@@ -1,8 +1,11 @@
 import { ArrowRight, TrendingUp, Users, Wallet, BarChart3, Shield, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 const Index = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -34,8 +37,12 @@ const Index = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button size="lg" className="group h-12 gap-2 px-8 shadow-glow">
-                Começar Agora
+              <Button
+                size="lg"
+                className="group h-12 gap-2 px-8 shadow-glow"
+                onClick={() => navigate("/parceiros")}
+              >
+                Acessar Sistema
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
               <Button size="lg" variant="outline" className="h-12 px-8">
