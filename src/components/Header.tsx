@@ -23,7 +23,7 @@ const Header = () => {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-primary">
             <Wallet className="h-5 w-5 text-white" />
           </div>
-          <span className="text-lg font-bold tracking-tight">BetFlow ERP</span>
+          <span className="text-lg font-bold tracking-tight">Labbet One</span>
         </Link>
 
         {/* Desktop Navigation */}

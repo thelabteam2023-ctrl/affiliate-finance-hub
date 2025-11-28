@@ -141,7 +141,7 @@ const Index = () => {
               { text: "1 usuário", included: true },
               { text: "Inserção de apostas padrão", included: true },
               { text: "Resposta em até 24h (WhatsApp/Discord)", included: true },
-              { text: "Acesso à comunidade Labbet", included: true },
+              { text: "Acesso à comunidade Labbet One", included: true },
             ]}
             highlighted={false}
           />
@@ -185,7 +185,7 @@ const Index = () => {
       <section className="border-y border-border bg-card/30 py-16">
         <div className="container mx-auto px-4">
           <div className="grid gap-8 sm:grid-cols-3">
-            <StatCard number="10+" label="Escritórios gerindo operações com a Labbet" />
+            <StatCard number="10+" label="Escritórios gerindo operações com a Labbet One" />
             <StatCard number="500+" label="Parceiros gerenciados" />
             <StatCard number="150+" label="Usuários Free e Starter ativos" />
           </div>
@@ -215,7 +215,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-border py-12">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© 2024 BetFlow ERP. Sistema profissional para gestão de apostas esportivas.</p>
+          <p>© 2025 Labbet One. One platform, all your betting operations.</p>
         </div>
       </footer>
     </div>
