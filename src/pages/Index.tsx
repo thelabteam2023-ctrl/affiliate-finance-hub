@@ -40,7 +40,7 @@ const Index = () => {
               <Button
                 size="lg"
                 className="group h-12 gap-2 px-8 shadow-glow"
-                onClick={() => navigate("/parceiros")}
+                onClick={() => navigate("/auth")}
               >
                 Acessar Sistema
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
