@@ -1,4 +1,4 @@
-import { ArrowRight, TrendingUp, Users, Wallet, BarChart3, FileSpreadsheet, Zap, UserCog } from "lucide-react";
+import { ArrowRight, TrendingUp, Users, Wallet, BarChart3, FileSpreadsheet, Zap, UserCog, Check, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -98,6 +98,85 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section className="container mx-auto px-4 py-20">
+        <div className="mb-16 text-center">
+          <h2 className="mb-4 text-3xl font-bold sm:text-4xl">
+            Planos que crescem com você
+          </h2>
+          <p className="text-lg text-muted-foreground">
+            Escolha o plano ideal para o tamanho da sua operação
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <PricingCard
+            name="Free"
+            price="R$ 0"
+            period="/mês"
+            description="Ideal para começar"
+            maxPartners="Até 3 parceiros"
+            features={[
+              { text: "Gestão de parcerias", included: true },
+              { text: "Controle financeiro básico", included: true },
+              { text: "1 usuário", included: true },
+              { text: "Suporte via email", included: true },
+              { text: "Dashboard limitado", included: false },
+              { text: "Estratégias de apostas", included: false },
+            ]}
+            highlighted={false}
+          />
+          <PricingCard
+            name="Starter"
+            price="R$ 97"
+            period="/mês"
+            description="Para operações pequenas"
+            maxPartners="Até 10 parceiros"
+            features={[
+              { text: "Tudo do Free", included: true },
+              { text: "Dashboard completo", included: true },
+              { text: "Até 3 usuários", included: true },
+              { text: "Módulo de apostas básico", included: true },
+              { text: "Suporte prioritário", included: true },
+              { text: "Estratégias avançadas", included: false },
+            ]}
+            highlighted={false}
+          />
+          <PricingCard
+            name="Pro"
+            price="R$ 297"
+            period="/mês"
+            description="Para escritórios estabelecidos"
+            maxPartners="Até 20 parceiros"
+            features={[
+              { text: "Tudo do Starter", included: true },
+              { text: "Estratégias avançadas", included: true },
+              { text: "Usuários ilimitados", included: true },
+              { text: "ROI e análises completas", included: true },
+              { text: "Hierarquia de permissões", included: true },
+              { text: "Suporte dedicado", included: true },
+            ]}
+            highlighted={true}
+          />
+          <PricingCard
+            name="Advanced"
+            price="R$ 597"
+            period="/mês"
+            description="Para grandes operações"
+            maxPartners="20+ parceiros"
+            features={[
+              { text: "Tudo do Pro", included: true },
+              { text: "Parceiros ilimitados", included: true },
+              { text: "API de integração", included: true },
+              { text: "Relatórios customizados", included: true },
+              { text: "Gerente de conta dedicado", included: true },
+              { text: "Onboarding personalizado", included: true },
+            ]}
+            highlighted={false}
+          />
+        </div>
+      </section>
+
       {/* Stats Section */}
       <section className="border-y border-border bg-card/30 py-16">
         <div className="container mx-auto px-4">
@@ -165,6 +244,73 @@ const StatCard = ({ number, label }: { number: string; label: string }) => {
       <div className="mb-2 text-4xl font-bold text-gradient">{number}</div>
       <div className="text-sm text-muted-foreground">{label}</div>
     </div>
+  );
+};
+
+const PricingCard = ({
+  name,
+  price,
+  period,
+  description,
+  maxPartners,
+  features,
+  highlighted,
+}: {
+  name: string;
+  price: string;
+  period: string;
+  description: string;
+  maxPartners: string;
+  features: { text: string; included: boolean }[];
+  highlighted: boolean;
+}) => {
+  return (
+    <Card
+      className={`relative overflow-hidden border-border bg-gradient-surface p-6 shadow-soft transition-all hover:shadow-medium ${
+        highlighted ? "border-primary shadow-glow" : ""
+      }`}
+    >
+      {highlighted && (
+        <div className="absolute right-4 top-4 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+          Popular
+        </div>
+      )}
+      <div className="mb-6">
+        <h3 className="mb-2 text-2xl font-bold">{name}</h3>
+        <p className="mb-4 text-sm text-muted-foreground">{description}</p>
+        <div className="mb-2">
+          <span className="text-4xl font-bold">{price}</span>
+          <span className="text-muted-foreground">{period}</span>
+        </div>
+        <div className="mb-6 inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+          {maxPartners}
+        </div>
+      </div>
+      <ul className="mb-6 space-y-3">
+        {features.map((feature, index) => (
+          <li key={index} className="flex items-start gap-2">
+            {feature.included ? (
+              <Check className="h-5 w-5 shrink-0 text-primary" />
+            ) : (
+              <X className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+            )}
+            <span
+              className={`text-sm ${
+                feature.included ? "text-foreground" : "text-muted-foreground/70"
+              }`}
+            >
+              {feature.text}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <Button
+        className={`w-full ${highlighted ? "shadow-glow" : ""}`}
+        variant={highlighted ? "default" : "outline"}
+      >
+        Começar Agora
+      </Button>
+    </Card>
   );
 };
 
