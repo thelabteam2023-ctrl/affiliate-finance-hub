@@ -72,18 +72,18 @@ const Index = () => {
           />
           <FeatureCard
             icon={<Wallet className="h-6 w-6" />}
-            title="Caixa Operacional"
-            description="Controle de aportes, transferências, depósitos e saques com suporte a múltiplas moedas (BRL, USD, EUR, crypto)."
+            title="Controle Financeiro"
+            description="Acompanhe entradas, saídas e lucros em tempo real com múltiplas moedas (BRL, USD, EUR, crypto)."
           />
           <FeatureCard
             icon={<BarChart3 className="h-6 w-6" />}
-            title="Análise de ROI"
-            description="Dashboards detalhados com yield, lucro/prejuízo por estratégia, parceiro e casa de apostas."
+            title="Dashboard Inteligente"
+            description="Visualize métricas e KPIs importantes com gráficos e relatórios detalhados para tomar decisões baseadas em dados."
           />
           <FeatureCard
             icon={<UserCog className="h-6 w-6" />}
-            title="Times e Permissões por Nível"
-            description="Crie usuários por função (owner, financeiro, trader, operador) e defina exatamente quem pode ver e mover dinheiro."
+            title="Delegue com Segurança"
+            description="Cresça seu time sem medo: dê acesso controlado para cada função e evite erros humanos com permissões inteligentes."
           />
           <FeatureCard
             icon={<TrendingUp className="h-6 w-6" />}
@@ -102,9 +102,9 @@ const Index = () => {
       <section className="border-y border-border bg-card/30 py-16">
         <div className="container mx-auto px-4">
           <div className="grid gap-8 sm:grid-cols-3">
-            <StatCard number="50+" label="Escritórios gerindo operações com a Labbet" />
+            <StatCard number="10+" label="Escritórios gerindo operações com a Labbet" />
             <StatCard number="500+" label="Parceiros gerenciados" />
-            <StatCard number="10+" label="Estratégias suportadas (arbitragem, surebet)" />
+            <StatCard number="1.000+" label="Contas bancárias e wallets cadastradas" />
           </div>
         </div>
       </section>
