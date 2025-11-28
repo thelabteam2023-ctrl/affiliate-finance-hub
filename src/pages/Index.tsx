@@ -107,6 +107,9 @@ const Index = () => {
           <p className="text-lg text-muted-foreground">
             Escolha o plano ideal para o tamanho da sua operação
           </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Valores válidos para pagamento no cartão de crédito à vista
+          </p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -128,49 +131,49 @@ const Index = () => {
           />
           <PricingCard
             name="Starter"
-            price="R$ 97"
+            price="R$ 79"
             period="/mês"
             description="Para operações pequenas"
             maxPartners="Até 10 parceiros"
             features={[
               { text: "Tudo do Free", included: true },
               { text: "Dashboard completo", included: true },
-              { text: "Até 3 usuários", included: true },
-              { text: "Módulo de apostas básico", included: true },
-              { text: "Suporte prioritário", included: true },
-              { text: "Estratégias avançadas", included: false },
+              { text: "1 usuário", included: true },
+              { text: "Inserção de apostas padrão", included: true },
+              { text: "Resposta em até 24h (WhatsApp/Discord)", included: true },
+              { text: "Acesso à comunidade Labbet", included: true },
             ]}
             highlighted={false}
           />
           <PricingCard
             name="Pro"
-            price="R$ 297"
+            price="R$ 167"
             period="/mês"
             description="Para escritórios estabelecidos"
-            maxPartners="Até 20 parceiros"
+            maxPartners="Até 25 parceiros"
             features={[
               { text: "Tudo do Starter", included: true },
-              { text: "Estratégias avançadas", included: true },
+              { text: "Sistemas de entrada por estratégia", included: true },
               { text: "Usuários ilimitados", included: true },
               { text: "ROI e análises completas", included: true },
               { text: "Hierarquia de permissões", included: true },
-              { text: "Suporte dedicado", included: true },
+              { text: "Suporte WhatsApp/chamada", included: true },
             ]}
             highlighted={true}
           />
           <PricingCard
             name="Advanced"
-            price="R$ 597"
+            price="R$ 397"
             period="/mês"
             description="Para grandes operações"
-            maxPartners="20+ parceiros"
+            maxPartners="25+ parceiros"
             features={[
               { text: "Tudo do Pro", included: true },
               { text: "Parceiros ilimitados", included: true },
               { text: "API de integração", included: true },
               { text: "Relatórios customizados", included: true },
-              { text: "Gerente de conta dedicado", included: true },
               { text: "Onboarding personalizado", included: true },
+              { text: "Suporte prioritário dedicado", included: true },
             ]}
             highlighted={false}
           />
