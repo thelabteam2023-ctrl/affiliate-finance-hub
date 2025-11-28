@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookmakers: {
+        Row: {
+          created_at: string
+          id: string
+          login_password_encrypted: string
+          login_username: string
+          moeda: string
+          nome: string
+          observacoes: string | null
+          saldo_atual: number
+          status: string
+          updated_at: string
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          login_password_encrypted: string
+          login_username: string
+          moeda?: string
+          nome: string
+          observacoes?: string | null
+          saldo_atual?: number
+          status?: string
+          updated_at?: string
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          login_password_encrypted?: string
+          login_username?: string
+          moeda?: string
+          nome?: string
+          observacoes?: string | null
+          saldo_atual?: number
+          status?: string
+          updated_at?: string
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmakers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contas_bancarias: {
         Row: {
           agencia: string
@@ -134,6 +187,53 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      transacoes_bookmakers: {
+        Row: {
+          bookmaker_id: string
+          created_at: string
+          data_transacao: string
+          descricao: string | null
+          id: string
+          referencia_externa: string | null
+          saldo_anterior: number
+          saldo_novo: number
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          bookmaker_id: string
+          created_at?: string
+          data_transacao?: string
+          descricao?: string | null
+          id?: string
+          referencia_externa?: string | null
+          saldo_anterior: number
+          saldo_novo: number
+          tipo: string
+          valor: number
+        }
+        Update: {
+          bookmaker_id?: string
+          created_at?: string
+          data_transacao?: string
+          descricao?: string | null
+          id?: string
+          referencia_externa?: string | null
+          saldo_anterior?: number
+          saldo_novo?: number
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transacoes_bookmakers_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wallets_crypto: {
         Row: {
