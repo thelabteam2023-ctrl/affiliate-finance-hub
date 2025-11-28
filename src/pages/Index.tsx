@@ -158,7 +158,7 @@ const Index = () => {
               { text: "API de integração", included: true },
               { text: "ROI e análises completas", included: true },
               { text: "Hierarquia de permissões", included: true },
-              { text: "Suporte WhatsApp/chamada", included: true },
+              { text: "Resposta em até 24h (WhatsApp/Discord)", included: true },
             ]}
             highlighted={true}
           />
