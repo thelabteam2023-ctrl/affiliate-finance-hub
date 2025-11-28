@@ -118,7 +118,7 @@ const Index = () => {
             price="R$ 0"
             period="/mês"
             description="Ideal para começar"
-            maxPartners="Até 3 parceiros"
+            maxPartners="Até 3 parceiros ativos"
             features={[
               { text: "Gestão de parcerias", included: true },
               { text: "Controle financeiro básico", included: true },
@@ -131,10 +131,10 @@ const Index = () => {
           />
           <PricingCard
             name="Starter"
-            price="R$ 79"
+            price="R$ 89"
             period="/mês"
             description="Para operações pequenas"
-            maxPartners="Até 10 parceiros"
+            maxPartners="Até 10 parceiros ativos"
             features={[
               { text: "Tudo do Free", included: true },
               { text: "Dashboard completo", included: true },
@@ -150,11 +150,12 @@ const Index = () => {
             price="R$ 167"
             period="/mês"
             description="Para escritórios estabelecidos"
-            maxPartners="Até 25 parceiros"
+            maxPartners="Até 25 parceiros ativos"
             features={[
               { text: "Tudo do Starter", included: true },
               { text: "Sistemas de entrada por estratégia", included: true },
-              { text: "Usuários ilimitados", included: true },
+              { text: "2 usuários", included: true },
+              { text: "API de integração", included: true },
               { text: "ROI e análises completas", included: true },
               { text: "Hierarquia de permissões", included: true },
               { text: "Suporte WhatsApp/chamada", included: true },
@@ -163,14 +164,14 @@ const Index = () => {
           />
           <PricingCard
             name="Advanced"
-            price="R$ 397"
+            price="R$ 597"
             period="/mês"
             description="Para grandes operações"
-            maxPartners="25+ parceiros"
+            maxPartners="25+ parceiros ativos"
             features={[
               { text: "Tudo do Pro", included: true },
               { text: "Parceiros ilimitados", included: true },
-              { text: "API de integração", included: true },
+              { text: "10 usuários", included: true },
               { text: "Relatórios customizados", included: true },
               { text: "Onboarding personalizado", included: true },
               { text: "Suporte prioritário dedicado", included: true },
