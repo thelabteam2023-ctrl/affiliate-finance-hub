@@ -11,26 +11,43 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2, Eye, EyeOff } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface BankAccount {
   id?: string;
-  banco: string;
+  banco_id: string;
   agencia: string;
   conta: string;
   tipo_conta: string;
   titular: string;
   pix_key: string;
+  senha_acesso_encrypted: string;
+  senha_transacao_encrypted: string;
+  usar_senha_global: boolean;
 }
 
 interface CryptoWallet {
   id?: string;
   moeda: string;
   endereco: string;
-  network: string;
+  rede_id: string;
   label: string;
+  senha_acesso_encrypted: string;
+  usar_senha_global: boolean;
+}
+
+interface Banco {
+  id: string;
+  codigo: string;
+  nome: string;
+}
+
+interface RedeCrypto {
+  id: string;
+  codigo: string;
+  nome: string;
 }
 
 interface ParceiroDialogProps {
@@ -46,11 +63,24 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
+  const [endereco, setEndereco] = useState("");
+  const [cidade, setCidade] = useState("");
+  const [cep, setCep] = useState("");
+  const [usuarioGlobal, setUsuarioGlobal] = useState("");
+  const [senhaGlobal, setSenhaGlobal] = useState("");
+  const [showSenhaGlobal, setShowSenhaGlobal] = useState(false);
   const [status, setStatus] = useState("ativo");
   const [observacoes, setObservacoes] = useState("");
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [cryptoWallets, setCryptoWallets] = useState<CryptoWallet[]>([]);
+  const [bancos, setBancos] = useState<Banco[]>([]);
+  const [redes, setRedes] = useState<RedeCrypto[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchBancos();
+    fetchRedes();
+  }, []);
 
   useEffect(() => {
     if (parceiro) {
@@ -59,6 +89,11 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
       setEmail(parceiro.email || "");
       setTelefone(parceiro.telefone || "");
       setDataNascimento(parceiro.data_nascimento || "");
+      setEndereco(parceiro.endereco || "");
+      setCidade(parceiro.cidade || "");
+      setCep(parceiro.cep || "");
+      setUsuarioGlobal(parceiro.usuario_global || "");
+      setSenhaGlobal(atob(parceiro.senha_global_encrypted || ""));
       setStatus(parceiro.status || "ativo");
       setObservacoes(parceiro.observacoes || "");
       setBankAccounts(parceiro.contas_bancarias || []);
@@ -68,16 +103,36 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
     }
   }, [parceiro]);
 
+  const fetchBancos = async () => {
+    const { data } = await supabase.from("bancos").select("*").order("nome");
+    if (data) setBancos(data);
+  };
+
+  const fetchRedes = async () => {
+    const { data } = await supabase.from("redes_crypto").select("*").order("nome");
+    if (data) setRedes(data);
+  };
+
   const resetForm = () => {
     setNome("");
     setCpf("");
     setEmail("");
     setTelefone("");
     setDataNascimento("");
+    setEndereco("");
+    setCidade("");
+    setCep("");
+    setUsuarioGlobal("");
+    setSenhaGlobal("");
     setStatus("ativo");
     setObservacoes("");
     setBankAccounts([]);
     setCryptoWallets([]);
+  };
+
+  const formatCEP = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    return numbers.replace(/(\d{5})(\d{3})/, "$1-$2");
   };
 
   const formatCPF = (value: string) => {
@@ -108,6 +163,11 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
         email: email || null,
         telefone: telefone.replace(/\D/g, "") || null,
         data_nascimento: dataNascimento || null,
+        endereco: endereco || null,
+        cidade: cidade || null,
+        cep: cep.replace(/\D/g, "") || null,
+        usuario_global: usuarioGlobal || null,
+        senha_global_encrypted: senhaGlobal ? btoa(senhaGlobal) : null,
         status,
         observacoes: observacoes || null,
       };
@@ -141,16 +201,20 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
       }
 
       for (const account of bankAccounts) {
-        if (account.banco && account.conta) {
-          await supabase.from("contas_bancarias").insert({
+        if (account.banco_id && account.conta) {
+          await supabase.from("contas_bancarias").insert([{
             parceiro_id: parceiroId,
-            banco: account.banco,
+            banco_id: account.banco_id,
+            banco: bancos.find(b => b.id === account.banco_id)?.nome || "",
             agencia: account.agencia,
             conta: account.conta,
             tipo_conta: account.tipo_conta,
             titular: account.titular,
             pix_key: account.pix_key || null,
-          });
+            senha_acesso_encrypted: account.senha_acesso_encrypted ? btoa(account.senha_acesso_encrypted) : null,
+            senha_transacao_encrypted: account.senha_transacao_encrypted ? btoa(account.senha_transacao_encrypted) : null,
+            usar_senha_global: account.usar_senha_global,
+          }]);
         }
       }
 
@@ -164,13 +228,16 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
 
       for (const wallet of cryptoWallets) {
         if (wallet.moeda && wallet.endereco) {
-          await supabase.from("wallets_crypto").insert({
+          await supabase.from("wallets_crypto").insert([{
             parceiro_id: parceiroId,
             moeda: wallet.moeda,
             endereco: wallet.endereco,
-            network: wallet.network,
+            network: redes.find(r => r.id === wallet.rede_id)?.nome || "",
+            rede_id: wallet.rede_id,
             label: wallet.label || null,
-          });
+            senha_acesso_encrypted: wallet.senha_acesso_encrypted ? btoa(wallet.senha_acesso_encrypted) : null,
+            usar_senha_global: wallet.usar_senha_global,
+          }]);
         }
       }
 
@@ -194,7 +261,17 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
   const addBankAccount = () => {
     setBankAccounts([
       ...bankAccounts,
-      { banco: "", agencia: "", conta: "", tipo_conta: "corrente", titular: nome, pix_key: "" },
+      { 
+        banco_id: "", 
+        agencia: "", 
+        conta: "", 
+        tipo_conta: "corrente", 
+        titular: nome, 
+        pix_key: "",
+        senha_acesso_encrypted: "",
+        senha_transacao_encrypted: "",
+        usar_senha_global: false
+      },
     ]);
   };
 
@@ -211,7 +288,14 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
   const addCryptoWallet = () => {
     setCryptoWallets([
       ...cryptoWallets,
-      { moeda: "USDT", endereco: "", network: "", label: "" },
+      { 
+        moeda: "USDT", 
+        endereco: "", 
+        rede_id: "", 
+        label: "",
+        senha_acesso_encrypted: "",
+        usar_senha_global: false
+      },
     ]);
   };
 
@@ -297,6 +381,69 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                     disabled={loading}
                   />
                 </div>
+                <div>
+                  <Label htmlFor="endereco">Endereço</Label>
+                  <Input
+                    id="endereco"
+                    value={endereco}
+                    onChange={(e) => setEndereco(e.target.value)}
+                    placeholder="Rua, número"
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cidade">Cidade</Label>
+                  <Input
+                    id="cidade"
+                    value={cidade}
+                    onChange={(e) => setCidade(e.target.value)}
+                    placeholder="Cidade - UF"
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cep">CEP</Label>
+                  <Input
+                    id="cep"
+                    value={cep}
+                    onChange={(e) => setCep(formatCEP(e.target.value))}
+                    placeholder="00000-000"
+                    maxLength={9}
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="usuarioGlobal">Usuário Global</Label>
+                  <Input
+                    id="usuarioGlobal"
+                    value={usuarioGlobal}
+                    onChange={(e) => setUsuarioGlobal(e.target.value)}
+                    placeholder="Usuário padrão"
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="senhaGlobal">Senha Global</Label>
+                  <div className="relative">
+                    <Input
+                      id="senhaGlobal"
+                      type={showSenhaGlobal ? "text" : "password"}
+                      value={senhaGlobal}
+                      onChange={(e) => setSenhaGlobal(e.target.value)}
+                      placeholder="Senha padrão"
+                      disabled={loading}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3"
+                      onClick={() => setShowSenhaGlobal(!showSenhaGlobal)}
+                    >
+                      {showSenhaGlobal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
                 <div className="col-span-2">
                   <Label htmlFor="status">Status</Label>
                   <select
@@ -308,7 +455,6 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                   >
                     <option value="ativo">Ativo</option>
                     <option value="inativo">Inativo</option>
-                    <option value="suspenso">Suspenso</option>
                   </select>
                 </div>
                 <div className="col-span-2">
@@ -352,11 +498,18 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                       </div>
                       <div className="col-span-2">
                         <Label>Banco</Label>
-                        <Input
-                          value={account.banco}
-                          onChange={(e) => updateBankAccount(index, "banco", e.target.value)}
-                          placeholder="Nome do banco"
-                        />
+                        <select
+                          value={account.banco_id}
+                          onChange={(e) => updateBankAccount(index, "banco_id", e.target.value)}
+                          className="w-full px-3 py-2 border rounded-md bg-background"
+                        >
+                          <option value="">Selecione um banco</option>
+                          {bancos.map((banco) => (
+                            <option key={banco.id} value={banco.id}>
+                              {banco.codigo} - {banco.nome}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <Label>Agência</Label>
@@ -401,6 +554,38 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                           onChange={(e) => updateBankAccount(index, "pix_key", e.target.value)}
                           placeholder="CPF, email, telefone ou chave aleatória"
                         />
+                      </div>
+                      <div>
+                        <Label>Senha de Acesso</Label>
+                        <Input
+                          type="password"
+                          value={account.usar_senha_global ? "••••••••" : account.senha_acesso_encrypted}
+                          onChange={(e) => updateBankAccount(index, "senha_acesso_encrypted", e.target.value)}
+                          placeholder="Senha do banco"
+                          disabled={account.usar_senha_global}
+                        />
+                      </div>
+                      <div>
+                        <Label>Senha de Transação</Label>
+                        <Input
+                          type="password"
+                          value={account.usar_senha_global ? "••••••••" : account.senha_transacao_encrypted}
+                          onChange={(e) => updateBankAccount(index, "senha_transacao_encrypted", e.target.value)}
+                          placeholder="Senha para transferências"
+                          disabled={account.usar_senha_global}
+                        />
+                      </div>
+                      <div className="col-span-2 flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`usar-senha-global-${index}`}
+                          checked={account.usar_senha_global}
+                          onChange={(e) => updateBankAccount(index, "usar_senha_global", e.target.checked.toString())}
+                          className="h-4 w-4"
+                        />
+                        <Label htmlFor={`usar-senha-global-${index}`}>
+                          Usar senha padrão do parceiro
+                        </Label>
                       </div>
                     </div>
                   </CardContent>
@@ -455,11 +640,18 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                       </div>
                       <div>
                         <Label>Network</Label>
-                        <Input
-                          value={wallet.network}
-                          onChange={(e) => updateCryptoWallet(index, "network", e.target.value)}
-                          placeholder="Ex: ERC20, TRC20, BEP20"
-                        />
+                        <select
+                          value={wallet.rede_id}
+                          onChange={(e) => updateCryptoWallet(index, "rede_id", e.target.value)}
+                          className="w-full px-3 py-2 border rounded-md bg-background"
+                        >
+                          <option value="">Selecione uma rede</option>
+                          {redes.map((rede) => (
+                            <option key={rede.id} value={rede.id}>
+                              {rede.nome}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div className="col-span-2">
                         <Label>Endereço</Label>
@@ -476,6 +668,28 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                           onChange={(e) => updateCryptoWallet(index, "label", e.target.value)}
                           placeholder="Ex: Wallet principal, Wallet apostas"
                         />
+                      </div>
+                      <div className="col-span-2">
+                        <Label>Senha de Acesso</Label>
+                        <Input
+                          type="password"
+                          value={wallet.usar_senha_global ? "••••••••" : wallet.senha_acesso_encrypted}
+                          onChange={(e) => updateCryptoWallet(index, "senha_acesso_encrypted", e.target.value)}
+                          placeholder="Senha da wallet"
+                          disabled={wallet.usar_senha_global}
+                        />
+                      </div>
+                      <div className="col-span-2 flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`usar-senha-global-wallet-${index}`}
+                          checked={wallet.usar_senha_global}
+                          onChange={(e) => updateCryptoWallet(index, "usar_senha_global", e.target.checked.toString())}
+                          className="h-4 w-4"
+                        />
+                        <Label htmlFor={`usar-senha-global-wallet-${index}`}>
+                          Usar senha padrão do parceiro
+                        </Label>
                       </div>
                     </div>
                   </CardContent>
