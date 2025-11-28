@@ -14,7 +14,168 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      contas_bancarias: {
+        Row: {
+          agencia: string
+          banco: string
+          conta: string
+          created_at: string
+          id: string
+          parceiro_id: string
+          pix_key: string | null
+          tipo_conta: string
+          titular: string
+          updated_at: string
+        }
+        Insert: {
+          agencia: string
+          banco: string
+          conta: string
+          created_at?: string
+          id?: string
+          parceiro_id: string
+          pix_key?: string | null
+          tipo_conta: string
+          titular: string
+          updated_at?: string
+        }
+        Update: {
+          agencia?: string
+          banco?: string
+          conta?: string
+          created_at?: string
+          id?: string
+          parceiro_id?: string
+          pix_key?: string | null
+          tipo_conta?: string
+          titular?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_bancarias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parceiros: {
+        Row: {
+          cpf: string
+          created_at: string
+          data_nascimento: string | null
+          email: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          status: string
+          telefone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cpf: string
+          created_at?: string
+          data_nascimento?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cpf?: string
+          created_at?: string
+          data_nascimento?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parceiros_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      wallets_crypto: {
+        Row: {
+          created_at: string
+          endereco: string
+          id: string
+          label: string | null
+          moeda: string
+          network: string
+          parceiro_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          endereco: string
+          id?: string
+          label?: string | null
+          moeda: string
+          network: string
+          parceiro_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          endereco?: string
+          id?: string
+          label?: string | null
+          moeda?: string
+          network?: string
+          parceiro_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallets_crypto_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
