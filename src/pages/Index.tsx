@@ -103,7 +103,7 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="grid gap-8 sm:grid-cols-3">
             <StatCard number="50+" label="Escritórios gerindo operações" />
-            <StatCard number="500+" label="Parceiros (CPFs) gerenciados" />
+            <StatCard number="500+" label="Parceiros gerenciados" />
             <StatCard number="10+" label="Estratégias suportadas (arbitragem, surebet)" />
           </div>
         </div>
