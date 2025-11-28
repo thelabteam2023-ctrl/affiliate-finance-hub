@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      bancos: {
+        Row: {
+          codigo: string
+          created_at: string | null
+          id: string
+          is_system: boolean | null
+          nome: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          codigo: string
+          created_at?: string | null
+          id?: string
+          is_system?: boolean | null
+          nome: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          codigo?: string
+          created_at?: string | null
+          id?: string
+          is_system?: boolean | null
+          nome?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       bookmakers: {
         Row: {
           created_at: string
@@ -71,40 +101,59 @@ export type Database = {
         Row: {
           agencia: string
           banco: string
+          banco_id: string | null
           conta: string
           created_at: string
           id: string
           parceiro_id: string
           pix_key: string | null
+          senha_acesso_encrypted: string | null
+          senha_transacao_encrypted: string | null
           tipo_conta: string
           titular: string
           updated_at: string
+          usar_senha_global: boolean | null
         }
         Insert: {
           agencia: string
           banco: string
+          banco_id?: string | null
           conta: string
           created_at?: string
           id?: string
           parceiro_id: string
           pix_key?: string | null
+          senha_acesso_encrypted?: string | null
+          senha_transacao_encrypted?: string | null
           tipo_conta: string
           titular: string
           updated_at?: string
+          usar_senha_global?: boolean | null
         }
         Update: {
           agencia?: string
           banco?: string
+          banco_id?: string | null
           conta?: string
           created_at?: string
           id?: string
           parceiro_id?: string
           pix_key?: string | null
+          senha_acesso_encrypted?: string | null
+          senha_transacao_encrypted?: string | null
           tipo_conta?: string
           titular?: string
           updated_at?: string
+          usar_senha_global?: boolean | null
         }
         Relationships: [
+          {
+            foreignKeyName: "contas_bancarias_banco_id_fkey"
+            columns: ["banco_id"]
+            isOneToOne: false
+            referencedRelation: "bancos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contas_bancarias_parceiro_id_fkey"
             columns: ["parceiro_id"]
@@ -116,43 +165,58 @@ export type Database = {
       }
       parceiros: {
         Row: {
+          cep: string | null
+          cidade: string | null
           cpf: string
           created_at: string
           data_nascimento: string | null
           email: string | null
+          endereco: string | null
           id: string
           nome: string
           observacoes: string | null
+          senha_global_encrypted: string | null
           status: string
           telefone: string | null
           updated_at: string
           user_id: string
+          usuario_global: string | null
         }
         Insert: {
+          cep?: string | null
+          cidade?: string | null
           cpf: string
           created_at?: string
           data_nascimento?: string | null
           email?: string | null
+          endereco?: string | null
           id?: string
           nome: string
           observacoes?: string | null
+          senha_global_encrypted?: string | null
           status?: string
           telefone?: string | null
           updated_at?: string
           user_id: string
+          usuario_global?: string | null
         }
         Update: {
+          cep?: string | null
+          cidade?: string | null
           cpf?: string
           created_at?: string
           data_nascimento?: string | null
           email?: string | null
+          endereco?: string | null
           id?: string
           nome?: string
           observacoes?: string | null
+          senha_global_encrypted?: string | null
           status?: string
           telefone?: string | null
           updated_at?: string
           user_id?: string
+          usuario_global?: string | null
         }
         Relationships: [
           {
@@ -185,6 +249,33 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      redes_crypto: {
+        Row: {
+          codigo: string
+          created_at: string | null
+          id: string
+          is_system: boolean | null
+          nome: string
+          user_id: string | null
+        }
+        Insert: {
+          codigo: string
+          created_at?: string | null
+          id?: string
+          is_system?: boolean | null
+          nome: string
+          user_id?: string | null
+        }
+        Update: {
+          codigo?: string
+          created_at?: string | null
+          id?: string
+          is_system?: boolean | null
+          nome?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -244,7 +335,10 @@ export type Database = {
           moeda: string
           network: string
           parceiro_id: string
+          rede_id: string | null
+          senha_acesso_encrypted: string | null
           updated_at: string
+          usar_senha_global: boolean | null
         }
         Insert: {
           created_at?: string
@@ -254,7 +348,10 @@ export type Database = {
           moeda: string
           network: string
           parceiro_id: string
+          rede_id?: string | null
+          senha_acesso_encrypted?: string | null
           updated_at?: string
+          usar_senha_global?: boolean | null
         }
         Update: {
           created_at?: string
@@ -264,7 +361,10 @@ export type Database = {
           moeda?: string
           network?: string
           parceiro_id?: string
+          rede_id?: string | null
+          senha_acesso_encrypted?: string | null
           updated_at?: string
+          usar_senha_global?: boolean | null
         }
         Relationships: [
           {
@@ -272,6 +372,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallets_crypto_rede_id_fkey"
+            columns: ["rede_id"]
+            isOneToOne: false
+            referencedRelation: "redes_crypto"
             referencedColumns: ["id"]
           },
         ]

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Users, Wallet, Building2, Link2, Menu } from "lucide-react";
+import { Users, Wallet, Building2, Link2, Menu, Landmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -10,6 +10,7 @@ import {
 const Header = () => {
   const navItems = [
     { to: "/parceiros", label: "Parceiros", icon: Users },
+    { to: "/bancos", label: "Bancos", icon: Landmark },
     { to: "/caixa", label: "Caixa", icon: Wallet },
     { to: "/bookmakers", label: "Casas", icon: Building2 },
     { to: "/vinculos", label: "Vínculos", icon: Link2 },

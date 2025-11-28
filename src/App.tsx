@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import GestaoParceiros from "./pages/GestaoParceiros";
 import GestaoBookmakers from "./pages/GestaoBookmakers";
+import GestaoBancos from "./pages/GestaoBancos";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/parceiros" element={<GestaoParceiros />} />
           <Route path="/bookmakers" element={<GestaoBookmakers />} />
+          <Route path="/bancos" element={<GestaoBancos />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

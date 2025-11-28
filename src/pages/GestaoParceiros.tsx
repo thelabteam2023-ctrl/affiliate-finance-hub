@@ -128,7 +128,6 @@ export default function GestaoParceiros() {
     total: parceiros.length,
     ativos: parceiros.filter((p) => p.status === "ativo").length,
     inativos: parceiros.filter((p) => p.status === "inativo").length,
-    suspensos: parceiros.filter((p) => p.status === "suspenso").length,
   };
 
   if (loading) {
@@ -158,7 +157,7 @@ export default function GestaoParceiros() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -189,16 +188,6 @@ export default function GestaoParceiros() {
               <div className="text-3xl font-bold text-yellow-600">{stats.inativos}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Suspensos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-red-600">{stats.suspensos}</div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Toolbar */}
@@ -222,7 +211,6 @@ export default function GestaoParceiros() {
                 <option value="todos">Todos os status</option>
                 <option value="ativo">Ativos</option>
                 <option value="inativo">Inativos</option>
-                <option value="suspenso">Suspensos</option>
               </select>
               <Button
                 variant="outline"
