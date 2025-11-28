@@ -1,4 +1,4 @@
-import { ArrowRight, TrendingUp, Users, Wallet, BarChart3, Shield, Zap } from "lucide-react";
+import { ArrowRight, TrendingUp, Users, Wallet, BarChart3, FileSpreadsheet, Zap, UserCog } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -81,9 +81,9 @@ const Index = () => {
             description="Dashboards detalhados com yield, lucro/prejuízo por estratégia, parceiro e casa de apostas."
           />
           <FeatureCard
-            icon={<Shield className="h-6 w-6" />}
-            title="Segurança Avançada"
-            description="Criptografia de dados sensíveis, autenticação multi-fator e controle de acesso por hierarquia."
+            icon={<UserCog className="h-6 w-6" />}
+            title="Times e Permissões por Nível"
+            description="Crie usuários por função (owner, financeiro, trader, operador) e defina exatamente quem pode ver e mover dinheiro."
           />
           <FeatureCard
             icon={<TrendingUp className="h-6 w-6" />}
@@ -91,9 +91,9 @@ const Index = () => {
             description="Registro de arbitragem, surebet e cálculo automático de proteção com métricas em tempo real."
           />
           <FeatureCard
-            icon={<Zap className="h-6 w-6" />}
-            title="Multi-tenant SaaS"
-            description="Gestão de múltiplos escritórios com planos flexíveis e hierarquia de usuários configurável."
+            icon={<FileSpreadsheet className="h-6 w-6" />}
+            title="Adeus às Planilhas"
+            description="Automatize fluxos que hoje você faz manualmente. Menos erro humano, mais tempo para estratégia e escala."
           />
         </div>
       </section>
@@ -102,9 +102,9 @@ const Index = () => {
       <section className="border-y border-border bg-card/30 py-16">
         <div className="container mx-auto px-4">
           <div className="grid gap-8 sm:grid-cols-3">
-            <StatCard number="100+" label="Bookmakers Suportadas" />
-            <StatCard number="5+" label="Moedas Integradas" />
-            <StatCard number="99.9%" label="Uptime Garantido" />
+            <StatCard number="50+" label="Escritórios gerindo operações" />
+            <StatCard number="500+" label="Parceiros (CPFs) gerenciados" />
+            <StatCard number="10+" label="Estratégias suportadas (arbitragem, surebet)" />
           </div>
         </div>
       </section>
