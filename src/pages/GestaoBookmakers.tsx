@@ -1,0 +1,410 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, Search, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import Header from "@/components/Header";
+import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
+import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
+import HistoricoTransacoes from "@/components/bookmakers/HistoricoTransacoes";
+
+interface Bookmaker {
+  id: string;
+  nome: string;
+  url: string | null;
+  login_username: string;
+  saldo_atual: number;
+  moeda: string;
+  status: string;
+  created_at: string;
+}
+
+export default function GestaoBookmakers() {
+  const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const [showCredentials, setShowCredentials] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [transacaoDialogOpen, setTransacaoDialogOpen] = useState(false);
+  const [historicoDialogOpen, setHistoricoDialogOpen] = useState(false);
+  const [editingBookmaker, setEditingBookmaker] = useState<any | null>(null);
+  const [selectedBookmaker, setSelectedBookmaker] = useState<Bookmaker | null>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    checkAuth();
+    fetchBookmakers();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate("/auth");
+    }
+  };
+
+  const fetchBookmakers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("bookmakers")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setBookmakers(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao carregar bookmakers",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este bookmaker? Todas as transações também serão removidas.")) return;
+
+    try {
+      const { error } = await supabase
+        .from("bookmakers")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Bookmaker excluído",
+        description: "O bookmaker foi removido com sucesso.",
+      });
+      fetchBookmakers();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir bookmaker",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEdit = async (bookmaker: Bookmaker) => {
+    // Fetch full bookmaker data including encrypted password
+    const { data, error } = await supabase
+      .from("bookmakers")
+      .select("*")
+      .eq("id", bookmaker.id)
+      .single();
+
+    if (error) {
+      toast({
+        title: "Erro ao carregar dados",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setEditingBookmaker(data);
+    setDialogOpen(true);
+  };
+
+  const handleAddTransaction = (bookmaker: Bookmaker) => {
+    setSelectedBookmaker(bookmaker);
+    setTransacaoDialogOpen(true);
+  };
+
+  const handleViewHistory = (bookmaker: Bookmaker) => {
+    setSelectedBookmaker(bookmaker);
+    setHistoricoDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setDialogOpen(false);
+    setEditingBookmaker(null);
+    fetchBookmakers();
+  };
+
+  const handleTransacaoDialogClose = () => {
+    setTransacaoDialogOpen(false);
+    setSelectedBookmaker(null);
+    fetchBookmakers();
+  };
+
+  const maskCredentials = (text: string) => {
+    if (showCredentials) return text;
+    return "••••••••";
+  };
+
+  const formatCurrency = (value: number, currency: string) => {
+    const currencySymbols: Record<string, string> = {
+      BRL: "R$",
+      USD: "$",
+      EUR: "€",
+      USDT: "₮",
+      BTC: "₿",
+      ETH: "Ξ",
+    };
+    return `${currencySymbols[currency] || ""} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const filteredBookmakers = bookmakers.filter((bookmaker) => {
+    const matchesSearch =
+      bookmaker.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bookmaker.login_username.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "todos" || bookmaker.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const stats = {
+    total: bookmakers.length,
+    ativos: bookmakers.filter((b) => b.status === "ativo").length,
+    saldoTotal: bookmakers.reduce((acc, b) => {
+      if (b.moeda === "BRL") return acc + Number(b.saldo_atual);
+      return acc;
+    }, 0),
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-muted-foreground">Carregando...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold">Gestão de Bookmakers</h1>
+            <p className="text-muted-foreground mt-2">
+              Gerencie casas de apostas, credenciais e saldos
+            </p>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total de Bookmakers
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{stats.total}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Ativos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600">{stats.ativos}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Saldo Total (BRL)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-primary">
+                {formatCurrency(stats.saldoTotal, "BRL")}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Toolbar */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Buscar por nome ou usuário..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-4 py-2 border rounded-md bg-background"
+              >
+                <option value="todos">Todos os status</option>
+                <option value="ativo">Ativos</option>
+                <option value="inativo">Inativos</option>
+                <option value="suspenso">Suspensos</option>
+                <option value="bloqueado">Bloqueados</option>
+              </select>
+              <Button
+                variant="outline"
+                onClick={() => setShowCredentials(!showCredentials)}
+              >
+                {showCredentials ? (
+                  <>
+                    <EyeOff className="mr-2 h-4 w-4" />
+                    Ocultar Credenciais
+                  </>
+                ) : (
+                  <>
+                    <Eye className="mr-2 h-4 w-4" />
+                    Mostrar Credenciais
+                  </>
+                )}
+              </Button>
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Bookmaker
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bookmakers Grid */}
+        {filteredBookmakers.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">
+                Nenhum bookmaker encontrado. Clique em "Novo Bookmaker" para adicionar.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredBookmakers.map((bookmaker) => (
+              <Card key={bookmaker.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-xl">{bookmaker.nome}</CardTitle>
+                      {bookmaker.url && (
+                        <a
+                          href={bookmaker.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline"
+                        >
+                          {bookmaker.url}
+                        </a>
+                      )}
+                    </div>
+                    <Badge
+                      variant={
+                        bookmaker.status === "ativo"
+                          ? "default"
+                          : bookmaker.status === "inativo"
+                          ? "secondary"
+                          : "destructive"
+                      }
+                    >
+                      {bookmaker.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="p-3 bg-muted rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">Saldo Disponível</span>
+                        <Badge variant="outline">{bookmaker.moeda}</Badge>
+                      </div>
+                      <div className="text-2xl font-bold">
+                        {formatCurrency(Number(bookmaker.saldo_atual), bookmaker.moeda)}
+                      </div>
+                    </div>
+
+                    <div className="text-sm space-y-1 pt-2 border-t">
+                      <p className="text-muted-foreground">
+                        <span className="font-medium">Usuário:</span>{" "}
+                        {maskCredentials(bookmaker.login_username)}
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleAddTransaction(bookmaker)}
+                      >
+                        <DollarSign className="mr-1 h-4 w-4" />
+                        Transação
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewHistory(bookmaker)}
+                      >
+                        <TrendingUp className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleEdit(bookmaker)}
+                      >
+                        <Edit className="mr-1 h-4 w-4" />
+                        Editar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-red-600 hover:text-red-700"
+                        onClick={() => handleDelete(bookmaker.id)}
+                      >
+                        <Trash2 className="mr-1 h-4 w-4" />
+                        Excluir
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <BookmakerDialog
+        open={dialogOpen}
+        onClose={handleDialogClose}
+        bookmaker={editingBookmaker}
+      />
+
+      {selectedBookmaker && (
+        <>
+          <TransacaoDialog
+            open={transacaoDialogOpen}
+            onClose={handleTransacaoDialogClose}
+            bookmaker={selectedBookmaker}
+          />
+          <HistoricoTransacoes
+            open={historicoDialogOpen}
+            onClose={() => setHistoricoDialogOpen(false)}
+            bookmaker={selectedBookmaker}
+          />
+        </>
+      )}
+    </div>
+  );
+}
