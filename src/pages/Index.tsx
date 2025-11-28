@@ -104,7 +104,7 @@ const Index = () => {
           <div className="grid gap-8 sm:grid-cols-3">
             <StatCard number="10+" label="Escritórios gerindo operações com a Labbet" />
             <StatCard number="500+" label="Parceiros gerenciados" />
-            <StatCard number="1.000+" label="Contas bancárias e wallets cadastradas" />
+            <StatCard number="150+" label="Usuários Free e Starter ativos" />
           </div>
         </div>
       </section>
