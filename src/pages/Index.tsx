@@ -150,7 +150,7 @@ const Index = () => {
             price="R$ 167"
             period="/mês"
             description="Para escritórios estabelecidos"
-            maxPartners="Até 25 parceiros ativos"
+            maxPartners="Até 20 parceiros ativos"
             features={[
               { text: "Tudo do Starter", included: true },
               { text: "Sistemas de entrada por estratégia", included: true },
@@ -167,7 +167,7 @@ const Index = () => {
             price="R$ 597"
             period="/mês"
             description="Para grandes operações"
-            maxPartners="25+ parceiros ativos"
+            maxPartners="20+ parceiros ativos"
             features={[
               { text: "Tudo do Pro", included: true },
               { text: "Parceiros ilimitados", included: true },
