@@ -67,7 +67,7 @@ const Index = () => {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <FeatureCard
             icon={<Users className="h-6 w-6" />}
-            title="Gestão de Parceiros"
+            title="Gestão de Parcerias"
             description="Cadastro completo de afiliados com CPF, contas bancárias, wallets e contratos personalizados."
           />
           <FeatureCard
