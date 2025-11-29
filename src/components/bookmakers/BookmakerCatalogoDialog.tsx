@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
@@ -266,42 +268,42 @@ export default function BookmakerCatalogoDialog({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="status">Status</Label>
-                <select
-                  id="status"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-                >
-                  <option value="REGULAMENTADA">Regulamentada</option>
-                  <option value="NAO_REGULAMENTADA">Não Regulamentada</option>
-                </select>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="REGULAMENTADA">Regulamentada</SelectItem>
+                    <SelectItem value="NAO_REGULAMENTADA">Não Regulamentada</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
                 <Label htmlFor="operacional">Operacional</Label>
-                <select
-                  id="operacional"
-                  value={operacional}
-                  onChange={(e) => setOperacional(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-                >
-                  <option value="ATIVA">Ativa</option>
-                  <option value="INATIVA">Inativa</option>
-                </select>
+                <Select value={operacional} onValueChange={setOperacional}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ATIVA">Ativa</SelectItem>
+                    <SelectItem value="INATIVA">Inativa</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
                 <Label htmlFor="verificacao">Verificação</Label>
-                <select
-                  id="verificacao"
-                  value={verificacao}
-                  onChange={(e) => setVerificacao(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-                >
-                  <option value="OBRIGATORIA">Obrigatória</option>
-                  <option value="QUANDO_SOLICITADO">Quando Solicitado</option>
-                  <option value="NAO_REQUERIDA">Não Requerida</option>
-                </select>
+                <Select value={verificacao} onValueChange={setVerificacao}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="OBRIGATORIA">Obrigatória</SelectItem>
+                    <SelectItem value="QUANDO_SOLICITADO">Quando Solicitado</SelectItem>
+                    <SelectItem value="NAO_REQUERIDA">Não Requerida</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -343,38 +345,36 @@ export default function BookmakerCatalogoDialog({
 
             {/* Bônus Section */}
             <div className="space-y-4 pt-4 border-t">
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="bonus-enabled" className="text-sm font-medium">Possui Bônus?</Label>
+                  <Switch
+                    id="bonus-enabled"
                     checked={bonusEnabled}
-                    onChange={(e) => {
-                      setBonusEnabled(e.target.checked);
-                      if (!e.target.checked) {
+                    onCheckedChange={(checked) => {
+                      setBonusEnabled(checked);
+                      if (!checked) {
                         setMultibonusEnabled(false);
                       }
                     }}
-                    className="w-4 h-4"
                   />
-                  <span className="text-sm font-medium">Possui Bônus?</span>
-                </label>
+                </div>
                 {bonusEnabled && (
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="multibonus-enabled" className="text-sm font-medium">Múltiplos Bônus?</Label>
+                    <Switch
+                      id="multibonus-enabled"
                       checked={multibonusEnabled}
-                      onChange={(e) => setMultibonusEnabled(e.target.checked)}
-                      className="w-4 h-4"
+                      onCheckedChange={setMultibonusEnabled}
                     />
-                    <span className="text-sm font-medium">Múltiplos Bônus?</span>
-                  </label>
+                  </div>
                 )}
               </div>
 
               {bonusEnabled && !multibonusEnabled && (
-                <div className="space-y-3 p-4 border rounded-lg bg-card">
-                  <h4 className="font-semibold text-sm">Bônus Simples</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-4 p-6 border rounded-lg bg-card/50">
+                  <h4 className="font-semibold">Configuração de Bônus Simples</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="bonus-percent">Percentual (%)</Label>
                       <Input
@@ -387,16 +387,19 @@ export default function BookmakerCatalogoDialog({
                     </div>
                     <div>
                       <Label htmlFor="bonus-moeda">Moeda</Label>
-                      <select
-                        id="bonus-moeda"
+                      <Select
                         value={bonusSimples.moeda}
-                        onChange={(e) => setBonusSimples({ ...bonusSimples, moeda: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+                        onValueChange={(value) => setBonusSimples({ ...bonusSimples, moeda: value })}
                       >
-                        <option value="BRL">BRL</option>
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                      </select>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="BRL">BRL</SelectItem>
+                          <SelectItem value="USD">USD</SelectItem>
+                          <SelectItem value="EUR">EUR</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label htmlFor="bonus-max">Valor Máximo</Label>
@@ -421,16 +424,19 @@ export default function BookmakerCatalogoDialog({
                     </div>
                     <div>
                       <Label htmlFor="bonus-tipo">Tipo de Aposta</Label>
-                      <select
-                        id="bonus-tipo"
+                      <Select
                         value={bonusSimples.tipo}
-                        onChange={(e) => setBonusSimples({ ...bonusSimples, tipo: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+                        onValueChange={(value) => setBonusSimples({ ...bonusSimples, tipo: value })}
                       >
-                        <option value="SIMPLES">Simples</option>
-                        <option value="MULTIPLA">Múltipla</option>
-                        <option value="AMBAS">Ambas</option>
-                      </select>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="SIMPLES">Simples</SelectItem>
+                          <SelectItem value="MULTIPLA">Múltipla</SelectItem>
+                          <SelectItem value="AMBAS">Ambas</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label htmlFor="bonus-rollover">Rollover (vezes)</Label>
@@ -444,15 +450,18 @@ export default function BookmakerCatalogoDialog({
                     </div>
                     <div>
                       <Label htmlFor="bonus-base">Base do Rollover</Label>
-                      <select
-                        id="bonus-base"
+                      <Select
                         value={bonusSimples.rolloverBase}
-                        onChange={(e) => setBonusSimples({ ...bonusSimples, rolloverBase: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+                        onValueChange={(value) => setBonusSimples({ ...bonusSimples, rolloverBase: value })}
                       >
-                        <option value="DEPOSITO_BONUS">Depósito + Bônus</option>
-                        <option value="BONUS">Apenas Bônus</option>
-                      </select>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="DEPOSITO_BONUS">Depósito + Bônus</SelectItem>
+                          <SelectItem value="BONUS">Apenas Bônus</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label htmlFor="bonus-prazo">Prazo (dias)</Label>
@@ -469,9 +478,9 @@ export default function BookmakerCatalogoDialog({
               )}
 
               {bonusEnabled && multibonusEnabled && (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-sm">Bônus Múltiplos (até 3)</h4>
+                    <h4 className="font-semibold">Configuração de Bônus Múltiplos (até 3)</h4>
                     {bonusMultiplos.length < 3 && (
                       <Button type="button" variant="outline" size="sm" onClick={addBonusMultiplo}>
                         <Plus className="h-4 w-4 mr-1" />
@@ -480,9 +489,9 @@ export default function BookmakerCatalogoDialog({
                     )}
                   </div>
                   {bonusMultiplos.map((bonus, index) => (
-                    <div key={index} className="space-y-3 p-4 border rounded-lg bg-card">
+                    <div key={index} className="space-y-4 p-6 border rounded-lg bg-card/50">
                       <div className="flex items-center justify-between">
-                        <h5 className="font-medium text-sm">{index + 1}º Depósito</h5>
+                        <h5 className="font-medium">{index + 1}º Depósito</h5>
                         {bonusMultiplos.length > 1 && (
                           <Button
                             type="button"
@@ -494,7 +503,7 @@ export default function BookmakerCatalogoDialog({
                           </Button>
                         )}
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <Label>Percentual (%)</Label>
                           <Input
@@ -506,15 +515,19 @@ export default function BookmakerCatalogoDialog({
                         </div>
                         <div>
                           <Label>Moeda</Label>
-                          <select
+                          <Select
                             value={bonus.moeda}
-                            onChange={(e) => updateBonusMultiplo(index, "moeda", e.target.value)}
-                            className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+                            onValueChange={(value) => updateBonusMultiplo(index, "moeda", value)}
                           >
-                            <option value="BRL">BRL</option>
-                            <option value="USD">USD</option>
-                            <option value="EUR">EUR</option>
-                          </select>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="BRL">BRL</SelectItem>
+                              <SelectItem value="USD">USD</SelectItem>
+                              <SelectItem value="EUR">EUR</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div>
                           <Label>Valor Máximo</Label>
@@ -537,15 +550,19 @@ export default function BookmakerCatalogoDialog({
                         </div>
                         <div>
                           <Label>Tipo de Aposta</Label>
-                          <select
+                          <Select
                             value={bonus.tipo}
-                            onChange={(e) => updateBonusMultiplo(index, "tipo", e.target.value)}
-                            className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+                            onValueChange={(value) => updateBonusMultiplo(index, "tipo", value)}
                           >
-                            <option value="SIMPLES">Simples</option>
-                            <option value="MULTIPLA">Múltipla</option>
-                            <option value="AMBAS">Ambas</option>
-                          </select>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="SIMPLES">Simples</SelectItem>
+                              <SelectItem value="MULTIPLA">Múltipla</SelectItem>
+                              <SelectItem value="AMBAS">Ambas</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div>
                           <Label>Rollover (vezes)</Label>
@@ -558,14 +575,18 @@ export default function BookmakerCatalogoDialog({
                         </div>
                         <div>
                           <Label>Base do Rollover</Label>
-                          <select
+                          <Select
                             value={bonus.rolloverBase}
-                            onChange={(e) => updateBonusMultiplo(index, "rolloverBase", e.target.value)}
-                            className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+                            onValueChange={(value) => updateBonusMultiplo(index, "rolloverBase", value)}
                           >
-                            <option value="DEPOSITO_BONUS">Depósito + Bônus</option>
-                            <option value="BONUS">Apenas Bônus</option>
-                          </select>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="DEPOSITO_BONUS">Depósito + Bônus</SelectItem>
+                              <SelectItem value="BONUS">Apenas Bônus</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div>
                           <Label>Prazo (dias)</Label>

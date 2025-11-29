@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, ShieldCheck, AlertTriangle } from "lucide-react";
 import BookmakerCatalogoDialog from "./BookmakerCatalogoDialog";
 
@@ -201,61 +202,65 @@ export default function CatalogoBookmakers() {
                   <label className="text-xs font-medium text-muted-foreground mb-2 block">
                     Status Regulatório
                   </label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border rounded-md bg-popover text-foreground hover:bg-accent/10 transition-colors focus:ring-2 focus:ring-primary/20 focus:outline-none"
-                  >
-                    <option value="todos">Todos</option>
-                    <option value="REGULAMENTADA">Regulamentada</option>
-                    <option value="NAO_REGULAMENTADA">Não Regulamentada</option>
-                  </select>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="REGULAMENTADA">Regulamentada</SelectItem>
+                      <SelectItem value="NAO_REGULAMENTADA">Não Regulamentada</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-2 block">
                     Status Operacional
                   </label>
-                  <select
-                    value={operacionalFilter}
-                    onChange={(e) => setOperacionalFilter(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border rounded-md bg-popover text-foreground hover:bg-accent/10 transition-colors focus:ring-2 focus:ring-primary/20 focus:outline-none"
-                  >
-                    <option value="todos">Todos</option>
-                    <option value="ATIVA">Ativa</option>
-                    <option value="INATIVA">Inativa</option>
-                  </select>
+                  <Select value={operacionalFilter} onValueChange={setOperacionalFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="ATIVA">Ativa</SelectItem>
+                      <SelectItem value="INATIVA">Inativa</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-2 block">
                     Tipo de Verificação
                   </label>
-                  <select
-                    value={verificacaoFilter}
-                    onChange={(e) => setVerificacaoFilter(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border rounded-md bg-popover text-foreground hover:bg-accent/10 transition-colors focus:ring-2 focus:ring-primary/20 focus:outline-none"
-                  >
-                    <option value="todos">Todos</option>
-                    <option value="OBRIGATORIA">Obrigatória</option>
-                    <option value="QUANDO_SOLICITADO">Quando Solicitado</option>
-                    <option value="NAO_REQUERIDA">Não Requerida</option>
-                  </select>
+                  <Select value={verificacaoFilter} onValueChange={setVerificacaoFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="OBRIGATORIA">Obrigatória</SelectItem>
+                      <SelectItem value="QUANDO_SOLICITADO">Quando Solicitado</SelectItem>
+                      <SelectItem value="NAO_REQUERIDA">Não Requerida</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-2 block">
                     Presença de Bônus
                   </label>
-                  <select
-                    value={bonusFilter}
-                    onChange={(e) => setBonusFilter(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border rounded-md bg-popover text-foreground hover:bg-accent/10 transition-colors focus:ring-2 focus:ring-primary/20 focus:outline-none"
-                  >
-                    <option value="todos">Todos</option>
-                    <option value="com_bonus">Com Bônus</option>
-                    <option value="sem_bonus">Sem Bônus</option>
-                  </select>
+                  <Select value={bonusFilter} onValueChange={setBonusFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="com_bonus">Com Bônus</SelectItem>
+                      <SelectItem value="sem_bonus">Sem Bônus</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
