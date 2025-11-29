@@ -99,10 +99,10 @@ export type Database = {
       }
       contas_bancarias: {
         Row: {
-          agencia: string
+          agencia: string | null
           banco: string
           banco_id: string | null
-          conta: string
+          conta: string | null
           created_at: string
           id: string
           observacoes: string | null
@@ -113,10 +113,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          agencia: string
+          agencia?: string | null
           banco: string
           banco_id?: string | null
-          conta: string
+          conta?: string | null
           created_at?: string
           id?: string
           observacoes?: string | null
@@ -127,10 +127,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          agencia?: string
+          agencia?: string | null
           banco?: string
           banco_id?: string | null
-          conta?: string
+          conta?: string | null
           created_at?: string
           id?: string
           observacoes?: string | null

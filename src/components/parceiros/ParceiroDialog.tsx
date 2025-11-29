@@ -110,7 +110,26 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       setCep(formatCEP(parceiro.cep || "")); // Apply mask when loading
       setStatus(parceiro.status || "ativo");
       setObservacoes(parceiro.observacoes || "");
-      setBankAccounts(parceiro.contas_bancarias || []);
+      
+      // Map bank accounts data, converting pix_key string to pix_keys array
+      const mappedAccounts = (parceiro.contas_bancarias || []).map((acc: any) => {
+        const detectPixKeyType = (key: string) => {
+          if (!key) return "";
+          if (/^\d{11}$/.test(key)) return "cpf";
+          if (/^\d{14}$/.test(key)) return "cnpj";
+          if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(key)) return "email";
+          if (/^\+?\d+$/.test(key)) return "telefone";
+          return "aleatoria";
+        };
+        
+        return {
+          ...acc,
+          pix_keys: acc.pix_key 
+            ? [{ tipo: detectPixKeyType(acc.pix_key), chave: acc.pix_key }] 
+            : [{ tipo: "", chave: "" }]
+        };
+      });
+      setBankAccounts(mappedAccounts);
       
       // Decrypt wallet observacoes when loading
       const decryptedWallets = (parceiro.wallets_crypto || []).map((wallet: any) => ({
@@ -391,7 +410,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
       for (const account of bankAccounts) {
         if (account.banco_id && account.pix_keys.some(k => k.chave)) {
-          await supabase.from("contas_bancarias").insert([{
+          const { error: insertError } = await supabase.from("contas_bancarias").insert([{
             parceiro_id: currentParceiroId,
             banco_id: account.banco_id,
             banco: bancos.find(b => b.id === account.banco_id)?.nome || "",
@@ -402,6 +421,11 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             pix_key: account.pix_keys[0]?.chave || null,
             observacoes: account.observacoes || null,
           }]);
+          
+          if (insertError) {
+            console.error("Error inserting bank account:", insertError);
+            throw insertError;
+          }
         }
       }
 
@@ -420,7 +444,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             ? btoa(unescape(encodeURIComponent(wallet.observacoes)))
             : null;
 
-          await supabase.from("wallets_crypto").insert([{
+          const { error: insertError } = await supabase.from("wallets_crypto").insert([{
             parceiro_id: currentParceiroId,
             moeda: wallet.moeda,
             endereco: wallet.endereco,
@@ -428,6 +452,11 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             rede_id: wallet.rede_id,
             observacoes_encrypted: observacoesEncrypted,
           }]);
+          
+          if (insertError) {
+            console.error("Error inserting crypto wallet:", insertError);
+            throw insertError;
+          }
         }
       }
 
@@ -598,7 +627,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         nome,
         cpf: cpf.replace(/\D/g, ""),
         email,
-        telefone: telefone.replace(/\D/g, ""),
+        telefone: telefone.replace(/[^\d+]/g, ""),
         data_nascimento: dataNascimento,
         endereco: endereco || null,
         cidade: cidade || null,
