@@ -66,7 +66,7 @@ export default {
         'glow': 'var(--shadow-glow)',
       },
       fontFamily: {
-        sans: ['Outfit', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'Outfit', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
       borderRadius: {
