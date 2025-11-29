@@ -652,15 +652,15 @@ export default function CatalogoBookmakers() {
                                   <span className="font-medium">Links:</span>
                                   {bookmaker.links_json.map((link: any, index: number) => (
                                     <span key={index} className="flex items-center gap-2">
-                                      <a
-                                        href={link.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
-                                      >
-                                        <ExternalLink className="h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                                        <span>{link.referencia || "Site Oficial"}</span>
-                                      </a>
+                                       <a
+                                         href={link.url}
+                                         target="_blank"
+                                         rel="noopener noreferrer"
+                                         className="text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group uppercase"
+                                       >
+                                         <ExternalLink className="h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                                         <span>{link.referencia || "Site Oficial"}</span>
+                                       </a>
                                       {index < bookmaker.links_json.length - 1 && (
                                         <span className="text-border">|</span>
                                       )}
