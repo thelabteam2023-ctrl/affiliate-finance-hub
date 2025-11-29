@@ -107,12 +107,9 @@ export type Database = {
           id: string
           parceiro_id: string
           pix_key: string | null
-          senha_acesso_encrypted: string | null
-          senha_transacao_encrypted: string | null
           tipo_conta: string
           titular: string
           updated_at: string
-          usar_senha_global: boolean | null
         }
         Insert: {
           agencia: string
@@ -123,12 +120,9 @@ export type Database = {
           id?: string
           parceiro_id: string
           pix_key?: string | null
-          senha_acesso_encrypted?: string | null
-          senha_transacao_encrypted?: string | null
           tipo_conta: string
           titular: string
           updated_at?: string
-          usar_senha_global?: boolean | null
         }
         Update: {
           agencia?: string
@@ -139,12 +133,9 @@ export type Database = {
           id?: string
           parceiro_id?: string
           pix_key?: string | null
-          senha_acesso_encrypted?: string | null
-          senha_transacao_encrypted?: string | null
           tipo_conta?: string
           titular?: string
           updated_at?: string
-          usar_senha_global?: boolean | null
         }
         Relationships: [
           {
@@ -175,12 +166,10 @@ export type Database = {
           id: string
           nome: string
           observacoes: string | null
-          senha_global_encrypted: string | null
           status: string
           telefone: string | null
           updated_at: string
           user_id: string
-          usuario_global: string | null
         }
         Insert: {
           cep?: string | null
@@ -193,12 +182,10 @@ export type Database = {
           id?: string
           nome: string
           observacoes?: string | null
-          senha_global_encrypted?: string | null
           status?: string
           telefone?: string | null
           updated_at?: string
           user_id: string
-          usuario_global?: string | null
         }
         Update: {
           cep?: string | null
@@ -211,12 +198,10 @@ export type Database = {
           id?: string
           nome?: string
           observacoes?: string | null
-          senha_global_encrypted?: string | null
           status?: string
           telefone?: string | null
           updated_at?: string
           user_id?: string
-          usuario_global?: string | null
         }
         Relationships: [
           {
@@ -336,9 +321,7 @@ export type Database = {
           network: string
           parceiro_id: string
           rede_id: string | null
-          senha_acesso_encrypted: string | null
           updated_at: string
-          usar_senha_global: boolean | null
         }
         Insert: {
           created_at?: string
@@ -349,9 +332,7 @@ export type Database = {
           network: string
           parceiro_id: string
           rede_id?: string | null
-          senha_acesso_encrypted?: string | null
           updated_at?: string
-          usar_senha_global?: boolean | null
         }
         Update: {
           created_at?: string
@@ -362,9 +343,7 @@ export type Database = {
           network?: string
           parceiro_id?: string
           rede_id?: string | null
-          senha_acesso_encrypted?: string | null
           updated_at?: string
-          usar_senha_global?: boolean | null
         }
         Relationships: [
           {

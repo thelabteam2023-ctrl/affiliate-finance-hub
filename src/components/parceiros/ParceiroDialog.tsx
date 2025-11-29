@@ -15,11 +15,9 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BancoSelect } from "./BancoSelect";
 import { RedeSelect } from "./RedeSelect";
-import { PasswordInput } from "./PasswordInput";
 import { PixKeyInput } from "./PixKeyInput";
 import { PhoneInput } from "./PhoneInput";
 import { validateCPF, formatCPF, formatCEP, formatAgencia, formatConta } from "@/lib/validators";
@@ -38,9 +36,6 @@ interface BankAccount {
   tipo_conta: string;
   titular: string;
   pix_keys: PixKey[];
-  senha_acesso_encrypted: string;
-  senha_transacao_encrypted: string;
-  usar_senha_global: boolean;
 }
 
 interface CryptoWallet {
@@ -49,8 +44,6 @@ interface CryptoWallet {
   endereco: string;
   rede_id: string;
   label: string;
-  senha_acesso_encrypted: string;
-  usar_senha_global: boolean;
 }
 
 interface Banco {
@@ -82,9 +75,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [endereco, setEndereco] = useState("");
   const [cidade, setCidade] = useState("");
   const [cep, setCep] = useState("");
-  const [usuarioGlobal, setUsuarioGlobal] = useState("");
-  const [senhaGlobal, setSenhaGlobal] = useState("");
-  const [showSenhaGlobal, setShowSenhaGlobal] = useState(false);
   const [status, setStatus] = useState("ativo");
   const [observacoes, setObservacoes] = useState("");
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
@@ -110,8 +100,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       setEndereco(parceiro.endereco || "");
       setCidade(parceiro.cidade || "");
       setCep(parceiro.cep || "");
-      setUsuarioGlobal(parceiro.usuario_global || "");
-      setSenhaGlobal(atob(parceiro.senha_global_encrypted || ""));
       setStatus(parceiro.status || "ativo");
       setObservacoes(parceiro.observacoes || "");
       setBankAccounts(parceiro.contas_bancarias || []);
@@ -141,8 +129,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     setEndereco("");
     setCidade("");
     setCep("");
-    setUsuarioGlobal("");
-    setSenhaGlobal("");
     setStatus("ativo");
     setObservacoes("");
     setBankAccounts([]);
@@ -153,6 +139,16 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate mandatory fields
+    if (!nome || !cpf || !dataNascimento || !email || !telefone) {
+      toast({
+        title: "Campos obrigatórios faltando",
+        description: "Por favor, preencha: Nome, CPF, Data Nascimento, Email e Telefone.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Validate CPF
     if (!validateCPF(cpf)) {
@@ -166,10 +162,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     
     // Check bank accounts validation - only mandatory fields
     for (const account of bankAccounts) {
-      if (!account.banco_id || !account.titular || !account.pix_keys.some(k => k.chave)) {
+      if (!account.banco_id || !account.tipo_conta || !account.titular || !account.pix_keys.some(k => k.chave)) {
         toast({
           title: "Campos obrigatórios faltando",
-          description: "Por favor, preencha: Banco, Titular e pelo menos uma Chave PIX.",
+          description: "Por favor, preencha em cada conta: Banco, Tipo, Titular e pelo menos uma Chave PIX.",
           variant: "destructive",
         });
         return;
@@ -190,14 +186,12 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         user_id: user.id,
         nome,
         cpf: cpf.replace(/\D/g, ""),
-        email: email || null,
-        telefone: telefone.replace(/\D/g, "") || null,
-        data_nascimento: dataNascimento || null,
+        email,
+        telefone: telefone.replace(/\D/g, ""),
+        data_nascimento: dataNascimento,
         endereco: endereco || null,
         cidade: cidade || null,
         cep: cep.replace(/\D/g, "") || null,
-        usuario_global: usuarioGlobal || null,
-        senha_global_encrypted: senhaGlobal ? btoa(senhaGlobal) : null,
         status,
         observacoes: observacoes || null,
       };
@@ -242,9 +236,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             tipo_conta: account.tipo_conta,
             titular: account.titular,
             pix_key: account.pix_keys[0]?.chave || null,
-            senha_acesso_encrypted: account.senha_acesso_encrypted ? btoa(account.senha_acesso_encrypted) : null,
-            senha_transacao_encrypted: account.senha_transacao_encrypted ? btoa(account.senha_transacao_encrypted) : null,
-            usar_senha_global: account.usar_senha_global,
           }]);
         }
       }
@@ -266,8 +257,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             network: redes.find(r => r.id === wallet.rede_id)?.nome || "",
             rede_id: wallet.rede_id,
             label: wallet.label || null,
-            senha_acesso_encrypted: wallet.senha_acesso_encrypted ? btoa(wallet.senha_acesso_encrypted) : null,
-            usar_senha_global: wallet.usar_senha_global,
           }]);
         }
       }
@@ -279,9 +268,20 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
       onClose();
     } catch (error: any) {
+      let errorMessage = error.message;
+      
+      // Check for duplicate CPF error
+      if (error.message?.includes('unique_cpf_per_user')) {
+        errorMessage = "Já existe um parceiro cadastrado com este CPF.";
+      }
+      // Check for duplicate phone error
+      if (error.message?.includes('unique_telefone_per_user')) {
+        errorMessage = "Já existe um parceiro cadastrado com este telefone.";
+      }
+      
       toast({
         title: "Erro ao salvar parceiro",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -290,7 +290,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   };
 
   const addBankAccount = () => {
-    const cleanCpf = cpf.replace(/\D/g, "");
     setBankAccounts([
       ...bankAccounts,
       { 
@@ -299,10 +298,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         conta: "", 
         tipo_conta: "corrente", 
         titular: nome, 
-        pix_keys: [{ tipo: "", chave: "" }],
-        senha_acesso_encrypted: "",
-        senha_transacao_encrypted: "",
-        usar_senha_global: false
+        pix_keys: [{ tipo: "", chave: "" }]
       },
     ]);
   };
@@ -324,9 +320,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         moeda: "USDT", 
         endereco: "", 
         rede_id: "", 
-        label: "",
-        senha_acesso_encrypted: "",
-        usar_senha_global: false
+        label: ""
       },
     ]);
   };
@@ -342,6 +336,16 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   };
 
   const savePersonalData = async () => {
+    // Validate mandatory fields
+    if (!nome || !cpf || !dataNascimento || !email || !telefone) {
+      toast({
+        title: "Campos obrigatórios faltando",
+        description: "Por favor, preencha: Nome, CPF, Data Nascimento, Email e Telefone.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Validate CPF
     if (!validateCPF(cpf)) {
       toast({
@@ -362,14 +366,12 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         user_id: user.id,
         nome,
         cpf: cpf.replace(/\D/g, ""),
-        email: email || null,
-        telefone: telefone.replace(/\D/g, "") || null,
-        data_nascimento: dataNascimento || null,
+        email,
+        telefone: telefone.replace(/\D/g, ""),
+        data_nascimento: dataNascimento,
         endereco: endereco || null,
         cidade: cidade || null,
         cep: cep.replace(/\D/g, "") || null,
-        usuario_global: usuarioGlobal || null,
-        senha_global_encrypted: senhaGlobal ? btoa(senhaGlobal) : null,
         status,
         observacoes: observacoes || null,
       };
@@ -402,9 +404,20 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       // Switch to bank accounts tab
       setActiveTab("bancos");
     } catch (error: any) {
+      let errorMessage = error.message;
+      
+      // Check for duplicate CPF error
+      if (error.message?.includes('unique_cpf_per_user')) {
+        errorMessage = "Já existe um parceiro cadastrado com este CPF.";
+      }
+      // Check for duplicate phone error
+      if (error.message?.includes('unique_telefone_per_user')) {
+        errorMessage = "Já existe um parceiro cadastrado com este telefone.";
+      }
+      
       toast({
         title: "Erro ao salvar dados pessoais",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -454,10 +467,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   />
                 </div>
                 <div>
-                  <Label htmlFor="dataNascimento">
-                    Data de Nascimento
-                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                  </Label>
+                  <Label htmlFor="dataNascimento">Data de Nascimento *</Label>
                   <DatePicker
                     value={dataNascimento}
                     onChange={setDataNascimento}
@@ -466,23 +476,18 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email">
-                    Email
-                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                  </Label>
+                  <Label htmlFor="email">Email *</Label>
                   <Input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    required
                     disabled={loading || viewMode}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="telefone">
-                    Telefone
-                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                  </Label>
+                  <Label htmlFor="telefone">Telefone *</Label>
                   <PhoneInput
                     value={telefone}
                     onChange={setTelefone}
@@ -529,31 +534,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                     disabled={loading || viewMode}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="usuarioGlobal">
-                    Usuário Global
-                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                  </Label>
-                  <Input
-                    id="usuarioGlobal"
-                    value={usuarioGlobal}
-                    onChange={(e) => setUsuarioGlobal(e.target.value)}
-                    placeholder="Usuário padrão"
-                    disabled={loading || viewMode}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="senhaGlobal">
-                    Senha Global
-                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                  </Label>
-                  <PasswordInput
-                    value={senhaGlobal}
-                    onChange={setSenhaGlobal}
-                    placeholder="Senha padrão"
-                    disabled={loading || viewMode}
-                  />
-                </div>
                 <div className="col-span-2">
                   <Label htmlFor="status" className="text-center block">Status</Label>
                   <Select value={status} onValueChange={setStatus} disabled={loading || viewMode}>
@@ -585,17 +565,9 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 <div className="flex gap-3 mt-6">
                   <Button
                     type="button"
-                    variant="outline"
-                    onClick={onClose}
-                    className="flex-1"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="button"
                     onClick={savePersonalData}
-                    disabled={loading || !nome || !cpf}
-                    className="flex-1"
+                    disabled={loading || !nome || !cpf || !dataNascimento || !email || !telefone}
+                    className="w-full"
                   >
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Salvar e Continuar
@@ -667,7 +639,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         />
                       </div>
                       <div>
-                        <Label>Tipo</Label>
+                       <Label>Tipo *</Label>
                         <Select 
                           value={account.tipo_conta} 
                           onValueChange={(value) => updateBankAccount(index, "tipo_conta", value)}
@@ -699,41 +671,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           cpf={cpf}
                           disabled={viewMode}
                         />
-                      </div>
-                      <div>
-                        <Label>
-                          Senha de Acesso
-                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                        </Label>
-                        <PasswordInput
-                          value={account.usar_senha_global ? "••••••••" : account.senha_acesso_encrypted}
-                          onChange={(value) => updateBankAccount(index, "senha_acesso_encrypted", value)}
-                          placeholder="Senha do banco"
-                          disabled={viewMode}
-                        />
-                      </div>
-                      <div>
-                        <Label>
-                          Senha de Transação
-                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                        </Label>
-                        <PasswordInput
-                          value={account.usar_senha_global ? "••••••••" : account.senha_transacao_encrypted}
-                          onChange={(value) => updateBankAccount(index, "senha_transacao_encrypted", value)}
-                          placeholder="Senha para transferências"
-                          disabled={viewMode}
-                        />
-                      </div>
-                      <div className="col-span-2 flex items-center gap-2">
-                        <Checkbox
-                          id={`usar-senha-global-${index}`}
-                          checked={account.usar_senha_global}
-                          onCheckedChange={(checked) => updateBankAccount(index, "usar_senha_global", String(checked))}
-                          disabled={viewMode}
-                        />
-                        <Label htmlFor={`usar-senha-global-${index}`} className="cursor-pointer">
-                          Usar senha padrão do parceiro
-                        </Label>
                       </div>
                     </div>
                   </CardContent>
@@ -823,29 +760,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           placeholder="Ex: Wallet principal, Wallet apostas"
                           disabled={viewMode}
                         />
-                      </div>
-                      <div className="col-span-2">
-                        <Label>
-                          Senha de Acesso
-                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                        </Label>
-                        <PasswordInput
-                          value={wallet.usar_senha_global ? "••••••••" : wallet.senha_acesso_encrypted}
-                          onChange={(value) => updateCryptoWallet(index, "senha_acesso_encrypted", value)}
-                          placeholder="Senha da wallet"
-                          disabled={viewMode}
-                        />
-                      </div>
-                      <div className="col-span-2 flex items-center gap-2">
-                        <Checkbox
-                          id={`usar-senha-global-wallet-${index}`}
-                          checked={wallet.usar_senha_global}
-                          onCheckedChange={(checked) => updateCryptoWallet(index, "usar_senha_global", String(checked))}
-                          disabled={viewMode}
-                        />
-                        <Label htmlFor={`usar-senha-global-wallet-${index}`} className="cursor-pointer">
-                          Usar senha padrão do parceiro
-                        </Label>
                       </div>
                     </div>
                   </CardContent>
