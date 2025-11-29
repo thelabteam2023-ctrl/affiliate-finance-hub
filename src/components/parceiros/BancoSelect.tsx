@@ -118,20 +118,27 @@ export function BancoSelect({ value, onValueChange, disabled }: BancoSelectProps
         </PopoverTrigger>
         <PopoverContent className="w-full p-0 bg-popover border-border" align="start">
           <Command className="bg-popover">
-            <CommandInput placeholder="Buscar banco..." className="text-center" />
+            <div className="relative">
+              <CommandInput 
+                placeholder="Buscar por nome ou código..." 
+                className="pr-14"
+              />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDialogOpen(true);
+                  setOpen(false);
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-7 px-3 rounded-lg border border-border/50 bg-background/80 text-primary hover:bg-background hover:border-primary/50 transition-all text-sm font-medium flex items-center gap-1"
+                title="Adicionar novo banco"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
             <CommandList className="bg-popover">
               <CommandEmpty>Nenhum banco encontrado.</CommandEmpty>
               <CommandGroup>
-                <CommandItem
-                  onSelect={() => {
-                    setDialogOpen(true);
-                    setOpen(false);
-                  }}
-                  className="justify-center text-center hover:bg-accent focus:bg-accent text-primary font-medium border-b border-border"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Cadastrar novo banco
-                </CommandItem>
                 {bancos.map((banco) => (
                   <CommandItem
                     key={banco.id}
