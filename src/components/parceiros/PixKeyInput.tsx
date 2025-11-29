@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
-import { formatCPF, formatCNPJ } from "@/lib/validators";
+import { formatCPF, formatCNPJ, validateCNPJ } from "@/lib/validators";
 
 interface PixKey {
   tipo: string;
@@ -31,11 +31,28 @@ export function PixKeyInput({ keys, onChange, cpf = "", disabled = false }: PixK
 
   const updateKey = (index: number, field: "tipo" | "chave", value: string) => {
     const updated = [...keys];
-    updated[index] = { ...updated[index], [field]: value };
     
-    // Se tipo for CPF, preencher automaticamente com o CPF do parceiro (formatado)
-    if (field === "tipo" && value === "cpf" && cpf) {
-      updated[index].chave = cpf;
+    if (field === "tipo") {
+      updated[index] = { ...updated[index], [field]: value };
+      
+      // Se tipo for CPF, preencher automaticamente com o CPF do parceiro (formatado)
+      if (value === "cpf" && cpf) {
+        updated[index].chave = cpf;
+      } else if (value !== updated[index].tipo) {
+        // Limpar chave ao mudar tipo
+        updated[index].chave = "";
+      }
+    } else {
+      // Para campo chave, aplicar formatação automática
+      let formattedValue = value;
+      
+      if (updated[index].tipo === "cpf") {
+        formattedValue = formatCPF(value);
+      } else if (updated[index].tipo === "cnpj") {
+        formattedValue = formatCNPJ(value);
+      }
+      
+      updated[index] = { ...updated[index], [field]: formattedValue };
     }
     
     onChange(updated);
@@ -69,8 +86,7 @@ export function PixKeyInput({ keys, onChange, cpf = "", disabled = false }: PixK
         if (cnpjClean.length !== 14) {
           return "CNPJ deve ter 14 dígitos";
         }
-        // Validação básica de CNPJ
-        if (!/^\d{14}$/.test(cnpjClean)) {
+        if (!validateCNPJ(chave)) {
           return "CNPJ inválido";
         }
         break;
@@ -124,11 +140,7 @@ export function PixKeyInput({ keys, onChange, cpf = "", disabled = false }: PixK
               </div>
               <div className="flex-1">
                 <Input
-                  value={
-                    key.tipo === "cpf" && key.chave ? formatCPF(key.chave) :
-                    key.tipo === "cnpj" && key.chave ? formatCNPJ(key.chave) :
-                    key.chave
-                  }
+                  value={key.chave}
                   onChange={(e) => updateKey(index, "chave", e.target.value)}
                   placeholder={
                     key.tipo === "email" ? "exemplo@email.com" :
@@ -139,6 +151,11 @@ export function PixKeyInput({ keys, onChange, cpf = "", disabled = false }: PixK
                   }
                   className="h-11 bg-background/50 border-border/50"
                   disabled={disabled || (key.tipo === "cpf" && !!cpf)}
+                  maxLength={
+                    key.tipo === "cpf" ? 14 :
+                    key.tipo === "cnpj" ? 18 :
+                    undefined
+                  }
                 />
               </div>
               {!disabled && (
