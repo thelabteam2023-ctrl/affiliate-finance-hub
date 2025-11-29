@@ -631,14 +631,22 @@ export default function CatalogoBookmakers() {
                               )}
                             </div>
                             <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                              <span>
-                                <span className="font-medium">Verificação:</span>{" "}
-                                {bookmaker.verificacao === "OBRIGATORIA" 
-                                  ? "Obrigatória" 
-                                  : bookmaker.verificacao === "QUANDO_SOLICITADO"
-                                  ? "Quando Solicitado"
-                                  : "Não Requerida"}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">Verificação:</span>
+                                <span className={`font-medium uppercase ${
+                                  bookmaker.verificacao === "OBRIGATORIA" 
+                                    ? "text-red-500 text-sm" 
+                                    : bookmaker.verificacao === "QUANDO_SOLICITADO"
+                                    ? "text-amber-500 text-[10px]"
+                                    : "text-emerald-500 text-sm"
+                                }`}>
+                                  {bookmaker.verificacao === "OBRIGATORIA" 
+                                    ? "OBRIGATÓRIA" 
+                                    : bookmaker.verificacao === "QUANDO_SOLICITADO"
+                                    ? "QUANDO SOLICITADO"
+                                    : "NÃO REQUERIDA"}
+                                </span>
+                              </div>
                               {bookmaker.links_json && Array.isArray(bookmaker.links_json) && bookmaker.links_json.length > 0 && (
                                 <div className="flex items-center gap-2 text-xs flex-wrap">
                                   <span className="font-medium">Links:</span>
