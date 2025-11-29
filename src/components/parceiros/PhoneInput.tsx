@@ -10,6 +10,12 @@ interface PhoneInputProps {
 
 const countries = [
   { code: "+55", name: "Brasil", flag: "🇧🇷", mask: "(00) 00000-0000" },
+  { code: "+54", name: "Argentina", flag: "🇦🇷", mask: "0 0000-0000" },
+  { code: "+56", name: "Chile", flag: "🇨🇱", mask: "0 0000 0000" },
+  { code: "+51", name: "Peru", flag: "🇵🇪", mask: "000 000 000" },
+  { code: "+52", name: "México", flag: "🇲🇽", mask: "00 0000 0000" },
+  { code: "+591", name: "Bolívia", flag: "🇧🇴", mask: "0 000 0000" },
+  { code: "+57", name: "Colômbia", flag: "🇨🇴", mask: "000 000 0000" },
   { code: "+1", name: "Estados Unidos", flag: "🇺🇸", mask: "(000) 000-0000" },
   { code: "+34", name: "Espanha", flag: "🇪🇸", mask: "000 00 00 00" },
   { code: "+351", name: "Portugal", flag: "🇵🇹", mask: "000 000 000" },
