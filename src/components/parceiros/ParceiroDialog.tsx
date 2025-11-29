@@ -119,41 +119,54 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     const checkCpf = async () => {
       const cleanCpf = cpf.replace(/\D/g, "");
       
-      // Only check if CPF is complete and valid format
-      if (cleanCpf.length !== 11 || !validateCPF(cpf)) {
+      // Check if empty or incomplete
+      if (cleanCpf.length === 0) {
         setCpfError("");
         return;
       }
-
-      setCheckingCpf(true);
-      setCpfError("");
-
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        let query = supabase
-          .from("parceiros")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("cpf", cleanCpf);
-
-        // Exclude current parceiro if editing
-        if (parceiroId || parceiro?.id) {
-          query = query.neq("id", parceiroId || parceiro?.id);
+      
+      // Check if complete (11 digits)
+      if (cleanCpf.length === 11) {
+        // Validate CPF format
+        if (!validateCPF(cpf)) {
+          setCpfError("CPF inválido");
+          return;
         }
 
-        const { data, error } = await query;
+        // Check for duplicate
+        setCheckingCpf(true);
+        setCpfError("");
 
-        if (error) throw error;
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
 
-        if (data && data.length > 0) {
-          setCpfError("CPF já cadastrado");
+          let query = supabase
+            .from("parceiros")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("cpf", cleanCpf);
+
+          // Exclude current parceiro if editing
+          if (parceiroId || parceiro?.id) {
+            query = query.neq("id", parceiroId || parceiro?.id);
+          }
+
+          const { data, error } = await query;
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            setCpfError("CPF já cadastrado");
+          }
+        } catch (error) {
+          console.error("Error checking CPF:", error);
+        } finally {
+          setCheckingCpf(false);
         }
-      } catch (error) {
-        console.error("Error checking CPF:", error);
-      } finally {
-        setCheckingCpf(false);
+      } else {
+        // Incomplete CPF, clear error
+        setCpfError("");
       }
     };
 
