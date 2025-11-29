@@ -140,7 +140,7 @@ export default function BookmakerCatalogoDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {bookmaker ? "Editar Casa" : "Nova Casa no Catálogo"}
+            {bookmaker ? "Editar Bookmaker" : "Novo Bookmaker"}
           </DialogTitle>
         </DialogHeader>
 

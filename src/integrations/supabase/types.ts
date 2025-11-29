@@ -104,6 +104,7 @@ export type Database = {
           bonus_simples_json: Json | null
           created_at: string
           id: string
+          is_system: boolean | null
           links_json: Json | null
           logo_url: string | null
           multibonus_enabled: boolean
@@ -121,6 +122,7 @@ export type Database = {
           bonus_simples_json?: Json | null
           created_at?: string
           id?: string
+          is_system?: boolean | null
           links_json?: Json | null
           logo_url?: string | null
           multibonus_enabled?: boolean
@@ -138,6 +140,7 @@ export type Database = {
           bonus_simples_json?: Json | null
           created_at?: string
           id?: string
+          is_system?: boolean | null
           links_json?: Json | null
           logo_url?: string | null
           multibonus_enabled?: boolean

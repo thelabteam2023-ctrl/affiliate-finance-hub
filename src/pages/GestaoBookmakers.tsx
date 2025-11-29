@@ -188,7 +188,7 @@ export default function GestaoBookmakers() {
           <div>
             <h1 className="text-4xl font-bold">Gestão de Bookmakers</h1>
             <p className="text-muted-foreground mt-2">
-              Catálogo de casas disponíveis e gerenciamento de contas
+              Bookmakers disponíveis e vínculos gerenciados
             </p>
           </div>
         </div>
@@ -197,11 +197,11 @@ export default function GestaoBookmakers() {
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="catalogo" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
-              Catálogo
+              Bookmakers
             </TabsTrigger>
             <TabsTrigger value="contas" className="flex items-center gap-2">
               <Wallet className="h-4 w-4" />
-              Contas
+              Vínculos
             </TabsTrigger>
           </TabsList>
 
@@ -289,7 +289,7 @@ export default function GestaoBookmakers() {
               </Button>
               <Button onClick={() => setDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                Novo Bookmaker
+                + Novo Vínculo
               </Button>
             </div>
               </CardContent>
@@ -300,7 +300,7 @@ export default function GestaoBookmakers() {
               <Card>
                 <CardContent className="py-12 text-center">
                   <p className="text-muted-foreground">
-                    Nenhuma conta encontrada. Clique em "Novo Bookmaker" para adicionar.
+                    Nenhum vínculo encontrado. Clique em "+ Novo Vínculo" para adicionar.
                   </p>
                 </CardContent>
               </Card>
