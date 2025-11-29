@@ -53,7 +53,7 @@ export function DatePicker({ value, onChange, disabled, placeholder = "Selecione
         <Button
           variant="outline"
           className={cn(
-            "w-full justify-start text-left font-normal h-10 border border-input bg-accent/20 hover:bg-accent/30 focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-0 focus-visible:border-primary transition-all",
+            "w-full justify-start text-left font-normal h-10 border border-input bg-background hover:bg-accent/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all",
             !date && "text-muted-foreground"
           )}
           disabled={disabled}
@@ -62,7 +62,7 @@ export function DatePicker({ value, onChange, disabled, placeholder = "Selecione
           {date ? format(date, "dd/MM/yyyy", { locale: ptBR }) : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0 bg-accent/20 backdrop-blur-sm border-border" align="start">
         <Calendar
           mode="single"
           selected={date}
