@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2, User, Landmark, Wallet } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -585,10 +585,19 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
         <form onSubmit={handleSubmit}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="dados">Dados Pessoais</TabsTrigger>
-              <TabsTrigger value="bancos" disabled={!parceiroId && !parceiro}>Contas Bancárias</TabsTrigger>
-              <TabsTrigger value="crypto" disabled={!parceiroId && !parceiro}>Wallets Crypto</TabsTrigger>
+            <TabsList className="w-full">
+              <TabsTrigger value="dados">
+                <User className="w-4 h-4" />
+                Dados Pessoais
+              </TabsTrigger>
+              <TabsTrigger value="bancos" disabled={!parceiroId && !parceiro}>
+                <Landmark className="w-4 h-4" />
+                Contas Bancárias
+              </TabsTrigger>
+              <TabsTrigger value="crypto" disabled={!parceiroId && !parceiro}>
+                <Wallet className="w-4 h-4" />
+                Wallets Crypto
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="dados" className="space-y-4">
