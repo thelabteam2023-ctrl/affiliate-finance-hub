@@ -45,9 +45,16 @@ export default function Auth() {
       });
       setShowPasswordReset(false);
     } catch (error: any) {
+      let errorMessage = error.message;
+      
+      // Traduzir erros comuns do Supabase para português
+      if (error.message.includes("Invalid")) {
+        errorMessage = "Email inválido ou não encontrado";
+      }
+      
       toast({
         title: "Erro",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -94,9 +101,20 @@ export default function Auth() {
         setIsLogin(true);
       }
     } catch (error: any) {
+      let errorMessage = error.message;
+      
+      // Traduzir erros comuns do Supabase para português
+      if (error.message.includes("Invalid login credentials")) {
+        errorMessage = "Credenciais inválidas";
+      } else if (error.message.includes("Email not confirmed")) {
+        errorMessage = "Email não confirmado";
+      } else if (error.message.includes("User already registered")) {
+        errorMessage = "Usuário já cadastrado";
+      }
+      
       toast({
         title: "Erro",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
