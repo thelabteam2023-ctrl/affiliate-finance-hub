@@ -478,12 +478,12 @@ export default function CatalogoBookmakers() {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">Verificação:</span>
-                          <span className={`text-sm font-medium uppercase ${
+                          <span className={`font-medium uppercase ${
                             bookmaker.verificacao === "OBRIGATORIA" 
-                              ? "text-red-500" 
+                              ? "text-red-500 text-sm" 
                               : bookmaker.verificacao === "QUANDO_SOLICITADO"
-                              ? "text-amber-500"
-                              : "text-emerald-500"
+                              ? "text-amber-500 text-[10px]"
+                              : "text-emerald-500 text-sm"
                           }`}>
                             {bookmaker.verificacao === "OBRIGATORIA" 
                               ? "OBRIGATÓRIA" 
