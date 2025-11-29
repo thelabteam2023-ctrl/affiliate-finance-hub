@@ -281,14 +281,17 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       return;
     }
     
-    // Validate mandatory fields
-    if (!nome || !cpf || !dataNascimento || !email || !telefone) {
-      toast({
-        title: "Campos obrigatórios faltando",
-        description: "Por favor, preencha: Nome, CPF, Data Nascimento, Email e Telefone.",
-        variant: "destructive",
-      });
-      return;
+    // Validate mandatory fields only for new parceiros or when on personal data tab
+    const isNewParceiro = !parceiroId && !parceiro;
+    if (isNewParceiro || activeTab === "dados") {
+      if (!nome || !cpf || !dataNascimento || !email || !telefone) {
+        toast({
+          title: "Campos obrigatórios faltando",
+          description: "Por favor, preencha: Nome, CPF, Data Nascimento, Email e Telefone.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
     
     // Validate CPF
@@ -917,7 +920,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           disabled={viewMode}
                         />
                       </div>
-                      <div>
+                      <div className="col-span-2">
                         <Label className="text-center block">Network *</Label>
                         <RedeSelect
                           value={wallet.rede_id}
