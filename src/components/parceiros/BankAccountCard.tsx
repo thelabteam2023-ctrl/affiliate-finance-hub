@@ -80,7 +80,7 @@ export function BankAccountCard({ account }: BankAccountCardProps) {
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wider">Chave PIX</p>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs uppercase">
                   {pixKey.tipo}
                 </Badge>
                 <p 

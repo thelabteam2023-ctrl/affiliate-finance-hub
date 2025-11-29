@@ -48,8 +48,8 @@ export function CryptoWalletCard({ wallet }: CryptoWalletCardProps) {
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <Wallet className="w-5 h-5 text-primary" />
             </div>
-            <h3 className="font-semibold text-foreground uppercase">
-              {wallet.exchange || "Wallet"}
+            <h3 className="font-semibold text-foreground">
+              {wallet.exchange}
             </h3>
           </div>
           <Badge variant="outline" className="bg-accent/20 text-accent-foreground uppercase text-xs">
