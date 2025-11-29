@@ -23,6 +23,19 @@ export function DatePicker({ value, onChange, disabled, placeholder = "Selecione
     value ? new Date(value) : undefined
   );
 
+  // Sync internal state when value prop changes (fixes view mode loading issue)
+  React.useEffect(() => {
+    if (value) {
+      const parsedDate = new Date(value);
+      // Only update if the date is valid
+      if (!isNaN(parsedDate.getTime())) {
+        setDate(parsedDate);
+      }
+    } else {
+      setDate(undefined);
+    }
+  }, [value]);
+
   const handleSelect = (selectedDate: Date | undefined) => {
     setDate(selectedDate);
     if (selectedDate) {
