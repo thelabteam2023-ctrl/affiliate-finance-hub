@@ -345,26 +345,9 @@ export default function CatalogoBookmakers() {
             {filteredBookmakers.map((bookmaker) => (
               <Card key={bookmaker.id} className="hover:shadow-lg transition-shadow relative">
                 <CardHeader className="pb-3">
-                  {/* Logo, Nome, Ícone de Verificação e Gift - tudo na mesma linha */}
+                  {/* Ícone de Verificação, Logo, Nome e Gift - tudo na mesma linha */}
                   <div className="flex items-center gap-3">
-                    {/* Logo pequeno ao lado do nome */}
-                    {bookmaker.logo_url && (
-                      <img
-                        src={bookmaker.logo_url}
-                        alt={bookmaker.nome}
-                        className="h-8 w-8 object-contain flex-shrink-0"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    )}
-                    
-                    {/* Nome com fonte menor */}
-                    <CardTitle className="text-sm font-semibold flex-1 truncate">
-                      {bookmaker.nome}
-                    </CardTitle>
-                    
-                    {/* Ícone de verificação */}
+                    {/* Ícone de verificação à esquerda */}
                     <TooltipProvider>
                       {bookmaker.status === "REGULAMENTADA" ? (
                         <Tooltip>
@@ -391,7 +374,24 @@ export default function CatalogoBookmakers() {
                       )}
                     </TooltipProvider>
                     
-                    {/* Ícone de Gift na mesma linha */}
+                    {/* Logo maior ao lado do nome */}
+                    {bookmaker.logo_url && (
+                      <img
+                        src={bookmaker.logo_url}
+                        alt={bookmaker.nome}
+                        className="h-12 w-12 object-contain flex-shrink-0"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    )}
+                    
+                    {/* Nome com fonte menor */}
+                    <CardTitle className="text-sm font-semibold flex-1 truncate">
+                      {bookmaker.nome}
+                    </CardTitle>
+                    
+                    {/* Ícone de Gift na mesma linha à direita */}
                     {bookmaker.bonus_enabled && (
                       <TooltipProvider>
                         <Tooltip>
