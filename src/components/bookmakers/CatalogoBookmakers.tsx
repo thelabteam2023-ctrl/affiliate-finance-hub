@@ -620,7 +620,7 @@ export default function CatalogoBookmakers() {
                                 </TooltipProvider>
                               )}
                             </div>
-                            <div className="flex flex-col gap-0.5 text-sm text-muted-foreground">
+                            <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                               <span>
                                 <span className="font-medium">Verificação:</span>{" "}
                                 {bookmaker.verificacao === "OBRIGATORIA" 
@@ -630,9 +630,25 @@ export default function CatalogoBookmakers() {
                                   : "Não Requerida"}
                               </span>
                               {bookmaker.links_json && Array.isArray(bookmaker.links_json) && bookmaker.links_json.length > 0 && (
-                                <span className="text-xs">
-                                  <span className="font-medium">Links:</span> {bookmaker.links_json.length} disponíve{bookmaker.links_json.length > 1 ? 'is' : 'l'}
-                                </span>
+                                <div className="flex items-center gap-2 text-xs flex-wrap">
+                                  <span className="font-medium">Links:</span>
+                                  {bookmaker.links_json.map((link: any, index: number) => (
+                                    <span key={index} className="flex items-center gap-2">
+                                      <a
+                                        href={link.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
+                                      >
+                                        <ExternalLink className="h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                                        <span>{link.referencia || "Site Oficial"}</span>
+                                      </a>
+                                      {index < bookmaker.links_json.length - 1 && (
+                                        <span className="text-border">|</span>
+                                      )}
+                                    </span>
+                                  ))}
+                                </div>
                               )}
                             </div>
                           </div>
