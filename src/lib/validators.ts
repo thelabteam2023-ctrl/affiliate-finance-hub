@@ -67,3 +67,39 @@ export function formatConta(conta: string): string {
   conta = conta.replace(/[^\d-]/g, "");
   return conta;
 }
+
+/**
+ * Formata telefone com DDI para exibição (55) 11 99999-9999
+ */
+export function formatPhoneDisplay(phone: string): string {
+  if (!phone) return "";
+  const cleaned = phone.replace(/\D/g, "");
+  
+  // Extract DDI (first 1-3 digits)
+  const ddi = cleaned.slice(0, 2);
+  const rest = cleaned.slice(2);
+  
+  // Format: (DDI) XX XXXXX-XXXX or (DDI) XX XXXX-XXXX
+  if (rest.length === 11) {
+    return `(${ddi}) ${rest.slice(0, 2)} ${rest.slice(2, 7)}-${rest.slice(7)}`;
+  } else if (rest.length === 10) {
+    return `(${ddi}) ${rest.slice(0, 2)} ${rest.slice(2, 6)}-${rest.slice(6)}`;
+  }
+  
+  return phone;
+}
+
+/**
+ * Mascara CPF parcialmente (***XXX***-**)
+ */
+export function maskCPFPartial(cpf: string): string {
+  const formatted = formatCPF(cpf);
+  return formatted.replace(/(\d{3})\.(\d{3})\.(\d{3})-(\d{2})/, "•••.$2.•••-••");
+}
+
+/**
+ * Mascara senha com bullets
+ */
+export function maskPassword(password: string): string {
+  return "•".repeat(password.length || 8);
+}

@@ -10,6 +10,7 @@ import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2, LayoutGrid, List } fro
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Header from "@/components/Header";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
+import { formatCPF, maskCPFPartial } from "@/lib/validators";
 
 interface Parceiro {
   id: string;
@@ -122,8 +123,8 @@ export default function GestaoParceiros() {
   };
 
   const maskCPF = (cpf: string) => {
-    if (showCPF) return cpf;
-    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "***.$2.***-**");
+    if (showCPF) return formatCPF(cpf);
+    return maskCPFPartial(cpf);
   };
 
   const filteredParceiros = parceiros.filter((parceiro) => {
@@ -284,54 +285,31 @@ export default function GestaoParceiros() {
                       onClick={() => handleView(parceiro)}
                       title="Clique para ver detalhes completos"
                     >
-                      <div className="relative">
-                        <svg width="40" height="40" viewBox="0 0 40 40" className="transition-transform group-hover:scale-110">
-                          <circle
-                            cx="20"
-                            cy="20"
-                            r="18"
-                            fill={parceiro.status === "ativo" ? "hsl(142 76% 36%)" : "hsl(0 72% 51%)"}
-                            opacity="0.2"
-                          />
-                          <circle
-                            cx="20"
-                            cy="20"
-                            r="14"
-                            fill={parceiro.status === "ativo" ? "hsl(142 76% 36%)" : "hsl(0 72% 51%)"}
-                            className="animate-pulse"
-                          />
-                          <circle
-                            cx="20"
-                            cy="20"
-                            r="8"
-                            fill={parceiro.status === "ativo" ? "hsl(142 90% 98%)" : "hsl(0 0% 100%)"}
-                          />
-                        </svg>
+                      <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center overflow-hidden border-2 border-primary/30 group-hover:border-primary/60 transition-all">
+                        <span className="text-lg font-bold text-primary">
+                          {parceiro.nome.charAt(0).toUpperCase()}
+                        </span>
                       </div>
                       <div>
                         <CardTitle className="text-xl group-hover:text-primary transition-colors">{parceiro.nome}</CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          CPF: {maskCPF(parceiro.cpf)}
+                        <p className="text-sm text-muted-foreground mt-1 font-mono">
+                          {maskCPF(parceiro.cpf)}
                         </p>
                       </div>
                     </div>
                     <Badge
                       variant={parceiro.status === "ativo" ? "default" : "secondary"}
                     >
-                      {parceiro.status}
+                      {parceiro.status.toUpperCase()}
                     </Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-sm">
                     {parceiro.email && (
-                      <p className="text-muted-foreground">
-                        <span className="font-medium">Email:</span> {parceiro.email}
-                      </p>
-                    )}
-                    {parceiro.telefone && (
-                      <p className="text-muted-foreground">
-                        <span className="font-medium">Telefone:</span> {parceiro.telefone}
+                      <p className="text-muted-foreground flex items-center gap-2">
+                        <span className="font-medium">Email:</span> 
+                        <span className="truncate">{parceiro.email}</span>
                       </p>
                     )}
                     <div className="pt-4 border-t">
@@ -381,25 +359,11 @@ export default function GestaoParceiros() {
                         onClick={() => handleView(parceiro)}
                       >
                         <div className="flex items-center gap-3">
-                          <svg width="36" height="36" viewBox="0 0 40 40">
-                            <circle
-                              cx="20"
-                              cy="20"
-                              r="18"
-                              fill={parceiro.status === "ativo" ? "hsl(142 76% 36%)" : "hsl(0 72% 51%)"}
-                              opacity="0.2"
-                            />
-                            <circle
-                              cx="20"
-                              cy="20"
-                              r="12"
-                              fill={parceiro.status === "ativo" ? "hsl(142 76% 36%)" : "hsl(0 72% 51%)"}
-                            />
-                            <path
-                              d="M 20 14 A 4 4 0 0 0 20 22 A 4 4 0 0 0 20 14 M 12 28 Q 12 24 20 24 T 28 28"
-                              fill={parceiro.status === "ativo" ? "hsl(142 90% 98%)" : "hsl(0 0% 100%)"}
-                            />
-                          </svg>
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-2 border-primary/30">
+                          <span className="text-sm font-bold text-primary">
+                            {parceiro.nome.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <h3 className="font-semibold text-lg">{parceiro.nome}</h3>
@@ -408,9 +372,8 @@ export default function GestaoParceiros() {
                               </Badge>
                             </div>
                             <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
-                              <span>CPF: {maskCPF(parceiro.cpf)}</span>
-                              {parceiro.email && <span>Email: {parceiro.email}</span>}
-                              {parceiro.telefone && <span>Tel: {parceiro.telefone}</span>}
+                              <span className="font-mono">{maskCPF(parceiro.cpf)}</span>
+                              {parceiro.email && <span className="truncate max-w-[200px]">{parceiro.email}</span>}
                             </div>
                           </div>
                         </div>
