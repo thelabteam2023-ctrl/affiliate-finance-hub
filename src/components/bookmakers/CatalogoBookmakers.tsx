@@ -343,11 +343,35 @@ export default function CatalogoBookmakers() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredBookmakers.map((bookmaker) => (
-              <Card key={bookmaker.id} className="hover:shadow-lg transition-shadow relative">
+              <Card 
+                key={bookmaker.id} 
+                className={`hover:shadow-lg transition-shadow relative border-2 ${
+                  bookmaker.operacional === "ATIVA" 
+                    ? "border-emerald-500/50" 
+                    : "border-warning/50"
+                }`}
+              >
                 <CardHeader className="pb-3">
-                  {/* Ícone de Verificação, Logo, Nome e Gift - tudo na mesma linha */}
+                  {/* Logo, Nome, Ícone de Verificação e Gift - tudo na mesma linha */}
                   <div className="flex items-center gap-3">
-                    {/* Ícone de verificação à esquerda */}
+                    {/* Logo 14x14 */}
+                    {bookmaker.logo_url && (
+                      <img
+                        src={bookmaker.logo_url}
+                        alt={bookmaker.nome}
+                        className="h-14 w-14 object-contain flex-shrink-0"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    )}
+                    
+                    {/* Nome com fonte menor */}
+                    <CardTitle className="text-sm font-semibold truncate">
+                      {bookmaker.nome}
+                    </CardTitle>
+                    
+                    {/* Ícone de verificação à direita do nome */}
                     <TooltipProvider>
                       {bookmaker.status === "REGULAMENTADA" ? (
                         <Tooltip>
@@ -374,24 +398,7 @@ export default function CatalogoBookmakers() {
                       )}
                     </TooltipProvider>
                     
-                    {/* Logo maior ao lado do nome */}
-                    {bookmaker.logo_url && (
-                      <img
-                        src={bookmaker.logo_url}
-                        alt={bookmaker.nome}
-                        className="h-12 w-12 object-contain flex-shrink-0"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    )}
-                    
-                    {/* Nome com fonte menor */}
-                    <CardTitle className="text-sm font-semibold flex-1 truncate">
-                      {bookmaker.nome}
-                    </CardTitle>
-                    
-                    {/* Ícone de Gift na mesma linha à direita */}
+                    {/* Ícone de Gift no final da linha */}
                     {bookmaker.bonus_enabled && (
                       <TooltipProvider>
                         <Tooltip>
@@ -401,7 +408,7 @@ export default function CatalogoBookmakers() {
                                 e.stopPropagation();
                                 handleBonusClick(bookmaker);
                               }}
-                              className="cursor-pointer hover:scale-110 transition-transform flex-shrink-0"
+                              className="cursor-pointer hover:scale-110 transition-transform flex-shrink-0 ml-auto"
                             >
                               <Gift className="h-5 w-5 text-primary" />
                             </button>
@@ -417,12 +424,6 @@ export default function CatalogoBookmakers() {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Operacional:</span>
-                        <Badge variant={bookmaker.operacional === "ATIVA" ? "default" : "destructive"}>
-                          {bookmaker.operacional === "ATIVA" ? "Ativa" : "Inativa"}
-                        </Badge>
-                      </div>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Verificação:</span>
                         <Badge variant="outline">
