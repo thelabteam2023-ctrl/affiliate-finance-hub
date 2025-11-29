@@ -302,7 +302,12 @@ export default function GestaoParceiros() {
         ) : viewType === "cards" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredParceiros.map((parceiro) => (
-              <Card key={parceiro.id} className="hover:shadow-lg transition-shadow relative">
+              <Card 
+                key={parceiro.id} 
+                className={`hover:shadow-lg transition-shadow relative ${
+                  parceiro.status === "inativo" ? "bg-warning/10 border-warning/30" : ""
+                }`}
+              >
                 <CardHeader>
                   <div className="flex justify-between items-start gap-3">
                     <div 
@@ -329,6 +334,7 @@ export default function GestaoParceiros() {
                     </div>
                     <Badge
                       variant={parceiro.status === "ativo" ? "default" : "secondary"}
+                      className={parceiro.status === "inativo" ? "bg-warning/20 text-warning border-warning/30" : ""}
                     >
                       {parceiro.status.toUpperCase()}
                     </Badge>
@@ -374,7 +380,14 @@ export default function GestaoParceiros() {
             <CardContent className="p-0">
               <div className="divide-y divide-border">
                 {filteredParceiros.map((parceiro) => (
-                  <div key={parceiro.id} className="p-4 hover:bg-accent/50 transition-colors">
+                  <div 
+                    key={parceiro.id} 
+                    className={`p-4 transition-colors ${
+                      parceiro.status === "inativo" 
+                        ? "bg-warning/5 hover:bg-warning/10" 
+                        : "hover:bg-accent/50"
+                    }`}
+                  >
                     <div className="flex items-center gap-4">
                       <div 
                         className="flex-1 cursor-pointer"
@@ -389,7 +402,10 @@ export default function GestaoParceiros() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <h3 className="font-semibold text-base">{parceiro.nome}</h3>
-                              <Badge variant={parceiro.status === "ativo" ? "default" : "secondary"} className="text-xs">
+                              <Badge 
+                                variant={parceiro.status === "ativo" ? "default" : "secondary"} 
+                                className={`text-xs ${parceiro.status === "inativo" ? "bg-warning/20 text-warning border-warning/30" : ""}`}
+                              >
                                 {parceiro.status}
                               </Badge>
                             </div>
