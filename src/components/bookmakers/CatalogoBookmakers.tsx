@@ -117,6 +117,15 @@ export default function CatalogoBookmakers() {
     return currencies[moeda] || moeda;
   };
 
+  const formatRolloverBase = (rolloverBase: string) => {
+    const bases: { [key: string]: string } = {
+      "DEPOSITO_BONUS": "Depósito + Bônus",
+      "APENAS_BONUS": "Apenas Bônus",
+      "DEPOSITO": "Depósito",
+    };
+    return bases[rolloverBase] || rolloverBase;
+  };
+
   const clearAllFilters = () => {
     setSearchTerm("");
     setStatusFilter("todos");
@@ -336,68 +345,72 @@ export default function CatalogoBookmakers() {
             {filteredBookmakers.map((bookmaker) => (
               <Card key={bookmaker.id} className="hover:shadow-lg transition-shadow relative">
                 <CardHeader className="pb-3">
+                  {/* Nome com ícone de verificação ao lado */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <CardTitle className="text-lg">{bookmaker.nome}</CardTitle>
+                    <TooltipProvider>
+                      {bookmaker.status === "REGULAMENTADA" ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="cursor-default">
+                              <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Casa Regulamentada</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="cursor-default">
+                              <AlertTriangle className="h-5 w-5 text-amber-500" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Casa Não Regulamentada</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </TooltipProvider>
+                  </div>
+
+                  {/* Logo e ícone de Gift */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
                       {bookmaker.logo_url ? (
                         <img
                           src={bookmaker.logo_url}
                           alt={bookmaker.nome}
-                          className="h-12 w-auto object-contain mb-2"
+                          className="h-12 w-auto object-contain"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none';
                           }}
                         />
                       ) : null}
-                      <CardTitle className="text-lg">{bookmaker.nome}</CardTitle>
                     </div>
                     
-                    {/* Ícones no canto superior direito */}
-                    <TooltipProvider>
-                      <div className="flex gap-2">
-                        {bookmaker.status === "REGULAMENTADA" ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="cursor-default">
-                                <ShieldCheck className="h-5 w-5 text-emerald-500" />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Casa Regulamentada</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="cursor-default">
-                                <AlertTriangle className="h-5 w-5 text-amber-500" />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Casa Não Regulamentada</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        
-                        {bookmaker.bonus_enabled && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleBonusClick(bookmaker);
-                                }}
-                                className="cursor-pointer hover:scale-110 transition-transform"
-                              >
-                                <Gift className="h-5 w-5 text-primary" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Ver Detalhes do Bônus</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                      </div>
-                    </TooltipProvider>
+                    {/* Ícone de Gift no canto superior direito */}
+                    {bookmaker.bonus_enabled && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleBonusClick(bookmaker);
+                              }}
+                              className="cursor-pointer hover:scale-110 transition-transform"
+                            >
+                              <Gift className="h-5 w-5 text-primary" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Ver Detalhes do Bônus</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -515,7 +528,7 @@ export default function CatalogoBookmakers() {
                     <div>
                       <p className="text-sm text-muted-foreground">Rollover</p>
                       <p className="text-lg font-semibold">
-                        {selectedBonusBookmaker.bonus_simples_json.rolloverVezes}x sobre {selectedBonusBookmaker.bonus_simples_json.rolloverBase}
+                        {selectedBonusBookmaker.bonus_simples_json.rolloverVezes}x sobre {formatRolloverBase(selectedBonusBookmaker.bonus_simples_json.rolloverBase)}
                       </p>
                     </div>
                     <div>
@@ -558,7 +571,7 @@ export default function CatalogoBookmakers() {
                         <div className="col-span-2">
                           <p className="text-muted-foreground">Rollover</p>
                           <p className="font-medium">
-                            {bonus.rolloverVezes}x sobre {bonus.rolloverBase}
+                            {bonus.rolloverVezes}x sobre {formatRolloverBase(bonus.rolloverBase)}
                           </p>
                         </div>
                       </div>
