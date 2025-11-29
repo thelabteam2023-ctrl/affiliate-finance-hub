@@ -23,6 +23,7 @@ import { PasswordInput } from "./PasswordInput";
 import { PixKeyInput } from "./PixKeyInput";
 import { PhoneInput } from "./PhoneInput";
 import { validateCPF, formatCPF, formatCEP, formatAgencia, formatConta } from "@/lib/validators";
+import { DatePicker } from "@/components/ui/date-picker";
 
 interface PixKey {
   tipo: string;
@@ -454,12 +455,11 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 </div>
                 <div>
                   <Label htmlFor="dataNascimento">Data de Nascimento</Label>
-                  <Input
-                    id="dataNascimento"
-                    type="date"
+                  <DatePicker
                     value={dataNascimento}
-                    onChange={(e) => setDataNascimento(e.target.value)}
+                    onChange={setDataNascimento}
                     disabled={loading || viewMode}
+                    placeholder="Selecione a data"
                   />
                 </div>
                 <div>
@@ -805,10 +805,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               {viewMode ? "Fechar" : "Cancelar"}
             </Button>
-            {!viewMode && (
+            {!viewMode && (parceiro || parceiroId) && (
               <Button type="submit" disabled={loading} className="flex-1">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {parceiro ? "Atualizar" : "Criar"} Parceiro
+                Salvar Alterações
               </Button>
             )}
           </div>
