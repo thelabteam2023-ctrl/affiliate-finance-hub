@@ -11,14 +11,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { BancoSelect } from "./BancoSelect";
 import { RedeSelect } from "./RedeSelect";
 import { PasswordInput } from "./PasswordInput";
+import { PixKeyInput } from "./PixKeyInput";
+
+interface PixKey {
+  tipo: string;
+  chave: string;
+}
 
 interface BankAccount {
   id?: string;
@@ -27,7 +35,7 @@ interface BankAccount {
   conta: string;
   tipo_conta: string;
   titular: string;
-  pix_key: string;
+  pix_keys: PixKey[];
   senha_acesso_encrypted: string;
   senha_transacao_encrypted: string;
   usar_senha_global: boolean;
@@ -81,6 +89,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [cryptoWallets, setCryptoWallets] = useState<CryptoWallet[]>([]);
   const [bancos, setBancos] = useState<Banco[]>([]);
   const [redes, setRedes] = useState<RedeCrypto[]>([]);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [missingFields, setMissingFields] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -156,6 +166,34 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields and collect missing optional fields
+    const missing: string[] = [];
+    
+    // Check bank accounts validation
+    for (const account of bankAccounts) {
+      if (!account.banco_id) missing.push("Banco");
+      if (!account.titular) missing.push("Titular da conta");
+      if (!account.pix_keys.some(k => k.chave)) missing.push("Chave PIX");
+      
+      // Check optional fields
+      if (!account.agencia) missing.push("Agência");
+      if (!account.conta) missing.push("Número da conta");
+      if (!account.senha_acesso_encrypted && !account.usar_senha_global) missing.push("Senha de acesso");
+      if (!account.senha_transacao_encrypted && !account.usar_senha_global) missing.push("Senha de transação");
+    }
+    
+    // If there are missing optional fields, show confirmation dialog
+    if (missing.length > 0) {
+      setMissingFields(missing);
+      setShowConfirmDialog(true);
+      return;
+    }
+    
+    await saveData();
+  };
+  
+  const saveData = async () => {
     setLoading(true);
 
     try {
@@ -207,16 +245,16 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       }
 
       for (const account of bankAccounts) {
-        if (account.banco_id && account.conta) {
+        if (account.banco_id && account.titular && account.pix_keys.some(k => k.chave)) {
           await supabase.from("contas_bancarias").insert([{
             parceiro_id: parceiroId,
             banco_id: account.banco_id,
             banco: bancos.find(b => b.id === account.banco_id)?.nome || "",
-            agencia: account.agencia,
-            conta: account.conta,
+            agencia: account.agencia || null,
+            conta: account.conta || null,
             tipo_conta: account.tipo_conta,
             titular: account.titular,
-            pix_key: account.pix_key || null,
+            pix_key: account.pix_keys[0]?.chave || null,
             senha_acesso_encrypted: account.senha_acesso_encrypted ? btoa(account.senha_acesso_encrypted) : null,
             senha_transacao_encrypted: account.senha_transacao_encrypted ? btoa(account.senha_transacao_encrypted) : null,
             usar_senha_global: account.usar_senha_global,
@@ -261,6 +299,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       });
     } finally {
       setLoading(false);
+      setShowConfirmDialog(false);
     }
   };
 
@@ -273,7 +312,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         conta: "", 
         tipo_conta: "corrente", 
         titular: nome, 
-        pix_key: "",
+        pix_keys: [{ tipo: "cpf", chave: cpf.replace(/\D/g, "") }],
         senha_acesso_encrypted: "",
         senha_transacao_encrypted: "",
         usar_senha_global: false
@@ -285,7 +324,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     setBankAccounts(bankAccounts.filter((_, i) => i !== index));
   };
 
-  const updateBankAccount = (index: number, field: string, value: string) => {
+  const updateBankAccount = (index: number, field: string, value: any) => {
     const updated = [...bankAccounts];
     updated[index] = { ...updated[index], [field]: value };
     setBankAccounts(updated);
@@ -493,7 +532,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         )}
                       </div>
                       <div className="col-span-2">
-                        <Label>Banco</Label>
+                        <Label>Banco *</Label>
                         <BancoSelect
                           value={account.banco_id}
                           onValueChange={(value) => updateBankAccount(index, "banco_id", value)}
@@ -536,7 +575,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         </Select>
                       </div>
                       <div>
-                        <Label>Titular</Label>
+                        <Label>Titular *</Label>
                         <Input
                           value={account.titular}
                           onChange={(e) => updateBankAccount(index, "titular", e.target.value)}
@@ -545,11 +584,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         />
                       </div>
                       <div className="col-span-2">
-                        <Label>Chave PIX</Label>
-                        <Input
-                          value={account.pix_key}
-                          onChange={(e) => updateBankAccount(index, "pix_key", e.target.value)}
-                          placeholder="CPF, email, telefone ou chave aleatória"
+                        <PixKeyInput
+                          keys={account.pix_keys}
+                          onChange={(keys) => updateBankAccount(index, "pix_keys", keys)}
+                          cpf={cpf}
                           disabled={viewMode}
                         />
                       </div>
@@ -694,6 +732,44 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
               ))}
             </TabsContent>
           </Tabs>
+
+          {/* Warning Alert */}
+          {bankAccounts.length > 0 && !viewMode && (
+            <Alert className="mt-4 border-orange-600/50 bg-orange-950/20">
+              <AlertTitle className="text-orange-400">Antes de continuar:</AlertTitle>
+              <AlertDescription>
+                <ul className="list-disc list-inside space-y-1 text-sm text-orange-300/80 mt-2">
+                  <li>Banco, Titular e Chave PIX são obrigatórios</li>
+                  <li>Agência e Conta são opcionais</li>
+                  <li>Senhas são opcionais (use senha padrão ou deixe em branco)</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Confirmation Dialog */}
+          <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Informações incompletas</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Os seguintes campos opcionais não foram preenchidos:
+                  <ul className="list-disc list-inside mt-2 text-sm">
+                    {[...new Set(missingFields)].map((field, i) => (
+                      <li key={i}>{field}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-3">Deseja salvar mesmo assim?</p>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Voltar e completar</AlertDialogCancel>
+                <AlertDialogAction onClick={saveData}>
+                  Salvar mesmo assim
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           <div className="flex gap-3 mt-6">
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
