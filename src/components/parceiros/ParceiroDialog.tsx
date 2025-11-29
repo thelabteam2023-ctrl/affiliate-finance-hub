@@ -83,6 +83,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [redes, setRedes] = useState<RedeCrypto[]>([]);
   const [activeTab, setActiveTab] = useState("dados");
   const [parceiroId, setParceiroId] = useState<string | null>(null);
+  const [cpfError, setCpfError] = useState<string>("");
+  const [telefoneError, setTelefoneError] = useState<string>("");
+  const [checkingCpf, setCheckingCpf] = useState(false);
+  const [checkingTelefone, setCheckingTelefone] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -110,6 +114,100 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     }
   }, [parceiro]);
 
+  // Real-time CPF validation
+  useEffect(() => {
+    const checkCpf = async () => {
+      const cleanCpf = cpf.replace(/\D/g, "");
+      
+      // Only check if CPF is complete and valid format
+      if (cleanCpf.length !== 11 || !validateCPF(cpf)) {
+        setCpfError("");
+        return;
+      }
+
+      setCheckingCpf(true);
+      setCpfError("");
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        let query = supabase
+          .from("parceiros")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("cpf", cleanCpf);
+
+        // Exclude current parceiro if editing
+        if (parceiroId || parceiro?.id) {
+          query = query.neq("id", parceiroId || parceiro?.id);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          setCpfError("CPF já cadastrado");
+        }
+      } catch (error) {
+        console.error("Error checking CPF:", error);
+      } finally {
+        setCheckingCpf(false);
+      }
+    };
+
+    const timer = setTimeout(checkCpf, 500); // Debounce 500ms
+    return () => clearTimeout(timer);
+  }, [cpf, parceiroId, parceiro?.id]);
+
+  // Real-time telefone validation
+  useEffect(() => {
+    const checkTelefone = async () => {
+      const cleanTelefone = telefone.replace(/[^\d+]/g, "");
+      
+      // Only check if telefone has reasonable length
+      if (cleanTelefone.length < 12) {
+        setTelefoneError("");
+        return;
+      }
+
+      setCheckingTelefone(true);
+      setTelefoneError("");
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        let query = supabase
+          .from("parceiros")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("telefone", cleanTelefone);
+
+        // Exclude current parceiro if editing
+        if (parceiroId || parceiro?.id) {
+          query = query.neq("id", parceiroId || parceiro?.id);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          setTelefoneError("Telefone já cadastrado");
+        }
+      } catch (error) {
+        console.error("Error checking telefone:", error);
+      } finally {
+        setCheckingTelefone(false);
+      }
+    };
+
+    const timer = setTimeout(checkTelefone, 500); // Debounce 500ms
+    return () => clearTimeout(timer);
+  }, [telefone, parceiroId, parceiro?.id]);
+
   const fetchBancos = async () => {
     const { data } = await supabase.from("bancos").select("*").order("nome");
     if (data) setBancos(data);
@@ -135,10 +233,22 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     setCryptoWallets([]);
     setActiveTab("dados");
     setParceiroId(null);
+    setCpfError("");
+    setTelefoneError("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check for validation errors
+    if (cpfError || telefoneError) {
+      toast({
+        title: "Erros de validação",
+        description: "Por favor, corrija os erros antes de salvar.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Validate mandatory fields
     if (!nome || !cpf || !dataNascimento || !email || !telefone) {
@@ -336,6 +446,16 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   };
 
   const savePersonalData = async () => {
+    // Check for validation errors
+    if (cpfError || telefoneError) {
+      toast({
+        title: "Erros de validação",
+        description: "Por favor, corrija os erros antes de salvar.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Validate mandatory fields
     if (!nome || !cpf || !dataNascimento || !email || !telefone) {
       toast({
@@ -459,12 +579,22 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   <Input
                     id="cpf"
                     value={cpf}
-                    onChange={(e) => setCpf(formatCPF(e.target.value))}
+                    onChange={(e) => {
+                      setCpf(formatCPF(e.target.value));
+                      setCpfError(""); // Clear error on change
+                    }}
                     placeholder="000.000.000-00"
                     maxLength={14}
                     required
                     disabled={loading || viewMode}
+                    className={cpfError ? "border-red-500" : ""}
                   />
+                  {checkingCpf && (
+                    <p className="text-xs text-muted-foreground mt-1">Verificando CPF...</p>
+                  )}
+                  {cpfError && (
+                    <p className="text-xs text-red-500 mt-1">{cpfError}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="dataNascimento">Data de Nascimento *</Label>
@@ -490,9 +620,18 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   <Label htmlFor="telefone">Telefone *</Label>
                   <PhoneInput
                     value={telefone}
-                    onChange={setTelefone}
+                    onChange={(value) => {
+                      setTelefone(value);
+                      setTelefoneError(""); // Clear error on change
+                    }}
                     disabled={loading || viewMode}
                   />
+                  {checkingTelefone && (
+                    <p className="text-xs text-muted-foreground mt-1">Verificando telefone...</p>
+                  )}
+                  {telefoneError && (
+                    <p className="text-xs text-red-500 mt-1">{telefoneError}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="endereco">
