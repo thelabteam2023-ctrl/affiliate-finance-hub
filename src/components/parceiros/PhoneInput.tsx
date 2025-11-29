@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -42,6 +42,28 @@ export function PhoneInput({ value, onChange, disabled = false }: PhoneInputProp
   const parsed = parsePhone(value || "+55");
   const [countryCode, setCountryCode] = useState(parsed.code);
   const [phoneNumber, setPhoneNumber] = useState(parsed.number);
+
+  // Update local state when value prop changes (important for view mode)
+  useEffect(() => {
+    const parsed = parsePhone(value || "+55");
+    setCountryCode(parsed.code);
+    
+    // Format the number for display
+    let formatted = parsed.number;
+    if (parsed.code === "+55" && parsed.number) {
+      const digits = parsed.number.replace(/\D/g, "");
+      if (digits.length <= 10) {
+        formatted = digits.replace(/(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3");
+      } else {
+        formatted = digits.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3");
+      }
+    } else if (parsed.code === "+1" && parsed.number) {
+      const digits = parsed.number.replace(/\D/g, "");
+      formatted = digits.replace(/(\d{3})(\d{3})(\d{0,4})/, "($1) $2-$3");
+    }
+    
+    setPhoneNumber(formatted);
+  }, [value]);
 
   const handleCountryChange = (newCode: string) => {
     setCountryCode(newCode);
