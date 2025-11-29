@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, Shield } from "lucide-react";
 import BookmakerCatalogoDialog from "./BookmakerCatalogoDialog";
 
 interface BookmakerCatalogo {
@@ -307,7 +308,7 @@ export default function CatalogoBookmakers() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredBookmakers.map((bookmaker) => (
-              <Card key={bookmaker.id} className="hover:shadow-lg transition-shadow">
+              <Card key={bookmaker.id} className="hover:shadow-lg transition-shadow relative">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
@@ -323,53 +324,79 @@ export default function CatalogoBookmakers() {
                       ) : null}
                       <CardTitle className="text-lg">{bookmaker.nome}</CardTitle>
                     </div>
+                    
+                    {/* Ícones no canto superior direito */}
+                    <TooltipProvider>
+                      <div className="flex gap-1.5">
+                        {bookmaker.status === "REGULAMENTADA" && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="p-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+                                <Shield className="h-4 w-4 text-emerald-500" />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Casa Regulamentada</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        
+                        {bookmaker.bonus_enabled && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="p-1.5 rounded-md bg-primary/10 border border-primary/20">
+                                <Gift className="h-4 w-4 text-primary" />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Possui Bônus {bookmaker.multibonus_enabled ? "Múltiplos" : "Simples"}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </TooltipProvider>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Status:</span>
-                        <Badge variant={bookmaker.status === "REGULAMENTADA" ? "default" : "secondary"}>
-                          {bookmaker.status}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Operacional:</span>
                         <Badge variant={bookmaker.operacional === "ATIVA" ? "default" : "destructive"}>
-                          {bookmaker.operacional}
+                          {bookmaker.operacional === "ATIVA" ? "Ativa" : "Inativa"}
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Verificação:</span>
                         <Badge variant="outline">
-                          {bookmaker.verificacao}
+                          {bookmaker.verificacao === "OBRIGATORIA" 
+                            ? "Obrigatória" 
+                            : bookmaker.verificacao === "QUANDO_SOLICITADO"
+                            ? "Quando Solicitado"
+                            : "Não Requerida"}
                         </Badge>
                       </div>
-                      {bookmaker.bonus_enabled && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Bônus:</span>
-                          <Badge variant="secondary">
-                            {bookmaker.multibonus_enabled ? "Múltiplo" : "Simples"}
-                          </Badge>
-                        </div>
-                      )}
                     </div>
 
                     {bookmaker.links_json && Array.isArray(bookmaker.links_json) && bookmaker.links_json.length > 0 && (
-                      <div className="pt-2 border-t">
-                        {bookmaker.links_json.map((link: any, index: number) => (
+                      <div className="pt-2 border-t space-y-1">
+                        {bookmaker.links_json.slice(0, 2).map((link: any, index: number) => (
                           <a
                             key={index}
                             href={link.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-primary hover:underline flex items-center gap-1"
+                            className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5 group"
                           >
-                            <ExternalLink className="h-3 w-3" />
-                            {link.referencia || "Site oficial"}
+                            <ExternalLink className="h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                            <span>{link.referencia || "Site Oficial"}</span>
                           </a>
                         ))}
+                        {bookmaker.links_json.length > 2 && (
+                          <p className="text-xs text-muted-foreground">
+                            +{bookmaker.links_json.length - 2} link{bookmaker.links_json.length - 2 > 1 ? 's' : ''}
+                          </p>
+                        )}
                       </div>
                     )}
 
