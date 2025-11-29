@@ -119,17 +119,30 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       const mappedAccounts = (parceiro.contas_bancarias || []).map((acc: any) => {
         const detectPixKeyType = (key: string) => {
           if (!key) return "";
-          if (/^\d{11}$/.test(key)) return "cpf";
-          if (/^\d{14}$/.test(key)) return "cnpj";
+          // Remove all non-digit characters for CPF/CNPJ detection
+          const cleanKey = key.replace(/\D/g, "");
+          if (cleanKey.length === 11) return "cpf";
+          if (cleanKey.length === 14) return "cnpj";
           if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(key)) return "email";
-          if (/^\+?\d+$/.test(key)) return "telefone";
+          if (/^\+/.test(key) && /\d/.test(key)) return "telefone";
           return "aleatoria";
         };
+        
+        const pixKeyType = acc.pix_key ? detectPixKeyType(acc.pix_key) : "";
+        let formattedKey = acc.pix_key || "";
+        
+        // Format CPF/CNPJ for display
+        if (pixKeyType === "cpf") {
+          formattedKey = formatCPF(acc.pix_key);
+        } else if (pixKeyType === "cnpj") {
+          const cleanCnpj = acc.pix_key.replace(/\D/g, "");
+          formattedKey = cleanCnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+        }
         
         return {
           ...acc,
           pix_keys: acc.pix_key 
-            ? [{ tipo: detectPixKeyType(acc.pix_key), chave: acc.pix_key }] 
+            ? [{ tipo: pixKeyType, chave: formattedKey }] 
             : [{ tipo: "", chave: "" }]
         };
       });
@@ -359,6 +372,18 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       }
     }
     
+    // Validate wallet data - exchange is mandatory
+    for (const wallet of cryptoWallets) {
+      if (!wallet.exchange || !wallet.rede_id || !wallet.endereco || !wallet.moeda || wallet.moeda.length === 0) {
+        toast({
+          title: "Campos obrigatórios faltando",
+          description: "Preencha: Exchange/Wallet, Rede, Moedas e Endereço em todas as wallets.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     await saveData();
   };
   
@@ -414,6 +439,15 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
       for (const account of bankAccounts) {
         if (account.banco_id && account.pix_keys.some(k => k.chave)) {
+          // Clean PIX key before saving (remove formatting)
+          let cleanPixKey = account.pix_keys[0]?.chave || null;
+          if (cleanPixKey) {
+            const pixType = account.pix_keys[0]?.tipo;
+            if (pixType === "cpf" || pixType === "cnpj") {
+              cleanPixKey = cleanPixKey.replace(/\D/g, "");
+            }
+          }
+          
           const { error: insertError } = await supabase.from("contas_bancarias").insert([{
             parceiro_id: currentParceiroId,
             banco_id: account.banco_id,
@@ -422,7 +456,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             conta: account.conta || null,
             tipo_conta: account.tipo_conta,
             titular: account.titular || nome,
-            pix_key: account.pix_keys[0]?.chave || null,
+            pix_key: cleanPixKey,
             observacoes: account.observacoes || null,
           }]);
           
@@ -442,7 +476,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       }
 
       for (const wallet of cryptoWallets) {
-        if (wallet.moeda && wallet.moeda.length > 0 && wallet.endereco) {
+        if (wallet.moeda && wallet.moeda.length > 0 && wallet.endereco && wallet.exchange) {
           // Encrypt observacoes if present
           const observacoesEncrypted = wallet.observacoes 
             ? btoa(unescape(encodeURIComponent(wallet.observacoes)))
@@ -454,7 +488,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             endereco: wallet.endereco,
             network: redes.find(r => r.id === wallet.rede_id)?.nome || "",
             rede_id: wallet.rede_id,
-            exchange: wallet.exchange || null,
+            exchange: wallet.exchange,
             observacoes_encrypted: observacoesEncrypted,
           }]);
           

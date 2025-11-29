@@ -1,6 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2 } from "lucide-react";
+import { Building2, Copy, Check } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface BankAccountCardProps {
   account: {
@@ -15,6 +17,26 @@ interface BankAccountCardProps {
 
 export function BankAccountCard({ account }: BankAccountCardProps) {
   const pixKey = account.pix_keys?.[0];
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+  
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast({
+        title: "Copiado!",
+        description: `${label} copiado para a área de transferência.`,
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar para a área de transferência.",
+        variant: "destructive",
+      });
+    }
+  };
   
   return (
     <Card className="bg-card/50 backdrop-blur border-border/50">
@@ -61,7 +83,18 @@ export function BankAccountCard({ account }: BankAccountCardProps) {
                 <Badge variant="secondary" className="text-xs">
                   {pixKey.tipo}
                 </Badge>
-                <p className="text-sm text-foreground font-mono">{pixKey.chave}</p>
+                <p 
+                  className="text-sm text-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-2"
+                  onClick={() => copyToClipboard(pixKey.chave, "Chave PIX")}
+                  title="Clique para copiar"
+                >
+                  {pixKey.chave}
+                  {copied ? (
+                    <Check className="w-3 h-3 text-primary" />
+                  ) : (
+                    <Copy className="w-3 h-3 opacity-50" />
+                  )}
+                </p>
               </div>
             </div>
           )}
