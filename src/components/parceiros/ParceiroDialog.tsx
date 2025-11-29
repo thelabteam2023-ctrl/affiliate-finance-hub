@@ -21,6 +21,9 @@ import { RedeSelect } from "./RedeSelect";
 import { PixKeyInput } from "./PixKeyInput";
 import { PhoneInput } from "./PhoneInput";
 import { MoedaMultiSelect } from "./MoedaMultiSelect";
+import { ExchangeSelect } from "./ExchangeSelect";
+import { BankAccountCard } from "./BankAccountCard";
+import { CryptoWalletCard } from "./CryptoWalletCard";
 import { validateCPF, formatCPF, formatCEP, formatAgencia, formatConta } from "@/lib/validators";
 import { DatePicker } from "@/components/ui/date-picker";
 
@@ -45,6 +48,7 @@ interface CryptoWallet {
   moeda: string[];
   endereco: string;
   rede_id: string;
+  exchange?: string;
   observacoes: string;
 }
 
@@ -450,6 +454,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             endereco: wallet.endereco,
             network: redes.find(r => r.id === wallet.rede_id)?.nome || "",
             rede_id: wallet.rede_id,
+            exchange: wallet.exchange || null,
             observacoes_encrypted: observacoesEncrypted,
           }]);
           
@@ -524,6 +529,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         moeda: [], 
         endereco: "", 
         rede_id: "", 
+        exchange: "",
         observacoes: ""
       },
     ]);
@@ -878,7 +884,28 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 </Button>
               )}
 
-              {bankAccounts.map((account, index) => (
+              {viewMode ? (
+                <div className="grid gap-4">
+                  {bankAccounts.map((account, index) => {
+                    const banco = bancos.find(b => b.id === account.banco_id);
+                    return (
+                      <BankAccountCard 
+                        key={index} 
+                        account={{
+                          ...account,
+                          banco: banco?.nome || ""
+                        }} 
+                      />
+                    );
+                  })}
+                  {bankAccounts.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">
+                      Nenhuma conta bancária cadastrada
+                    </p>
+                  )}
+                </div>
+              ) : (
+                bankAccounts.map((account, index) => (
                 <Card key={index}>
                   <CardContent className="pt-4">
                     <div className="grid grid-cols-2 gap-3">
@@ -976,7 +1003,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              )))}
             </TabsContent>
 
             <TabsContent value="crypto" className="space-y-4">
@@ -993,7 +1020,28 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 </Button>
               )}
 
-              {cryptoWallets.map((wallet, index) => (
+              {viewMode ? (
+                <div className="grid gap-4">
+                  {cryptoWallets.map((wallet, index) => {
+                    const rede = redes.find(r => r.id === wallet.rede_id);
+                    return (
+                      <CryptoWalletCard 
+                        key={index} 
+                        wallet={{
+                          ...wallet,
+                          network: rede?.nome || ""
+                        }} 
+                      />
+                    );
+                  })}
+                  {cryptoWallets.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">
+                      Nenhuma wallet crypto cadastrada
+                    </p>
+                  )}
+                </div>
+              ) : (
+                cryptoWallets.map((wallet, index) => (
                 <Card key={index}>
                   <CardContent className="pt-4">
                     <div className="grid grid-cols-2 gap-3">
@@ -1013,6 +1061,17 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         <MoedaMultiSelect
                           moedas={wallet.moeda}
                           onChange={(moedas) => updateCryptoWallet(index, "moeda", moedas)}
+                          disabled={viewMode}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-center block">
+                          Exchange/Wallet
+                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                        </Label>
+                        <ExchangeSelect
+                          value={wallet.exchange}
+                          onValueChange={(value) => updateCryptoWallet(index, "exchange", value)}
                           disabled={viewMode}
                         />
                       </div>
@@ -1060,7 +1119,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              )))}
             </TabsContent>
           </Tabs>
 
