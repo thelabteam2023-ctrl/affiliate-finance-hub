@@ -105,6 +105,7 @@ export type Database = {
           conta: string
           created_at: string
           id: string
+          observacoes: string | null
           parceiro_id: string
           pix_key: string | null
           tipo_conta: string
@@ -118,6 +119,7 @@ export type Database = {
           conta: string
           created_at?: string
           id?: string
+          observacoes?: string | null
           parceiro_id: string
           pix_key?: string | null
           tipo_conta: string
@@ -131,6 +133,7 @@ export type Database = {
           conta?: string
           created_at?: string
           id?: string
+          observacoes?: string | null
           parceiro_id?: string
           pix_key?: string | null
           tipo_conta?: string
