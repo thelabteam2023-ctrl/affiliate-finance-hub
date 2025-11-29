@@ -20,6 +20,7 @@ import { BancoSelect } from "./BancoSelect";
 import { RedeSelect } from "./RedeSelect";
 import { PixKeyInput } from "./PixKeyInput";
 import { PhoneInput } from "./PhoneInput";
+import { MoedaMultiSelect } from "./MoedaMultiSelect";
 import { validateCPF, formatCPF, formatCEP, formatAgencia, formatConta } from "@/lib/validators";
 import { DatePicker } from "@/components/ui/date-picker";
 
@@ -41,7 +42,7 @@ interface BankAccount {
 
 interface CryptoWallet {
   id?: string;
-  moeda: string;
+  moeda: string[];
   endereco: string;
   rede_id: string;
   label: string;
@@ -398,7 +399,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       }
 
       for (const wallet of cryptoWallets) {
-        if (wallet.moeda && wallet.endereco) {
+        if (wallet.moeda && wallet.moeda.length > 0 && wallet.endereco) {
           await supabase.from("wallets_crypto").insert([{
             parceiro_id: currentParceiroId,
             moeda: wallet.moeda,
@@ -467,7 +468,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     setCryptoWallets([
       ...cryptoWallets,
       { 
-        moeda: "USDT", 
+        moeda: [], 
         endereco: "", 
         rede_id: "", 
         label: ""
@@ -479,7 +480,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     setCryptoWallets(cryptoWallets.filter((_, i) => i !== index));
   };
 
-  const updateCryptoWallet = (index: number, field: string, value: string) => {
+  const updateCryptoWallet = (index: number, field: string, value: any) => {
     const updated = [...cryptoWallets];
     updated[index] = { ...updated[index], [field]: value };
     setCryptoWallets(updated);
@@ -909,29 +910,12 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           </Button>
                         </div>
                       )}
-                      <div>
-                        <Label>Moeda</Label>
-                        <Select 
-                          value={wallet.moeda} 
-                          onValueChange={(value) => updateCryptoWallet(index, "moeda", value)}
+                      <div className="col-span-2">
+                        <MoedaMultiSelect
+                          moedas={wallet.moeda}
+                          onChange={(moedas) => updateCryptoWallet(index, "moeda", moedas)}
                           disabled={viewMode}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Selecione a moeda" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="BTC">Bitcoin (BTC)</SelectItem>
-                            <SelectItem value="ETH">Ethereum (ETH)</SelectItem>
-                            <SelectItem value="USDT">Tether (USDT)</SelectItem>
-                            <SelectItem value="USDC">USD Coin (USDC)</SelectItem>
-                            <SelectItem value="BNB">Binance Coin (BNB)</SelectItem>
-                            <SelectItem value="SOL">Solana (SOL)</SelectItem>
-                            <SelectItem value="ADA">Cardano (ADA)</SelectItem>
-                            <SelectItem value="DOT">Polkadot (DOT)</SelectItem>
-                            <SelectItem value="MATIC">Polygon (MATIC)</SelectItem>
-                            <SelectItem value="TRX">Tron (TRX)</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        />
                       </div>
                       <div>
                         <Label>Network</Label>
