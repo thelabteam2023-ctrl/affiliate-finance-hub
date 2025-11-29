@@ -49,10 +49,12 @@ export function ExchangeSelect({ value, onValueChange, disabled }: ExchangeSelec
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between"
+          className="w-full justify-center text-center"
           disabled={disabled}
         >
-          {selectedExchange ? selectedExchange.label : "Selecione a exchange/wallet"}
+          <span className="flex-1 text-center">
+            {selectedExchange ? selectedExchange.label : "Selecione a exchange/wallet"}
+          </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>

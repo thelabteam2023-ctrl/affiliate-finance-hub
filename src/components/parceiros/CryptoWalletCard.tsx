@@ -1,6 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Wallet } from "lucide-react";
+import { Wallet, Copy, Check } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface CryptoWalletCardProps {
   wallet: {
@@ -12,9 +14,30 @@ interface CryptoWalletCardProps {
 }
 
 export function CryptoWalletCard({ wallet }: CryptoWalletCardProps) {
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+  
   const truncateAddress = (addr: string) => {
     if (addr.length <= 12) return addr;
     return `${addr.slice(0, 6)}...${addr.slice(-6)}`;
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast({
+        title: "Copiado!",
+        description: "Endereço copiado para a área de transferência.",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar para a área de transferência.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -48,8 +71,17 @@ export function CryptoWalletCard({ wallet }: CryptoWalletCardProps) {
 
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Endereço</p>
-            <p className="text-sm text-foreground font-mono font-semibold mt-1">
+            <p 
+              className="text-sm text-foreground font-mono font-semibold mt-1 cursor-pointer hover:text-primary transition-colors flex items-center gap-2"
+              onClick={() => copyToClipboard(wallet.endereco)}
+              title="Clique para copiar"
+            >
               {truncateAddress(wallet.endereco)}
+              {copied ? (
+                <Check className="w-3 h-3 text-primary" />
+              ) : (
+                <Copy className="w-3 h-3 opacity-50" />
+              )}
             </p>
           </div>
         </div>
