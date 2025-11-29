@@ -93,13 +93,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   useEffect(() => {
     if (parceiro) {
       setNome(parceiro.nome || "");
-      setCpf(parceiro.cpf || "");
+      setCpf(formatCPF(parceiro.cpf || "")); // Apply mask when loading
       setEmail(parceiro.email || "");
       setTelefone(parceiro.telefone || "");
       setDataNascimento(parceiro.data_nascimento || "");
       setEndereco(parceiro.endereco || "");
       setCidade(parceiro.cidade || "");
-      setCep(parceiro.cep || "");
+      setCep(formatCEP(parceiro.cep || "")); // Apply mask when loading
       setStatus(parceiro.status || "ativo");
       setObservacoes(parceiro.observacoes || "");
       setBankAccounts(parceiro.contas_bancarias || []);
@@ -534,8 +534,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                     disabled={loading || viewMode}
                   />
                 </div>
-                <div className="col-span-2 mt-4">
-                  <Label htmlFor="status" className="text-center block">Status</Label>
+                <div className="col-span-2 mt-8">
+                  <Label htmlFor="status" className="text-center block mb-2">Status</Label>
                   <Select value={status} onValueChange={setStatus} disabled={loading || viewMode}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecione o status" className="text-center" />
