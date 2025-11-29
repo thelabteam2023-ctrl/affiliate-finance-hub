@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import { Plus, Search, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet } from "lucide-react";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
 import HistoricoTransacoes from "@/components/bookmakers/HistoricoTransacoes";
+import CatalogoBookmakers from "@/components/bookmakers/CatalogoBookmakers";
 
 interface Bookmaker {
   id: string;
@@ -186,13 +188,31 @@ export default function GestaoBookmakers() {
           <div>
             <h1 className="text-4xl font-bold">Gestão de Bookmakers</h1>
             <p className="text-muted-foreground mt-2">
-              Gerencie casas de apostas, credenciais e saldos
+              Catálogo de casas disponíveis e gerenciamento de contas
             </p>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <Tabs defaultValue="catalogo" className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="catalogo" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              Catálogo
+            </TabsTrigger>
+            <TabsTrigger value="contas" className="flex items-center gap-2">
+              <Wallet className="h-4 w-4" />
+              Contas
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="catalogo">
+            <CatalogoBookmakers />
+          </TabsContent>
+
+          <TabsContent value="contas" className="space-y-6">
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -224,11 +244,11 @@ export default function GestaoBookmakers() {
                 {formatCurrency(stats.saldoTotal, "BRL")}
               </div>
             </CardContent>
-          </Card>
-        </div>
+              </Card>
+            </div>
 
-        {/* Toolbar */}
-        <Card className="mb-6">
+            {/* Toolbar */}
+            <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative">
@@ -272,20 +292,20 @@ export default function GestaoBookmakers() {
                 Novo Bookmaker
               </Button>
             </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
-        {/* Bookmakers Grid */}
-        {filteredBookmakers.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">
-                Nenhum bookmaker encontrado. Clique em "Novo Bookmaker" para adicionar.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Bookmakers Grid */}
+            {filteredBookmakers.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">
+                    Nenhuma conta encontrada. Clique em "Novo Bookmaker" para adicionar.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredBookmakers.map((bookmaker) => (
               <Card key={bookmaker.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
@@ -377,9 +397,11 @@ export default function GestaoBookmakers() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       <BookmakerDialog
