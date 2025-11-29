@@ -44,6 +44,17 @@ export function formatCPF(cpf: string): string {
 }
 
 /**
+ * Formata um CNPJ para o padrão 00.000.000/0000-00
+ */
+export function formatCNPJ(cnpj: string): string {
+  cnpj = cnpj.replace(/\D/g, "");
+  if (cnpj.length <= 14) {
+    return cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+  }
+  return cnpj;
+}
+
+/**
  * Formata CEP para o padrão 00000-000
  */
 export function formatCEP(cep: string): string {

@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
-import { formatCPF } from "@/lib/validators";
+import { formatCPF, formatCNPJ } from "@/lib/validators";
 
 interface PixKey {
   tipo: string;
@@ -64,11 +64,20 @@ export function PixKeyInput({ keys, onChange, cpf = "", disabled = false }: PixK
           return "CPF deve ter 11 dígitos";
         }
         break;
+      case "cnpj":
+        const cnpjClean = chave.replace(/\D/g, "");
+        if (cnpjClean.length !== 14) {
+          return "CNPJ deve ter 14 dígitos";
+        }
+        // Validação básica de CNPJ
+        if (!/^\d{14}$/.test(cnpjClean)) {
+          return "CNPJ inválido";
+        }
+        break;
     }
     return null;
   };
 
-  // Get available types for each key (exclude already used types except current)
   const getAvailableTypes = (currentIndex: number) => {
     const usedTypes = keys
       .map((k, i) => i !== currentIndex ? k.tipo : null)
@@ -76,6 +85,7 @@ export function PixKeyInput({ keys, onChange, cpf = "", disabled = false }: PixK
     
     const allTypes = [
       { value: "cpf", label: "CPF" },
+      { value: "cnpj", label: "CNPJ" },
       { value: "email", label: "Email" },
       { value: "telefone", label: "Telefone" },
       { value: "aleatoria", label: "Chave Aleatória" }
@@ -114,12 +124,17 @@ export function PixKeyInput({ keys, onChange, cpf = "", disabled = false }: PixK
               </div>
               <div className="flex-1">
                 <Input
-                  value={key.tipo === "cpf" && key.chave ? formatCPF(key.chave) : key.chave}
+                  value={
+                    key.tipo === "cpf" && key.chave ? formatCPF(key.chave) :
+                    key.tipo === "cnpj" && key.chave ? formatCNPJ(key.chave) :
+                    key.chave
+                  }
                   onChange={(e) => updateKey(index, "chave", e.target.value)}
                   placeholder={
                     key.tipo === "email" ? "exemplo@email.com" :
                     key.tipo === "telefone" ? "+55 (00) 00000-0000" :
                     key.tipo === "cpf" ? "000.000.000-00" :
+                    key.tipo === "cnpj" ? "00.000.000/0000-00" :
                     "Digite a chave"
                   }
                   className="h-11 bg-background/50 border-border/50"
