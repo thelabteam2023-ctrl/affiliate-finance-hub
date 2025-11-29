@@ -353,9 +353,9 @@ export default function CatalogoBookmakers() {
               >
                 <CardHeader className="pb-3">
                   {/* Logo, Nome, Ícone de Verificação e Gift - tudo na mesma linha */}
-                  <div className="flex items-center gap-3">
-                    {/* Logo 14x14 com fallback */}
-                    <div className="h-14 w-14 flex-shrink-0 flex items-center justify-center">
+                  <div className="flex items-start gap-3">
+                    {/* Logo 20x20 com fallback */}
+                    <div className="h-20 w-20 flex-shrink-0 flex items-center justify-center">
                       {bookmaker.logo_url ? (
                         <img
                           src={bookmaker.logo_url}
@@ -366,15 +366,15 @@ export default function CatalogoBookmakers() {
                             target.style.display = 'none';
                             const parent = target.parentElement;
                             if (parent) {
-                              parent.innerHTML = `<div class="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span class="text-xs font-bold text-primary">${bookmaker.nome.substring(0, 2).toUpperCase()}</span>
+                              parent.innerHTML = `<div class="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                                <span class="text-sm font-bold text-primary">${bookmaker.nome.substring(0, 2).toUpperCase()}</span>
                               </div>`;
                             }
                           }}
                         />
                       ) : (
-                        <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-xs font-bold text-primary">
+                        <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-sm font-bold text-primary">
                             {bookmaker.nome.substring(0, 2).toUpperCase()}
                           </span>
                         </div>
@@ -441,13 +441,13 @@ export default function CatalogoBookmakers() {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Verificação:</span>
-                        <Badge variant="outline">
+                        <span className="text-sm">
                           {bookmaker.verificacao === "OBRIGATORIA" 
                             ? "Obrigatória" 
                             : bookmaker.verificacao === "QUANDO_SOLICITADO"
                             ? "Quando Solicitado"
                             : "Não Requerida"}
-                        </Badge>
+                        </span>
                       </div>
                     </div>
 
