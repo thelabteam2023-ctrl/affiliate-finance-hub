@@ -476,7 +476,7 @@ export default function CatalogoBookmakers() {
                   <CardContent>
                     <div className="space-y-3">
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground">Verificação:</span>
                           <span className={`font-medium uppercase ${
                             bookmaker.verificacao === "OBRIGATORIA" 
@@ -495,23 +495,23 @@ export default function CatalogoBookmakers() {
                       </div>
 
                       {bookmaker.links_json && Array.isArray(bookmaker.links_json) && bookmaker.links_json.length > 0 && (
-                        <div className="pt-2 border-t space-y-1">
+                        <div className="pt-2 border-t flex items-center gap-2 flex-wrap">
                           {bookmaker.links_json.slice(0, 2).map((link: any, index: number) => (
                             <a
                               key={index}
                               href={link.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5 group"
+                              className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5 group uppercase"
                             >
                               <ExternalLink className="h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                               <span>{link.referencia || "Site Oficial"}</span>
                             </a>
                           ))}
                           {bookmaker.links_json.length > 2 && (
-                            <p className="text-xs text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               +{bookmaker.links_json.length - 2} link{bookmaker.links_json.length - 2 > 1 ? 's' : ''}
-                            </p>
+                            </span>
                           )}
                         </div>
                       )}
