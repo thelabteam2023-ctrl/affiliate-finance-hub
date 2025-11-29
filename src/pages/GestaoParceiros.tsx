@@ -206,7 +206,7 @@ export default function GestaoParceiros() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border rounded-md bg-background"
+                className="px-4 py-2 border border-border rounded-lg bg-input focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all hover:border-primary/50"
               >
                 <option value="todos">Todos os status</option>
                 <option value="ativo">Ativos</option>
@@ -248,23 +248,47 @@ export default function GestaoParceiros() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredParceiros.map((parceiro) => (
-              <Card key={parceiro.id} className="hover:shadow-lg transition-shadow">
+              <Card key={parceiro.id} className="hover:shadow-lg transition-shadow relative">
                 <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-xl">{parceiro.nome}</CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        CPF: {maskCPF(parceiro.cpf)}
-                      </p>
+                  <div className="flex justify-between items-start gap-3">
+                    <div 
+                      className="flex items-center gap-3 flex-1 cursor-pointer group"
+                      onClick={() => handleEdit(parceiro)}
+                      title="Clique para ver detalhes completos"
+                    >
+                      <div className="relative">
+                        <svg width="40" height="40" viewBox="0 0 40 40" className="transition-transform group-hover:scale-110">
+                          <circle
+                            cx="20"
+                            cy="20"
+                            r="18"
+                            fill={parceiro.status === "ativo" ? "hsl(142 76% 36%)" : "hsl(0 72% 51%)"}
+                            opacity="0.2"
+                          />
+                          <circle
+                            cx="20"
+                            cy="20"
+                            r="14"
+                            fill={parceiro.status === "ativo" ? "hsl(142 76% 36%)" : "hsl(0 72% 51%)"}
+                            className="animate-pulse"
+                          />
+                          <circle
+                            cx="20"
+                            cy="20"
+                            r="8"
+                            fill={parceiro.status === "ativo" ? "hsl(142 90% 98%)" : "hsl(0 0% 100%)"}
+                          />
+                        </svg>
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl group-hover:text-primary transition-colors">{parceiro.nome}</CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          CPF: {maskCPF(parceiro.cpf)}
+                        </p>
+                      </div>
                     </div>
                     <Badge
-                      variant={
-                        parceiro.status === "ativo"
-                          ? "default"
-                          : parceiro.status === "inativo"
-                          ? "secondary"
-                          : "destructive"
-                      }
+                      variant={parceiro.status === "ativo" ? "default" : "secondary"}
                     >
                       {parceiro.status}
                     </Badge>
