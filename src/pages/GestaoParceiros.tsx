@@ -8,6 +8,17 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2, LayoutGrid, List } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import Header from "@/components/Header";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import { formatCPF, maskCPFPartial } from "@/lib/validators";
@@ -34,6 +45,8 @@ export default function GestaoParceiros() {
   const [editingParceiro, setEditingParceiro] = useState<Parceiro | null>(null);
   const [viewMode, setViewMode] = useState(false);
   const [viewType, setViewType] = useState<"cards" | "list">("cards");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [parceiroToDelete, setParceiroToDelete] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -78,14 +91,19 @@ export default function GestaoParceiros() {
     navigate("/auth");
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este parceiro?")) return;
+  const handleDeleteClick = (id: string) => {
+    setParceiroToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!parceiroToDelete) return;
 
     try {
       const { error } = await supabase
         .from("parceiros")
         .delete()
-        .eq("id", id);
+        .eq("id", parceiroToDelete);
 
       if (error) throw error;
 
@@ -94,6 +112,8 @@ export default function GestaoParceiros() {
         description: "O parceiro foi removido com sucesso.",
       });
       fetchParceiros();
+      setDeleteDialogOpen(false);
+      setParceiroToDelete(null);
     } catch (error: any) {
       toast({
         title: "Erro ao excluir parceiro",
@@ -151,22 +171,23 @@ export default function GestaoParceiros() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold">Gestão de Parceiros</h1>
-            <p className="text-muted-foreground mt-2">
-              Gerencie seus parceiros, contas bancárias e wallets crypto
-            </p>
+    <TooltipProvider>
+      <div className="min-h-screen bg-background">
+        <Header />
+        
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-4xl font-bold">Gestão de Parceiros</h1>
+              <p className="text-muted-foreground mt-2">
+                Gerencie seus parceiros, contas bancárias e wallets crypto
+              </p>
+            </div>
+            <Button onClick={handleLogout} variant="outline">
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
           </div>
-          <Button onClick={handleLogout} variant="outline">
-            <LogOut className="mr-2 h-4 w-4" />
-            Sair
-          </Button>
-        </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -224,43 +245,50 @@ export default function GestaoParceiros() {
                   <SelectItem value="ativo">Ativos</SelectItem>
                   <SelectItem value="inativo">Inativos</SelectItem>
                 </SelectContent>
-              </Select>
-               <Button
-                variant="outline"
-                onClick={() => setShowCPF(!showCPF)}
-              >
-                {showCPF ? (
-                  <>
-                    <EyeOff className="mr-2 h-4 w-4" />
-                    Ocultar CPF
-                  </>
-                ) : (
-                  <>
-                    <Eye className="mr-2 h-4 w-4" />
-                    Mostrar CPF
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setViewType(viewType === "cards" ? "list" : "cards")}
-              >
-                {viewType === "cards" ? (
-                  <>
-                    <List className="mr-2 h-4 w-4" />
-                    Lista
-                  </>
-                ) : (
-                  <>
-                    <LayoutGrid className="mr-2 h-4 w-4" />
-                    Cards
-                  </>
-                )}
-              </Button>
-              <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Parceiro
-              </Button>
+               </Select>
+               <Tooltip>
+                 <TooltipTrigger asChild>
+                   <Button
+                     variant="outline"
+                     size="icon"
+                     onClick={() => setShowCPF(!showCPF)}
+                     className="shrink-0"
+                   >
+                     {showCPF ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                   </Button>
+                 </TooltipTrigger>
+                 <TooltipContent>
+                   <p>Visualizar dados sensíveis</p>
+                 </TooltipContent>
+               </Tooltip>
+               <Tooltip>
+                 <TooltipTrigger asChild>
+                   <Button
+                     variant="outline"
+                     size="icon"
+                     onClick={() => setViewType(viewType === "cards" ? "list" : "cards")}
+                   >
+                     {viewType === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+                   </Button>
+                 </TooltipTrigger>
+                 <TooltipContent>
+                   <p>{viewType === "cards" ? "Visualizar como lista" : "Visualizar como cards"}</p>
+                 </TooltipContent>
+               </Tooltip>
+               <Tooltip>
+                 <TooltipTrigger asChild>
+                   <Button
+                     size="icon"
+                     onClick={() => setDialogOpen(true)}
+                     className="shrink-0"
+                   >
+                     <Plus className="h-4 w-4" />
+                   </Button>
+                 </TooltipTrigger>
+                 <TooltipContent>
+                   <p>Novo Parceiro</p>
+                 </TooltipContent>
+               </Tooltip>
             </div>
           </CardContent>
         </Card>
@@ -337,7 +365,7 @@ export default function GestaoParceiros() {
                       variant="outline"
                       size="sm"
                       className="flex-1 text-red-600 hover:text-red-700"
-                      onClick={() => handleDelete(parceiro.id)}
+                      onClick={() => handleDeleteClick(parceiro.id)}
                     >
                       <Trash2 className="mr-1 h-4 w-4" />
                       Excluir
@@ -399,7 +427,7 @@ export default function GestaoParceiros() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(parceiro.id)}
+                          onClick={() => handleDeleteClick(parceiro.id)}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -414,12 +442,34 @@ export default function GestaoParceiros() {
         )}
       </div>
 
-      <ParceiroDialog
-        open={dialogOpen}
-        onClose={handleDialogClose}
-        parceiro={editingParceiro}
-        viewMode={viewMode}
-      />
-    </div>
+        <ParceiroDialog
+          open={dialogOpen}
+          onClose={handleDialogClose}
+          parceiro={editingParceiro}
+          viewMode={viewMode}
+        />
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza que deseja excluir este parceiro?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Todos os dados associados a este parceiro,
+                incluindo contas bancárias e wallets, serão permanentemente removidos.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </TooltipProvider>
   );
 }
