@@ -16,6 +16,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { BancoSelect } from "./BancoSelect";
+import { RedeSelect } from "./RedeSelect";
+import { PasswordInput } from "./PasswordInput";
 
 interface BankAccount {
   id?: string;
@@ -56,9 +59,10 @@ interface ParceiroDialogProps {
   open: boolean;
   onClose: () => void;
   parceiro: any | null;
+  viewMode?: boolean;
 }
 
-export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDialogProps) {
+export default function ParceiroDialog({ open, onClose, parceiro, viewMode = false }: ParceiroDialogProps) {
   const [loading, setLoading] = useState(false);
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
@@ -316,7 +320,7 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {parceiro ? "Editar Parceiro" : "Novo Parceiro"}
+            {viewMode ? "Visualizar Parceiro" : parceiro ? "Editar Parceiro" : "Novo Parceiro"}
           </DialogTitle>
         </DialogHeader>
 
@@ -337,7 +341,7 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                     value={nome}
                     onChange={(e) => setNome(e.target.value)}
                     required
-                    disabled={loading}
+                    disabled={loading || viewMode}
                   />
                 </div>
                 <div>
@@ -349,7 +353,7 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                     placeholder="000.000.000-00"
                     maxLength={14}
                     required
-                    disabled={loading}
+                    disabled={loading || viewMode}
                   />
                 </div>
                 <div>
@@ -359,7 +363,7 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                     type="date"
                     value={dataNascimento}
                     onChange={(e) => setDataNascimento(e.target.value)}
-                    disabled={loading}
+                    disabled={loading || viewMode}
                   />
                 </div>
                 <div>
@@ -369,7 +373,7 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading}
+                    disabled={loading || viewMode}
                   />
                 </div>
                 <div>
@@ -380,7 +384,7 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                     onChange={(e) => setTelefone(formatPhone(e.target.value))}
                     placeholder="(00) 00000-0000"
                     maxLength={15}
-                    disabled={loading}
+                    disabled={loading || viewMode}
                   />
                 </div>
                 <div>
@@ -390,7 +394,7 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                     value={endereco}
                     onChange={(e) => setEndereco(e.target.value)}
                     placeholder="Rua, número"
-                    disabled={loading}
+                    disabled={loading || viewMode}
                   />
                 </div>
                 <div>
@@ -400,7 +404,7 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                     value={cidade}
                     onChange={(e) => setCidade(e.target.value)}
                     placeholder="Cidade - UF"
-                    disabled={loading}
+                    disabled={loading || viewMode}
                   />
                 </div>
                 <div>
@@ -411,7 +415,7 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                     onChange={(e) => setCep(formatCEP(e.target.value))}
                     placeholder="00000-000"
                     maxLength={9}
-                    disabled={loading}
+                    disabled={loading || viewMode}
                   />
                 </div>
                 <div>
@@ -421,36 +425,23 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                     value={usuarioGlobal}
                     onChange={(e) => setUsuarioGlobal(e.target.value)}
                     placeholder="Usuário padrão"
-                    disabled={loading}
+                    disabled={loading || viewMode}
                   />
                 </div>
                 <div>
                   <Label htmlFor="senhaGlobal">Senha Global</Label>
-                  <div className="relative">
-                    <Input
-                      id="senhaGlobal"
-                      type={showSenhaGlobal ? "text" : "password"}
-                      value={senhaGlobal}
-                      onChange={(e) => setSenhaGlobal(e.target.value)}
-                      placeholder="Senha padrão"
-                      disabled={loading}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3"
-                      onClick={() => setShowSenhaGlobal(!showSenhaGlobal)}
-                    >
-                      {showSenhaGlobal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                  </div>
+                  <PasswordInput
+                    value={senhaGlobal}
+                    onChange={setSenhaGlobal}
+                    placeholder="Senha padrão"
+                    disabled={loading || viewMode}
+                  />
                 </div>
                 <div className="col-span-2">
                   <Label htmlFor="status" className="text-center block">Status</Label>
-                  <Select value={status} onValueChange={setStatus} disabled={loading}>
-                    <SelectTrigger className="w-full text-center">
-                      <SelectValue placeholder="Selecione o status" />
+                  <Select value={status} onValueChange={setStatus} disabled={loading || viewMode}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione o status" className="text-center" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ativo">Ativo</SelectItem>
@@ -465,22 +456,24 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                     value={observacoes}
                     onChange={(e) => setObservacoes(e.target.value)}
                     rows={3}
-                    disabled={loading}
+                    disabled={loading || viewMode}
                   />
                 </div>
               </div>
             </TabsContent>
 
             <TabsContent value="bancos" className="space-y-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addBankAccount}
-                className="w-full"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar Conta Bancária
-              </Button>
+              {!viewMode && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addBankAccount}
+                  className="w-full"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Adicionar Conta Bancária
+                </Button>
+              )}
 
               {bankAccounts.map((account, index) => (
                 <Card key={index}>
@@ -488,32 +481,24 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                     <div className="grid grid-cols-2 gap-3">
                       <div className="col-span-2 flex justify-between items-center mb-2">
                         <h4 className="font-medium">Conta {index + 1}</h4>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeBankAccount(index)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
+                        {!viewMode && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeBankAccount(index)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
+                        )}
                       </div>
                       <div className="col-span-2">
                         <Label>Banco</Label>
-                        <Select 
-                          value={account.banco_id} 
+                        <BancoSelect
+                          value={account.banco_id}
                           onValueChange={(value) => updateBankAccount(index, "banco_id", value)}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Selecione um banco" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {bancos.map((banco) => (
-                              <SelectItem key={banco.id} value={banco.id}>
-                                {banco.codigo} - {banco.nome}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          disabled={viewMode}
+                        />
                       </div>
                       <div>
                         <Label>Agência</Label>
@@ -521,6 +506,7 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                           value={account.agencia}
                           onChange={(e) => updateBankAccount(index, "agencia", e.target.value)}
                           placeholder="0000"
+                          disabled={viewMode}
                         />
                       </div>
                       <div>
@@ -529,6 +515,7 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                           value={account.conta}
                           onChange={(e) => updateBankAccount(index, "conta", e.target.value)}
                           placeholder="00000-0"
+                          disabled={viewMode}
                         />
                       </div>
                       <div>
@@ -536,6 +523,7 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                         <Select 
                           value={account.tipo_conta} 
                           onValueChange={(value) => updateBankAccount(index, "tipo_conta", value)}
+                          disabled={viewMode}
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Tipo de conta" />
@@ -553,6 +541,7 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                           value={account.titular}
                           onChange={(e) => updateBankAccount(index, "titular", e.target.value)}
                           placeholder="Nome do titular"
+                          disabled={viewMode}
                         />
                       </div>
                       <div className="col-span-2">
@@ -561,26 +550,25 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                           value={account.pix_key}
                           onChange={(e) => updateBankAccount(index, "pix_key", e.target.value)}
                           placeholder="CPF, email, telefone ou chave aleatória"
+                          disabled={viewMode}
                         />
                       </div>
                       <div>
                         <Label>Senha de Acesso</Label>
-                        <Input
-                          type="password"
+                        <PasswordInput
                           value={account.usar_senha_global ? "••••••••" : account.senha_acesso_encrypted}
-                          onChange={(e) => updateBankAccount(index, "senha_acesso_encrypted", e.target.value)}
+                          onChange={(value) => updateBankAccount(index, "senha_acesso_encrypted", value)}
                           placeholder="Senha do banco"
-                          disabled={account.usar_senha_global}
+                          disabled={viewMode}
                         />
                       </div>
                       <div>
                         <Label>Senha de Transação</Label>
-                        <Input
-                          type="password"
+                        <PasswordInput
                           value={account.usar_senha_global ? "••••••••" : account.senha_transacao_encrypted}
-                          onChange={(e) => updateBankAccount(index, "senha_transacao_encrypted", e.target.value)}
+                          onChange={(value) => updateBankAccount(index, "senha_transacao_encrypted", value)}
                           placeholder="Senha para transferências"
-                          disabled={account.usar_senha_global}
+                          disabled={viewMode}
                         />
                       </div>
                       <div className="col-span-2 flex items-center gap-2">
@@ -588,6 +576,7 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                           id={`usar-senha-global-${index}`}
                           checked={account.usar_senha_global}
                           onCheckedChange={(checked) => updateBankAccount(index, "usar_senha_global", String(checked))}
+                          disabled={viewMode}
                         />
                         <Label htmlFor={`usar-senha-global-${index}`} className="cursor-pointer">
                           Usar senha padrão do parceiro
@@ -600,15 +589,17 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
             </TabsContent>
 
             <TabsContent value="crypto" className="space-y-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addCryptoWallet}
-                className="w-full"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar Wallet Crypto
-              </Button>
+              {!viewMode && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addCryptoWallet}
+                  className="w-full"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Adicionar Wallet Crypto
+                </Button>
+              )}
 
               {cryptoWallets.map((wallet, index) => (
                 <Card key={index}>
@@ -616,20 +607,23 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                     <div className="grid grid-cols-2 gap-3">
                       <div className="col-span-2 flex justify-between items-center mb-2">
                         <h4 className="font-medium">Wallet {index + 1}</h4>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeCryptoWallet(index)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
+                        {!viewMode && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeCryptoWallet(index)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
+                        )}
                       </div>
                       <div>
                         <Label>Moeda</Label>
                         <Select 
                           value={wallet.moeda} 
                           onValueChange={(value) => updateCryptoWallet(index, "moeda", value)}
+                          disabled={viewMode}
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Selecione a moeda" />
@@ -650,21 +644,11 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                       </div>
                       <div>
                         <Label>Network</Label>
-                        <Select 
-                          value={wallet.rede_id} 
+                        <RedeSelect
+                          value={wallet.rede_id}
                           onValueChange={(value) => updateCryptoWallet(index, "rede_id", value)}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Selecione uma rede" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {redes.map((rede) => (
-                              <SelectItem key={rede.id} value={rede.id}>
-                                {rede.nome}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          disabled={viewMode}
+                        />
                       </div>
                       <div className="col-span-2">
                         <Label>Endereço</Label>
@@ -672,6 +656,7 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                           value={wallet.endereco}
                           onChange={(e) => updateCryptoWallet(index, "endereco", e.target.value)}
                           placeholder="Endereço da wallet"
+                          disabled={viewMode}
                         />
                       </div>
                       <div className="col-span-2">
@@ -680,16 +665,16 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                           value={wallet.label}
                           onChange={(e) => updateCryptoWallet(index, "label", e.target.value)}
                           placeholder="Ex: Wallet principal, Wallet apostas"
+                          disabled={viewMode}
                         />
                       </div>
                       <div className="col-span-2">
                         <Label>Senha de Acesso</Label>
-                        <Input
-                          type="password"
+                        <PasswordInput
                           value={wallet.usar_senha_global ? "••••••••" : wallet.senha_acesso_encrypted}
-                          onChange={(e) => updateCryptoWallet(index, "senha_acesso_encrypted", e.target.value)}
+                          onChange={(value) => updateCryptoWallet(index, "senha_acesso_encrypted", value)}
                           placeholder="Senha da wallet"
-                          disabled={wallet.usar_senha_global}
+                          disabled={viewMode}
                         />
                       </div>
                       <div className="col-span-2 flex items-center gap-2">
@@ -697,6 +682,7 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                           id={`usar-senha-global-wallet-${index}`}
                           checked={wallet.usar_senha_global}
                           onCheckedChange={(checked) => updateCryptoWallet(index, "usar_senha_global", String(checked))}
+                          disabled={viewMode}
                         />
                         <Label htmlFor={`usar-senha-global-wallet-${index}`} className="cursor-pointer">
                           Usar senha padrão do parceiro
@@ -711,12 +697,14 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
 
           <div className="flex gap-3 mt-6">
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-              Cancelar
+              {viewMode ? "Fechar" : "Cancelar"}
             </Button>
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {parceiro ? "Atualizar" : "Criar"} Parceiro
-            </Button>
+            {!viewMode && (
+              <Button type="submit" disabled={loading} className="flex-1">
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {parceiro ? "Atualizar" : "Criar"} Parceiro
+              </Button>
+            )}
           </div>
         </form>
       </DialogContent>

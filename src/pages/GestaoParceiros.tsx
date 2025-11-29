@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Header from "@/components/Header";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 
@@ -30,6 +31,7 @@ export default function GestaoParceiros() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingParceiro, setEditingParceiro] = useState<Parceiro | null>(null);
+  const [viewMode, setViewMode] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -101,12 +103,20 @@ export default function GestaoParceiros() {
 
   const handleEdit = (parceiro: Parceiro) => {
     setEditingParceiro(parceiro);
+    setViewMode(false);
+    setDialogOpen(true);
+  };
+
+  const handleView = (parceiro: Parceiro) => {
+    setEditingParceiro(parceiro);
+    setViewMode(true);
     setDialogOpen(true);
   };
 
   const handleDialogClose = () => {
     setDialogOpen(false);
     setEditingParceiro(null);
+    setViewMode(false);
     fetchParceiros();
   };
 
@@ -203,15 +213,16 @@ export default function GestaoParceiros() {
                   className="pl-10"
                 />
               </div>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-border rounded-lg bg-input focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all hover:border-primary/50"
-              >
-                <option value="todos">Todos os status</option>
-                <option value="ativo">Ativos</option>
-                <option value="inativo">Inativos</option>
-              </select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os status</SelectItem>
+                  <SelectItem value="ativo">Ativos</SelectItem>
+                  <SelectItem value="inativo">Inativos</SelectItem>
+                </SelectContent>
+              </Select>
               <Button
                 variant="outline"
                 onClick={() => setShowCPF(!showCPF)}
@@ -253,7 +264,7 @@ export default function GestaoParceiros() {
                   <div className="flex justify-between items-start gap-3">
                     <div 
                       className="flex items-center gap-3 flex-1 cursor-pointer group"
-                      onClick={() => handleEdit(parceiro)}
+                      onClick={() => handleView(parceiro)}
                       title="Clique para ver detalhes completos"
                     >
                       <div className="relative">
@@ -348,6 +359,7 @@ export default function GestaoParceiros() {
         open={dialogOpen}
         onClose={handleDialogClose}
         parceiro={editingParceiro}
+        viewMode={viewMode}
       />
     </div>
   );
