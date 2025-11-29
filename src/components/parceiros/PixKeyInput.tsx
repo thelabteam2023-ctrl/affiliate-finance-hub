@@ -57,21 +57,21 @@ export function PixKeyInput({ keys, onChange, cpf = "", disabled = false }: PixK
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      <Label className="text-sm font-medium">Chaves PIX</Label>
       {keys.map((key, index) => {
         const availableTypes = getAvailableTypes(index);
         
         return (
-          <div key={index} className="flex gap-2 items-end">
-            <div className="w-[140px]">
-              {index === 0 && <Label className="text-xs mb-1">Tipo</Label>}
+          <div key={index} className="flex gap-2 items-start">
+            <div className="w-[180px]">
               <Select
                 value={key.tipo}
                 onValueChange={(value) => updateKey(index, "tipo", value)}
                 disabled={disabled}
               >
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger className="h-11 bg-background/50 border-border/50">
+                  <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
                   {availableTypes.map(type => (
@@ -83,16 +83,11 @@ export function PixKeyInput({ keys, onChange, cpf = "", disabled = false }: PixK
               </Select>
             </div>
             <div className="flex-1">
-              {index === 0 && <Label className="text-xs mb-1">Chave PIX *</Label>}
               <Input
                 value={key.chave}
                 onChange={(e) => updateKey(index, "chave", e.target.value)}
-                placeholder={
-                  key.tipo === "cpf" ? "000.000.000-00" :
-                  key.tipo === "email" ? "email@exemplo.com" :
-                  key.tipo === "telefone" ? "+55 11 98765-4321" :
-                  "Chave aleatória"
-                }
+                placeholder="Digite a chave"
+                className="h-11 bg-background/50 border-border/50"
                 disabled={disabled || (key.tipo === "cpf" && !!cpf)}
               />
             </div>
@@ -101,7 +96,7 @@ export function PixKeyInput({ keys, onChange, cpf = "", disabled = false }: PixK
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                className="h-11 w-11 rounded-lg bg-background/50 border border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors"
                 onClick={() => removeKey(index)}
                 disabled={keys.length === 1}
               >
@@ -118,9 +113,9 @@ export function PixKeyInput({ keys, onChange, cpf = "", disabled = false }: PixK
           variant="ghost"
           size="sm"
           onClick={addKey}
-          className="w-full h-8 hover:bg-primary/10 hover:text-primary transition-colors"
+          className="w-full h-10 rounded-lg bg-background/50 border border-border/50 hover:bg-primary/10 hover:text-primary hover:border-primary/50 transition-colors mt-1"
         >
-          <Plus className="h-4 w-4 mr-1" />
+          <Plus className="h-4 w-4 mr-2" />
           Adicionar chave
         </Button>
       )}

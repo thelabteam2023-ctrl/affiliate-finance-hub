@@ -93,6 +93,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [redes, setRedes] = useState<RedeCrypto[]>([]);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [missingFields, setMissingFields] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState("dados");
+  const [parceiroId, setParceiroId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -116,6 +118,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       setObservacoes(parceiro.observacoes || "");
       setBankAccounts(parceiro.contas_bancarias || []);
       setCryptoWallets(parceiro.wallets_crypto || []);
+      setParceiroId(parceiro.id);
     } else {
       resetForm();
     }
@@ -146,6 +149,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     setObservacoes("");
     setBankAccounts([]);
     setCryptoWallets([]);
+    setActiveTab("dados");
+    setParceiroId(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -210,13 +215,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         observacoes: observacoes || null,
       };
 
-      let parceiroId = parceiro?.id;
+      let currentParceiroId = parceiroId || parceiro?.id;
 
-      if (parceiro) {
+      if (currentParceiroId) {
         const { error } = await supabase
           .from("parceiros")
           .update(parceiroData)
-          .eq("id", parceiro.id);
+          .eq("id", currentParceiroId);
 
         if (error) throw error;
       } else {
@@ -227,21 +232,22 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
           .single();
 
         if (error) throw error;
-        parceiroId = data.id;
+        currentParceiroId = data.id;
+        setParceiroId(data.id);
       }
 
       // Save bank accounts
-      if (parceiro) {
+      if (currentParceiroId) {
         await supabase
           .from("contas_bancarias")
           .delete()
-          .eq("parceiro_id", parceiro.id);
+          .eq("parceiro_id", currentParceiroId);
       }
 
       for (const account of bankAccounts) {
         if (account.banco_id && account.titular && account.pix_keys.some(k => k.chave)) {
           await supabase.from("contas_bancarias").insert([{
-            parceiro_id: parceiroId,
+            parceiro_id: currentParceiroId,
             banco_id: account.banco_id,
             banco: bancos.find(b => b.id === account.banco_id)?.nome || "",
             agencia: account.agencia || null,
@@ -257,17 +263,17 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       }
 
       // Save crypto wallets
-      if (parceiro) {
+      if (currentParceiroId) {
         await supabase
           .from("wallets_crypto")
           .delete()
-          .eq("parceiro_id", parceiro.id);
+          .eq("parceiro_id", currentParceiroId);
       }
 
       for (const wallet of cryptoWallets) {
         if (wallet.moeda && wallet.endereco) {
           await supabase.from("wallets_crypto").insert([{
-            parceiro_id: parceiroId,
+            parceiro_id: currentParceiroId,
             moeda: wallet.moeda,
             endereco: wallet.endereco,
             network: redes.find(r => r.id === wallet.rede_id)?.nome || "",
@@ -298,6 +304,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   };
 
   const addBankAccount = () => {
+    const cleanCpf = cpf.replace(/\D/g, "");
     setBankAccounts([
       ...bankAccounts,
       { 
@@ -306,7 +313,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         conta: "", 
         tipo_conta: "corrente", 
         titular: nome, 
-        pix_keys: [{ tipo: "cpf", chave: cpf.replace(/\D/g, "") }],
+        pix_keys: [{ tipo: "", chave: "" }],
         senha_acesso_encrypted: "",
         senha_transacao_encrypted: "",
         usar_senha_global: false
@@ -348,6 +355,77 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     setCryptoWallets(updated);
   };
 
+  const savePersonalData = async () => {
+    // Validate CPF
+    if (!validateCPF(cpf)) {
+      toast({
+        title: "CPF inválido",
+        description: "Por favor, informe um CPF válido.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const parceiroData = {
+        user_id: user.id,
+        nome,
+        cpf: cpf.replace(/\D/g, ""),
+        email: email || null,
+        telefone: telefone.replace(/\D/g, "") || null,
+        data_nascimento: dataNascimento || null,
+        endereco: endereco || null,
+        cidade: cidade || null,
+        cep: cep.replace(/\D/g, "") || null,
+        usuario_global: usuarioGlobal || null,
+        senha_global_encrypted: senhaGlobal ? btoa(senhaGlobal) : null,
+        status,
+        observacoes: observacoes || null,
+      };
+
+      if (parceiroId) {
+        // Update existing
+        const { error } = await supabase
+          .from("parceiros")
+          .update(parceiroData)
+          .eq("id", parceiroId);
+
+        if (error) throw error;
+      } else {
+        // Create new
+        const { data, error } = await supabase
+          .from("parceiros")
+          .insert(parceiroData)
+          .select()
+          .single();
+
+        if (error) throw error;
+        setParceiroId(data.id);
+      }
+
+      toast({
+        title: "Dados pessoais salvos",
+        description: "Agora você pode adicionar contas bancárias.",
+      });
+
+      // Switch to bank accounts tab
+      setActiveTab("bancos");
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar dados pessoais",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -358,11 +436,11 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
-          <Tabs defaultValue="dados" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="dados">Dados Pessoais</TabsTrigger>
-              <TabsTrigger value="bancos">Contas Bancárias</TabsTrigger>
-              <TabsTrigger value="crypto">Wallets Crypto</TabsTrigger>
+              <TabsTrigger value="bancos" disabled={!parceiroId && !parceiro}>Contas Bancárias</TabsTrigger>
+              <TabsTrigger value="crypto" disabled={!parceiroId && !parceiro}>Wallets Crypto</TabsTrigger>
             </TabsList>
 
             <TabsContent value="dados" className="space-y-4">
@@ -490,6 +568,20 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   />
                 </div>
               </div>
+
+              {!viewMode && !parceiro && !parceiroId && (
+                <div className="flex justify-end mt-6">
+                  <Button
+                    type="button"
+                    onClick={savePersonalData}
+                    disabled={loading || !nome || !cpf}
+                    className="px-8"
+                  >
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Salvar e Continuar
+                  </Button>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="bancos" className="space-y-4">
