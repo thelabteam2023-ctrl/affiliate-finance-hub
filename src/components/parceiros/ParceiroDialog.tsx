@@ -11,13 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, AlertTriangle } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BancoSelect } from "./BancoSelect";
 import { RedeSelect } from "./RedeSelect";
 import { PasswordInput } from "./PasswordInput";
@@ -91,8 +90,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [cryptoWallets, setCryptoWallets] = useState<CryptoWallet[]>([]);
   const [bancos, setBancos] = useState<Banco[]>([]);
   const [redes, setRedes] = useState<RedeCrypto[]>([]);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [missingFields, setMissingFields] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("dados");
   const [parceiroId, setParceiroId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -166,27 +163,16 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       return;
     }
     
-    // Validate required fields and collect missing optional fields
-    const missing: string[] = [];
-    
-    // Check bank accounts validation
+    // Check bank accounts validation - only mandatory fields
     for (const account of bankAccounts) {
-      if (!account.banco_id) missing.push("Banco");
-      if (!account.titular) missing.push("Titular da conta");
-      if (!account.pix_keys.some(k => k.chave)) missing.push("Chave PIX");
-      
-      // Check optional fields
-      if (!account.agencia) missing.push("Agência");
-      if (!account.conta) missing.push("Número da conta");
-      if (!account.senha_acesso_encrypted && !account.usar_senha_global) missing.push("Senha de acesso");
-      if (!account.senha_transacao_encrypted && !account.usar_senha_global) missing.push("Senha de transação");
-    }
-    
-    // If there are missing optional fields, show confirmation dialog
-    if (missing.length > 0) {
-      setMissingFields(missing);
-      setShowConfirmDialog(true);
-      return;
+      if (!account.banco_id || !account.titular || !account.pix_keys.some(k => k.chave)) {
+        toast({
+          title: "Campos obrigatórios faltando",
+          description: "Por favor, preencha: Banco, Titular e pelo menos uma Chave PIX.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
     
     await saveData();
@@ -299,7 +285,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       });
     } finally {
       setLoading(false);
-      setShowConfirmDialog(false);
     }
   };
 
@@ -585,23 +570,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             </TabsContent>
 
             <TabsContent value="bancos" className="space-y-4">
-              {bankAccounts.some(account => 
-                !account.banco_id || !account.titular || !account.pix_keys.some(k => k.chave) ||
-                !account.agencia || !account.conta || 
-                (!account.senha_acesso_encrypted && !account.usar_senha_global) ||
-                (!account.senha_transacao_encrypted && !account.usar_senha_global)
-              ) && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Antes de continuar:</AlertTitle>
-                  <AlertDescription>
-                    <ul className="list-disc list-inside space-y-1 text-sm mt-2">
-                      <li><strong>Obrigatórios:</strong> Banco, Titular, pelo menos uma Chave PIX</li>
-                      <li><strong>Opcionais:</strong> Agência, Conta, Senha de Acesso, Senha de Transação</li>
-                    </ul>
-                  </AlertDescription>
-                </Alert>
-              )}
               
               {!viewMode && (
                 <Button
@@ -619,9 +587,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 <Card key={index}>
                   <CardContent className="pt-4">
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="col-span-2 flex justify-between items-center mb-2">
-                        <h4 className="font-medium">Conta {index + 1}</h4>
-                        {!viewMode && (
+                      {!viewMode && (
+                        <div className="col-span-2 flex justify-end">
                           <Button
                             type="button"
                             variant="ghost"
@@ -630,8 +597,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           >
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                       <div className="col-span-2">
                         <Label>Banco *</Label>
                         <BancoSelect
@@ -728,21 +695,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             </TabsContent>
 
             <TabsContent value="crypto" className="space-y-4">
-              {cryptoWallets.some(wallet => 
-                !wallet.moeda || !wallet.endereco || !wallet.rede_id ||
-                (!wallet.senha_acesso_encrypted && !wallet.usar_senha_global)
-              ) && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Antes de continuar:</AlertTitle>
-                  <AlertDescription>
-                    <ul className="list-disc list-inside space-y-1 text-sm mt-2">
-                      <li><strong>Obrigatórios:</strong> Moeda, Rede, Endereço</li>
-                      <li><strong>Opcionais:</strong> Label, Senha de Acesso</li>
-                    </ul>
-                  </AlertDescription>
-                </Alert>
-              )}
               
               {!viewMode && (
                 <Button
@@ -760,9 +712,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 <Card key={index}>
                   <CardContent className="pt-4">
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="col-span-2 flex justify-between items-center mb-2">
-                        <h4 className="font-medium">Wallet {index + 1}</h4>
-                        {!viewMode && (
+                      {!viewMode && (
+                        <div className="col-span-2 flex justify-end">
                           <Button
                             type="button"
                             variant="ghost"
@@ -771,8 +722,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           >
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                       <div>
                         <Label>Moeda</Label>
                         <Select 
@@ -849,30 +800,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
               ))}
             </TabsContent>
           </Tabs>
-
-          {/* Confirmation Dialog */}
-          <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Informações incompletas</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Os seguintes campos opcionais não foram preenchidos:
-                  <ul className="list-disc list-inside mt-2 text-sm">
-                    {[...new Set(missingFields)].map((field, i) => (
-                      <li key={i}>{field}</li>
-                    ))}
-                  </ul>
-                  <p className="mt-3">Deseja salvar mesmo assim?</p>
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Voltar e completar</AlertDialogCancel>
-                <AlertDialogAction onClick={saveData}>
-                  Salvar mesmo assim
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
 
           <div className="flex gap-3 mt-6">
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
