@@ -918,7 +918,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         />
                       </div>
                       <div>
-                        <Label>Network</Label>
+                        <Label className="text-center block">Network *</Label>
                         <RedeSelect
                           value={wallet.rede_id}
                           onValueChange={(value) => updateCryptoWallet(index, "rede_id", value)}
@@ -926,16 +926,17 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         />
                       </div>
                       <div className="col-span-2">
-                        <Label>Endereço</Label>
+                        <Label className="text-center block">Endereço *</Label>
                         <Input
                           value={wallet.endereco}
                           onChange={(e) => updateCryptoWallet(index, "endereco", e.target.value)}
                           placeholder="Endereço da wallet"
                           disabled={viewMode}
+                          className="text-center"
                         />
                       </div>
                       <div className="col-span-2">
-                        <Label>
+                        <Label className="text-center block">
                           Label
                           <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
                         </Label>
@@ -944,6 +945,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           onChange={(e) => updateCryptoWallet(index, "label", e.target.value)}
                           placeholder="Ex: Wallet principal, Wallet apostas"
                           disabled={viewMode}
+                          className="text-center"
                         />
                       </div>
                     </div>
