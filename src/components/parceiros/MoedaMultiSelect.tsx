@@ -1,8 +1,21 @@
 import { useState } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
-import { Plus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface MoedaMultiSelectProps {
@@ -30,88 +43,91 @@ const MOEDAS_DISPONIVEIS = [
 ];
 
 export function MoedaMultiSelect({ moedas = [], onChange, disabled = false }: MoedaMultiSelectProps) {
-  const [selectedMoeda, setSelectedMoeda] = useState("");
+  const [open, setOpen] = useState(false);
 
-  const addMoeda = () => {
-    if (selectedMoeda && !moedas.includes(selectedMoeda)) {
-      onChange([...moedas, selectedMoeda]);
-      setSelectedMoeda("");
+  const toggleMoeda = (moedaValue: string) => {
+    if (moedas.includes(moedaValue)) {
+      onChange(moedas.filter(m => m !== moedaValue));
+    } else {
+      onChange([...moedas, moedaValue]);
     }
   };
 
-  const removeMoeda = (moeda: string) => {
-    onChange(moedas.filter(m => m !== moeda));
+  const getDisplayText = () => {
+    if (moedas.length === 0) return "Selecione uma moeda";
+    if (moedas.length === 1) {
+      const moeda = MOEDAS_DISPONIVEIS.find(m => m.value === moedas[0]);
+      return moeda?.label || moedas[0];
+    }
+    return `${moedas.length} moedas selecionadas`;
   };
 
-  const moedasDisponiveis = MOEDAS_DISPONIVEIS.filter(
-    m => !moedas.includes(m.value)
-  );
-
   return (
-    <div className="space-y-3">
-      <Label className="text-sm font-medium">Moeda(s) *</Label>
+    <div className="space-y-2">
+      <Label className="text-sm font-medium text-center block">Moeda(s) *</Label>
       
-      {/* Moedas selecionadas */}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between text-center h-11 bg-background/50 border-border/50"
+            disabled={disabled}
+          >
+            <span className="flex-1 text-center">{getDisplayText()}</span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-full p-0 bg-popover border-border" align="center">
+          <Command className="bg-popover">
+            <CommandInput placeholder="Buscar moeda..." />
+            <CommandList className="bg-popover max-h-[300px]">
+              <CommandEmpty>Nenhuma moeda encontrada.</CommandEmpty>
+              <CommandGroup>
+                {MOEDAS_DISPONIVEIS.map((moeda) => (
+                  <CommandItem
+                    key={moeda.value}
+                    value={moeda.label}
+                    onSelect={() => !disabled && toggleMoeda(moeda.value)}
+                    className="justify-between hover:bg-accent focus:bg-accent cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={cn(
+                          "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                          moedas.includes(moeda.value)
+                            ? "bg-primary text-primary-foreground"
+                            : "opacity-50 [&_svg]:invisible"
+                        )}
+                      >
+                        <Check className="h-3 w-3" />
+                      </div>
+                      <span>{moeda.label}</span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+
       {moedas.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5 justify-center">
           {moedas.map((moeda) => {
             const moedaInfo = MOEDAS_DISPONIVEIS.find(m => m.value === moeda);
             return (
               <Badge
                 key={moeda}
                 variant="secondary"
-                className="flex items-center gap-1 px-3 py-1.5"
+                className="text-xs px-2 py-0.5"
               >
-                {moedaInfo?.label || moeda}
-                {!disabled && (
-                  <button
-                    type="button"
-                    onClick={() => removeMoeda(moeda)}
-                    className="ml-1 hover:text-destructive transition-colors"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
+                {moedaInfo?.value || moeda}
               </Badge>
             );
           })}
         </div>
-      )}
-
-      {/* Adicionar nova moeda */}
-      {!disabled && moedasDisponiveis.length > 0 && (
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <Select value={selectedMoeda} onValueChange={setSelectedMoeda}>
-              <SelectTrigger className="h-11 bg-background/50 border-border/50">
-                <SelectValue placeholder="Selecione uma moeda" />
-              </SelectTrigger>
-              <SelectContent>
-                {moedasDisponiveis.map((moeda) => (
-                  <SelectItem key={moeda.value} value={moeda.value}>
-                    {moeda.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={addMoeda}
-            disabled={!selectedMoeda}
-            className="h-11 w-11 rounded-lg bg-background/50 border border-border/50 hover:bg-primary/10 hover:text-primary hover:border-primary/50 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-
-      {moedas.length === 0 && (
-        <p className="text-xs text-muted-foreground">
-          Selecione pelo menos uma moeda para este wallet
-        </p>
       )}
     </div>
   );
