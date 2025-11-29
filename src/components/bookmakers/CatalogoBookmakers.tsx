@@ -390,18 +390,19 @@ export default function CatalogoBookmakers() {
                   }`}
                 >
                   <CardHeader className="pb-3">
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <CardTitle className="text-sm font-semibold truncate">
-                          {bookmaker.nome}
-                        </CardTitle>
-                        <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="space-y-3">
+                      {/* Nome com ícone de verificação colado */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <CardTitle className="text-sm font-semibold">
+                            {bookmaker.nome}
+                          </CardTitle>
                           <TooltipProvider>
                             {bookmaker.status === "REGULAMENTADA" ? (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div className="cursor-default">
-                                    <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                                    <ShieldCheck className="h-4 w-4 text-emerald-500" />
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -412,7 +413,7 @@ export default function CatalogoBookmakers() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div className="cursor-default">
-                                    <AlertTriangle className="h-5 w-5 text-amber-500" />
+                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -421,29 +422,30 @@ export default function CatalogoBookmakers() {
                               </Tooltip>
                             )}
                           </TooltipProvider>
-                          
-                          {bookmaker.bonus_enabled && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    onClick={() => handleBonusClick(bookmaker)}
-                                    className="text-emerald-500 hover:text-emerald-400 transition-colors"
-                                  >
-                                    <Gift className="h-5 w-5" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Ver bônus disponíveis</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
                         </div>
+                        
+                        {bookmaker.bonus_enabled && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => handleBonusClick(bookmaker)}
+                                  className="text-emerald-500 hover:text-emerald-400 transition-colors"
+                                >
+                                  <Gift className="h-5 w-5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Ver bônus disponíveis</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                       
-                      <div className="flex items-center justify-center">
-                        <div className="h-20 w-20 flex items-center justify-center">
+                      {/* Imagem à esquerda */}
+                      <div className="flex items-start justify-start">
+                        <div className="h-20 w-20 flex-shrink-0">
                           {bookmaker.logo_url ? (
                             <img
                               src={bookmaker.logo_url}
@@ -476,12 +478,18 @@ export default function CatalogoBookmakers() {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">Verificação:</span>
-                          <span className="text-sm">
-                            {bookmaker.verificacao === "OBRIGATORIA" 
-                              ? "Obrigatória" 
+                          <span className={`text-sm font-medium uppercase ${
+                            bookmaker.verificacao === "OBRIGATORIA" 
+                              ? "text-red-500" 
                               : bookmaker.verificacao === "QUANDO_SOLICITADO"
-                              ? "Quando Solicitado"
-                              : "Não Requerida"}
+                              ? "text-amber-500"
+                              : "text-emerald-500"
+                          }`}>
+                            {bookmaker.verificacao === "OBRIGATORIA" 
+                              ? "OBRIGATÓRIA" 
+                              : bookmaker.verificacao === "QUANDO_SOLICITADO"
+                              ? "QUANDO SOLICITADO"
+                              : "NÃO REQUERIDA"}
                           </span>
                         </div>
                       </div>
