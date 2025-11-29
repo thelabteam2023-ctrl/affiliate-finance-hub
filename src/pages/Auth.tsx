@@ -14,6 +14,7 @@ export default function Auth() {
   const [fullName, setFullName] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -26,6 +27,33 @@ export default function Auth() {
     };
     checkSession();
   }, [navigate]);
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Email enviado!",
+        description: "Verifique sua caixa de entrada para redefinir sua senha.",
+      });
+      setShowPasswordReset(false);
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,16 +109,18 @@ export default function Auth() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl font-bold">
-            {isLogin ? "Entrar" : "Criar conta"}
+            {showPasswordReset ? "Recuperar senha" : isLogin ? "Entrar" : "Criar conta"}
           </CardTitle>
           <CardDescription>
-            {isLogin
+            {showPasswordReset
+              ? "Digite seu email para receber o link de recuperação"
+              : isLogin
               ? "Entre com suas credenciais para acessar o sistema"
               : "Crie sua conta para começar a usar o Labbet"}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={showPasswordReset ? handlePasswordReset : handleSubmit} className="space-y-4">
             {!isLogin && (
               <div className="space-y-2">
                 <Label htmlFor="fullName">Nome completo</Label>
@@ -115,31 +145,60 @@ export default function Auth() {
                 disabled={loading}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-                minLength={6}
-              />
-            </div>
+            {!showPasswordReset && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  minLength={6}
+                />
+              </div>
+            )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isLogin ? "Entrar" : "Criar conta"}
+              {showPasswordReset ? "Enviar email de recuperação" : isLogin ? "Entrar" : "Criar conta"}
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full"
-              onClick={() => setIsLogin(!isLogin)}
-              disabled={loading}
-            >
-              {isLogin ? "Não tem conta? Cadastre-se" : "Já tem conta? Entrar"}
-            </Button>
+            {isLogin && !showPasswordReset && (
+              <Button
+                type="button"
+                variant="link"
+                className="w-full text-sm text-muted-foreground"
+                onClick={() => setShowPasswordReset(true)}
+                disabled={loading}
+              >
+                Esqueci minha senha
+              </Button>
+            )}
+            {!showPasswordReset && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => setIsLogin(!isLogin)}
+                disabled={loading}
+              >
+                {isLogin ? "Não tem conta? Cadastre-se" : "Já tem conta? Entrar"}
+              </Button>
+            )}
+            {showPasswordReset && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setShowPasswordReset(false);
+                  setIsLogin(true);
+                }}
+                disabled={loading}
+              >
+                Voltar para login
+              </Button>
+            )}
           </form>
         </CardContent>
       </Card>
