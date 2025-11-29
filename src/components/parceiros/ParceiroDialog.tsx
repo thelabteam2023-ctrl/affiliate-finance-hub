@@ -36,6 +36,7 @@ interface BankAccount {
   tipo_conta: string;
   titular: string;
   pix_keys: PixKey[];
+  observacoes: string;
 }
 
 interface CryptoWallet {
@@ -299,12 +300,20 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       return;
     }
     
-    // Check bank accounts validation - only mandatory fields
+    // Check bank accounts validation - RN101
     for (const account of bankAccounts) {
-      if (!account.banco_id || !account.tipo_conta || !account.titular || !account.pix_keys.some(k => k.chave)) {
+      if (!account.banco_id) {
         toast({
-          title: "Campos obrigatórios faltando",
-          description: "Por favor, preencha em cada conta: Banco, Tipo, Titular e pelo menos uma Chave PIX.",
+          title: "Campo obrigatório",
+          description: "Selecione o banco.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!account.pix_keys.some(k => k.chave)) {
+        toast({
+          title: "Campo obrigatório",
+          description: "Adicione pelo menos uma chave PIX.",
           variant: "destructive",
         });
         return;
@@ -365,7 +374,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       }
 
       for (const account of bankAccounts) {
-        if (account.banco_id && account.titular && account.pix_keys.some(k => k.chave)) {
+        if (account.banco_id && account.pix_keys.some(k => k.chave)) {
           await supabase.from("contas_bancarias").insert([{
             parceiro_id: currentParceiroId,
             banco_id: account.banco_id,
@@ -373,8 +382,9 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             agencia: account.agencia || null,
             conta: account.conta || null,
             tipo_conta: account.tipo_conta,
-            titular: account.titular,
+            titular: account.titular || nome,
             pix_key: account.pix_keys[0]?.chave || null,
+            observacoes: account.observacoes || null,
           }]);
         }
       }
@@ -437,7 +447,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         conta: "", 
         tipo_conta: "corrente", 
         titular: nome, 
-        pix_keys: [{ tipo: "", chave: "" }]
+        pix_keys: [{ tipo: "", chave: "" }],
+        observacoes: ""
       },
     ]);
   };
@@ -846,6 +857,19 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           keys={account.pix_keys}
                           onChange={(keys) => updateBankAccount(index, "pix_keys", keys)}
                           cpf={cpf}
+                          disabled={viewMode}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label>
+                          Observações
+                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                        </Label>
+                        <Textarea
+                          value={account.observacoes}
+                          onChange={(e) => updateBankAccount(index, "observacoes", e.target.value)}
+                          rows={3}
+                          placeholder="Informações adicionais sobre esta conta"
                           disabled={viewMode}
                         />
                       </div>
