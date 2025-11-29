@@ -454,7 +454,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   />
                 </div>
                 <div>
-                  <Label htmlFor="dataNascimento">Data de Nascimento</Label>
+                  <Label htmlFor="dataNascimento">
+                    Data de Nascimento
+                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                  </Label>
                   <DatePicker
                     value={dataNascimento}
                     onChange={setDataNascimento}
@@ -463,7 +466,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">
+                    Email
+                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                  </Label>
                   <Input
                     id="email"
                     type="email"
@@ -473,7 +479,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   />
                 </div>
                 <div>
-                  <Label htmlFor="telefone">Telefone</Label>
+                  <Label htmlFor="telefone">
+                    Telefone
+                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                  </Label>
                   <PhoneInput
                     value={telefone}
                     onChange={setTelefone}
@@ -481,7 +490,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   />
                 </div>
                 <div>
-                  <Label htmlFor="endereco">Endereço</Label>
+                  <Label htmlFor="endereco">
+                    Endereço
+                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                  </Label>
                   <Input
                     id="endereco"
                     value={endereco}
@@ -491,17 +503,23 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   />
                 </div>
                 <div>
-                  <Label htmlFor="cidade">Cidade</Label>
+                  <Label htmlFor="cidade">
+                    Cidade - UF
+                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                  </Label>
                   <Input
                     id="cidade"
                     value={cidade}
                     onChange={(e) => setCidade(e.target.value)}
-                    placeholder="Cidade - UF"
+                    placeholder="Virgem da Lapa - MG"
                     disabled={loading || viewMode}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="cep">CEP</Label>
+                  <Label htmlFor="cep">
+                    CEP
+                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                  </Label>
                   <Input
                     id="cep"
                     value={cep}
@@ -512,7 +530,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   />
                 </div>
                 <div>
-                  <Label htmlFor="usuarioGlobal">Usuário Global</Label>
+                  <Label htmlFor="usuarioGlobal">
+                    Usuário Global
+                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                  </Label>
                   <Input
                     id="usuarioGlobal"
                     value={usuarioGlobal}
@@ -522,7 +543,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   />
                 </div>
                 <div>
-                  <Label htmlFor="senhaGlobal">Senha Global</Label>
+                  <Label htmlFor="senhaGlobal">
+                    Senha Global
+                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                  </Label>
                   <PasswordInput
                     value={senhaGlobal}
                     onChange={setSenhaGlobal}
@@ -543,7 +567,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   </Select>
                 </div>
                 <div className="col-span-2">
-                  <Label htmlFor="observacoes">Observações</Label>
+                  <Label htmlFor="observacoes">
+                    Observações
+                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                  </Label>
                   <Textarea
                     id="observacoes"
                     value={observacoes}
@@ -555,12 +582,20 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
               </div>
 
               {!viewMode && !parceiro && !parceiroId && (
-                <div className="flex justify-end mt-6">
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onClose}
+                    className="flex-1"
+                  >
+                    Cancelar
+                  </Button>
                   <Button
                     type="button"
                     onClick={savePersonalData}
                     disabled={loading || !nome || !cpf}
-                    className="px-8"
+                    className="flex-1"
                   >
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Salvar e Continuar
@@ -608,7 +643,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         />
                       </div>
                       <div>
-                        <Label>Agência</Label>
+                        <Label>
+                          Agência
+                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                        </Label>
                         <Input
                           value={formatAgencia(account.agencia)}
                           onChange={(e) => updateBankAccount(index, "agencia", e.target.value)}
@@ -617,7 +655,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         />
                       </div>
                       <div>
-                        <Label>Conta</Label>
+                        <Label>
+                          Conta
+                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                        </Label>
                         <Input
                           value={formatConta(account.conta)}
                           onChange={(e) => updateBankAccount(index, "conta", e.target.value)}
@@ -660,7 +701,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         />
                       </div>
                       <div>
-                        <Label>Senha de Acesso</Label>
+                        <Label>
+                          Senha de Acesso
+                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                        </Label>
                         <PasswordInput
                           value={account.usar_senha_global ? "••••••••" : account.senha_acesso_encrypted}
                           onChange={(value) => updateBankAccount(index, "senha_acesso_encrypted", value)}
@@ -669,7 +713,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         />
                       </div>
                       <div>
-                        <Label>Senha de Transação</Label>
+                        <Label>
+                          Senha de Transação
+                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                        </Label>
                         <PasswordInput
                           value={account.usar_senha_global ? "••••••••" : account.senha_transacao_encrypted}
                           onChange={(value) => updateBankAccount(index, "senha_transacao_encrypted", value)}
@@ -766,7 +813,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         />
                       </div>
                       <div className="col-span-2">
-                        <Label>Label (Opcional)</Label>
+                        <Label>
+                          Label
+                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                        </Label>
                         <Input
                           value={wallet.label}
                           onChange={(e) => updateCryptoWallet(index, "label", e.target.value)}
@@ -775,7 +825,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         />
                       </div>
                       <div className="col-span-2">
-                        <Label>Senha de Acesso</Label>
+                        <Label>
+                          Senha de Acesso
+                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                        </Label>
                         <PasswordInput
                           value={wallet.usar_senha_global ? "••••••••" : wallet.senha_acesso_encrypted}
                           onChange={(value) => updateCryptoWallet(index, "senha_acesso_encrypted", value)}

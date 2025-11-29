@@ -79,7 +79,7 @@ export function PhoneInput({ value, onChange, disabled = false }: PhoneInputProp
             </div>
           </SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-popover border-border">
           {countries.map((country) => (
             <SelectItem key={country.code} value={country.code}>
               <div className="flex items-center gap-2">

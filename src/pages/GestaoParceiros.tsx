@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import Header from "@/components/Header";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
-import { formatCPF, maskCPFPartial } from "@/lib/validators";
+import { formatCPF, maskCPFPartial, maskEmail } from "@/lib/validators";
 
 interface Parceiro {
   id: string;
@@ -337,7 +337,7 @@ export default function GestaoParceiros() {
                     {parceiro.email && (
                       <p className="text-muted-foreground flex items-center gap-2">
                         <span className="font-medium">Email:</span> 
-                        <span className="truncate">{parceiro.email}</span>
+                        <span className="truncate">{showCPF ? parceiro.email : maskEmail(parceiro.email)}</span>
                       </p>
                     )}
                     <div className="pt-4 border-t">
@@ -401,7 +401,7 @@ export default function GestaoParceiros() {
                             </div>
                             <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
                               <span className="font-mono">{maskCPF(parceiro.cpf)}</span>
-                              {parceiro.email && <span className="truncate max-w-[200px]">{parceiro.email}</span>}
+                              {parceiro.email && <span className="truncate max-w-[200px]">{showCPF ? parceiro.email : maskEmail(parceiro.email)}</span>}
                             </div>
                           </div>
                         </div>

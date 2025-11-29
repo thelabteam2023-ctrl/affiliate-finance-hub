@@ -62,10 +62,10 @@ export function BancoSelect({ value, onValueChange, disabled }: BancoSelectProps
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start">
-        <Command>
+      <PopoverContent className="w-full p-0 bg-popover border-border" align="start">
+        <Command className="bg-popover">
           <CommandInput placeholder="Buscar banco..." className="text-center" />
-          <CommandList>
+          <CommandList className="bg-popover">
             <CommandEmpty>Nenhum banco encontrado.</CommandEmpty>
             <CommandGroup>
               {bancos.map((banco) => (
@@ -76,7 +76,7 @@ export function BancoSelect({ value, onValueChange, disabled }: BancoSelectProps
                     onValueChange(banco.id);
                     setOpen(false);
                   }}
-                  className="justify-center text-center"
+                  className="justify-center text-center hover:bg-accent focus:bg-accent"
                 >
                   <Check
                     className={cn(
