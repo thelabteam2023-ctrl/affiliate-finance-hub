@@ -103,3 +103,18 @@ export function maskCPFPartial(cpf: string): string {
 export function maskPassword(password: string): string {
   return "•".repeat(password.length || 8);
 }
+
+/**
+ * Mascara email parcialmente (us***@ex***.com)
+ */
+export function maskEmail(email: string): string {
+  if (!email || !email.includes("@")) return email;
+  const [local, domain] = email.split("@");
+  const maskedLocal = local.length > 2 
+    ? local.substring(0, 2) + "***" 
+    : local;
+  const maskedDomain = domain.length > 4
+    ? domain.substring(0, 2) + "***" + domain.substring(domain.lastIndexOf("."))
+    : domain;
+  return `${maskedLocal}@${maskedDomain}`;
+}
