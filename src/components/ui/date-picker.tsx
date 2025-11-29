@@ -40,7 +40,7 @@ export function DatePicker({ value, onChange, disabled, placeholder = "Selecione
         <Button
           variant="outline"
           className={cn(
-            "w-full justify-start text-left font-normal h-10 border-input bg-background hover:bg-accent hover:text-accent-foreground",
+            "w-full justify-start text-left font-normal h-10 rounded-lg border border-border bg-input px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all hover:border-primary/50",
             !date && "text-muted-foreground"
           )}
           disabled={disabled}
