@@ -116,6 +116,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
   // Real-time CPF validation
   useEffect(() => {
+    // Skip validation in view mode
+    if (viewMode) {
+      setCheckingCpf(false);
+      setCpfError("");
+      return;
+    }
+
     const checkCpf = async () => {
       const cleanCpf = cpf.replace(/\D/g, "");
       
@@ -172,10 +179,17 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
     const timer = setTimeout(checkCpf, 500); // Debounce 500ms
     return () => clearTimeout(timer);
-  }, [cpf, parceiroId, parceiro?.id]);
+  }, [cpf, parceiroId, parceiro?.id, viewMode]);
 
   // Real-time telefone validation
   useEffect(() => {
+    // Skip validation in view mode
+    if (viewMode) {
+      setCheckingTelefone(false);
+      setTelefoneError("");
+      return;
+    }
+
     const checkTelefone = async () => {
       const cleanTelefone = telefone.replace(/[^\d+]/g, "");
       
@@ -219,7 +233,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
     const timer = setTimeout(checkTelefone, 500); // Debounce 500ms
     return () => clearTimeout(timer);
-  }, [telefone, parceiroId, parceiro?.id]);
+  }, [telefone, parceiroId, parceiro?.id, viewMode]);
 
   const fetchBancos = async () => {
     const { data } = await supabase.from("bancos").select("*").order("nome");
@@ -248,6 +262,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     setParceiroId(null);
     setCpfError("");
     setTelefoneError("");
+    setCheckingCpf(false);
+    setCheckingTelefone(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
