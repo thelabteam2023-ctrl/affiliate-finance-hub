@@ -315,8 +315,14 @@ export default function GestaoParceiros() {
                       onClick={() => handleView(parceiro)}
                       title="Clique para ver detalhes completos"
                     >
-                      <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center overflow-hidden border-2 border-primary/30 group-hover:border-primary/60 transition-all">
-                        <span className="text-lg font-bold text-primary">
+                      <div className={`relative w-12 h-12 rounded-full flex items-center justify-center overflow-hidden border-2 transition-all ${
+                        parceiro.status === "inativo"
+                          ? "bg-gradient-to-br from-warning/20 to-warning/5 border-warning/30 group-hover:border-warning/60"
+                          : "bg-gradient-to-br from-primary/20 to-primary/5 border-primary/30 group-hover:border-primary/60"
+                      }`}>
+                        <span className={`text-lg font-bold ${
+                          parceiro.status === "inativo" ? "text-warning" : "text-primary"
+                        }`}>
                           {parceiro.nome.charAt(0).toUpperCase()}
                         </span>
                       </div>
@@ -394,8 +400,14 @@ export default function GestaoParceiros() {
                         onClick={() => handleView(parceiro)}
                       >
                         <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-2 border-primary/30">
-                          <span className="text-sm font-bold text-primary">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+                          parceiro.status === "inativo"
+                            ? "bg-gradient-to-br from-warning/20 to-warning/5 border-warning/30"
+                            : "bg-gradient-to-br from-primary/20 to-primary/5 border-primary/30"
+                        }`}>
+                          <span className={`text-sm font-bold ${
+                            parceiro.status === "inativo" ? "text-warning" : "text-primary"
+                          }`}>
                             {parceiro.nome.charAt(0).toUpperCase()}
                           </span>
                         </div>
