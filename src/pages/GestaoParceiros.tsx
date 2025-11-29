@@ -319,9 +319,14 @@ export default function GestaoParceiros() {
                         </span>
                       </div>
                       <div>
-                        <CardTitle className="text-xl group-hover:text-primary transition-colors">{parceiro.nome}</CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1 font-mono">
-                          {maskCPF(parceiro.cpf)}
+                        <CardTitle className="text-base group-hover:text-primary transition-colors">{parceiro.nome}</CardTitle>
+                        {parceiro.email && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            <span className="font-medium">Email:</span> {showCPF ? parceiro.email : maskEmail(parceiro.email)}
+                          </p>
+                        )}
+                        <p className="text-sm text-muted-foreground mt-0.5 font-mono">
+                          <span className="font-medium">CPF:</span> {maskCPF(parceiro.cpf)}
                         </p>
                       </div>
                     </div>
@@ -333,23 +338,15 @@ export default function GestaoParceiros() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2 text-sm">
-                    {parceiro.email && (
-                      <p className="text-muted-foreground flex items-center gap-2">
-                        <span className="font-medium">Email:</span> 
-                        <span className="truncate">{showCPF ? parceiro.email : maskEmail(parceiro.email)}</span>
-                      </p>
-                    )}
-                    <div className="pt-4 border-t">
-                      <p className="text-muted-foreground">
-                        <span className="font-medium">Contas Bancárias:</span>{" "}
-                        {parceiro.contas_bancarias?.length || 0}
-                      </p>
-                      <p className="text-muted-foreground">
-                        <span className="font-medium">Wallets Crypto:</span>{" "}
-                        {parceiro.wallets_crypto?.length || 0}
-                      </p>
-                    </div>
+                  <div className="space-y-2 text-sm pt-2 border-t mt-2">
+                    <p className="text-muted-foreground">
+                      <span className="font-medium">Contas Bancárias:</span>{" "}
+                      {parceiro.contas_bancarias?.length || 0}
+                    </p>
+                    <p className="text-muted-foreground">
+                      <span className="font-medium">Wallets Crypto:</span>{" "}
+                      {parceiro.wallets_crypto?.length || 0}
+                    </p>
                   </div>
                   <div className="flex gap-2 mt-4">
                     <Button
@@ -394,14 +391,20 @@ export default function GestaoParceiros() {
                         </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <h3 className="font-semibold text-lg">{parceiro.nome}</h3>
+                              <h3 className="font-semibold text-base">{parceiro.nome}</h3>
                               <Badge variant={parceiro.status === "ativo" ? "default" : "secondary"} className="text-xs">
                                 {parceiro.status}
                               </Badge>
                             </div>
-                            <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
-                              <span className="font-mono">{maskCPF(parceiro.cpf)}</span>
-                              {parceiro.email && <span className="truncate max-w-[200px]">{showCPF ? parceiro.email : maskEmail(parceiro.email)}</span>}
+                            <div className="flex flex-col gap-0.5 mt-1 text-sm text-muted-foreground">
+                              {parceiro.email && (
+                                <span className="truncate max-w-[300px]">
+                                  <span className="font-medium">Email:</span> {showCPF ? parceiro.email : maskEmail(parceiro.email)}
+                                </span>
+                              )}
+                              <span className="font-mono">
+                                <span className="font-medium">CPF:</span> {maskCPF(parceiro.cpf)}
+                              </span>
                             </div>
                           </div>
                         </div>

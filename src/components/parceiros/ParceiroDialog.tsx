@@ -187,7 +187,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         nome,
         cpf: cpf.replace(/\D/g, ""),
         email,
-        telefone: telefone.replace(/\D/g, ""),
+        telefone: telefone.replace(/[^\d+]/g, ""),
         data_nascimento: dataNascimento,
         endereco: endereco || null,
         cidade: cidade || null,
@@ -534,7 +534,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                     disabled={loading || viewMode}
                   />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-2 mt-4">
                   <Label htmlFor="status" className="text-center block">Status</Label>
                   <Select value={status} onValueChange={setStatus} disabled={loading || viewMode}>
                     <SelectTrigger className="w-full">
