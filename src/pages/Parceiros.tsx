@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Plus, Search, Eye, EyeOff, Edit, Trash2, Building2, Wallet, Users } from "lucide-react";
-import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -93,8 +92,6 @@ const Parceiros = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-
       <main className="container mx-auto px-4 py-8">
         {/* Page Header */}
         <div className="mb-8">

@@ -19,7 +19,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import Header from "@/components/Header";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import { formatCPF, maskCPFPartial, maskEmail } from "@/lib/validators";
 
@@ -173,8 +172,6 @@ export default function GestaoParceiros() {
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background">
-        <Header />
-        
         <div className="container mx-auto px-4 py-8">
           <div className="flex justify-between items-center mb-8">
             <div>
