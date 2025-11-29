@@ -320,7 +320,7 @@ export type Database = {
           endereco: string
           id: string
           label: string | null
-          moeda: string
+          moeda: string[] | null
           network: string
           parceiro_id: string
           rede_id: string | null
@@ -331,7 +331,7 @@ export type Database = {
           endereco: string
           id?: string
           label?: string | null
-          moeda: string
+          moeda?: string[] | null
           network: string
           parceiro_id: string
           rede_id?: string | null
@@ -342,7 +342,7 @@ export type Database = {
           endereco?: string
           id?: string
           label?: string | null
-          moeda?: string
+          moeda?: string[] | null
           network?: string
           parceiro_id?: string
           rede_id?: string | null
