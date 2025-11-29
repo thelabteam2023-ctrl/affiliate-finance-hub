@@ -289,7 +289,7 @@ export default function GestaoBookmakers() {
               </Button>
               <Button onClick={() => setDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                + Novo Vínculo
+                Novo Vínculo
               </Button>
             </div>
               </CardContent>
