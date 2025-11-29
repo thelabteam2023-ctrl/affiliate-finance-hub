@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, User, Landmark, Wallet } from "lucide-react";
+import { Loader2, Plus, Trash2, User, Landmark, Wallet, Copy, Check } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -95,7 +95,26 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [checkingTelefone, setCheckingTelefone] = useState(false);
   const [enderecoErrors, setEnderecoErrors] = useState<{ [key: number]: string }>({});
   const [checkingEnderecos, setCheckingEnderecos] = useState<{ [key: number]: boolean }>({});
+  const [copiedField, setCopiedField] = useState<string>("");
   const { toast } = useToast();
+
+  const copyToClipboard = async (text: string, fieldName: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      toast({
+        title: "Copiado!",
+        description: `${fieldName} copiado para a área de transferência.`,
+      });
+      setTimeout(() => setCopiedField(""), 2000);
+    } catch (error) {
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o texto.",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     fetchBancos();
@@ -765,19 +784,36 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 </div>
                 <div>
                   <Label htmlFor="cpf">CPF *</Label>
-                  <Input
-                    id="cpf"
-                    value={cpf}
-                    onChange={(e) => {
-                      setCpf(formatCPF(e.target.value));
-                      setCpfError(""); // Clear error on change
-                    }}
-                    placeholder="000.000.000-00"
-                    maxLength={14}
-                    required
-                    disabled={loading || viewMode}
-                    className={cpfError ? "border-red-500" : ""}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="cpf"
+                      value={cpf}
+                      onChange={(e) => {
+                        setCpf(formatCPF(e.target.value));
+                        setCpfError(""); // Clear error on change
+                      }}
+                      placeholder="000.000.000-00"
+                      maxLength={14}
+                      required
+                      disabled={loading || viewMode}
+                      className={cpfError ? "border-red-500" : ""}
+                    />
+                    {viewMode && cpf && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => copyToClipboard(cpf.replace(/\D/g, ""), "CPF")}
+                        className="shrink-0"
+                      >
+                        {copiedField === "CPF" ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                   {checkingCpf && (
                     <p className="text-xs text-muted-foreground mt-1">Verificando CPF...</p>
                   )}
@@ -796,25 +832,61 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 </div>
                 <div>
                   <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading || viewMode}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      disabled={loading || viewMode}
+                    />
+                    {viewMode && email && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => copyToClipboard(email, "Email")}
+                        className="shrink-0"
+                      >
+                        {copiedField === "Email" ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="telefone">Telefone *</Label>
-                  <PhoneInput
-                    value={telefone}
-                    onChange={(value) => {
-                      setTelefone(value);
-                      setTelefoneError(""); // Clear error on change
-                    }}
-                    disabled={loading || viewMode}
-                  />
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <PhoneInput
+                        value={telefone}
+                        onChange={(value) => {
+                          setTelefone(value);
+                          setTelefoneError(""); // Clear error on change
+                        }}
+                        disabled={loading || viewMode}
+                      />
+                    </div>
+                    {viewMode && telefone && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => copyToClipboard(telefone, "Telefone")}
+                        className="shrink-0"
+                      >
+                        {copiedField === "Telefone" ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                   {checkingTelefone && (
                     <p className="text-xs text-muted-foreground mt-1">Verificando telefone...</p>
                   )}
@@ -827,40 +899,91 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                     Endereço
                     <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
                   </Label>
-                  <Input
-                    id="endereco"
-                    value={endereco}
-                    onChange={(e) => setEndereco(e.target.value)}
-                    placeholder="Rua, número"
-                    disabled={loading || viewMode}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="endereco"
+                      value={endereco}
+                      onChange={(e) => setEndereco(e.target.value)}
+                      placeholder="Rua, número"
+                      disabled={loading || viewMode}
+                    />
+                    {viewMode && endereco && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => copyToClipboard(endereco, "Endereço")}
+                        className="shrink-0"
+                      >
+                        {copiedField === "Endereço" ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="cidade">
                     Cidade - UF
                     <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
                   </Label>
-                  <Input
-                    id="cidade"
-                    value={cidade}
-                    onChange={(e) => setCidade(e.target.value)}
-                    placeholder="Virgem da Lapa - MG"
-                    disabled={loading || viewMode}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="cidade"
+                      value={cidade}
+                      onChange={(e) => setCidade(e.target.value)}
+                      placeholder="Virgem da Lapa - MG"
+                      disabled={loading || viewMode}
+                    />
+                    {viewMode && cidade && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => copyToClipboard(cidade, "Cidade")}
+                        className="shrink-0"
+                      >
+                        {copiedField === "Cidade" ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="cep">
                     CEP
                     <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
                   </Label>
-                  <Input
-                    id="cep"
-                    value={cep}
-                    onChange={(e) => setCep(formatCEP(e.target.value))}
-                    placeholder="00000-000"
-                    maxLength={9}
-                    disabled={loading || viewMode}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="cep"
+                      value={cep}
+                      onChange={(e) => setCep(formatCEP(e.target.value))}
+                      placeholder="00000-000"
+                      maxLength={9}
+                      disabled={loading || viewMode}
+                    />
+                    {viewMode && cep && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => copyToClipboard(cep.replace(/\D/g, ""), "CEP")}
+                        className="shrink-0"
+                      >
+                        {copiedField === "CEP" ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <div className="col-span-2 mt-8">
                   <Label htmlFor="status" className="text-center block mb-2">Status</Label>
