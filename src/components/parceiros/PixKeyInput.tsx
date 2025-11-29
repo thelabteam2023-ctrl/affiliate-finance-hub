@@ -17,7 +17,7 @@ interface PixKeyInputProps {
   disabled?: boolean;
 }
 
-export function PixKeyInput({ keys, onChange, cpf = "", disabled = false }: PixKeyInputProps) {
+export function PixKeyInput({ keys = [], onChange, cpf = "", disabled = false }: PixKeyInputProps) {
   const addKey = () => {
     // Determine default type - avoid CPF if already used
     const usedTypes = keys.map(k => k.tipo);
