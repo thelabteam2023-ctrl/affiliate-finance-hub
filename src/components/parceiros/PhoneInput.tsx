@@ -26,14 +26,17 @@ const countries = [
 
 export function PhoneInput({ value, onChange, disabled = false }: PhoneInputProps) {
   const parsePhone = (fullPhone: string) => {
-    const country = countries.find(c => fullPhone.startsWith(c.code));
+    // Normalize: ensure it starts with "+"
+    const normalized = fullPhone.startsWith("+") ? fullPhone : `+${fullPhone}`;
+    
+    const country = countries.find(c => normalized.startsWith(c.code));
     if (country) {
       return {
         code: country.code,
-        number: fullPhone.slice(country.code.length).trim()
+        number: normalized.slice(country.code.length).trim()
       };
     }
-    return { code: "+55", number: fullPhone };
+    return { code: "+55", number: normalized.slice(3).trim() };
   };
 
   const parsed = parsePhone(value || "+55");
