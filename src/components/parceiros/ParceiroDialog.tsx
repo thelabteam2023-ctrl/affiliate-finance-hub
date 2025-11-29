@@ -733,8 +733,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             </TabsContent>
           </Tabs>
 
-          {/* Warning Alert */}
-          {bankAccounts.length > 0 && !viewMode && (
+          {/* Warning Alert - Only show if any account is incomplete */}
+          {bankAccounts.length > 0 && !viewMode && bankAccounts.some(account => 
+            !account.banco_id || !account.titular || account.pix_keys.length === 0 || !account.pix_keys.some(key => key.chave)
+          ) && (
             <Alert className="mt-4 border-orange-600/50 bg-orange-950/20">
               <AlertTitle className="text-orange-400">Antes de continuar:</AlertTitle>
               <AlertDescription>
