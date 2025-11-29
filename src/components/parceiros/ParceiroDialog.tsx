@@ -45,7 +45,7 @@ interface CryptoWallet {
   moeda: string[];
   endereco: string;
   rede_id: string;
-  label: string;
+  observacoes: string;
 }
 
 interface Banco {
@@ -89,6 +89,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [telefoneError, setTelefoneError] = useState<string>("");
   const [checkingCpf, setCheckingCpf] = useState(false);
   const [checkingTelefone, setCheckingTelefone] = useState(false);
+  const [enderecoErrors, setEnderecoErrors] = useState<{ [key: number]: string }>({});
+  const [checkingEnderecos, setCheckingEnderecos] = useState<{ [key: number]: boolean }>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -109,7 +111,16 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       setStatus(parceiro.status || "ativo");
       setObservacoes(parceiro.observacoes || "");
       setBankAccounts(parceiro.contas_bancarias || []);
-      setCryptoWallets(parceiro.wallets_crypto || []);
+      
+      // Decrypt wallet observacoes when loading
+      const decryptedWallets = (parceiro.wallets_crypto || []).map((wallet: any) => ({
+        ...wallet,
+        observacoes: wallet.observacoes_encrypted 
+          ? decodeURIComponent(escape(atob(wallet.observacoes_encrypted)))
+          : ""
+      }));
+      setCryptoWallets(decryptedWallets);
+      
       setParceiroId(parceiro.id);
     } else {
       resetForm();
@@ -272,7 +283,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     e.preventDefault();
     
     // Check for validation errors
-    if (cpfError || telefoneError) {
+    const hasEnderecoError = Object.values(enderecoErrors).some(error => error);
+    if (cpfError || telefoneError || hasEnderecoError) {
       toast({
         title: "Erros de validação",
         description: "Por favor, corrija os erros antes de salvar.",
@@ -403,13 +415,18 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
       for (const wallet of cryptoWallets) {
         if (wallet.moeda && wallet.moeda.length > 0 && wallet.endereco) {
+          // Encrypt observacoes if present
+          const observacoesEncrypted = wallet.observacoes 
+            ? btoa(unescape(encodeURIComponent(wallet.observacoes)))
+            : null;
+
           await supabase.from("wallets_crypto").insert([{
             parceiro_id: currentParceiroId,
             moeda: wallet.moeda,
             endereco: wallet.endereco,
             network: redes.find(r => r.id === wallet.rede_id)?.nome || "",
             rede_id: wallet.rede_id,
-            label: wallet.label || null,
+            observacoes_encrypted: observacoesEncrypted,
           }]);
         }
       }
@@ -430,6 +447,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       // Check for duplicate phone error
       if (error.message?.includes('unique_telefone_per_user')) {
         errorMessage = "Já existe um parceiro cadastrado com este telefone.";
+      }
+      // Check for duplicate wallet address error
+      if (error.message?.includes('Este endereço de wallet já está cadastrado')) {
+        errorMessage = "Este endereço de wallet já está cadastrado para outro parceiro.";
       }
       
       toast({
@@ -474,7 +495,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         moeda: [], 
         endereco: "", 
         rede_id: "", 
-        label: ""
+        observacoes: ""
       },
     ]);
   };
@@ -487,6 +508,52 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     const updated = [...cryptoWallets];
     updated[index] = { ...updated[index], [field]: value };
     setCryptoWallets(updated);
+
+    // Clear error when endereco changes
+    if (field === "endereco") {
+      setEnderecoErrors({ ...enderecoErrors, [index]: "" });
+    }
+  };
+
+  // Validate wallet address uniqueness
+  const validateWalletEndereco = async (endereco: string, index: number, walletId?: string) => {
+    if (viewMode || !endereco || endereco.length < 10) {
+      setEnderecoErrors({ ...enderecoErrors, [index]: "" });
+      return;
+    }
+
+    setCheckingEnderecos({ ...checkingEnderecos, [index]: true });
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Check if address already exists for this tenant
+      let query = supabase
+        .from("wallets_crypto")
+        .select("id, parceiro_id, parceiros!inner(user_id)")
+        .eq("endereco", endereco)
+        .eq("parceiros.user_id", user.id);
+
+      // Exclude current wallet if editing
+      if (walletId) {
+        query = query.neq("id", walletId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setEnderecoErrors({ ...enderecoErrors, [index]: "Este endereço já está cadastrado" });
+      } else {
+        setEnderecoErrors({ ...enderecoErrors, [index]: "" });
+      }
+    } catch (error) {
+      console.error("Error checking wallet address:", error);
+    } finally {
+      setCheckingEnderecos({ ...checkingEnderecos, [index]: false });
+    }
   };
 
   const savePersonalData = async () => {
@@ -932,22 +999,32 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         <Label className="text-center block">Endereço *</Label>
                         <Input
                           value={wallet.endereco}
-                          onChange={(e) => updateCryptoWallet(index, "endereco", e.target.value)}
+                          onChange={(e) => {
+                            updateCryptoWallet(index, "endereco", e.target.value);
+                          }}
+                          onBlur={() => validateWalletEndereco(wallet.endereco, index, wallet.id)}
                           placeholder="Endereço da wallet"
                           disabled={viewMode}
-                          className="text-center"
+                          className={`text-center ${enderecoErrors[index] ? "border-red-500" : ""}`}
                         />
+                        {checkingEnderecos[index] && (
+                          <p className="text-xs text-muted-foreground mt-1 text-center">Verificando endereço...</p>
+                        )}
+                        {enderecoErrors[index] && (
+                          <p className="text-xs text-red-500 mt-1 text-center">{enderecoErrors[index]}</p>
+                        )}
                       </div>
                       <div className="col-span-2">
                         <Label className="text-center block">
-                          Label
+                          Observações
                           <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
                         </Label>
-                        <Input
-                          value={wallet.label}
-                          onChange={(e) => updateCryptoWallet(index, "label", e.target.value)}
-                          placeholder="Ex: Wallet principal, Wallet apostas"
+                        <Textarea
+                          value={wallet.observacoes}
+                          onChange={(e) => updateCryptoWallet(index, "observacoes", e.target.value)}
+                          placeholder="Informações adicionais sobre esta wallet"
                           disabled={viewMode}
+                          rows={3}
                           className="text-center"
                         />
                       </div>
