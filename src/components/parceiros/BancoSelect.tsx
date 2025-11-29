@@ -16,6 +16,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -99,43 +105,50 @@ export function BancoSelect({ value, onValueChange, disabled }: BancoSelectProps
 
   return (
     <>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between text-center"
-            disabled={disabled}
-          >
-            <span className="flex-1 text-center">
-              {selectedBanco
-                ? `${selectedBanco.codigo} - ${selectedBanco.nome}`
-                : "Selecione um banco"}
-            </span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-full p-0 bg-popover border-border" align="start">
-          <Command className="bg-popover">
-            <div className="relative">
-              <CommandInput 
-                placeholder="Buscar por nome ou código..." 
-                className="pr-14"
-              />
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDialogOpen(true);
-                  setOpen(false);
-                }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-7 px-3 rounded-lg border border-border/50 bg-background/80 text-primary hover:bg-background hover:border-primary/50 transition-all text-sm font-medium flex items-center gap-1"
-                title="Adicionar novo banco"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            </div>
+      <TooltipProvider>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className="w-full justify-between text-center"
+              disabled={disabled}
+            >
+              <span className="flex-1 text-center">
+                {selectedBanco
+                  ? `${selectedBanco.codigo} - ${selectedBanco.nome}`
+                  : "Selecione um banco"}
+              </span>
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-full p-0 bg-popover border-border" align="start">
+            <Command className="bg-popover">
+              <div className="relative">
+                <CommandInput 
+                  placeholder="Buscar por nome ou código..." 
+                  className="pr-14"
+                />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDialogOpen(true);
+                        setOpen(false);
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-7 px-3 rounded-lg border border-border/50 bg-background/80 text-primary hover:bg-background hover:border-primary/50 transition-all text-sm font-medium flex items-center gap-1"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Adicionar novo banco</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             <CommandList className="bg-popover">
               <CommandEmpty>Nenhum banco encontrado.</CommandEmpty>
               <CommandGroup>
@@ -163,6 +176,7 @@ export function BancoSelect({ value, onValueChange, disabled }: BancoSelectProps
           </Command>
         </PopoverContent>
       </Popover>
+      </TooltipProvider>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
