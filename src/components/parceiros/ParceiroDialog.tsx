@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Trash2, Eye, EyeOff } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface BankAccount {
   id?: string;
@@ -445,17 +447,16 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                   </div>
                 </div>
                 <div className="col-span-2">
-                  <Label htmlFor="status">Status</Label>
-                  <select
-                    id="status"
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-md bg-background"
-                    disabled={loading}
-                  >
-                    <option value="ativo">Ativo</option>
-                    <option value="inativo">Inativo</option>
-                  </select>
+                  <Label htmlFor="status" className="text-center block">Status</Label>
+                  <Select value={status} onValueChange={setStatus} disabled={loading}>
+                    <SelectTrigger className="w-full text-center">
+                      <SelectValue placeholder="Selecione o status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ativo">Ativo</SelectItem>
+                      <SelectItem value="inativo">Inativo</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="col-span-2">
                   <Label htmlFor="observacoes">Observações</Label>
@@ -498,18 +499,21 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                       </div>
                       <div className="col-span-2">
                         <Label>Banco</Label>
-                        <select
-                          value={account.banco_id}
-                          onChange={(e) => updateBankAccount(index, "banco_id", e.target.value)}
-                          className="w-full px-3 py-2 border rounded-md bg-background"
+                        <Select 
+                          value={account.banco_id} 
+                          onValueChange={(value) => updateBankAccount(index, "banco_id", value)}
                         >
-                          <option value="">Selecione um banco</option>
-                          {bancos.map((banco) => (
-                            <option key={banco.id} value={banco.id}>
-                              {banco.codigo} - {banco.nome}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Selecione um banco" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {bancos.map((banco) => (
+                              <SelectItem key={banco.id} value={banco.id}>
+                                {banco.codigo} - {banco.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <Label>Agência</Label>
@@ -529,15 +533,19 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                       </div>
                       <div>
                         <Label>Tipo</Label>
-                        <select
-                          value={account.tipo_conta}
-                          onChange={(e) => updateBankAccount(index, "tipo_conta", e.target.value)}
-                          className="w-full px-3 py-2 border rounded-md bg-background"
+                        <Select 
+                          value={account.tipo_conta} 
+                          onValueChange={(value) => updateBankAccount(index, "tipo_conta", value)}
                         >
-                          <option value="corrente">Corrente</option>
-                          <option value="poupanca">Poupança</option>
-                          <option value="pagamento">Pagamento</option>
-                        </select>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Tipo de conta" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="corrente">Corrente</SelectItem>
+                            <SelectItem value="poupanca">Poupança</SelectItem>
+                            <SelectItem value="pagamento">Pagamento</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <Label>Titular</Label>
@@ -576,14 +584,12 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                         />
                       </div>
                       <div className="col-span-2 flex items-center gap-2">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           id={`usar-senha-global-${index}`}
                           checked={account.usar_senha_global}
-                          onChange={(e) => updateBankAccount(index, "usar_senha_global", e.target.checked.toString())}
-                          className="h-4 w-4"
+                          onCheckedChange={(checked) => updateBankAccount(index, "usar_senha_global", String(checked))}
                         />
-                        <Label htmlFor={`usar-senha-global-${index}`}>
+                        <Label htmlFor={`usar-senha-global-${index}`} className="cursor-pointer">
                           Usar senha padrão do parceiro
                         </Label>
                       </div>
@@ -621,37 +627,44 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                       </div>
                       <div>
                         <Label>Moeda</Label>
-                        <select
-                          value={wallet.moeda}
-                          onChange={(e) => updateCryptoWallet(index, "moeda", e.target.value)}
-                          className="w-full px-3 py-2 border rounded-md bg-background"
+                        <Select 
+                          value={wallet.moeda} 
+                          onValueChange={(value) => updateCryptoWallet(index, "moeda", value)}
                         >
-                          <option value="BTC">Bitcoin (BTC)</option>
-                          <option value="ETH">Ethereum (ETH)</option>
-                          <option value="USDT">Tether (USDT)</option>
-                          <option value="USDC">USD Coin (USDC)</option>
-                          <option value="BNB">Binance Coin (BNB)</option>
-                          <option value="SOL">Solana (SOL)</option>
-                          <option value="ADA">Cardano (ADA)</option>
-                          <option value="DOT">Polkadot (DOT)</option>
-                          <option value="MATIC">Polygon (MATIC)</option>
-                          <option value="TRX">Tron (TRX)</option>
-                        </select>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Selecione a moeda" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="BTC">Bitcoin (BTC)</SelectItem>
+                            <SelectItem value="ETH">Ethereum (ETH)</SelectItem>
+                            <SelectItem value="USDT">Tether (USDT)</SelectItem>
+                            <SelectItem value="USDC">USD Coin (USDC)</SelectItem>
+                            <SelectItem value="BNB">Binance Coin (BNB)</SelectItem>
+                            <SelectItem value="SOL">Solana (SOL)</SelectItem>
+                            <SelectItem value="ADA">Cardano (ADA)</SelectItem>
+                            <SelectItem value="DOT">Polkadot (DOT)</SelectItem>
+                            <SelectItem value="MATIC">Polygon (MATIC)</SelectItem>
+                            <SelectItem value="TRX">Tron (TRX)</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <Label>Network</Label>
-                        <select
-                          value={wallet.rede_id}
-                          onChange={(e) => updateCryptoWallet(index, "rede_id", e.target.value)}
-                          className="w-full px-3 py-2 border rounded-md bg-background"
+                        <Select 
+                          value={wallet.rede_id} 
+                          onValueChange={(value) => updateCryptoWallet(index, "rede_id", value)}
                         >
-                          <option value="">Selecione uma rede</option>
-                          {redes.map((rede) => (
-                            <option key={rede.id} value={rede.id}>
-                              {rede.nome}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Selecione uma rede" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {redes.map((rede) => (
+                              <SelectItem key={rede.id} value={rede.id}>
+                                {rede.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="col-span-2">
                         <Label>Endereço</Label>
@@ -680,14 +693,12 @@ export default function ParceiroDialog({ open, onClose, parceiro }: ParceiroDial
                         />
                       </div>
                       <div className="col-span-2 flex items-center gap-2">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           id={`usar-senha-global-wallet-${index}`}
                           checked={wallet.usar_senha_global}
-                          onChange={(e) => updateCryptoWallet(index, "usar_senha_global", e.target.checked.toString())}
-                          className="h-4 w-4"
+                          onCheckedChange={(checked) => updateCryptoWallet(index, "usar_senha_global", String(checked))}
                         />
-                        <Label htmlFor={`usar-senha-global-wallet-${index}`}>
+                        <Label htmlFor={`usar-senha-global-wallet-${index}`} className="cursor-pointer">
                           Usar senha padrão do parceiro
                         </Label>
                       </div>
