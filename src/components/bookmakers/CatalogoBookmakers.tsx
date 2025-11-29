@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, Shield } from "lucide-react";
+import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, ShieldCheck, AlertTriangle } from "lucide-react";
 import BookmakerCatalogoDialog from "./BookmakerCatalogoDialog";
 
 interface BookmakerCatalogo {
@@ -349,15 +349,26 @@ export default function CatalogoBookmakers() {
                     {/* Ícones no canto superior direito */}
                     <TooltipProvider>
                       <div className="flex gap-2">
-                        {bookmaker.status === "REGULAMENTADA" && (
+                        {bookmaker.status === "REGULAMENTADA" ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div className="cursor-default">
-                                <Shield className="h-5 w-5 text-emerald-500" />
+                                <ShieldCheck className="h-5 w-5 text-emerald-500" />
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>Casa Regulamentada</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="cursor-default">
+                                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Casa Não Regulamentada</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
