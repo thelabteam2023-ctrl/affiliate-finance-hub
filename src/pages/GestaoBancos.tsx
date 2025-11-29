@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Edit, Trash2, LogOut } from "lucide-react";
-import Header from "@/components/Header";
 import {
   Dialog,
   DialogContent,
@@ -181,8 +180,6 @@ export default function GestaoBancos() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
