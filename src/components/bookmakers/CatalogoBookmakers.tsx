@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, Shield } from "lucide-react";
 import BookmakerCatalogoDialog from "./BookmakerCatalogoDialog";
 
@@ -19,6 +20,8 @@ interface BookmakerCatalogo {
   links_json: any;
   bonus_enabled: boolean;
   multibonus_enabled: boolean;
+  bonus_simples_json: any;
+  bonus_multiplos_json: any;
   observacoes: string | null;
 }
 
@@ -33,6 +36,8 @@ export default function CatalogoBookmakers() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBookmaker, setEditingBookmaker] = useState<BookmakerCatalogo | null>(null);
+  const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
+  const [selectedBonusBookmaker, setSelectedBonusBookmaker] = useState<BookmakerCatalogo | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -93,6 +98,22 @@ export default function CatalogoBookmakers() {
     setDialogOpen(false);
     setEditingBookmaker(null);
     fetchBookmakers();
+  };
+
+  const handleBonusClick = (bookmaker: BookmakerCatalogo) => {
+    setSelectedBonusBookmaker(bookmaker);
+    setBonusDialogOpen(true);
+  };
+
+  const formatCurrency = (moeda: string) => {
+    const currencies: { [key: string]: string } = {
+      BRL: "R$",
+      USD: "$",
+      EUR: "€",
+      USDT: "USDT",
+      BTC: "BTC",
+    };
+    return currencies[moeda] || moeda;
   };
 
   const clearAllFilters = () => {
@@ -327,12 +348,12 @@ export default function CatalogoBookmakers() {
                     
                     {/* Ícones no canto superior direito */}
                     <TooltipProvider>
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-2">
                         {bookmaker.status === "REGULAMENTADA" && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="p-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
-                                <Shield className="h-4 w-4 text-emerald-500" />
+                              <div className="cursor-default">
+                                <Shield className="h-5 w-5 text-emerald-500" />
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -344,12 +365,18 @@ export default function CatalogoBookmakers() {
                         {bookmaker.bonus_enabled && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="p-1.5 rounded-md bg-primary/10 border border-primary/20">
-                                <Gift className="h-4 w-4 text-primary" />
-                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleBonusClick(bookmaker);
+                                }}
+                                className="cursor-pointer hover:scale-110 transition-transform"
+                              >
+                                <Gift className="h-5 w-5 text-primary" />
+                              </button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Possui Bônus {bookmaker.multibonus_enabled ? "Múltiplos" : "Simples"}</p>
+                              <p>Ver Detalhes do Bônus</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -433,6 +460,100 @@ export default function CatalogoBookmakers() {
         onClose={handleDialogClose}
         bookmaker={editingBookmaker}
       />
+
+      {/* Dialog de Detalhes do Bônus */}
+      <Dialog open={bonusDialogOpen} onOpenChange={setBonusDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5 text-primary" />
+              Detalhes do Bônus - {selectedBonusBookmaker?.nome}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedBonusBookmaker && (
+            <div className="space-y-6 py-4">
+              {/* Bônus Simples */}
+              {!selectedBonusBookmaker.multibonus_enabled && selectedBonusBookmaker.bonus_simples_json && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-primary">Bônus Simples</h3>
+                  <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-accent/20 border border-accent/30">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Percentual</p>
+                      <p className="text-lg font-semibold">{selectedBonusBookmaker.bonus_simples_json.percent}%</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Valor Máximo</p>
+                      <p className="text-lg font-semibold">
+                        {formatCurrency(selectedBonusBookmaker.bonus_simples_json.moeda)} {selectedBonusBookmaker.bonus_simples_json.valorMax}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Odd Mínima</p>
+                      <p className="text-lg font-semibold">{selectedBonusBookmaker.bonus_simples_json.oddMin}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Tipo</p>
+                      <Badge variant="secondary">{selectedBonusBookmaker.bonus_simples_json.tipo}</Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Rollover</p>
+                      <p className="text-lg font-semibold">
+                        {selectedBonusBookmaker.bonus_simples_json.rolloverVezes}x sobre {selectedBonusBookmaker.bonus_simples_json.rolloverBase}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Prazo</p>
+                      <p className="text-lg font-semibold">{selectedBonusBookmaker.bonus_simples_json.prazo} dias</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Bônus Múltiplos */}
+              {selectedBonusBookmaker.multibonus_enabled && selectedBonusBookmaker.bonus_multiplos_json && Array.isArray(selectedBonusBookmaker.bonus_multiplos_json) && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-primary">Bônus Múltiplos</h3>
+                  {selectedBonusBookmaker.bonus_multiplos_json.map((bonus: any, index: number) => (
+                    <div key={index} className="space-y-3 p-4 rounded-lg bg-accent/20 border border-accent/30">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold">{index + 1}º Depósito</h4>
+                        <Badge variant="default">{bonus.percent}%</Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Valor Máximo</p>
+                          <p className="font-medium">
+                            {formatCurrency(bonus.moeda)} {bonus.valorMax}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Odd Mínima</p>
+                          <p className="font-medium">{bonus.oddMin}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Tipo</p>
+                          <Badge variant="outline" className="text-xs">{bonus.tipo}</Badge>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Prazo</p>
+                          <p className="font-medium">{bonus.prazo} dias</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-muted-foreground">Rollover</p>
+                          <p className="font-medium">
+                            {bonus.rolloverVezes}x sobre {bonus.rolloverBase}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
