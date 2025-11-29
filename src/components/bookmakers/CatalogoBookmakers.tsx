@@ -8,7 +8,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, ShieldCheck, AlertTriangle, LayoutGrid, List } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import BookmakerCatalogoDialog from "./BookmakerCatalogoDialog";
 
 interface BookmakerCatalogo {
@@ -39,6 +49,9 @@ export default function CatalogoBookmakers() {
   const [editingBookmaker, setEditingBookmaker] = useState<BookmakerCatalogo | null>(null);
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
   const [selectedBonusBookmaker, setSelectedBonusBookmaker] = useState<BookmakerCatalogo | null>(null);
+  const [viewType, setViewType] = useState<"cards" | "list">("cards");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [bookmakerToDelete, setBookmakerToDelete] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -65,14 +78,19 @@ export default function CatalogoBookmakers() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta casa do catálogo?")) return;
+  const handleDeleteClick = (id: string) => {
+    setBookmakerToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!bookmakerToDelete) return;
 
     try {
       const { error } = await supabase
         .from("bookmakers_catalogo")
         .delete()
-        .eq("id", id);
+        .eq("id", bookmakerToDelete);
 
       if (error) throw error;
 
@@ -81,6 +99,8 @@ export default function CatalogoBookmakers() {
         description: "A casa foi removida do catálogo com sucesso.",
       });
       fetchBookmakers();
+      setDeleteDialogOpen(false);
+      setBookmakerToDelete(null);
     } catch (error: any) {
       toast({
         title: "Erro ao excluir casa",
@@ -184,6 +204,22 @@ export default function CatalogoBookmakers() {
               <Filter className="mr-2 h-4 w-4" />
               Filtros {hasActiveFilters && `(${[statusFilter, operacionalFilter, verificacaoFilter, bonusFilter].filter(f => f !== "todos").length})`}
             </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setViewType(viewType === "cards" ? "list" : "cards")}
+                  >
+                    {viewType === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{viewType === "cards" ? "Visualizar como lista" : "Visualizar como cards"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Bookmaker
@@ -334,170 +370,297 @@ export default function CatalogoBookmakers() {
         </Card>
       ) : (
         <>
-          <div className="flex items-center justify-between px-1">
+          <div className="flex items-center justify-between px-1 mb-4">
             <p className="text-sm text-muted-foreground">
               {filteredBookmakers.length === bookmakers.length 
                 ? `${bookmakers.length} bookmaker${bookmakers.length !== 1 ? 's' : ''} no catálogo`
                 : `${filteredBookmakers.length} de ${bookmakers.length} bookmaker${bookmakers.length !== 1 ? 's' : ''}`}
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredBookmakers.map((bookmaker) => (
-              <Card 
-                key={bookmaker.id} 
-                className={`hover:shadow-lg transition-shadow relative border-2 ${
-                  bookmaker.operacional === "ATIVA" 
-                    ? "border-emerald-500/50" 
-                    : "border-warning/50"
-                }`}
-              >
-                <CardHeader className="pb-3">
-                  {/* Logo, Nome, Ícone de Verificação e Gift - tudo na mesma linha */}
-                  <div className="flex items-start gap-3">
-                    {/* Logo 20x20 com fallback */}
-                    <div className="h-20 w-20 flex-shrink-0 flex items-center justify-center">
-                      {bookmaker.logo_url ? (
-                        <img
-                          src={bookmaker.logo_url}
-                          alt={bookmaker.nome}
-                          className="h-full w-full object-contain"
-                          onError={(e) => {
-                            const target = e.currentTarget;
-                            target.style.display = 'none';
-                            const parent = target.parentElement;
-                            if (parent) {
-                              parent.innerHTML = `<div class="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span class="text-sm font-bold text-primary">${bookmaker.nome.substring(0, 2).toUpperCase()}</span>
-                              </div>`;
-                            }
-                          }}
-                        />
-                      ) : (
-                        <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-sm font-bold text-primary">
-                            {bookmaker.nome.substring(0, 2).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Nome com fonte menor */}
-                    <CardTitle className="text-sm font-semibold truncate">
-                      {bookmaker.nome}
-                    </CardTitle>
-                    
-                    {/* Ícone de verificação à direita do nome */}
-                    <TooltipProvider>
-                      {bookmaker.status === "REGULAMENTADA" ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="cursor-default flex-shrink-0">
-                              <ShieldCheck className="h-5 w-5 text-emerald-500" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>REGULAMENTADA</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="cursor-default flex-shrink-0">
-                              <AlertTriangle className="h-5 w-5 text-amber-500" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>NÃO REGULAMENTADA</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </TooltipProvider>
-                    
-                    {/* Ícone de Gift no final da linha */}
-                    {bookmaker.bonus_enabled && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleBonusClick(bookmaker);
-                              }}
-                              className="cursor-pointer hover:scale-110 transition-transform flex-shrink-0 ml-auto"
-                            >
-                              <Gift className="h-5 w-5 text-primary" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Ver Detalhes do Bônus</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Verificação:</span>
-                        <span className="text-sm">
-                          {bookmaker.verificacao === "OBRIGATORIA" 
-                            ? "Obrigatória" 
-                            : bookmaker.verificacao === "QUANDO_SOLICITADO"
-                            ? "Quando Solicitado"
-                            : "Não Requerida"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {bookmaker.links_json && Array.isArray(bookmaker.links_json) && bookmaker.links_json.length > 0 && (
-                      <div className="pt-2 border-t space-y-1">
-                        {bookmaker.links_json.slice(0, 2).map((link: any, index: number) => (
-                          <a
-                            key={index}
-                            href={link.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5 group"
-                          >
-                            <ExternalLink className="h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                            <span>{link.referencia || "Site Oficial"}</span>
-                          </a>
-                        ))}
-                        {bookmaker.links_json.length > 2 && (
-                          <p className="text-xs text-muted-foreground">
-                            +{bookmaker.links_json.length - 2} link{bookmaker.links_json.length - 2 > 1 ? 's' : ''}
-                          </p>
+          
+          {viewType === "cards" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredBookmakers.map((bookmaker) => (
+                <Card 
+                  key={bookmaker.id} 
+                  className={`hover:shadow-lg transition-shadow relative border-2 ${
+                    bookmaker.operacional === "ATIVA" 
+                      ? "border-emerald-500/50" 
+                      : "border-warning/50"
+                  }`}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start gap-3">
+                      <div className="h-20 w-20 flex-shrink-0 flex items-center justify-center">
+                        {bookmaker.logo_url ? (
+                          <img
+                            src={bookmaker.logo_url}
+                            alt={bookmaker.nome}
+                            className="h-full w-full object-contain"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent) {
+                                parent.innerHTML = `<div class="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <span class="text-sm font-bold text-primary">${bookmaker.nome.substring(0, 2).toUpperCase()}</span>
+                                </div>`;
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-sm font-bold text-primary">
+                              {bookmaker.nome.substring(0, 2).toUpperCase()}
+                            </span>
+                          </div>
                         )}
                       </div>
-                    )}
-
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => handleEdit(bookmaker)}
-                      >
-                        <Edit className="mr-1 h-4 w-4" />
-                        Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-red-600 hover:text-red-700"
-                        onClick={() => handleDelete(bookmaker.id)}
-                      >
-                        <Trash2 className="mr-1 h-4 w-4" />
-                        Excluir
-                      </Button>
+                      
+                      <CardTitle className="text-sm font-semibold truncate">
+                        {bookmaker.nome}
+                      </CardTitle>
+                      
+                      <TooltipProvider>
+                        {bookmaker.status === "REGULAMENTADA" ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="cursor-default flex-shrink-0">
+                                <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>REGULAMENTADA</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="cursor-default flex-shrink-0">
+                                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>NÃO REGULAMENTADA</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </TooltipProvider>
+                      
+                      {bookmaker.bonus_enabled && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleBonusClick(bookmaker);
+                                }}
+                                className="cursor-pointer hover:scale-110 transition-transform flex-shrink-0 ml-auto"
+                              >
+                                <Gift className="h-5 w-5 text-primary" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Ver Detalhes do Bônus</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Verificação:</span>
+                          <span className="text-sm">
+                            {bookmaker.verificacao === "OBRIGATORIA" 
+                              ? "Obrigatória" 
+                              : bookmaker.verificacao === "QUANDO_SOLICITADO"
+                              ? "Quando Solicitado"
+                              : "Não Requerida"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {bookmaker.links_json && Array.isArray(bookmaker.links_json) && bookmaker.links_json.length > 0 && (
+                        <div className="pt-2 border-t space-y-1">
+                          {bookmaker.links_json.slice(0, 2).map((link: any, index: number) => (
+                            <a
+                              key={index}
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5 group"
+                            >
+                              <ExternalLink className="h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                              <span>{link.referencia || "Site Oficial"}</span>
+                            </a>
+                          ))}
+                          {bookmaker.links_json.length > 2 && (
+                            <p className="text-xs text-muted-foreground">
+                              +{bookmaker.links_json.length - 2} link{bookmaker.links_json.length - 2 > 1 ? 's' : ''}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleEdit(bookmaker)}
+                        >
+                          <Edit className="mr-1 h-4 w-4" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteClick(bookmaker.id)}
+                        >
+                          <Trash2 className="mr-1 h-4 w-4" />
+                          Excluir
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <div className="divide-y divide-border">
+                  {filteredBookmakers.map((bookmaker) => (
+                    <div 
+                      key={bookmaker.id} 
+                      className={`p-4 transition-colors ${
+                        bookmaker.operacional === "INATIVA" 
+                          ? "bg-warning/5 hover:bg-warning/10" 
+                          : "hover:bg-accent/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 flex items-center gap-3">
+                          <div className="h-16 w-16 flex-shrink-0 flex items-center justify-center">
+                            {bookmaker.logo_url ? (
+                              <img
+                                src={bookmaker.logo_url}
+                                alt={bookmaker.nome}
+                                className="h-full w-full object-contain"
+                                onError={(e) => {
+                                  const target = e.currentTarget;
+                                  target.style.display = 'none';
+                                  const parent = target.parentElement;
+                                  if (parent) {
+                                    parent.innerHTML = `<div class="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                                      <span class="text-sm font-bold text-primary">${bookmaker.nome.substring(0, 2).toUpperCase()}</span>
+                                    </div>`;
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                                <span className="text-sm font-bold text-primary">
+                                  {bookmaker.nome.substring(0, 2).toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-base">{bookmaker.nome}</h3>
+                              <TooltipProvider>
+                                {bookmaker.status === "REGULAMENTADA" ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="cursor-default">
+                                        <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>REGULAMENTADA</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="cursor-default">
+                                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>NÃO REGULAMENTADA</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </TooltipProvider>
+                              {bookmaker.bonus_enabled && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleBonusClick(bookmaker);
+                                        }}
+                                        className="cursor-pointer hover:scale-110 transition-transform"
+                                      >
+                                        <Gift className="h-4 w-4 text-primary" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Ver Detalhes do Bônus</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-0.5 text-sm text-muted-foreground">
+                              <span>
+                                <span className="font-medium">Verificação:</span>{" "}
+                                {bookmaker.verificacao === "OBRIGATORIA" 
+                                  ? "Obrigatória" 
+                                  : bookmaker.verificacao === "QUANDO_SOLICITADO"
+                                  ? "Quando Solicitado"
+                                  : "Não Requerida"}
+                              </span>
+                              {bookmaker.links_json && Array.isArray(bookmaker.links_json) && bookmaker.links_json.length > 0 && (
+                                <span className="text-xs">
+                                  <span className="font-medium">Links:</span> {bookmaker.links_json.length} disponíve{bookmaker.links_json.length > 1 ? 'is' : 'l'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(bookmaker)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(bookmaker.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
 
@@ -600,6 +763,26 @@ export default function CatalogoBookmakers() {
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza que deseja excluir esta casa do catálogo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. A casa será permanentemente removida do catálogo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
