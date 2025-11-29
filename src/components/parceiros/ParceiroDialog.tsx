@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2, AlertTriangle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,6 +22,8 @@ import { BancoSelect } from "./BancoSelect";
 import { RedeSelect } from "./RedeSelect";
 import { PasswordInput } from "./PasswordInput";
 import { PixKeyInput } from "./PixKeyInput";
+import { PhoneInput } from "./PhoneInput";
+import { validateCPF, formatCPF, formatCEP, formatAgencia, formatConta } from "@/lib/validators";
 
 interface PixKey {
   tipo: string;
@@ -146,26 +148,18 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     setCryptoWallets([]);
   };
 
-  const formatCEP = (value: string) => {
-    const numbers = value.replace(/\D/g, "");
-    return numbers.replace(/(\d{5})(\d{3})/, "$1-$2");
-  };
-
-  const formatCPF = (value: string) => {
-    const numbers = value.replace(/\D/g, "");
-    return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-  };
-
-  const formatPhone = (value: string) => {
-    const numbers = value.replace(/\D/g, "");
-    if (numbers.length <= 10) {
-      return numbers.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
-    }
-    return numbers.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate CPF
+    if (!validateCPF(cpf)) {
+      toast({
+        title: "CPF inválido",
+        description: "Por favor, informe um CPF válido.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Validate required fields and collect missing optional fields
     const missing: string[] = [];
@@ -417,12 +411,9 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 </div>
                 <div>
                   <Label htmlFor="telefone">Telefone</Label>
-                  <Input
-                    id="telefone"
+                  <PhoneInput
                     value={telefone}
-                    onChange={(e) => setTelefone(formatPhone(e.target.value))}
-                    placeholder="(00) 00000-0000"
-                    maxLength={15}
+                    onChange={setTelefone}
                     disabled={loading || viewMode}
                   />
                 </div>
@@ -502,6 +493,24 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             </TabsContent>
 
             <TabsContent value="bancos" className="space-y-4">
+              {bankAccounts.some(account => 
+                !account.banco_id || !account.titular || !account.pix_keys.some(k => k.chave) ||
+                !account.agencia || !account.conta || 
+                (!account.senha_acesso_encrypted && !account.usar_senha_global) ||
+                (!account.senha_transacao_encrypted && !account.usar_senha_global)
+              ) && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Antes de continuar:</AlertTitle>
+                  <AlertDescription>
+                    <ul className="list-disc list-inside space-y-1 text-sm mt-2">
+                      <li><strong>Obrigatórios:</strong> Banco, Titular, pelo menos uma Chave PIX</li>
+                      <li><strong>Opcionais:</strong> Agência, Conta, Senha de Acesso, Senha de Transação</li>
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               {!viewMode && (
                 <Button
                   type="button"
@@ -542,16 +551,16 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                       <div>
                         <Label>Agência</Label>
                         <Input
-                          value={account.agencia}
+                          value={formatAgencia(account.agencia)}
                           onChange={(e) => updateBankAccount(index, "agencia", e.target.value)}
-                          placeholder="0000"
+                          placeholder="0000-0"
                           disabled={viewMode}
                         />
                       </div>
                       <div>
                         <Label>Conta</Label>
                         <Input
-                          value={account.conta}
+                          value={formatConta(account.conta)}
                           onChange={(e) => updateBankAccount(index, "conta", e.target.value)}
                           placeholder="00000-0"
                           disabled={viewMode}
@@ -627,6 +636,22 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             </TabsContent>
 
             <TabsContent value="crypto" className="space-y-4">
+              {cryptoWallets.some(wallet => 
+                !wallet.moeda || !wallet.endereco || !wallet.rede_id ||
+                (!wallet.senha_acesso_encrypted && !wallet.usar_senha_global)
+              ) && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Antes de continuar:</AlertTitle>
+                  <AlertDescription>
+                    <ul className="list-disc list-inside space-y-1 text-sm mt-2">
+                      <li><strong>Obrigatórios:</strong> Moeda, Rede, Endereço</li>
+                      <li><strong>Opcionais:</strong> Label, Senha de Acesso</li>
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               {!viewMode && (
                 <Button
                   type="button"
@@ -732,22 +757,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
               ))}
             </TabsContent>
           </Tabs>
-
-          {/* Warning Alert - Only show if any account is incomplete */}
-          {bankAccounts.length > 0 && !viewMode && bankAccounts.some(account => 
-            !account.banco_id || !account.titular || account.pix_keys.length === 0 || !account.pix_keys.some(key => key.chave)
-          ) && (
-            <Alert className="mt-4 border-orange-600/50 bg-orange-950/20">
-              <AlertTitle className="text-orange-400">Antes de continuar:</AlertTitle>
-              <AlertDescription>
-                <ul className="list-disc list-inside space-y-1 text-sm text-orange-300/80 mt-2">
-                  <li>Banco, Titular e Chave PIX são obrigatórios</li>
-                  <li>Agência e Conta são opcionais</li>
-                  <li>Senhas são opcionais (use senha padrão ou deixe em branco)</li>
-                </ul>
-              </AlertDescription>
-            </Alert>
-          )}
 
           {/* Confirmation Dialog */}
           <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
