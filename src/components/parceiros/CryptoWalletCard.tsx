@@ -22,6 +22,14 @@ export function CryptoWalletCard({ wallet }: CryptoWalletCardProps) {
     return `${addr.slice(0, 6)}...${addr.slice(-6)}`;
   };
 
+  const formatExchangeName = (name: string) => {
+    // Convert kebab-case or lowercase to Title Case
+    return name
+      .split(/[-\s]/) // Split by hyphens or spaces
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -49,7 +57,7 @@ export function CryptoWalletCard({ wallet }: CryptoWalletCardProps) {
               <Wallet className="w-5 h-5 text-primary" />
             </div>
             <h3 className="font-semibold text-foreground">
-              {wallet.exchange}
+              {formatExchangeName(wallet.exchange || "")}
             </h3>
           </div>
           <Badge variant="outline" className="bg-accent/20 text-accent-foreground uppercase text-xs">
