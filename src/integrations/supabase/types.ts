@@ -319,9 +319,9 @@ export type Database = {
           created_at: string
           endereco: string
           id: string
-          label: string | null
           moeda: string[] | null
           network: string
+          observacoes_encrypted: string | null
           parceiro_id: string
           rede_id: string | null
           updated_at: string
@@ -330,9 +330,9 @@ export type Database = {
           created_at?: string
           endereco: string
           id?: string
-          label?: string | null
           moeda?: string[] | null
           network: string
+          observacoes_encrypted?: string | null
           parceiro_id: string
           rede_id?: string | null
           updated_at?: string
@@ -341,9 +341,9 @@ export type Database = {
           created_at?: string
           endereco?: string
           id?: string
-          label?: string | null
           moeda?: string[] | null
           network?: string
+          observacoes_encrypted?: string | null
           parceiro_id?: string
           rede_id?: string | null
           updated_at?: string
