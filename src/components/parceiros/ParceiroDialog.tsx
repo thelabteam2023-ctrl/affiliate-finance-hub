@@ -283,7 +283,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     e.preventDefault();
     
     // Check for validation errors
-    const hasEnderecoError = Object.values(enderecoErrors).some(error => error);
+    const hasEnderecoError = Object.values(enderecoErrors || {}).some(error => error);
     if (cpfError || telefoneError || hasEnderecoError) {
       toast({
         title: "Erros de validação",
