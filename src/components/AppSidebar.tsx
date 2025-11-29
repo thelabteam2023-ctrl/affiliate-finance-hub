@@ -1,6 +1,7 @@
 import { Home, Users, Landmark, Wallet, Building2, Link2 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import {
   Sidebar,
@@ -57,17 +58,37 @@ export function AppSidebar() {
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <NavLink 
-                      to={item.url} 
-                      end 
-                      className="hover:bg-accent/50 transition-colors"
-                      activeClassName="bg-primary/10 text-primary font-medium border-l-2 border-primary"
-                    >
-                      <item.icon className={`h-4 w-4 ${isCollapsed ? '' : 'mr-2'}`} />
-                      {!isCollapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
+                  {isCollapsed ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                          <NavLink 
+                            to={item.url} 
+                            end 
+                            className="hover:bg-accent/50 transition-colors"
+                            activeClassName="bg-primary/10 text-primary font-medium border-l-2 border-primary"
+                          >
+                            <item.icon className="h-4 w-4" />
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="font-medium">
+                        {item.title}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                      <NavLink 
+                        to={item.url} 
+                        end 
+                        className="hover:bg-accent/50 transition-colors"
+                        activeClassName="bg-primary/10 text-primary font-medium border-l-2 border-primary"
+                      >
+                        <item.icon className="h-4 w-4 mr-2" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
