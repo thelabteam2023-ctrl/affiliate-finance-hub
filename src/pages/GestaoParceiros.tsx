@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2, LayoutGrid, List } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Header from "@/components/Header";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
@@ -32,6 +32,7 @@ export default function GestaoParceiros() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingParceiro, setEditingParceiro] = useState<Parceiro | null>(null);
   const [viewMode, setViewMode] = useState(false);
+  const [viewType, setViewType] = useState<"cards" | "list">("cards");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -223,7 +224,7 @@ export default function GestaoParceiros() {
                   <SelectItem value="inativo">Inativos</SelectItem>
                 </SelectContent>
               </Select>
-              <Button
+               <Button
                 variant="outline"
                 onClick={() => setShowCPF(!showCPF)}
               >
@@ -239,6 +240,22 @@ export default function GestaoParceiros() {
                   </>
                 )}
               </Button>
+              <Button
+                variant="outline"
+                onClick={() => setViewType(viewType === "cards" ? "list" : "cards")}
+              >
+                {viewType === "cards" ? (
+                  <>
+                    <List className="mr-2 h-4 w-4" />
+                    Lista
+                  </>
+                ) : (
+                  <>
+                    <LayoutGrid className="mr-2 h-4 w-4" />
+                    Cards
+                  </>
+                )}
+              </Button>
               <Button onClick={() => setDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Parceiro
@@ -247,7 +264,7 @@ export default function GestaoParceiros() {
           </CardContent>
         </Card>
 
-        {/* Parceiros Grid */}
+        {/* Parceiros View */}
         {filteredParceiros.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
@@ -256,7 +273,7 @@ export default function GestaoParceiros() {
               </p>
             </CardContent>
           </Card>
-        ) : (
+        ) : viewType === "cards" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredParceiros.map((parceiro) => (
               <Card key={parceiro.id} className="hover:shadow-lg transition-shadow relative">
@@ -352,6 +369,85 @@ export default function GestaoParceiros() {
               </Card>
             ))}
           </div>
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <div className="divide-y divide-border">
+                {filteredParceiros.map((parceiro) => (
+                  <div key={parceiro.id} className="p-4 hover:bg-accent/50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div 
+                        className="flex-1 cursor-pointer"
+                        onClick={() => handleView(parceiro)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <svg width="36" height="36" viewBox="0 0 40 40">
+                            <circle
+                              cx="20"
+                              cy="20"
+                              r="18"
+                              fill={parceiro.status === "ativo" ? "hsl(142 76% 36%)" : "hsl(0 72% 51%)"}
+                              opacity="0.2"
+                            />
+                            <circle
+                              cx="20"
+                              cy="20"
+                              r="12"
+                              fill={parceiro.status === "ativo" ? "hsl(142 76% 36%)" : "hsl(0 72% 51%)"}
+                            />
+                            <path
+                              d="M 20 14 A 4 4 0 0 0 20 22 A 4 4 0 0 0 20 14 M 12 28 Q 12 24 20 24 T 28 28"
+                              fill={parceiro.status === "ativo" ? "hsl(142 90% 98%)" : "hsl(0 0% 100%)"}
+                            />
+                          </svg>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-lg">{parceiro.nome}</h3>
+                              <Badge variant={parceiro.status === "ativo" ? "default" : "secondary"} className="text-xs">
+                                {parceiro.status}
+                              </Badge>
+                            </div>
+                            <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
+                              <span>CPF: {maskCPF(parceiro.cpf)}</span>
+                              {parceiro.email && <span>Email: {parceiro.email}</span>}
+                              {parceiro.telefone && <span>Tel: {parceiro.telefone}</span>}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="text-center px-3 py-2 bg-accent rounded-lg">
+                          <div className="font-bold text-foreground">{parceiro.contas_bancarias?.length || 0}</div>
+                          <div className="text-xs">Contas</div>
+                        </div>
+                        <div className="text-center px-3 py-2 bg-accent rounded-lg">
+                          <div className="font-bold text-foreground">{parceiro.wallets_crypto?.length || 0}</div>
+                          <div className="text-xs">Wallets</div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(parceiro)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(parceiro.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 
