@@ -345,52 +345,53 @@ export default function CatalogoBookmakers() {
             {filteredBookmakers.map((bookmaker) => (
               <Card key={bookmaker.id} className="hover:shadow-lg transition-shadow relative">
                 <CardHeader className="pb-3">
-                  {/* Nome com ícone de verificação ao lado */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <CardTitle className="text-lg">{bookmaker.nome}</CardTitle>
+                  {/* Logo, Nome, Ícone de Verificação e Gift - tudo na mesma linha */}
+                  <div className="flex items-center gap-3">
+                    {/* Logo pequeno ao lado do nome */}
+                    {bookmaker.logo_url && (
+                      <img
+                        src={bookmaker.logo_url}
+                        alt={bookmaker.nome}
+                        className="h-8 w-8 object-contain flex-shrink-0"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    )}
+                    
+                    {/* Nome com fonte menor */}
+                    <CardTitle className="text-sm font-semibold flex-1 truncate">
+                      {bookmaker.nome}
+                    </CardTitle>
+                    
+                    {/* Ícone de verificação */}
                     <TooltipProvider>
                       {bookmaker.status === "REGULAMENTADA" ? (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="cursor-default">
+                            <div className="cursor-default flex-shrink-0">
                               <ShieldCheck className="h-5 w-5 text-emerald-500" />
                             </div>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Casa Regulamentada</p>
+                            <p>REGULAMENTADA</p>
                           </TooltipContent>
                         </Tooltip>
                       ) : (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="cursor-default">
+                            <div className="cursor-default flex-shrink-0">
                               <AlertTriangle className="h-5 w-5 text-amber-500" />
                             </div>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Casa Não Regulamentada</p>
+                            <p>NÃO REGULAMENTADA</p>
                           </TooltipContent>
                         </Tooltip>
                       )}
                     </TooltipProvider>
-                  </div>
-
-                  {/* Logo e ícone de Gift */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      {bookmaker.logo_url ? (
-                        <img
-                          src={bookmaker.logo_url}
-                          alt={bookmaker.nome}
-                          className="h-12 w-auto object-contain"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      ) : null}
-                    </div>
                     
-                    {/* Ícone de Gift no canto superior direito */}
+                    {/* Ícone de Gift na mesma linha */}
                     {bookmaker.bonus_enabled && (
                       <TooltipProvider>
                         <Tooltip>
@@ -400,7 +401,7 @@ export default function CatalogoBookmakers() {
                                 e.stopPropagation();
                                 handleBonusClick(bookmaker);
                               }}
-                              className="cursor-pointer hover:scale-110 transition-transform"
+                              className="cursor-pointer hover:scale-110 transition-transform flex-shrink-0"
                             >
                               <Gift className="h-5 w-5 text-primary" />
                             </button>
