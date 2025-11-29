@@ -97,6 +97,60 @@ export type Database = {
           },
         ]
       }
+      bookmakers_catalogo: {
+        Row: {
+          bonus_enabled: boolean
+          bonus_multiplos_json: Json | null
+          bonus_simples_json: Json | null
+          created_at: string
+          id: string
+          links_json: Json | null
+          logo_url: string | null
+          multibonus_enabled: boolean
+          nome: string
+          observacoes: string | null
+          operacional: string
+          status: string
+          updated_at: string
+          user_id: string | null
+          verificacao: string
+        }
+        Insert: {
+          bonus_enabled?: boolean
+          bonus_multiplos_json?: Json | null
+          bonus_simples_json?: Json | null
+          created_at?: string
+          id?: string
+          links_json?: Json | null
+          logo_url?: string | null
+          multibonus_enabled?: boolean
+          nome: string
+          observacoes?: string | null
+          operacional?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          verificacao?: string
+        }
+        Update: {
+          bonus_enabled?: boolean
+          bonus_multiplos_json?: Json | null
+          bonus_simples_json?: Json | null
+          created_at?: string
+          id?: string
+          links_json?: Json | null
+          logo_url?: string | null
+          multibonus_enabled?: boolean
+          nome?: string
+          observacoes?: string | null
+          operacional?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          verificacao?: string
+        }
+        Relationships: []
+      }
       contas_bancarias: {
         Row: {
           agencia: string | null
