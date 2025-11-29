@@ -354,17 +354,32 @@ export default function CatalogoBookmakers() {
                 <CardHeader className="pb-3">
                   {/* Logo, Nome, Ícone de Verificação e Gift - tudo na mesma linha */}
                   <div className="flex items-center gap-3">
-                    {/* Logo 14x14 */}
-                    {bookmaker.logo_url && (
-                      <img
-                        src={bookmaker.logo_url}
-                        alt={bookmaker.nome}
-                        className="h-14 w-14 object-contain flex-shrink-0"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    )}
+                    {/* Logo 14x14 com fallback */}
+                    <div className="h-14 w-14 flex-shrink-0 flex items-center justify-center">
+                      {bookmaker.logo_url ? (
+                        <img
+                          src={bookmaker.logo_url}
+                          alt={bookmaker.nome}
+                          className="h-full w-full object-contain"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              parent.innerHTML = `<div class="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
+                                <span class="text-xs font-bold text-primary">${bookmaker.nome.substring(0, 2).toUpperCase()}</span>
+                              </div>`;
+                            }
+                          }}
+                        />
+                      ) : (
+                        <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-xs font-bold text-primary">
+                            {bookmaker.nome.substring(0, 2).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                     
                     {/* Nome com fonte menor */}
                     <CardTitle className="text-sm font-semibold truncate">
