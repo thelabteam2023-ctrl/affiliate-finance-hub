@@ -100,7 +100,8 @@ export function formatCNPJ(cnpj: string): string {
 /**
  * Formata CEP para o padrão 00000-000
  */
-export function formatCEP(cep: string): string {
+export function formatCEP(cep: string | null | undefined): string {
+  if (!cep) return "";
   cep = cep.replace(/\D/g, "");
   return cep.replace(/(\d{5})(\d{3})/, "$1-$2");
 }
@@ -108,7 +109,8 @@ export function formatCEP(cep: string): string {
 /**
  * Formata agência bancária para o padrão 0000-0
  */
-export function formatAgencia(agencia: string): string {
+export function formatAgencia(agencia: string | null | undefined): string {
+  if (!agencia) return "";
   agencia = agencia.replace(/\D/g, "");
   if (agencia.length <= 4) return agencia;
   return agencia.replace(/(\d{4})(\d)/, "$1-$2");
@@ -117,7 +119,8 @@ export function formatAgencia(agencia: string): string {
 /**
  * Formata conta bancária
  */
-export function formatConta(conta: string): string {
+export function formatConta(conta: string | null | undefined): string {
+  if (!conta) return "";
   conta = conta.replace(/[^\d-]/g, "");
   return conta;
 }
