@@ -53,7 +53,7 @@ export function DatePicker({ value, onChange, disabled, placeholder = "Selecione
         <Button
           variant="outline"
           className={cn(
-            "w-full justify-start text-left font-normal h-10 border-input bg-background hover:bg-accent hover:text-accent-foreground",
+            "w-full justify-start text-left font-normal h-10 border border-input bg-accent/20 hover:bg-accent/30 focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-0 focus-visible:border-primary transition-all",
             !date && "text-muted-foreground"
           )}
           disabled={disabled}
