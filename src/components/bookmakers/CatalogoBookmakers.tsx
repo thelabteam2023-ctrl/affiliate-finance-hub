@@ -774,6 +774,7 @@ export default function CatalogoBookmakers() {
                             {bonus.tipoBônus === "BOAS_VINDAS" ? "BOAS-VINDAS" : 
                              bonus.tipoBônus === "CASHBACK" ? "CASHBACK" : 
                              bonus.tipoBônus === "FREE_BET" ? "FREE BET" : 
+                             bonus.tipoBônus === "RELOAD" ? "RELOAD" :
                              bonus.tipoBônus === "OUTRO" && bonus.tipoOutro ? bonus.tipoOutro : bonus.tipoBônus}
                           </Badge>
                           <Badge variant="outline">{bonus.percent}%</Badge>
