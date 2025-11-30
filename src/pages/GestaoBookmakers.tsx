@@ -58,10 +58,9 @@ export default function GestaoBookmakers() {
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [parceiros, setParceiros] = useState<Array<{ id: string; nome: string }>>([]);
   const [bookmakersCatalogo, setBookmakersCatalogo] = useState<Array<{ id: string; nome: string }>>([]);
-  const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
-  const [credentialsBookmaker, setCredentialsBookmaker] = useState<Bookmaker | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [limitadaPopoverOpen, setLimitadaPopoverOpen] = useState<string | null>(null);
+  const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -187,10 +186,6 @@ export default function GestaoBookmakers() {
     setHistoricoDialogOpen(true);
   };
 
-  const handleViewCredentials = (bookmaker: Bookmaker) => {
-    setCredentialsBookmaker(bookmaker);
-    setShowCredentialsDialog(true);
-  };
 
   const decryptPassword = (encrypted: string) => {
     try {
@@ -472,21 +467,63 @@ export default function GestaoBookmakers() {
                       <div className="flex items-center gap-2">
                         <CardTitle className="text-xl">{bookmaker.nome}</CardTitle>
                         {hasCredentials(bookmaker) && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleViewCredentials(bookmaker)}
-                                  className="h-7 w-7 p-0"
-                                >
-                                  <IdCard className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>ABRIR CREDENCIAIS DE ACESSO</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <Popover 
+                            open={credentialsPopoverOpen === bookmaker.id} 
+                            onOpenChange={(open) => setCredentialsPopoverOpen(open ? bookmaker.id : null)}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                              >
+                                <IdCard className="h-4 w-4" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-72 p-4" align="start">
+                              <div className="space-y-3">
+                                <h4 className="font-semibold text-sm">Credenciais - {bookmaker.nome}</h4>
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="text-xs font-medium text-muted-foreground">Usuário</label>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <p className="text-sm font-mono flex-1 truncate">{bookmaker.login_username}</p>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => copyToClipboard(bookmaker.login_username, "Usuário")}
+                                        className="h-7 w-7 p-0 shrink-0"
+                                      >
+                                        {copiedField === "Usuário" ? (
+                                          <Check className="h-3.5 w-3.5 text-green-500" />
+                                        ) : (
+                                          <Copy className="h-3.5 w-3.5" />
+                                        )}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-medium text-muted-foreground">Senha</label>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <p className="text-sm font-mono flex-1 truncate">{decryptPassword(bookmaker.login_password_encrypted)}</p>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => copyToClipboard(decryptPassword(bookmaker.login_password_encrypted), "Senha")}
+                                        className="h-7 w-7 p-0 shrink-0"
+                                      >
+                                        {copiedField === "Senha" ? (
+                                          <Check className="h-3.5 w-3.5 text-green-500" />
+                                        ) : (
+                                          <Copy className="h-3.5 w-3.5" />
+                                        )}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
@@ -624,23 +661,65 @@ export default function GestaoBookmakers() {
                               <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-2">
                                   <h3 className="font-medium text-base">{bookmaker.nome}</h3>
-                                  {hasCredentials(bookmaker) && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleViewCredentials(bookmaker)}
-                                            className="h-7 w-7 p-0"
-                                          >
-                                            <IdCard className="h-4 w-4" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>ABRIR CREDENCIAIS DE ACESSO</TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
+                                   {hasCredentials(bookmaker) && (
+                                    <Popover 
+                                      open={credentialsPopoverOpen === bookmaker.id} 
+                                      onOpenChange={(open) => setCredentialsPopoverOpen(open ? bookmaker.id : null)}
+                                    >
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 w-7 p-0"
+                                        >
+                                          <IdCard className="h-4 w-4" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-72 p-4" align="start">
+                                        <div className="space-y-3">
+                                          <h4 className="font-semibold text-sm">Credenciais - {bookmaker.nome}</h4>
+                                          <div className="space-y-3">
+                                            <div>
+                                              <label className="text-xs font-medium text-muted-foreground">Usuário</label>
+                                              <div className="flex items-center gap-2 mt-1">
+                                                <p className="text-sm font-mono flex-1 truncate">{bookmaker.login_username}</p>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  onClick={() => copyToClipboard(bookmaker.login_username, "Usuário")}
+                                                  className="h-7 w-7 p-0 shrink-0"
+                                                >
+                                                  {copiedField === "Usuário" ? (
+                                                    <Check className="h-3.5 w-3.5 text-green-500" />
+                                                  ) : (
+                                                    <Copy className="h-3.5 w-3.5" />
+                                                  )}
+                                                </Button>
+                                              </div>
+                                            </div>
+                                            <div>
+                                              <label className="text-xs font-medium text-muted-foreground">Senha</label>
+                                              <div className="flex items-center gap-2 mt-1">
+                                                <p className="text-sm font-mono flex-1 truncate">{decryptPassword(bookmaker.login_password_encrypted)}</p>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  onClick={() => copyToClipboard(decryptPassword(bookmaker.login_password_encrypted), "Senha")}
+                                                  className="h-7 w-7 p-0 shrink-0"
+                                                >
+                                                  {copiedField === "Senha" ? (
+                                                    <Check className="h-3.5 w-3.5 text-green-500" />
+                                                  ) : (
+                                                    <Copy className="h-3.5 w-3.5" />
+                                                  )}
+                                                </Button>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                   )}
                                   <Badge
                                     variant={
                                       bookmaker.status === "ativo"
@@ -772,64 +851,6 @@ export default function GestaoBookmakers() {
         </>
       )}
 
-      {/* Credentials Dialog */}
-      {credentialsBookmaker && (
-        <div
-          className={`fixed inset-0 z-50 flex items-center justify-center ${showCredentialsDialog ? 'visible' : 'hidden'}`}
-          onClick={() => setShowCredentialsDialog(false)}
-        >
-          <div className="fixed inset-0 bg-black/50" />
-          <Card className="relative z-50 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
-            <CardHeader>
-              <CardTitle>Credenciais - {credentialsBookmaker.nome}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Usuário</label>
-                <div className="flex items-center gap-2 mt-1">
-                  <p className="text-base font-mono flex-1">{credentialsBookmaker.login_username}</p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(credentialsBookmaker.login_username, "Usuário")}
-                    className="h-8 w-8 p-0"
-                  >
-                    {copiedField === "Usuário" ? (
-                      <Check className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Senha</label>
-                <div className="flex items-center gap-2 mt-1">
-                  <p className="text-base font-mono flex-1">{decryptPassword(credentialsBookmaker.login_password_encrypted)}</p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(decryptPassword(credentialsBookmaker.login_password_encrypted), "Senha")}
-                    className="h-8 w-8 p-0"
-                  >
-                    {copiedField === "Senha" ? (
-                      <Check className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-              <Button 
-                onClick={() => setShowCredentialsDialog(false)} 
-                className="w-full"
-              >
-                Fechar
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
     </div>
   );
