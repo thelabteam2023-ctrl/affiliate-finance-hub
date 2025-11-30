@@ -877,14 +877,16 @@ export function CaixaTransacaoDialog({
 
           {/* Nome do Investidor - Centralizado */}
           {tipoTransacao === "APORTE_FINANCEIRO" && (
-            <div className="space-y-2">
-              <Label htmlFor="nomeInvestidor" className="text-center block">Nome do Investidor</Label>
-              <Input
-                id="nomeInvestidor"
-                value={nomeInvestidor}
-                onChange={(e) => setNomeInvestidor(e.target.value)}
-                placeholder="Digite o nome do investidor"
-              />
+            <div className="flex justify-center">
+              <div className="w-[40%] space-y-2">
+                <Label htmlFor="nomeInvestidor" className="text-center block">Nome do Investidor</Label>
+                <Input
+                  id="nomeInvestidor"
+                  value={nomeInvestidor}
+                  onChange={(e) => setNomeInvestidor(e.target.value)}
+                  placeholder="Digite o nome do investidor"
+                />
+              </div>
             </div>
           )}
 
