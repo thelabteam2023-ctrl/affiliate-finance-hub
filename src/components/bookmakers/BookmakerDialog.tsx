@@ -244,71 +244,33 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
             />
           </div>
 
-          {selectedBookmaker && (
-            <>
-              <div className="flex items-center gap-3 py-3 border-y">
-                {selectedBookmaker.logo_url && (
-                  <img
-                    src={selectedBookmaker.logo_url}
-                    alt={selectedBookmaker.nome}
-                    className="h-14 w-14 rounded-lg object-contain flex-shrink-0"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
-                )}
-                <div className="text-lg font-semibold uppercase flex-1">
-                  {selectedBookmaker.nome}
-                </div>
-                {selectedBookmaker.observacoes && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => setShowObservacoesDialog(true)}
-                          className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex-shrink-0"
-                        >
-                          <Info className="h-4 w-4 text-white" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Ver observações da casa</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </div>
-
-              {selectedBookmaker.links_json && selectedBookmaker.links_json.length > 0 && (
+          {selectedBookmaker && selectedBookmaker.links_json && selectedBookmaker.links_json.length > 0 && (
+            <div className="space-y-3">
+              <Label className="text-base">
+                Link de Cadastro *
+              </Label>
+              <RadioGroup value={selectedLink} onValueChange={setSelectedLink}>
                 <div className="space-y-3">
-                  <Label className="text-base">
-                    Link de Cadastro *
-                  </Label>
-                  <RadioGroup value={selectedLink} onValueChange={setSelectedLink}>
-                    <div className="space-y-3">
-                      {selectedBookmaker.links_json.map((link) => (
-                        <label
-                          key={link.referencia}
-                          htmlFor={link.referencia}
-                          className="flex items-start gap-3 p-4 border rounded-lg hover:bg-accent/40 transition-colors cursor-pointer"
-                        >
-                          <RadioGroupItem value={link.referencia} id={link.referencia} className="mt-1 flex-shrink-0" />
-                          <div className="flex-1 flex items-center gap-3">
-                            <Badge variant="secondary" className="uppercase text-xs flex-shrink-0">
-                              {link.referencia === "PADRÃO" ? "SITE OFICIAL" : link.referencia}
-                            </Badge>
-                            <div className="text-xs text-muted-foreground break-all">
-                              {link.url}
-                            </div>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </RadioGroup>
+                  {selectedBookmaker.links_json.map((link) => (
+                    <label
+                      key={link.referencia}
+                      htmlFor={link.referencia}
+                      className="flex items-start gap-3 p-4 border rounded-lg hover:bg-accent/40 transition-colors cursor-pointer"
+                    >
+                      <RadioGroupItem value={link.referencia} id={link.referencia} className="mt-1 flex-shrink-0" />
+                      <div className="flex-1 flex items-center gap-3">
+                        <Badge variant="secondary" className="uppercase text-xs flex-shrink-0">
+                          {link.referencia === "PADRÃO" ? "SITE OFICIAL" : link.referencia}
+                        </Badge>
+                        <div className="text-xs text-muted-foreground break-all">
+                          {link.url}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
                 </div>
-              )}
-            </>
+              </RadioGroup>
+            </div>
           )}
 
           <div className="grid grid-cols-2 gap-4">
@@ -345,7 +307,6 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ativo">Ativo</SelectItem>
-                  <SelectItem value="inativo">Inativo</SelectItem>
                   <SelectItem value="limitada">Limitada</SelectItem>
                 </SelectContent>
               </Select>

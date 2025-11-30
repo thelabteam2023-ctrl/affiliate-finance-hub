@@ -313,7 +313,6 @@ export default function GestaoBookmakers() {
                 <SelectContent>
                   <SelectItem value="todos">Todos os status</SelectItem>
                   <SelectItem value="ativo">Ativo</SelectItem>
-                  <SelectItem value="inativo">Inativo</SelectItem>
                   <SelectItem value="limitada">Limitada</SelectItem>
                 </SelectContent>
               </Select>
