@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
 import BookmakerSelect from "@/components/bookmakers/BookmakerSelect";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeftRight } from "lucide-react";
 
 interface CaixaTransacaoDialogProps {
   open: boolean;
@@ -40,6 +40,24 @@ interface WalletCrypto {
   exchange: string;
   endereco: string;
   parceiro_id: string;
+}
+
+interface Bookmaker {
+  id: string;
+  nome: string;
+  saldo_atual: number;
+  moeda: string;
+}
+
+interface SaldoCaixaFiat {
+  moeda: string;
+  saldo: number;
+}
+
+interface SaldoCaixaCrypto {
+  coin: string;
+  saldo_usd: number;
+  saldo_coin: number;
 }
 
 export function CaixaTransacaoDialog({
@@ -76,10 +94,18 @@ export function CaixaTransacaoDialog({
   // Data for selects
   const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([]);
   const [walletsCrypto, setWalletsCrypto] = useState<WalletCrypto[]>([]);
+  const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
+  const [saldosCaixaFiat, setSaldosCaixaFiat] = useState<SaldoCaixaFiat[]>([]);
+  const [saldosCaixaCrypto, setSaldosCaixaCrypto] = useState<SaldoCaixaCrypto[]>([]);
+  
+  // Transfer flow type for TRANSFERENCIA
+  const [fluxoTransferencia, setFluxoTransferencia] = useState<"CAIXA_PARCEIRO" | "PARCEIRO_PARCEIRO">("CAIXA_PARCEIRO");
 
   useEffect(() => {
     if (open) {
       fetchAccountsAndWallets();
+      fetchBookmakers();
+      fetchSaldosCaixa();
     }
   }, [open]);
 
@@ -95,6 +121,7 @@ export function CaixaTransacaoDialog({
     setDestinoContaId("");
     setDestinoWalletId("");
     setDestinoBookmakerId("");
+    setFluxoTransferencia("CAIXA_PARCEIRO");
 
     // Set defaults based on transaction type
     if (tipoTransacao === "APORTE_FINANCEIRO") {
@@ -105,8 +132,27 @@ export function CaixaTransacaoDialog({
     } else if (tipoTransacao === "SAQUE") {
       setOrigemTipo("BOOKMAKER");
       setDestinoTipo("CAIXA_OPERACIONAL");
+    } else if (tipoTransacao === "TRANSFERENCIA") {
+      setOrigemTipo("CAIXA_OPERACIONAL");
+      setDestinoTipo("PARCEIRO_CONTA");
     }
   }, [tipoTransacao]);
+  
+  useEffect(() => {
+    // Update origem/destino based on transfer flow
+    if (tipoTransacao === "TRANSFERENCIA") {
+      if (fluxoTransferencia === "CAIXA_PARCEIRO") {
+        setOrigemTipo("CAIXA_OPERACIONAL");
+        setDestinoTipo("PARCEIRO_CONTA");
+        setOrigemParceiroId("");
+        setOrigemContaId("");
+        setOrigemWalletId("");
+      } else {
+        setOrigemTipo("PARCEIRO_CONTA");
+        setDestinoTipo("PARCEIRO_CONTA");
+      }
+    }
+  }, [fluxoTransferencia, tipoTransacao]);
 
   const fetchAccountsAndWallets = async () => {
     try {
@@ -124,6 +170,37 @@ export function CaixaTransacaoDialog({
       setWalletsCrypto(wallets || []);
     } catch (error) {
       console.error("Erro ao carregar contas e wallets:", error);
+    }
+  };
+
+  const fetchBookmakers = async () => {
+    try {
+      const { data } = await supabase
+        .from("bookmakers")
+        .select("id, nome, saldo_atual, moeda")
+        .eq("status", "ativo")
+        .order("nome");
+      
+      setBookmakers(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar bookmakers:", error);
+    }
+  };
+
+  const fetchSaldosCaixa = async () => {
+    try {
+      const { data: fiat } = await supabase
+        .from("v_saldo_caixa_fiat")
+        .select("moeda, saldo");
+
+      const { data: crypto } = await supabase
+        .from("v_saldo_caixa_crypto")
+        .select("coin, saldo_usd, saldo_coin");
+
+      setSaldosCaixaFiat(fiat || []);
+      setSaldosCaixaCrypto(crypto || []);
+    } catch (error) {
+      console.error("Erro ao carregar saldos caixa:", error);
     }
   };
 
@@ -146,6 +223,66 @@ export function CaixaTransacaoDialog({
     setDestinoContaId("");
     setDestinoWalletId("");
     setDestinoBookmakerId("");
+    setFluxoTransferencia("CAIXA_PARCEIRO");
+  };
+
+  const getSaldoAtual = (tipo: string, id?: string): number => {
+    if (tipo === "CAIXA_OPERACIONAL") {
+      const moedaAtual = tipoMoeda === "FIAT" ? moeda : "USD";
+      const saldo = saldosCaixaFiat.find(s => s.moeda === moedaAtual);
+      return saldo?.saldo || 0;
+    }
+    
+    if (tipo === "BOOKMAKER" && id) {
+      const bm = bookmakers.find(b => b.id === id);
+      return bm?.saldo_atual || 0;
+    }
+    
+    // TODO: Implementar saldo de parceiros quando necessário
+    return 0;
+  };
+
+  const getOrigemLabel = (): string => {
+    if (tipoTransacao === "APORTE_FINANCEIRO") return "Aporte Externo";
+    if (tipoTransacao === "DEPOSITO") return "Caixa Operacional";
+    if (tipoTransacao === "SAQUE" && origemBookmakerId) {
+      const bm = bookmakers.find(b => b.id === origemBookmakerId);
+      return bm?.nome || "Bookmaker";
+    }
+    if (tipoTransacao === "TRANSFERENCIA") {
+      if (origemTipo === "CAIXA_OPERACIONAL") return "Caixa Operacional";
+      if (origemTipo === "PARCEIRO_CONTA" && origemContaId) {
+        const conta = contasBancarias.find(c => c.id === origemContaId);
+        return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+      }
+      if (origemTipo === "PARCEIRO_WALLET" && origemWalletId) {
+        const wallet = walletsCrypto.find(w => w.id === origemWalletId);
+        return wallet ? `${wallet.exchange}` : "Wallet";
+      }
+    }
+    return "Origem";
+  };
+
+  const getDestinoLabel = (): string => {
+    if (tipoTransacao === "APORTE_FINANCEIRO" || tipoTransacao === "SAQUE") {
+      return "Caixa Operacional";
+    }
+    if (tipoTransacao === "DEPOSITO" && destinoBookmakerId) {
+      const bm = bookmakers.find(b => b.id === destinoBookmakerId);
+      return bm?.nome || "Bookmaker";
+    }
+    if (tipoTransacao === "TRANSFERENCIA") {
+      if (destinoTipo === "CAIXA_OPERACIONAL") return "Caixa Operacional";
+      if (destinoTipo === "PARCEIRO_CONTA" && destinoContaId) {
+        const conta = contasBancarias.find(c => c.id === destinoContaId);
+        return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+      }
+      if (destinoTipo === "PARCEIRO_WALLET" && destinoWalletId) {
+        const wallet = walletsCrypto.find(w => w.id === destinoWalletId);
+        return wallet ? `${wallet.exchange}` : "Wallet";
+      }
+    }
+    return "Destino";
   };
 
   const handleSubmit = async () => {
@@ -276,6 +413,14 @@ export function CaixaTransacaoDialog({
     }
 
     if (tipoTransacao === "TRANSFERENCIA") {
+      if (fluxoTransferencia === "CAIXA_PARCEIRO") {
+        return (
+          <div className="text-sm text-muted-foreground italic">
+            Caixa Operacional
+          </div>
+        );
+      }
+      
       return (
         <>
           <div className="space-y-2">
@@ -285,7 +430,6 @@ export function CaixaTransacaoDialog({
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="CAIXA_OPERACIONAL">Caixa Operacional</SelectItem>
                 <SelectItem value="PARCEIRO_CONTA">Conta Bancária</SelectItem>
                 <SelectItem value="PARCEIRO_WALLET">Wallet Crypto</SelectItem>
               </SelectContent>
@@ -502,26 +646,59 @@ export function CaixaTransacaoDialog({
             </Select>
           </div>
 
+          {/* Transfer Flow Toggle for TRANSFERENCIA */}
+          {tipoTransacao === "TRANSFERENCIA" && (
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={fluxoTransferencia === "CAIXA_PARCEIRO" ? "default" : "outline"}
+                onClick={() => setFluxoTransferencia("CAIXA_PARCEIRO")}
+                className="flex-1"
+              >
+                <ArrowLeftRight className="mr-2 h-4 w-4" />
+                Caixa → Parceiro
+              </Button>
+              <Button
+                type="button"
+                variant={fluxoTransferencia === "PARCEIRO_PARCEIRO" ? "default" : "outline"}
+                onClick={() => setFluxoTransferencia("PARCEIRO_PARCEIRO")}
+                className="flex-1"
+              >
+                <ArrowLeftRight className="mr-2 h-4 w-4" />
+                Parceiro → Parceiro
+              </Button>
+            </div>
+          )}
+
           {/* Visual Flow Cards */}
           {tipoTransacao && (
             <div className="flex items-center gap-4 p-4 bg-accent/5 rounded-lg border border-border/50">
               {/* Origem Card */}
               <div className="flex-1 p-4 bg-card rounded-lg border border-border shadow-sm">
                 <div className="text-xs text-muted-foreground mb-2">ORIGEM</div>
-                <div className="font-medium text-foreground">
-                  {tipoTransacao === "APORTE_FINANCEIRO" && "Aporte Externo"}
-                  {tipoTransacao === "DEPOSITO" && "Caixa Operacional"}
-                  {tipoTransacao === "SAQUE" && origemBookmakerId ? "Bookmaker Selecionado" : "Selecione Bookmaker"}
-                  {tipoTransacao === "TRANSFERENCIA" && origemTipo ? (
-                    origemTipo === "CAIXA_OPERACIONAL" ? "Caixa Operacional" :
-                    origemTipo === "PARCEIRO_CONTA" ? "Conta Bancária" :
-                    "Wallet Crypto"
-                  ) : tipoTransacao === "TRANSFERENCIA" && "Selecione Origem"}
+                <div className="font-medium text-foreground text-sm">
+                  {getOrigemLabel()}
                 </div>
-                {valor && parseFloat(valor) > 0 && (
-                  <div className="text-xs text-destructive mt-2">
-                    - {tipoMoeda === "CRYPTO" ? "USD" : moeda} {parseFloat(valor).toFixed(2)}
+                {(tipoTransacao === "DEPOSITO" || 
+                  tipoTransacao === "SAQUE" || 
+                  (tipoTransacao === "TRANSFERENCIA" && origemTipo === "CAIXA_OPERACIONAL")) && (
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Saldo atual: {tipoMoeda === "CRYPTO" ? "USD" : moeda} {getSaldoAtual(origemTipo, origemBookmakerId).toFixed(2)}
                   </div>
+                )}
+                {valor && parseFloat(valor) > 0 && (
+                  <>
+                    <div className="text-xs text-destructive mt-1">
+                      - {tipoMoeda === "CRYPTO" ? "USD" : moeda} {parseFloat(valor).toFixed(2)}
+                    </div>
+                    {(tipoTransacao === "DEPOSITO" || 
+                      tipoTransacao === "SAQUE" || 
+                      (tipoTransacao === "TRANSFERENCIA" && origemTipo === "CAIXA_OPERACIONAL")) && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Novo saldo: {tipoMoeda === "CRYPTO" ? "USD" : moeda} {(getSaldoAtual(origemTipo, origemBookmakerId) - parseFloat(valor)).toFixed(2)}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -542,20 +719,29 @@ export function CaixaTransacaoDialog({
               {/* Destino Card */}
               <div className="flex-1 p-4 bg-card rounded-lg border border-border shadow-sm">
                 <div className="text-xs text-muted-foreground mb-2">DESTINO</div>
-                <div className="font-medium text-foreground">
-                  {tipoTransacao === "APORTE_FINANCEIRO" && "Caixa Operacional"}
-                  {tipoTransacao === "SAQUE" && "Caixa Operacional"}
-                  {tipoTransacao === "DEPOSITO" && destinoBookmakerId ? "Bookmaker Selecionado" : "Selecione Bookmaker"}
-                  {tipoTransacao === "TRANSFERENCIA" && destinoTipo ? (
-                    destinoTipo === "CAIXA_OPERACIONAL" ? "Caixa Operacional" :
-                    destinoTipo === "PARCEIRO_CONTA" ? "Conta Bancária" :
-                    "Wallet Crypto"
-                  ) : tipoTransacao === "TRANSFERENCIA" && "Selecione Destino"}
+                <div className="font-medium text-foreground text-sm">
+                  {getDestinoLabel()}
                 </div>
-                {valor && parseFloat(valor) > 0 && (
-                  <div className="text-xs text-primary mt-2">
-                    + {tipoMoeda === "CRYPTO" ? "USD" : moeda} {parseFloat(valor).toFixed(2)}
+                {(tipoTransacao === "APORTE_FINANCEIRO" || 
+                  tipoTransacao === "SAQUE" || 
+                  (tipoTransacao === "TRANSFERENCIA" && destinoTipo === "CAIXA_OPERACIONAL")) && (
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Saldo atual: {tipoMoeda === "CRYPTO" ? "USD" : moeda} {getSaldoAtual(destinoTipo, destinoBookmakerId).toFixed(2)}
                   </div>
+                )}
+                {valor && parseFloat(valor) > 0 && (
+                  <>
+                    <div className="text-xs text-primary mt-1">
+                      + {tipoMoeda === "CRYPTO" ? "USD" : moeda} {parseFloat(valor).toFixed(2)}
+                    </div>
+                    {(tipoTransacao === "APORTE_FINANCEIRO" || 
+                      tipoTransacao === "SAQUE" || 
+                      (tipoTransacao === "TRANSFERENCIA" && destinoTipo === "CAIXA_OPERACIONAL")) && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Novo saldo: {tipoMoeda === "CRYPTO" ? "USD" : moeda} {(getSaldoAtual(destinoTipo, destinoBookmakerId) + parseFloat(valor)).toFixed(2)}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
