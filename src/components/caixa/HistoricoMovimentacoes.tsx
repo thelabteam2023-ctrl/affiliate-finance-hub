@@ -21,8 +21,8 @@ interface HistoricoMovimentacoesProps {
   dataFim: Date | undefined;
   setDataFim: (date: Date | undefined) => void;
   getTransacoesFiltradas: () => any[];
-  getTipoLabel: (tipo: string) => string;
-  getTipoColor: (tipo: string) => string;
+  getTipoLabel: (tipo: string, transacao?: any) => string;
+  getTipoColor: (tipo: string, transacao?: any) => string;
   getOrigemLabel: (transacao: any) => string;
   getDestinoLabel: (transacao: any) => string;
   formatCurrency: (value: number, currency: string) => string;
@@ -129,8 +129,8 @@ export function HistoricoMovimentacoes({
                 className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-center gap-4 flex-1">
-                  <Badge className={getTipoColor(transacao.tipo_transacao)}>
-                    {getTipoLabel(transacao.tipo_transacao)}
+                  <Badge className={getTipoColor(transacao.tipo_transacao, transacao)}>
+                    {getTipoLabel(transacao.tipo_transacao, transacao)}
                   </Badge>
                   <div className="flex items-center gap-2 flex-1">
                     <span className="text-sm text-muted-foreground">
