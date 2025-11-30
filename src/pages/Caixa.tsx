@@ -445,7 +445,7 @@ export default function Caixa() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="TODOS">Todos os tipos</SelectItem>
-                  <SelectItem value="APORTE_FINANCEIRO">Aporte/Liquidação</SelectItem>
+                  <SelectItem value="APORTE_FINANCEIRO">Aporte & Liquidação</SelectItem>
                   <SelectItem value="TRANSFERENCIA">Transferência</SelectItem>
                   <SelectItem value="DEPOSITO">Depósito</SelectItem>
                   <SelectItem value="SAQUE">Saque</SelectItem>

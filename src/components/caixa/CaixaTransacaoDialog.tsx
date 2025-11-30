@@ -861,7 +861,7 @@ export function CaixaTransacaoDialog({
                 <SelectValue placeholder="Selecione o tipo de transação" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="APORTE_FINANCEIRO">APORTE / LIQUIDAÇÃO</SelectItem>
+                <SelectItem value="APORTE_FINANCEIRO">APORTE & LIQUIDAÇÃO</SelectItem>
                 <SelectItem value="TRANSFERENCIA">TRANSFERÊNCIA</SelectItem>
                 <SelectItem value="DEPOSITO">DEPÓSITO</SelectItem>
                 <SelectItem value="SAQUE">SAQUE</SelectItem>
