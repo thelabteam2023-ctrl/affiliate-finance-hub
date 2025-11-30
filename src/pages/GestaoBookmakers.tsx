@@ -32,6 +32,9 @@ interface Bookmaker {
   created_at: string;
   parceiro_id: string | null;
   bookmaker_catalogo_id: string | null;
+  parceiros?: {
+    nome: string;
+  };
 }
 
 export default function GestaoBookmakers() {
@@ -498,6 +501,11 @@ export default function GestaoBookmakers() {
                     </div>
 
                     <div className="text-sm space-y-1 pt-2 border-t">
+                      <p className="text-muted-foreground flex items-center gap-2">
+                        <User className="h-3.5 w-3.5" />
+                        <span className="font-medium">Parceiro:</span>{" "}
+                        {bookmaker.parceiros?.nome || "Não definido"}
+                      </p>
                       <p className="text-muted-foreground">
                         <span className="font-medium">Usuário:</span>{" "}
                         {maskCredentials(bookmaker.login_username)}
@@ -599,6 +607,11 @@ export default function GestaoBookmakers() {
                                   <Badge variant="outline">{bookmaker.moeda}</Badge>
                                 </div>
                                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <span className="flex items-center gap-1.5">
+                                    <User className="h-3.5 w-3.5" />
+                                    <span className="font-medium">Parceiro:</span>{" "}
+                                    {bookmaker.parceiros?.nome || "Não definido"}
+                                  </span>
                                   <span>
                                     <span className="font-medium">Usuário:</span>{" "}
                                     {maskCredentials(bookmaker.login_username)}
