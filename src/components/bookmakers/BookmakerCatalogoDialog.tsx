@@ -23,13 +23,13 @@ interface LinkItem {
   referencia: string;
 }
 
-interface BonusSimples {
+interface BonusItem {
   id?: string;
+  tipoBônus: string;
   percent: string;
   moeda: string;
   valorMax: string;
   oddMin: string;
-  tipo: string;
   rolloverVezes: string;
   rolloverBase: string;
   prazo: string;
@@ -48,30 +48,7 @@ export default function BookmakerCatalogoDialog({
   const [verificacao, setVerificacao] = useState("OBRIGATORIA");
   const [links, setLinks] = useState<LinkItem[]>([{ id: crypto.randomUUID(), url: "", referencia: "PADRÃO" }]);
   const [bonusEnabled, setBonusEnabled] = useState(false);
-  const [multibonusEnabled, setMultibonusEnabled] = useState(false);
-  const [bonusSimples, setBonusSimples] = useState<BonusSimples>({
-    percent: "",
-    moeda: "BRL",
-    valorMax: "",
-    oddMin: "",
-    tipo: "SIMPLES",
-    rolloverVezes: "",
-    rolloverBase: "DEPOSITO_BONUS",
-    prazo: "",
-  });
-  const [bonusMultiplos, setBonusMultiplos] = useState<BonusSimples[]>([
-    {
-      id: crypto.randomUUID(),
-      percent: "",
-      moeda: "BRL",
-      valorMax: "",
-      oddMin: "",
-      tipo: "SIMPLES",
-      rolloverVezes: "",
-      rolloverBase: "DEPOSITO_BONUS",
-      prazo: "",
-    },
-  ]);
+  const [bonusList, setBonusList] = useState<BonusItem[]>([]);
   const [observacoes, setObservacoes] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -88,17 +65,14 @@ export default function BookmakerCatalogoDialog({
         ? bookmaker.links_json.map((link: any) => ({ ...link, id: link.id || crypto.randomUUID() }))
         : [{ id: crypto.randomUUID(), url: "", referencia: "PADRÃO" }]);
       setBonusEnabled(bookmaker.bonus_enabled || false);
-      setMultibonusEnabled(bookmaker.multibonus_enabled || false);
-      
-      if (bookmaker.bonus_simples_json && typeof bookmaker.bonus_simples_json === 'object') {
-        setBonusSimples(bookmaker.bonus_simples_json);
-      }
       
       if (Array.isArray(bookmaker.bonus_multiplos_json) && bookmaker.bonus_multiplos_json.length > 0) {
-        setBonusMultiplos(bookmaker.bonus_multiplos_json.map((bonus: any) => ({ 
+        setBonusList(bookmaker.bonus_multiplos_json.map((bonus: any) => ({ 
           ...bonus, 
           id: bonus.id || crypto.randomUUID() 
         })));
+      } else {
+        setBonusList([]);
       }
       
       setObservacoes(bookmaker.observacoes || "");
@@ -116,30 +90,7 @@ export default function BookmakerCatalogoDialog({
     setVerificacao("OBRIGATORIA");
     setLinks([{ id: crypto.randomUUID(), url: "", referencia: "PADRÃO" }]);
     setBonusEnabled(false);
-    setMultibonusEnabled(false);
-    setBonusSimples({
-      percent: "",
-      moeda: "BRL",
-      valorMax: "",
-      oddMin: "",
-      tipo: "SIMPLES",
-      rolloverVezes: "",
-      rolloverBase: "DEPOSITO_BONUS",
-      prazo: "",
-    });
-    setBonusMultiplos([
-      {
-        id: crypto.randomUUID(),
-        percent: "",
-        moeda: "BRL",
-        valorMax: "",
-        oddMin: "",
-        tipo: "SIMPLES",
-        rolloverVezes: "",
-        rolloverBase: "DEPOSITO_BONUS",
-        prazo: "",
-      },
-    ]);
+    setBonusList([]);
     setObservacoes("");
   };
 
@@ -167,31 +118,29 @@ export default function BookmakerCatalogoDialog({
     return isDuplicate ? "Já existe uma referência com este nome" : null;
   };
 
-  const addBonusMultiplo = () => {
-    if (bonusMultiplos.length < 3) {
-      setBonusMultiplos([
-        ...bonusMultiplos,
-        {
-          id: crypto.randomUUID(),
-          percent: "",
-          moeda: "BRL",
-          valorMax: "",
-          oddMin: "",
-          tipo: "SIMPLES",
-          rolloverVezes: "",
-          rolloverBase: "DEPOSITO_BONUS",
-          prazo: "",
-        },
-      ]);
-    }
+  const addBonus = () => {
+    setBonusList([
+      ...bonusList,
+      {
+        id: crypto.randomUUID(),
+        tipoBônus: "BOAS_VINDAS",
+        percent: "",
+        moeda: "BRL",
+        valorMax: "",
+        oddMin: "",
+        rolloverVezes: "",
+        rolloverBase: "DEPOSITO_BONUS",
+        prazo: "",
+      },
+    ]);
   };
 
-  const removeBonusMultiplo = (id: string) => {
-    setBonusMultiplos(bonusMultiplos.filter((bonus) => bonus.id !== id));
+  const removeBonus = (id: string) => {
+    setBonusList(bonusList.filter((bonus) => bonus.id !== id));
   };
 
-  const updateBonusMultiplo = (id: string, field: keyof BonusSimples, value: string) => {
-    setBonusMultiplos(bonusMultiplos.map(bonus => 
+  const updateBonus = (id: string, field: keyof BonusItem, value: string) => {
+    setBonusList(bonusList.map(bonus => 
       bonus.id === id ? { ...bonus, [field]: value } : bonus
     ));
   };
@@ -291,9 +240,9 @@ export default function BookmakerCatalogoDialog({
         verificacao,
         links_json: validLinks as any,
         bonus_enabled: bonusEnabled,
-        multibonus_enabled: multibonusEnabled,
-        bonus_simples_json: bonusEnabled && !multibonusEnabled ? bonusSimples as any : {} as any,
-        bonus_multiplos_json: bonusEnabled && multibonusEnabled ? bonusMultiplos.map(({ id, ...bonus }) => bonus) as any : [] as any,
+        multibonus_enabled: false,
+        bonus_simples_json: {} as any,
+        bonus_multiplos_json: bonusEnabled ? bonusList.map(({ id, ...bonus }) => bonus) as any : [] as any,
         observacoes: observacoes || null,
       };
 
@@ -505,180 +454,74 @@ export default function BookmakerCatalogoDialog({
               ))}
             </div>
 
-            {/* Bônus Section */}
-            <div className="space-y-4 pt-6 border-t">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="bonus-enabled" className="text-base font-medium">Possui Bônus?</Label>
-                  <Switch
-                    id="bonus-enabled"
-                    checked={bonusEnabled}
-                    onCheckedChange={(checked) => {
-                      setBonusEnabled(checked);
-                      if (!checked) {
-                        setMultibonusEnabled(false);
-                      }
-                    }}
-                  />
-                </div>
-                {bonusEnabled && (
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="multibonus-enabled" className="text-sm font-medium">Múltiplos Bônus?</Label>
-                    <Switch
-                      id="multibonus-enabled"
-                      checked={multibonusEnabled}
-                      onCheckedChange={setMultibonusEnabled}
-                    />
-                  </div>
-                )}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="bonus">Bônus Disponível</Label>
+                <Switch
+                  id="bonus"
+                  checked={bonusEnabled}
+                  onCheckedChange={setBonusEnabled}
+                />
               </div>
 
-              {bonusEnabled && !multibonusEnabled && (
-                <div className="space-y-4 p-6 border rounded-lg bg-card/50">
-                  <h4 className="font-semibold">Configuração de Bônus Simples</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="bonus-percent">Percentual (%)</Label>
-                      <Input
-                        id="bonus-percent"
-                        type="number"
-                        value={bonusSimples.percent}
-                        onChange={(e) => setBonusSimples({ ...bonusSimples, percent: e.target.value })}
-                        placeholder="100"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="bonus-moeda">Moeda</Label>
-                      <Select
-                        value={bonusSimples.moeda}
-                        onValueChange={(value) => setBonusSimples({ ...bonusSimples, moeda: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="BRL">BRL</SelectItem>
-                          <SelectItem value="USD">USD</SelectItem>
-                          <SelectItem value="EUR">EUR</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="bonus-max">Valor Máximo</Label>
-                      <Input
-                        id="bonus-max"
-                        type="number"
-                        value={bonusSimples.valorMax}
-                        onChange={(e) => setBonusSimples({ ...bonusSimples, valorMax: e.target.value })}
-                        placeholder="500"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="bonus-oddmin">Odd Mínima</Label>
-                      <Input
-                        id="bonus-oddmin"
-                        type="number"
-                        step="0.01"
-                        value={bonusSimples.oddMin}
-                        onChange={(e) => setBonusSimples({ ...bonusSimples, oddMin: e.target.value })}
-                        placeholder="1.50"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="bonus-tipo">Tipo de Aposta</Label>
-                      <Select
-                        value={bonusSimples.tipo}
-                        onValueChange={(value) => setBonusSimples({ ...bonusSimples, tipo: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="SIMPLES">Simples</SelectItem>
-                          <SelectItem value="MULTIPLA">Múltipla</SelectItem>
-                          <SelectItem value="AMBAS">Ambas</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="bonus-rollover">Rollover (vezes)</Label>
-                      <Input
-                        id="bonus-rollover"
-                        type="number"
-                        value={bonusSimples.rolloverVezes}
-                        onChange={(e) => setBonusSimples({ ...bonusSimples, rolloverVezes: e.target.value })}
-                        placeholder="5"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="bonus-base">Base do Rollover</Label>
-                      <Select
-                        value={bonusSimples.rolloverBase}
-                        onValueChange={(value) => setBonusSimples({ ...bonusSimples, rolloverBase: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="DEPOSITO_BONUS">Depósito + Bônus</SelectItem>
-                          <SelectItem value="BONUS">Apenas Bônus</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="bonus-prazo">Prazo (dias)</Label>
-                      <Input
-                        id="bonus-prazo"
-                        type="number"
-                        value={bonusSimples.prazo}
-                        onChange={(e) => setBonusSimples({ ...bonusSimples, prazo: e.target.value })}
-                        placeholder="30"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {bonusEnabled && multibonusEnabled && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold">Configuração de Bônus Múltiplos (até 3)</h4>
-                    {bonusMultiplos.length < 3 && (
-                      <Button type="button" variant="outline" size="sm" onClick={addBonusMultiplo}>
-                        <Plus className="h-4 w-4 mr-1" />
-                        Adicionar Bônus
-                      </Button>
-                    )}
-                  </div>
-                  {bonusMultiplos.map((bonus, index) => (
-                    <div key={bonus.id} className="space-y-4 p-6 border rounded-lg bg-card/50">
+              {bonusEnabled && (
+                <div className="space-y-4 pt-2">
+                  {bonusList.map((bonus) => (
+                    <div
+                      key={bonus.id}
+                      className="space-y-4 p-4 rounded-lg border border-border bg-muted/30"
+                    >
                       <div className="flex items-center justify-between">
-                        <h5 className="font-medium">{index + 1}º Depósito</h5>
-                        {bonusMultiplos.length > 1 && (
-                          <Badge
-                            variant="outline"
-                            onClick={() => removeBonusMultiplo(bonus.id!)}
-                            className="h-8 px-2 cursor-pointer hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors"
+                        <h4 className="font-medium text-sm">Configuração de Bônus</h4>
+                        {bonusList.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeBonus(bonus.id!)}
+                            className="h-8 w-8 text-destructive hover:text-destructive"
                           >
-                            <X className="h-3 w-3" />
-                          </Badge>
+                            <X className="h-4 w-4" />
+                          </Button>
                         )}
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
+                        <div className="space-y-2">
+                          <Label>Tipo de Bônus</Label>
+                          <Select
+                            value={bonus.tipoBônus}
+                            onValueChange={(value) =>
+                              updateBonus(bonus.id!, "tipoBônus", value)
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="BOAS_VINDAS">BOAS-VINDAS</SelectItem>
+                              <SelectItem value="CASHBACK">CASHBACK</SelectItem>
+                              <SelectItem value="FREE_BET">FREE BET</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
                           <Label>Percentual (%)</Label>
                           <Input
                             type="number"
                             value={bonus.percent}
-                            onChange={(e) => updateBonusMultiplo(bonus.id!, "percent", e.target.value)}
+                            onChange={(e) =>
+                              updateBonus(bonus.id!, "percent", e.target.value)
+                            }
                             placeholder="100"
                           />
                         </div>
-                        <div>
+                        <div className="space-y-2">
                           <Label>Moeda</Label>
                           <Select
                             value={bonus.moeda}
-                            onValueChange={(value) => updateBonusMultiplo(bonus.id!, "moeda", value)}
+                            onValueChange={(value) =>
+                              updateBonus(bonus.id!, "moeda", value)
+                            }
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -690,77 +533,82 @@ export default function BookmakerCatalogoDialog({
                             </SelectContent>
                           </Select>
                         </div>
-                        <div>
+                        <div className="space-y-2">
                           <Label>Valor Máximo</Label>
                           <Input
                             type="number"
                             value={bonus.valorMax}
-                            onChange={(e) => updateBonusMultiplo(bonus.id!, "valorMax", e.target.value)}
+                            onChange={(e) =>
+                              updateBonus(bonus.id!, "valorMax", e.target.value)
+                            }
                             placeholder="500"
                           />
                         </div>
-                        <div>
+                        <div className="space-y-2">
                           <Label>Odd Mínima</Label>
                           <Input
                             type="number"
                             step="0.01"
                             value={bonus.oddMin}
-                            onChange={(e) => updateBonusMultiplo(bonus.id!, "oddMin", e.target.value)}
+                            onChange={(e) =>
+                              updateBonus(bonus.id!, "oddMin", e.target.value)
+                            }
                             placeholder="1.50"
                           />
                         </div>
-                        <div>
-                          <Label>Tipo de Aposta</Label>
-                          <Select
-                            value={bonus.tipo}
-                            onValueChange={(value) => updateBonusMultiplo(bonus.id!, "tipo", value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="SIMPLES">Simples</SelectItem>
-                              <SelectItem value="MULTIPLA">Múltipla</SelectItem>
-                              <SelectItem value="AMBAS">Ambas</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
+                        <div className="space-y-2">
                           <Label>Rollover (vezes)</Label>
                           <Input
                             type="number"
                             value={bonus.rolloverVezes}
-                            onChange={(e) => updateBonusMultiplo(bonus.id!, "rolloverVezes", e.target.value)}
-                            placeholder="5"
+                            onChange={(e) =>
+                              updateBonus(bonus.id!, "rolloverVezes", e.target.value)
+                            }
+                            placeholder="14"
                           />
                         </div>
-                        <div>
-                          <Label>Base do Rollover</Label>
+                        <div className="space-y-2">
+                          <Label>Rollover Base</Label>
                           <Select
                             value={bonus.rolloverBase}
-                            onValueChange={(value) => updateBonusMultiplo(bonus.id!, "rolloverBase", value)}
+                            onValueChange={(value) =>
+                              updateBonus(bonus.id!, "rolloverBase", value)
+                            }
                           >
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="DEPOSITO_BONUS">Depósito + Bônus</SelectItem>
-                              <SelectItem value="BONUS">Apenas Bônus</SelectItem>
+                              <SelectItem value="DEPOSITO">DEPÓSITO</SelectItem>
+                              <SelectItem value="BONUS">BÔNUS</SelectItem>
+                              <SelectItem value="DEPOSITO_BONUS">DEPÓSITO + BÔNUS</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
-                        <div>
+                        <div className="space-y-2">
                           <Label>Prazo (dias)</Label>
                           <Input
                             type="number"
                             value={bonus.prazo}
-                            onChange={(e) => updateBonusMultiplo(bonus.id!, "prazo", e.target.value)}
+                            onChange={(e) =>
+                              updateBonus(bonus.id!, "prazo", e.target.value)
+                            }
                             placeholder="30"
                           />
                         </div>
                       </div>
                     </div>
                   ))}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addBonus}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Bônus
+                  </Button>
                 </div>
               )}
             </div>

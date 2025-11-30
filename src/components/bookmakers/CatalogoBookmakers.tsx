@@ -763,52 +763,20 @@ export default function CatalogoBookmakers() {
 
           {selectedBonusBookmaker && (
             <div className="space-y-6 py-4">
-              {/* Bônus Simples */}
-              {!selectedBonusBookmaker.multibonus_enabled && selectedBonusBookmaker.bonus_simples_json && (
+              {selectedBonusBookmaker.bonus_multiplos_json && Array.isArray(selectedBonusBookmaker.bonus_multiplos_json) && selectedBonusBookmaker.bonus_multiplos_json.length > 0 ? (
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-primary">Bônus Simples</h3>
-                  <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-accent/20 border border-accent/30">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Percentual</p>
-                      <p className="text-lg font-semibold">{selectedBonusBookmaker.bonus_simples_json.percent}%</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Valor Máximo</p>
-                      <p className="text-lg font-semibold">
-                        {formatCurrency(selectedBonusBookmaker.bonus_simples_json.moeda)} {selectedBonusBookmaker.bonus_simples_json.valorMax}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Odd Mínima</p>
-                      <p className="text-lg font-semibold">{selectedBonusBookmaker.bonus_simples_json.oddMin}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Tipo</p>
-                      <Badge variant="secondary">{selectedBonusBookmaker.bonus_simples_json.tipo}</Badge>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Rollover</p>
-                      <p className="text-lg font-semibold">
-                        {selectedBonusBookmaker.bonus_simples_json.rolloverVezes}x sobre {formatRolloverBase(selectedBonusBookmaker.bonus_simples_json.rolloverBase)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Prazo</p>
-                      <p className="text-lg font-semibold">{selectedBonusBookmaker.bonus_simples_json.prazo} dias</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Bônus Múltiplos */}
-              {selectedBonusBookmaker.multibonus_enabled && selectedBonusBookmaker.bonus_multiplos_json && Array.isArray(selectedBonusBookmaker.bonus_multiplos_json) && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-primary">Bônus Múltiplos</h3>
+                  <h3 className="text-lg font-semibold text-primary">Bônus Disponíveis</h3>
                   {selectedBonusBookmaker.bonus_multiplos_json.map((bonus: any, index: number) => (
                     <div key={index} className="space-y-3 p-4 rounded-lg bg-accent/20 border border-accent/30">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-semibold">{index + 1}º Depósito</h4>
-                        <Badge variant="default">{bonus.percent}%</Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="default" className="text-sm">
+                            {bonus.tipoBônus === "BOAS_VINDAS" ? "BOAS-VINDAS" : 
+                             bonus.tipoBônus === "CASHBACK" ? "CASHBACK" : 
+                             bonus.tipoBônus === "FREE_BET" ? "FREE BET" : bonus.tipoBônus}
+                          </Badge>
+                          <Badge variant="outline">{bonus.percent}%</Badge>
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
@@ -820,10 +788,6 @@ export default function CatalogoBookmakers() {
                         <div>
                           <p className="text-muted-foreground">Odd Mínima</p>
                           <p className="font-medium">{bonus.oddMin}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Tipo</p>
-                          <Badge variant="outline" className="text-xs">{bonus.tipo}</Badge>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Prazo</p>
@@ -839,6 +803,10 @@ export default function CatalogoBookmakers() {
                     </div>
                   ))}
                 </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Nenhum bônus configurado
+                </p>
               )}
             </div>
           )}
