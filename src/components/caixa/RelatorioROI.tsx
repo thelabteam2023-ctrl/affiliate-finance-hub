@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, TrendingDown, DollarSign } from "lucide-react";
-import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { TrendingUp, TrendingDown } from "lucide-react";
+import { subMonths, startOfMonth, endOfMonth } from "date-fns";
 
 interface ROIData {
   investidor: string;
@@ -104,7 +104,7 @@ export function RelatorioROI() {
     : 0;
 
   return (
-    <Card className="bg-card/50 backdrop-blur border-border/50">
+    <>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Relatório de ROI - Investidores</CardTitle>
@@ -198,6 +198,6 @@ export function RelatorioROI() {
           </div>
         )}
       </CardContent>
-    </Card>
+    </>
   );
 }

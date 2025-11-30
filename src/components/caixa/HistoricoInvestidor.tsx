@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -106,7 +106,7 @@ export function HistoricoInvestidor() {
   const saldoAtual = totals.totalAportes - totals.totalLiquidacoes;
 
   return (
-    <Card className="bg-card/50 backdrop-blur border-border/50">
+    <>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Histórico por Investidor</CardTitle>
@@ -211,6 +211,6 @@ export function HistoricoInvestidor() {
           </div>
         )}
       </CardContent>
-    </Card>
+    </>
   );
 }
