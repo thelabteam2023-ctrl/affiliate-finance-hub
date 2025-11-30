@@ -505,7 +505,7 @@ export default function CatalogoBookmakers() {
                               className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5 group uppercase"
                             >
                               <ExternalLink className="h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                              <span>{link.referencia || "Site Oficial"}</span>
+                              <span>{link.referencia === "PADRÃO" || !link.referencia ? "SITE OFICIAL" : link.referencia}</span>
                             </a>
                           ))}
                           {bookmaker.links_json.length > 2 && (
@@ -659,7 +659,7 @@ export default function CatalogoBookmakers() {
                                          className="text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group uppercase"
                                        >
                                          <ExternalLink className="h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                                         <span>{link.referencia || "Site Oficial"}</span>
+                                         <span>{link.referencia === "PADRÃO" || !link.referencia ? "SITE OFICIAL" : link.referencia}</span>
                                        </a>
                                       {index < bookmaker.links_json.length - 1 && (
                                         <span className="text-border">|</span>
