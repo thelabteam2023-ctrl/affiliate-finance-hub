@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
@@ -22,6 +22,14 @@ interface Transacao {
   destino_tipo: string | null;
   descricao: string | null;
   status: string;
+  origem_parceiro_id: string | null;
+  origem_conta_bancaria_id: string | null;
+  origem_wallet_id: string | null;
+  origem_bookmaker_id: string | null;
+  destino_parceiro_id: string | null;
+  destino_conta_bancaria_id: string | null;
+  destino_wallet_id: string | null;
+  destino_bookmaker_id: string | null;
 }
 
 interface SaldoFiat {
@@ -42,6 +50,12 @@ export default function Caixa() {
   const [saldosFiat, setSaldosFiat] = useState<SaldoFiat[]>([]);
   const [saldosCrypto, setSaldosCrypto] = useState<SaldoCrypto[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Data for displaying names
+  const [parceiros, setParceiros] = useState<{ [key: string]: string }>({});
+  const [contas, setContas] = useState<{ [key: string]: string }>({});
+  const [wallets, setWallets] = useState<{ [key: string]: string }>({});
+  const [bookmakers, setBookmakers] = useState<{ [key: string]: string }>({});
 
   const fetchData = async () => {
     try {
@@ -56,6 +70,40 @@ export default function Caixa() {
 
       if (transacoesError) throw transacoesError;
       setTransacoes(transacoesData || []);
+
+      // Fetch reference data for names
+      const { data: parceirosData } = await supabase
+        .from("parceiros")
+        .select("id, nome");
+      
+      const { data: contasData } = await supabase
+        .from("contas_bancarias")
+        .select("id, banco, titular");
+      
+      const { data: walletsData } = await supabase
+        .from("wallets_crypto")
+        .select("id, exchange");
+      
+      const { data: bookmakersData } = await supabase
+        .from("bookmakers")
+        .select("id, nome");
+
+      // Create lookup maps
+      const parceirosMap: { [key: string]: string } = {};
+      parceirosData?.forEach(p => parceirosMap[p.id] = p.nome);
+      setParceiros(parceirosMap);
+
+      const contasMap: { [key: string]: string } = {};
+      contasData?.forEach(c => contasMap[c.id] = `${c.banco} - ${c.titular}`);
+      setContas(contasMap);
+
+      const walletsMap: { [key: string]: string } = {};
+      walletsData?.forEach(w => walletsMap[w.id] = w.exchange);
+      setWallets(walletsMap);
+
+      const bookmakersMap: { [key: string]: string } = {};
+      bookmakersData?.forEach(b => bookmakersMap[b.id] = b.nome);
+      setBookmakers(bookmakersMap);
 
       // Fetch FIAT balances
       const { data: saldosFiatData, error: fiatError } = await supabase
@@ -123,6 +171,50 @@ export default function Caixa() {
       style: "currency",
       currency: currency,
     }).format(value);
+  };
+
+  const getOrigemLabel = (transacao: Transacao): string => {
+    if (transacao.tipo_transacao === "APORTE_FINANCEIRO") {
+      return "Aporte Externo";
+    }
+    
+    if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
+      return "Caixa Operacional";
+    }
+    
+    if (transacao.origem_tipo === "PARCEIRO_CONTA" && transacao.origem_conta_bancaria_id) {
+      return contas[transacao.origem_conta_bancaria_id] || "Conta Bancária";
+    }
+    
+    if (transacao.origem_tipo === "PARCEIRO_WALLET" && transacao.origem_wallet_id) {
+      return wallets[transacao.origem_wallet_id] || "Wallet";
+    }
+    
+    if (transacao.origem_tipo === "BOOKMAKER" && transacao.origem_bookmaker_id) {
+      return bookmakers[transacao.origem_bookmaker_id] || "Bookmaker";
+    }
+    
+    return "Origem";
+  };
+
+  const getDestinoLabel = (transacao: Transacao): string => {
+    if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
+      return "Caixa Operacional";
+    }
+    
+    if (transacao.destino_tipo === "PARCEIRO_CONTA" && transacao.destino_conta_bancaria_id) {
+      return contas[transacao.destino_conta_bancaria_id] || "Conta Bancária";
+    }
+    
+    if (transacao.destino_tipo === "PARCEIRO_WALLET" && transacao.destino_wallet_id) {
+      return wallets[transacao.destino_wallet_id] || "Wallet";
+    }
+    
+    if (transacao.destino_tipo === "BOOKMAKER" && transacao.destino_bookmaker_id) {
+      return bookmakers[transacao.destino_bookmaker_id] || "Bookmaker";
+    }
+    
+    return "Destino";
   };
 
   return (
@@ -230,23 +322,29 @@ export default function Caixa() {
                     <Badge className={getTipoColor(transacao.tipo_transacao)}>
                       {getTipoLabel(transacao.tipo_transacao)}
                     </Badge>
-                    <div className="flex-1">
-                      <div className="font-medium">
-                        {transacao.tipo_moeda === "FIAT"
-                          ? formatCurrency(transacao.valor, transacao.moeda)
-                          : `${transacao.qtd_coin} ${transacao.coin}`}
-                      </div>
-                      {transacao.descricao && (
-                        <div className="text-sm text-muted-foreground">{transacao.descricao}</div>
-                      )}
+                    <div className="flex items-center gap-2 flex-1">
+                      <span className="text-sm text-muted-foreground">
+                        {getOrigemLabel(transacao)}
+                      </span>
+                      <ArrowRight className="h-4 w-4 text-primary" />
+                      <span className="text-sm text-muted-foreground">
+                        {getDestinoLabel(transacao)}
+                      </span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium">
-                      {format(new Date(transacao.data_transacao), "dd/MM/yyyy")}
+                  <div className="flex items-center gap-4">
+                    <div className="font-medium">
+                      {transacao.tipo_moeda === "FIAT"
+                        ? formatCurrency(transacao.valor, transacao.moeda)
+                        : `${transacao.qtd_coin} ${transacao.coin}`}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {format(new Date(transacao.data_transacao), "HH:mm")}
+                    <div className="text-right">
+                      <div className="text-sm font-medium">
+                        {format(new Date(transacao.data_transacao), "dd/MM/yyyy")}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {format(new Date(transacao.data_transacao), "HH:mm")}
+                      </div>
                     </div>
                   </div>
                 </div>
