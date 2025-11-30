@@ -752,10 +752,13 @@ export function CaixaTransacaoDialog({
 
           {/* Origem e Destino em Colunas */}
           {tipoTransacao && (
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-6 relative">
+              {/* Linha vertical divisória */}
+              <div className="absolute left-1/2 top-0 bottom-0 w-px bg-border/50 -translate-x-1/2" />
+              
               {/* Coluna Origem */}
               <div className="space-y-4">
-                <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-b border-border/50 pb-2">
+                <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-b border-border/50 pb-2 text-center">
                   Origem
                 </div>
                 {renderOrigemFields()}
@@ -763,7 +766,7 @@ export function CaixaTransacaoDialog({
 
               {/* Coluna Destino */}
               <div className="space-y-4">
-                <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-b border-border/50 pb-2">
+                <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-b border-border/50 pb-2 text-center">
                   Destino
                 </div>
                 {renderDestinoFields()}
