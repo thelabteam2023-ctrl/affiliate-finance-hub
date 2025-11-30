@@ -26,6 +26,7 @@ interface LinkItem {
 interface BonusItem {
   id?: string;
   tipoBônus: string;
+  tipoOutro?: string;
   percent: string;
   moeda: string;
   valorMax: string;
@@ -140,9 +141,17 @@ export default function BookmakerCatalogoDialog({
   };
 
   const updateBonus = (id: string, field: keyof BonusItem, value: string) => {
-    setBonusList(bonusList.map(bonus => 
-      bonus.id === id ? { ...bonus, [field]: value } : bonus
-    ));
+    setBonusList(bonusList.map(bonus => {
+      if (bonus.id === id) {
+        const updated = { ...bonus, [field]: value };
+        // Limpar tipoOutro se mudar de OUTRO para outro tipo
+        if (field === "tipoBônus" && value !== "OUTRO" && bonus.tipoOutro) {
+          delete updated.tipoOutro;
+        }
+        return updated;
+      }
+      return bonus;
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -501,9 +510,22 @@ export default function BookmakerCatalogoDialog({
                               <SelectItem value="BOAS_VINDAS">BOAS-VINDAS</SelectItem>
                               <SelectItem value="CASHBACK">CASHBACK</SelectItem>
                               <SelectItem value="FREE_BET">FREE BET</SelectItem>
+                              <SelectItem value="OUTRO">OUTRO</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
+                        {bonus.tipoBônus === "OUTRO" && (
+                          <div className="space-y-2">
+                            <Label>Especificar Tipo</Label>
+                            <Input
+                              value={bonus.tipoOutro || ""}
+                              onChange={(e) =>
+                                updateBonus(bonus.id!, "tipoOutro", e.target.value.toUpperCase())
+                              }
+                              placeholder="Digite o tipo de bônus"
+                            />
+                          </div>
+                        )}
                         <div className="space-y-2">
                           <Label>Percentual (%)</Label>
                           <Input
