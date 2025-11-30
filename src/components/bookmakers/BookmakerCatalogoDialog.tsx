@@ -287,12 +287,30 @@ export default function BookmakerCatalogoDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="logo">URL do Logo (opcional)</Label>
-                <Input
-                  id="logo"
-                  value={logoUrl}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                  placeholder="https://..."
-                />
+                <div className="flex gap-3 items-center">
+                  <Input
+                    id="logo"
+                    value={logoUrl}
+                    onChange={(e) => setLogoUrl(e.target.value)}
+                    placeholder="https://..."
+                    className="flex-1"
+                  />
+                  <div className="w-14 h-14 rounded-md border border-border bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {logoUrl ? (
+                      <img 
+                        src={logoUrl} 
+                        alt="Preview do logo" 
+                        className="w-full h-full object-contain p-1"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement!.innerHTML = '<span class="text-xs text-muted-foreground">Logo</span>';
+                        }}
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Logo</span>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -339,76 +357,69 @@ export default function BookmakerCatalogoDialog({
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Links de Acesso</Label>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={addLink}
-                  className="h-8 w-8 rounded-full hover:bg-primary/10"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
+              <Label>Links de Acesso</Label>
               {links.map((link, index) => (
                 <div key={index} className="space-y-2">
-                  <div className="grid grid-cols-12 gap-3 items-start">
+                  <div className="flex gap-3 items-start">
                     {index === 0 ? (
                       <>
-                        <div className="col-span-2">
+                        <div className="w-24 flex-shrink-0">
                           <div className="h-10 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm flex items-center justify-center font-medium">
                             PADRÃO
                           </div>
                         </div>
-                        <div className="col-span-10">
-                          <Input
-                            placeholder="https://exemplo.com"
-                            value={link.url}
-                            onChange={(e) => {
-                              updateLink(index, "url", e.target.value);
-                              updateLink(index, "referencia", "PADRÃO");
-                            }}
-                          />
-                        </div>
+                        <Input
+                          placeholder="https://exemplo.com"
+                          value={link.url}
+                          onChange={(e) => {
+                            updateLink(index, "url", e.target.value);
+                            updateLink(index, "referencia", "PADRÃO");
+                          }}
+                          className="flex-1"
+                        />
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={addLink}
+                          className="h-10 w-10 rounded-full hover:bg-primary/10 flex-shrink-0"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
                       </>
                     ) : (
                       <>
-                        <div className="col-span-5">
-                          <Input
-                            placeholder="https://exemplo.com"
-                            value={link.url}
-                            onChange={(e) => updateLink(index, "url", e.target.value)}
-                          />
-                        </div>
-                        <div className="col-span-6">
-                          <Input
-                            placeholder="Referência (ex: FOMENTO, PADRAO 2)"
-                            value={link.referencia}
-                            onChange={(e) => {
-                              const error = validateDuplicateReference(e.target.value, index);
-                              if (error && e.target.value.trim()) {
-                                toast({
-                                  title: "Referência duplicada",
-                                  description: error,
-                                  variant: "destructive",
-                                });
-                              }
-                              updateLink(index, "referencia", e.target.value);
-                            }}
-                          />
-                        </div>
-                        <div className="col-span-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeLink(index)}
-                            className="h-10 w-10 hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <Input
+                          placeholder="https://exemplo.com"
+                          value={link.url}
+                          onChange={(e) => updateLink(index, "url", e.target.value)}
+                          className="flex-1"
+                        />
+                        <Input
+                          placeholder="Referência (ex: FOMENTO, PADRAO 2)"
+                          value={link.referencia}
+                          onChange={(e) => {
+                            const error = validateDuplicateReference(e.target.value, index);
+                            if (error && e.target.value.trim()) {
+                              toast({
+                                title: "Referência duplicada",
+                                description: error,
+                                variant: "destructive",
+                              });
+                            }
+                            updateLink(index, "referencia", e.target.value);
+                          }}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeLink(index)}
+                          className="h-10 w-10 hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </>
                     )}
                   </div>
