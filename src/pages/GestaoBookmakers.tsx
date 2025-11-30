@@ -19,6 +19,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Bookmaker {
   id: string;
@@ -56,6 +66,8 @@ export default function GestaoBookmakers() {
   const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
   const [credentialsBookmaker, setCredentialsBookmaker] = useState<Bookmaker | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [limitadaDialogOpen, setLimitadaDialogOpen] = useState(false);
+  const [bookmakerToToggle, setBookmakerToToggle] = useState<Bookmaker | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -210,14 +222,21 @@ export default function GestaoBookmakers() {
     fetchBookmakers();
   };
 
-  const handleToggleLimitada = async (bookmaker: Bookmaker) => {
+  const handleToggleLimitada = (bookmaker: Bookmaker) => {
+    setBookmakerToToggle(bookmaker);
+    setLimitadaDialogOpen(true);
+  };
+
+  const confirmToggleLimitada = async () => {
+    if (!bookmakerToToggle) return;
+
     try {
-      const newStatus = bookmaker.status === "limitada" ? "ativo" : "limitada";
+      const newStatus = bookmakerToToggle.status === "limitada" ? "ativo" : "limitada";
       
       const { error } = await supabase
         .from("bookmakers")
         .update({ status: newStatus })
-        .eq("id", bookmaker.id);
+        .eq("id", bookmakerToToggle.id);
 
       if (error) throw error;
 
@@ -226,6 +245,8 @@ export default function GestaoBookmakers() {
         description: `Vínculo marcado como ${newStatus === "limitada" ? "Limitada" : "Ativo"}.`,
       });
       
+      setLimitadaDialogOpen(false);
+      setBookmakerToToggle(null);
       fetchBookmakers();
     } catch (error: any) {
       toast({
@@ -759,6 +780,34 @@ export default function GestaoBookmakers() {
           </Card>
         </div>
       )}
+
+      <AlertDialog open={limitadaDialogOpen} onOpenChange={setLimitadaDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {bookmakerToToggle?.status === "limitada" 
+                ? "Confirmar remoção de limitação" 
+                : "Confirmar conta limitada"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {bookmakerToToggle?.status === "limitada"
+                ? `Deseja marcar a conta "${bookmakerToToggle?.nome}" como Ativa novamente?`
+                : `Confirma que a conta "${bookmakerToToggle?.nome}" foi limitada pela casa de apostas?`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setLimitadaDialogOpen(false);
+              setBookmakerToToggle(null);
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmToggleLimitada}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
