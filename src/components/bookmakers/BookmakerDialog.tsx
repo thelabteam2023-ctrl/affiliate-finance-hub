@@ -10,9 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import BookmakerSelect from "./BookmakerSelect";
 
 interface BookmakerDialogProps {
   open: boolean;
@@ -20,56 +22,87 @@ interface BookmakerDialogProps {
   bookmaker: any | null;
 }
 
+interface BookmakerCatalogo {
+  id: string;
+  nome: string;
+  logo_url: string | null;
+  links_json: Array<{ ref: string; url: string }>;
+}
+
 export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [nome, setNome] = useState("");
-  const [url, setUrl] = useState("");
+  const [bookmakerId, setBookmakerId] = useState("");
+  const [selectedBookmaker, setSelectedBookmaker] = useState<BookmakerCatalogo | null>(null);
+  const [selectedLink, setSelectedLink] = useState("");
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [saldoAtual, setSaldoAtual] = useState("0.00");
-  const [moeda, setMoeda] = useState("BRL");
   const [status, setStatus] = useState("ativo");
   const [observacoes, setObservacoes] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
     if (bookmaker) {
-      setNome(bookmaker.nome || "");
-      setUrl(bookmaker.url || "");
+      setBookmakerId(bookmaker.bookmaker_catalogo_id || "");
       setLoginUsername(bookmaker.login_username || "");
-      setLoginPassword(""); // Never show the actual password
-      setSaldoAtual(bookmaker.saldo_atual?.toString() || "0.00");
-      setMoeda(bookmaker.moeda || "BRL");
+      setLoginPassword("");
       setStatus(bookmaker.status || "ativo");
       setObservacoes(bookmaker.observacoes || "");
+      setSelectedLink(bookmaker.link_origem || "");
     } else {
       resetForm();
     }
   }, [bookmaker]);
 
+  useEffect(() => {
+    if (bookmakerId) {
+      fetchBookmakerDetails();
+    } else {
+      setSelectedBookmaker(null);
+      setSelectedLink("");
+    }
+  }, [bookmakerId]);
+
+  const fetchBookmakerDetails = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("bookmakers_catalogo")
+        .select("id, nome, logo_url, links_json")
+        .eq("id", bookmakerId)
+        .single();
+
+      if (error) throw error;
+      
+      const bookmakerData: BookmakerCatalogo = {
+        id: data.id,
+        nome: data.nome,
+        logo_url: data.logo_url,
+        links_json: (data.links_json as any) || [],
+      };
+      
+      setSelectedBookmaker(bookmakerData);
+      
+      // Auto-select first link (PADRÃO) if available
+      const linksArray = bookmakerData.links_json;
+      if (linksArray && linksArray.length > 0 && !selectedLink) {
+        setSelectedLink(linksArray[0].ref);
+      }
+    } catch (error: any) {
+      console.error("Erro ao carregar detalhes da bookmaker:", error);
+    }
+  };
+
   const resetForm = () => {
-    setNome("");
-    setUrl("");
+    setBookmakerId("");
+    setSelectedBookmaker(null);
+    setSelectedLink("");
     setLoginUsername("");
     setLoginPassword("");
-    setSaldoAtual("0.00");
-    setMoeda("BRL");
     setStatus("ativo");
     setObservacoes("");
   };
 
-  // Simple client-side encryption (base64) - NOT secure for production
-  // In production, use proper encryption or store credentials in a secure vault
   const encryptPassword = (password: string): string => {
-    return btoa(password); // Basic base64 encoding
-  };
-
-  const decryptPassword = (encrypted: string): string => {
-    try {
-      return atob(encrypted); // Basic base64 decoding
-    } catch {
-      return "";
-    }
+    return btoa(password);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,24 +113,31 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      if (!bookmakerId) {
+        throw new Error("Selecione uma bookmaker");
+      }
+
+      if (!selectedLink) {
+        throw new Error("Selecione um link de cadastro");
+      }
+
       const bookmakerData: any = {
         user_id: user.id,
-        nome,
-        url: url || null,
+        bookmaker_catalogo_id: bookmakerId,
+        nome: selectedBookmaker?.nome || "",
+        link_origem: selectedLink,
         login_username: loginUsername,
-        saldo_atual: parseFloat(saldoAtual),
-        moeda,
+        saldo_atual: 0, // Sempre começa com 0
+        moeda: "BRL", // Padrão BRL
         status,
         observacoes: observacoes || null,
       };
 
-      // Only update password if a new one is provided
       if (loginPassword) {
         bookmakerData.login_password_encrypted = encryptPassword(loginPassword);
       }
 
       if (bookmaker) {
-        // If editing and no new password, remove it from update
         if (!loginPassword) {
           delete bookmakerData.login_password_encrypted;
         }
@@ -109,9 +149,8 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
 
         if (error) throw error;
       } else {
-        // For new bookmakers, password is required
         if (!loginPassword) {
-          throw new Error("Senha é obrigatória para novo bookmaker");
+          throw new Error("Senha é obrigatória para novo vínculo");
         }
 
         const { error } = await supabase
@@ -122,14 +161,14 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
       }
 
       toast({
-        title: bookmaker ? "Bookmaker atualizado" : "Bookmaker criado",
+        title: bookmaker ? "Vínculo atualizado" : "Vínculo criado",
         description: "Os dados foram salvos com sucesso.",
       });
 
       onClose();
     } catch (error: any) {
       toast({
-        title: "Erro ao salvar bookmaker",
+        title: "Erro ao salvar vínculo",
         description: error.message,
         variant: "destructive",
       });
@@ -138,12 +177,16 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
     }
   };
 
+  const linkUrl = selectedBookmaker?.links_json?.find(
+    (link) => link.ref === selectedLink
+  )?.url || "";
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {bookmaker ? "Editar Bookmaker" : "Novo Bookmaker"}
+          <DialogTitle className="text-center text-2xl">
+            Parceiro ↔ Bookmaker
           </DialogTitle>
         </DialogHeader>
 
@@ -155,32 +198,73 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
           </AlertDescription>
         </Alert>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label>Selecione...</Label>
+            <BookmakerSelect
+              value={bookmakerId}
+              onValueChange={setBookmakerId}
+              disabled={loading}
+            />
+          </div>
+
+          {selectedBookmaker && (
+            <>
+              <div className="flex flex-col items-center gap-4 py-6 border-y">
+                {selectedBookmaker.logo_url && (
+                  <img
+                    src={selectedBookmaker.logo_url}
+                    alt={selectedBookmaker.nome}
+                    className="h-32 w-32 rounded-lg object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                )}
+                <div className="text-center">
+                  <div className="text-sm text-muted-foreground mb-1">Bookmaker</div>
+                  <div className="text-lg font-semibold uppercase">
+                    {selectedBookmaker.nome}
+                  </div>
+                </div>
+              </div>
+
+              {selectedBookmaker.links_json && selectedBookmaker.links_json.length > 0 && (
+                <div className="space-y-3">
+                  <Label className="text-base">
+                    Links desta casa (selecione um para usar como origem)
+                  </Label>
+                  <RadioGroup value={selectedLink} onValueChange={setSelectedLink}>
+                    <div className="space-y-2">
+                      {selectedBookmaker.links_json.map((link) => (
+                        <div
+                          key={link.ref}
+                          className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-accent/40 transition-colors"
+                        >
+                          <RadioGroupItem value={link.ref} id={link.ref} />
+                          <label
+                            htmlFor={link.ref}
+                            className="flex-1 cursor-pointer flex items-center gap-2"
+                          >
+                            <span className="font-medium uppercase">
+                              {link.ref === "PADRÃO" ? "SITE OFICIAL" : link.ref}
+                            </span>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </RadioGroup>
+                  {linkUrl && (
+                    <div className="text-xs text-muted-foreground break-all bg-muted p-2 rounded">
+                      {linkUrl}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <Label htmlFor="nome">Nome do Bookmaker *</Label>
-              <Input
-                id="nome"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder="Ex: Bet365, Betano, etc"
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="url">URL do Site</Label>
-              <Input
-                id="url"
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://..."
-                disabled={loading}
-              />
-            </div>
-
             <div>
               <Label htmlFor="loginUsername">Usuário de Login *</Label>
               <Input
@@ -189,7 +273,7 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
                 onChange={(e) => setLoginUsername(e.target.value)}
                 placeholder="username ou email"
                 required
-                disabled={loading}
+                disabled={loading || !bookmakerId}
                 autoComplete="off"
               />
             </div>
@@ -205,40 +289,9 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
                 onChange={(e) => setLoginPassword(e.target.value)}
                 placeholder={bookmaker ? "••••••••" : "senha"}
                 required={!bookmaker}
-                disabled={loading}
+                disabled={loading || !bookmakerId}
                 autoComplete="new-password"
               />
-            </div>
-
-            <div>
-              <Label htmlFor="saldoAtual">Saldo Inicial *</Label>
-              <Input
-                id="saldoAtual"
-                type="number"
-                step="0.01"
-                value={saldoAtual}
-                onChange={(e) => setSaldoAtual(e.target.value)}
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="moeda">Moeda *</Label>
-              <select
-                id="moeda"
-                value={moeda}
-                onChange={(e) => setMoeda(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md bg-background"
-                disabled={loading}
-              >
-                <option value="BRL">Real (BRL)</option>
-                <option value="USD">Dólar (USD)</option>
-                <option value="EUR">Euro (EUR)</option>
-                <option value="USDT">Tether (USDT)</option>
-                <option value="BTC">Bitcoin (BTC)</option>
-                <option value="ETH">Ethereum (ETH)</option>
-              </select>
             </div>
 
             <div className="col-span-2">
@@ -247,8 +300,8 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
                 id="status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md bg-background"
-                disabled={loading}
+                className="w-full h-10 px-3 py-2 border border-border rounded-md bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                disabled={loading || !bookmakerId}
               >
                 <option value="ativo">Ativo</option>
                 <option value="inativo">Inativo</option>
@@ -264,8 +317,8 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
                 value={observacoes}
                 onChange={(e) => setObservacoes(e.target.value)}
                 rows={3}
-                placeholder="Notas internas sobre este bookmaker..."
-                disabled={loading}
+                placeholder="Notas internas sobre este vínculo..."
+                disabled={loading || !bookmakerId}
               />
             </div>
           </div>
@@ -274,9 +327,9 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
             <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading} className="flex-1">
+            <Button type="submit" disabled={loading || !bookmakerId} className="flex-1">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {bookmaker ? "Atualizar" : "Criar"} Bookmaker
+              {bookmaker ? "Atualizar" : "Criar"} Vínculo
             </Button>
           </div>
         </form>
