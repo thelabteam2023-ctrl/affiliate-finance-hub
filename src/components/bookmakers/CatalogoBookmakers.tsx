@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, ShieldCheck, AlertTriangle, LayoutGrid, List } from "lucide-react";
+import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, ShieldCheck, AlertTriangle, LayoutGrid, List, Info } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +49,8 @@ export default function CatalogoBookmakers() {
   const [editingBookmaker, setEditingBookmaker] = useState<BookmakerCatalogo | null>(null);
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
   const [selectedBonusBookmaker, setSelectedBonusBookmaker] = useState<BookmakerCatalogo | null>(null);
+  const [observacoesDialogOpen, setObservacoesDialogOpen] = useState(false);
+  const [selectedObservacoesBookmaker, setSelectedObservacoesBookmaker] = useState<BookmakerCatalogo | null>(null);
   const [viewType, setViewType] = useState<"cards" | "list">("cards");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [bookmakerToDelete, setBookmakerToDelete] = useState<string | null>(null);
@@ -124,6 +126,11 @@ export default function CatalogoBookmakers() {
   const handleBonusClick = (bookmaker: BookmakerCatalogo) => {
     setSelectedBonusBookmaker(bookmaker);
     setBonusDialogOpen(true);
+  };
+
+  const handleObservacoesClick = (bookmaker: BookmakerCatalogo) => {
+    setSelectedObservacoesBookmaker(bookmaker);
+    setObservacoesDialogOpen(true);
   };
 
   const formatCurrency = (moeda: string) => {
@@ -422,8 +429,9 @@ export default function CatalogoBookmakers() {
                               </Tooltip>
                             )}
                           </TooltipProvider>
-                        </div>
-                        
+                      </div>
+                      
+                      <div className="flex items-center gap-1.5">
                         {bookmaker.bonus_enabled && (
                           <TooltipProvider>
                             <Tooltip>
@@ -441,7 +449,26 @@ export default function CatalogoBookmakers() {
                             </Tooltip>
                           </TooltipProvider>
                         )}
+                        
+                        {bookmaker.observacoes && bookmaker.observacoes.trim() !== "" && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => handleObservacoesClick(bookmaker)}
+                                  className="h-5 w-5 rounded-full bg-primary/20 hover:bg-primary/30 flex items-center justify-center text-primary transition-colors"
+                                >
+                                  <Info className="h-3.5 w-3.5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Ver observações</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
+                    </div>
                       
                       {/* Imagem à esquerda */}
                       <div className="flex items-start justify-start">
@@ -629,6 +656,26 @@ export default function CatalogoBookmakers() {
                                   </Tooltip>
                                 </TooltipProvider>
                               )}
+                              {bookmaker.observacoes && bookmaker.observacoes.trim() !== "" && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleObservacoesClick(bookmaker);
+                                        }}
+                                        className="h-4 w-4 rounded-full bg-primary/20 hover:bg-primary/30 flex items-center justify-center text-primary transition-colors cursor-pointer hover:scale-110"
+                                      >
+                                        <Info className="h-3 w-3" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Ver observações</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
                             </div>
                             <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                               <div className="flex items-center gap-2">
@@ -793,6 +840,27 @@ export default function CatalogoBookmakers() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Observações */}
+      <Dialog open={observacoesDialogOpen} onOpenChange={setObservacoesDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          {selectedObservacoesBookmaker && (
+            <div className="space-y-4">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Info className="h-5 w-5 text-primary" />
+                  Observações - {selectedObservacoesBookmaker.nome}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                  {selectedObservacoesBookmaker.observacoes}
+                </p>
+              </div>
             </div>
           )}
         </DialogContent>
