@@ -24,6 +24,7 @@ import { Loader2, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import BookmakerSelect from "./BookmakerSelect";
 import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
+import { PasswordInput } from "@/components/parceiros/PasswordInput";
 
 interface BookmakerDialogProps {
   open: boolean;
@@ -35,7 +36,7 @@ interface BookmakerCatalogo {
   id: string;
   nome: string;
   logo_url: string | null;
-  links_json: Array<{ ref: string; url: string }>;
+  links_json: Array<{ referencia: string; url: string }>;
 }
 
 export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerDialogProps) {
@@ -95,7 +96,7 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
       // Auto-select first link (PADRÃO) if available
       const linksArray = bookmakerData.links_json;
       if (linksArray && linksArray.length > 0 && !selectedLink) {
-        setSelectedLink(linksArray[0].ref);
+        setSelectedLink(linksArray[0].referencia);
       }
     } catch (error: any) {
       console.error("Erro ao carregar detalhes da bookmaker:", error);
@@ -195,7 +196,7 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
   };
 
   const linkUrl = selectedBookmaker?.links_json?.find(
-    (link) => link.ref === selectedLink
+    (link) => link.referencia === selectedLink
   )?.url || "";
 
   return (
@@ -264,14 +265,14 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
                     <div className="space-y-3">
                       {selectedBookmaker.links_json.map((link) => (
                         <label
-                          key={link.ref}
-                          htmlFor={link.ref}
+                          key={link.referencia}
+                          htmlFor={link.referencia}
                           className="flex items-start gap-3 p-4 border rounded-lg hover:bg-accent/40 transition-colors cursor-pointer"
                         >
-                          <RadioGroupItem value={link.ref} id={link.ref} className="mt-1 flex-shrink-0" />
+                          <RadioGroupItem value={link.referencia} id={link.referencia} className="mt-1 flex-shrink-0" />
                           <div className="flex-1 space-y-2">
                             <Badge variant="secondary" className="uppercase text-xs">
-                              {link.ref === "PADRÃO" ? "SITE OFICIAL" : link.ref}
+                              {link.referencia === "PADRÃO" ? "SITE OFICIAL" : link.referencia}
                             </Badge>
                             <div className="text-xs text-muted-foreground break-all">
                               {link.url}
@@ -304,15 +305,11 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
               <Label htmlFor="loginPassword">
                 Senha de Login {bookmaker ? "(deixe em branco para não alterar)" : "*"}
               </Label>
-              <Input
-                id="loginPassword"
-                type="password"
+              <PasswordInput
                 value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
+                onChange={setLoginPassword}
                 placeholder={bookmaker ? "••••••••" : "senha"}
-                required={!bookmaker}
                 disabled={loading || !bookmakerId}
-                autoComplete="new-password"
               />
             </div>
 
