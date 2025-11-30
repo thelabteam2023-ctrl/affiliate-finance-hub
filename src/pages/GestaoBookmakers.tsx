@@ -370,7 +370,7 @@ export default function GestaoBookmakers() {
                         size="sm"
                         onClick={() => handleViewHistory(bookmaker)}
                       >
-                        <TrendingUp className="h-4 w-4" />
+                        <Eye className="h-4 w-4" />
                       </Button>
                     </div>
 
