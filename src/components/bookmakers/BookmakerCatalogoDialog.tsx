@@ -464,12 +464,13 @@ export default function BookmakerCatalogoDialog({
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-center gap-3">
                 <Label htmlFor="bonus">Bônus Disponível</Label>
                 <Switch
                   id="bonus"
                   checked={bonusEnabled}
                   onCheckedChange={setBonusEnabled}
+                  className={!bonusEnabled ? "data-[state=unchecked]:bg-red-500/10" : ""}
                 />
               </div>
 
