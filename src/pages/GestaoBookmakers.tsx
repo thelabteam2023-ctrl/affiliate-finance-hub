@@ -273,18 +273,13 @@ export default function GestaoBookmakers() {
               </select>
               <Button
                 variant="outline"
+                size="icon"
                 onClick={() => setShowCredentials(!showCredentials)}
               >
                 {showCredentials ? (
-                  <>
-                    <EyeOff className="mr-2 h-4 w-4" />
-                    Ocultar Credenciais
-                  </>
+                  <EyeOff className="h-4 w-4" />
                 ) : (
-                  <>
-                    <Eye className="mr-2 h-4 w-4" />
-                    Mostrar Credenciais
-                  </>
+                  <Eye className="h-4 w-4" />
                 )}
               </Button>
               <Button onClick={() => setDialogOpen(true)}>

@@ -11,6 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -232,33 +240,31 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
               {selectedBookmaker.links_json && selectedBookmaker.links_json.length > 0 && (
                 <div className="space-y-3">
                   <Label className="text-base">
-                    Links desta casa (selecione um para usar como origem)
+                    Link de Cadastro
                   </Label>
                   <RadioGroup value={selectedLink} onValueChange={setSelectedLink}>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {selectedBookmaker.links_json.map((link) => (
                         <div
                           key={link.ref}
-                          className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-accent/40 transition-colors"
+                          className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-accent/40 transition-colors"
                         >
-                          <RadioGroupItem value={link.ref} id={link.ref} />
+                          <RadioGroupItem value={link.ref} id={link.ref} className="mt-1" />
                           <label
                             htmlFor={link.ref}
-                            className="flex-1 cursor-pointer flex items-center gap-2"
+                            className="flex-1 cursor-pointer space-y-2"
                           >
-                            <span className="font-medium uppercase">
+                            <Badge variant="secondary" className="uppercase text-xs">
                               {link.ref === "PADRÃO" ? "SITE OFICIAL" : link.ref}
-                            </span>
+                            </Badge>
+                            <div className="text-xs text-muted-foreground break-all">
+                              {link.url}
+                            </div>
                           </label>
                         </div>
                       ))}
                     </div>
                   </RadioGroup>
-                  {linkUrl && (
-                    <div className="text-xs text-muted-foreground break-all bg-muted p-2 rounded">
-                      {linkUrl}
-                    </div>
-                  )}
                 </div>
               )}
             </>
@@ -296,18 +302,17 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
 
             <div className="col-span-2">
               <Label htmlFor="status">Status</Label>
-              <select
-                id="status"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full h-10 px-3 py-2 border border-border rounded-md bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                disabled={loading || !bookmakerId}
-              >
-                <option value="ativo">Ativo</option>
-                <option value="inativo">Inativo</option>
-                <option value="suspenso">Suspenso</option>
-                <option value="bloqueado">Bloqueado</option>
-              </select>
+              <Select value={status} onValueChange={setStatus} disabled={loading || !bookmakerId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ativo">Ativo</SelectItem>
+                  <SelectItem value="inativo">Inativo</SelectItem>
+                  <SelectItem value="suspenso">Suspenso</SelectItem>
+                  <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="col-span-2">
