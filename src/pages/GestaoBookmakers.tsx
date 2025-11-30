@@ -20,15 +20,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface Bookmaker {
   id: string;
@@ -66,8 +61,7 @@ export default function GestaoBookmakers() {
   const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
   const [credentialsBookmaker, setCredentialsBookmaker] = useState<Bookmaker | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [limitadaDialogOpen, setLimitadaDialogOpen] = useState(false);
-  const [bookmakerToToggle, setBookmakerToToggle] = useState<Bookmaker | null>(null);
+  const [limitadaPopoverOpen, setLimitadaPopoverOpen] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -222,21 +216,14 @@ export default function GestaoBookmakers() {
     fetchBookmakers();
   };
 
-  const handleToggleLimitada = (bookmaker: Bookmaker) => {
-    setBookmakerToToggle(bookmaker);
-    setLimitadaDialogOpen(true);
-  };
-
-  const confirmToggleLimitada = async () => {
-    if (!bookmakerToToggle) return;
-
+  const confirmToggleLimitada = async (bookmaker: Bookmaker) => {
     try {
-      const newStatus = bookmakerToToggle.status === "limitada" ? "ativo" : "limitada";
+      const newStatus = bookmaker.status === "limitada" ? "ativo" : "limitada";
       
       const { error } = await supabase
         .from("bookmakers")
         .update({ status: newStatus })
-        .eq("id", bookmakerToToggle.id);
+        .eq("id", bookmaker.id);
 
       if (error) throw error;
 
@@ -245,8 +232,7 @@ export default function GestaoBookmakers() {
         description: `Vínculo marcado como ${newStatus === "limitada" ? "Limitada" : "Ativo"}.`,
       });
       
-      setLimitadaDialogOpen(false);
-      setBookmakerToToggle(null);
+      setLimitadaPopoverOpen(null);
       fetchBookmakers();
     } catch (error: any) {
       toast({
@@ -548,18 +534,50 @@ export default function GestaoBookmakers() {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleToggleLimitada(bookmaker)}
-                              className={bookmaker.status === "limitada" ? "text-warning" : ""}
+                            <Popover 
+                              open={limitadaPopoverOpen === bookmaker.id} 
+                              onOpenChange={(open) => setLimitadaPopoverOpen(open ? bookmaker.id : null)}
                             >
-                              <ShieldAlert className="h-4 w-4" />
-                            </Button>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className={bookmaker.status === "limitada" ? "text-warning" : ""}
+                                >
+                                  <ShieldAlert className="h-4 w-4" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-3" align="start">
+                                <div className="space-y-2">
+                                  <p className="text-sm font-medium">
+                                    {bookmaker.status === "limitada" ? "Remover limitação?" : "Confirmar limitação?"}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {bookmaker.status === "limitada"
+                                      ? "Marcar como Ativa novamente?"
+                                      : "Confirma que foi limitada?"}
+                                  </p>
+                                  <div className="flex gap-2 pt-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="flex-1 h-8"
+                                      onClick={() => setLimitadaPopoverOpen(null)}
+                                    >
+                                      Cancelar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      className="flex-1 h-8 bg-emerald-600 hover:bg-emerald-700"
+                                      onClick={() => confirmToggleLimitada(bookmaker)}
+                                    >
+                                      Confirmar
+                                    </Button>
+                                  </div>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
                           </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{bookmaker.status === "limitada" ? "Marcar como Ativo" : "Marcar como Limitada"}</p>
-                          </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     </div>
@@ -660,18 +678,50 @@ export default function GestaoBookmakers() {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleToggleLimitada(bookmaker)}
-                                    className={bookmaker.status === "limitada" ? "text-warning" : ""}
+                                  <Popover 
+                                    open={limitadaPopoverOpen === bookmaker.id} 
+                                    onOpenChange={(open) => setLimitadaPopoverOpen(open ? bookmaker.id : null)}
                                   >
-                                    <ShieldAlert className="h-4 w-4" />
-                                  </Button>
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className={bookmaker.status === "limitada" ? "text-warning" : ""}
+                                      >
+                                        <ShieldAlert className="h-4 w-4" />
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-64 p-3" align="start">
+                                      <div className="space-y-2">
+                                        <p className="text-sm font-medium">
+                                          {bookmaker.status === "limitada" ? "Remover limitação?" : "Confirmar limitação?"}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {bookmaker.status === "limitada"
+                                            ? "Marcar como Ativa novamente?"
+                                            : "Confirma que foi limitada?"}
+                                        </p>
+                                        <div className="flex gap-2 pt-2">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="flex-1 h-8"
+                                            onClick={() => setLimitadaPopoverOpen(null)}
+                                          >
+                                            Cancelar
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            className="flex-1 h-8 bg-emerald-600 hover:bg-emerald-700"
+                                            onClick={() => confirmToggleLimitada(bookmaker)}
+                                          >
+                                            Confirmar
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
                                 </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{bookmaker.status === "limitada" ? "Marcar como Ativo" : "Marcar como Limitada"}</p>
-                                </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                             <Button
@@ -781,33 +831,6 @@ export default function GestaoBookmakers() {
         </div>
       )}
 
-      <AlertDialog open={limitadaDialogOpen} onOpenChange={setLimitadaDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {bookmakerToToggle?.status === "limitada" 
-                ? "Confirmar remoção de limitação" 
-                : "Confirmar conta limitada"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {bookmakerToToggle?.status === "limitada"
-                ? `Deseja marcar a conta "${bookmakerToToggle?.nome}" como Ativa novamente?`
-                : `Confirma que a conta "${bookmakerToToggle?.nome}" foi limitada pela casa de apostas?`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setLimitadaDialogOpen(false);
-              setBookmakerToToggle(null);
-            }}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmToggleLimitada}>
-              Confirmar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
