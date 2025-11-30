@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Filter, Calendar, ArrowRight, AlertCircle } from "lucide-react";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 
 interface HistoricoMovimentacoesProps {
   transacoes: any[];
@@ -43,6 +43,29 @@ export function HistoricoMovimentacoes({
   getDestinoLabel,
   formatCurrency,
 }: HistoricoMovimentacoesProps) {
+  const handlePeriodoRapido = (dias: number | null) => {
+    if (dias === null) {
+      // Todo o período - remove os filtros de data
+      setDataInicio(undefined);
+      setDataFim(undefined);
+    } else {
+      // Define o período baseado nos dias
+      setDataInicio(subDays(new Date(), dias));
+      setDataFim(new Date());
+    }
+  };
+
+  const getPeriodoAtivo = () => {
+    if (!dataInicio && !dataFim) return "todos";
+    
+    const hoje = new Date();
+    const diffDays = dataInicio ? Math.floor((hoje.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)) : null;
+    
+    if (diffDays === 7) return "7dias";
+    if (diffDays === 30) return "30dias";
+    return "custom";
+  };
+
   return (
     <>
       <CardHeader>
@@ -56,60 +79,91 @@ export function HistoricoMovimentacoes({
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-4 mt-4">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Tipo de transação" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="TODOS">Todos os tipos</SelectItem>
-                <SelectItem value="APORTE_FINANCEIRO">Aporte & Liquidação</SelectItem>
-                <SelectItem value="TRANSFERENCIA">Transferência</SelectItem>
-                <SelectItem value="DEPOSITO">Depósito</SelectItem>
-                <SelectItem value="SAQUE">Saque</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="space-y-4 mt-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Tipo de transação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TODOS">Todos os tipos</SelectItem>
+                  <SelectItem value="APORTE_FINANCEIRO">Aporte & Liquidação</SelectItem>
+                  <SelectItem value="TRANSFERENCIA">Transferência</SelectItem>
+                  <SelectItem value="DEPOSITO">Depósito</SelectItem>
+                  <SelectItem value="SAQUE">Saque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[140px] justify-start text-left">
+                    {dataInicio ? format(dataInicio, "dd/MM/yyyy") : "Data início"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={dataInicio}
+                    onSelect={setDataInicio}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <span className="text-muted-foreground">até</span>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[140px] justify-start text-left">
+                    {dataFim ? format(dataFim, "dd/MM/yyyy") : "Data fim"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={dataFim}
+                    onSelect={setDataFim}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
+          {/* Pills de Período Rápido */}
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[140px] justify-start text-left">
-                  {dataInicio ? format(dataInicio, "dd/MM/yyyy") : "Data início"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={dataInicio}
-                  onSelect={setDataInicio}
-                  initialFocus
-                  className="pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-
-            <span className="text-muted-foreground">até</span>
-
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[140px] justify-start text-left">
-                  {dataFim ? format(dataFim, "dd/MM/yyyy") : "Data fim"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={dataFim}
-                  onSelect={setDataFim}
-                  initialFocus
-                  className="pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
+            <span className="text-sm text-muted-foreground">Período:</span>
+            <Button
+              variant={getPeriodoAtivo() === "7dias" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handlePeriodoRapido(7)}
+              className="h-7 px-3 text-xs"
+            >
+              Últimos 7 dias
+            </Button>
+            <Button
+              variant={getPeriodoAtivo() === "30dias" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handlePeriodoRapido(30)}
+              className="h-7 px-3 text-xs"
+            >
+              Últimos 30 dias
+            </Button>
+            <Button
+              variant={getPeriodoAtivo() === "todos" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handlePeriodoRapido(null)}
+              className="h-7 px-3 text-xs"
+            >
+              Todo o período
+            </Button>
           </div>
         </div>
       </CardHeader>
