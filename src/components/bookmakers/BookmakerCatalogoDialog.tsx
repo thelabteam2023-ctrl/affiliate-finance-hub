@@ -240,6 +240,53 @@ export default function BookmakerCatalogoDialog({
         return;
       }
 
+      // Validar campos obrigatórios dos bônus
+      if (bonusEnabled && bonusList.length > 0) {
+        for (let i = 0; i < bonusList.length; i++) {
+          const bonus = bonusList[i];
+          
+          if (!bonus.tipoBônus || !bonus.tipoBônus.trim()) {
+            toast({
+              title: "Erro de validação",
+              description: `Bônus ${i + 1}: O campo "Tipo de Bônus" é obrigatório.`,
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
+
+          if (!bonus.percent || !bonus.percent.trim()) {
+            toast({
+              title: "Erro de validação",
+              description: `Bônus ${i + 1}: O campo "Percentual" é obrigatório.`,
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
+
+          if (!bonus.valorMax || !bonus.valorMax.trim()) {
+            toast({
+              title: "Erro de validação",
+              description: `Bônus ${i + 1}: O campo "Valor Máximo" é obrigatório.`,
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
+
+          if (!bonus.prazo || !bonus.prazo.trim()) {
+            toast({
+              title: "Erro de validação",
+              description: `Bônus ${i + 1}: O campo "Prazo" é obrigatório.`,
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
       const catalogoData = {
         user_id: user.id,
         nome,
@@ -497,7 +544,7 @@ export default function BookmakerCatalogoDialog({
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label>Tipo de Bônus</Label>
+                          <Label>Tipo de Bônus *</Label>
                           <Select
                             value={bonus.tipoBônus}
                             onValueChange={(value) =>
@@ -511,6 +558,7 @@ export default function BookmakerCatalogoDialog({
                               <SelectItem value="BOAS_VINDAS">BOAS-VINDAS</SelectItem>
                               <SelectItem value="CASHBACK">CASHBACK</SelectItem>
                               <SelectItem value="FREE_BET">FREE BET</SelectItem>
+                              <SelectItem value="RELOAD">RELOAD</SelectItem>
                               <SelectItem value="OUTRO">OUTRO</SelectItem>
                             </SelectContent>
                           </Select>
@@ -528,7 +576,7 @@ export default function BookmakerCatalogoDialog({
                           </div>
                         )}
                         <div className="space-y-2">
-                          <Label>Percentual (%)</Label>
+                          <Label>Percentual (%) *</Label>
                           <Input
                             type="number"
                             value={bonus.percent}
@@ -557,7 +605,7 @@ export default function BookmakerCatalogoDialog({
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Valor Máximo</Label>
+                          <Label>Valor Máximo *</Label>
                           <Input
                             type="number"
                             value={bonus.valorMax}
@@ -609,7 +657,7 @@ export default function BookmakerCatalogoDialog({
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Prazo (dias)</Label>
+                          <Label>Prazo (dias) *</Label>
                           <Input
                             type="number"
                             value={bonus.prazo}
