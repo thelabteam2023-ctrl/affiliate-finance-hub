@@ -477,7 +477,7 @@ export default function GestaoBookmakers() {
                                   <IdCard className="h-4 w-4" />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Abrir credencial</TooltipContent>
+                              <TooltipContent>ABRIR CREDENCIAIS DE ACESSO</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         )}
@@ -598,7 +598,7 @@ export default function GestaoBookmakers() {
                                             <IdCard className="h-4 w-4" />
                                           </Button>
                                         </TooltipTrigger>
-                                        <TooltipContent>Abrir credencial</TooltipContent>
+                                        <TooltipContent>ABRIR CREDENCIAIS DE ACESSO</TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>
                                   )}
