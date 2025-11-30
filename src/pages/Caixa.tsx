@@ -6,6 +6,8 @@ import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calend
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
+import { RelatorioROI } from "@/components/caixa/RelatorioROI";
+import { HistoricoInvestidor } from "@/components/caixa/HistoricoInvestidor";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,6 +36,7 @@ interface Transacao {
   destino_conta_bancaria_id: string | null;
   destino_wallet_id: string | null;
   destino_bookmaker_id: string | null;
+  nome_investidor: string | null;
 }
 
 interface SaldoFiat {
@@ -152,10 +155,15 @@ export default function Caixa() {
 
   const getTransacoesFiltradas = () => {
     return transacoes.filter((t) => {
-      const matchTipo = filtroTipo === "TODOS" || t.tipo_transacao === filtroTipo;
       const dataTransacao = new Date(t.data_transacao);
       const matchDataInicio = !dataInicio || dataTransacao >= startOfDay(dataInicio);
       const matchDataFim = !dataFim || dataTransacao <= endOfDay(dataFim);
+      
+      // Include both APORTE and LIQUIDACAO when filter is APORTE_FINANCEIRO
+      const matchTipo = filtroTipo === "TODOS" || 
+        (filtroTipo === "APORTE_FINANCEIRO" && (t.tipo_transacao === "APORTE" || t.tipo_transacao === "LIQUIDACAO")) ||
+        t.tipo_transacao === filtroTipo;
+      
       return matchTipo && matchDataInicio && matchDataFim;
     });
   };
@@ -178,7 +186,7 @@ export default function Caixa() {
       }
 
       // Calculate balance impact
-      const valorImpacto = t.tipo_transacao === "APORTE_FINANCEIRO" || t.destino_tipo === "CAIXA_OPERACIONAL"
+      const valorImpacto = t.tipo_transacao === "APORTE" || t.destino_tipo === "CAIXA_OPERACIONAL"
         ? t.valor
         : t.tipo_transacao === "LIQUIDACAO" || t.origem_tipo === "CAIXA_OPERACIONAL"
         ? -t.valor
@@ -220,7 +228,7 @@ export default function Caixa() {
 
   const getTipoLabel = (tipo: string) => {
     const labels: { [key: string]: string } = {
-      APORTE_FINANCEIRO: "Aporte",
+      APORTE: "Aporte",
       LIQUIDACAO: "Liquidação",
       TRANSFERENCIA: "Transferência",
       DEPOSITO: "Depósito",
@@ -231,7 +239,7 @@ export default function Caixa() {
 
   const getTipoColor = (tipo: string) => {
     const colors: { [key: string]: string } = {
-      APORTE_FINANCEIRO: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+      APORTE: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
       LIQUIDACAO: "bg-amber-500/20 text-amber-400 border-amber-500/30",
       TRANSFERENCIA: "bg-blue-500/20 text-blue-400 border-blue-500/30",
       DEPOSITO: "bg-amber-500/20 text-amber-400 border-amber-500/30",
@@ -248,8 +256,8 @@ export default function Caixa() {
   };
 
   const getOrigemLabel = (transacao: Transacao): string => {
-    if (transacao.tipo_transacao === "APORTE_FINANCEIRO") {
-      return "Aporte Externo";
+    if (transacao.tipo_transacao === "APORTE") {
+      return "Investidor Externo";
     }
     
     if (transacao.tipo_transacao === "LIQUIDACAO") {
@@ -409,6 +417,12 @@ export default function Caixa() {
         </Card>
       )}
 
+      {/* Relatório de ROI */}
+      <RelatorioROI />
+
+      {/* Histórico por Investidor */}
+      <HistoricoInvestidor />
+
       {/* Transactions History */}
       <Card className="bg-card/50 backdrop-blur border-border/50">
         <CardHeader>
@@ -431,8 +445,7 @@ export default function Caixa() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="TODOS">Todos os tipos</SelectItem>
-                  <SelectItem value="APORTE_FINANCEIRO">Aporte</SelectItem>
-                  <SelectItem value="LIQUIDACAO">Liquidação</SelectItem>
+                  <SelectItem value="APORTE_FINANCEIRO">Aporte/Liquidação</SelectItem>
                   <SelectItem value="TRANSFERENCIA">Transferência</SelectItem>
                   <SelectItem value="DEPOSITO">Depósito</SelectItem>
                   <SelectItem value="SAQUE">Saque</SelectItem>
