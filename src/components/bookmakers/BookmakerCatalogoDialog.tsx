@@ -196,6 +196,17 @@ export default function BookmakerCatalogoDialog({
         linksToSave[0].referencia = "PADRÃO";
       }
       
+      // Validar que o link padrão tenha URL
+      if (!linksToSave[0]?.url.trim()) {
+        toast({
+          title: "Erro de validação",
+          description: "O link de acesso padrão é obrigatório.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+      
       const validLinks = linksToSave.filter(link => link.url.trim() !== "");
       
       // Validar referências duplicadas
@@ -296,7 +307,7 @@ export default function BookmakerCatalogoDialog({
                     placeholder="https://..."
                     className="flex-1"
                   />
-                  <div className="w-14 h-14 rounded-md border border-border bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <div className="w-20 h-20 rounded-md border border-border bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
                     {logoUrl ? (
                       <img 
                         src={logoUrl} 
@@ -358,71 +369,69 @@ export default function BookmakerCatalogoDialog({
             </div>
 
             <div className="space-y-3">
-              <Label>Links de Acesso</Label>
+              <Label>Links de Acesso *</Label>
               {links.map((link, index) => (
                 <div key={index} className="space-y-2">
-                  <div className="flex gap-3 items-start">
-                    {index === 0 ? (
-                      <>
-                        <div className="w-24 flex-shrink-0">
-                          <div className="h-10 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm flex items-center justify-center font-medium">
-                            PADRÃO
-                          </div>
+                  {index === 0 ? (
+                    <div className="flex gap-3 items-center">
+                      <div className="w-24 flex-shrink-0">
+                        <div className="h-10 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm flex items-center justify-center font-medium">
+                          PADRÃO
                         </div>
-                        <Input
-                          placeholder="https://exemplo.com"
-                          value={link.url}
-                          onChange={(e) => {
-                            updateLink(index, "url", e.target.value);
-                            updateLink(index, "referencia", "PADRÃO");
-                          }}
-                          className="flex-1"
-                        />
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={addLink}
-                          className="h-10 w-10 rounded-full hover:bg-primary/10 flex-shrink-0"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <div className="flex-1 space-y-2">
-                        <div className="flex gap-2 items-center">
-                          <Input
-                            placeholder="Referência (ex: FOMENTO, PADRAO 2)"
-                            value={link.referencia}
-                            onChange={(e) => {
-                              const error = validateDuplicateReference(e.target.value, index);
-                              if (error && e.target.value.trim()) {
-                                toast({
-                                  title: "Referência duplicada",
-                                  description: error,
-                                  variant: "destructive",
-                                });
-                              }
-                              updateLink(index, "referencia", e.target.value);
-                            }}
-                            className="flex-1"
-                          />
-                          <Badge
-                            variant="outline"
-                            onClick={() => removeLink(index)}
-                            className="h-8 px-2 cursor-pointer hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors"
-                          >
-                            <X className="h-3 w-3" />
-                          </Badge>
-                        </div>
-                        <Input
-                          placeholder="https://exemplo.com"
-                          value={link.url}
-                          onChange={(e) => updateLink(index, "url", e.target.value)}
-                        />
                       </div>
-                    )}
-                  </div>
+                      <Input
+                        placeholder="https://exemplo.com"
+                        value={link.url}
+                        onChange={(e) => {
+                          updateLink(index, "url", e.target.value);
+                          updateLink(index, "referencia", "PADRÃO");
+                        }}
+                        className="flex-1 h-10"
+                        required
+                      />
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={addLink}
+                        className="h-10 w-10 rounded-full hover:bg-primary/10 flex-shrink-0"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-3 items-center">
+                      <Input
+                        placeholder="Referência (ex: FOMENTO)"
+                        value={link.referencia}
+                        onChange={(e) => {
+                          const error = validateDuplicateReference(e.target.value, index);
+                          if (error && e.target.value.trim()) {
+                            toast({
+                              title: "Referência duplicada",
+                              description: error,
+                              variant: "destructive",
+                            });
+                          }
+                          updateLink(index, "referencia", e.target.value);
+                        }}
+                        className="w-48 h-10"
+                      />
+                      <Input
+                        placeholder="https://exemplo.com"
+                        value={link.url}
+                        onChange={(e) => updateLink(index, "url", e.target.value)}
+                        className="flex-1 h-10"
+                      />
+                      <Badge
+                        variant="outline"
+                        onClick={() => removeLink(index)}
+                        className="h-8 px-2 cursor-pointer hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors flex-shrink-0"
+                      >
+                        <X className="h-3 w-3" />
+                      </Badge>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
