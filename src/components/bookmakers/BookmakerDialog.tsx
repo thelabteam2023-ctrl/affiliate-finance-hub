@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import BookmakerSelect from "./BookmakerSelect";
+import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
 
 interface BookmakerDialogProps {
   open: boolean;
@@ -39,6 +40,7 @@ interface BookmakerCatalogo {
 
 export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [parceiroId, setParceiroId] = useState("");
   const [bookmakerId, setBookmakerId] = useState("");
   const [selectedBookmaker, setSelectedBookmaker] = useState<BookmakerCatalogo | null>(null);
   const [selectedLink, setSelectedLink] = useState("");
@@ -50,6 +52,7 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
 
   useEffect(() => {
     if (bookmaker) {
+      setParceiroId(bookmaker.parceiro_id || "");
       setBookmakerId(bookmaker.bookmaker_catalogo_id || "");
       setLoginUsername(bookmaker.login_username || "");
       setLoginPassword("");
@@ -100,6 +103,7 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
   };
 
   const resetForm = () => {
+    setParceiroId("");
     setBookmakerId("");
     setSelectedBookmaker(null);
     setSelectedLink("");
@@ -121,6 +125,10 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      if (!parceiroId) {
+        throw new Error("Selecione um parceiro");
+      }
+
       if (!bookmakerId) {
         throw new Error("Selecione uma bookmaker");
       }
@@ -131,6 +139,7 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
 
       const bookmakerData: any = {
         user_id: user.id,
+        parceiro_id: parceiroId,
         bookmaker_catalogo_id: bookmakerId,
         nome: selectedBookmaker?.nome || "",
         link_origem: selectedLink,
@@ -208,7 +217,16 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label>Selecione...</Label>
+            <Label>Parceiro *</Label>
+            <ParceiroSelect
+              value={parceiroId}
+              onValueChange={setParceiroId}
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Bookmaker *</Label>
             <BookmakerSelect
               value={bookmakerId}
               onValueChange={setBookmakerId}
@@ -240,28 +258,26 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
               {selectedBookmaker.links_json && selectedBookmaker.links_json.length > 0 && (
                 <div className="space-y-3">
                   <Label className="text-base">
-                    Link de Cadastro
+                    Link de Cadastro *
                   </Label>
                   <RadioGroup value={selectedLink} onValueChange={setSelectedLink}>
                     <div className="space-y-3">
                       {selectedBookmaker.links_json.map((link) => (
-                        <div
+                        <label
                           key={link.ref}
-                          className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-accent/40 transition-colors"
+                          htmlFor={link.ref}
+                          className="flex items-start gap-3 p-4 border rounded-lg hover:bg-accent/40 transition-colors cursor-pointer"
                         >
-                          <RadioGroupItem value={link.ref} id={link.ref} className="mt-1" />
-                          <label
-                            htmlFor={link.ref}
-                            className="flex-1 cursor-pointer space-y-2"
-                          >
+                          <RadioGroupItem value={link.ref} id={link.ref} className="mt-1 flex-shrink-0" />
+                          <div className="flex-1 space-y-2">
                             <Badge variant="secondary" className="uppercase text-xs">
                               {link.ref === "PADRÃO" ? "SITE OFICIAL" : link.ref}
                             </Badge>
                             <div className="text-xs text-muted-foreground break-all">
                               {link.url}
                             </div>
-                          </label>
-                        </div>
+                          </div>
+                        </label>
                       ))}
                     </div>
                   </RadioGroup>
@@ -332,7 +348,7 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
             <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || !bookmakerId} className="flex-1">
+            <Button type="submit" disabled={loading || !parceiroId || !bookmakerId} className="flex-1">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {bookmaker ? "Atualizar" : "Criar"} Vínculo
             </Button>

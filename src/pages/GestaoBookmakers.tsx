@@ -22,6 +22,7 @@ interface Bookmaker {
   moeda: string;
   status: string;
   created_at: string;
+  parceiro_id: string | null;
 }
 
 export default function GestaoBookmakers() {
