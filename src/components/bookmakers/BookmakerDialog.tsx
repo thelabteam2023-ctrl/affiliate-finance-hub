@@ -270,8 +270,8 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
                           className="flex items-start gap-3 p-4 border rounded-lg hover:bg-accent/40 transition-colors cursor-pointer"
                         >
                           <RadioGroupItem value={link.referencia} id={link.referencia} className="mt-1 flex-shrink-0" />
-                          <div className="flex-1 space-y-2">
-                            <Badge variant="secondary" className="uppercase text-xs">
+                          <div className="flex-1 flex items-center gap-3">
+                            <Badge variant="secondary" className="uppercase text-xs flex-shrink-0">
                               {link.referencia === "PADRÃO" ? "SITE OFICIAL" : link.referencia}
                             </Badge>
                             <div className="text-xs text-muted-foreground break-all">
