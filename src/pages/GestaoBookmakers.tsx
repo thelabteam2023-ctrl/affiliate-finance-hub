@@ -480,45 +480,46 @@ export default function GestaoBookmakers() {
                                 <IdCard className="h-4 w-4" />
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-72 p-4" align="start">
-                              <div className="space-y-3">
-                                <h4 className="font-semibold text-sm">Credenciais - {bookmaker.nome}</h4>
-                                <div className="space-y-3">
-                                  <div>
-                                    <label className="text-xs font-medium text-muted-foreground">Usuário</label>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <p className="text-sm font-mono flex-1 truncate">{bookmaker.login_username}</p>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => copyToClipboard(bookmaker.login_username, "Usuário")}
-                                        className="h-7 w-7 p-0 shrink-0"
-                                      >
-                                        {copiedField === "Usuário" ? (
-                                          <Check className="h-3.5 w-3.5 text-green-500" />
-                                        ) : (
-                                          <Copy className="h-3.5 w-3.5" />
-                                        )}
-                                      </Button>
-                                    </div>
+                            <PopoverContent className="w-52 p-2" align="start">
+                              <div className="space-y-2">
+                                <div>
+                                  <label className="text-[10px] text-muted-foreground">Usuário</label>
+                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
+                                      {bookmaker.login_username}
+                                    </code>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => copyToClipboard(bookmaker.login_username, "Usuário")}
+                                      className="h-6 w-6 p-0 shrink-0"
+                                    >
+                                      {copiedField === "Usuário" ? (
+                                        <Check className="h-3 w-3 text-green-500" />
+                                      ) : (
+                                        <Copy className="h-3 w-3" />
+                                      )}
+                                    </Button>
                                   </div>
-                                  <div>
-                                    <label className="text-xs font-medium text-muted-foreground">Senha</label>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <p className="text-sm font-mono flex-1 truncate">{decryptPassword(bookmaker.login_password_encrypted)}</p>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => copyToClipboard(decryptPassword(bookmaker.login_password_encrypted), "Senha")}
-                                        className="h-7 w-7 p-0 shrink-0"
-                                      >
-                                        {copiedField === "Senha" ? (
-                                          <Check className="h-3.5 w-3.5 text-green-500" />
-                                        ) : (
-                                          <Copy className="h-3.5 w-3.5" />
-                                        )}
-                                      </Button>
-                                    </div>
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-muted-foreground">Senha</label>
+                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
+                                      {decryptPassword(bookmaker.login_password_encrypted)}
+                                    </code>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => copyToClipboard(decryptPassword(bookmaker.login_password_encrypted), "Senha")}
+                                      className="h-6 w-6 p-0 shrink-0"
+                                    >
+                                      {copiedField === "Senha" ? (
+                                        <Check className="h-3 w-3 text-green-500" />
+                                      ) : (
+                                        <Copy className="h-3 w-3" />
+                                      )}
+                                    </Button>
                                   </div>
                                 </div>
                               </div>
@@ -675,45 +676,46 @@ export default function GestaoBookmakers() {
                                           <IdCard className="h-4 w-4" />
                                         </Button>
                                       </PopoverTrigger>
-                                      <PopoverContent className="w-72 p-4" align="start">
-                                        <div className="space-y-3">
-                                          <h4 className="font-semibold text-sm">Credenciais - {bookmaker.nome}</h4>
-                                          <div className="space-y-3">
-                                            <div>
-                                              <label className="text-xs font-medium text-muted-foreground">Usuário</label>
-                                              <div className="flex items-center gap-2 mt-1">
-                                                <p className="text-sm font-mono flex-1 truncate">{bookmaker.login_username}</p>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  onClick={() => copyToClipboard(bookmaker.login_username, "Usuário")}
-                                                  className="h-7 w-7 p-0 shrink-0"
-                                                >
-                                                  {copiedField === "Usuário" ? (
-                                                    <Check className="h-3.5 w-3.5 text-green-500" />
-                                                  ) : (
-                                                    <Copy className="h-3.5 w-3.5" />
-                                                  )}
-                                                </Button>
-                                              </div>
+                                       <PopoverContent className="w-52 p-2" align="start">
+                                        <div className="space-y-2">
+                                          <div>
+                                            <label className="text-[10px] text-muted-foreground">Usuário</label>
+                                            <div className="flex items-center gap-1 mt-0.5">
+                                              <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
+                                                {bookmaker.login_username}
+                                              </code>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => copyToClipboard(bookmaker.login_username, "Usuário")}
+                                                className="h-6 w-6 p-0 shrink-0"
+                                              >
+                                                {copiedField === "Usuário" ? (
+                                                  <Check className="h-3 w-3 text-green-500" />
+                                                ) : (
+                                                  <Copy className="h-3 w-3" />
+                                                )}
+                                              </Button>
                                             </div>
-                                            <div>
-                                              <label className="text-xs font-medium text-muted-foreground">Senha</label>
-                                              <div className="flex items-center gap-2 mt-1">
-                                                <p className="text-sm font-mono flex-1 truncate">{decryptPassword(bookmaker.login_password_encrypted)}</p>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  onClick={() => copyToClipboard(decryptPassword(bookmaker.login_password_encrypted), "Senha")}
-                                                  className="h-7 w-7 p-0 shrink-0"
-                                                >
-                                                  {copiedField === "Senha" ? (
-                                                    <Check className="h-3.5 w-3.5 text-green-500" />
-                                                  ) : (
-                                                    <Copy className="h-3.5 w-3.5" />
-                                                  )}
-                                                </Button>
-                                              </div>
+                                          </div>
+                                          <div>
+                                            <label className="text-[10px] text-muted-foreground">Senha</label>
+                                            <div className="flex items-center gap-1 mt-0.5">
+                                              <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
+                                                {decryptPassword(bookmaker.login_password_encrypted)}
+                                              </code>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => copyToClipboard(decryptPassword(bookmaker.login_password_encrypted), "Senha")}
+                                                className="h-6 w-6 p-0 shrink-0"
+                                              >
+                                                {copiedField === "Senha" ? (
+                                                  <Check className="h-3 w-3 text-green-500" />
+                                                ) : (
+                                                  <Copy className="h-3 w-3" />
+                                                )}
+                                              </Button>
                                             </div>
                                           </div>
                                         </div>
