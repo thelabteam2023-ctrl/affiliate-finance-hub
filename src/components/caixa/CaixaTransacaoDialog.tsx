@@ -126,6 +126,9 @@ export function CaixaTransacaoDialog({
     // Set defaults based on transaction type
     if (tipoTransacao === "APORTE_FINANCEIRO") {
       setDestinoTipo("CAIXA_OPERACIONAL");
+    } else if (tipoTransacao === "LIQUIDACAO") {
+      setOrigemTipo("CAIXA_OPERACIONAL");
+      setDestinoTipo("");
     } else if (tipoTransacao === "DEPOSITO") {
       setOrigemTipo("CAIXA_OPERACIONAL");
       setDestinoTipo("BOOKMAKER");
@@ -244,6 +247,7 @@ export function CaixaTransacaoDialog({
 
   const getOrigemLabel = (): string => {
     if (tipoTransacao === "APORTE_FINANCEIRO") return "Aporte Externo";
+    if (tipoTransacao === "LIQUIDACAO") return "Caixa Operacional";
     if (tipoTransacao === "DEPOSITO") return "Caixa Operacional";
     if (tipoTransacao === "SAQUE" && origemBookmakerId) {
       const bm = bookmakers.find(b => b.id === origemBookmakerId);
@@ -266,6 +270,9 @@ export function CaixaTransacaoDialog({
   const getDestinoLabel = (): string => {
     if (tipoTransacao === "APORTE_FINANCEIRO" || tipoTransacao === "SAQUE") {
       return "Caixa Operacional";
+    }
+    if (tipoTransacao === "LIQUIDACAO") {
+      return "Investidor Externo";
     }
     if (tipoTransacao === "DEPOSITO" && destinoBookmakerId) {
       const bm = bookmakers.find(b => b.id === destinoBookmakerId);
@@ -392,10 +399,14 @@ export function CaixaTransacaoDialog({
   };
 
   const renderOrigemFields = () => {
-    if (tipoTransacao === "APORTE_FINANCEIRO" || tipoTransacao === "DEPOSITO") {
+    if (tipoTransacao === "APORTE_FINANCEIRO" || tipoTransacao === "DEPOSITO" || tipoTransacao === "LIQUIDACAO") {
       return (
         <div className="text-sm text-muted-foreground italic text-center">
-          {tipoTransacao === "APORTE_FINANCEIRO" ? "Aporte externo" : "Caixa Operacional"}
+          {tipoTransacao === "APORTE_FINANCEIRO" 
+            ? "Aporte externo" 
+            : tipoTransacao === "LIQUIDACAO"
+            ? "Caixa Operacional"
+            : "Caixa Operacional"}
         </div>
       );
     }
@@ -515,6 +526,14 @@ export function CaixaTransacaoDialog({
       return (
         <div className="text-sm text-muted-foreground italic text-center">
           Caixa Operacional
+        </div>
+      );
+    }
+
+    if (tipoTransacao === "LIQUIDACAO") {
+      return (
+        <div className="text-sm text-muted-foreground italic text-center">
+          Investidor Externo
         </div>
       );
     }
@@ -642,6 +661,7 @@ export function CaixaTransacaoDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="APORTE_FINANCEIRO">APORTE FINANCEIRO</SelectItem>
+                <SelectItem value="LIQUIDACAO">LIQUIDAÇÃO</SelectItem>
                 <SelectItem value="TRANSFERENCIA">TRANSFERÊNCIA</SelectItem>
                 <SelectItem value="DEPOSITO">DEPÓSITO (PARA BOOKMAKER)</SelectItem>
                 <SelectItem value="SAQUE">SAQUE (DE BOOKMAKER)</SelectItem>
