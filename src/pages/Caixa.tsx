@@ -227,6 +227,7 @@ export default function Caixa() {
 
   const getTipoLabel = (tipo: string) => {
     const labels: { [key: string]: string } = {
+      APORTE_FINANCEIRO: "Aporte & Liquidação",
       APORTE: "Aporte",
       LIQUIDACAO: "Liquidação",
       TRANSFERENCIA: "Transferência",
@@ -238,6 +239,7 @@ export default function Caixa() {
 
   const getTipoColor = (tipo: string) => {
     const colors: { [key: string]: string } = {
+      APORTE_FINANCEIRO: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
       APORTE: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
       LIQUIDACAO: "bg-amber-500/20 text-amber-400 border-amber-500/30",
       TRANSFERENCIA: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -255,8 +257,20 @@ export default function Caixa() {
   };
 
   const getOrigemLabel = (transacao: Transacao): string => {
+    // Para APORTE_FINANCEIRO, verificamos o fluxo pela direção
+    if (transacao.tipo_transacao === "APORTE_FINANCEIRO") {
+      // Se destino é CAIXA_OPERACIONAL, é um aporte (Investidor → Caixa)
+      if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
+        return transacao.nome_investidor || "Investidor Externo";
+      }
+      // Se origem é CAIXA_OPERACIONAL, é uma liquidação (Caixa → Investidor)
+      if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
+        return "Caixa Operacional";
+      }
+    }
+    
     if (transacao.tipo_transacao === "APORTE") {
-      return "Investidor Externo";
+      return transacao.nome_investidor || "Investidor Externo";
     }
     
     if (transacao.tipo_transacao === "LIQUIDACAO") {
@@ -283,8 +297,24 @@ export default function Caixa() {
   };
 
   const getDestinoLabel = (transacao: Transacao): string => {
+    // Para APORTE_FINANCEIRO, verificamos o fluxo pela direção
+    if (transacao.tipo_transacao === "APORTE_FINANCEIRO") {
+      // Se destino é CAIXA_OPERACIONAL, é um aporte (Investidor → Caixa)
+      if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
+        return "Caixa Operacional";
+      }
+      // Se origem é CAIXA_OPERACIONAL, é uma liquidação (Caixa → Investidor)
+      if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
+        return transacao.nome_investidor || "Investidor Externo";
+      }
+    }
+    
+    if (transacao.tipo_transacao === "APORTE") {
+      return "Caixa Operacional";
+    }
+    
     if (transacao.tipo_transacao === "LIQUIDACAO") {
-      return "Investidor Externo";
+      return transacao.nome_investidor || "Investidor Externo";
     }
     
     if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
