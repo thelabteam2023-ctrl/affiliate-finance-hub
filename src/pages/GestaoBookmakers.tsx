@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert } from "lucide-react";
+import { Plus, Search, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check } from "lucide-react";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
 import HistoricoTransacoes from "@/components/bookmakers/HistoricoTransacoes";
@@ -55,6 +55,7 @@ export default function GestaoBookmakers() {
   const [bookmakersCatalogo, setBookmakersCatalogo] = useState<Array<{ id: string; nome: string }>>([]);
   const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
   const [credentialsBookmaker, setCredentialsBookmaker] = useState<Bookmaker | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -250,6 +251,16 @@ export default function GestaoBookmakers() {
       ETH: "Ξ",
     };
     return `${currencySymbols[currency] || ""} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    toast({
+      title: `${field} copiado!`,
+      description: "O valor foi copiado para a área de transferência.",
+    });
+    setTimeout(() => setCopiedField(null), 2000);
   };
 
   const filteredBookmakers = bookmakers.filter((bookmaker) => {
@@ -496,14 +507,7 @@ export default function GestaoBookmakers() {
                       </div>
                     </div>
 
-                    <div className="text-sm pt-2 border-t">
-                      <p className="text-muted-foreground">
-                        <span className="font-medium">Usuário de Login:</span>{" "}
-                        {maskCredentials(bookmaker.login_username)}
-                      </p>
-                    </div>
-
-                    <div className="flex gap-2 pt-2">
+                    <div className="flex gap-2 pt-2 border-t">
                       <Button
                         variant="outline"
                         size="sm"
@@ -603,10 +607,6 @@ export default function GestaoBookmakers() {
                                     <span className="font-medium">Parceiro:</span>{" "}
                                     {bookmaker.parceiros?.nome || "Não definido"}
                                   </span>
-                                  <span>
-                                    <span className="font-medium">Usuário:</span>{" "}
-                                    {maskCredentials(bookmaker.login_username)}
-                                  </span>
                                   <span className="text-lg font-bold text-foreground">
                                     {formatCurrency(Number(bookmaker.saldo_atual), bookmaker.moeda)}
                                   </span>
@@ -701,11 +701,39 @@ export default function GestaoBookmakers() {
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Usuário</label>
-                <p className="text-base font-mono mt-1">{credentialsBookmaker.login_username}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-base font-mono flex-1">{credentialsBookmaker.login_username}</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(credentialsBookmaker.login_username, "Usuário")}
+                    className="h-8 w-8 p-0"
+                  >
+                    {copiedField === "Usuário" ? (
+                      <Check className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Senha</label>
-                <p className="text-base font-mono mt-1">{decryptPassword(credentialsBookmaker.login_password_encrypted)}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-base font-mono flex-1">{decryptPassword(credentialsBookmaker.login_password_encrypted)}</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(decryptPassword(credentialsBookmaker.login_password_encrypted), "Senha")}
+                    className="h-8 w-8 p-0"
+                  >
+                    {copiedField === "Senha" ? (
+                      <Check className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
               <Button 
                 onClick={() => setShowCredentialsDialog(false)} 
