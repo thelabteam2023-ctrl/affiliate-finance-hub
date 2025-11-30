@@ -40,6 +40,10 @@ interface Bookmaker {
   parceiros?: {
     nome: string;
   };
+  bookmakers_catalogo?: {
+    logo_url: string | null;
+    nome: string;
+  };
 }
 
 export default function GestaoBookmakers() {
@@ -84,7 +88,8 @@ export default function GestaoBookmakers() {
         .from("bookmakers")
         .select(`
           *,
-          parceiros!inner(nome)
+          parceiros!inner(nome),
+          bookmakers_catalogo(logo_url, nome)
         `)
         .order("created_at", { ascending: false });
 
@@ -465,6 +470,17 @@ export default function GestaoBookmakers() {
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
+                        {bookmaker.bookmakers_catalogo?.logo_url ? (
+                          <img 
+                            src={bookmaker.bookmakers_catalogo.logo_url} 
+                            alt={bookmaker.nome}
+                            className="w-10 h-10 rounded object-contain bg-white/5 p-1"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
+                            <Building className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        )}
                         <CardTitle className="text-xl">{bookmaker.nome}</CardTitle>
                         {hasCredentials(bookmaker) && (
                           <Popover 
@@ -659,6 +675,17 @@ export default function GestaoBookmakers() {
                           <div className="flex items-center justify-between gap-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-3">
+                              {bookmaker.bookmakers_catalogo?.logo_url ? (
+                                <img 
+                                  src={bookmaker.bookmakers_catalogo.logo_url} 
+                                  alt={bookmaker.nome}
+                                  className="w-8 h-8 rounded object-contain bg-white/5 p-1 shrink-0"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0">
+                                  <Building className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                              )}
                               <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-2">
                                   <h3 className="font-medium text-base">{bookmaker.nome}</h3>
