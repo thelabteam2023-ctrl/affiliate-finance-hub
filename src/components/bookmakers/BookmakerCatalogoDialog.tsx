@@ -37,7 +37,7 @@ export default function BookmakerCatalogoDialog({
   const [status, setStatus] = useState("REGULAMENTADA");
   const [operacional, setOperacional] = useState("ATIVA");
   const [verificacao, setVerificacao] = useState("OBRIGATORIA");
-  const [links, setLinks] = useState<Array<{ url: string; referencia: string }>>([{ url: "", referencia: "" }]);
+  const [links, setLinks] = useState<Array<{ url: string; referencia: string }>>([{ url: "", referencia: "PADRÃO" }]);
   const [bonusEnabled, setBonusEnabled] = useState(false);
   const [multibonusEnabled, setMultibonusEnabled] = useState(false);
   const [bonusSimples, setBonusSimples] = useState<BonusSimples>({
@@ -75,7 +75,7 @@ export default function BookmakerCatalogoDialog({
       setVerificacao(bookmaker.verificacao || "OBRIGATORIA");
       setLinks(Array.isArray(bookmaker.links_json) && bookmaker.links_json.length > 0 
         ? bookmaker.links_json 
-        : [{ url: "", referencia: "" }]);
+        : [{ url: "", referencia: "PADRÃO" }]);
       setBonusEnabled(bookmaker.bonus_enabled || false);
       setMultibonusEnabled(bookmaker.multibonus_enabled || false);
       
@@ -99,7 +99,7 @@ export default function BookmakerCatalogoDialog({
     setStatus("REGULAMENTADA");
     setOperacional("ATIVA");
     setVerificacao("OBRIGATORIA");
-    setLinks([{ url: "", referencia: "" }]);
+    setLinks([{ url: "", referencia: "PADRÃO" }]);
     setBonusEnabled(false);
     setMultibonusEnabled(false);
     setBonusSimples({
@@ -141,6 +141,18 @@ export default function BookmakerCatalogoDialog({
     setLinks(newLinks);
   };
 
+  const validateDuplicateReference = (referencia: string, currentIndex: number): string | null => {
+    const normalizedRef = referencia.trim().toUpperCase();
+    if (!normalizedRef) return null;
+    
+    const isDuplicate = links.some((link, index) => 
+      index !== currentIndex && 
+      link.referencia.trim().toUpperCase() === normalizedRef
+    );
+    
+    return isDuplicate ? "Já existe uma referência com este nome" : null;
+  };
+
   const addBonusMultiplo = () => {
     if (bonusMultiplos.length < 3) {
       setBonusMultiplos([
@@ -177,7 +189,26 @@ export default function BookmakerCatalogoDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      const validLinks = links.filter(link => link.url.trim() !== "");
+      // Garantir que o primeiro link seja sempre PADRÃO
+      const linksToSave = [...links];
+      if (linksToSave.length > 0) {
+        linksToSave[0].referencia = "PADRÃO";
+      }
+      
+      const validLinks = linksToSave.filter(link => link.url.trim() !== "");
+      
+      // Validar referências duplicadas
+      const references = validLinks.map(l => l.referencia.trim().toUpperCase());
+      const duplicates = references.filter((ref, index) => ref && references.indexOf(ref) !== index);
+      if (duplicates.length > 0) {
+        toast({
+          title: "Erro de validação",
+          description: "Existem referências duplicadas. Cada referência deve ser única.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
 
       const catalogoData = {
         user_id: user.id,
@@ -241,21 +272,21 @@ export default function BookmakerCatalogoDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
                 <Label htmlFor="nome">Nome da Casa *</Label>
                 <Input
                   id="nome"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  placeholder="Ex: Bet365"
+                  placeholder="Ex: Betano, Blaze, Bet365"
                   required
                 />
               </div>
 
-              <div>
-                <Label htmlFor="logo">URL do Logo</Label>
+              <div className="space-y-2">
+                <Label htmlFor="logo">URL do Logo (opcional)</Label>
                 <Input
                   id="logo"
                   value={logoUrl}
@@ -265,89 +296,131 @@ export default function BookmakerCatalogoDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="REGULAMENTADA">Regulamentada</SelectItem>
-                    <SelectItem value="NAO_REGULAMENTADA">Não Regulamentada</SelectItem>
+                    <SelectItem value="REGULAMENTADA">REGULAMENTADA</SelectItem>
+                    <SelectItem value="NAO_REGULAMENTADA">NÃO REGULAMENTADA</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="operacional">Operacional</Label>
                 <Select value={operacional} onValueChange={setOperacional}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ATIVA">Ativa</SelectItem>
-                    <SelectItem value="INATIVA">Inativa</SelectItem>
+                    <SelectItem value="ATIVA">ATIVA</SelectItem>
+                    <SelectItem value="INATIVA">INATIVA</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="verificacao">Verificação</Label>
                 <Select value={verificacao} onValueChange={setVerificacao}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="OBRIGATORIA">Obrigatória</SelectItem>
-                    <SelectItem value="QUANDO_SOLICITADO">Quando Solicitado</SelectItem>
-                    <SelectItem value="NAO_REQUERIDA">Não Requerida</SelectItem>
+                    <SelectItem value="OBRIGATORIA">OBRIGATÓRIA</SelectItem>
+                    <SelectItem value="QUANDO_SOLICITADO">QUANDO SOLICITADO</SelectItem>
+                    <SelectItem value="NAO_REQUERIDA">NÃO REQUERIDA</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>Links *</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addLink}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Adicionar Link
+                <Label>Links de Acesso</Label>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={addLink}
+                  className="h-8 w-8 rounded-full hover:bg-primary/10"
+                >
+                  <Plus className="h-4 w-4" />
                 </Button>
               </div>
               {links.map((link, index) => (
-                <div key={index} className="flex gap-2">
-                  <Input
-                    placeholder="URL"
-                    value={link.url}
-                    onChange={(e) => updateLink(index, "url", e.target.value)}
-                    className="flex-1"
-                  />
-                  <Input
-                    placeholder="Referência (ex: PADRAO, FOMENTO)"
-                    value={link.referencia}
-                    onChange={(e) => updateLink(index, "referencia", e.target.value)}
-                    className="flex-1"
-                  />
-                  {links.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => removeLink(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+                <div key={index} className="space-y-2">
+                  <div className="grid grid-cols-12 gap-3 items-start">
+                    {index === 0 ? (
+                      <>
+                        <div className="col-span-2">
+                          <div className="h-10 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm flex items-center justify-center font-medium">
+                            PADRÃO
+                          </div>
+                        </div>
+                        <div className="col-span-10">
+                          <Input
+                            placeholder="https://exemplo.com"
+                            value={link.url}
+                            onChange={(e) => {
+                              updateLink(index, "url", e.target.value);
+                              updateLink(index, "referencia", "PADRÃO");
+                            }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="col-span-5">
+                          <Input
+                            placeholder="https://exemplo.com"
+                            value={link.url}
+                            onChange={(e) => updateLink(index, "url", e.target.value)}
+                          />
+                        </div>
+                        <div className="col-span-6">
+                          <Input
+                            placeholder="Referência (ex: FOMENTO, PADRAO 2)"
+                            value={link.referencia}
+                            onChange={(e) => {
+                              const error = validateDuplicateReference(e.target.value, index);
+                              if (error && e.target.value.trim()) {
+                                toast({
+                                  title: "Referência duplicada",
+                                  description: error,
+                                  variant: "destructive",
+                                });
+                              }
+                              updateLink(index, "referencia", e.target.value);
+                            }}
+                          />
+                        </div>
+                        <div className="col-span-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeLink(index)}
+                            className="h-10 w-10 hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
 
             {/* Bônus Section */}
-            <div className="space-y-4 pt-4 border-t">
+            <div className="space-y-4 pt-6 border-t">
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="bonus-enabled" className="text-sm font-medium">Possui Bônus?</Label>
+                  <Label htmlFor="bonus-enabled" className="text-base font-medium">Possui Bônus?</Label>
                   <Switch
                     id="bonus-enabled"
                     checked={bonusEnabled}
@@ -616,7 +689,7 @@ export default function BookmakerCatalogoDialog({
             </div>
           </div>
 
-          <div className="flex gap-3 justify-end pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
