@@ -285,44 +285,48 @@ export default function BookmakerCatalogoDialog({
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome da Casa *</Label>
-                <Input
-                  id="nome"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  placeholder="Ex: Betano, Blaze, Bet365"
-                  required
-                  className="h-10"
-                />
+            {/* Logo Preview à esquerda + Campos à direita */}
+            <div className="flex gap-4">
+              {/* Preview do Logo */}
+              <div className="w-24 h-24 rounded-md border border-border bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+                {logoUrl ? (
+                  <img 
+                    src={logoUrl} 
+                    alt="Preview do logo" 
+                    className="w-full h-full object-contain p-2"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.parentElement!.innerHTML = '<span class="text-xs text-muted-foreground">Logo</span>';
+                    }}
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">Logo</span>
+                )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="logo">URL do Logo (opcional)</Label>
-                <div className="flex gap-3 items-center">
+              {/* Campos Nome e URL empilhados */}
+              <div className="flex-1 space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="nome">Nome da Casa *</Label>
+                  <Input
+                    id="nome"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Ex: Betano, Blaze, Bet365"
+                    required
+                    className="h-10"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="logo">URL do Logo (opcional)</Label>
                   <Input
                     id="logo"
                     value={logoUrl}
                     onChange={(e) => setLogoUrl(e.target.value)}
                     placeholder="https://..."
-                    className="flex-1 h-10"
+                    className="h-10"
                   />
-                  <div className="w-20 h-20 rounded-md border border-border bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {logoUrl ? (
-                      <img 
-                        src={logoUrl} 
-                        alt="Preview do logo" 
-                        className="w-full h-full object-contain p-1"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          e.currentTarget.parentElement!.innerHTML = '<span class="text-xs text-muted-foreground">Logo</span>';
-                        }}
-                      />
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Logo</span>
-                    )}
-                  </div>
                 </div>
               </div>
             </div>
@@ -399,7 +403,7 @@ export default function BookmakerCatalogoDialog({
                       </Button>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-[180px_1fr_40px] gap-3 items-center">
+                    <div className="grid grid-cols-[100px_1fr_40px] gap-3 items-center">
                       <Input
                         placeholder="Referência (ex: FOMENTO)"
                         value={link.referencia}
