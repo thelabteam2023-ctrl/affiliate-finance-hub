@@ -20,8 +20,14 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import BookmakerSelect from "./BookmakerSelect";
 import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
 import { PasswordInput } from "@/components/parceiros/PasswordInput";
@@ -37,6 +43,7 @@ interface BookmakerCatalogo {
   nome: string;
   logo_url: string | null;
   links_json: Array<{ referencia: string; url: string }>;
+  observacoes: string | null;
 }
 
 export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerDialogProps) {
@@ -49,6 +56,7 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
   const [loginPassword, setLoginPassword] = useState("");
   const [status, setStatus] = useState("ativo");
   const [observacoes, setObservacoes] = useState("");
+  const [showObservacoesDialog, setShowObservacoesDialog] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -78,7 +86,7 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
     try {
       const { data, error } = await supabase
         .from("bookmakers_catalogo")
-        .select("id, nome, logo_url, links_json")
+        .select("id, nome, logo_url, links_json, observacoes")
         .eq("id", bookmakerId)
         .single();
 
@@ -89,6 +97,7 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
         nome: data.nome,
         logo_url: data.logo_url,
         links_json: (data.links_json as any) || [],
+        observacoes: data.observacoes,
       };
       
       setSelectedBookmaker(bookmakerData);
@@ -237,23 +246,38 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
 
           {selectedBookmaker && (
             <>
-              <div className="flex flex-col items-center gap-4 py-6 border-y">
+              <div className="flex items-center gap-3 py-3 border-y">
                 {selectedBookmaker.logo_url && (
                   <img
                     src={selectedBookmaker.logo_url}
                     alt={selectedBookmaker.nome}
-                    className="h-24 w-24 rounded-lg object-contain"
+                    className="h-14 w-14 rounded-lg object-contain flex-shrink-0"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
                   />
                 )}
-                <div className="text-center">
-                  <div className="text-sm text-muted-foreground mb-1">Bookmaker</div>
-                  <div className="text-lg font-semibold uppercase">
-                    {selectedBookmaker.nome}
-                  </div>
+                <div className="text-lg font-semibold uppercase flex-1">
+                  {selectedBookmaker.nome}
                 </div>
+                {selectedBookmaker.observacoes && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => setShowObservacoesDialog(true)}
+                          className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex-shrink-0"
+                        >
+                          <Info className="h-4 w-4 text-white" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Ver observações da casa</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
 
               {selectedBookmaker.links_json && selectedBookmaker.links_json.length > 0 && (
@@ -351,6 +375,19 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
           </div>
         </form>
       </DialogContent>
+
+      {/* Dialog de Observações */}
+      <Dialog open={showObservacoesDialog} onOpenChange={setShowObservacoesDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="uppercase">{selectedBookmaker?.nome}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <h4 className="text-sm font-medium mb-2 text-muted-foreground">Observações:</h4>
+            <p className="text-sm whitespace-pre-wrap">{selectedBookmaker?.observacoes}</p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
