@@ -271,7 +271,9 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="loginUsername">Usuário de Login (opcional)</Label>
+              <Label htmlFor="loginUsername">
+                Usuário de Login <span className="text-xs text-muted-foreground">(opcional)</span>
+              </Label>
               <Input
                 id="loginUsername"
                 value={loginUsername}
@@ -284,7 +286,7 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
 
             <div>
               <Label htmlFor="loginPassword">
-                Senha de Login {bookmaker ? "(opcional - deixe em branco para não alterar)" : "(opcional)"}
+                Senha de Login <span className="text-xs text-muted-foreground">{bookmaker ? "(opcional - deixe em branco para não alterar)" : "(opcional)"}</span>
               </Label>
               <PasswordInput
                 value={loginPassword}
