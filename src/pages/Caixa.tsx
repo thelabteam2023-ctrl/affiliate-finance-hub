@@ -2,11 +2,15 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
-import { format } from "date-fns";
+import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 
 interface Transacao {
   id: string;
@@ -50,6 +54,11 @@ export default function Caixa() {
   const [saldosFiat, setSaldosFiat] = useState<SaldoFiat[]>([]);
   const [saldosCrypto, setSaldosCrypto] = useState<SaldoCrypto[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filters
+  const [filtroTipo, setFiltroTipo] = useState<string>("TODOS");
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(subDays(new Date(), 30));
+  const [dataFim, setDataFim] = useState<Date | undefined>(new Date());
   
   // Data for displaying names
   const [parceiros, setParceiros] = useState<{ [key: string]: string }>({});
@@ -141,6 +150,74 @@ export default function Caixa() {
     return saldosCrypto.reduce((acc, s) => acc + (s.saldo_usd || 0), 0);
   };
 
+  const getTransacoesFiltradas = () => {
+    return transacoes.filter((t) => {
+      const matchTipo = filtroTipo === "TODOS" || t.tipo_transacao === filtroTipo;
+      const dataTransacao = new Date(t.data_transacao);
+      const matchDataInicio = !dataInicio || dataTransacao >= startOfDay(dataInicio);
+      const matchDataFim = !dataFim || dataTransacao <= endOfDay(dataFim);
+      return matchTipo && matchDataInicio && matchDataFim;
+    });
+  };
+
+  const getChartData = () => {
+    if (transacoes.length === 0) return [];
+
+    // Sort transactions by date
+    const sortedTransacoes = [...transacoes].sort(
+      (a, b) => new Date(a.data_transacao).getTime() - new Date(b.data_transacao).getTime()
+    );
+
+    const dataPoints: { [key: string]: any } = {};
+
+    sortedTransacoes.forEach((t) => {
+      const dateKey = format(new Date(t.data_transacao), "dd/MM");
+      
+      if (!dataPoints[dateKey]) {
+        dataPoints[dateKey] = { date: dateKey, BRL: 0, USD: 0, EUR: 0, Crypto: 0 };
+      }
+
+      // Calculate balance impact
+      const valorImpacto = t.tipo_transacao === "APORTE_FINANCEIRO" || t.destino_tipo === "CAIXA_OPERACIONAL"
+        ? t.valor
+        : t.origem_tipo === "CAIXA_OPERACIONAL"
+        ? -t.valor
+        : 0;
+
+      if (t.tipo_moeda === "FIAT") {
+        if (dataPoints[dateKey][t.moeda] !== undefined) {
+          dataPoints[dateKey][t.moeda] += valorImpacto;
+        }
+      } else if (t.tipo_moeda === "CRYPTO" && t.valor_usd) {
+        dataPoints[dateKey].Crypto += t.valor_usd;
+      }
+    });
+
+    // Convert to array and accumulate values
+    const chartData: any[] = [];
+    let accumulatedBRL = 0;
+    let accumulatedUSD = 0;
+    let accumulatedEUR = 0;
+    let accumulatedCrypto = 0;
+
+    Object.keys(dataPoints).forEach((date) => {
+      accumulatedBRL += dataPoints[date].BRL || 0;
+      accumulatedUSD += dataPoints[date].USD || 0;
+      accumulatedEUR += dataPoints[date].EUR || 0;
+      accumulatedCrypto += dataPoints[date].Crypto || 0;
+
+      chartData.push({
+        date,
+        BRL: accumulatedBRL,
+        USD: accumulatedUSD,
+        EUR: accumulatedEUR,
+        Crypto: accumulatedCrypto,
+      });
+    });
+
+    return chartData;
+  };
+
   const getTipoLabel = (tipo: string) => {
     const labels: { [key: string]: string } = {
       APORTE_FINANCEIRO: "Aporte",
@@ -229,7 +306,7 @@ export default function Caixa() {
       </div>
 
       {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         {/* Saldos FIAT consolidados */}
         <Card className="bg-card/50 backdrop-blur border-border/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -265,19 +342,35 @@ export default function Caixa() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Transações */}
-        <Card className="bg-card/50 backdrop-blur border-border/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Transações</CardTitle>
-            <TrendingDown className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{transacoes.length}</div>
-            <p className="text-xs text-muted-foreground">Últimas 50 movimentações</p>
-          </CardContent>
-        </Card>
       </div>
+
+      {/* Gráfico de Evolução */}
+      <Card className="bg-card/50 backdrop-blur border-border/50">
+        <CardHeader>
+          <CardTitle className="text-lg">Evolução dos Saldos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={getChartData()}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
+              <YAxis stroke="hsl(var(--muted-foreground))" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(var(--popover))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "8px",
+                }}
+              />
+              <Legend />
+              <Line type="monotone" dataKey="BRL" stroke="#10b981" strokeWidth={2} />
+              <Line type="monotone" dataKey="USD" stroke="#3b82f6" strokeWidth={2} />
+              <Line type="monotone" dataKey="EUR" stroke="#f59e0b" strokeWidth={2} />
+              <Line type="monotone" dataKey="Crypto" stroke="#8b5cf6" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       {/* Crypto Balances */}
       {saldosCrypto.length > 0 && (
@@ -309,19 +402,84 @@ export default function Caixa() {
       {/* Transactions History */}
       <Card className="bg-card/50 backdrop-blur border-border/50">
         <CardHeader>
-          <CardTitle className="text-lg">Histórico de Movimentações</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Histórico de Movimentações</CardTitle>
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-muted-foreground">
+                {getTransacoesFiltradas().length} transações no período
+              </div>
+            </div>
+          </div>
+          
+          {/* Filters */}
+          <div className="flex items-center gap-4 mt-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Tipo de transação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TODOS">Todos os tipos</SelectItem>
+                  <SelectItem value="APORTE_FINANCEIRO">Aporte</SelectItem>
+                  <SelectItem value="TRANSFERENCIA">Transferência</SelectItem>
+                  <SelectItem value="DEPOSITO">Depósito</SelectItem>
+                  <SelectItem value="SAQUE">Saque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[140px] justify-start text-left">
+                    {dataInicio ? format(dataInicio, "dd/MM/yyyy") : "Data início"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={dataInicio}
+                    onSelect={setDataInicio}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <span className="text-muted-foreground">até</span>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[140px] justify-start text-left">
+                    {dataFim ? format(dataFim, "dd/MM/yyyy") : "Data fim"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={dataFim}
+                    onSelect={setDataFim}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">Carregando...</div>
-          ) : transacoes.length === 0 ? (
+          ) : getTransacoesFiltradas().length === 0 ? (
             <div className="text-center py-8">
               <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Nenhuma transação registrada</p>
+              <p className="text-muted-foreground">Nenhuma transação encontrada no período</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {transacoes.map((transacao) => (
+              {getTransacoesFiltradas().map((transacao) => (
                 <div
                   key={transacao.id}
                   className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors"
