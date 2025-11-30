@@ -112,6 +112,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
             foreignKeyName: "bookmakers_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -177,6 +191,203 @@ export type Database = {
         }
         Relationships: []
       }
+      cash_ledger: {
+        Row: {
+          coin: string | null
+          cotacao: number | null
+          created_at: string
+          data_transacao: string
+          descricao: string | null
+          destino_bookmaker_id: string | null
+          destino_conta_bancaria_id: string | null
+          destino_parceiro_id: string | null
+          destino_tipo: string | null
+          destino_wallet_id: string | null
+          id: string
+          moeda: string
+          origem_bookmaker_id: string | null
+          origem_conta_bancaria_id: string | null
+          origem_parceiro_id: string | null
+          origem_tipo: string | null
+          origem_wallet_id: string | null
+          qtd_coin: number | null
+          status: string
+          tipo_moeda: string
+          tipo_transacao: string
+          updated_at: string
+          user_id: string
+          valor: number
+          valor_usd: number | null
+        }
+        Insert: {
+          coin?: string | null
+          cotacao?: number | null
+          created_at?: string
+          data_transacao?: string
+          descricao?: string | null
+          destino_bookmaker_id?: string | null
+          destino_conta_bancaria_id?: string | null
+          destino_parceiro_id?: string | null
+          destino_tipo?: string | null
+          destino_wallet_id?: string | null
+          id?: string
+          moeda: string
+          origem_bookmaker_id?: string | null
+          origem_conta_bancaria_id?: string | null
+          origem_parceiro_id?: string | null
+          origem_tipo?: string | null
+          origem_wallet_id?: string | null
+          qtd_coin?: number | null
+          status?: string
+          tipo_moeda: string
+          tipo_transacao: string
+          updated_at?: string
+          user_id: string
+          valor: number
+          valor_usd?: number | null
+        }
+        Update: {
+          coin?: string | null
+          cotacao?: number | null
+          created_at?: string
+          data_transacao?: string
+          descricao?: string | null
+          destino_bookmaker_id?: string | null
+          destino_conta_bancaria_id?: string | null
+          destino_parceiro_id?: string | null
+          destino_tipo?: string | null
+          destino_wallet_id?: string | null
+          id?: string
+          moeda?: string
+          origem_bookmaker_id?: string | null
+          origem_conta_bancaria_id?: string | null
+          origem_parceiro_id?: string | null
+          origem_tipo?: string | null
+          origem_wallet_id?: string | null
+          qtd_coin?: number | null
+          status?: string
+          tipo_moeda?: string
+          tipo_transacao?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+          valor_usd?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
+            columns: ["destino_bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_conta_bancaria_id_fkey"
+            columns: ["destino_conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_conta_bancaria_id_fkey"
+            columns: ["destino_conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["conta_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_parceiro_id_fkey"
+            columns: ["destino_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_parceiro_id_fkey"
+            columns: ["destino_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_parceiro_id_fkey"
+            columns: ["destino_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_wallet_id_fkey"
+            columns: ["destino_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_wallet_id_fkey"
+            columns: ["destino_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets_crypto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_bookmaker_id_fkey"
+            columns: ["origem_bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_conta_bancaria_id_fkey"
+            columns: ["origem_conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_conta_bancaria_id_fkey"
+            columns: ["origem_conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["conta_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_wallet_id_fkey"
+            columns: ["origem_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_wallet_id_fkey"
+            columns: ["origem_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets_crypto"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contas_bancarias: {
         Row: {
           agencia: string | null
@@ -234,6 +445,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "parceiros"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contas_bancarias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "contas_bancarias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
           },
         ]
       }
@@ -461,6 +686,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "wallets_crypto_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "wallets_crypto_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
             foreignKeyName: "wallets_crypto_rede_id_fkey"
             columns: ["rede_id"]
             isOneToOne: false
@@ -471,7 +710,50 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_saldo_caixa_crypto: {
+        Row: {
+          coin: string | null
+          saldo_coin: number | null
+          saldo_usd: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      v_saldo_caixa_fiat: {
+        Row: {
+          moeda: string | null
+          saldo: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      v_saldo_parceiro_contas: {
+        Row: {
+          banco: string | null
+          conta_id: string | null
+          moeda: string | null
+          parceiro_id: string | null
+          parceiro_nome: string | null
+          saldo: number | null
+          titular: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      v_saldo_parceiro_wallets: {
+        Row: {
+          coin: string | null
+          endereco: string | null
+          exchange: string | null
+          parceiro_id: string | null
+          parceiro_nome: string | null
+          saldo_coin: number | null
+          saldo_usd: number | null
+          user_id: string | null
+          wallet_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       is_master: { Args: { _user_id: string }; Returns: boolean }
