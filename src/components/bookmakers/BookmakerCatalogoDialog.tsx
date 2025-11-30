@@ -487,7 +487,7 @@ export default function BookmakerCatalogoDialog({
                         className="h-10"
                       />
                       <Input
-                        placeholder="https://exemplo.com"
+                        placeholder="https://exemplo.com/FOMENTO"
                         value={link.url}
                         onChange={(e) => updateLink(link.id, "url", e.target.value)}
                         className="h-10"
