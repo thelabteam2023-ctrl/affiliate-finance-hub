@@ -311,7 +311,7 @@ export default function BookmakerCatalogoDialog({
                   <Input
                     id="nome"
                     value={nome}
-                    onChange={(e) => setNome(e.target.value)}
+                    onChange={(e) => setNome(e.target.value.toUpperCase())}
                     placeholder="Ex: Betano, Blaze, Bet365"
                     required
                     className="h-10"
@@ -408,15 +408,16 @@ export default function BookmakerCatalogoDialog({
                         placeholder="Referência (ex: FOMENTO)"
                         value={link.referencia}
                         onChange={(e) => {
-                          const error = validateDuplicateReference(e.target.value, index);
-                          if (error && e.target.value.trim()) {
+                          const upperValue = e.target.value.toUpperCase();
+                          const error = validateDuplicateReference(upperValue, index);
+                          if (error && upperValue.trim()) {
                             toast({
                               title: "Referência duplicada",
                               description: error,
                               variant: "destructive",
                             });
                           }
-                          updateLink(index, "referencia", e.target.value);
+                          updateLink(index, "referencia", upperValue);
                         }}
                         className="h-10"
                       />
