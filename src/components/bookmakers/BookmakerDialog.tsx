@@ -242,7 +242,7 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
                   <img
                     src={selectedBookmaker.logo_url}
                     alt={selectedBookmaker.nome}
-                    className="h-32 w-32 rounded-lg object-contain"
+                    className="h-24 w-24 rounded-lg object-contain"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
@@ -322,8 +322,7 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
                 <SelectContent>
                   <SelectItem value="ativo">Ativo</SelectItem>
                   <SelectItem value="inativo">Inativo</SelectItem>
-                  <SelectItem value="suspenso">Suspenso</SelectItem>
-                  <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                  <SelectItem value="limitada">Limitada</SelectItem>
                 </SelectContent>
               </Select>
             </div>
