@@ -137,11 +137,6 @@ export default function Caixa() {
     fetchData();
   }, []);
 
-  const getTotalFiat = (moeda: string) => {
-    const saldo = saldosFiat.find(s => s.moeda === moeda);
-    return saldo?.saldo || 0;
-  };
-
   const getTotalCryptoUSD = () => {
     return saldosCrypto.reduce((acc, s) => acc + (s.saldo_usd || 0), 0);
   };
@@ -234,19 +229,23 @@ export default function Caixa() {
       </div>
 
       {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-card/50 backdrop-blur border-border/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo BRL</CardTitle>
-            <Wallet className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-400">
-              {formatCurrency(getTotalFiat("BRL"), "BRL")}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-4">
+        {/* Saldos FIAT - um card para cada moeda */}
+        {saldosFiat.map((saldoFiat) => (
+          <Card key={saldoFiat.moeda} className="bg-card/50 backdrop-blur border-border/50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Saldo {saldoFiat.moeda}</CardTitle>
+              <Wallet className="h-4 w-4 text-emerald-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-emerald-400">
+                {formatCurrency(saldoFiat.saldo, saldoFiat.moeda)}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
 
+        {/* Exposição Crypto */}
         <Card className="bg-card/50 backdrop-blur border-border/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Exposição Crypto (USD)</CardTitle>
@@ -259,6 +258,7 @@ export default function Caixa() {
           </CardContent>
         </Card>
 
+        {/* Transações */}
         <Card className="bg-card/50 backdrop-blur border-border/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Transações</CardTitle>
