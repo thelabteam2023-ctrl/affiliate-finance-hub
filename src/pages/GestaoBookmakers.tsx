@@ -464,16 +464,12 @@ export default function GestaoBookmakers() {
                           </Button>
                         )}
                       </div>
-                      {bookmaker.url && (
-                        <a
-                          href={bookmaker.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-primary hover:underline"
-                        >
-                          {bookmaker.url}
-                        </a>
-                      )}
+                      <div className="flex items-center gap-2 mt-1">
+                        <User className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          {bookmaker.parceiros?.nome || "Não definido"}
+                        </span>
+                      </div>
                     </div>
                     <Badge
                       variant={
@@ -500,14 +496,9 @@ export default function GestaoBookmakers() {
                       </div>
                     </div>
 
-                    <div className="text-sm space-y-1 pt-2 border-t">
-                      <p className="text-muted-foreground flex items-center gap-2">
-                        <User className="h-3.5 w-3.5" />
-                        <span className="font-medium">Parceiro:</span>{" "}
-                        {bookmaker.parceiros?.nome || "Não definido"}
-                      </p>
+                    <div className="text-sm pt-2 border-t">
                       <p className="text-muted-foreground">
-                        <span className="font-medium">Usuário:</span>{" "}
+                        <span className="font-medium">Usuário de Login:</span>{" "}
                         {maskCredentials(bookmaker.login_username)}
                       </p>
                     </div>
