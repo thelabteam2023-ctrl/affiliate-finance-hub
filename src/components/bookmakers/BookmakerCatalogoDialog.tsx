@@ -201,6 +201,30 @@ export default function BookmakerCatalogoDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      // Validar nome duplicado
+      const nomeNormalizado = nome.trim().toUpperCase();
+      const { data: existingBookmakers, error: checkError } = await supabase
+        .from("bookmakers_catalogo")
+        .select("id, nome")
+        .or(`user_id.eq.${user.id},is_system.eq.true`)
+        .ilike("nome", nomeNormalizado);
+
+      if (checkError) throw checkError;
+
+      const isDuplicate = existingBookmakers?.some(
+        (bm) => bm.nome.toUpperCase() === nomeNormalizado && bm.id !== bookmaker?.id
+      );
+
+      if (isDuplicate) {
+        toast({
+          title: "Nome duplicado",
+          description: `Já existe uma casa com o nome "${nome}". Escolha um nome diferente.`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       // Garantir que o primeiro link seja sempre PADRÃO
       const linksToSave = [...links];
       if (linksToSave.length > 0) {
