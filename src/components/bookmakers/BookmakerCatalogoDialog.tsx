@@ -315,8 +315,8 @@ export default function BookmakerCatalogoDialog({
                 )}
               </div>
 
-              {/* Campos Nome e URL empilhados */}
-              <div className="flex-1 space-y-4">
+              {/* Campos Nome e URL alinhados */}
+              <div className="flex-1 grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="nome">Nome da Casa *</Label>
                   <Input
