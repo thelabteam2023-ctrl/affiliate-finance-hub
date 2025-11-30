@@ -42,6 +42,7 @@ export default function BookmakerCatalogoDialog({
 }: BookmakerCatalogoDialogProps) {
   const [nome, setNome] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [logoError, setLogoError] = useState(false);
   const [status, setStatus] = useState("REGULAMENTADA");
   const [operacional, setOperacional] = useState("ATIVA");
   const [verificacao, setVerificacao] = useState("OBRIGATORIA");
@@ -79,6 +80,7 @@ export default function BookmakerCatalogoDialog({
     if (bookmaker) {
       setNome(bookmaker.nome || "");
       setLogoUrl(bookmaker.logo_url || "");
+      setLogoError(false);
       setStatus(bookmaker.status || "REGULAMENTADA");
       setOperacional(bookmaker.operacional || "ATIVA");
       setVerificacao(bookmaker.verificacao || "OBRIGATORIA");
@@ -108,6 +110,7 @@ export default function BookmakerCatalogoDialog({
   const resetForm = () => {
     setNome("");
     setLogoUrl("");
+    setLogoError(false);
     setStatus("REGULAMENTADA");
     setOperacional("ATIVA");
     setVerificacao("OBRIGATORIA");
@@ -346,15 +349,13 @@ export default function BookmakerCatalogoDialog({
             <div className="flex gap-4">
               {/* Preview do Logo */}
               <div className="w-24 h-24 rounded-md border border-border bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
-                {logoUrl ? (
+                {logoUrl && !logoError ? (
                   <img 
+                    key={logoUrl}
                     src={logoUrl} 
                     alt="Preview do logo" 
                     className="w-full h-full object-contain p-2"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      e.currentTarget.parentElement!.innerHTML = '<span class="text-xs text-muted-foreground">Logo</span>';
-                    }}
+                    onError={() => setLogoError(true)}
                   />
                 ) : (
                   <span className="text-xs text-muted-foreground">Logo</span>
@@ -380,7 +381,10 @@ export default function BookmakerCatalogoDialog({
                   <Input
                     id="logo"
                     value={logoUrl}
-                    onChange={(e) => setLogoUrl(e.target.value)}
+                    onChange={(e) => {
+                      setLogoUrl(e.target.value);
+                      setLogoError(false);
+                    }}
                     placeholder="https://..."
                     className="h-10"
                   />
