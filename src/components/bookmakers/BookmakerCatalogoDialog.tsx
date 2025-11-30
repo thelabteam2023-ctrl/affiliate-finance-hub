@@ -397,8 +397,11 @@ export default function BookmakerCatalogoDialog({
                         placeholder="https://exemplo.com"
                         value={link.url}
                         onChange={(e) => {
-                          updateLink(link.id, "url", e.target.value);
-                          updateLink(link.id, "referencia", "PADRÃO");
+                          setLinks(links.map(l => 
+                            l.id === link.id 
+                              ? { ...l, url: e.target.value, referencia: "PADRÃO" } 
+                              : l
+                          ));
                         }}
                         className="h-10"
                         required
