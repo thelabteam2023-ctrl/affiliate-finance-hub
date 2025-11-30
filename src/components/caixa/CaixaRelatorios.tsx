@@ -29,8 +29,15 @@ interface CaixaRelatoriosProps {
 export function CaixaRelatorios(props: CaixaRelatoriosProps) {
   return (
     <Card className="bg-card/50 backdrop-blur border-border/50">
-      <Tabs defaultValue="roi" className="w-full">
+      <Tabs defaultValue="movimentacoes" className="w-full">
         <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
+          <TabsTrigger
+            value="movimentacoes"
+            className="flex items-center gap-2 data-[state=active]:bg-transparent"
+          >
+            <List className="h-4 w-4" />
+            Movimentações
+          </TabsTrigger>
           <TabsTrigger
             value="roi"
             className="flex items-center gap-2 data-[state=active]:bg-transparent"
@@ -45,14 +52,11 @@ export function CaixaRelatorios(props: CaixaRelatoriosProps) {
             <User className="h-4 w-4" />
             Histórico Investidor
           </TabsTrigger>
-          <TabsTrigger
-            value="movimentacoes"
-            className="flex items-center gap-2 data-[state=active]:bg-transparent"
-          >
-            <List className="h-4 w-4" />
-            Movimentações
-          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="movimentacoes" className="mt-0">
+          <HistoricoMovimentacoes {...props} />
+        </TabsContent>
 
         <TabsContent value="roi" className="mt-0">
           <RelatorioROI />
@@ -60,10 +64,6 @@ export function CaixaRelatorios(props: CaixaRelatoriosProps) {
 
         <TabsContent value="historico-investidor" className="mt-0">
           <HistoricoInvestidor />
-        </TabsContent>
-
-        <TabsContent value="movimentacoes" className="mt-0">
-          <HistoricoMovimentacoes {...props} />
         </TabsContent>
       </Tabs>
     </Card>
