@@ -205,6 +205,7 @@ export type Database = {
           destino_wallet_id: string | null
           id: string
           moeda: string
+          nome_investidor: string | null
           origem_bookmaker_id: string | null
           origem_conta_bancaria_id: string | null
           origem_parceiro_id: string | null
@@ -232,6 +233,7 @@ export type Database = {
           destino_wallet_id?: string | null
           id?: string
           moeda: string
+          nome_investidor?: string | null
           origem_bookmaker_id?: string | null
           origem_conta_bancaria_id?: string | null
           origem_parceiro_id?: string | null
@@ -259,6 +261,7 @@ export type Database = {
           destino_wallet_id?: string | null
           id?: string
           moeda?: string
+          nome_investidor?: string | null
           origem_bookmaker_id?: string | null
           origem_conta_bancaria_id?: string | null
           origem_parceiro_id?: string | null
