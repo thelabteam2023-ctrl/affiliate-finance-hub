@@ -470,7 +470,7 @@ export default function BookmakerCatalogoDialog({
                   ) : (
                     <div className="grid grid-cols-[130px_1fr_40px] gap-3 items-center">
                       <Input
-                        placeholder="Referência (ex: FOMENTO)"
+                        placeholder="Referência (ex: fomento)"
                         value={link.referencia}
                         onChange={(e) => {
                           const upperValue = e.target.value.toUpperCase();
