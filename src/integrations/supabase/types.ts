@@ -46,8 +46,10 @@ export type Database = {
       }
       bookmakers: {
         Row: {
+          bookmaker_catalogo_id: string | null
           created_at: string
           id: string
+          link_origem: string | null
           login_password_encrypted: string
           login_username: string
           moeda: string
@@ -60,8 +62,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bookmaker_catalogo_id?: string | null
           created_at?: string
           id?: string
+          link_origem?: string | null
           login_password_encrypted: string
           login_username: string
           moeda?: string
@@ -74,8 +78,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bookmaker_catalogo_id?: string | null
           created_at?: string
           id?: string
+          link_origem?: string | null
           login_password_encrypted?: string
           login_username?: string
           moeda?: string
@@ -88,6 +94,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bookmakers_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bookmakers_user_id_fkey"
             columns: ["user_id"]
