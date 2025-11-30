@@ -210,24 +210,17 @@ export default function GestaoBancos() {
               </div>
               <div className="flex gap-2">
                 <Button
-                  variant={viewMode === "cards" ? "default" : "outline"}
+                  variant="outline"
                   size="icon"
-                  onClick={() => setViewMode("cards")}
+                  onClick={() => setViewMode(viewMode === "cards" ? "list" : "cards")}
                 >
-                  <LayoutGrid className="h-4 w-4" />
+                  {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
                 </Button>
-                <Button
-                  variant={viewMode === "list" ? "default" : "outline"}
-                  size="icon"
-                  onClick={() => setViewMode("list")}
-                >
-                  <List className="h-4 w-4" />
+                <Button onClick={() => setDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo Banco
                 </Button>
               </div>
-              <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Banco
-              </Button>
             </div>
           </CardContent>
         </Card>

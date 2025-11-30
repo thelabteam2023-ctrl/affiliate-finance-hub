@@ -274,31 +274,24 @@ export default function GestaoBookmakers() {
               </select>
               <div className="flex gap-2">
                 <Button
-                  variant={viewMode === "cards" ? "default" : "outline"}
+                  variant="outline"
                   size="icon"
-                  onClick={() => setViewMode("cards")}
+                  onClick={() => setViewMode(viewMode === "cards" ? "list" : "cards")}
                 >
-                  <LayoutGrid className="h-4 w-4" />
+                  {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
                 </Button>
                 <Button
-                  variant={viewMode === "list" ? "default" : "outline"}
+                  variant="outline"
                   size="icon"
-                  onClick={() => setViewMode("list")}
+                  onClick={() => setShowCredentials(!showCredentials)}
                 >
-                  <List className="h-4 w-4" />
+                  {showCredentials ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setShowCredentials(!showCredentials)}
-              >
-                {showCredentials ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </Button>
               <Button onClick={() => setDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Vínculo
