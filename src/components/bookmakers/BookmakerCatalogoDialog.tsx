@@ -294,6 +294,7 @@ export default function BookmakerCatalogoDialog({
                   onChange={(e) => setNome(e.target.value)}
                   placeholder="Ex: Betano, Blaze, Bet365"
                   required
+                  className="h-10"
                 />
               </div>
 
@@ -305,7 +306,7 @@ export default function BookmakerCatalogoDialog({
                     value={logoUrl}
                     onChange={(e) => setLogoUrl(e.target.value)}
                     placeholder="https://..."
-                    className="flex-1"
+                    className="flex-1 h-10"
                   />
                   <div className="w-20 h-20 rounded-md border border-border bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
                     {logoUrl ? (
@@ -371,13 +372,11 @@ export default function BookmakerCatalogoDialog({
             <div className="space-y-3">
               <Label>Links de Acesso *</Label>
               {links.map((link, index) => (
-                <div key={index} className="space-y-2">
+                <div key={index}>
                   {index === 0 ? (
-                    <div className="flex gap-3 items-center">
-                      <div className="w-24 flex-shrink-0">
-                        <div className="h-10 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm flex items-center justify-center font-medium">
-                          PADRÃO
-                        </div>
+                    <div className="grid grid-cols-[100px_1fr_40px] gap-3 items-center">
+                      <div className="h-10 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm flex items-center justify-center font-medium">
+                        PADRÃO
                       </div>
                       <Input
                         placeholder="https://exemplo.com"
@@ -386,7 +385,7 @@ export default function BookmakerCatalogoDialog({
                           updateLink(index, "url", e.target.value);
                           updateLink(index, "referencia", "PADRÃO");
                         }}
-                        className="flex-1 h-10"
+                        className="h-10"
                         required
                       />
                       <Button 
@@ -394,13 +393,13 @@ export default function BookmakerCatalogoDialog({
                         variant="ghost" 
                         size="icon"
                         onClick={addLink}
-                        className="h-10 w-10 rounded-full hover:bg-primary/10 flex-shrink-0"
+                        className="h-10 w-10 rounded-full hover:bg-primary/10"
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
                   ) : (
-                    <div className="flex gap-3 items-center">
+                    <div className="grid grid-cols-[180px_1fr_40px] gap-3 items-center">
                       <Input
                         placeholder="Referência (ex: FOMENTO)"
                         value={link.referencia}
@@ -415,18 +414,18 @@ export default function BookmakerCatalogoDialog({
                           }
                           updateLink(index, "referencia", e.target.value);
                         }}
-                        className="w-48 h-10"
+                        className="h-10"
                       />
                       <Input
                         placeholder="https://exemplo.com"
                         value={link.url}
                         onChange={(e) => updateLink(index, "url", e.target.value)}
-                        className="flex-1 h-10"
+                        className="h-10"
                       />
                       <Badge
                         variant="outline"
                         onClick={() => removeLink(index)}
-                        className="h-8 px-2 cursor-pointer hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors flex-shrink-0"
+                        className="h-8 w-8 p-0 cursor-pointer hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors flex items-center justify-center"
                       >
                         <X className="h-3 w-3" />
                       </Badge>
