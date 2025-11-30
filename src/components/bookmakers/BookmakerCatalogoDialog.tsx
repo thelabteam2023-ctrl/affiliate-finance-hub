@@ -378,7 +378,7 @@ export default function BookmakerCatalogoDialog({
               {links.map((link, index) => (
                 <div key={index}>
                   {index === 0 ? (
-                    <div className="grid grid-cols-[100px_1fr_40px] gap-3 items-center">
+                    <div className="grid grid-cols-[105px_1fr_40px] gap-3 items-center">
                       <div className="h-10 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm flex items-center justify-center font-medium">
                         PADRÃO
                       </div>
@@ -403,7 +403,7 @@ export default function BookmakerCatalogoDialog({
                       </Button>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-[100px_1fr_40px] gap-3 items-center">
+                    <div className="grid grid-cols-[105px_1fr_40px] gap-3 items-center">
                       <Input
                         placeholder="Referência (ex: FOMENTO)"
                         value={link.referencia}
