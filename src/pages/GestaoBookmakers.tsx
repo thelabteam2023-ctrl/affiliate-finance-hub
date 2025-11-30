@@ -7,11 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List } from "lucide-react";
+import { Plus, Search, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building } from "lucide-react";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
 import HistoricoTransacoes from "@/components/bookmakers/HistoricoTransacoes";
 import CatalogoBookmakers from "@/components/bookmakers/CatalogoBookmakers";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Bookmaker {
   id: string;
@@ -23,12 +24,15 @@ interface Bookmaker {
   status: string;
   created_at: string;
   parceiro_id: string | null;
+  bookmaker_catalogo_id: string | null;
 }
 
 export default function GestaoBookmakers() {
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
+  const [parceiroFilter, setParceiroFilter] = useState("todos");
+  const [bookmakerFilter, setBookmakerFilter] = useState("todos");
   const [showCredentials, setShowCredentials] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -37,12 +41,16 @@ export default function GestaoBookmakers() {
   const [editingBookmaker, setEditingBookmaker] = useState<any | null>(null);
   const [selectedBookmaker, setSelectedBookmaker] = useState<Bookmaker | null>(null);
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const [parceiros, setParceiros] = useState<Array<{ id: string; nome: string }>>([]);
+  const [bookmakersCatalogo, setBookmakersCatalogo] = useState<Array<{ id: string; nome: string }>>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     checkAuth();
     fetchBookmakers();
+    fetchParceiros();
+    fetchBookmakersCatalogo();
   }, []);
 
   const checkAuth = async () => {
@@ -56,7 +64,10 @@ export default function GestaoBookmakers() {
     try {
       const { data, error } = await supabase
         .from("bookmakers")
-        .select("*")
+        .select(`
+          *,
+          parceiros!inner(nome)
+        `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -69,6 +80,35 @@ export default function GestaoBookmakers() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchParceiros = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("parceiros")
+        .select("id, nome")
+        .eq("status", "ativo")
+        .order("nome");
+
+      if (error) throw error;
+      setParceiros(data || []);
+    } catch (error: any) {
+      console.error("Erro ao carregar parceiros:", error);
+    }
+  };
+
+  const fetchBookmakersCatalogo = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("bookmakers_catalogo")
+        .select("id, nome")
+        .order("nome");
+
+      if (error) throw error;
+      setBookmakersCatalogo(data || []);
+    } catch (error: any) {
+      console.error("Erro ao carregar catálogo:", error);
     }
   };
 
@@ -163,7 +203,11 @@ export default function GestaoBookmakers() {
       bookmaker.login_username.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
       statusFilter === "todos" || bookmaker.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesParceiro =
+      parceiroFilter === "todos" || bookmaker.parceiro_id === parceiroFilter;
+    const matchesBookmaker =
+      bookmakerFilter === "todos" || bookmaker.bookmaker_catalogo_id === bookmakerFilter;
+    return matchesSearch && matchesStatus && matchesParceiro && matchesBookmaker;
   });
 
   const stats = {
@@ -262,16 +306,53 @@ export default function GestaoBookmakers() {
                   className="pl-10"
                 />
               </div>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border rounded-md bg-background"
-              >
-                <option value="todos">Todos os status</option>
-                <option value="ativo">Ativo</option>
-                <option value="inativo">Inativo</option>
-                <option value="limitada">Limitada</option>
-              </select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os status</SelectItem>
+                  <SelectItem value="ativo">Ativo</SelectItem>
+                  <SelectItem value="inativo">Inativo</SelectItem>
+                  <SelectItem value="limitada">Limitada</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={parceiroFilter} onValueChange={setParceiroFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Todos parceiros" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Todos parceiros
+                    </div>
+                  </SelectItem>
+                  {parceiros.map((parceiro) => (
+                    <SelectItem key={parceiro.id} value={parceiro.id}>
+                      {parceiro.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={bookmakerFilter} onValueChange={setBookmakerFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Todas bookmakers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">
+                    <div className="flex items-center gap-2">
+                      <Building className="h-4 w-4" />
+                      Todas bookmakers
+                    </div>
+                  </SelectItem>
+                  {bookmakersCatalogo.map((bookmaker) => (
+                    <SelectItem key={bookmaker.id} value={bookmaker.id}>
+                      {bookmaker.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
