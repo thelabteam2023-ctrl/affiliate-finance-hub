@@ -480,10 +480,10 @@ export default function CatalogoBookmakers() {
                           <span className="text-sm text-muted-foreground">Verificação:</span>
                           <span className={`font-medium uppercase ${
                             bookmaker.verificacao === "OBRIGATORIA" 
-                              ? "text-red-500 text-sm" 
+                              ? "text-red-500 text-[10px]" 
                               : bookmaker.verificacao === "QUANDO_SOLICITADO"
                               ? "text-amber-500 text-[10px]"
-                              : "text-emerald-500 text-sm"
+                              : "text-emerald-500 text-[10px]"
                           }`}>
                             {bookmaker.verificacao === "OBRIGATORIA" 
                               ? "OBRIGATÓRIA" 
@@ -635,10 +635,10 @@ export default function CatalogoBookmakers() {
                                 <span className="font-medium">Verificação:</span>
                                 <span className={`font-medium uppercase ${
                                   bookmaker.verificacao === "OBRIGATORIA" 
-                                    ? "text-red-500 text-sm" 
+                                    ? "text-red-500 text-[10px]" 
                                     : bookmaker.verificacao === "QUANDO_SOLICITADO"
                                     ? "text-amber-500 text-[10px]"
-                                    : "text-emerald-500 text-sm"
+                                    : "text-emerald-500 text-[10px]"
                                 }`}>
                                   {bookmaker.verificacao === "OBRIGATORIA" 
                                     ? "OBRIGATÓRIA" 
