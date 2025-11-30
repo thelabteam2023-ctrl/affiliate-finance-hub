@@ -153,7 +153,7 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
         bookmaker_catalogo_id: bookmakerId,
         nome: selectedBookmaker?.nome || "",
         link_origem: selectedLink,
-        login_username: loginUsername,
+        login_username: loginUsername || null,
         saldo_atual: 0, // Sempre começa com 0
         moeda: "BRL", // Padrão BRL
         status,
@@ -176,10 +176,6 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
 
         if (error) throw error;
       } else {
-        if (!loginPassword) {
-          throw new Error("Senha é obrigatória para novo vínculo");
-        }
-
         const { error } = await supabase
           .from("bookmakers")
           .insert(bookmakerData);
@@ -275,13 +271,12 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="loginUsername">Usuário de Login *</Label>
+              <Label htmlFor="loginUsername">Usuário de Login (opcional)</Label>
               <Input
                 id="loginUsername"
                 value={loginUsername}
                 onChange={(e) => setLoginUsername(e.target.value)}
                 placeholder="username ou email"
-                required
                 disabled={loading || !bookmakerId}
                 autoComplete="off"
               />
@@ -289,7 +284,7 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
 
             <div>
               <Label htmlFor="loginPassword">
-                Senha de Login {bookmaker ? "(deixe em branco para não alterar)" : "*"}
+                Senha de Login {bookmaker ? "(opcional - deixe em branco para não alterar)" : "(opcional)"}
               </Label>
               <PasswordInput
                 value={loginPassword}

@@ -7,12 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building } from "lucide-react";
+import { Plus, Search, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert } from "lucide-react";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
 import HistoricoTransacoes from "@/components/bookmakers/HistoricoTransacoes";
 import CatalogoBookmakers from "@/components/bookmakers/CatalogoBookmakers";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Bookmaker {
   id: string;
@@ -178,6 +184,32 @@ export default function GestaoBookmakers() {
     setTransacaoDialogOpen(false);
     setSelectedBookmaker(null);
     fetchBookmakers();
+  };
+
+  const handleToggleLimitada = async (bookmaker: Bookmaker) => {
+    try {
+      const newStatus = bookmaker.status === "limitada" ? "ativo" : "limitada";
+      
+      const { error } = await supabase
+        .from("bookmakers")
+        .update({ status: newStatus })
+        .eq("id", bookmaker.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Status atualizado",
+        description: `Vínculo marcado como ${newStatus === "limitada" ? "Limitada" : "Ativo"}.`,
+      });
+      
+      fetchBookmakers();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao atualizar status",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const maskCredentials = (text: string) => {
@@ -457,6 +489,23 @@ export default function GestaoBookmakers() {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleToggleLimitada(bookmaker)}
+                              className={bookmaker.status === "limitada" ? "text-warning" : ""}
+                            >
+                              <ShieldAlert className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{bookmaker.status === "limitada" ? "Marcar como Ativo" : "Marcar como Limitada"}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
 
                     <div className="flex gap-2">
@@ -541,6 +590,23 @@ export default function GestaoBookmakers() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleToggleLimitada(bookmaker)}
+                                    className={bookmaker.status === "limitada" ? "text-warning" : ""}
+                                  >
+                                    <ShieldAlert className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{bookmaker.status === "limitada" ? "Marcar como Ativo" : "Marcar como Limitada"}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                             <Button
                               variant="ghost"
                               size="sm"
