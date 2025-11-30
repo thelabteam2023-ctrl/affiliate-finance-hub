@@ -674,7 +674,7 @@ export default function GestaoBookmakers() {
                       >
                           <div className="flex items-center justify-between gap-4">
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-start gap-3">
                               {bookmaker.bookmakers_catalogo?.logo_url ? (
                                 <img 
                                   src={bookmaker.bookmakers_catalogo.logo_url} 
