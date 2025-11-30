@@ -878,7 +878,7 @@ export function CaixaTransacaoDialog({
           {/* Nome do Investidor - Centralizado */}
           {tipoTransacao === "APORTE_FINANCEIRO" && (
             <div className="space-y-2">
-              <Label htmlFor="nomeInvestidor">Nome do Investidor</Label>
+              <Label htmlFor="nomeInvestidor" className="text-center block">Nome do Investidor</Label>
               <Input
                 id="nomeInvestidor"
                 value={nomeInvestidor}
@@ -892,7 +892,7 @@ export function CaixaTransacaoDialog({
           {tipoTransacao && tipoMoeda === "FIAT" && (
             <div className="grid grid-cols-[200px_1fr_1fr] gap-3">
               <div className="space-y-2">
-                <Label>Tipo de Moeda</Label>
+                <Label className="text-center block">Tipo de Moeda</Label>
                 <Select value={tipoMoeda} onValueChange={setTipoMoeda}>
                   <SelectTrigger>
                     <SelectValue />
@@ -904,7 +904,7 @@ export function CaixaTransacaoDialog({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Moeda</Label>
+                <Label className="text-center block">Moeda</Label>
                 <Select value={moeda} onValueChange={setMoeda}>
                   <SelectTrigger>
                     <SelectValue />
@@ -917,7 +917,7 @@ export function CaixaTransacaoDialog({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Valor em {moeda}</Label>
+                <Label className="text-center block">Valor em {moeda}</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -934,7 +934,7 @@ export function CaixaTransacaoDialog({
             <>
               <div className="grid grid-cols-[200px_1fr_1fr] gap-3">
                 <div className="space-y-2">
-                  <Label>Tipo de Moeda</Label>
+                  <Label className="text-center block">Tipo de Moeda</Label>
                   <Select value={tipoMoeda} onValueChange={setTipoMoeda}>
                     <SelectTrigger>
                       <SelectValue />
@@ -946,7 +946,7 @@ export function CaixaTransacaoDialog({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Moeda</Label>
+                  <Label className="text-center block">Moeda</Label>
                   <Select value={coin} onValueChange={setCoin}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />
@@ -964,7 +964,7 @@ export function CaixaTransacaoDialog({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Valor em USD</Label>
+                  <Label className="text-center block">Valor em USD</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -976,7 +976,7 @@ export function CaixaTransacaoDialog({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>Quantidade</Label>
+                  <Label className="text-center block">Quantidade</Label>
                   <Input
                     type="number"
                     step="0.00000001"
@@ -986,7 +986,7 @@ export function CaixaTransacaoDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Cotação USD (opcional)</Label>
+                  <Label className="text-center block">Cotação USD (opcional)</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -1019,7 +1019,7 @@ export function CaixaTransacaoDialog({
           {tipoTransacao && (
             <>
               <div className="pt-4">
-                <h3 className="text-sm font-medium mb-4">Fluxo da Transação</h3>
+                <h3 className="text-sm font-medium mb-4 text-center uppercase">Fluxo da Transação</h3>
                 <div className="grid grid-cols-2 gap-4">
                   {/* Origem */}
                   <div className="space-y-4 pr-4 border-r border-border/50">
@@ -1029,18 +1029,8 @@ export function CaixaTransacaoDialog({
                       </h4>
                     </div>
                     <Card className="bg-card/30 border-border/50">
-                      <CardContent className="pt-6 space-y-2">
+                      <CardContent className="pt-6 text-center">
                         <div className="text-sm font-medium">{getOrigemLabel()}</div>
-                        {getSaldoAtual(origemTipo, origemBookmakerId) > 0 && (
-                          <div className="text-xs text-muted-foreground">
-                            Saldo atual: {formatCurrency(getSaldoAtual(origemTipo, origemBookmakerId))}
-                          </div>
-                        )}
-                        {calculateNewBalance(origemTipo, true) !== null && (
-                          <div className="text-xs font-medium text-red-400">
-                            Novo saldo: {formatCurrency(calculateNewBalance(origemTipo, true)!)}
-                          </div>
-                        )}
                       </CardContent>
                     </Card>
                     {renderOrigemFields()}
@@ -1054,18 +1044,8 @@ export function CaixaTransacaoDialog({
                       </h4>
                     </div>
                     <Card className="bg-card/30 border-border/50">
-                      <CardContent className="pt-6 space-y-2">
+                      <CardContent className="pt-6 text-center">
                         <div className="text-sm font-medium">{getDestinoLabel()}</div>
-                        {getSaldoAtual(destinoTipo, destinoBookmakerId) > 0 && (
-                          <div className="text-xs text-muted-foreground">
-                            Saldo atual: {formatCurrency(getSaldoAtual(destinoTipo, destinoBookmakerId))}
-                          </div>
-                        )}
-                        {calculateNewBalance(destinoTipo, false) !== null && (
-                          <div className="text-xs font-medium text-emerald-400">
-                            Novo saldo: {formatCurrency(calculateNewBalance(destinoTipo, false)!)}
-                          </div>
-                        )}
                       </CardContent>
                     </Card>
                     {renderDestinoFields()}
