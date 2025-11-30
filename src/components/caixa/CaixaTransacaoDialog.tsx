@@ -256,13 +256,17 @@ export function CaixaTransacaoDialog({
 
   const renderOrigemFields = () => {
     if (tipoTransacao === "APORTE_FINANCEIRO" || tipoTransacao === "DEPOSITO") {
-      return null; // Origem é sempre CAIXA_OPERACIONAL
+      return (
+        <div className="text-sm text-muted-foreground italic">
+          {tipoTransacao === "APORTE_FINANCEIRO" ? "Aporte externo" : "Caixa Operacional"}
+        </div>
+      );
     }
 
     if (tipoTransacao === "SAQUE") {
       return (
         <div className="space-y-2">
-          <Label>Bookmaker de Origem</Label>
+          <Label>Bookmaker</Label>
           <BookmakerSelect
             value={origemBookmakerId}
             onValueChange={setOrigemBookmakerId}
@@ -273,17 +277,17 @@ export function CaixaTransacaoDialog({
 
     if (tipoTransacao === "TRANSFERENCIA") {
       return (
-        <div className="space-y-4">
+        <>
           <div className="space-y-2">
-            <Label>Tipo de Origem</Label>
+            <Label>Tipo</Label>
             <Select value={origemTipo} onValueChange={setOrigemTipo}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="CAIXA_OPERACIONAL">Caixa Operacional</SelectItem>
-                <SelectItem value="PARCEIRO_CONTA">Conta Bancária do Parceiro</SelectItem>
-                <SelectItem value="PARCEIRO_WALLET">Wallet Crypto do Parceiro</SelectItem>
+                <SelectItem value="PARCEIRO_CONTA">Conta Bancária</SelectItem>
+                <SelectItem value="PARCEIRO_WALLET">Wallet Crypto</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -302,10 +306,10 @@ export function CaixaTransacaoDialog({
               </div>
               {origemParceiroId && (
                 <div className="space-y-2">
-                  <Label>Conta Bancária</Label>
+                  <Label>Conta</Label>
                   <Select value={origemContaId} onValueChange={setOrigemContaId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione a conta" />
+                      <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
                       {contasBancarias
@@ -336,10 +340,10 @@ export function CaixaTransacaoDialog({
               </div>
               {origemParceiroId && (
                 <div className="space-y-2">
-                  <Label>Wallet Crypto</Label>
+                  <Label>Wallet</Label>
                   <Select value={origemWalletId} onValueChange={setOrigemWalletId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione a wallet" />
+                      <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
                       {walletsCrypto
@@ -355,7 +359,7 @@ export function CaixaTransacaoDialog({
               )}
             </>
           )}
-        </div>
+        </>
       );
     }
 
@@ -364,13 +368,17 @@ export function CaixaTransacaoDialog({
 
   const renderDestinoFields = () => {
     if (tipoTransacao === "APORTE_FINANCEIRO" || tipoTransacao === "SAQUE") {
-      return null; // Destino é sempre CAIXA_OPERACIONAL
+      return (
+        <div className="text-sm text-muted-foreground italic">
+          Caixa Operacional
+        </div>
+      );
     }
 
     if (tipoTransacao === "DEPOSITO") {
       return (
         <div className="space-y-2">
-          <Label>Bookmaker de Destino</Label>
+          <Label>Bookmaker</Label>
           <BookmakerSelect
             value={destinoBookmakerId}
             onValueChange={setDestinoBookmakerId}
@@ -381,17 +389,17 @@ export function CaixaTransacaoDialog({
 
     if (tipoTransacao === "TRANSFERENCIA") {
       return (
-        <div className="space-y-4">
+        <>
           <div className="space-y-2">
-            <Label>Tipo de Destino</Label>
+            <Label>Tipo</Label>
             <Select value={destinoTipo} onValueChange={setDestinoTipo}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="CAIXA_OPERACIONAL">Caixa Operacional</SelectItem>
-                <SelectItem value="PARCEIRO_CONTA">Conta Bancária do Parceiro</SelectItem>
-                <SelectItem value="PARCEIRO_WALLET">Wallet Crypto do Parceiro</SelectItem>
+                <SelectItem value="PARCEIRO_CONTA">Conta Bancária</SelectItem>
+                <SelectItem value="PARCEIRO_WALLET">Wallet Crypto</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -410,10 +418,10 @@ export function CaixaTransacaoDialog({
               </div>
               {destinoParceiroId && (
                 <div className="space-y-2">
-                  <Label>Conta Bancária</Label>
+                  <Label>Conta</Label>
                   <Select value={destinoContaId} onValueChange={setDestinoContaId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione a conta" />
+                      <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
                       {contasBancarias
@@ -444,10 +452,10 @@ export function CaixaTransacaoDialog({
               </div>
               {destinoParceiroId && (
                 <div className="space-y-2">
-                  <Label>Wallet Crypto</Label>
+                  <Label>Wallet</Label>
                   <Select value={destinoWalletId} onValueChange={setDestinoWalletId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione a wallet" />
+                      <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
                       {walletsCrypto
@@ -463,7 +471,7 @@ export function CaixaTransacaoDialog({
               )}
             </>
           )}
-        </div>
+        </>
       );
     }
 
@@ -486,10 +494,10 @@ export function CaixaTransacaoDialog({
                 <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="APORTE_FINANCEIRO">Aporte Financeiro</SelectItem>
-                <SelectItem value="TRANSFERENCIA">Transferência</SelectItem>
-                <SelectItem value="DEPOSITO">Depósito (para Bookmaker)</SelectItem>
-                <SelectItem value="SAQUE">Saque (de Bookmaker)</SelectItem>
+                <SelectItem value="APORTE_FINANCEIRO">APORTE FINANCEIRO</SelectItem>
+                <SelectItem value="TRANSFERENCIA">TRANSFERÊNCIA</SelectItem>
+                <SelectItem value="DEPOSITO">DEPÓSITO (PARA BOOKMAKER)</SelectItem>
+                <SelectItem value="SAQUE">SAQUE (DE BOOKMAKER)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -553,11 +561,26 @@ export function CaixaTransacaoDialog({
             </div>
           )}
 
-          {/* Origem Fields */}
-          {renderOrigemFields()}
+          {/* Origem e Destino em Colunas */}
+          {tipoTransacao && (
+            <div className="grid grid-cols-2 gap-6">
+              {/* Coluna Origem */}
+              <div className="space-y-4">
+                <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-b border-border/50 pb-2">
+                  Origem
+                </div>
+                {renderOrigemFields()}
+              </div>
 
-          {/* Destino Fields */}
-          {renderDestinoFields()}
+              {/* Coluna Destino */}
+              <div className="space-y-4">
+                <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-b border-border/50 pb-2">
+                  Destino
+                </div>
+                {renderDestinoFields()}
+              </div>
+            </div>
+          )}
 
           {/* Moeda e Valores */}
           <div className="grid grid-cols-3 gap-4">
