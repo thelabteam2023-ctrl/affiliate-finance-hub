@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check } from "lucide-react";
+import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check } from "lucide-react";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
 import HistoricoTransacoes from "@/components/bookmakers/HistoricoTransacoes";
@@ -465,14 +465,21 @@ export default function GestaoBookmakers() {
                       <div className="flex items-center gap-2">
                         <CardTitle className="text-xl">{bookmaker.nome}</CardTitle>
                         {hasCredentials(bookmaker) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewCredentials(bookmaker)}
-                            className="h-7 w-7 p-0"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleViewCredentials(bookmaker)}
+                                  className="h-7 w-7 p-0"
+                                >
+                                  <IdCard className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Abrir credencial</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
@@ -579,14 +586,21 @@ export default function GestaoBookmakers() {
                                 <div className="flex items-center gap-3 mb-2">
                                   <h3 className="font-medium text-base">{bookmaker.nome}</h3>
                                   {hasCredentials(bookmaker) && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleViewCredentials(bookmaker)}
-                                      className="h-7 w-7 p-0"
-                                    >
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleViewCredentials(bookmaker)}
+                                            className="h-7 w-7 p-0"
+                                          >
+                                            <IdCard className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Abrir credencial</TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
                                   )}
                                   <Badge
                                     variant={
