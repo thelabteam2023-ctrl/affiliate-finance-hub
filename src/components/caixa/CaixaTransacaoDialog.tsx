@@ -394,7 +394,7 @@ export function CaixaTransacaoDialog({
   const renderOrigemFields = () => {
     if (tipoTransacao === "APORTE_FINANCEIRO" || tipoTransacao === "DEPOSITO") {
       return (
-        <div className="text-sm text-muted-foreground italic">
+        <div className="text-sm text-muted-foreground italic text-center">
           {tipoTransacao === "APORTE_FINANCEIRO" ? "Aporte externo" : "Caixa Operacional"}
         </div>
       );
@@ -415,7 +415,7 @@ export function CaixaTransacaoDialog({
     if (tipoTransacao === "TRANSFERENCIA") {
       if (fluxoTransferencia === "CAIXA_PARCEIRO") {
         return (
-          <div className="text-sm text-muted-foreground italic">
+          <div className="text-sm text-muted-foreground italic text-center">
             Caixa Operacional
           </div>
         );
@@ -513,7 +513,7 @@ export function CaixaTransacaoDialog({
   const renderDestinoFields = () => {
     if (tipoTransacao === "APORTE_FINANCEIRO" || tipoTransacao === "SAQUE") {
       return (
-        <div className="text-sm text-muted-foreground italic">
+        <div className="text-sm text-muted-foreground italic text-center">
           Caixa Operacional
         </div>
       );
