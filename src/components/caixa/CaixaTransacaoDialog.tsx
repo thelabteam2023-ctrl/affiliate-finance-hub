@@ -472,12 +472,13 @@ export function CaixaTransacaoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nova Transação</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* Tipo de Transação */}
           <div className="space-y-2">
             <Label>Tipo de Transação *</Label>
             <Select value={tipoTransacao} onValueChange={setTipoTransacao}>
@@ -493,7 +494,73 @@ export function CaixaTransacaoDialog({
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Visual Flow Cards */}
+          {tipoTransacao && (
+            <div className="flex items-center gap-4 p-4 bg-accent/5 rounded-lg border border-border/50">
+              {/* Origem Card */}
+              <div className="flex-1 p-4 bg-card rounded-lg border border-border shadow-sm">
+                <div className="text-xs text-muted-foreground mb-2">ORIGEM</div>
+                <div className="font-medium text-foreground">
+                  {tipoTransacao === "APORTE_FINANCEIRO" && "Aporte Externo"}
+                  {tipoTransacao === "DEPOSITO" && "Caixa Operacional"}
+                  {tipoTransacao === "SAQUE" && origemBookmakerId ? "Bookmaker Selecionado" : "Selecione Bookmaker"}
+                  {tipoTransacao === "TRANSFERENCIA" && origemTipo ? (
+                    origemTipo === "CAIXA_OPERACIONAL" ? "Caixa Operacional" :
+                    origemTipo === "PARCEIRO_CONTA" ? "Conta Bancária" :
+                    "Wallet Crypto"
+                  ) : tipoTransacao === "TRANSFERENCIA" && "Selecione Origem"}
+                </div>
+                {valor && parseFloat(valor) > 0 && (
+                  <div className="text-xs text-destructive mt-2">
+                    - {tipoMoeda === "CRYPTO" ? "USD" : moeda} {parseFloat(valor).toFixed(2)}
+                  </div>
+                )}
+              </div>
+
+              {/* Arrow */}
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </div>
+                {valor && parseFloat(valor) > 0 && (
+                  <div className="text-xs font-medium text-primary">
+                    {tipoMoeda === "CRYPTO" ? "USD" : moeda} {parseFloat(valor).toFixed(2)}
+                  </div>
+                )}
+              </div>
+
+              {/* Destino Card */}
+              <div className="flex-1 p-4 bg-card rounded-lg border border-border shadow-sm">
+                <div className="text-xs text-muted-foreground mb-2">DESTINO</div>
+                <div className="font-medium text-foreground">
+                  {tipoTransacao === "APORTE_FINANCEIRO" && "Caixa Operacional"}
+                  {tipoTransacao === "SAQUE" && "Caixa Operacional"}
+                  {tipoTransacao === "DEPOSITO" && destinoBookmakerId ? "Bookmaker Selecionado" : "Selecione Bookmaker"}
+                  {tipoTransacao === "TRANSFERENCIA" && destinoTipo ? (
+                    destinoTipo === "CAIXA_OPERACIONAL" ? "Caixa Operacional" :
+                    destinoTipo === "PARCEIRO_CONTA" ? "Conta Bancária" :
+                    "Wallet Crypto"
+                  ) : tipoTransacao === "TRANSFERENCIA" && "Selecione Destino"}
+                </div>
+                {valor && parseFloat(valor) > 0 && (
+                  <div className="text-xs text-primary mt-2">
+                    + {tipoMoeda === "CRYPTO" ? "USD" : moeda} {parseFloat(valor).toFixed(2)}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Origem Fields */}
+          {renderOrigemFields()}
+
+          {/* Destino Fields */}
+          {renderDestinoFields()}
+
+          {/* Moeda e Valores */}
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Tipo de Moeda *</Label>
               <Select value={tipoMoeda} onValueChange={setTipoMoeda}>
@@ -501,8 +568,8 @@ export function CaixaTransacaoDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="FIAT">FIAT (Moeda Corrente)</SelectItem>
-                  <SelectItem value="CRYPTO">CRYPTO (Criptomoeda)</SelectItem>
+                  <SelectItem value="FIAT">FIAT</SelectItem>
+                  <SelectItem value="CRYPTO">CRYPTO</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -515,9 +582,9 @@ export function CaixaTransacaoDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="BRL">BRL - Real Brasileiro</SelectItem>
-                    <SelectItem value="USD">USD - Dólar Americano</SelectItem>
-                    <SelectItem value="EUR">EUR - Euro</SelectItem>
+                    <SelectItem value="BRL">BRL</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -529,19 +596,17 @@ export function CaixaTransacaoDialog({
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="BTC">BTC - Bitcoin</SelectItem>
-                    <SelectItem value="ETH">ETH - Ethereum</SelectItem>
-                    <SelectItem value="USDT">USDT - Tether</SelectItem>
-                    <SelectItem value="USDC">USDC - USD Coin</SelectItem>
+                    <SelectItem value="BTC">BTC</SelectItem>
+                    <SelectItem value="ETH">ETH</SelectItem>
+                    <SelectItem value="USDT">USDT</SelectItem>
+                    <SelectItem value="USDC">USDC</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             )}
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Valor {tipoMoeda === "CRYPTO" ? "USD" : moeda} *</Label>
+              <Label>Valor *</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -550,8 +615,10 @@ export function CaixaTransacaoDialog({
                 placeholder="0.00"
               />
             </div>
+          </div>
 
-            {tipoMoeda === "CRYPTO" && (
+          {tipoMoeda === "CRYPTO" && (
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Quantidade {coin} *</Label>
                 <Input
@@ -562,25 +629,20 @@ export function CaixaTransacaoDialog({
                   placeholder="0.00000000"
                 />
               </div>
-            )}
-          </div>
-
-          {tipoMoeda === "CRYPTO" && (
-            <div className="space-y-2">
-              <Label>Cotação (USD/{coin})</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={cotacao}
-                onChange={(e) => setCotacao(e.target.value)}
-                placeholder="0.00"
-              />
+              <div className="space-y-2">
+                <Label>Cotação (USD/{coin})</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={cotacao}
+                  onChange={(e) => setCotacao(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
             </div>
           )}
 
-          {renderOrigemFields()}
-          {renderDestinoFields()}
-
+          {/* Descrição */}
           <div className="space-y-2">
             <Label>Descrição</Label>
             <Textarea
@@ -591,6 +653,7 @@ export function CaixaTransacaoDialog({
             />
           </div>
 
+          {/* Actions */}
           <div className="flex gap-2 justify-end pt-4">
             <Button variant="outline" onClick={onClose} disabled={loading}>
               Cancelar
