@@ -19,9 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
 import BookmakerSelect from "@/components/bookmakers/BookmakerSelect";
-import { Loader2, ArrowLeftRight } from "lucide-react";
+import { Loader2, ArrowLeftRight, AlertTriangle } from "lucide-react";
 
 interface CaixaTransacaoDialogProps {
   open: boolean;
@@ -344,16 +345,22 @@ export function CaixaTransacaoDialog({
         return;
       }
 
+      // Validar saldo insuficiente
+      if (checkSaldoInsuficiente()) {
+        toast({
+          title: "Erro",
+          description: "Saldo insuficiente para realizar esta transação",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
-      const actualTipoTransacao = tipoTransacao === "APORTE_FINANCEIRO" 
-        ? fluxoAporte 
-        : tipoTransacao;
-
       const transactionData: any = {
         user_id: userData.user.id,
-        tipo_transacao: actualTipoTransacao,
+        tipo_transacao: tipoTransacao,
         tipo_moeda: tipoMoeda,
         moeda: tipoMoeda === "FIAT" ? moeda : "USD",
         valor: parseFloat(valor),
@@ -372,13 +379,15 @@ export function CaixaTransacaoDialog({
         }
       }
 
-      // Set origem/destino based on actual transaction type
-      if (actualTipoTransacao === "APORTE") {
-        transactionData.origem_tipo = null;
-        transactionData.destino_tipo = "CAIXA_OPERACIONAL";
-      } else if (actualTipoTransacao === "LIQUIDACAO") {
-        transactionData.origem_tipo = "CAIXA_OPERACIONAL";
-        transactionData.destino_tipo = null;
+      // Set origem/destino based on transaction type and flow
+      if (tipoTransacao === "APORTE_FINANCEIRO") {
+        if (fluxoAporte === "APORTE") {
+          transactionData.origem_tipo = null;
+          transactionData.destino_tipo = "CAIXA_OPERACIONAL";
+        } else {
+          transactionData.origem_tipo = "CAIXA_OPERACIONAL";
+          transactionData.destino_tipo = null;
+        }
       } else {
         // Add origin fields for other types
         if (origemTipo) {
@@ -796,6 +805,39 @@ export function CaixaTransacaoDialog({
     return null;
   };
 
+  const checkSaldoInsuficiente = (): boolean => {
+    const valorNumerico = parseFloat(valor) || 0;
+    if (valorNumerico === 0) return false;
+
+    // Check APORTE_FINANCEIRO flow
+    if (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO") {
+      const saldoAtual = getSaldoAtual("CAIXA_OPERACIONAL");
+      return saldoAtual < valorNumerico;
+    }
+
+    // Check SAQUE
+    if (tipoTransacao === "SAQUE" && origemBookmakerId) {
+      const saldoAtual = getSaldoAtual("BOOKMAKER", origemBookmakerId);
+      return saldoAtual < valorNumerico;
+    }
+
+    // Check DEPOSITO
+    if (tipoTransacao === "DEPOSITO") {
+      const saldoAtual = getSaldoAtual("CAIXA_OPERACIONAL");
+      return saldoAtual < valorNumerico;
+    }
+
+    // Check TRANSFERENCIA
+    if (tipoTransacao === "TRANSFERENCIA" && origemTipo === "CAIXA_OPERACIONAL") {
+      const saldoAtual = getSaldoAtual("CAIXA_OPERACIONAL");
+      return saldoAtual < valorNumerico;
+    }
+
+    return false;
+  };
+
+  const saldoInsuficiente = checkSaldoInsuficiente();
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -1001,6 +1043,16 @@ export function CaixaTransacaoDialog({
             </>
           )}
 
+          {/* Alerta de Saldo Insuficiente */}
+          {saldoInsuficiente && (
+            <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Saldo insuficiente! O saldo disponível é menor que o valor da transação.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Only show Tipo selector when no transaction type selected yet */}
           {tipoTransacao && !tipoMoeda && (
             <div className="space-y-2">
@@ -1032,7 +1084,20 @@ export function CaixaTransacaoDialog({
                     </div>
                     <Card className="bg-card/30 border-border/50">
                       <CardContent className="pt-6 text-center">
-                        <div className="text-sm font-medium">{getOrigemLabel()}</div>
+                        <div className="text-sm font-medium uppercase">{getOrigemLabel()}</div>
+                        {(origemTipo === "CAIXA_OPERACIONAL" || 
+                          (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO") ||
+                          (tipoTransacao === "DEPOSITO") ||
+                          (tipoTransacao === "TRANSFERENCIA" && origemTipo === "CAIXA_OPERACIONAL")) && (
+                          <div className="text-xs text-muted-foreground mt-2">
+                            Saldo disponível: {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL"))}
+                          </div>
+                        )}
+                        {tipoTransacao === "SAQUE" && origemBookmakerId && (
+                          <div className="text-xs text-muted-foreground mt-2">
+                            Saldo disponível: {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId))}
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                     {renderOrigemFields()}
@@ -1047,7 +1112,19 @@ export function CaixaTransacaoDialog({
                     </div>
                     <Card className="bg-card/30 border-border/50">
                       <CardContent className="pt-6 text-center">
-                        <div className="text-sm font-medium">{getDestinoLabel()}</div>
+                        <div className="text-sm font-medium uppercase">{getDestinoLabel()}</div>
+                        {(destinoTipo === "CAIXA_OPERACIONAL" || 
+                          (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "APORTE") ||
+                          (tipoTransacao === "SAQUE")) && (
+                          <div className="text-xs text-muted-foreground mt-2">
+                            Saldo atual: {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL"))}
+                          </div>
+                        )}
+                        {tipoTransacao === "DEPOSITO" && destinoBookmakerId && (
+                          <div className="text-xs text-muted-foreground mt-2">
+                            Saldo atual: {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId))}
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                     {renderDestinoFields()}
@@ -1075,7 +1152,7 @@ export function CaixaTransacaoDialog({
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button onClick={handleSubmit} disabled={loading || saldoInsuficiente}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Registrar Transação
           </Button>
