@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet } from "lucide-react";
+import { Plus, Search, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List } from "lucide-react";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
 import HistoricoTransacoes from "@/components/bookmakers/HistoricoTransacoes";
@@ -36,6 +36,7 @@ export default function GestaoBookmakers() {
   const [historicoDialogOpen, setHistoricoDialogOpen] = useState(false);
   const [editingBookmaker, setEditingBookmaker] = useState<any | null>(null);
   const [selectedBookmaker, setSelectedBookmaker] = useState<Bookmaker | null>(null);
+  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -267,11 +268,26 @@ export default function GestaoBookmakers() {
                 className="px-4 py-2 border rounded-md bg-background"
               >
                 <option value="todos">Todos os status</option>
-                <option value="ativo">Ativos</option>
-                <option value="inativo">Inativos</option>
-                <option value="suspenso">Suspensos</option>
-                <option value="bloqueado">Bloqueados</option>
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+                <option value="limitada">Limitada</option>
               </select>
+              <div className="flex gap-2">
+                <Button
+                  variant={viewMode === "cards" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setViewMode("cards")}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setViewMode("list")}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
               <Button
                 variant="outline"
                 size="icon"
@@ -291,7 +307,7 @@ export default function GestaoBookmakers() {
               </CardContent>
             </Card>
 
-            {/* Bookmakers Grid */}
+            {/* Bookmakers Display */}
             {filteredBookmakers.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
@@ -300,7 +316,7 @@ export default function GestaoBookmakers() {
                   </p>
                 </CardContent>
               </Card>
-            ) : (
+            ) : viewMode === "cards" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredBookmakers.map((bookmaker) => (
               <Card key={bookmaker.id} className="hover:shadow-lg transition-shadow">
@@ -395,6 +411,85 @@ export default function GestaoBookmakers() {
               </Card>
                 ))}
               </div>
+            ) : (
+              <Card>
+                <CardContent className="p-0">
+                  <div className="space-y-1">
+                    {filteredBookmakers.map((bookmaker, index) => (
+                      <div
+                        key={bookmaker.id}
+                        className={`p-4 hover:bg-accent/5 transition-colors ${
+                          index !== filteredBookmakers.length - 1 ? "border-b border-border/50" : ""
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h3 className="font-medium text-base">{bookmaker.nome}</h3>
+                                  <Badge
+                                    variant={
+                                      bookmaker.status === "ativo"
+                                        ? "default"
+                                        : bookmaker.status === "inativo"
+                                        ? "secondary"
+                                        : "destructive"
+                                    }
+                                  >
+                                    {bookmaker.status}
+                                  </Badge>
+                                  <Badge variant="outline">{bookmaker.moeda}</Badge>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <span>
+                                    <span className="font-medium">Usuário:</span>{" "}
+                                    {maskCredentials(bookmaker.login_username)}
+                                  </span>
+                                  <span className="text-lg font-bold text-foreground">
+                                    {formatCurrency(Number(bookmaker.saldo_atual), bookmaker.moeda)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleAddTransaction(bookmaker)}
+                            >
+                              <DollarSign className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewHistory(bookmaker)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(bookmaker)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(bookmaker.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
         </Tabs>
