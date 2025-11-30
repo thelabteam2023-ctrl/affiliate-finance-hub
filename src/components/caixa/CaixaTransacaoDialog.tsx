@@ -251,7 +251,10 @@ export function CaixaTransacaoDialog({
 
   const getOrigemLabel = (): string => {
     if (tipoTransacao === "APORTE_FINANCEIRO") {
-      return fluxoAporte === "APORTE" ? "Investidor Externo" : "Caixa Operacional";
+      if (fluxoAporte === "APORTE") {
+        return nomeInvestidor.trim() ? `Investidor: ${nomeInvestidor}` : "Investidor Externo";
+      }
+      return "Caixa Operacional";
     }
     if (tipoTransacao === "DEPOSITO") return "Caixa Operacional";
     if (tipoTransacao === "SAQUE" && origemBookmakerId) {
@@ -274,7 +277,10 @@ export function CaixaTransacaoDialog({
 
   const getDestinoLabel = (): string => {
     if (tipoTransacao === "APORTE_FINANCEIRO") {
-      return fluxoAporte === "APORTE" ? "Caixa Operacional" : "Investidor Externo";
+      if (fluxoAporte === "APORTE") {
+        return "Caixa Operacional";
+      }
+      return nomeInvestidor.trim() ? `Investidor: ${nomeInvestidor}` : "Investidor Externo";
     }
     if (tipoTransacao === "SAQUE") {
       return "Caixa Operacional";
@@ -329,10 +335,10 @@ export function CaixaTransacaoDialog({
         return;
       }
 
-      if (tipoMoeda === "CRYPTO" && (!qtdCoin || parseFloat(qtdCoin) <= 0)) {
+      if (tipoMoeda === "CRYPTO" && (!coin || !qtdCoin || parseFloat(qtdCoin) <= 0)) {
         toast({
           title: "Erro",
-          description: "Informe a quantidade de crypto",
+          description: "Informe a moeda crypto e quantidade",
           variant: "destructive",
         });
         return;
@@ -430,7 +436,9 @@ export function CaixaTransacaoDialog({
     if (tipoTransacao === "APORTE_FINANCEIRO") {
       return (
         <div className="text-sm text-muted-foreground italic text-center">
-          {fluxoAporte === "APORTE" ? "Investidor Externo" : "Caixa Operacional"}
+          {fluxoAporte === "APORTE" 
+            ? (nomeInvestidor.trim() ? `Investidor: ${nomeInvestidor}` : "Investidor Externo")
+            : "Caixa Operacional"}
         </div>
       );
     }
@@ -557,7 +565,9 @@ export function CaixaTransacaoDialog({
     if (tipoTransacao === "APORTE_FINANCEIRO") {
       return (
         <div className="text-sm text-muted-foreground italic text-center">
-          {fluxoAporte === "APORTE" ? "Caixa Operacional" : "Investidor Externo"}
+          {fluxoAporte === "APORTE" 
+            ? "Caixa Operacional"
+            : (nomeInvestidor.trim() ? `Investidor: ${nomeInvestidor}` : "Investidor Externo")}
         </div>
       );
     }
@@ -865,7 +875,7 @@ export function CaixaTransacaoDialog({
             </div>
           )}
 
-          {/* Nome do Investidor */}
+          {/* Nome do Investidor - Centralizado */}
           {tipoTransacao === "APORTE_FINANCEIRO" && (
             <div className="space-y-2">
               <Label htmlFor="nomeInvestidor">Nome do Investidor</Label>
@@ -878,8 +888,119 @@ export function CaixaTransacaoDialog({
             </div>
           )}
 
-          {/* Tipo de Moeda */}
-          {tipoTransacao && (
+          {/* Tipo de Moeda, Moeda e Valor - Compactados */}
+          {tipoTransacao && tipoMoeda === "FIAT" && (
+            <div className="grid grid-cols-[200px_1fr_1fr] gap-3">
+              <div className="space-y-2">
+                <Label>Tipo de Moeda</Label>
+                <Select value={tipoMoeda} onValueChange={setTipoMoeda}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FIAT">FIAT</SelectItem>
+                    <SelectItem value="CRYPTO">CRYPTO</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Moeda</Label>
+                <Select value={moeda} onValueChange={setMoeda}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BRL">BRL - Real Brasileiro</SelectItem>
+                    <SelectItem value="USD">USD - Dólar Americano</SelectItem>
+                    <SelectItem value="EUR">EUR - Euro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Valor em {moeda}</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={valor}
+                  onChange={(e) => setValor(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Crypto fields - Compactados */}
+          {tipoTransacao && tipoMoeda === "CRYPTO" && (
+            <>
+              <div className="grid grid-cols-[200px_1fr_1fr] gap-3">
+                <div className="space-y-2">
+                  <Label>Tipo de Moeda</Label>
+                  <Select value={tipoMoeda} onValueChange={setTipoMoeda}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="FIAT">FIAT</SelectItem>
+                      <SelectItem value="CRYPTO">CRYPTO</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Moeda</Label>
+                  <Select value={coin} onValueChange={setCoin}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BTC">BTC</SelectItem>
+                      <SelectItem value="CARDANO">CARDANO</SelectItem>
+                      <SelectItem value="DOGE">DOGE</SelectItem>
+                      <SelectItem value="ETH">ETH</SelectItem>
+                      <SelectItem value="LITECOIN">LITECOIN</SelectItem>
+                      <SelectItem value="TRX">TRX</SelectItem>
+                      <SelectItem value="USDC">USDC</SelectItem>
+                      <SelectItem value="USDT">USDT</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Valor em USD</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={valor}
+                    onChange={(e) => setValor(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Quantidade</Label>
+                  <Input
+                    type="number"
+                    step="0.00000001"
+                    value={qtdCoin}
+                    onChange={(e) => setQtdCoin(e.target.value)}
+                    placeholder="0.00000000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Cotação USD (opcional)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={cotacao}
+                    onChange={(e) => setCotacao(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Only show Tipo selector when no transaction type selected yet */}
+          {tipoTransacao && !tipoMoeda && (
             <div className="space-y-2">
               <Label>Tipo de Moeda</Label>
               <Select value={tipoMoeda} onValueChange={setTipoMoeda}>
@@ -887,77 +1008,10 @@ export function CaixaTransacaoDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="FIAT">FIAT (BRL, USD, EUR)</SelectItem>
+                  <SelectItem value="FIAT">FIAT</SelectItem>
                   <SelectItem value="CRYPTO">CRYPTO</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          )}
-
-          {/* Moeda FIAT */}
-          {tipoTransacao && tipoMoeda === "FIAT" && (
-            <div className="space-y-2">
-              <Label>Moeda</Label>
-              <Select value={moeda} onValueChange={setMoeda}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="BRL">BRL - Real Brasileiro</SelectItem>
-                  <SelectItem value="USD">USD - Dólar Americano</SelectItem>
-                  <SelectItem value="EUR">EUR - Euro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Crypto fields */}
-          {tipoTransacao && tipoMoeda === "CRYPTO" && (
-            <>
-              <div className="space-y-2">
-                <Label>Moeda</Label>
-                <Input
-                  value={coin}
-                  onChange={(e) => setCoin(e.target.value.toUpperCase())}
-                  placeholder="Ex: BTC, ETH, USDT"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Quantidade</Label>
-                <Input
-                  type="number"
-                  step="0.00000001"
-                  value={qtdCoin}
-                  onChange={(e) => setQtdCoin(e.target.value)}
-                  placeholder="0.00000000"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Cotação USD (opcional)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={cotacao}
-                  onChange={(e) => setCotacao(e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
-            </>
-          )}
-
-          {/* Valor */}
-          {tipoTransacao && (
-            <div className="space-y-2">
-              <Label>
-                {tipoMoeda === "CRYPTO" ? "Valor em USD" : `Valor em ${moeda}`}
-              </Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={valor}
-                onChange={(e) => setValor(e.target.value)}
-                placeholder="0.00"
-              />
             </div>
           )}
 
