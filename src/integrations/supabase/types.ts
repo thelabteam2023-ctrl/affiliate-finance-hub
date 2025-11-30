@@ -55,6 +55,7 @@ export type Database = {
           moeda: string
           nome: string
           observacoes: string | null
+          parceiro_id: string | null
           saldo_atual: number
           status: string
           updated_at: string
@@ -71,6 +72,7 @@ export type Database = {
           moeda?: string
           nome: string
           observacoes?: string | null
+          parceiro_id?: string | null
           saldo_atual?: number
           status?: string
           updated_at?: string
@@ -87,6 +89,7 @@ export type Database = {
           moeda?: string
           nome?: string
           observacoes?: string | null
+          parceiro_id?: string | null
           saldo_atual?: number
           status?: string
           updated_at?: string
@@ -99,6 +102,13 @@ export type Database = {
             columns: ["bookmaker_catalogo_id"]
             isOneToOne: false
             referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
             referencedColumns: ["id"]
           },
           {
