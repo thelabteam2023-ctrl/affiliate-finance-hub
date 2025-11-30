@@ -19,8 +19,8 @@ interface CaixaRelatoriosProps {
   dataFim: Date | undefined;
   setDataFim: (date: Date | undefined) => void;
   getTransacoesFiltradas: () => any[];
-  getTipoLabel: (tipo: string) => string;
-  getTipoColor: (tipo: string) => string;
+  getTipoLabel: (tipo: string, transacao?: any) => string;
+  getTipoColor: (tipo: string, transacao?: any) => string;
   getOrigemLabel: (transacao: any) => string;
   getDestinoLabel: (transacao: any) => string;
   formatCurrency: (value: number, currency: string) => string;

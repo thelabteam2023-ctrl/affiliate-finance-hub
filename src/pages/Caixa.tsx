@@ -225,9 +225,20 @@ export default function Caixa() {
     return chartData;
   };
 
-  const getTipoLabel = (tipo: string) => {
+  const getTipoLabel = (tipo: string, transacao?: Transacao) => {
+    // Para APORTE_FINANCEIRO, determinamos se é Aporte ou Liquidação pela direção
+    if (tipo === "APORTE_FINANCEIRO" && transacao) {
+      // Se destino é CAIXA_OPERACIONAL → é Aporte (Investidor → Caixa)
+      if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
+        return "Aporte";
+      }
+      // Se origem é CAIXA_OPERACIONAL → é Liquidação (Caixa → Investidor)
+      if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
+        return "Liquidação";
+      }
+    }
+    
     const labels: { [key: string]: string } = {
-      APORTE_FINANCEIRO: "Aporte & Liquidação",
       APORTE: "Aporte",
       LIQUIDACAO: "Liquidação",
       TRANSFERENCIA: "Transferência",
@@ -237,9 +248,20 @@ export default function Caixa() {
     return labels[tipo] || tipo;
   };
 
-  const getTipoColor = (tipo: string) => {
+  const getTipoColor = (tipo: string, transacao?: Transacao) => {
+    // Para APORTE_FINANCEIRO, determinamos a cor pela direção
+    if (tipo === "APORTE_FINANCEIRO" && transacao) {
+      // Se destino é CAIXA_OPERACIONAL → é Aporte (verde)
+      if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
+        return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+      }
+      // Se origem é CAIXA_OPERACIONAL → é Liquidação (amarelo)
+      if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
+        return "bg-amber-500/20 text-amber-400 border-amber-500/30";
+      }
+    }
+    
     const colors: { [key: string]: string } = {
-      APORTE_FINANCEIRO: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
       APORTE: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
       LIQUIDACAO: "bg-amber-500/20 text-amber-400 border-amber-500/30",
       TRANSFERENCIA: "bg-blue-500/20 text-blue-400 border-blue-500/30",
