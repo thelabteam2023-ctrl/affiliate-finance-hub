@@ -541,7 +541,10 @@ export function CaixaTransacaoDialog({
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="CAIXA_OPERACIONAL">Caixa Operacional</SelectItem>
+                {/* Caixa Operacional só aparece quando fluxo é PARCEIRO_PARCEIRO */}
+                {fluxoTransferencia === "PARCEIRO_PARCEIRO" && (
+                  <SelectItem value="CAIXA_OPERACIONAL">Caixa Operacional</SelectItem>
+                )}
                 <SelectItem value="PARCEIRO_CONTA">Conta Bancária</SelectItem>
                 <SelectItem value="PARCEIRO_WALLET">Wallet Crypto</SelectItem>
               </SelectContent>
