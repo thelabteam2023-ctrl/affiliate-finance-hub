@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, LogOut } from "lucide-react";
+import { Plus, Search, Edit, Trash2, LogOut, LayoutGrid, List } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,7 @@ export default function GestaoBancos() {
   const [codigo, setCodigo] = useState("");
   const [nome, setNome] = useState("");
   const [saving, setSaving] = useState(false);
+  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -207,6 +208,22 @@ export default function GestaoBancos() {
                   className="pl-10"
                 />
               </div>
+              <div className="flex gap-2">
+                <Button
+                  variant={viewMode === "cards" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setViewMode("cards")}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setViewMode("list")}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
               <Button onClick={() => setDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Banco
@@ -215,14 +232,14 @@ export default function GestaoBancos() {
           </CardContent>
         </Card>
 
-        {/* Bancos Grid */}
+        {/* Bancos Display */}
         {filteredBancos.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">Nenhum banco encontrado.</p>
             </CardContent>
           </Card>
-        ) : (
+        ) : viewMode === "cards" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredBancos.map((banco) => (
               <Card key={banco.id} className="hover:shadow-lg transition-shadow">
@@ -266,6 +283,58 @@ export default function GestaoBancos() {
               </Card>
             ))}
           </div>
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <div className="space-y-1">
+                {filteredBancos.map((banco, index) => (
+                  <div
+                    key={banco.id}
+                    className={`p-4 hover:bg-accent/5 transition-colors ${
+                      index !== filteredBancos.length - 1 ? "border-b border-border/50" : ""
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3">
+                          <div>
+                            <h3 className="font-medium text-base">{banco.nome}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Código: {banco.codigo}
+                            </p>
+                          </div>
+                          {banco.is_system && (
+                            <Badge variant="secondary" className="ml-2">
+                              Sistema
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      {!banco.is_system && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(banco)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(banco.id, banco.is_system)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 
