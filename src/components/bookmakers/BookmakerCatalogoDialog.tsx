@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface BookmakerCatalogoDialogProps {
   open: boolean;
@@ -316,8 +317,8 @@ export default function BookmakerCatalogoDialog({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select value={status} onValueChange={setStatus}>
+                <Label htmlFor="status">Status *</Label>
+                <Select value={status} onValueChange={setStatus} required>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -329,8 +330,8 @@ export default function BookmakerCatalogoDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="operacional">Operacional</Label>
-                <Select value={operacional} onValueChange={setOperacional}>
+                <Label htmlFor="operacional">Operacional *</Label>
+                <Select value={operacional} onValueChange={setOperacional} required>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -342,8 +343,8 @@ export default function BookmakerCatalogoDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="verificacao">Verificação</Label>
-                <Select value={verificacao} onValueChange={setVerificacao}>
+                <Label htmlFor="verificacao">Verificação *</Label>
+                <Select value={verificacao} onValueChange={setVerificacao} required>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -388,39 +389,38 @@ export default function BookmakerCatalogoDialog({
                         </Button>
                       </>
                     ) : (
-                      <>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            placeholder="Referência (ex: FOMENTO, PADRAO 2)"
+                            value={link.referencia}
+                            onChange={(e) => {
+                              const error = validateDuplicateReference(e.target.value, index);
+                              if (error && e.target.value.trim()) {
+                                toast({
+                                  title: "Referência duplicada",
+                                  description: error,
+                                  variant: "destructive",
+                                });
+                              }
+                              updateLink(index, "referencia", e.target.value);
+                            }}
+                            className="flex-1"
+                          />
+                          <Badge
+                            variant="outline"
+                            onClick={() => removeLink(index)}
+                            className="h-8 px-2 cursor-pointer hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                          </Badge>
+                        </div>
                         <Input
                           placeholder="https://exemplo.com"
                           value={link.url}
                           onChange={(e) => updateLink(index, "url", e.target.value)}
-                          className="flex-1"
                         />
-                        <Input
-                          placeholder="Referência (ex: FOMENTO, PADRAO 2)"
-                          value={link.referencia}
-                          onChange={(e) => {
-                            const error = validateDuplicateReference(e.target.value, index);
-                            if (error && e.target.value.trim()) {
-                              toast({
-                                title: "Referência duplicada",
-                                description: error,
-                                variant: "destructive",
-                              });
-                            }
-                            updateLink(index, "referencia", e.target.value);
-                          }}
-                          className="flex-1"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeLink(index)}
-                          className="h-10 w-10 hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -577,14 +577,13 @@ export default function BookmakerCatalogoDialog({
                       <div className="flex items-center justify-between">
                         <h5 className="font-medium">{index + 1}º Depósito</h5>
                         {bonusMultiplos.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
+                          <Badge
+                            variant="outline"
                             onClick={() => removeBonusMultiplo(index)}
+                            className="h-8 px-2 cursor-pointer hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors"
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                            <X className="h-3 w-3" />
+                          </Badge>
                         )}
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
