@@ -229,21 +229,29 @@ export default function Caixa() {
       </div>
 
       {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-4">
-        {/* Saldos FIAT - um card para cada moeda */}
-        {saldosFiat.map((saldoFiat) => (
-          <Card key={saldoFiat.moeda} className="bg-card/50 backdrop-blur border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Saldo {saldoFiat.moeda}</CardTitle>
-              <Wallet className="h-4 w-4 text-emerald-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-400">
-                {formatCurrency(saldoFiat.saldo, saldoFiat.moeda)}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid gap-4 md:grid-cols-3">
+        {/* Saldos FIAT consolidados */}
+        <Card className="bg-card/50 backdrop-blur border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Saldos FIAT</CardTitle>
+            <Wallet className="h-4 w-4 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {saldosFiat.map((saldoFiat) => (
+                <div key={saldoFiat.moeda} className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">{saldoFiat.moeda}</span>
+                  <span className="text-lg font-bold text-emerald-400">
+                    {formatCurrency(saldoFiat.saldo, saldoFiat.moeda)}
+                  </span>
+                </div>
+              ))}
+              {saldosFiat.length === 0 && (
+                <div className="text-sm text-muted-foreground italic">Nenhum saldo FIAT</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Exposição Crypto */}
         <Card className="bg-card/50 backdrop-blur border-border/50">
