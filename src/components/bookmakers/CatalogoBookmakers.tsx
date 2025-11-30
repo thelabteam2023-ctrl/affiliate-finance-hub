@@ -456,7 +456,7 @@ export default function CatalogoBookmakers() {
                               <TooltipTrigger asChild>
                                 <button
                                   onClick={() => handleObservacoesClick(bookmaker)}
-                                  className="h-5 w-5 rounded-full bg-primary/20 hover:bg-primary/30 flex items-center justify-center text-primary transition-colors"
+                                  className="h-5 w-5 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
                                 >
                                   <Info className="h-3.5 w-3.5" />
                                 </button>
@@ -665,7 +665,7 @@ export default function CatalogoBookmakers() {
                                           e.stopPropagation();
                                           handleObservacoesClick(bookmaker);
                                         }}
-                                        className="h-4 w-4 rounded-full bg-primary/20 hover:bg-primary/30 flex items-center justify-center text-primary transition-colors cursor-pointer hover:scale-110"
+                                        className="h-4 w-4 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors cursor-pointer hover:scale-110"
                                       >
                                         <Info className="h-3 w-3" />
                                       </button>
