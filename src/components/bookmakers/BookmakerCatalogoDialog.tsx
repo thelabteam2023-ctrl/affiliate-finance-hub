@@ -17,7 +17,14 @@ interface BookmakerCatalogoDialogProps {
   bookmaker: any | null;
 }
 
+interface LinkItem {
+  id: string;
+  url: string;
+  referencia: string;
+}
+
 interface BonusSimples {
+  id?: string;
   percent: string;
   moeda: string;
   valorMax: string;
@@ -38,7 +45,7 @@ export default function BookmakerCatalogoDialog({
   const [status, setStatus] = useState("REGULAMENTADA");
   const [operacional, setOperacional] = useState("ATIVA");
   const [verificacao, setVerificacao] = useState("OBRIGATORIA");
-  const [links, setLinks] = useState<Array<{ url: string; referencia: string }>>([{ url: "", referencia: "PADRÃO" }]);
+  const [links, setLinks] = useState<LinkItem[]>([{ id: crypto.randomUUID(), url: "", referencia: "PADRÃO" }]);
   const [bonusEnabled, setBonusEnabled] = useState(false);
   const [multibonusEnabled, setMultibonusEnabled] = useState(false);
   const [bonusSimples, setBonusSimples] = useState<BonusSimples>({
@@ -53,6 +60,7 @@ export default function BookmakerCatalogoDialog({
   });
   const [bonusMultiplos, setBonusMultiplos] = useState<BonusSimples[]>([
     {
+      id: crypto.randomUUID(),
       percent: "",
       moeda: "BRL",
       valorMax: "",
@@ -75,8 +83,8 @@ export default function BookmakerCatalogoDialog({
       setOperacional(bookmaker.operacional || "ATIVA");
       setVerificacao(bookmaker.verificacao || "OBRIGATORIA");
       setLinks(Array.isArray(bookmaker.links_json) && bookmaker.links_json.length > 0 
-        ? bookmaker.links_json 
-        : [{ url: "", referencia: "PADRÃO" }]);
+        ? bookmaker.links_json.map((link: any) => ({ ...link, id: link.id || crypto.randomUUID() }))
+        : [{ id: crypto.randomUUID(), url: "", referencia: "PADRÃO" }]);
       setBonusEnabled(bookmaker.bonus_enabled || false);
       setMultibonusEnabled(bookmaker.multibonus_enabled || false);
       
@@ -85,7 +93,10 @@ export default function BookmakerCatalogoDialog({
       }
       
       if (Array.isArray(bookmaker.bonus_multiplos_json) && bookmaker.bonus_multiplos_json.length > 0) {
-        setBonusMultiplos(bookmaker.bonus_multiplos_json);
+        setBonusMultiplos(bookmaker.bonus_multiplos_json.map((bonus: any) => ({ 
+          ...bonus, 
+          id: bonus.id || crypto.randomUUID() 
+        })));
       }
       
       setObservacoes(bookmaker.observacoes || "");
@@ -100,7 +111,7 @@ export default function BookmakerCatalogoDialog({
     setStatus("REGULAMENTADA");
     setOperacional("ATIVA");
     setVerificacao("OBRIGATORIA");
-    setLinks([{ url: "", referencia: "PADRÃO" }]);
+    setLinks([{ id: crypto.randomUUID(), url: "", referencia: "PADRÃO" }]);
     setBonusEnabled(false);
     setMultibonusEnabled(false);
     setBonusSimples({
@@ -115,6 +126,7 @@ export default function BookmakerCatalogoDialog({
     });
     setBonusMultiplos([
       {
+        id: crypto.randomUUID(),
         percent: "",
         moeda: "BRL",
         valorMax: "",
@@ -129,25 +141,23 @@ export default function BookmakerCatalogoDialog({
   };
 
   const addLink = () => {
-    setLinks([...links, { url: "", referencia: "" }]);
+    setLinks([...links, { id: crypto.randomUUID(), url: "", referencia: "" }]);
   };
 
-  const removeLink = (index: number) => {
-    setLinks(links.filter((_, i) => i !== index));
+  const removeLink = (id: string) => {
+    setLinks(links.filter((link) => link.id !== id));
   };
 
-  const updateLink = (index: number, field: "url" | "referencia", value: string) => {
-    const newLinks = [...links];
-    newLinks[index][field] = value;
-    setLinks(newLinks);
+  const updateLink = (id: string, field: "url" | "referencia", value: string) => {
+    setLinks(links.map(link => link.id === id ? { ...link, [field]: value } : link));
   };
 
-  const validateDuplicateReference = (referencia: string, currentIndex: number): string | null => {
+  const validateDuplicateReference = (referencia: string, currentId: string): string | null => {
     const normalizedRef = referencia.trim().toUpperCase();
     if (!normalizedRef) return null;
     
-    const isDuplicate = links.some((link, index) => 
-      index !== currentIndex && 
+    const isDuplicate = links.some((link) => 
+      link.id !== currentId && 
       link.referencia.trim().toUpperCase() === normalizedRef
     );
     
@@ -159,6 +169,7 @@ export default function BookmakerCatalogoDialog({
       setBonusMultiplos([
         ...bonusMultiplos,
         {
+          id: crypto.randomUUID(),
           percent: "",
           moeda: "BRL",
           valorMax: "",
@@ -172,14 +183,14 @@ export default function BookmakerCatalogoDialog({
     }
   };
 
-  const removeBonusMultiplo = (index: number) => {
-    setBonusMultiplos(bonusMultiplos.filter((_, i) => i !== index));
+  const removeBonusMultiplo = (id: string) => {
+    setBonusMultiplos(bonusMultiplos.filter((bonus) => bonus.id !== id));
   };
 
-  const updateBonusMultiplo = (index: number, field: keyof BonusSimples, value: string) => {
-    const newBonus = [...bonusMultiplos];
-    newBonus[index][field] = value;
-    setBonusMultiplos(newBonus);
+  const updateBonusMultiplo = (id: string, field: keyof BonusSimples, value: string) => {
+    setBonusMultiplos(bonusMultiplos.map(bonus => 
+      bonus.id === id ? { ...bonus, [field]: value } : bonus
+    ));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -207,7 +218,7 @@ export default function BookmakerCatalogoDialog({
         return;
       }
       
-      const validLinks = linksToSave.filter(link => link.url.trim() !== "");
+      const validLinks = linksToSave.filter(link => link.url.trim() !== "").map(({ id, ...link }) => link);
       
       // Validar referências duplicadas
       const references = validLinks.map(l => l.referencia.trim().toUpperCase());
@@ -233,7 +244,7 @@ export default function BookmakerCatalogoDialog({
         bonus_enabled: bonusEnabled,
         multibonus_enabled: multibonusEnabled,
         bonus_simples_json: bonusEnabled && !multibonusEnabled ? bonusSimples as any : {} as any,
-        bonus_multiplos_json: bonusEnabled && multibonusEnabled ? bonusMultiplos as any : [] as any,
+        bonus_multiplos_json: bonusEnabled && multibonusEnabled ? bonusMultiplos.map(({ id, ...bonus }) => bonus) as any : [] as any,
         observacoes: observacoes || null,
       };
 
@@ -376,7 +387,7 @@ export default function BookmakerCatalogoDialog({
             <div className="space-y-3">
               <Label>Links de Acesso *</Label>
               {links.map((link, index) => (
-                <div key={index}>
+                <div key={link.id}>
                   {index === 0 ? (
                     <div className="grid grid-cols-[130px_1fr_40px] gap-3 items-center">
                       <div className="h-10 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm flex items-center justify-center font-medium">
@@ -386,8 +397,8 @@ export default function BookmakerCatalogoDialog({
                         placeholder="https://exemplo.com"
                         value={link.url}
                         onChange={(e) => {
-                          updateLink(index, "url", e.target.value);
-                          updateLink(index, "referencia", "PADRÃO");
+                          updateLink(link.id, "url", e.target.value);
+                          updateLink(link.id, "referencia", "PADRÃO");
                         }}
                         className="h-10"
                         required
@@ -409,7 +420,7 @@ export default function BookmakerCatalogoDialog({
                         value={link.referencia}
                         onChange={(e) => {
                           const upperValue = e.target.value.toUpperCase();
-                          const error = validateDuplicateReference(upperValue, index);
+                          const error = validateDuplicateReference(upperValue, link.id);
                           if (error && upperValue.trim()) {
                             toast({
                               title: "Referência duplicada",
@@ -417,19 +428,19 @@ export default function BookmakerCatalogoDialog({
                               variant: "destructive",
                             });
                           }
-                          updateLink(index, "referencia", upperValue);
+                          updateLink(link.id, "referencia", upperValue);
                         }}
                         className="h-10"
                       />
                       <Input
                         placeholder="https://exemplo.com"
                         value={link.url}
-                        onChange={(e) => updateLink(index, "url", e.target.value)}
+                        onChange={(e) => updateLink(link.id, "url", e.target.value)}
                         className="h-10"
                       />
                       <Badge
                         variant="outline"
-                        onClick={() => removeLink(index)}
+                        onClick={() => removeLink(link.id)}
                         className="h-8 w-8 p-0 cursor-pointer hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors flex items-center justify-center"
                       >
                         <X className="h-3 w-3" />
@@ -586,13 +597,13 @@ export default function BookmakerCatalogoDialog({
                     )}
                   </div>
                   {bonusMultiplos.map((bonus, index) => (
-                    <div key={index} className="space-y-4 p-6 border rounded-lg bg-card/50">
+                    <div key={bonus.id} className="space-y-4 p-6 border rounded-lg bg-card/50">
                       <div className="flex items-center justify-between">
                         <h5 className="font-medium">{index + 1}º Depósito</h5>
                         {bonusMultiplos.length > 1 && (
                           <Badge
                             variant="outline"
-                            onClick={() => removeBonusMultiplo(index)}
+                            onClick={() => removeBonusMultiplo(bonus.id!)}
                             className="h-8 px-2 cursor-pointer hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors"
                           >
                             <X className="h-3 w-3" />
@@ -605,7 +616,7 @@ export default function BookmakerCatalogoDialog({
                           <Input
                             type="number"
                             value={bonus.percent}
-                            onChange={(e) => updateBonusMultiplo(index, "percent", e.target.value)}
+                            onChange={(e) => updateBonusMultiplo(bonus.id!, "percent", e.target.value)}
                             placeholder="100"
                           />
                         </div>
@@ -613,7 +624,7 @@ export default function BookmakerCatalogoDialog({
                           <Label>Moeda</Label>
                           <Select
                             value={bonus.moeda}
-                            onValueChange={(value) => updateBonusMultiplo(index, "moeda", value)}
+                            onValueChange={(value) => updateBonusMultiplo(bonus.id!, "moeda", value)}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -630,7 +641,7 @@ export default function BookmakerCatalogoDialog({
                           <Input
                             type="number"
                             value={bonus.valorMax}
-                            onChange={(e) => updateBonusMultiplo(index, "valorMax", e.target.value)}
+                            onChange={(e) => updateBonusMultiplo(bonus.id!, "valorMax", e.target.value)}
                             placeholder="500"
                           />
                         </div>
@@ -640,7 +651,7 @@ export default function BookmakerCatalogoDialog({
                             type="number"
                             step="0.01"
                             value={bonus.oddMin}
-                            onChange={(e) => updateBonusMultiplo(index, "oddMin", e.target.value)}
+                            onChange={(e) => updateBonusMultiplo(bonus.id!, "oddMin", e.target.value)}
                             placeholder="1.50"
                           />
                         </div>
@@ -648,7 +659,7 @@ export default function BookmakerCatalogoDialog({
                           <Label>Tipo de Aposta</Label>
                           <Select
                             value={bonus.tipo}
-                            onValueChange={(value) => updateBonusMultiplo(index, "tipo", value)}
+                            onValueChange={(value) => updateBonusMultiplo(bonus.id!, "tipo", value)}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -665,7 +676,7 @@ export default function BookmakerCatalogoDialog({
                           <Input
                             type="number"
                             value={bonus.rolloverVezes}
-                            onChange={(e) => updateBonusMultiplo(index, "rolloverVezes", e.target.value)}
+                            onChange={(e) => updateBonusMultiplo(bonus.id!, "rolloverVezes", e.target.value)}
                             placeholder="5"
                           />
                         </div>
@@ -673,7 +684,7 @@ export default function BookmakerCatalogoDialog({
                           <Label>Base do Rollover</Label>
                           <Select
                             value={bonus.rolloverBase}
-                            onValueChange={(value) => updateBonusMultiplo(index, "rolloverBase", value)}
+                            onValueChange={(value) => updateBonusMultiplo(bonus.id!, "rolloverBase", value)}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -689,7 +700,7 @@ export default function BookmakerCatalogoDialog({
                           <Input
                             type="number"
                             value={bonus.prazo}
-                            onChange={(e) => updateBonusMultiplo(index, "prazo", e.target.value)}
+                            onChange={(e) => updateBonusMultiplo(bonus.id!, "prazo", e.target.value)}
                             placeholder="30"
                           />
                         </div>
