@@ -201,30 +201,6 @@ export default function BookmakerCatalogoDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Validar nome duplicado
-      const nomeNormalizado = nome.trim().toUpperCase();
-      const { data: existingBookmakers, error: checkError } = await supabase
-        .from("bookmakers_catalogo")
-        .select("id, nome")
-        .or(`user_id.eq.${user.id},is_system.eq.true`)
-        .ilike("nome", nomeNormalizado);
-
-      if (checkError) throw checkError;
-
-      const isDuplicate = existingBookmakers?.some(
-        (bm) => bm.nome.toUpperCase() === nomeNormalizado && bm.id !== bookmaker?.id
-      );
-
-      if (isDuplicate) {
-        toast({
-          title: "Nome duplicado",
-          description: `Já existe uma casa com o nome "${nome}". Escolha um nome diferente.`,
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-
       // Garantir que o primeiro link seja sempre PADRÃO
       const linksToSave = [...links];
       if (linksToSave.length > 0) {
@@ -236,6 +212,52 @@ export default function BookmakerCatalogoDialog({
         toast({
           title: "Erro de validação",
           description: "O link de acesso padrão é obrigatório.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      const urlPadrao = linksToSave[0].url.trim().toLowerCase();
+
+      // Validar nome duplicado (normalizado sem espaços)
+      const nomeNormalizado = nome.trim().toUpperCase().replace(/\s+/g, '');
+      const { data: existingBookmakers, error: checkError } = await supabase
+        .from("bookmakers_catalogo")
+        .select("id, nome, links_json")
+        .or(`user_id.eq.${user.id},is_system.eq.true`);
+
+      if (checkError) throw checkError;
+
+      // Verificar nome duplicado (sem considerar espaços)
+      const duplicateByName = existingBookmakers?.find(
+        (bm) => bm.nome.toUpperCase().replace(/\s+/g, '') === nomeNormalizado && bm.id !== bookmaker?.id
+      );
+
+      if (duplicateByName) {
+        toast({
+          title: "Nome duplicado",
+          description: `Já existe uma casa com o nome "${duplicateByName.nome}". Os nomes são considerados iguais mesmo com espaços diferentes.`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Verificar URL padrão duplicada
+      const duplicateByUrl = existingBookmakers?.find((bm) => {
+        if (bm.id === bookmaker?.id) return false;
+        
+        const links = Array.isArray(bm.links_json) ? bm.links_json : [];
+        const linkPadrao = links.find((l: any) => l?.referencia === "PADRÃO") as { url?: string; referencia?: string } | undefined;
+        
+        return linkPadrao?.url?.trim().toLowerCase() === urlPadrao;
+      });
+
+      if (duplicateByUrl) {
+        toast({
+          title: "URL duplicada",
+          description: `O link de acesso padrão já está cadastrado na casa "${duplicateByUrl.nome}". Use uma URL diferente.`,
           variant: "destructive",
         });
         setLoading(false);
