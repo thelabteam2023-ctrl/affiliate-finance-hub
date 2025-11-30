@@ -180,7 +180,7 @@ export default function Caixa() {
       // Calculate balance impact
       const valorImpacto = t.tipo_transacao === "APORTE_FINANCEIRO" || t.destino_tipo === "CAIXA_OPERACIONAL"
         ? t.valor
-        : t.origem_tipo === "CAIXA_OPERACIONAL"
+        : t.tipo_transacao === "LIQUIDACAO" || t.origem_tipo === "CAIXA_OPERACIONAL"
         ? -t.valor
         : 0;
 
@@ -221,6 +221,7 @@ export default function Caixa() {
   const getTipoLabel = (tipo: string) => {
     const labels: { [key: string]: string } = {
       APORTE_FINANCEIRO: "Aporte",
+      LIQUIDACAO: "Liquidação",
       TRANSFERENCIA: "Transferência",
       DEPOSITO: "Depósito",
       SAQUE: "Saque",
@@ -231,6 +232,7 @@ export default function Caixa() {
   const getTipoColor = (tipo: string) => {
     const colors: { [key: string]: string } = {
       APORTE_FINANCEIRO: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+      LIQUIDACAO: "bg-amber-500/20 text-amber-400 border-amber-500/30",
       TRANSFERENCIA: "bg-blue-500/20 text-blue-400 border-blue-500/30",
       DEPOSITO: "bg-amber-500/20 text-amber-400 border-amber-500/30",
       SAQUE: "bg-purple-500/20 text-purple-400 border-purple-500/30",
@@ -248,6 +250,10 @@ export default function Caixa() {
   const getOrigemLabel = (transacao: Transacao): string => {
     if (transacao.tipo_transacao === "APORTE_FINANCEIRO") {
       return "Aporte Externo";
+    }
+    
+    if (transacao.tipo_transacao === "LIQUIDACAO") {
+      return "Caixa Operacional";
     }
     
     if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
@@ -270,6 +276,10 @@ export default function Caixa() {
   };
 
   const getDestinoLabel = (transacao: Transacao): string => {
+    if (transacao.tipo_transacao === "LIQUIDACAO") {
+      return "Investidor Externo";
+    }
+    
     if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
       return "Caixa Operacional";
     }
@@ -422,6 +432,7 @@ export default function Caixa() {
                 <SelectContent>
                   <SelectItem value="TODOS">Todos os tipos</SelectItem>
                   <SelectItem value="APORTE_FINANCEIRO">Aporte</SelectItem>
+                  <SelectItem value="LIQUIDACAO">Liquidação</SelectItem>
                   <SelectItem value="TRANSFERENCIA">Transferência</SelectItem>
                   <SelectItem value="DEPOSITO">Depósito</SelectItem>
                   <SelectItem value="SAQUE">Saque</SelectItem>
