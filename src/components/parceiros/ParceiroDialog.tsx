@@ -69,9 +69,10 @@ interface ParceiroDialogProps {
   onClose: () => void;
   parceiro: any | null;
   viewMode?: boolean;
+  initialTab?: "dados" | "bancos" | "crypto";
 }
 
-export default function ParceiroDialog({ open, onClose, parceiro, viewMode = false }: ParceiroDialogProps) {
+export default function ParceiroDialog({ open, onClose, parceiro, viewMode = false, initialTab = "dados" }: ParceiroDialogProps) {
   const [loading, setLoading] = useState(false);
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
@@ -87,7 +88,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [cryptoWallets, setCryptoWallets] = useState<CryptoWallet[]>([]);
   const [bancos, setBancos] = useState<Banco[]>([]);
   const [redes, setRedes] = useState<RedeCrypto[]>([]);
-  const [activeTab, setActiveTab] = useState("dados");
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [parceiroId, setParceiroId] = useState<string | null>(null);
   const [cpfError, setCpfError] = useState<string>("");
   const [telefoneError, setTelefoneError] = useState<string>("");
@@ -120,6 +121,12 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     fetchBancos();
     fetchRedes();
   }, []);
+
+  useEffect(() => {
+    if (open) {
+      setActiveTab(initialTab);
+    }
+  }, [open, initialTab]);
 
   useEffect(() => {
     if (parceiro) {
@@ -754,7 +761,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "dados" | "bancos" | "crypto")} className="w-full">
             <TabsList className="w-full">
               <TabsTrigger value="dados">
                 <User className="w-4 h-4" />
