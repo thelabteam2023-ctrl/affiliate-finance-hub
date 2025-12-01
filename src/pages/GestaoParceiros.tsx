@@ -522,10 +522,10 @@ export default function GestaoParceiros() {
                           {parceiro.contas_bancarias.map((conta: any) => (
                             <div key={conta.id} className="flex items-center justify-between text-xs bg-accent/30 rounded p-2">
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">{conta.banco} - {conta.titular}</p>
+                                <p className="font-medium truncate">{conta.banco}</p>
                                 {conta.pix_key && (
                                   <p className="text-[10px] text-muted-foreground font-mono truncate">
-                                    PIX: {conta.pix_key}
+                                    PIX: ***{conta.pix_key.slice(-4)}
                                   </p>
                                 )}
                               </div>
@@ -555,8 +555,13 @@ export default function GestaoParceiros() {
                             <div key={wallet.id} className="flex items-center justify-between text-xs bg-accent/30 rounded p-2">
                               <div className="flex-1 min-w-0">
                                 <p className="font-medium truncate">{wallet.exchange || wallet.network}</p>
+                                {wallet.moeda && wallet.moeda.length > 0 && (
+                                  <p className="text-[10px] text-primary font-semibold">
+                                    {wallet.moeda.join(", ")}
+                                  </p>
+                                )}
                                 <p className="text-[10px] text-muted-foreground font-mono truncate">
-                                  {wallet.endereco.slice(0, 8)}...{wallet.endereco.slice(-8)}
+                                  ***{wallet.endereco.slice(-6)}
                                 </p>
                               </div>
                               <button
@@ -681,7 +686,7 @@ export default function GestaoParceiros() {
                                   <p className="font-medium truncate max-w-[150px]">{conta.banco}</p>
                                   {conta.pix_key && (
                                     <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[150px]">
-                                      {conta.pix_key}
+                                      PIX: ***{conta.pix_key.slice(-4)}
                                     </p>
                                   )}
                                 </div>
@@ -708,8 +713,13 @@ export default function GestaoParceiros() {
                               <div key={wallet.id} className="flex items-center gap-2 bg-accent/30 rounded px-2 py-1.5 text-xs">
                                 <div className="min-w-0 flex-1">
                                   <p className="font-medium truncate max-w-[150px]">{wallet.exchange || wallet.network}</p>
+                                  {wallet.moeda && wallet.moeda.length > 0 && (
+                                    <p className="text-[10px] text-primary font-semibold">
+                                      {wallet.moeda.join(", ")}
+                                    </p>
+                                  )}
                                   <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[150px]">
-                                    {wallet.endereco.slice(0, 6)}...{wallet.endereco.slice(-6)}
+                                    ***{wallet.endereco.slice(-6)}
                                   </p>
                                 </div>
                                 <button
