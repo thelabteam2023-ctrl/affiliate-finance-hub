@@ -571,44 +571,44 @@ export default function ParceiroFinanceiroDialog({
                             )}
                             
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">{bookmaker.nome}</p>
+                              <div className="flex items-center gap-1.5">
+                                <p className="font-medium text-sm truncate">{bookmaker.nome}</p>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Badge 
+                                      variant="outline"
+                                      className={`cursor-pointer transition-all hover:opacity-80 text-[10px] px-1.5 py-0 ${
+                                        bookmaker.status === "ativo"
+                                          ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/30"
+                                          : "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
+                                      }`}
+                                    >
+                                      {bookmaker.status === "ativo" ? "ATIVO" : "LIMITADA"}
+                                    </Badge>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-64 p-4" align="end">
+                                    <div className="space-y-3">
+                                      <p className="text-sm font-medium">Alterar Status</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Deseja alterar o status de <strong>{bookmaker.nome}</strong> para{" "}
+                                        <strong>{bookmaker.status === "ativo" ? "LIMITADA" : "ATIVO"}</strong>?
+                                      </p>
+                                      <Button
+                                        size="sm"
+                                        className="w-full"
+                                        onClick={() => handleToggleStatus(bookmaker.id, bookmaker.status)}
+                                        disabled={editingStatus === bookmaker.id}
+                                      >
+                                        {editingStatus === bookmaker.id ? "Alterando..." : "Confirmar"}
+                                      </Button>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
                               <p className="text-xs text-muted-foreground truncate">
                                 {bookmaker.login_username}
                               </p>
                             </div>
-                            
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Badge 
-                                  variant="outline"
-                                  className={`cursor-pointer transition-all hover:opacity-80 ${
-                                    bookmaker.status === "ativo"
-                                      ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/30"
-                                      : "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
-                                  }`}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {bookmaker.status === "ativo" ? "ATIVO" : "LIMITADA"}
-                                </Badge>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-64 p-4" align="end">
-                                <div className="space-y-3">
-                                  <p className="text-sm font-medium">Alterar Status</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Deseja alterar o status de <strong>{bookmaker.nome}</strong> para{" "}
-                                    <strong>{bookmaker.status === "ativo" ? "LIMITADA" : "ATIVO"}</strong>?
-                                  </p>
-                                  <Button
-                                    size="sm"
-                                    className="w-full"
-                                    onClick={() => handleToggleStatus(bookmaker.id, bookmaker.status)}
-                                    disabled={editingStatus === bookmaker.id}
-                                  >
-                                    {editingStatus === bookmaker.id ? "Alterando..." : "Confirmar"}
-                                  </Button>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
                             
                             <div className="text-right flex-shrink-0">
                               <p className="text-sm font-bold">
