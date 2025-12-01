@@ -22,6 +22,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
 import BookmakerSelect from "@/components/bookmakers/BookmakerSelect";
+import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { Loader2, ArrowLeftRight, AlertTriangle } from "lucide-react";
 
 interface CaixaTransacaoDialogProps {
@@ -73,7 +74,7 @@ export function CaixaTransacaoDialog({
   // Form state
   const [tipoTransacao, setTipoTransacao] = useState<string>("");
   const [fluxoAporte, setFluxoAporte] = useState<"APORTE" | "LIQUIDACAO">("APORTE");
-  const [nomeInvestidor, setNomeInvestidor] = useState<string>("");
+  const [investidorId, setInvestidorId] = useState<string>("");
   const [tipoMoeda, setTipoMoeda] = useState<string>("FIAT");
   const [moeda, setMoeda] = useState<string>("BRL");
   const [coin, setCoin] = useState<string>("");
@@ -101,6 +102,7 @@ export function CaixaTransacaoDialog({
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [saldosCaixaFiat, setSaldosCaixaFiat] = useState<SaldoCaixaFiat[]>([]);
   const [saldosCaixaCrypto, setSaldosCaixaCrypto] = useState<SaldoCaixaCrypto[]>([]);
+  const [investidores, setInvestidores] = useState<Array<{ id: string; nome: string }>>([]);
   
   // Transfer flow type for TRANSFERENCIA
   const [fluxoTransferencia, setFluxoTransferencia] = useState<"CAIXA_PARCEIRO" | "PARCEIRO_PARCEIRO">("CAIXA_PARCEIRO");
@@ -110,6 +112,7 @@ export function CaixaTransacaoDialog({
       fetchAccountsAndWallets();
       fetchBookmakers();
       fetchSaldosCaixa();
+      fetchInvestidores();
     }
   }, [open]);
 
@@ -127,7 +130,7 @@ export function CaixaTransacaoDialog({
     setDestinoBookmakerId("");
     setFluxoTransferencia("CAIXA_PARCEIRO");
     setFluxoAporte("APORTE");
-    setNomeInvestidor("");
+    setInvestidorId("");
 
     // Set defaults based on transaction type
     if (tipoTransacao === "APORTE_FINANCEIRO") {
@@ -210,10 +213,28 @@ export function CaixaTransacaoDialog({
     }
   };
 
+  const fetchInvestidores = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("investidores")
+        .select("id, nome")
+        .eq("user_id", user.id)
+        .eq("status", "ativo");
+
+      if (error) throw error;
+      setInvestidores(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar investidores:", error);
+    }
+  };
+
   const resetForm = () => {
     setTipoTransacao("");
     setFluxoAporte("APORTE");
-    setNomeInvestidor("");
+    setInvestidorId("");
     setTipoMoeda("FIAT");
     setMoeda("BRL");
     setCoin("");
@@ -253,7 +274,8 @@ export function CaixaTransacaoDialog({
   const getOrigemLabel = (): string => {
     if (tipoTransacao === "APORTE_FINANCEIRO") {
       if (fluxoAporte === "APORTE") {
-        return nomeInvestidor.trim() ? `Investidor: ${nomeInvestidor}` : "Investidor Externo";
+        const investidor = investidores.find(inv => inv.id === investidorId);
+        return investidor ? `Investidor: ${investidor.nome}` : "Investidor Externo";
       }
       return "Caixa Operacional";
     }
@@ -281,7 +303,8 @@ export function CaixaTransacaoDialog({
       if (fluxoAporte === "APORTE") {
         return "Caixa Operacional";
       }
-      return nomeInvestidor.trim() ? `Investidor: ${nomeInvestidor}` : "Investidor Externo";
+      const investidor = investidores.find(inv => inv.id === investidorId);
+      return investidor ? `Investidor: ${investidor.nome}` : "Investidor Externo";
     }
     if (tipoTransacao === "SAQUE") {
       return "Caixa Operacional";
@@ -318,10 +341,10 @@ export function CaixaTransacaoDialog({
         return;
       }
 
-      if (tipoTransacao === "APORTE_FINANCEIRO" && !nomeInvestidor.trim()) {
+      if (tipoTransacao === "APORTE_FINANCEIRO" && !investidorId.trim()) {
         toast({
           title: "Erro",
-          description: "Informe o nome do investidor",
+          description: "Selecione o investidor",
           variant: "destructive",
         });
         return;
@@ -366,7 +389,7 @@ export function CaixaTransacaoDialog({
         valor: parseFloat(valor),
         descricao,
         status: "CONFIRMADO",
-        nome_investidor: tipoTransacao === "APORTE_FINANCEIRO" ? nomeInvestidor : null,
+        investidor_id: tipoTransacao === "APORTE_FINANCEIRO" ? investidorId : null,
       };
 
       // Add crypto-specific fields
@@ -443,10 +466,11 @@ export function CaixaTransacaoDialog({
 
   const renderOrigemFields = () => {
     if (tipoTransacao === "APORTE_FINANCEIRO") {
+      const investidor = investidores.find(inv => inv.id === investidorId);
       return (
         <div className="text-sm text-muted-foreground italic text-center">
           {fluxoAporte === "APORTE" 
-            ? (nomeInvestidor.trim() ? `Investidor: ${nomeInvestidor}` : "Investidor Externo")
+            ? (investidor ? `Investidor: ${investidor.nome}` : "Investidor Externo")
             : "Caixa Operacional"}
         </div>
       );
@@ -572,11 +596,12 @@ export function CaixaTransacaoDialog({
 
   const renderDestinoFields = () => {
     if (tipoTransacao === "APORTE_FINANCEIRO") {
+      const investidor = investidores.find(inv => inv.id === investidorId);
       return (
         <div className="text-sm text-muted-foreground italic text-center">
           {fluxoAporte === "APORTE" 
             ? "Caixa Operacional"
-            : (nomeInvestidor.trim() ? `Investidor: ${nomeInvestidor}` : "Investidor Externo")}
+            : (investidor ? `Investidor: ${investidor.nome}` : "Investidor Externo")}
         </div>
       );
     }
@@ -917,16 +942,14 @@ export function CaixaTransacaoDialog({
             </div>
           )}
 
-          {/* Nome do Investidor - Centralizado */}
+          {/* Investidor - Centralizado */}
           {tipoTransacao === "APORTE_FINANCEIRO" && (
             <div className="flex justify-center">
               <div className="w-[40%] space-y-2">
-                <Label htmlFor="nomeInvestidor" className="text-center block">Nome do Investidor</Label>
-                <Input
-                  id="nomeInvestidor"
-                  value={nomeInvestidor}
-                  onChange={(e) => setNomeInvestidor(e.target.value)}
-                  placeholder="Digite o nome do investidor"
+                <Label htmlFor="investidor" className="text-center block">Investidor</Label>
+                <InvestidorSelect
+                  value={investidorId}
+                  onValueChange={setInvestidorId}
                 />
               </div>
             </div>
