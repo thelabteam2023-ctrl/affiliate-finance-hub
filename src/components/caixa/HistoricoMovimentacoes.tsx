@@ -188,13 +188,35 @@ export function HistoricoMovimentacoes({
                     {getTipoLabel(transacao.tipo_transacao, transacao)}
                   </Badge>
                   <div className="flex items-center gap-2 flex-1">
-                    <span className="text-sm text-muted-foreground">
-                      {getOrigemLabel(transacao)}
-                    </span>
+                    {transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.destino_tipo === "CAIXA_OPERACIONAL" ? (
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">Investidor</span>
+                        <span className="text-xs text-muted-foreground/70">
+                          {transacao.nome_investidor ? 
+                            transacao.nome_investidor.split(' ').slice(0, 2).join(' ') : 
+                            'Externo'}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        {getOrigemLabel(transacao)}
+                      </span>
+                    )}
                     <ArrowRight className="h-4 w-4 text-primary" />
-                    <span className="text-sm text-muted-foreground">
-                      {getDestinoLabel(transacao)}
-                    </span>
+                    {transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.origem_tipo === "CAIXA_OPERACIONAL" ? (
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">Investidor</span>
+                        <span className="text-xs text-muted-foreground/70">
+                          {transacao.nome_investidor ? 
+                            transacao.nome_investidor.split(' ').slice(0, 2).join(' ') : 
+                            'Externo'}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        {getDestinoLabel(transacao)}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
