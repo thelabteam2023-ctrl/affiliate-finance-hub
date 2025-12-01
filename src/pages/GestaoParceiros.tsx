@@ -515,39 +515,6 @@ export default function GestaoParceiros() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3 text-sm pt-2 border-t mt-2">
-                    {/* Contas Bancárias */}
-                    {parceiro.contas_bancarias && parceiro.contas_bancarias.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-2">Contas Bancárias</p>
-                        <div className="space-y-1.5">
-                          {parceiro.contas_bancarias.map((conta: any) => (
-                            <BankAccountItem key={conta.id} conta={conta} variant="card" showSensitiveData={showCPF} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Wallets Crypto */}
-                    {parceiro.wallets_crypto && parceiro.wallets_crypto.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-2">Wallets Crypto</p>
-                        <div className="space-y-1.5">
-                          {parceiro.wallets_crypto.map((wallet: any) => (
-                            <WalletItem key={wallet.id} wallet={wallet} variant="card" />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Bookmakers */}
-                    {roiData.has(parceiro.id) && (
-                      <p className="text-muted-foreground">
-                        <span className="font-medium">Bookmakers:</span>{" "}
-                        {(roiData.get(parceiro.id)?.num_bookmakers || 0) + (roiData.get(parceiro.id)?.num_bookmakers_limitadas || 0)}
-                      </p>
-                    )}
-                  </div>
                   {roiData.has(parceiro.id) && (
                     <div className="pt-3 border-t mt-3">
                       <div>
@@ -638,31 +605,8 @@ export default function GestaoParceiros() {
                         </div>
                       </div>
                       <div className="flex items-center gap-3 text-sm">
-                        {/* Contas Bancárias */}
-                        {parceiro.contas_bancarias && parceiro.contas_bancarias.length > 0 && (
-                          <div className="space-y-1">
-                            {parceiro.contas_bancarias.map((conta: any) => (
-                              <BankAccountItem key={conta.id} conta={conta} variant="list" showSensitiveData={showCPF} />
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Wallets Crypto */}
-                        {parceiro.wallets_crypto && parceiro.wallets_crypto.length > 0 && (
-                          <div className="space-y-1">
-                            {parceiro.wallets_crypto.map((wallet: any) => (
-                              <WalletItem key={wallet.id} wallet={wallet} variant="list" />
-                            ))}
-                          </div>
-                        )}
                         {roiData.has(parceiro.id) && (
                           <>
-                            <div className="text-center px-3 py-2 bg-accent rounded-lg">
-                              <div className="font-bold text-foreground">
-                                {(roiData.get(parceiro.id)?.num_bookmakers || 0) + (roiData.get(parceiro.id)?.num_bookmakers_limitadas || 0)}
-                              </div>
-                              <div className="text-xs">Bookmakers</div>
-                            </div>
                             <div className="text-center px-3 py-2 bg-accent rounded-lg">
                               <div className={`font-bold ${
                                 roiData.get(parceiro.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
