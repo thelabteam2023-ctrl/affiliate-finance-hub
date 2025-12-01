@@ -14,6 +14,7 @@ interface BookmakerSelectProps {
   value: string;
   onValueChange: (value: string) => void;
   disabled?: boolean;
+  parceiroId?: string;
 }
 
 interface BookmakerCatalogo {
@@ -23,24 +24,54 @@ interface BookmakerCatalogo {
   links_json: any;
 }
 
-export default function BookmakerSelect({ value, onValueChange, disabled }: BookmakerSelectProps) {
+export default function BookmakerSelect({ value, onValueChange, disabled, parceiroId }: BookmakerSelectProps) {
   const [bookmakers, setBookmakers] = useState<BookmakerCatalogo[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchBookmakers();
-  }, []);
+  }, [parceiroId]);
 
   const fetchBookmakers = async () => {
     try {
-      const { data, error } = await supabase
-        .from("bookmakers_catalogo")
-        .select("id, nome, logo_url, links_json")
-        .order("nome");
+      if (parceiroId) {
+        // Se parceiroId for fornecido, buscar apenas bookmakers vinculadas a esse parceiro
+        const { data: vinculosData, error: vinculosError } = await supabase
+          .from("bookmakers")
+          .select("bookmaker_catalogo_id")
+          .eq("parceiro_id", parceiroId);
 
-      if (error) throw error;
-      setBookmakers(data || []);
+        if (vinculosError) throw vinculosError;
+
+        const catalogoIds = vinculosData
+          ?.map(v => v.bookmaker_catalogo_id)
+          .filter(Boolean) as string[];
+
+        if (catalogoIds.length === 0) {
+          setBookmakers([]);
+          setLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("bookmakers_catalogo")
+          .select("id, nome, logo_url, links_json")
+          .in("id", catalogoIds)
+          .order("nome");
+
+        if (error) throw error;
+        setBookmakers(data || []);
+      } else {
+        // Sem filtro, buscar todos
+        const { data, error } = await supabase
+          .from("bookmakers_catalogo")
+          .select("id, nome, logo_url, links_json")
+          .order("nome");
+
+        if (error) throw error;
+        setBookmakers(data || []);
+      }
     } catch (error) {
       console.error("Erro ao carregar bookmakers:", error);
     } finally {
@@ -89,7 +120,9 @@ export default function BookmakerSelect({ value, onValueChange, disabled }: Book
         </div>
         {filteredBookmakers.length === 0 ? (
           <div className="py-6 text-center text-sm text-muted-foreground">
-            Nenhuma bookmaker encontrada
+            {parceiroId 
+              ? "Este parceiro não possui bookmakers vinculadas"
+              : "Nenhuma bookmaker encontrada"}
           </div>
         ) : (
           filteredBookmakers.map((bookmaker) => (
