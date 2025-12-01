@@ -204,6 +204,7 @@ export type Database = {
           destino_tipo: string | null
           destino_wallet_id: string | null
           id: string
+          investidor_id: string | null
           moeda: string
           nome_investidor: string | null
           origem_bookmaker_id: string | null
@@ -232,6 +233,7 @@ export type Database = {
           destino_tipo?: string | null
           destino_wallet_id?: string | null
           id?: string
+          investidor_id?: string | null
           moeda: string
           nome_investidor?: string | null
           origem_bookmaker_id?: string | null
@@ -260,6 +262,7 @@ export type Database = {
           destino_tipo?: string | null
           destino_wallet_id?: string | null
           id?: string
+          investidor_id?: string | null
           moeda?: string
           nome_investidor?: string | null
           origem_bookmaker_id?: string | null
@@ -331,6 +334,13 @@ export type Database = {
             columns: ["destino_wallet_id"]
             isOneToOne: false
             referencedRelation: "wallets_crypto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "investidores"
             referencedColumns: ["id"]
           },
           {
@@ -464,6 +474,39 @@ export type Database = {
             referencedColumns: ["parceiro_id"]
           },
         ]
+      }
+      investidores: {
+        Row: {
+          cpf: string
+          created_at: string
+          id: string
+          nome: string
+          observacoes: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cpf: string
+          created_at?: string
+          id?: string
+          nome: string
+          observacoes?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cpf?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       parceiros: {
         Row: {
