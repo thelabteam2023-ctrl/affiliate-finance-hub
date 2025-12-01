@@ -344,6 +344,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_ledger_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "v_roi_investidores"
+            referencedColumns: ["investidor_id"]
+          },
+          {
             foreignKeyName: "cash_ledger_origem_bookmaker_id_fkey"
             columns: ["origem_bookmaker_id"]
             isOneToOne: false
@@ -756,6 +763,20 @@ export type Database = {
       }
     }
     Views: {
+      v_roi_investidores: {
+        Row: {
+          cpf: string | null
+          investidor_id: string | null
+          lucro_prejuizo: number | null
+          nome: string | null
+          roi_percentual: number | null
+          status: string | null
+          total_aportes: number | null
+          total_liquidacoes: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       v_saldo_caixa_crypto: {
         Row: {
           coin: string | null
