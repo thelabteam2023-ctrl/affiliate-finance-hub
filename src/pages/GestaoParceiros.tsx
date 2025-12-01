@@ -42,6 +42,7 @@ interface ParceiroROI {
   lucro_prejuizo: number;
   roi_percentual: number;
   num_bookmakers: number;
+  num_bookmakers_limitadas: number;
   saldo_bookmakers: number;
 }
 
@@ -147,13 +148,15 @@ export default function GestaoParceiros() {
       });
 
       // Process bookmaker data
-      const parceiroBookmakers = new Map<string, { count: number; saldo: number }>();
+      const parceiroBookmakers = new Map<string, { count: number; countLimitadas: number; saldo: number }>();
       
       bookmakersData?.forEach((bm) => {
         if (!bm.parceiro_id) return;
-        const current = parceiroBookmakers.get(bm.parceiro_id) || { count: 0, saldo: 0 };
+        const current = parceiroBookmakers.get(bm.parceiro_id) || { count: 0, countLimitadas: 0, saldo: 0 };
         if (bm.status === "ativo") {
           current.count += 1;
+        } else if (bm.status === "limitada") {
+          current.countLimitadas += 1;
         }
         current.saldo += Number(bm.saldo_atual);
         parceiroBookmakers.set(bm.parceiro_id, current);
@@ -161,7 +164,7 @@ export default function GestaoParceiros() {
 
       // Combine all data
       parceiroFinancials.forEach((financials, parceiroId) => {
-        const bookmakerInfo = parceiroBookmakers.get(parceiroId) || { count: 0, saldo: 0 };
+        const bookmakerInfo = parceiroBookmakers.get(parceiroId) || { count: 0, countLimitadas: 0, saldo: 0 };
         const lucro = financials.sacado - financials.depositado;
         const roi = financials.depositado > 0 ? (lucro / financials.depositado) * 100 : 0;
         
@@ -172,6 +175,7 @@ export default function GestaoParceiros() {
           lucro_prejuizo: lucro,
           roi_percentual: roi,
           num_bookmakers: bookmakerInfo.count,
+          num_bookmakers_limitadas: bookmakerInfo.countLimitadas,
           saldo_bookmakers: bookmakerInfo.saldo,
         });
       });
@@ -186,6 +190,7 @@ export default function GestaoParceiros() {
             lucro_prejuizo: 0,
             roi_percentual: 0,
             num_bookmakers: bookmakerInfo.count,
+            num_bookmakers_limitadas: bookmakerInfo.countLimitadas,
             saldo_bookmakers: bookmakerInfo.saldo,
           });
         }
@@ -486,7 +491,7 @@ export default function GestaoParceiros() {
                     {roiData.has(parceiro.id) && (
                       <p className="text-muted-foreground">
                         <span className="font-medium">Bookmakers:</span>{" "}
-                        {roiData.get(parceiro.id)?.num_bookmakers || 0}
+                        {(roiData.get(parceiro.id)?.num_bookmakers || 0) + (roiData.get(parceiro.id)?.num_bookmakers_limitadas || 0)}
                       </p>
                     )}
                   </div>
@@ -608,7 +613,9 @@ export default function GestaoParceiros() {
                         {roiData.has(parceiro.id) && (
                           <>
                             <div className="text-center px-3 py-2 bg-accent rounded-lg">
-                              <div className="font-bold text-foreground">{roiData.get(parceiro.id)?.num_bookmakers || 0}</div>
+                              <div className="font-bold text-foreground">
+                                {(roiData.get(parceiro.id)?.num_bookmakers || 0) + (roiData.get(parceiro.id)?.num_bookmakers_limitadas || 0)}
+                              </div>
                               <div className="text-xs">Bookmakers</div>
                             </div>
                             <div className="text-center px-3 py-2 bg-accent rounded-lg">

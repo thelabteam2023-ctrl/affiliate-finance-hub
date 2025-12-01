@@ -23,6 +23,7 @@ interface ParceiroFinanceiroDialogProps {
     lucro_prejuizo: number;
     roi_percentual: number;
     num_bookmakers: number;
+    num_bookmakers_limitadas: number;
     saldo_bookmakers: number;
   } | null;
 }
@@ -217,23 +218,39 @@ export default function ParceiroFinanceiroDialog({
 
                 <Card>
                   <CardContent className="pt-6">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <div className="text-center">
                         <p className="text-sm text-muted-foreground mb-2">
                           Bookmakers Ativos
                         </p>
-                        <p className="text-xl font-bold">
+                        <p className="text-xl font-bold text-green-600">
                           {roiData.num_bookmakers}
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm text-muted-foreground mb-2">
-                          Saldo Total em Bookmakers
+                          Bookmakers Limitadas
                         </p>
-                        <p className="text-xl font-bold">
-                          {formatCurrency(roiData.saldo_bookmakers)}
+                        <p className="text-xl font-bold text-yellow-600">
+                          {roiData.num_bookmakers_limitadas}
                         </p>
                       </div>
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Total de Bookmakers
+                        </p>
+                        <p className="text-xl font-bold">
+                          {roiData.num_bookmakers + roiData.num_bookmakers_limitadas}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t text-center">
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Saldo Total em Bookmakers
+                      </p>
+                      <p className="text-2xl font-bold">
+                        {formatCurrency(roiData.saldo_bookmakers)}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
