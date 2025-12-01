@@ -223,8 +223,9 @@ export function CaixaTransacaoDialog({
     if (tipoTransacao === "APORTE_FINANCEIRO") {
       // Will be set by fluxoAporte toggle
     } else if (tipoTransacao === "DEPOSITO") {
-      setOrigemTipo("CAIXA_OPERACIONAL");
+      setOrigemTipo("PARCEIRO_CONTA");
       setDestinoTipo("BOOKMAKER");
+      setTipoMoeda("FIAT"); // DEPOSITO only supports FIAT
     } else if (tipoTransacao === "SAQUE") {
       setOrigemTipo("BOOKMAKER");
       setDestinoTipo("CAIXA_OPERACIONAL");
@@ -259,12 +260,15 @@ export function CaixaTransacaoDialog({
     }
   }, [fluxoTransferencia, tipoTransacao, tipoMoeda]);
 
-  // Limpar destino quando origem mudar (para PARCEIRO_PARCEIRO)
+  // Limpar destino quando origem mudar (para PARCEIRO_PARCEIRO e DEPOSITO)
   useEffect(() => {
     if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO") {
       setDestinoParceiroId("");
       setDestinoContaId("");
       setDestinoWalletId("");
+    }
+    if (tipoTransacao === "DEPOSITO") {
+      setDestinoBookmakerId("");
     }
   }, [origemParceiroId, origemContaId, origemWalletId, tipoTransacao, fluxoTransferencia]);
 
@@ -455,7 +459,13 @@ export function CaixaTransacaoDialog({
       }
       return "Caixa Operacional";
     }
-    if (tipoTransacao === "DEPOSITO") return "Caixa Operacional";
+    if (tipoTransacao === "DEPOSITO") {
+      if (origemContaId) {
+        const conta = contasBancarias.find(c => c.id === origemContaId);
+        return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+      }
+      return "Conta Bancária";
+    }
     if (tipoTransacao === "SAQUE" && origemBookmakerId) {
       const bm = bookmakers.find(b => b.id === origemBookmakerId);
       return bm?.nome || "Bookmaker";
@@ -734,10 +744,72 @@ export function CaixaTransacaoDialog({
     }
 
     if (tipoTransacao === "DEPOSITO") {
+      // DEPOSITO: Always from Parceiro (bank account) → Bookmaker
       return (
-        <div className="text-sm text-muted-foreground italic text-center">
-          Caixa Operacional
-        </div>
+        <>
+          <div className="space-y-2">
+            <Label>Parceiro</Label>
+            <ParceiroSelect
+              value={origemParceiroId}
+              onValueChange={(value) => {
+                setOrigemParceiroId(value);
+                setOrigemContaId("");
+              }}
+            />
+          </div>
+          {origemParceiroId && (
+            <div className="space-y-2">
+              <Label>Conta Bancária</Label>
+              <Select 
+                value={origemContaId} 
+                onValueChange={(value) => {
+                  setOrigemContaId(value);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {contasBancarias
+                    .filter((c) => {
+                      // Filtrar apenas contas do parceiro selecionado
+                      if (c.parceiro_id !== origemParceiroId) return false;
+                      
+                      // Filtrar apenas contas com saldo disponível
+                      const saldo = saldosParceirosContas.find(
+                        s => s.conta_id === c.id && s.moeda === moeda
+                      );
+                      return saldo && saldo.saldo > 0;
+                    })
+                    .map((conta) => {
+                      const saldo = saldosParceirosContas.find(
+                        s => s.conta_id === conta.id && s.moeda === moeda
+                      );
+                      return (
+                        <SelectItem key={conta.id} value={conta.id}>
+                          {conta.banco} - Saldo: {formatCurrency(saldo?.saldo || 0)}
+                        </SelectItem>
+                      );
+                    })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {origemParceiroId && contasBancarias.filter((c) => {
+            if (c.parceiro_id !== origemParceiroId) return false;
+            const saldo = saldosParceirosContas.find(
+              s => s.conta_id === c.id && s.moeda === moeda
+            );
+            return saldo && saldo.saldo > 0;
+          }).length === 0 && (
+            <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+              <AlertTriangle className="h-4 w-4 text-warning" />
+              <AlertDescription className="text-warning">
+                Este parceiro não possui contas bancárias com saldo disponível em {moeda}.
+              </AlertDescription>
+            </Alert>
+          )}
+        </>
       );
     }
 
@@ -909,14 +981,28 @@ export function CaixaTransacaoDialog({
     }
 
     if (tipoTransacao === "DEPOSITO") {
+      // Check if origem is complete
+      const isOrigemCompleta = origemParceiroId && origemContaId;
+      
       return (
-        <div className="space-y-2">
-          <Label>Bookmaker</Label>
-          <BookmakerSelect
-            value={destinoBookmakerId}
-            onValueChange={setDestinoBookmakerId}
-          />
-        </div>
+        <>
+          {!isOrigemCompleta && (
+            <Alert className="border-blue-500/50 bg-blue-500/10">
+              <AlertTriangle className="h-4 w-4 text-blue-500" />
+              <AlertDescription className="text-blue-500">
+                Selecione primeiro o parceiro e a conta bancária de origem
+              </AlertDescription>
+            </Alert>
+          )}
+          <div className="space-y-2">
+            <Label>Bookmaker</Label>
+            <BookmakerSelect
+              value={destinoBookmakerId}
+              onValueChange={setDestinoBookmakerId}
+              disabled={!isOrigemCompleta}
+            />
+          </div>
+        </>
       );
     }
 
@@ -1234,8 +1320,8 @@ export function CaixaTransacaoDialog({
     }
 
     // Check DEPOSITO
-    if (tipoTransacao === "DEPOSITO") {
-      const saldoAtual = getSaldoAtual("CAIXA_OPERACIONAL");
+    if (tipoTransacao === "DEPOSITO" && origemContaId) {
+      const saldoAtual = getSaldoAtual("PARCEIRO_CONTA", origemContaId);
       return saldoAtual < valorNumerico;
     }
 
@@ -1508,10 +1594,14 @@ export function CaixaTransacaoDialog({
                         <div className="text-sm font-medium uppercase">{getOrigemLabel()}</div>
                         {(origemTipo === "CAIXA_OPERACIONAL" || 
                           (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO") ||
-                          (tipoTransacao === "DEPOSITO") ||
                           (tipoTransacao === "TRANSFERENCIA" && origemTipo === "CAIXA_OPERACIONAL")) && (
                           <div className="text-xs text-muted-foreground mt-2">
                             Saldo disponível: {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL"))}
+                          </div>
+                        )}
+                        {tipoTransacao === "DEPOSITO" && origemContaId && (
+                          <div className="text-xs text-muted-foreground mt-2">
+                            Saldo disponível: {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId))}
                           </div>
                         )}
                         {tipoTransacao === "SAQUE" && origemBookmakerId && (
