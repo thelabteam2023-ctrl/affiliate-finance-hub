@@ -461,73 +461,70 @@ export default function GestaoParceiros() {
               >
                 <CardHeader>
                   <div className="flex justify-between items-start gap-3">
-                    <div 
-                      className="flex items-center gap-3 flex-1 cursor-pointer group"
-                      onClick={() => handleView(parceiro)}
-                      title="Clique para ver detalhes completos"
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div 
+                          className="flex items-center gap-3 flex-1 cursor-pointer group"
+                          onClick={() => handleView(parceiro)}
+                        >
+                          <div className={`relative w-12 h-12 rounded-full flex items-center justify-center overflow-hidden border-2 transition-all ${
+                            parceiro.status === "inativo"
+                              ? "bg-gradient-to-br from-warning/20 to-warning/5 border-warning/30 group-hover:border-warning/60"
+                              : "bg-gradient-to-br from-primary/20 to-primary/5 border-primary/30 group-hover:border-primary/60"
+                          }`}>
+                            <span className={`text-lg font-bold ${
+                              parceiro.status === "inativo" ? "text-warning" : "text-primary"
+                            }`}>
+                              {parceiro.nome.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <CardTitle className="text-base group-hover:text-primary transition-colors">{parceiro.nome}</CardTitle>
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Clique para ver dados completos</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Badge
+                      variant={parceiro.status === "ativo" ? "default" : "secondary"}
+                      className={parceiro.status === "inativo" ? "bg-warning/20 text-warning border-warning/30" : ""}
                     >
-                      <div className={`relative w-12 h-12 rounded-full flex items-center justify-center overflow-hidden border-2 transition-all ${
-                        parceiro.status === "inativo"
-                          ? "bg-gradient-to-br from-warning/20 to-warning/5 border-warning/30 group-hover:border-warning/60"
-                          : "bg-gradient-to-br from-primary/20 to-primary/5 border-primary/30 group-hover:border-primary/60"
-                      }`}>
-                        <span className={`text-lg font-bold ${
-                          parceiro.status === "inativo" ? "text-warning" : "text-primary"
-                        }`}>
-                          {parceiro.nome.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="flex-1">
-                        <CardTitle className="text-base group-hover:text-primary transition-colors">{parceiro.nome}</CardTitle>
-                        {parceiro.email && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            <span className="font-medium">Email:</span> {showCPF ? parceiro.email : maskEmail(parceiro.email)}
-                          </p>
-                        )}
-                        <p className="text-sm text-muted-foreground mt-0.5 font-mono">
-                          <span className="font-medium">CPF:</span> {maskCPF(parceiro.cpf)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <Badge
-                        variant={parceiro.status === "ativo" ? "default" : "secondary"}
-                        className={parceiro.status === "inativo" ? "bg-warning/20 text-warning border-warning/30" : ""}
-                      >
-                        {parceiro.status.toUpperCase()}
-                      </Badge>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleOpenFinanceiro(parceiro)}
-                          >
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Ver informações completas</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
+                      {parceiro.status.toUpperCase()}
+                    </Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
                   {roiData.has(parceiro.id) && (
-                    <div className="pt-3 border-t mt-3">
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Lucro/Prejuízo</p>
-                        <p className={`text-lg font-bold ${
-                          roiData.get(parceiro.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
-                        }`}>
-                          {formatCurrency(roiData.get(parceiro.id)!.lucro_prejuizo)}
-                        </p>
+                    <div 
+                      className="pt-3 border-t mt-3 cursor-pointer hover:bg-accent/50 -mx-6 px-6 -mt-3 mb-4 pb-3 transition-colors group"
+                      onClick={() => handleOpenFinanceiro(parceiro)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Lucro/Prejuízo</p>
+                          <p className={`text-lg font-bold ${
+                            roiData.get(parceiro.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
+                          }`}>
+                            {formatCurrency(roiData.get(parceiro.id)!.lucro_prejuizo)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground mb-1">ROI</p>
+                          <p className={`text-lg font-bold ${
+                            roiData.get(parceiro.id)!.roi_percentual >= 0 ? "text-green-600" : "text-red-600"
+                          }`}>
+                            {roiData.get(parceiro.id)!.roi_percentual.toFixed(1)}%
+                          </p>
+                        </div>
                       </div>
+                      <p className="text-xs text-muted-foreground mt-2 text-center group-hover:text-foreground transition-colors">
+                        Clique para ver informações financeiras
+                      </p>
                     </div>
                   )}
-                  <div className="flex gap-2 mt-4">
+                  <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -564,67 +561,66 @@ export default function GestaoParceiros() {
                         : "hover:bg-accent/50"
                     }`}
                   >
-                    <div className="flex items-center gap-4">
-                      <div 
-                        className="flex-1 cursor-pointer"
-                        onClick={() => handleView(parceiro)}
-                      >
-                        <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
-                          parceiro.status === "inativo"
-                            ? "bg-gradient-to-br from-warning/20 to-warning/5 border-warning/30"
-                            : "bg-gradient-to-br from-primary/20 to-primary/5 border-primary/30"
-                        }`}>
-                          <span className={`text-sm font-bold ${
-                            parceiro.status === "inativo" ? "text-warning" : "text-primary"
-                          }`}>
-                            {parceiro.nome.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-semibold text-base">{parceiro.nome}</h3>
-                              <Badge 
-                                variant={parceiro.status === "ativo" ? "default" : "secondary"} 
-                                className={`text-xs ${parceiro.status === "inativo" ? "bg-warning/20 text-warning border-warning/30" : ""}`}
-                              >
-                                {parceiro.status}
-                              </Badge>
-                            </div>
-                            <div className="flex flex-col gap-0.5 mt-1 text-sm text-muted-foreground">
-                              {parceiro.email && (
-                                <span className="truncate max-w-[300px]">
-                                  <span className="font-medium">Email:</span> {showCPF ? parceiro.email : maskEmail(parceiro.email)}
-                                </span>
-                              )}
-                              <span className="font-mono">
-                                <span className="font-medium">CPF:</span> {maskCPF(parceiro.cpf)}
+                     <div className="flex items-center gap-4">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div 
+                            className="flex-1 cursor-pointer"
+                            onClick={() => handleView(parceiro)}
+                          >
+                            <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+                              parceiro.status === "inativo"
+                                ? "bg-gradient-to-br from-warning/20 to-warning/5 border-warning/30"
+                                : "bg-gradient-to-br from-primary/20 to-primary/5 border-primary/30"
+                            }`}>
+                              <span className={`text-sm font-bold ${
+                                parceiro.status === "inativo" ? "text-warning" : "text-primary"
+                              }`}>
+                                {parceiro.nome.charAt(0).toUpperCase()}
                               </span>
                             </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-semibold text-base">{parceiro.nome}</h3>
+                                  <Badge 
+                                    variant={parceiro.status === "ativo" ? "default" : "secondary"} 
+                                    className={`text-xs ${parceiro.status === "inativo" ? "bg-warning/20 text-warning border-warning/30" : ""}`}
+                                  >
+                                    {parceiro.status}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Clique para ver dados completos</p>
+                        </TooltipContent>
+                      </Tooltip>
                       <div className="flex items-center gap-3 text-sm">
                         {roiData.has(parceiro.id) && (
-                          <>
-                            <div className="text-center px-3 py-2 bg-accent rounded-lg">
+                          <div 
+                            className="flex items-center gap-3 px-4 py-2 bg-accent/50 hover:bg-accent rounded-lg cursor-pointer transition-colors"
+                            onClick={() => handleOpenFinanceiro(parceiro)}
+                          >
+                            <div className="text-center">
                               <div className={`font-bold ${
                                 roiData.get(parceiro.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
                               }`}>
                                 {formatCurrency(roiData.get(parceiro.id)!.lucro_prejuizo)}
                               </div>
-                              <div className="text-xs">Lucro</div>
+                              <div className="text-xs text-muted-foreground">Lucro/Prejuízo</div>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="gap-1"
-                              onClick={() => handleOpenFinanceiro(parceiro)}
-                            >
-                              <FileText className="h-4 w-4" />
-                              Informações
-                            </Button>
-                          </>
+                            <div className="text-center">
+                              <div className={`font-bold ${
+                                roiData.get(parceiro.id)!.roi_percentual >= 0 ? "text-green-600" : "text-red-600"
+                              }`}>
+                                {roiData.get(parceiro.id)!.roi_percentual.toFixed(1)}%
+                              </div>
+                              <div className="text-xs text-muted-foreground">ROI</div>
+                            </div>
+                          </div>
                         )}
                       </div>
                       <div className="flex gap-2">
