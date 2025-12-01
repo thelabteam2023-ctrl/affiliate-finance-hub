@@ -228,6 +228,9 @@ export function CaixaTransacaoDialog({
       setTipoMoeda("FIAT"); // DEPOSITO only supports FIAT
     } else if (tipoTransacao === "SAQUE") {
       setOrigemTipo("BOOKMAKER");
+      setDestinoTipo("PARCEIRO_CONTA");
+      setTipoMoeda("FIAT"); // SAQUE only supports FIAT
+      setOrigemTipo("BOOKMAKER");
       setDestinoTipo("CAIXA_OPERACIONAL");
     } else if (tipoTransacao === "TRANSFERENCIA") {
       setOrigemTipo("CAIXA_OPERACIONAL");
@@ -260,7 +263,7 @@ export function CaixaTransacaoDialog({
     }
   }, [fluxoTransferencia, tipoTransacao, tipoMoeda]);
 
-  // Limpar destino quando origem mudar (para PARCEIRO_PARCEIRO e DEPOSITO)
+  // Limpar destino quando origem mudar (para PARCEIRO_PARCEIRO, DEPOSITO e SAQUE)
   useEffect(() => {
     if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO") {
       setDestinoParceiroId("");
@@ -270,7 +273,11 @@ export function CaixaTransacaoDialog({
     if (tipoTransacao === "DEPOSITO") {
       setDestinoBookmakerId("");
     }
-  }, [origemParceiroId, origemContaId, origemWalletId, tipoTransacao, fluxoTransferencia]);
+    if (tipoTransacao === "SAQUE") {
+      setDestinoParceiroId("");
+      setDestinoContaId("");
+    }
+  }, [origemParceiroId, origemContaId, origemWalletId, origemBookmakerId, tipoTransacao, fluxoTransferencia]);
 
   const fetchAccountsAndWallets = async () => {
     try {
@@ -493,7 +500,11 @@ export function CaixaTransacaoDialog({
       return investidor ? `Investidor: ${investidor.nome}` : "Investidor Externo";
     }
     if (tipoTransacao === "SAQUE") {
-      return "Caixa Operacional";
+      if (destinoContaId) {
+        const conta = contasBancarias.find(c => c.id === destinoContaId);
+        return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+      }
+      return "Conta Bancária";
     }
     if (tipoTransacao === "DEPOSITO" && destinoBookmakerId) {
       const bm = bookmakers.find(b => b.id === destinoBookmakerId);
@@ -973,10 +984,73 @@ export function CaixaTransacaoDialog({
     }
 
     if (tipoTransacao === "SAQUE") {
+      // Check if origem is complete
+      const isOrigemCompleta = origemBookmakerId;
+      
       return (
-        <div className="text-sm text-muted-foreground italic text-center">
-          Caixa Operacional
-        </div>
+        <>
+          {!isOrigemCompleta && (
+            <Alert className="border-blue-500/50 bg-blue-500/10">
+              <AlertTriangle className="h-4 w-4 text-blue-500" />
+              <AlertDescription className="text-blue-500">
+                Selecione primeiro a bookmaker de origem
+              </AlertDescription>
+            </Alert>
+          )}
+          <div className="space-y-2">
+            <Label>Parceiro</Label>
+            <ParceiroSelect
+              value={destinoParceiroId}
+              onValueChange={(value) => {
+                setDestinoParceiroId(value);
+                setDestinoContaId("");
+              }}
+              disabled={!isOrigemCompleta}
+            />
+          </div>
+          {destinoParceiroId && (
+            <div className="space-y-2">
+              <Label>Conta Bancária</Label>
+              <Select 
+                value={destinoContaId} 
+                onValueChange={(value) => {
+                  setDestinoContaId(value);
+                }}
+                disabled={!isOrigemCompleta}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {contasBancarias
+                    .filter((c) => c.parceiro_id === destinoParceiroId)
+                    .map((conta) => (
+                      <SelectItem key={conta.id} value={conta.id}>
+                        {conta.banco}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {destinoParceiroId && contasBancarias.filter((c) => c.parceiro_id === destinoParceiroId).length === 0 && (
+            <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+              <AlertTriangle className="h-4 w-4 text-warning" />
+              <AlertDescription className="text-warning">
+                Este parceiro não possui contas bancárias cadastradas.{' '}
+                <button
+                  onClick={() => {
+                    setAlertParceiroId(destinoParceiroId);
+                    setShowNoBankAlert(true);
+                  }}
+                  className="underline font-medium"
+                >
+                  Cadastrar agora
+                </button>
+              </AlertDescription>
+            </Alert>
+          )}
+        </>
       );
     }
 
@@ -1600,14 +1674,30 @@ export function CaixaTransacaoDialog({
                             Saldo disponível: {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL"))}
                           </div>
                         )}
-                        {tipoTransacao === "DEPOSITO" && origemContaId && (
-                          <div className="text-xs text-muted-foreground mt-2">
-                            Saldo disponível: {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId))}
+                        {tipoTransacao === "DEPOSITO" && origemContaId && parseFloat(String(valor)) > 0 && (
+                          <div className="mt-3 space-y-1">
+                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                              <TrendingDown className="h-4 w-4 text-destructive" />
+                              <span className="line-through opacity-70">
+                                {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId))}
+                              </span>
+                            </div>
+                            <div className="text-sm font-semibold text-foreground">
+                              {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId) - parseFloat(String(valor)))}
+                            </div>
                           </div>
                         )}
-                        {tipoTransacao === "SAQUE" && origemBookmakerId && (
-                          <div className="text-xs text-muted-foreground mt-2">
-                            Saldo disponível: {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId))}
+                        {tipoTransacao === "SAQUE" && origemBookmakerId && parseFloat(String(valor)) > 0 && (
+                          <div className="mt-3 space-y-1">
+                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                              <TrendingDown className="h-4 w-4 text-destructive" />
+                              <span className="line-through opacity-70">
+                                {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId))}
+                              </span>
+                            </div>
+                            <div className="text-sm font-semibold text-foreground">
+                              {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId) - parseFloat(String(valor)))}
+                            </div>
                           </div>
                         )}
                         {/* Transferência Parceiro → Parceiro - Mostrar saldo anterior e novo */}
@@ -1642,15 +1732,35 @@ export function CaixaTransacaoDialog({
                       <CardContent className="pt-6 text-center">
                         <div className="text-sm font-medium uppercase">{getDestinoLabel()}</div>
                         {(destinoTipo === "CAIXA_OPERACIONAL" || 
-                          (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "APORTE") ||
-                          (tipoTransacao === "SAQUE")) && (
+                          (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "APORTE")) && (
                           <div className="text-xs text-muted-foreground mt-2">
                             Saldo atual: {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL"))}
                           </div>
                         )}
-                        {tipoTransacao === "DEPOSITO" && destinoBookmakerId && (
-                          <div className="text-xs text-muted-foreground mt-2">
-                            Saldo atual: {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId))}
+                        {tipoTransacao === "DEPOSITO" && destinoBookmakerId && parseFloat(String(valor)) > 0 && (
+                          <div className="mt-3 space-y-1">
+                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                              <TrendingUp className="h-4 w-4 text-emerald-500" />
+                              <span className="line-through opacity-70">
+                                {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId))}
+                              </span>
+                            </div>
+                            <div className="text-sm font-semibold text-foreground">
+                              {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + parseFloat(String(valor)))}
+                            </div>
+                          </div>
+                        )}
+                        {tipoTransacao === "SAQUE" && destinoContaId && parseFloat(String(valor)) > 0 && (
+                          <div className="mt-3 space-y-1">
+                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                              <TrendingUp className="h-4 w-4 text-emerald-500" />
+                              <span className="line-through opacity-70">
+                                {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId))}
+                              </span>
+                            </div>
+                            <div className="text-sm font-semibold text-foreground">
+                              {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId) + parseFloat(String(valor)))}
+                            </div>
                           </div>
                         )}
                         {/* Transferência Parceiro → Parceiro - Mostrar saldo anterior e novo */}
