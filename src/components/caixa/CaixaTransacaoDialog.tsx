@@ -1107,9 +1107,21 @@ export function CaixaTransacaoDialog({
       return saldoAtual < valorNumerico;
     }
 
-    // Check TRANSFERENCIA
+    // Check TRANSFERENCIA from CAIXA_OPERACIONAL
     if (tipoTransacao === "TRANSFERENCIA" && origemTipo === "CAIXA_OPERACIONAL") {
       const saldoAtual = getSaldoAtual("CAIXA_OPERACIONAL");
+      return saldoAtual < valorNumerico;
+    }
+
+    // Check TRANSFERENCIA from PARCEIRO_CONTA
+    if (tipoTransacao === "TRANSFERENCIA" && origemTipo === "PARCEIRO_CONTA" && origemContaId) {
+      const saldoAtual = getSaldoAtual("PARCEIRO_CONTA", origemContaId);
+      return saldoAtual < valorNumerico;
+    }
+
+    // Check TRANSFERENCIA from PARCEIRO_WALLET
+    if (tipoTransacao === "TRANSFERENCIA" && origemTipo === "PARCEIRO_WALLET" && origemWalletId) {
+      const saldoAtual = getSaldoAtual("PARCEIRO_WALLET", origemWalletId);
       return saldoAtual < valorNumerico;
     }
 

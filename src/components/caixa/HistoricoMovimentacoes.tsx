@@ -6,7 +6,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Filter, Calendar, ArrowRight, AlertCircle, Info } from "lucide-react";
-import { format, subDays } from "date-fns";
+import { format, subDays, startOfDay, endOfDay, isToday } from "date-fns";
 
 interface HistoricoMovimentacoesProps {
   transacoes: any[];
@@ -49,6 +49,10 @@ export function HistoricoMovimentacoes({
       // Todo o período - remove os filtros de data
       setDataInicio(undefined);
       setDataFim(undefined);
+    } else if (dias === 0) {
+      // Hoje - define início e fim como hoje
+      setDataInicio(startOfDay(new Date()));
+      setDataFim(endOfDay(new Date()));
     } else {
       // Define o período baseado nos dias
       setDataInicio(subDays(new Date(), dias));
@@ -58,6 +62,11 @@ export function HistoricoMovimentacoes({
 
   const getPeriodoAtivo = () => {
     if (!dataInicio && !dataFim) return "todos";
+    
+    // Check if it's today
+    if (dataInicio && dataFim && isToday(dataInicio) && isToday(dataFim)) {
+      return "hoje";
+    }
     
     const hoje = new Date();
     const diffDays = dataInicio ? Math.floor((hoje.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)) : null;
@@ -141,6 +150,14 @@ export function HistoricoMovimentacoes({
           {/* Pills de Período Rápido */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Período:</span>
+            <Button
+              variant={getPeriodoAtivo() === "hoje" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handlePeriodoRapido(0)}
+              className="h-7 px-3 text-xs"
+            >
+              Hoje
+            </Button>
             <Button
               variant={getPeriodoAtivo() === "7dias" ? "default" : "outline"}
               size="sm"

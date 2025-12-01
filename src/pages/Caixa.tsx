@@ -109,7 +109,7 @@ export default function Caixa() {
       setContas(contasMap);
 
       const walletsMap: { [key: string]: string } = {};
-      walletsData?.forEach(w => walletsMap[w.id] = w.exchange);
+      walletsData?.forEach(w => walletsMap[w.id] = w.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET');
       setWallets(walletsMap);
 
       const bookmakersMap: { [key: string]: string } = {};
