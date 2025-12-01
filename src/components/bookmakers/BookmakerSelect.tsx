@@ -15,6 +15,7 @@ interface BookmakerSelectProps {
   onValueChange: (value: string) => void;
   disabled?: boolean;
   parceiroId?: string;
+  somenteComSaldo?: boolean;
 }
 
 interface BookmakerCatalogo {
@@ -24,23 +25,30 @@ interface BookmakerCatalogo {
   links_json: any;
 }
 
-export default function BookmakerSelect({ value, onValueChange, disabled, parceiroId }: BookmakerSelectProps) {
+export default function BookmakerSelect({ value, onValueChange, disabled, parceiroId, somenteComSaldo }: BookmakerSelectProps) {
   const [bookmakers, setBookmakers] = useState<BookmakerCatalogo[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchBookmakers();
-  }, [parceiroId]);
+  }, [parceiroId, somenteComSaldo]);
 
   const fetchBookmakers = async () => {
     try {
       if (parceiroId) {
         // Se parceiroId for fornecido, buscar apenas bookmakers vinculadas a esse parceiro
-        const { data: vinculosData, error: vinculosError } = await supabase
+        let query = supabase
           .from("bookmakers")
-          .select("bookmaker_catalogo_id")
+          .select("id, nome, saldo_atual, moeda, bookmaker_catalogo_id")
           .eq("parceiro_id", parceiroId);
+
+        // Se somenteComSaldo = true, filtrar apenas bookmakers com saldo > 0
+        if (somenteComSaldo) {
+          query = query.gt("saldo_atual", 0);
+        }
+
+        const { data: vinculosData, error: vinculosError } = await query;
 
         if (vinculosError) throw vinculosError;
 
@@ -121,7 +129,9 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
         {filteredBookmakers.length === 0 ? (
           <div className="py-6 text-center text-sm text-muted-foreground">
             {parceiroId 
-              ? "Este parceiro não possui bookmakers vinculadas"
+              ? (somenteComSaldo 
+                  ? "Este parceiro não possui bookmakers com saldo disponível" 
+                  : "Este parceiro não possui bookmakers vinculadas")
               : "Nenhuma bookmaker encontrada"}
           </div>
         ) : (
