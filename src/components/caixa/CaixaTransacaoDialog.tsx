@@ -75,6 +75,21 @@ interface SaldoCaixaCrypto {
   saldo_coin: number;
 }
 
+interface SaldoParceiroContas {
+  conta_id: string;
+  parceiro_id: string;
+  saldo: number;
+  moeda: string;
+}
+
+interface SaldoParceiroWallets {
+  wallet_id: string;
+  parceiro_id: string;
+  coin: string;
+  saldo_usd: number;
+  saldo_coin: number;
+}
+
 export function CaixaTransacaoDialog({
   open,
   onClose,
@@ -160,6 +175,8 @@ export function CaixaTransacaoDialog({
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [saldosCaixaFiat, setSaldosCaixaFiat] = useState<SaldoCaixaFiat[]>([]);
   const [saldosCaixaCrypto, setSaldosCaixaCrypto] = useState<SaldoCaixaCrypto[]>([]);
+  const [saldosParceirosContas, setSaldosParceirosContas] = useState<SaldoParceiroContas[]>([]);
+  const [saldosParceirosWallets, setSaldosParceirosWallets] = useState<SaldoParceiroWallets[]>([]);
   const [investidores, setInvestidores] = useState<Array<{ id: string; nome: string }>>([]);
   
   // Transfer flow type for TRANSFERENCIA
@@ -181,6 +198,7 @@ export function CaixaTransacaoDialog({
       fetchAccountsAndWallets();
       fetchBookmakers();
       fetchSaldosCaixa();
+      fetchSaldosParceiros();
       fetchInvestidores();
     }
   }, [open]);
@@ -291,6 +309,23 @@ export function CaixaTransacaoDialog({
     }
   };
 
+  const fetchSaldosParceiros = async () => {
+    try {
+      const { data: contas } = await supabase
+        .from("v_saldo_parceiro_contas")
+        .select("conta_id, parceiro_id, saldo, moeda");
+
+      const { data: wallets } = await supabase
+        .from("v_saldo_parceiro_wallets")
+        .select("wallet_id, parceiro_id, coin, saldo_usd, saldo_coin");
+
+      setSaldosParceirosContas(contas || []);
+      setSaldosParceirosWallets(wallets || []);
+    } catch (error) {
+      console.error("Erro ao carregar saldos dos parceiros:", error);
+    }
+  };
+
   const fetchInvestidores = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -351,7 +386,16 @@ export function CaixaTransacaoDialog({
       return bm?.saldo_atual || 0;
     }
     
-    // TODO: Implementar saldo de parceiros quando necessário
+    if (tipo === "PARCEIRO_CONTA" && id) {
+      const saldo = saldosParceirosContas.find(s => s.conta_id === id && s.moeda === moeda);
+      return saldo?.saldo || 0;
+    }
+    
+    if (tipo === "PARCEIRO_WALLET" && id) {
+      const saldo = saldosParceirosWallets.find(s => s.wallet_id === id && s.coin === coin);
+      return saldo?.saldo_usd || 0;
+    }
+    
     return 0;
   };
 
@@ -506,6 +550,27 @@ export function CaixaTransacaoDialog({
           variant: "destructive",
         });
         return;
+      }
+
+      // Validar transferência para mesma conta/wallet
+      if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO") {
+        if (origemTipo === "PARCEIRO_CONTA" && destinoTipo === "PARCEIRO_CONTA" && origemContaId === destinoContaId) {
+          toast({
+            title: "Erro",
+            description: "Não é possível transferir de uma conta bancária para ela mesma",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        if (origemTipo === "PARCEIRO_WALLET" && destinoTipo === "PARCEIRO_WALLET" && origemWalletId === destinoWalletId) {
+          toast({
+            title: "Erro",
+            description: "Não é possível transferir de uma wallet para ela mesma",
+            variant: "destructive",
+          });
+          return;
+        }
       }
 
       // Validar saldo insuficiente
