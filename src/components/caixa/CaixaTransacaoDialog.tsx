@@ -606,12 +606,6 @@ export function CaixaTransacaoDialog({
                 <Select 
                   value={origemContaId} 
                   onValueChange={(value) => {
-                    const contasDisponiveis = contasBancarias.filter((c) => c.parceiro_id === origemParceiroId);
-                    if (contasDisponiveis.length === 0) {
-                      setAlertParceiroId(origemParceiroId);
-                      setShowNoBankAlert(true);
-                      return;
-                    }
                     setOrigemContaId(value);
                   }}
                 >
@@ -629,6 +623,23 @@ export function CaixaTransacaoDialog({
                   </SelectContent>
                 </Select>
               </div>
+            )}
+            {origemParceiroId && contasBancarias.filter((c) => c.parceiro_id === origemParceiroId).length === 0 && (
+              <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <AlertDescription className="text-warning">
+                  Este parceiro não possui contas bancárias cadastradas.{' '}
+                  <button
+                    onClick={() => {
+                      setAlertParceiroId(origemParceiroId);
+                      setShowNoBankAlert(true);
+                    }}
+                    className="underline font-medium"
+                  >
+                    Cadastrar agora
+                  </button>
+                </AlertDescription>
+              </Alert>
             )}
           </>
         );
@@ -652,14 +663,6 @@ export function CaixaTransacaoDialog({
                 <Select 
                   value={origemWalletId} 
                   onValueChange={(value) => {
-                    const walletsDisponiveis = walletsCrypto.filter(
-                      (w) => w.parceiro_id === origemParceiroId && w.moeda?.includes(coin)
-                    );
-                    if (walletsDisponiveis.length === 0) {
-                      setAlertParceiroId(origemParceiroId);
-                      setShowNoWalletAlert(true);
-                      return;
-                    }
                     setOrigemWalletId(value);
                   }}
                 >
@@ -669,14 +672,37 @@ export function CaixaTransacaoDialog({
                   <SelectContent>
                     {walletsCrypto
                       .filter((w) => w.parceiro_id === origemParceiroId && w.moeda?.includes(coin))
-                      .map((wallet) => (
-                        <SelectItem key={wallet.id} value={wallet.id}>
-                          {wallet.exchange}
-                        </SelectItem>
-                      ))}
+                      .map((wallet) => {
+                        const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
+                        const shortenedAddress = wallet.endereco 
+                          ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-3)}`
+                          : '';
+                        return (
+                          <SelectItem key={wallet.id} value={wallet.id}>
+                            <span className="font-mono">{walletName} - {shortenedAddress}</span>
+                          </SelectItem>
+                        );
+                      })}
                   </SelectContent>
                 </Select>
               </div>
+            )}
+            {origemParceiroId && walletsCrypto.filter((w) => w.parceiro_id === origemParceiroId && w.moeda?.includes(coin)).length === 0 && (
+              <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <AlertDescription className="text-warning">
+                  Este parceiro não possui wallets cadastradas para {coin}.{' '}
+                  <button
+                    onClick={() => {
+                      setAlertParceiroId(origemParceiroId);
+                      setShowNoWalletAlert(true);
+                    }}
+                    className="underline font-medium"
+                  >
+                    Cadastrar agora
+                  </button>
+                </AlertDescription>
+              </Alert>
             )}
           </>
         );
@@ -740,12 +766,6 @@ export function CaixaTransacaoDialog({
                   <Select 
                     value={destinoContaId} 
                     onValueChange={(value) => {
-                      const contasDisponiveis = contasBancarias.filter((c) => c.parceiro_id === destinoParceiroId);
-                      if (contasDisponiveis.length === 0) {
-                        setAlertParceiroId(destinoParceiroId);
-                        setShowNoBankAlert(true);
-                        return;
-                      }
                       setDestinoContaId(value);
                     }}
                   >
@@ -763,6 +783,23 @@ export function CaixaTransacaoDialog({
                     </SelectContent>
                   </Select>
                 </div>
+              )}
+              {destinoParceiroId && contasBancarias.filter((c) => c.parceiro_id === destinoParceiroId).length === 0 && (
+                <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  <AlertDescription className="text-warning">
+                    Este parceiro não possui contas bancárias cadastradas.{' '}
+                    <button
+                      onClick={() => {
+                        setAlertParceiroId(destinoParceiroId);
+                        setShowNoBankAlert(true);
+                      }}
+                      className="underline font-medium"
+                    >
+                      Cadastrar agora
+                    </button>
+                  </AlertDescription>
+                </Alert>
               )}
             </>
           );
@@ -786,31 +823,46 @@ export function CaixaTransacaoDialog({
                   <Select 
                     value={destinoWalletId} 
                     onValueChange={(value) => {
-                      const walletsDisponiveis = walletsCrypto.filter(
-                        (w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin)
-                      );
-                      if (walletsDisponiveis.length === 0) {
-                        setAlertParceiroId(destinoParceiroId);
-                        setShowNoWalletAlert(true);
-                        return;
-                      }
                       setDestinoWalletId(value);
                     }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {walletsCrypto
-                        .filter((w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin))
-                        .map((wallet) => (
+                  <SelectContent>
+                    {walletsCrypto
+                      .filter((w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin))
+                      .map((wallet) => {
+                        const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
+                        const shortenedAddress = wallet.endereco 
+                          ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-3)}`
+                          : '';
+                        return (
                           <SelectItem key={wallet.id} value={wallet.id}>
-                            {wallet.exchange}
+                            <span className="font-mono">{walletName} - {shortenedAddress}</span>
                           </SelectItem>
-                        ))}
-                    </SelectContent>
+                        );
+                      })}
+                  </SelectContent>
                   </Select>
                 </div>
+              )}
+              {destinoParceiroId && walletsCrypto.filter((w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin)).length === 0 && (
+                <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  <AlertDescription className="text-warning">
+                    Este parceiro não possui wallets cadastradas para {coin}.{' '}
+                    <button
+                      onClick={() => {
+                        setAlertParceiroId(destinoParceiroId);
+                        setShowNoWalletAlert(true);
+                      }}
+                      className="underline font-medium"
+                    >
+                      Cadastrar agora
+                    </button>
+                  </AlertDescription>
+                </Alert>
               )}
             </>
           );
@@ -837,12 +889,6 @@ export function CaixaTransacaoDialog({
                 <Select 
                   value={destinoContaId} 
                   onValueChange={(value) => {
-                    const contasDisponiveis = contasBancarias.filter((c) => c.parceiro_id === destinoParceiroId);
-                    if (contasDisponiveis.length === 0) {
-                      setAlertParceiroId(destinoParceiroId);
-                      setShowNoBankAlert(true);
-                      return;
-                    }
                     setDestinoContaId(value);
                   }}
                 >
@@ -860,6 +906,23 @@ export function CaixaTransacaoDialog({
                   </SelectContent>
                 </Select>
               </div>
+            )}
+            {destinoParceiroId && contasBancarias.filter((c) => c.parceiro_id === destinoParceiroId).length === 0 && (
+              <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <AlertDescription className="text-warning">
+                  Este parceiro não possui contas bancárias cadastradas.{' '}
+                  <button
+                    onClick={() => {
+                      setAlertParceiroId(destinoParceiroId);
+                      setShowNoBankAlert(true);
+                    }}
+                    className="underline font-medium"
+                  >
+                    Cadastrar agora
+                  </button>
+                </AlertDescription>
+              </Alert>
             )}
           </>
         );
@@ -883,14 +946,6 @@ export function CaixaTransacaoDialog({
                 <Select 
                   value={destinoWalletId} 
                   onValueChange={(value) => {
-                    const walletsDisponiveis = walletsCrypto.filter(
-                      (w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin)
-                    );
-                    if (walletsDisponiveis.length === 0) {
-                      setAlertParceiroId(destinoParceiroId);
-                      setShowNoWalletAlert(true);
-                      return;
-                    }
                     setDestinoWalletId(value);
                   }}
                 >
@@ -900,14 +955,37 @@ export function CaixaTransacaoDialog({
                   <SelectContent>
                     {walletsCrypto
                       .filter((w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin))
-                      .map((wallet) => (
-                        <SelectItem key={wallet.id} value={wallet.id}>
-                          {wallet.exchange}
-                        </SelectItem>
-                      ))}
+                      .map((wallet) => {
+                        const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
+                        const shortenedAddress = wallet.endereco 
+                          ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-3)}`
+                          : '';
+                        return (
+                          <SelectItem key={wallet.id} value={wallet.id}>
+                            <span className="font-mono">{walletName} - {shortenedAddress}</span>
+                          </SelectItem>
+                        );
+                      })}
                   </SelectContent>
                 </Select>
               </div>
+            )}
+            {destinoParceiroId && walletsCrypto.filter((w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin)).length === 0 && (
+              <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <AlertDescription className="text-warning">
+                  Este parceiro não possui wallets cadastradas para {coin}.{' '}
+                  <button
+                    onClick={() => {
+                      setAlertParceiroId(destinoParceiroId);
+                      setShowNoWalletAlert(true);
+                    }}
+                    className="underline font-medium"
+                  >
+                    Cadastrar agora
+                  </button>
+                </AlertDescription>
+              </Alert>
             )}
           </>
         );
