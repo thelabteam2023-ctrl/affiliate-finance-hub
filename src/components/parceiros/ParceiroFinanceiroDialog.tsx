@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { History, TrendingUp, ArrowRightLeft, Building2, ShieldCheck, ShieldAlert, Search, Plus, Edit2 } from "lucide-react";
+import { History, TrendingUp, ArrowRight, Building2, ShieldCheck, ShieldAlert, Search, Plus, Edit2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -206,7 +206,13 @@ export default function ParceiroFinanceiroDialog({
     });
   };
 
-  const getTipoLabel = (tipo: string) => {
+  const getTipoLabel = (tipo: string, transacao?: Transacao) => {
+    if (tipo === "TRANSFERENCIA" && transacao) {
+      // Verifica se o parceiro atual é origem ou destino
+      const isOrigem = transacao.origem_parceiro_id === parceiroId;
+      return isOrigem ? "Transferência Enviada" : "Transferência Recebida";
+    }
+    
     const labels: Record<string, string> = {
       DEPOSITO: "Depósito",
       SAQUE: "Saque",
@@ -500,7 +506,7 @@ export default function ParceiroFinanceiroDialog({
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center gap-2">
                               <Badge className={getTipoBadgeColor(transacao.tipo_transacao)}>
-                                {getTipoLabel(transacao.tipo_transacao)}
+                                {getTipoLabel(transacao.tipo_transacao, transacao)}
                               </Badge>
                               <Badge variant="outline" className="text-xs">
                                 {transacao.moeda}
@@ -544,7 +550,15 @@ export default function ParceiroFinanceiroDialog({
                                 ) : null}
                               </div>
                               
-                              <ArrowRightLeft className="h-3 w-3" />
+                              {/* Seta direcional colorida */}
+                              {(() => {
+                                const isOrigem = transacao.origem_parceiro_id === parceiroId;
+                                const isSaida = transacao.tipo_transacao === "DEPOSITO" || 
+                                              transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.origem_tipo === "CAIXA_OPERACIONAL" ||
+                                              isOrigem;
+                                const arrowColor = isSaida ? "text-red-500" : "text-green-500";
+                                return <ArrowRight className={`h-4 w-4 ${arrowColor}`} />;
+                              })()}
                               
                               {/* Destino */}
                               <div className="flex items-center gap-2">
