@@ -84,6 +84,18 @@ export function CaixaTransacaoDialog({
   const [cotacao, setCotacao] = useState<string>("");
   const [descricao, setDescricao] = useState<string>("");
 
+  // Auto-calculate cotacao when valor and qtdCoin change (for crypto)
+  useEffect(() => {
+    if (tipoMoeda === "CRYPTO" && valor && qtdCoin) {
+      const valorNum = parseFloat(valor);
+      const qtdNum = parseFloat(qtdCoin);
+      if (!isNaN(valorNum) && !isNaN(qtdNum) && qtdNum > 0) {
+        const cotacaoCalculada = valorNum / qtdNum;
+        setCotacao(cotacaoCalculada.toFixed(8));
+      }
+    }
+  }, [valor, qtdCoin, tipoMoeda]);
+
   // Format currency for Brazilian format (1.234,56)
   const formatCurrencyInput = (value: string): string => {
     // Remove non-digits
@@ -1090,13 +1102,15 @@ export function CaixaTransacaoDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-center block">Cotação USD (opcional)</Label>
+                  <Label className="text-center block">Cotação USD (calculada)</Label>
                   <Input
                     type="number"
-                    step="0.01"
+                    step="0.00000001"
                     value={cotacao}
-                    onChange={(e) => setCotacao(e.target.value)}
+                    readOnly
+                    disabled
                     placeholder="0.00"
+                    className="bg-muted/50"
                   />
                 </div>
               </div>

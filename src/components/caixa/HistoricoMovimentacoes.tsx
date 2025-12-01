@@ -189,7 +189,7 @@ export function HistoricoMovimentacoes({
                   </Badge>
                   <div className="flex items-center gap-2 flex-1">
                     <div className="flex items-center gap-2">
-                      {transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.destino_tipo === "CAIXA_OPERACIONAL" ? (
+                       {transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.destino_tipo === "CAIXA_OPERACIONAL" ? (
                         <div className="flex flex-col">
                           <span className="text-sm text-muted-foreground">Investidor</span>
                           <span className="text-xs text-muted-foreground/70">
@@ -207,7 +207,7 @@ export function HistoricoMovimentacoes({
                       {transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.origem_tipo === "CAIXA_OPERACIONAL" ? (
                         <>
                           <span className="text-sm text-muted-foreground">Caixa Operacional</span>
-                          {transacao.descricao && transacao.descricao.trim() !== '' && (
+                          {((transacao.descricao && transacao.descricao.trim() !== '') || transacao.tipo_moeda === "CRYPTO") && (
                             <Dialog>
                               <DialogTrigger asChild>
                                 <button className="p-1 hover:bg-muted rounded-md transition-colors">
@@ -216,10 +216,37 @@ export function HistoricoMovimentacoes({
                               </DialogTrigger>
                               <DialogContent>
                                 <DialogHeader>
-                                  <DialogTitle>Observações da Transação</DialogTitle>
+                                  <DialogTitle>Detalhes da Transação</DialogTitle>
                                 </DialogHeader>
-                                <div className="py-4">
-                                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{transacao.descricao}</p>
+                                <div className="py-4 space-y-4">
+                                  {transacao.tipo_moeda === "CRYPTO" && (
+                                    <div className="space-y-2 pb-4 border-b border-border/50">
+                                      <h4 className="font-medium text-sm">Informações Crypto</h4>
+                                      <div className="space-y-1 text-sm">
+                                        <p className="text-muted-foreground">
+                                          <span className="font-medium">Moeda:</span> {transacao.coin}
+                                        </p>
+                                        <p className="text-muted-foreground">
+                                          <span className="font-medium">Quantidade:</span> {transacao.qtd_coin}
+                                        </p>
+                                        <p className="text-muted-foreground">
+                                          <span className="font-medium">Valor (USD):</span> ${transacao.valor_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </p>
+                                        <p className="text-muted-foreground">
+                                          <span className="font-medium">Cotação (USD):</span> ${transacao.cotacao?.toLocaleString('pt-BR', { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground/70 mt-2 pt-2 border-t border-border/30">
+                                          Cálculo: {transacao.cotacao?.toFixed(8)} × {transacao.qtd_coin} = ${transacao.valor_usd?.toFixed(2)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {transacao.descricao && transacao.descricao.trim() !== '' && (
+                                    <div className="space-y-2">
+                                      <h4 className="font-medium text-sm">Observações</h4>
+                                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{transacao.descricao}</p>
+                                    </div>
+                                  )}
                                 </div>
                               </DialogContent>
                             </Dialog>
@@ -228,7 +255,7 @@ export function HistoricoMovimentacoes({
                       ) : transacao.destino_tipo === "CAIXA_OPERACIONAL" ? (
                         <>
                           <span className="text-sm text-muted-foreground">Caixa Operacional</span>
-                          {transacao.descricao && transacao.descricao.trim() !== '' && (
+                          {((transacao.descricao && transacao.descricao.trim() !== '') || transacao.tipo_moeda === "CRYPTO") && (
                             <Dialog>
                               <DialogTrigger asChild>
                                 <button className="p-1 hover:bg-muted rounded-md transition-colors">
@@ -237,10 +264,37 @@ export function HistoricoMovimentacoes({
                               </DialogTrigger>
                               <DialogContent>
                                 <DialogHeader>
-                                  <DialogTitle>Observações da Transação</DialogTitle>
+                                  <DialogTitle>Detalhes da Transação</DialogTitle>
                                 </DialogHeader>
-                                <div className="py-4">
-                                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{transacao.descricao}</p>
+                                <div className="py-4 space-y-4">
+                                  {transacao.tipo_moeda === "CRYPTO" && (
+                                    <div className="space-y-2 pb-4 border-b border-border/50">
+                                      <h4 className="font-medium text-sm">Informações Crypto</h4>
+                                      <div className="space-y-1 text-sm">
+                                        <p className="text-muted-foreground">
+                                          <span className="font-medium">Moeda:</span> {transacao.coin}
+                                        </p>
+                                        <p className="text-muted-foreground">
+                                          <span className="font-medium">Quantidade:</span> {transacao.qtd_coin}
+                                        </p>
+                                        <p className="text-muted-foreground">
+                                          <span className="font-medium">Valor (USD):</span> ${transacao.valor_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </p>
+                                        <p className="text-muted-foreground">
+                                          <span className="font-medium">Cotação (USD):</span> ${transacao.cotacao?.toLocaleString('pt-BR', { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground/70 mt-2 pt-2 border-t border-border/30">
+                                          Cálculo: {transacao.cotacao?.toFixed(8)} × {transacao.qtd_coin} = ${transacao.valor_usd?.toFixed(2)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {transacao.descricao && transacao.descricao.trim() !== '' && (
+                                    <div className="space-y-2">
+                                      <h4 className="font-medium text-sm">Observações</h4>
+                                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{transacao.descricao}</p>
+                                    </div>
+                                  )}
                                 </div>
                               </DialogContent>
                             </Dialog>
@@ -256,9 +310,55 @@ export function HistoricoMovimentacoes({
                               </span>
                             </div>
                           ) : (
-                            <span className="text-sm text-muted-foreground">
-                              {getDestinoLabel(transacao)}
-                            </span>
+                            <>
+                              <span className="text-sm text-muted-foreground">
+                                {getDestinoLabel(transacao)}
+                              </span>
+                              {((transacao.descricao && transacao.descricao.trim() !== '') || transacao.tipo_moeda === "CRYPTO") && (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <button className="p-1 hover:bg-muted rounded-md transition-colors">
+                                      <Info className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                                    </button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Detalhes da Transação</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="py-4 space-y-4">
+                                      {transacao.tipo_moeda === "CRYPTO" && (
+                                        <div className="space-y-2 pb-4 border-b border-border/50">
+                                          <h4 className="font-medium text-sm">Informações Crypto</h4>
+                                          <div className="space-y-1 text-sm">
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Moeda:</span> {transacao.coin}
+                                            </p>
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Quantidade:</span> {transacao.qtd_coin}
+                                            </p>
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Valor (USD):</span> ${transacao.valor_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Cotação (USD):</span> ${transacao.cotacao?.toLocaleString('pt-BR', { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground/70 mt-2 pt-2 border-t border-border/30">
+                                              Cálculo: {transacao.cotacao?.toFixed(8)} × {transacao.qtd_coin} = ${transacao.valor_usd?.toFixed(2)}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {transacao.descricao && transacao.descricao.trim() !== '' && (
+                                        <div className="space-y-2">
+                                          <h4 className="font-medium text-sm">Observações</h4>
+                                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{transacao.descricao}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
+                            </>
                           )}
                         </>
                       )}
