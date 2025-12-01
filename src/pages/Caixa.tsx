@@ -4,7 +4,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
 import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { CaixaRelatorios } from "@/components/caixa/CaixaRelatorios";
@@ -400,45 +399,50 @@ export default function Caixa() {
           </CardContent>
         </Card>
 
-        {/* Exposição Crypto com Tooltip */}
+        {/* Exposição Crypto com Popover */}
         <Card className="bg-card/50 backdrop-blur border-border/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Exposição Crypto (USD)</CardTitle>
             <TrendingUp className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <HoverCard>
-              <HoverCardTrigger asChild>
-                <div className="flex items-center gap-2 cursor-pointer group">
-                  <span className="text-2xl font-bold text-blue-400">
-                    {formatCurrency(getTotalCryptoUSD(), "USD")}
-                  </span>
-                  {saldosCrypto.length > 0 && (
-                    <Info className="h-4 w-4 text-muted-foreground group-hover:text-blue-400 transition-colors" />
-                  )}
-                </div>
-              </HoverCardTrigger>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-blue-400">
+                {formatCurrency(getTotalCryptoUSD(), "USD")}
+              </span>
               {saldosCrypto.length > 0 && (
-                <HoverCardContent 
-                  className="w-auto min-w-[200px]" 
-                  align="start"
-                >
-                  <div className={`grid gap-3 ${saldosCrypto.length > 3 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                    {saldosCrypto.map((saldo) => (
-                      <div key={saldo.coin} className="flex items-center justify-between gap-4 text-sm">
-                        <span className="font-medium">{saldo.coin}</span>
-                        <div className="text-right">
-                          <div className="font-mono text-xs">{saldo.saldo_coin.toFixed(8)}</div>
-                          <div className="text-xs text-muted-foreground">
-                            ≈ {formatCurrency(saldo.saldo_usd, "USD")}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 rounded-full hover:bg-blue-500/20"
+                    >
+                      <Info className="h-4 w-4 text-muted-foreground hover:text-blue-400 transition-colors" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent 
+                    className="w-auto min-w-[200px] z-50 bg-popover" 
+                    align="start"
+                    side="bottom"
+                  >
+                    <div className={`grid gap-3 ${saldosCrypto.length > 3 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                      {saldosCrypto.map((saldo) => (
+                        <div key={saldo.coin} className="flex items-center justify-between gap-4 text-sm">
+                          <span className="font-medium">{saldo.coin}</span>
+                          <div className="text-right">
+                            <div className="font-mono text-xs">{saldo.saldo_coin.toFixed(8)}</div>
+                            <div className="text-xs text-muted-foreground">
+                              ≈ {formatCurrency(saldo.saldo_usd, "USD")}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </HoverCardContent>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               )}
-            </HoverCard>
+            </div>
           </CardContent>
         </Card>
       </div>
