@@ -65,6 +65,7 @@ export default function Caixa() {
   // Data for displaying names
   const [parceiros, setParceiros] = useState<{ [key: string]: string }>({});
   const [contas, setContas] = useState<{ [key: string]: string }>({});
+  const [contasBancarias, setContasBancarias] = useState<Array<{ id: string; banco: string; titular: string }>>([]);
   const [wallets, setWallets] = useState<{ [key: string]: string }>({});
   const [bookmakers, setBookmakers] = useState<{ [key: string]: string }>({});
 
@@ -107,6 +108,7 @@ export default function Caixa() {
       const contasMap: { [key: string]: string } = {};
       contasData?.forEach(c => contasMap[c.id] = c.banco);
       setContas(contasMap);
+      setContasBancarias(contasData || []);
 
       const walletsMap: { [key: string]: string } = {};
       walletsData?.forEach(w => walletsMap[w.id] = w.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET');
@@ -482,6 +484,7 @@ export default function Caixa() {
         transacoes={transacoes}
         parceiros={parceiros}
         contas={contas}
+        contasBancarias={contasBancarias}
         wallets={wallets}
         bookmakers={bookmakers}
         loading={loading}

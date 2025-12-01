@@ -9,6 +9,7 @@ interface CaixaRelatoriosProps {
   transacoes: any[];
   parceiros: { [key: string]: string };
   contas: { [key: string]: string };
+  contasBancarias: Array<{ id: string; banco: string; titular: string }>;
   wallets: { [key: string]: string };
   bookmakers: { [key: string]: string };
   loading: boolean;

@@ -8,10 +8,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Filter, Calendar, ArrowRight, AlertCircle, Info } from "lucide-react";
 import { format, subDays, startOfDay, endOfDay, isToday } from "date-fns";
 
+interface ContaBancaria {
+  id: string;
+  banco: string;
+  titular: string;
+}
+
 interface HistoricoMovimentacoesProps {
   transacoes: any[];
   parceiros: { [key: string]: string };
   contas: { [key: string]: string };
+  contasBancarias: ContaBancaria[];
   wallets: { [key: string]: string };
   bookmakers: { [key: string]: string };
   loading: boolean;
@@ -43,6 +50,7 @@ export function HistoricoMovimentacoes({
   getOrigemLabel,
   getDestinoLabel,
   formatCurrency,
+  contasBancarias,
 }: HistoricoMovimentacoesProps) {
   const handlePeriodoRapido = (dias: number | null) => {
     if (dias === null) {
@@ -213,6 +221,15 @@ export function HistoricoMovimentacoes({
                             {transacao.nome_investidor?.split(' ').slice(0, 2).join(' ') || 'Não informado'}
                           </span>
                         </div>
+                      ) : transacao.origem_tipo === "PARCEIRO_CONTA" && transacao.origem_conta_bancaria_id ? (
+                        <div className="flex flex-col">
+                          <span className="text-sm text-muted-foreground">
+                            {contasBancarias.find(c => c.id === transacao.origem_conta_bancaria_id)?.banco || 'Conta Bancária'}
+                          </span>
+                          <span className="text-xs text-muted-foreground/70">
+                            {contasBancarias.find(c => c.id === transacao.origem_conta_bancaria_id)?.titular || ''}
+                          </span>
+                        </div>
                       ) : (
                         <span className="text-sm text-muted-foreground">
                           {getOrigemLabel(transacao)}
@@ -324,6 +341,15 @@ export function HistoricoMovimentacoes({
                               <span className="text-sm text-muted-foreground">Investidor</span>
                               <span className="text-xs text-muted-foreground/70">
                                 {transacao.nome_investidor?.split(' ').slice(0, 2).join(' ') || 'Não informado'}
+                              </span>
+                            </div>
+                          ) : transacao.destino_tipo === "PARCEIRO_CONTA" && transacao.destino_conta_bancaria_id ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm text-muted-foreground">
+                                {contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id)?.banco || 'Conta Bancária'}
+                              </span>
+                              <span className="text-xs text-muted-foreground/70">
+                                {contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id)?.titular || ''}
                               </span>
                             </div>
                           ) : (
