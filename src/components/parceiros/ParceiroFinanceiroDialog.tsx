@@ -50,6 +50,13 @@ interface Transacao {
   destino_bookmaker_id: string | null;
   origem_tipo: string | null;
   destino_tipo: string | null;
+  origem_parceiro_id: string | null;
+  destino_parceiro_id: string | null;
+  origem_conta_bancaria_id: string | null;
+  destino_conta_bancaria_id: string | null;
+  origem_wallet_id: string | null;
+  destino_wallet_id: string | null;
+  nome_investidor: string | null;
 }
 
 interface BookmakerVinculado {
@@ -80,6 +87,9 @@ export default function ParceiroFinanceiroDialog({
 }: ParceiroFinanceiroDialogProps) {
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
   const [bookmakerNames, setBookmakerNames] = useState<Map<string, string>>(new Map());
+  const [parceiroNames, setParceiroNames] = useState<Map<string, string>>(new Map());
+  const [contasBancarias, setContasBancarias] = useState<Array<{ id: string; banco: string; titular: string; parceiro_id: string }>>([]);
+  const [walletsCrypto, setWalletsCrypto] = useState<Array<{ id: string; exchange: string; endereco: string; parceiro_id: string }>>([]);
   const [bookmakersVinculados, setBookmakersVinculados] = useState<BookmakerVinculado[]>([]);
   const [bookmakersDisponiveis, setBookmakersDisponiveis] = useState<BookmakerCatalogo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -114,11 +124,22 @@ export default function ParceiroFinanceiroDialog({
 
       // Fetch bookmaker names
       const bookmakerIds = new Set<string>();
+      const parceiroIds = new Set<string>();
+      const contaIds = new Set<string>();
+      const walletIds = new Set<string>();
+      
       transacoesData?.forEach((t) => {
         if (t.origem_bookmaker_id) bookmakerIds.add(t.origem_bookmaker_id);
         if (t.destino_bookmaker_id) bookmakerIds.add(t.destino_bookmaker_id);
+        if (t.origem_parceiro_id) parceiroIds.add(t.origem_parceiro_id);
+        if (t.destino_parceiro_id) parceiroIds.add(t.destino_parceiro_id);
+        if (t.origem_conta_bancaria_id) contaIds.add(t.origem_conta_bancaria_id);
+        if (t.destino_conta_bancaria_id) contaIds.add(t.destino_conta_bancaria_id);
+        if (t.origem_wallet_id) walletIds.add(t.origem_wallet_id);
+        if (t.destino_wallet_id) walletIds.add(t.destino_wallet_id);
       });
 
+      // Fetch bookmakers
       if (bookmakerIds.size > 0) {
         const { data: bookmakersData } = await supabase
           .from("bookmakers")
@@ -128,6 +149,38 @@ export default function ParceiroFinanceiroDialog({
         const namesMap = new Map<string, string>();
         bookmakersData?.forEach((b) => namesMap.set(b.id, b.nome));
         setBookmakerNames(namesMap);
+      }
+
+      // Fetch parceiros
+      if (parceiroIds.size > 0) {
+        const { data: parceirosData } = await supabase
+          .from("parceiros")
+          .select("id, nome")
+          .in("id", Array.from(parceiroIds));
+
+        const namesMap = new Map<string, string>();
+        parceirosData?.forEach((p) => namesMap.set(p.id, p.nome));
+        setParceiroNames(namesMap);
+      }
+
+      // Fetch contas bancarias
+      if (contaIds.size > 0) {
+        const { data: contasData } = await supabase
+          .from("contas_bancarias")
+          .select("id, banco, titular, parceiro_id")
+          .in("id", Array.from(contaIds));
+
+        setContasBancarias(contasData || []);
+      }
+
+      // Fetch wallets crypto
+      if (walletIds.size > 0) {
+        const { data: walletsData } = await supabase
+          .from("wallets_crypto")
+          .select("id, exchange, endereco, parceiro_id")
+          .in("id", Array.from(walletIds));
+
+        setWalletsCrypto(walletsData || []);
       }
     } catch (error) {
       console.error("Erro ao carregar transações:", error);
@@ -455,52 +508,79 @@ export default function ParceiroFinanceiroDialog({
                             </div>
 
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              {transacao.tipo_transacao === "DEPOSITO" && transacao.destino_bookmaker_id && (
-                                <>
-                                  <span>Caixa</span>
-                                  <ArrowRightLeft className="h-3 w-3" />
-                                  <span className="font-medium">
-                                    {bookmakerNames.get(transacao.destino_bookmaker_id) || "Bookmaker"}
-                                  </span>
-                                </>
-                              )}
-                              {transacao.tipo_transacao === "SAQUE" && transacao.origem_bookmaker_id && (
-                                <>
+                              {/* Origem */}
+                              <div className="flex items-center gap-2">
+                                {transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.destino_tipo === "CAIXA_OPERACIONAL" ? (
+                                  <div className="flex flex-col">
+                                    <span className="text-sm text-muted-foreground">Investidor</span>
+                                    <span className="text-xs text-muted-foreground/70">
+                                      {transacao.nome_investidor?.split(' ').slice(0, 2).join(' ') || 'Não informado'}
+                                    </span>
+                                  </div>
+                                ) : transacao.origem_tipo === "PARCEIRO_CONTA" && transacao.origem_conta_bancaria_id ? (
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium">
+                                      {contasBancarias.find(c => c.id === transacao.origem_conta_bancaria_id)?.banco || 'Conta Bancária'}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground/70">
+                                      {contasBancarias.find(c => c.id === transacao.origem_conta_bancaria_id)?.titular || ''}
+                                    </span>
+                                  </div>
+                                ) : transacao.origem_tipo === "PARCEIRO_WALLET" && transacao.origem_wallet_id ? (
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium">
+                                      {walletsCrypto.find(w => w.id === transacao.origem_wallet_id)?.exchange?.replace(/-/g, ' ').toUpperCase() || 'Wallet'}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground/70">
+                                      {parceiroNames.get(transacao.origem_parceiro_id || '') || ''}
+                                    </span>
+                                  </div>
+                                ) : transacao.origem_tipo === "BOOKMAKER" && transacao.origem_bookmaker_id ? (
                                   <span className="font-medium">
                                     {bookmakerNames.get(transacao.origem_bookmaker_id) || "Bookmaker"}
                                   </span>
-                                  <ArrowRightLeft className="h-3 w-3" />
-                                  <span>Caixa</span>
-                                </>
-                              )}
-                              {transacao.tipo_transacao === "TRANSFERENCIA" && (
-                                <>
-                                  <span>
-                                    {transacao.origem_tipo === "CAIXA_OPERACIONAL" 
-                                      ? "Caixa Operacional" 
-                                      : transacao.origem_tipo === "PARCEIRO_CONTA" || transacao.origem_tipo === "PARCEIRO_WALLET"
-                                      ? "Parceiro"
-                                      : "Origem"}
-                                  </span>
-                                  <ArrowRightLeft className="h-3 w-3" />
+                                ) : transacao.origem_tipo === "CAIXA_OPERACIONAL" ? (
+                                  <span>Caixa Operacional</span>
+                                ) : null}
+                              </div>
+                              
+                              <ArrowRightLeft className="h-3 w-3" />
+                              
+                              {/* Destino */}
+                              <div className="flex items-center gap-2">
+                                {transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.origem_tipo === "CAIXA_OPERACIONAL" ? (
+                                  <div className="flex flex-col">
+                                    <span className="text-sm text-muted-foreground">Investidor</span>
+                                    <span className="text-xs text-muted-foreground/70">
+                                      {transacao.nome_investidor?.split(' ').slice(0, 2).join(' ') || 'Não informado'}
+                                    </span>
+                                  </div>
+                                ) : transacao.destino_tipo === "PARCEIRO_CONTA" && transacao.destino_conta_bancaria_id ? (
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium">
+                                      {contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id)?.banco || 'Conta Bancária'}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground/70">
+                                      {contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id)?.titular || ''}
+                                    </span>
+                                  </div>
+                                ) : transacao.destino_tipo === "PARCEIRO_WALLET" && transacao.destino_wallet_id ? (
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium">
+                                      {walletsCrypto.find(w => w.id === transacao.destino_wallet_id)?.exchange?.replace(/-/g, ' ').toUpperCase() || 'Wallet'}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground/70">
+                                      {parceiroNames.get(transacao.destino_parceiro_id || '') || ''}
+                                    </span>
+                                  </div>
+                                ) : transacao.destino_tipo === "BOOKMAKER" && transacao.destino_bookmaker_id ? (
                                   <span className="font-medium">
-                                    {transacao.destino_tipo === "CAIXA_OPERACIONAL" 
-                                      ? "Caixa Operacional" 
-                                      : transacao.destino_tipo === "PARCEIRO_CONTA" || transacao.destino_tipo === "PARCEIRO_WALLET"
-                                      ? "Parceiro (Conta)"
-                                      : "Destino"}
+                                    {bookmakerNames.get(transacao.destino_bookmaker_id) || "Bookmaker"}
                                   </span>
-                                </>
-                              )}
-                              {transacao.tipo_transacao === "APORTE_FINANCEIRO" && (
-                                <>
-                                  <span>
-                                    {transacao.origem_tipo === "CAIXA_OPERACIONAL" 
-                                      ? "Caixa → Investidor" 
-                                      : "Investidor → Caixa"}
-                                  </span>
-                                </>
-                              )}
+                                ) : transacao.destino_tipo === "CAIXA_OPERACIONAL" ? (
+                                  <span>Caixa Operacional</span>
+                                ) : null}
+                              </div>
                             </div>
 
                             {transacao.descricao && (
