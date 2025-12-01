@@ -424,7 +424,8 @@ export default function Caixa() {
                   <PopoverContent 
                     className="w-auto min-w-[200px] z-50 bg-popover" 
                     align="start"
-                    side="bottom"
+                    side="right"
+                    sideOffset={8}
                   >
                     <div className={`grid gap-3 ${saldosCrypto.length > 3 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                       {saldosCrypto.map((saldo) => (
