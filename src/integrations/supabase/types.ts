@@ -805,7 +805,15 @@ export type Database = {
           titular: string | null
           user_id: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "parceiros_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_saldo_parceiro_wallets: {
         Row: {
@@ -819,7 +827,15 @@ export type Database = {
           user_id: string | null
           wallet_id: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "parceiros_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
