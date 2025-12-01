@@ -1426,9 +1426,10 @@ export function CaixaTransacaoDialog({
   const saldoInsuficiente = checkSaldoInsuficiente();
 
   const formatCurrency = (value: number) => {
+    const currencyCode = tipoMoeda === "CRYPTO" ? "USD" : (moeda || "BRL");
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
-      currency: moeda || "BRL",
+      currency: currencyCode,
     }).format(value);
   };
 
@@ -1730,7 +1731,22 @@ export function CaixaTransacaoDialog({
                             <div className="text-sm font-medium uppercase">{getOrigemLabel()}</div>
                             {(origemTipo === "CAIXA_OPERACIONAL" || 
                               (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO") ||
-                              (tipoTransacao === "TRANSFERENCIA" && origemTipo === "CAIXA_OPERACIONAL")) && (
+                              (tipoTransacao === "TRANSFERENCIA" && origemTipo === "CAIXA_OPERACIONAL")) && parseFloat(String(valor)) > 0 && (
+                              <div className="mt-3 space-y-1">
+                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                  <TrendingDown className="h-4 w-4 text-destructive" />
+                                  <span className="line-through opacity-70">
+                                    {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL"))}
+                                  </span>
+                                </div>
+                                <div className="text-sm font-semibold text-foreground">
+                                  {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL") - parseFloat(String(valor)))}
+                                </div>
+                              </div>
+                            )}
+                            {(origemTipo === "CAIXA_OPERACIONAL" || 
+                              (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO") ||
+                              (tipoTransacao === "TRANSFERENCIA" && origemTipo === "CAIXA_OPERACIONAL")) && parseFloat(String(valor)) === 0 && (
                               <div className="text-xs text-muted-foreground mt-2">
                                 Saldo disponível: {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL"))}
                               </div>
@@ -1780,7 +1796,21 @@ export function CaixaTransacaoDialog({
                           <CardContent className="pt-6 text-center">
                             <div className="text-sm font-medium uppercase">{getDestinoLabel()}</div>
                             {(destinoTipo === "CAIXA_OPERACIONAL" || 
-                              (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "APORTE")) && (
+                              (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "APORTE")) && parseFloat(String(valor)) > 0 && (
+                              <div className="mt-3 space-y-1">
+                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                  <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                  <span className="line-through opacity-70">
+                                    {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL"))}
+                                  </span>
+                                </div>
+                                <div className="text-sm font-semibold text-foreground">
+                                  {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL") + parseFloat(String(valor)))}
+                                </div>
+                              </div>
+                            )}
+                            {(destinoTipo === "CAIXA_OPERACIONAL" || 
+                              (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "APORTE")) && parseFloat(String(valor)) === 0 && (
                               <div className="text-xs text-muted-foreground mt-2">
                                 Saldo atual: {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL"))}
                               </div>
