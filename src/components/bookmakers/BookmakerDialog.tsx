@@ -153,18 +153,16 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
         bookmaker_catalogo_id: bookmakerId,
         nome: selectedBookmaker?.nome || "",
         link_origem: selectedLink,
-        login_username: loginUsername || null,
+        login_username: loginUsername || "", // String vazia ao invés de null
+        login_password_encrypted: loginPassword ? encryptPassword(loginPassword) : "", // String vazia ao invés de null
         saldo_atual: 0, // Sempre começa com 0
         moeda: "BRL", // Padrão BRL
         status,
         observacoes: observacoes || null,
       };
 
-      if (loginPassword) {
-        bookmakerData.login_password_encrypted = encryptPassword(loginPassword);
-      }
-
       if (bookmaker) {
+        // Se não houver nova senha, não atualizar o campo de senha
         if (!loginPassword) {
           delete bookmakerData.login_password_encrypted;
         }
