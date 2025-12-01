@@ -522,7 +522,7 @@ export default function GestaoParceiros() {
                         <p className="text-xs font-medium text-muted-foreground mb-2">Contas Bancárias</p>
                         <div className="space-y-1.5">
                           {parceiro.contas_bancarias.map((conta: any) => (
-                            <BankAccountItem key={conta.id} conta={conta} variant="card" />
+                            <BankAccountItem key={conta.id} conta={conta} variant="card" showSensitiveData={showCPF} />
                           ))}
                         </div>
                       </div>
@@ -642,7 +642,7 @@ export default function GestaoParceiros() {
                         {parceiro.contas_bancarias && parceiro.contas_bancarias.length > 0 && (
                           <div className="space-y-1">
                             {parceiro.contas_bancarias.map((conta: any) => (
-                              <BankAccountItem key={conta.id} conta={conta} variant="list" />
+                              <BankAccountItem key={conta.id} conta={conta} variant="list" showSensitiveData={showCPF} />
                             ))}
                           </div>
                         )}
