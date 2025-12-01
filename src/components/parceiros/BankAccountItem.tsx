@@ -31,8 +31,10 @@ export function BankAccountItem({ conta, variant = "card" }: BankAccountItemProp
   return (
     <div className={`flex items-center justify-between text-xs bg-accent/30 rounded ${variant === "card" ? "p-2" : "px-2 py-1.5"}`}>
       <div className="flex-1 min-w-0">
-        <p className={`font-medium truncate ${variant === "list" ? "max-w-[200px]" : ""}`}>
-          {conta.banco} - PIX {pixKey.tipo}: {showPix ? pixKey.chave : '***'}
+        <p className={`truncate ${variant === "list" ? "max-w-[200px]" : ""}`}>
+          <span className="font-medium">{conta.banco}</span>
+          <span className="text-muted-foreground"> - PIX {pixKey.tipo}: </span>
+          <span className="font-mono">{showPix ? pixKey.chave : '***'}</span>
         </p>
       </div>
       <div className="flex items-center gap-1 ml-2">

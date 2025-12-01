@@ -24,17 +24,21 @@ export function WalletItem({ wallet, variant = "card" }: WalletItemProps) {
   
   const truncatedAddress = `${wallet.endereco.slice(0, 6)}...${wallet.endereco.slice(-6)}`;
 
+  const moedaDisplay = wallet.moeda && wallet.moeda.length > 0 ? wallet.moeda.join(", ") : "";
+
   return (
     <div className={`flex items-center justify-between text-xs bg-accent/30 rounded ${variant === "card" ? "p-2" : "px-2 py-1.5"}`}>
       <div className="flex-1 min-w-0">
-        <p className="font-medium">{formattedName}</p>
-        {wallet.moeda && wallet.moeda.length > 0 && (
-          <p className="text-[10px] text-primary font-semibold">
-            {wallet.moeda.join(", ")}
-          </p>
-        )}
-        <p className="text-[10px] text-muted-foreground font-mono">
-          {truncatedAddress}
+        <p className="truncate">
+          <span className="font-medium">{formattedName}</span>
+          {moedaDisplay && (
+            <>
+              <span className="text-muted-foreground"> - </span>
+              <span className="text-primary font-semibold">{moedaDisplay}</span>
+            </>
+          )}
+          <span className="text-muted-foreground"> - </span>
+          <span className="font-mono">{truncatedAddress}</span>
         </p>
       </div>
       <button
