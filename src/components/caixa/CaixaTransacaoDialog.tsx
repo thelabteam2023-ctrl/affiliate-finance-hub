@@ -680,7 +680,7 @@ export function CaixaTransacaoDialog({
                       .filter((c) => c.parceiro_id === origemParceiroId)
                       .map((conta) => (
                         <SelectItem key={conta.id} value={conta.id}>
-                          {conta.banco} - {conta.titular}
+                          {conta.banco}
                         </SelectItem>
                       ))}
                   </SelectContent>
@@ -840,7 +840,7 @@ export function CaixaTransacaoDialog({
                         .filter((c) => c.parceiro_id === destinoParceiroId)
                         .map((conta) => (
                           <SelectItem key={conta.id} value={conta.id}>
-                            {conta.banco} - {conta.titular}
+                            {conta.banco}
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -963,7 +963,7 @@ export function CaixaTransacaoDialog({
                       .filter((c) => c.parceiro_id === destinoParceiroId)
                       .map((conta) => (
                         <SelectItem key={conta.id} value={conta.id}>
-                          {conta.banco} - {conta.titular}
+                          {conta.banco}
                         </SelectItem>
                       ))}
                   </SelectContent>
