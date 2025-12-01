@@ -571,17 +571,7 @@ export default function ParceiroFinanceiroDialog({
                             )}
                             
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium text-sm truncate">{bookmaker.nome}</p>
-                                {bookmaker.status === "limitada" && (
-                                  <Badge 
-                                    variant="outline" 
-                                    className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30 text-[10px] px-1.5 py-0"
-                                  >
-                                    LIMITADA
-                                  </Badge>
-                                )}
-                              </div>
+                              <p className="font-medium text-sm truncate">{bookmaker.nome}</p>
                               <p className="text-xs text-muted-foreground truncate">
                                 {bookmaker.login_username}
                               </p>
@@ -589,24 +579,17 @@ export default function ParceiroFinanceiroDialog({
                             
                             <Popover>
                               <PopoverTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 px-3 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  disabled={editingStatus === bookmaker.id}
+                                <Badge 
+                                  variant="outline"
+                                  className={`cursor-pointer transition-all hover:opacity-80 ${
+                                    bookmaker.status === "ativo"
+                                      ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/30"
+                                      : "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
+                                  }`}
+                                  onClick={(e) => e.stopPropagation()}
                                 >
-                                  <Edit2 className="h-3 w-3 mr-1" />
-                                  <Badge 
-                                    variant="outline"
-                                    className={
-                                      bookmaker.status === "ativo"
-                                        ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/30"
-                                        : "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
-                                    }
-                                  >
-                                    {bookmaker.status === "ativo" ? "ATIVO" : "LIMITADA"}
-                                  </Badge>
-                                </Button>
+                                  {bookmaker.status === "ativo" ? "ATIVO" : "LIMITADA"}
+                                </Badge>
                               </PopoverTrigger>
                               <PopoverContent className="w-64 p-4" align="end">
                                 <div className="space-y-3">
