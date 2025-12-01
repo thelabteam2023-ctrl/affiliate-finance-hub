@@ -1000,6 +1000,7 @@ export function CaixaTransacaoDialog({
               value={destinoBookmakerId}
               onValueChange={setDestinoBookmakerId}
               disabled={!isOrigemCompleta}
+              parceiroId={origemParceiroId}
             />
           </div>
         </>
