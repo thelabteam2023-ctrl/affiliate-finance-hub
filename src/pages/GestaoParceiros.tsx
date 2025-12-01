@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import ParceiroFinanceiroDialog from "@/components/parceiros/ParceiroFinanceiroDialog";
+import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import { formatCPF, maskCPFPartial, maskEmail } from "@/lib/validators";
 
 interface Parceiro {
@@ -63,6 +64,11 @@ export default function GestaoParceiros() {
   const [selectedParceiroFinanceiro, setSelectedParceiroFinanceiro] = useState<{
     id: string;
     nome: string;
+  } | null>(null);
+  const [vinculoDialogOpen, setVinculoDialogOpen] = useState(false);
+  const [preselectedVinculo, setPreselectedVinculo] = useState<{
+    parceiroId: string;
+    bookmakerId: string;
   } | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -271,6 +277,17 @@ export default function GestaoParceiros() {
       nome: parceiro.nome,
     });
     setFinanceiroDialogOpen(true);
+  };
+
+  const handleCreateVinculo = (parceiroId: string, bookmakerId: string) => {
+    setPreselectedVinculo({ parceiroId, bookmakerId });
+    setVinculoDialogOpen(true);
+  };
+
+  const handleVinculoDialogClose = () => {
+    setVinculoDialogOpen(false);
+    setPreselectedVinculo(null);
+    fetchParceiros(); // Refresh to update bookmaker counts
   };
 
   const maskCPF = (cpf: string) => {
@@ -680,8 +697,22 @@ export default function GestaoParceiros() {
             parceiroId={selectedParceiroFinanceiro.id}
             parceiroNome={selectedParceiroFinanceiro.nome}
             roiData={roiData.get(selectedParceiroFinanceiro.id) || null}
+            onCreateVinculo={handleCreateVinculo}
           />
         )}
+
+        <BookmakerDialog
+          open={vinculoDialogOpen}
+          onClose={handleVinculoDialogClose}
+          bookmaker={
+            preselectedVinculo
+              ? {
+                  parceiro_id: preselectedVinculo.parceiroId,
+                  bookmaker_catalogo_id: preselectedVinculo.bookmakerId,
+                }
+              : null
+          }
+        />
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
