@@ -10,7 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { History, TrendingUp, ArrowRightLeft, Building2, ShieldCheck, ShieldAlert } from "lucide-react";
+import { History, TrendingUp, ArrowRightLeft, Building2, ShieldCheck, ShieldAlert, Search, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 
 interface ParceiroFinanceiroDialogProps {
   open: boolean;
@@ -26,6 +29,7 @@ interface ParceiroFinanceiroDialogProps {
     num_bookmakers_limitadas: number;
     saldo_bookmakers: number;
   } | null;
+  onCreateVinculo?: (parceiroId: string, bookmakerId: string) => void;
 }
 
 interface Transacao {
@@ -64,6 +68,7 @@ export default function ParceiroFinanceiroDialog({
   parceiroId,
   parceiroNome,
   roiData,
+  onCreateVinculo,
 }: ParceiroFinanceiroDialogProps) {
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
   const [bookmakerNames, setBookmakerNames] = useState<Map<string, string>>(new Map());
@@ -71,6 +76,8 @@ export default function ParceiroFinanceiroDialog({
   const [bookmakersDisponiveis, setBookmakersDisponiveis] = useState<BookmakerCatalogo[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingBookmakers, setLoadingBookmakers] = useState(false);
+  const [searchVinculados, setSearchVinculados] = useState("");
+  const [searchDisponiveis, setSearchDisponiveis] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -148,6 +155,23 @@ export default function ParceiroFinanceiroDialog({
     if (tipo === "DEPOSITO") return "bg-red-500/20 text-red-500 border-red-500/30";
     if (tipo === "SAQUE") return "bg-green-500/20 text-green-500 border-green-500/30";
     return "bg-gray-500/20 text-gray-500 border-gray-500/30";
+  };
+
+  // Filtrar bookmakers vinculados
+  const filteredVinculados = bookmakersVinculados.filter((b) =>
+    b.nome.toLowerCase().includes(searchVinculados.toLowerCase())
+  );
+
+  // Filtrar bookmakers disponíveis
+  const filteredDisponiveis = bookmakersDisponiveis.filter((b) =>
+    b.nome.toLowerCase().includes(searchDisponiveis.toLowerCase())
+  );
+
+  const handleCreateVinculo = (bookmakerId: string) => {
+    if (onCreateVinculo) {
+      onCreateVinculo(parceiroId, bookmakerId);
+      onOpenChange(false);
+    }
   };
 
   const fetchBookmakers = async () => {
@@ -441,25 +465,39 @@ export default function ParceiroFinanceiroDialog({
                 Carregando...
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-[1fr_1px_1fr] gap-4">
                 {/* Coluna 1: Bookmakers Vinculados */}
                 <div>
-                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                    Casas Vinculadas ({bookmakersVinculados.length})
-                  </h3>
-                  <ScrollArea className="h-[400px] pr-3">
-                    {bookmakersVinculados.length === 0 ? (
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                      Casas Vinculadas ({filteredVinculados.length})
+                    </h3>
+                  </div>
+                  
+                  {/* Filtro de busca */}
+                  <div className="relative mb-3">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar casas vinculadas..."
+                      value={searchVinculados}
+                      onChange={(e) => setSearchVinculados(e.target.value)}
+                      className="pl-9 h-9"
+                    />
+                  </div>
+
+                  <ScrollArea className="h-[350px] pr-3">
+                    {filteredVinculados.length === 0 ? (
                       <Card>
                         <CardContent className="py-8 text-center">
                           <p className="text-sm text-muted-foreground">
-                            Nenhuma casa vinculada
+                            {searchVinculados ? "Nenhuma casa encontrada" : "Nenhuma casa vinculada"}
                           </p>
                         </CardContent>
                       </Card>
                     ) : (
                       <div className="space-y-2">
-                        {bookmakersVinculados.map((bookmaker) => (
+                        {filteredVinculados.map((bookmaker) => (
                           <Card key={bookmaker.id} className="hover:bg-accent/50 transition-colors">
                             <CardContent className="p-4">
                               <div className="space-y-3">
@@ -518,42 +556,72 @@ export default function ParceiroFinanceiroDialog({
                   </ScrollArea>
                 </div>
 
+                {/* Separador vertical */}
+                <Separator orientation="vertical" className="h-full" />
+
                 {/* Coluna 2: Bookmakers Disponíveis */}
                 <div>
-                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <ShieldAlert className="h-4 w-4 text-muted-foreground" />
-                    Casas Disponíveis ({bookmakersDisponiveis.length})
-                  </h3>
-                  <ScrollArea className="h-[400px] pr-3">
-                    {bookmakersDisponiveis.length === 0 ? (
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                      Casas Disponíveis ({filteredDisponiveis.length})
+                    </h3>
+                  </div>
+                  
+                  {/* Filtro de busca */}
+                  <div className="relative mb-3">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar casas disponíveis..."
+                      value={searchDisponiveis}
+                      onChange={(e) => setSearchDisponiveis(e.target.value)}
+                      className="pl-9 h-9"
+                    />
+                  </div>
+
+                  <ScrollArea className="h-[350px] pr-3">
+                    {filteredDisponiveis.length === 0 ? (
                       <Card>
                         <CardContent className="py-8 text-center">
                           <p className="text-sm text-muted-foreground">
-                            Todas as casas já foram vinculadas
+                            {searchDisponiveis ? "Nenhuma casa encontrada" : "Todas as casas já foram vinculadas"}
                           </p>
                         </CardContent>
                       </Card>
                     ) : (
                       <div className="space-y-2">
-                        {bookmakersDisponiveis.map((bookmaker) => (
-                          <Card key={bookmaker.id} className="hover:bg-accent/50 transition-colors">
+                        {filteredDisponiveis.map((bookmaker) => (
+                          <Card key={bookmaker.id} className="hover:bg-accent/50 transition-colors group">
                             <CardContent className="p-3">
-                              <div className="flex items-center gap-3">
-                                {bookmaker.logo_url ? (
-                                  <img
-                                    src={bookmaker.logo_url}
-                                    alt={bookmaker.nome}
-                                    className="h-10 w-10 rounded object-contain"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = "none";
-                                    }}
-                                  />
-                                ) : (
-                                  <div className="h-10 w-10 rounded bg-accent flex items-center justify-center">
-                                    <Building2 className="h-5 w-5 text-muted-foreground" />
-                                  </div>
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3 flex-1">
+                                  {bookmaker.logo_url ? (
+                                    <img
+                                      src={bookmaker.logo_url}
+                                      alt={bookmaker.nome}
+                                      className="h-10 w-10 rounded object-contain"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = "none";
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="h-10 w-10 rounded bg-accent flex items-center justify-center">
+                                      <Building2 className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                  )}
+                                  <p className="text-sm font-medium">{bookmaker.nome}</p>
+                                </div>
+                                
+                                {onCreateVinculo && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => handleCreateVinculo(bookmaker.id)}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
                                 )}
-                                <p className="text-sm font-medium">{bookmaker.nome}</p>
                               </div>
                             </CardContent>
                           </Card>
