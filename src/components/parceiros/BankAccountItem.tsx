@@ -86,7 +86,7 @@ export function BankAccountItem({ conta, variant = "card" }: BankAccountItemProp
       <div className="flex-1 min-w-0">
         <p className={`truncate ${variant === "list" ? "max-w-[200px]" : ""}`}>
           <span className="font-medium">{conta.banco}</span>
-          <span className="text-muted-foreground"> - {pixKey.tipo}: </span>
+          <span className="text-muted-foreground"> - PIX {pixKey.tipo}: </span>
           <span className="font-mono">{maskedValue}</span>
         </p>
       </div>
