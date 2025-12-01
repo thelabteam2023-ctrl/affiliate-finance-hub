@@ -85,6 +85,7 @@ export default function ParceiroFinanceiroDialog({
   const [searchVinculados, setSearchVinculados] = useState("");
   const [searchDisponiveis, setSearchDisponiveis] = useState("");
   const [editingStatus, setEditingStatus] = useState<string | null>(null);
+  const [showAllVinculados, setShowAllVinculados] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -165,10 +166,14 @@ export default function ParceiroFinanceiroDialog({
     return "bg-gray-500/20 text-gray-500 border-gray-500/30";
   };
 
-  // Filtrar bookmakers vinculados
-  const filteredVinculados = bookmakersVinculados.filter((b) =>
-    b.nome.toLowerCase().includes(searchVinculados.toLowerCase())
-  );
+  // Filtrar e ordenar bookmakers vinculados por saldo (maior para menor)
+  const filteredVinculados = bookmakersVinculados
+    .filter((b) => b.nome.toLowerCase().includes(searchVinculados.toLowerCase()))
+    .sort((a, b) => b.saldo_atual - a.saldo_atual);
+
+  // Limitar a 8 casas se não estiver expandido
+  const displayedVinculados = showAllVinculados ? filteredVinculados : filteredVinculados.slice(0, 8);
+  const hasMoreVinculados = filteredVinculados.length > 8;
 
   // Filtrar bookmakers disponíveis
   const filteredDisponiveis = bookmakersDisponiveis.filter((b) =>
@@ -511,6 +516,16 @@ export default function ParceiroFinanceiroDialog({
                       <ShieldCheck className="h-4 w-4 text-emerald-500" />
                       Casas Vinculadas ({filteredVinculados.length})
                     </h3>
+                    {hasMoreVinculados && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAllVinculados(!showAllVinculados)}
+                        className="h-7 text-xs"
+                      >
+                        {showAllVinculados ? "Mostrar menos" : `+${filteredVinculados.length - 8} mais`}
+                      </Button>
+                    )}
                   </div>
                   
                   {/* Filtro de busca */}
@@ -535,7 +550,7 @@ export default function ParceiroFinanceiroDialog({
                       </Card>
                     ) : (
                       <div className="space-y-1">
-                        {filteredVinculados.map((bookmaker) => (
+                        {displayedVinculados.map((bookmaker) => (
                           <div
                             key={bookmaker.id}
                             className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors border border-border/50 group"
@@ -556,7 +571,17 @@ export default function ParceiroFinanceiroDialog({
                             )}
                             
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">{bookmaker.nome}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-sm truncate">{bookmaker.nome}</p>
+                                {bookmaker.status === "limitada" && (
+                                  <Badge 
+                                    variant="outline" 
+                                    className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30 text-[10px] px-1.5 py-0"
+                                  >
+                                    LIMITADA
+                                  </Badge>
+                                )}
+                              </div>
                               <p className="text-xs text-muted-foreground truncate">
                                 {bookmaker.login_username}
                               </p>
