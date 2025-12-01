@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Eye, EyeOff, Copy } from "lucide-react";
+import { Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BankAccountItemProps {
@@ -10,6 +9,7 @@ interface BankAccountItemProps {
     pix_keys?: Array<{ tipo: string; chave: string }>;
   };
   variant?: "card" | "list";
+  showSensitiveData?: boolean;
 }
 
 const maskPixKey = (chave: string, tipo: string): string => {
@@ -63,8 +63,7 @@ const maskPixKey = (chave: string, tipo: string): string => {
   }
 };
 
-export function BankAccountItem({ conta, variant = "card" }: BankAccountItemProps) {
-  const [showPix, setShowPix] = useState(false);
+export function BankAccountItem({ conta, variant = "card", showSensitiveData = false }: BankAccountItemProps) {
   const { toast } = useToast();
   
   const pixKey = conta.pix_keys?.[0] || (conta.pix_key ? { tipo: 'CPF', chave: conta.pix_key } : null);
@@ -79,7 +78,7 @@ export function BankAccountItem({ conta, variant = "card" }: BankAccountItemProp
     );
   }
 
-  const maskedValue = showPix ? pixKey.chave : maskPixKey(pixKey.chave, pixKey.tipo);
+  const maskedValue = showSensitiveData ? pixKey.chave : maskPixKey(pixKey.chave, pixKey.tipo);
 
   return (
     <div className={`flex items-center justify-between text-xs bg-accent/30 rounded ${variant === "card" ? "p-2" : "px-2 py-1.5"}`}>
@@ -90,23 +89,15 @@ export function BankAccountItem({ conta, variant = "card" }: BankAccountItemProp
           <span className="font-mono">{maskedValue}</span>
         </p>
       </div>
-      <div className="flex items-center gap-1 ml-2">
-        <button
-          onClick={() => setShowPix(!showPix)}
-          className="p-1 hover:bg-accent rounded transition-colors"
-        >
-          {showPix ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-        </button>
-        <button
-          onClick={() => {
-            navigator.clipboard.writeText(pixKey.chave);
-            toast({ title: "PIX copiado!" });
-          }}
-          className="p-1 hover:bg-accent rounded transition-colors"
-        >
-          <Copy className="h-3 w-3" />
-        </button>
-      </div>
+      <button
+        onClick={() => {
+          navigator.clipboard.writeText(pixKey.chave);
+          toast({ title: "PIX copiado!" });
+        }}
+        className="ml-2 p-1 hover:bg-accent rounded transition-colors"
+      >
+        <Copy className="h-3 w-3" />
+      </button>
     </div>
   );
 }
