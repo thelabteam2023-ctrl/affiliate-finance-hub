@@ -436,19 +436,19 @@ export default function ParceiroFinanceiroDialog({
           </TabsContent>
 
           <TabsContent value="bookmakers" className="mt-4">
-            <ScrollArea className="h-[400px] pr-4">
-              {loadingBookmakers ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  Carregando...
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Bookmakers Vinculados */}
-                  <div>
-                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                      <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                      Casas Vinculadas ({bookmakersVinculados.length})
-                    </h3>
+            {loadingBookmakers ? (
+              <div className="text-center py-12 text-muted-foreground">
+                Carregando...
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                {/* Coluna 1: Bookmakers Vinculados */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                    Casas Vinculadas ({bookmakersVinculados.length})
+                  </h3>
+                  <ScrollArea className="h-[400px] pr-3">
                     {bookmakersVinculados.length === 0 ? (
                       <Card>
                         <CardContent className="py-8 text-center">
@@ -462,8 +462,8 @@ export default function ParceiroFinanceiroDialog({
                         {bookmakersVinculados.map((bookmaker) => (
                           <Card key={bookmaker.id} className="hover:bg-accent/50 transition-colors">
                             <CardContent className="p-4">
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="flex items-start gap-3 flex-1">
+                              <div className="space-y-3">
+                                <div className="flex items-start gap-3">
                                   {bookmaker.logo_url ? (
                                     <img
                                       src={bookmaker.logo_url}
@@ -479,35 +479,33 @@ export default function ParceiroFinanceiroDialog({
                                     </div>
                                   )}
                                   
-                                  <div className="flex-1 space-y-2">
-                                    <div>
-                                      <p className="font-semibold">{bookmaker.nome}</p>
-                                      <p className="text-xs text-muted-foreground">
-                                        Login: {bookmaker.login_username}
-                                      </p>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-2">
-                                      <Badge 
-                                        variant="outline"
-                                        className={
-                                          bookmaker.status === "ativo"
-                                            ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/30"
-                                            : "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
-                                        }
-                                      >
-                                        {bookmaker.status === "ativo" ? "ATIVO" : "LIMITADA"}
-                                      </Badge>
-                                      <Badge variant="outline" className="text-xs">
-                                        {bookmaker.moeda}
-                                      </Badge>
-                                    </div>
+                                  <div className="flex-1">
+                                    <p className="font-semibold text-sm">{bookmaker.nome}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {bookmaker.login_username}
+                                    </p>
                                   </div>
                                 </div>
-
-                                <div className="text-right">
-                                  <p className="text-xs text-muted-foreground mb-1">Saldo</p>
-                                  <p className="text-lg font-bold">
+                                
+                                <div className="flex items-center gap-2">
+                                  <Badge 
+                                    variant="outline"
+                                    className={
+                                      bookmaker.status === "ativo"
+                                        ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/30"
+                                        : "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
+                                    }
+                                  >
+                                    {bookmaker.status === "ativo" ? "ATIVO" : "LIMITADA"}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    {bookmaker.moeda}
+                                  </Badge>
+                                </div>
+                                
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Saldo</p>
+                                  <p className="text-sm font-bold">
                                     {formatCurrency(bookmaker.saldo_atual)}
                                   </p>
                                 </div>
@@ -517,40 +515,42 @@ export default function ParceiroFinanceiroDialog({
                         ))}
                       </div>
                     )}
-                  </div>
+                  </ScrollArea>
+                </div>
 
-                  {/* Bookmakers Disponíveis */}
-                  <div>
-                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                      <ShieldAlert className="h-4 w-4 text-muted-foreground" />
-                      Casas Disponíveis para Vínculo ({bookmakersDisponiveis.length})
-                    </h3>
+                {/* Coluna 2: Bookmakers Disponíveis */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                    Casas Disponíveis ({bookmakersDisponiveis.length})
+                  </h3>
+                  <ScrollArea className="h-[400px] pr-3">
                     {bookmakersDisponiveis.length === 0 ? (
                       <Card>
                         <CardContent className="py-8 text-center">
                           <p className="text-sm text-muted-foreground">
-                            Todas as casas disponíveis já foram vinculadas
+                            Todas as casas já foram vinculadas
                           </p>
                         </CardContent>
                       </Card>
                     ) : (
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-2">
                         {bookmakersDisponiveis.map((bookmaker) => (
                           <Card key={bookmaker.id} className="hover:bg-accent/50 transition-colors">
                             <CardContent className="p-3">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-3">
                                 {bookmaker.logo_url ? (
                                   <img
                                     src={bookmaker.logo_url}
                                     alt={bookmaker.nome}
-                                    className="h-8 w-8 rounded object-contain"
+                                    className="h-10 w-10 rounded object-contain"
                                     onError={(e) => {
                                       e.currentTarget.style.display = "none";
                                     }}
                                   />
                                 ) : (
-                                  <div className="h-8 w-8 rounded bg-accent flex items-center justify-center">
-                                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                                  <div className="h-10 w-10 rounded bg-accent flex items-center justify-center">
+                                    <Building2 className="h-5 w-5 text-muted-foreground" />
                                   </div>
                                 )}
                                 <p className="text-sm font-medium">{bookmaker.nome}</p>
@@ -560,10 +560,10 @@ export default function ParceiroFinanceiroDialog({
                         ))}
                       </div>
                     )}
-                  </div>
+                  </ScrollArea>
                 </div>
-              )}
-            </ScrollArea>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </DialogContent>
