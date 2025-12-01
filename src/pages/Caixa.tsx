@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
 import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { CaixaRelatorios } from "@/components/caixa/CaixaRelatorios";
@@ -399,16 +400,45 @@ export default function Caixa() {
           </CardContent>
         </Card>
 
-        {/* Exposição Crypto */}
+        {/* Exposição Crypto com Tooltip */}
         <Card className="bg-card/50 backdrop-blur border-border/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Exposição Crypto (USD)</CardTitle>
             <TrendingUp className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-400">
-              {formatCurrency(getTotalCryptoUSD(), "USD")}
-            </div>
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <div className="flex items-center gap-2 cursor-pointer group">
+                  <span className="text-2xl font-bold text-blue-400">
+                    {formatCurrency(getTotalCryptoUSD(), "USD")}
+                  </span>
+                  {saldosCrypto.length > 0 && (
+                    <Info className="h-4 w-4 text-muted-foreground group-hover:text-blue-400 transition-colors" />
+                  )}
+                </div>
+              </HoverCardTrigger>
+              {saldosCrypto.length > 0 && (
+                <HoverCardContent 
+                  className="w-auto min-w-[200px]" 
+                  align="start"
+                >
+                  <div className={`grid gap-3 ${saldosCrypto.length > 3 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                    {saldosCrypto.map((saldo) => (
+                      <div key={saldo.coin} className="flex items-center justify-between gap-4 text-sm">
+                        <span className="font-medium">{saldo.coin}</span>
+                        <div className="text-right">
+                          <div className="font-mono text-xs">{saldo.saldo_coin.toFixed(8)}</div>
+                          <div className="text-xs text-muted-foreground">
+                            ≈ {formatCurrency(saldo.saldo_usd, "USD")}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </HoverCardContent>
+              )}
+            </HoverCard>
           </CardContent>
         </Card>
       </div>
@@ -441,32 +471,6 @@ export default function Caixa() {
         </CardContent>
       </Card>
 
-      {/* Crypto Balances */}
-      {saldosCrypto.length > 0 && (
-        <Card className="bg-card/50 backdrop-blur border-border/50">
-          <CardHeader>
-            <CardTitle className="text-lg">Saldos Crypto</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-2 md:grid-cols-3">
-              {saldosCrypto.map((saldo) => (
-                <div
-                  key={saldo.coin}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border/50"
-                >
-                  <span className="font-medium text-sm">{saldo.coin}</span>
-                  <div className="text-right">
-                    <div className="font-bold">{saldo.saldo_coin.toFixed(8)}</div>
-                    <div className="text-xs text-muted-foreground">
-                      ≈ {formatCurrency(saldo.saldo_usd, "USD")}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Relatórios Consolidados */}
       <CaixaRelatorios
