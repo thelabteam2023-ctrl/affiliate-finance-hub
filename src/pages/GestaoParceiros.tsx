@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2, LayoutGrid, List, FileText } from "lucide-react";
+import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2, LayoutGrid, List, FileText, Copy } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -513,15 +513,68 @@ export default function GestaoParceiros() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2 text-sm pt-2 border-t mt-2">
-                    <p className="text-muted-foreground">
-                      <span className="font-medium">Contas Bancárias:</span>{" "}
-                      {parceiro.contas_bancarias?.length || 0}
-                    </p>
-                    <p className="text-muted-foreground">
-                      <span className="font-medium">Wallets Crypto:</span>{" "}
-                      {parceiro.wallets_crypto?.length || 0}
-                    </p>
+                  <div className="space-y-3 text-sm pt-2 border-t mt-2">
+                    {/* Contas Bancárias */}
+                    {parceiro.contas_bancarias && parceiro.contas_bancarias.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Contas Bancárias</p>
+                        <div className="space-y-1.5">
+                          {parceiro.contas_bancarias.map((conta: any) => (
+                            <div key={conta.id} className="flex items-center justify-between text-xs bg-accent/30 rounded p-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{conta.banco} - {conta.titular}</p>
+                                {conta.pix_key && (
+                                  <p className="text-[10px] text-muted-foreground font-mono truncate">
+                                    PIX: {conta.pix_key}
+                                  </p>
+                                )}
+                              </div>
+                              {conta.pix_key && (
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(conta.pix_key);
+                                    toast({ title: "PIX copiado!" });
+                                  }}
+                                  className="ml-2 p-1 hover:bg-accent rounded transition-colors"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Wallets Crypto */}
+                    {parceiro.wallets_crypto && parceiro.wallets_crypto.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Wallets Crypto</p>
+                        <div className="space-y-1.5">
+                          {parceiro.wallets_crypto.map((wallet: any) => (
+                            <div key={wallet.id} className="flex items-center justify-between text-xs bg-accent/30 rounded p-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{wallet.exchange || wallet.network}</p>
+                                <p className="text-[10px] text-muted-foreground font-mono truncate">
+                                  {wallet.endereco.slice(0, 8)}...{wallet.endereco.slice(-8)}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(wallet.endereco);
+                                  toast({ title: "Endereço copiado!" });
+                                }}
+                                className="ml-2 p-1 hover:bg-accent rounded transition-colors"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bookmakers */}
                     {roiData.has(parceiro.id) && (
                       <p className="text-muted-foreground">
                         <span className="font-medium">Bookmakers:</span>{" "}
@@ -618,15 +671,60 @@ export default function GestaoParceiros() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <div className="text-center px-3 py-2 bg-accent rounded-lg">
-                          <div className="font-bold text-foreground">{parceiro.contas_bancarias?.length || 0}</div>
-                          <div className="text-xs">Contas</div>
-                        </div>
-                        <div className="text-center px-3 py-2 bg-accent rounded-lg">
-                          <div className="font-bold text-foreground">{parceiro.wallets_crypto?.length || 0}</div>
-                          <div className="text-xs">Wallets</div>
-                        </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        {/* Contas Bancárias */}
+                        {parceiro.contas_bancarias && parceiro.contas_bancarias.length > 0 && (
+                          <div className="space-y-1">
+                            {parceiro.contas_bancarias.map((conta: any) => (
+                              <div key={conta.id} className="flex items-center gap-2 bg-accent/30 rounded px-2 py-1.5 text-xs">
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-medium truncate max-w-[150px]">{conta.banco}</p>
+                                  {conta.pix_key && (
+                                    <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[150px]">
+                                      {conta.pix_key}
+                                    </p>
+                                  )}
+                                </div>
+                                {conta.pix_key && (
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(conta.pix_key);
+                                      toast({ title: "PIX copiado!" });
+                                    }}
+                                    className="p-1 hover:bg-accent rounded"
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Wallets Crypto */}
+                        {parceiro.wallets_crypto && parceiro.wallets_crypto.length > 0 && (
+                          <div className="space-y-1">
+                            {parceiro.wallets_crypto.map((wallet: any) => (
+                              <div key={wallet.id} className="flex items-center gap-2 bg-accent/30 rounded px-2 py-1.5 text-xs">
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-medium truncate max-w-[150px]">{wallet.exchange || wallet.network}</p>
+                                  <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[150px]">
+                                    {wallet.endereco.slice(0, 6)}...{wallet.endereco.slice(-6)}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(wallet.endereco);
+                                    toast({ title: "Endereço copiado!" });
+                                  }}
+                                  className="p-1 hover:bg-accent rounded"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         {roiData.has(parceiro.id) && (
                           <>
                             <div className="text-center px-3 py-2 bg-accent rounded-lg">
