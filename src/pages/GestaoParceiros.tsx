@@ -498,12 +498,12 @@ export default function GestaoParceiros() {
                 <CardContent>
                   {roiData.has(parceiro.id) && (
                     <div 
-                      className="pt-3 border-t mt-3 cursor-pointer hover:bg-accent/50 -mx-6 px-6 -mt-3 mb-4 pb-3 transition-colors group"
+                      className="pt-3 border-t mt-3 cursor-pointer bg-accent/80 hover:bg-accent -mx-6 px-6 -mt-3 mb-4 pb-3 transition-colors group rounded-lg"
                       onClick={() => handleOpenFinanceiro(parceiro)}
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Lucro/Prejuízo</p>
+                          <p className="text-xs text-foreground/70 mb-1">Lucro/Prejuízo</p>
                           <p className={`text-lg font-bold ${
                             roiData.get(parceiro.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
                           }`}>
@@ -511,7 +511,7 @@ export default function GestaoParceiros() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs text-muted-foreground mb-1">ROI</p>
+                          <p className="text-xs text-foreground/70 mb-1">ROI</p>
                           <p className={`text-lg font-bold ${
                             roiData.get(parceiro.id)!.roi_percentual >= 0 ? "text-green-600" : "text-red-600"
                           }`}>
@@ -519,7 +519,7 @@ export default function GestaoParceiros() {
                           </p>
                         </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2 text-center group-hover:text-foreground transition-colors">
+                      <p className="text-xs text-foreground/60 mt-2 text-center group-hover:text-foreground transition-colors">
                         Clique para ver informações financeiras
                       </p>
                     </div>
@@ -601,7 +601,7 @@ export default function GestaoParceiros() {
                       <div className="flex items-center gap-3 text-sm">
                         {roiData.has(parceiro.id) && (
                           <div 
-                            className="flex items-center gap-3 px-4 py-2 bg-accent/50 hover:bg-accent rounded-lg cursor-pointer transition-colors"
+                            className="flex items-center gap-3 px-4 py-2 bg-accent/80 hover:bg-accent rounded-lg cursor-pointer transition-colors"
                             onClick={() => handleOpenFinanceiro(parceiro)}
                           >
                             <div className="text-center">
@@ -610,7 +610,7 @@ export default function GestaoParceiros() {
                               }`}>
                                 {formatCurrency(roiData.get(parceiro.id)!.lucro_prejuizo)}
                               </div>
-                              <div className="text-xs text-muted-foreground">Lucro/Prejuízo</div>
+                              <div className="text-xs text-foreground/70">Lucro/Prejuízo</div>
                             </div>
                             <div className="text-center">
                               <div className={`font-bold ${
@@ -618,7 +618,7 @@ export default function GestaoParceiros() {
                               }`}>
                                 {roiData.get(parceiro.id)!.roi_percentual.toFixed(1)}%
                               </div>
-                              <div className="text-xs text-muted-foreground">ROI</div>
+                              <div className="text-xs text-foreground/70">ROI</div>
                             </div>
                           </div>
                         )}
