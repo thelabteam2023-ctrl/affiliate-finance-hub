@@ -452,6 +452,62 @@ export function CaixaTransacaoDialog({
         return;
       }
 
+      // Validate origin fields
+      if (origemTipo === "PARCEIRO_CONTA" && !origemContaId) {
+        toast({
+          title: "Erro",
+          description: "Selecione a conta bancária de origem",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (origemTipo === "PARCEIRO_WALLET" && !origemWalletId) {
+        toast({
+          title: "Erro",
+          description: "Selecione a wallet de origem",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (origemTipo === "BOOKMAKER" && !origemBookmakerId) {
+        toast({
+          title: "Erro",
+          description: "Selecione a bookmaker de origem",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate destination fields
+      if (destinoTipo === "PARCEIRO_CONTA" && !destinoContaId) {
+        toast({
+          title: "Erro",
+          description: "Selecione a conta bancária de destino",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (destinoTipo === "PARCEIRO_WALLET" && !destinoWalletId) {
+        toast({
+          title: "Erro",
+          description: "Selecione a wallet de destino",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (destinoTipo === "BOOKMAKER" && !destinoBookmakerId) {
+        toast({
+          title: "Erro",
+          description: "Selecione a bookmaker de destino",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Validar saldo insuficiente
       if (checkSaldoInsuficiente()) {
         toast({
