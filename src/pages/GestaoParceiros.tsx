@@ -34,8 +34,19 @@ interface Parceiro {
   wallets_crypto: any[];
 }
 
+interface ParceiroROI {
+  parceiro_id: string;
+  total_depositado: number;
+  total_sacado: number;
+  lucro_prejuizo: number;
+  roi_percentual: number;
+  num_bookmakers: number;
+  saldo_bookmakers: number;
+}
+
 export default function GestaoParceiros() {
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
+  const [roiData, setRoiData] = useState<Map<string, ParceiroROI>>(new Map());
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [showCPF, setShowCPF] = useState(false);
@@ -74,6 +85,9 @@ export default function GestaoParceiros() {
 
       if (error) throw error;
       setParceiros(data || []);
+      
+      // Fetch ROI data after fetching partners
+      await fetchROIData();
     } catch (error: any) {
       toast({
         title: "Erro ao carregar parceiros",
@@ -83,6 +97,105 @@ export default function GestaoParceiros() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchROIData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch financial data from cash_ledger
+      const { data: financialData, error: financialError } = await supabase
+        .from("cash_ledger")
+        .select("*")
+        .eq("user_id", user.id)
+        .in("tipo_transacao", ["DEPOSITO", "SAQUE"])
+        .eq("status", "CONFIRMADO");
+
+      if (financialError) throw financialError;
+
+      // Fetch bookmaker counts and balances
+      const { data: bookmakersData, error: bookmakersError } = await supabase
+        .from("bookmakers")
+        .select("parceiro_id, saldo_atual, status")
+        .eq("user_id", user.id);
+
+      if (bookmakersError) throw bookmakersError;
+
+      // Calculate ROI per partner
+      const roiMap = new Map<string, ParceiroROI>();
+      
+      // Process financial transactions
+      const parceiroFinancials = new Map<string, { depositado: number; sacado: number }>();
+      
+      financialData?.forEach((tx) => {
+        if (tx.tipo_transacao === "DEPOSITO" && tx.origem_parceiro_id) {
+          const current = parceiroFinancials.get(tx.origem_parceiro_id) || { depositado: 0, sacado: 0 };
+          current.depositado += Number(tx.valor);
+          parceiroFinancials.set(tx.origem_parceiro_id, current);
+        } else if (tx.tipo_transacao === "SAQUE" && tx.destino_parceiro_id) {
+          const current = parceiroFinancials.get(tx.destino_parceiro_id) || { depositado: 0, sacado: 0 };
+          current.sacado += Number(tx.valor);
+          parceiroFinancials.set(tx.destino_parceiro_id, current);
+        }
+      });
+
+      // Process bookmaker data
+      const parceiroBookmakers = new Map<string, { count: number; saldo: number }>();
+      
+      bookmakersData?.forEach((bm) => {
+        if (!bm.parceiro_id) return;
+        const current = parceiroBookmakers.get(bm.parceiro_id) || { count: 0, saldo: 0 };
+        if (bm.status === "ativo") {
+          current.count += 1;
+        }
+        current.saldo += Number(bm.saldo_atual);
+        parceiroBookmakers.set(bm.parceiro_id, current);
+      });
+
+      // Combine all data
+      parceiroFinancials.forEach((financials, parceiroId) => {
+        const bookmakerInfo = parceiroBookmakers.get(parceiroId) || { count: 0, saldo: 0 };
+        const lucro = financials.sacado - financials.depositado;
+        const roi = financials.depositado > 0 ? (lucro / financials.depositado) * 100 : 0;
+        
+        roiMap.set(parceiroId, {
+          parceiro_id: parceiroId,
+          total_depositado: financials.depositado,
+          total_sacado: financials.sacado,
+          lucro_prejuizo: lucro,
+          roi_percentual: roi,
+          num_bookmakers: bookmakerInfo.count,
+          saldo_bookmakers: bookmakerInfo.saldo,
+        });
+      });
+
+      // Add partners with bookmakers but no transactions
+      parceiroBookmakers.forEach((bookmakerInfo, parceiroId) => {
+        if (!roiMap.has(parceiroId)) {
+          roiMap.set(parceiroId, {
+            parceiro_id: parceiroId,
+            total_depositado: 0,
+            total_sacado: 0,
+            lucro_prejuizo: 0,
+            roi_percentual: 0,
+            num_bookmakers: bookmakerInfo.count,
+            saldo_bookmakers: bookmakerInfo.saldo,
+          });
+        }
+      });
+
+      setRoiData(roiMap);
+    } catch (error: any) {
+      console.error("Erro ao carregar ROI:", error);
+    }
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
   };
 
   const handleLogout = async () => {
@@ -356,7 +469,51 @@ export default function GestaoParceiros() {
                       <span className="font-medium">Wallets Crypto:</span>{" "}
                       {parceiro.wallets_crypto?.length || 0}
                     </p>
+                    {roiData.has(parceiro.id) && (
+                      <>
+                        <p className="text-muted-foreground">
+                          <span className="font-medium">Bookmakers:</span>{" "}
+                          {roiData.get(parceiro.id)?.num_bookmakers || 0}
+                        </p>
+                        <p className="text-muted-foreground">
+                          <span className="font-medium">Saldo Total:</span>{" "}
+                          {formatCurrency(roiData.get(parceiro.id)?.saldo_bookmakers || 0)}
+                        </p>
+                      </>
+                    )}
                   </div>
+                  {roiData.has(parceiro.id) && roiData.get(parceiro.id)!.total_depositado > 0 && (
+                    <div className="space-y-2 text-sm pt-3 border-t mt-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Total Depositado</p>
+                          <p className="font-semibold text-sm">{formatCurrency(roiData.get(parceiro.id)!.total_depositado)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Total Sacado</p>
+                          <p className="font-semibold text-sm">{formatCurrency(roiData.get(parceiro.id)!.total_sacado)}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Lucro/Prejuízo</p>
+                          <p className={`font-bold text-sm ${
+                            roiData.get(parceiro.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
+                          }`}>
+                            {formatCurrency(roiData.get(parceiro.id)!.lucro_prejuizo)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">ROI</p>
+                          <p className={`font-bold text-sm ${
+                            roiData.get(parceiro.id)!.roi_percentual >= 0 ? "text-green-600" : "text-red-600"
+                          }`}>
+                            {roiData.get(parceiro.id)!.roi_percentual.toFixed(2)}%
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex gap-2 mt-4">
                     <Button
                       variant="outline"
@@ -443,22 +600,56 @@ export default function GestaoParceiros() {
                           <div className="font-bold text-foreground">{parceiro.wallets_crypto?.length || 0}</div>
                           <div className="text-xs">Wallets</div>
                         </div>
+                        {roiData.has(parceiro.id) && (
+                          <>
+                            <div className="text-center px-3 py-2 bg-accent rounded-lg">
+                              <div className="font-bold text-foreground">{roiData.get(parceiro.id)?.num_bookmakers || 0}</div>
+                              <div className="text-xs">Bookmakers</div>
+                            </div>
+                            {roiData.get(parceiro.id)!.total_depositado > 0 && (
+                              <>
+                                <div className="text-center px-3 py-2 bg-accent rounded-lg">
+                                  <div className="font-bold text-foreground">{formatCurrency(roiData.get(parceiro.id)!.total_depositado)}</div>
+                                  <div className="text-xs">Depositado</div>
+                                </div>
+                                <div className="text-center px-3 py-2 bg-accent rounded-lg">
+                                  <div className={`font-bold ${
+                                    roiData.get(parceiro.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                    {formatCurrency(roiData.get(parceiro.id)!.lucro_prejuizo)}
+                                  </div>
+                                  <div className="text-xs">Lucro</div>
+                                </div>
+                                <div className="text-center px-3 py-2 bg-accent rounded-lg">
+                                  <div className={`font-bold ${
+                                    roiData.get(parceiro.id)!.roi_percentual >= 0 ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                    {roiData.get(parceiro.id)!.roi_percentual.toFixed(2)}%
+                                  </div>
+                                  <div className="text-xs">ROI</div>
+                                </div>
+                              </>
+                            )}
+                          </>
+                        )}
                       </div>
                       <div className="flex gap-2">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => handleEdit(parceiro)}
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="mr-1 h-4 w-4" />
+                          Editar
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
+                          className="text-red-600 hover:text-red-700"
                           onClick={() => handleDeleteClick(parceiro.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="mr-1 h-4 w-4" />
+                          Excluir
                         </Button>
                       </div>
                     </div>
