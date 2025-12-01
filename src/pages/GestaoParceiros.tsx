@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2, LayoutGrid, List, DollarSign } from "lucide-react";
+import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2, LayoutGrid, List, FileText } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -475,7 +475,7 @@ export default function GestaoParceiros() {
                           {parceiro.nome.charAt(0).toUpperCase()}
                         </span>
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <CardTitle className="text-base group-hover:text-primary transition-colors">{parceiro.nome}</CardTitle>
                         {parceiro.email && (
                           <p className="text-sm text-muted-foreground mt-1">
@@ -487,12 +487,29 @@ export default function GestaoParceiros() {
                         </p>
                       </div>
                     </div>
-                    <Badge
-                      variant={parceiro.status === "ativo" ? "default" : "secondary"}
-                      className={parceiro.status === "inativo" ? "bg-warning/20 text-warning border-warning/30" : ""}
-                    >
-                      {parceiro.status.toUpperCase()}
-                    </Badge>
+                    <div className="flex flex-col gap-2">
+                      <Badge
+                        variant={parceiro.status === "ativo" ? "default" : "secondary"}
+                        className={parceiro.status === "inativo" ? "bg-warning/20 text-warning border-warning/30" : ""}
+                      >
+                        {parceiro.status.toUpperCase()}
+                      </Badge>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleOpenFinanceiro(parceiro)}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Ver informações completas</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -514,30 +531,13 @@ export default function GestaoParceiros() {
                   </div>
                   {roiData.has(parceiro.id) && (
                     <div className="pt-3 border-t mt-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Lucro/Prejuízo</p>
-                          <p className={`text-lg font-bold ${
-                            roiData.get(parceiro.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
-                          }`}>
-                            {formatCurrency(roiData.get(parceiro.id)!.lucro_prejuizo)}
-                          </p>
-                        </div>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-9 w-9"
-                              onClick={() => handleOpenFinanceiro(parceiro)}
-                            >
-                              <DollarSign className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Ver detalhes financeiros</p>
-                          </TooltipContent>
-                        </Tooltip>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Lucro/Prejuízo</p>
+                        <p className={`text-lg font-bold ${
+                          roiData.get(parceiro.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
+                        }`}>
+                          {formatCurrency(roiData.get(parceiro.id)!.lucro_prejuizo)}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -644,13 +644,13 @@ export default function GestaoParceiros() {
                               <div className="text-xs">Lucro</div>
                             </div>
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
                               className="gap-1"
                               onClick={() => handleOpenFinanceiro(parceiro)}
                             >
-                              <DollarSign className="h-4 w-4" />
-                              Detalhes
+                              <FileText className="h-4 w-4" />
+                              Informações
                             </Button>
                           </>
                         )}
