@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { History, TrendingUp, ArrowRightLeft } from "lucide-react";
+import { History, TrendingUp, ArrowRightLeft, Building2, ShieldCheck, ShieldAlert } from "lucide-react";
 
 interface ParceiroFinanceiroDialogProps {
   open: boolean;
@@ -40,6 +40,24 @@ interface Transacao {
   destino_bookmaker_id: string | null;
 }
 
+interface BookmakerVinculado {
+  id: string;
+  nome: string;
+  saldo_atual: number;
+  status: string;
+  moeda: string;
+  login_username: string;
+  bookmaker_catalogo_id: string | null;
+  logo_url?: string;
+}
+
+interface BookmakerCatalogo {
+  id: string;
+  nome: string;
+  logo_url: string | null;
+  status: string;
+}
+
 export default function ParceiroFinanceiroDialog({
   open,
   onOpenChange,
@@ -49,11 +67,15 @@ export default function ParceiroFinanceiroDialog({
 }: ParceiroFinanceiroDialogProps) {
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
   const [bookmakerNames, setBookmakerNames] = useState<Map<string, string>>(new Map());
+  const [bookmakersVinculados, setBookmakersVinculados] = useState<BookmakerVinculado[]>([]);
+  const [bookmakersDisponiveis, setBookmakersDisponiveis] = useState<BookmakerCatalogo[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingBookmakers, setLoadingBookmakers] = useState(false);
 
   useEffect(() => {
     if (open) {
       fetchTransacoes();
+      fetchBookmakers();
     }
   }, [open, parceiroId]);
 
@@ -128,6 +150,66 @@ export default function ParceiroFinanceiroDialog({
     return "bg-gray-500/20 text-gray-500 border-gray-500/30";
   };
 
+  const fetchBookmakers = async () => {
+    setLoadingBookmakers(true);
+    try {
+      // Buscar bookmakers vinculados ao parceiro
+      const { data: vinculadosData, error: vinculadosError } = await supabase
+        .from("bookmakers")
+        .select("id, nome, saldo_atual, status, moeda, login_username, bookmaker_catalogo_id")
+        .eq("parceiro_id", parceiroId);
+
+      if (vinculadosError) throw vinculadosError;
+
+      // Buscar logos dos bookmakers vinculados
+      const catalogoIds = vinculadosData
+        ?.filter(b => b.bookmaker_catalogo_id)
+        .map(b => b.bookmaker_catalogo_id as string) || [];
+
+      let logosMap = new Map<string, string>();
+      if (catalogoIds.length > 0) {
+        const { data: catalogoData } = await supabase
+          .from("bookmakers_catalogo")
+          .select("id, logo_url")
+          .in("id", catalogoIds);
+
+        catalogoData?.forEach((c) => {
+          if (c.logo_url) logosMap.set(c.id, c.logo_url);
+        });
+      }
+
+      const vinculadosComLogo = vinculadosData?.map(b => ({
+        ...b,
+        logo_url: b.bookmaker_catalogo_id ? logosMap.get(b.bookmaker_catalogo_id) : undefined,
+      })) || [];
+
+      setBookmakersVinculados(vinculadosComLogo);
+
+      // Buscar todos os bookmakers do catálogo
+      const { data: catalogoData, error: catalogoError } = await supabase
+        .from("bookmakers_catalogo")
+        .select("id, nome, logo_url, status")
+        .eq("status", "REGULAMENTADA");
+
+      if (catalogoError) throw catalogoError;
+
+      // Filtrar apenas os não vinculados
+      const vinculadosCatalogoIds = new Set(
+        vinculadosData?.map(b => b.bookmaker_catalogo_id).filter(Boolean) || []
+      );
+
+      const disponiveis = catalogoData?.filter(
+        c => !vinculadosCatalogoIds.has(c.id)
+      ) || [];
+
+      setBookmakersDisponiveis(disponiveis);
+    } catch (error) {
+      console.error("Erro ao carregar bookmakers:", error);
+    } finally {
+      setLoadingBookmakers(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh]">
@@ -138,7 +220,7 @@ export default function ParceiroFinanceiroDialog({
         </DialogHeader>
 
         <Tabs defaultValue="financeiro" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="financeiro" className="gap-2">
               <TrendingUp className="h-4 w-4" />
               Informações Financeiras
@@ -146,6 +228,10 @@ export default function ParceiroFinanceiroDialog({
             <TabsTrigger value="historico" className="gap-2">
               <History className="h-4 w-4" />
               Histórico de Movimentações
+            </TabsTrigger>
+            <TabsTrigger value="bookmakers" className="gap-2">
+              <Building2 className="h-4 w-4" />
+              Bookmakers
             </TabsTrigger>
           </TabsList>
 
@@ -344,6 +430,137 @@ export default function ParceiroFinanceiroDialog({
                       </CardContent>
                     </Card>
                   ))}
+                </div>
+              )}
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="bookmakers" className="mt-4">
+            <ScrollArea className="h-[400px] pr-4">
+              {loadingBookmakers ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  Carregando...
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Bookmakers Vinculados */}
+                  <div>
+                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                      Casas Vinculadas ({bookmakersVinculados.length})
+                    </h3>
+                    {bookmakersVinculados.length === 0 ? (
+                      <Card>
+                        <CardContent className="py-8 text-center">
+                          <p className="text-sm text-muted-foreground">
+                            Nenhuma casa vinculada
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <div className="space-y-2">
+                        {bookmakersVinculados.map((bookmaker) => (
+                          <Card key={bookmaker.id} className="hover:bg-accent/50 transition-colors">
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-start gap-3 flex-1">
+                                  {bookmaker.logo_url ? (
+                                    <img
+                                      src={bookmaker.logo_url}
+                                      alt={bookmaker.nome}
+                                      className="h-10 w-10 rounded object-contain"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = "none";
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="h-10 w-10 rounded bg-accent flex items-center justify-center">
+                                      <Building2 className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                  )}
+                                  
+                                  <div className="flex-1 space-y-2">
+                                    <div>
+                                      <p className="font-semibold">{bookmaker.nome}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Login: {bookmaker.login_username}
+                                      </p>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2">
+                                      <Badge 
+                                        variant="outline"
+                                        className={
+                                          bookmaker.status === "ativo"
+                                            ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/30"
+                                            : "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
+                                        }
+                                      >
+                                        {bookmaker.status === "ativo" ? "ATIVO" : "LIMITADA"}
+                                      </Badge>
+                                      <Badge variant="outline" className="text-xs">
+                                        {bookmaker.moeda}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="text-right">
+                                  <p className="text-xs text-muted-foreground mb-1">Saldo</p>
+                                  <p className="text-lg font-bold">
+                                    {formatCurrency(bookmaker.saldo_atual)}
+                                  </p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bookmakers Disponíveis */}
+                  <div>
+                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                      <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                      Casas Disponíveis para Vínculo ({bookmakersDisponiveis.length})
+                    </h3>
+                    {bookmakersDisponiveis.length === 0 ? (
+                      <Card>
+                        <CardContent className="py-8 text-center">
+                          <p className="text-sm text-muted-foreground">
+                            Todas as casas disponíveis já foram vinculadas
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        {bookmakersDisponiveis.map((bookmaker) => (
+                          <Card key={bookmaker.id} className="hover:bg-accent/50 transition-colors">
+                            <CardContent className="p-3">
+                              <div className="flex items-center gap-2">
+                                {bookmaker.logo_url ? (
+                                  <img
+                                    src={bookmaker.logo_url}
+                                    alt={bookmaker.nome}
+                                    className="h-8 w-8 rounded object-contain"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = "none";
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="h-8 w-8 rounded bg-accent flex items-center justify-center">
+                                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                )}
+                                <p className="text-sm font-medium">{bookmaker.nome}</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </ScrollArea>
