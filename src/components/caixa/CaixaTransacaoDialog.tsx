@@ -416,6 +416,9 @@ export function CaixaTransacaoDialog({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
+      // Find investor name if APORTE_FINANCEIRO
+      const investidor = investidores.find(inv => inv.id === investidorId);
+      
       const transactionData: any = {
         user_id: userData.user.id,
         tipo_transacao: tipoTransacao,
@@ -425,6 +428,7 @@ export function CaixaTransacaoDialog({
         descricao,
         status: "CONFIRMADO",
         investidor_id: tipoTransacao === "APORTE_FINANCEIRO" ? investidorId : null,
+        nome_investidor: tipoTransacao === "APORTE_FINANCEIRO" && investidor ? investidor.nome : null,
       };
 
       // Add crypto-specific fields
