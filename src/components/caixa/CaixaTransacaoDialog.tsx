@@ -675,7 +675,7 @@ export function CaixaTransacaoDialog({
                       .map((wallet) => {
                         const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
                         const shortenedAddress = wallet.endereco 
-                          ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-3)}`
+                          ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
                           : '';
                         return (
                           <SelectItem key={wallet.id} value={wallet.id}>
@@ -835,7 +835,7 @@ export function CaixaTransacaoDialog({
                       .map((wallet) => {
                         const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
                         const shortenedAddress = wallet.endereco 
-                          ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-3)}`
+                          ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
                           : '';
                         return (
                           <SelectItem key={wallet.id} value={wallet.id}>
@@ -958,7 +958,7 @@ export function CaixaTransacaoDialog({
                       .map((wallet) => {
                         const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
                         const shortenedAddress = wallet.endereco 
-                          ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-3)}`
+                          ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
                           : '';
                         return (
                           <SelectItem key={wallet.id} value={wallet.id}>

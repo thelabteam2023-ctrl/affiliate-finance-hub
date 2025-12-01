@@ -48,6 +48,8 @@ interface Transacao {
   descricao: string | null;
   origem_bookmaker_id: string | null;
   destino_bookmaker_id: string | null;
+  origem_tipo: string | null;
+  destino_tipo: string | null;
 }
 
 interface BookmakerVinculado {
@@ -98,12 +100,11 @@ export default function ParceiroFinanceiroDialog({
   const fetchTransacoes = async () => {
     setLoading(true);
     try {
-      // Fetch transactions
+      // Fetch all transactions related to the partner
       const { data: transacoesData, error: transacoesError } = await supabase
         .from("cash_ledger")
         .select("*")
         .or(`origem_parceiro_id.eq.${parceiroId},destino_parceiro_id.eq.${parceiroId}`)
-        .in("tipo_transacao", ["DEPOSITO", "SAQUE"])
         .eq("status", "CONFIRMADO")
         .order("data_transacao", { ascending: false });
 
@@ -156,6 +157,8 @@ export default function ParceiroFinanceiroDialog({
     const labels: Record<string, string> = {
       DEPOSITO: "Depósito",
       SAQUE: "Saque",
+      TRANSFERENCIA: "Transferência",
+      APORTE_FINANCEIRO: "Aporte",
     };
     return labels[tipo] || tipo;
   };
@@ -163,6 +166,8 @@ export default function ParceiroFinanceiroDialog({
   const getTipoBadgeColor = (tipo: string) => {
     if (tipo === "DEPOSITO") return "bg-red-500/20 text-red-500 border-red-500/30";
     if (tipo === "SAQUE") return "bg-green-500/20 text-green-500 border-green-500/30";
+    if (tipo === "TRANSFERENCIA") return "bg-blue-500/20 text-blue-500 border-blue-500/30";
+    if (tipo === "APORTE_FINANCEIRO") return "bg-emerald-500/20 text-emerald-500 border-emerald-500/30";
     return "bg-gray-500/20 text-gray-500 border-gray-500/30";
   };
 
@@ -466,6 +471,34 @@ export default function ParceiroFinanceiroDialog({
                                   </span>
                                   <ArrowRightLeft className="h-3 w-3" />
                                   <span>Caixa</span>
+                                </>
+                              )}
+                              {transacao.tipo_transacao === "TRANSFERENCIA" && (
+                                <>
+                                  <span>
+                                    {transacao.origem_tipo === "CAIXA_OPERACIONAL" 
+                                      ? "Caixa Operacional" 
+                                      : transacao.origem_tipo === "PARCEIRO_CONTA" || transacao.origem_tipo === "PARCEIRO_WALLET"
+                                      ? "Parceiro"
+                                      : "Origem"}
+                                  </span>
+                                  <ArrowRightLeft className="h-3 w-3" />
+                                  <span className="font-medium">
+                                    {transacao.destino_tipo === "CAIXA_OPERACIONAL" 
+                                      ? "Caixa Operacional" 
+                                      : transacao.destino_tipo === "PARCEIRO_CONTA" || transacao.destino_tipo === "PARCEIRO_WALLET"
+                                      ? "Parceiro (Conta)"
+                                      : "Destino"}
+                                  </span>
+                                </>
+                              )}
+                              {transacao.tipo_transacao === "APORTE_FINANCEIRO" && (
+                                <>
+                                  <span>
+                                    {transacao.origem_tipo === "CAIXA_OPERACIONAL" 
+                                      ? "Caixa → Investidor" 
+                                      : "Investidor → Caixa"}
+                                  </span>
                                 </>
                               )}
                             </div>
