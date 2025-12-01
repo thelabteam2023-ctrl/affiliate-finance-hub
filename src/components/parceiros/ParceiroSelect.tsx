@@ -14,6 +14,7 @@ interface ParceiroSelectProps {
   value: string;
   onValueChange: (value: string) => void;
   disabled?: boolean;
+  onlyParceiros?: string[]; // IDs dos parceiros que podem ser exibidos
 }
 
 interface Parceiro {
@@ -23,7 +24,7 @@ interface Parceiro {
   status: string;
 }
 
-export default function ParceiroSelect({ value, onValueChange, disabled }: ParceiroSelectProps) {
+export default function ParceiroSelect({ value, onValueChange, disabled, onlyParceiros }: ParceiroSelectProps) {
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -49,7 +50,12 @@ export default function ParceiroSelect({ value, onValueChange, disabled }: Parce
     }
   };
 
-  const filteredParceiros = parceiros.filter((parceiro) =>
+  // Aplicar filtro de onlyParceiros se fornecido
+  const availableParceiros = onlyParceiros 
+    ? parceiros.filter(p => onlyParceiros.includes(p.id))
+    : parceiros;
+
+  const filteredParceiros = availableParceiros.filter((parceiro) =>
     parceiro.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
     parceiro.cpf.includes(searchTerm)
   );
