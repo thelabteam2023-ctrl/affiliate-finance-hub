@@ -28,8 +28,17 @@ interface Investidor {
   created_at: string;
 }
 
+interface InvestidorROI {
+  investidor_id: string;
+  total_aportes: number;
+  total_liquidacoes: number;
+  lucro_prejuizo: number;
+  roi_percentual: number;
+}
+
 export default function GestaoInvestidores() {
   const [investidores, setInvestidores] = useState<Investidor[]>([]);
+  const [roiData, setRoiData] = useState<Map<string, InvestidorROI>>(new Map());
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
@@ -52,12 +61,34 @@ export default function GestaoInvestidores() {
 
       if (error) throw error;
       setInvestidores(data || []);
+      
+      // Fetch ROI data
+      await fetchROIData(user.id);
     } catch (error: any) {
       toast.error("Erro ao carregar investidores", {
         description: error.message,
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchROIData = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("v_roi_investidores")
+        .select("*")
+        .eq("user_id", userId);
+
+      if (error) throw error;
+      
+      const roiMap = new Map<string, InvestidorROI>();
+      data?.forEach((roi) => {
+        roiMap.set(roi.investidor_id, roi);
+      });
+      setRoiData(roiMap);
+    } catch (error: any) {
+      console.error("Erro ao carregar dados de ROI:", error);
     }
   };
 
@@ -98,6 +129,13 @@ export default function GestaoInvestidores() {
 
   const formatCPF = (cpf: string) => {
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
   };
 
   const stats = {
@@ -264,6 +302,40 @@ export default function GestaoInvestidores() {
                     </div>
                   </CardHeader>
                   <CardContent>
+                    {/* ROI and Financial Data */}
+                    {roiData.has(investidor.id) && (
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Total Aportes</p>
+                          <p className="text-sm font-semibold text-green-600">
+                            {formatCurrency(roiData.get(investidor.id)!.total_aportes)}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Total Liquidações</p>
+                          <p className="text-sm font-semibold text-blue-600">
+                            {formatCurrency(roiData.get(investidor.id)!.total_liquidacoes)}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Lucro/Prejuízo</p>
+                          <p className={`text-sm font-semibold ${
+                            roiData.get(investidor.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
+                          }`}>
+                            {formatCurrency(roiData.get(investidor.id)!.lucro_prejuizo)}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">ROI</p>
+                          <p className={`text-sm font-semibold ${
+                            roiData.get(investidor.id)!.roi_percentual >= 0 ? "text-green-600" : "text-red-600"
+                          }`}>
+                            {roiData.get(investidor.id)!.roi_percentual.toFixed(2)}%
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
                     {investidor.observacoes && (
                       <div className="space-y-2 text-sm pt-2 border-t mt-2">
                         <p className="text-muted-foreground">
@@ -348,6 +420,40 @@ export default function GestaoInvestidores() {
                                 </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground mt-1 font-mono">{formatCPF(investidor.cpf)}</p>
+                              
+                              {/* ROI Data */}
+                              {roiData.has(investidor.id) && (
+                                <div className="flex gap-4 mt-2 text-xs">
+                                  <div>
+                                    <span className="text-muted-foreground">Aportes: </span>
+                                    <span className="font-semibold text-green-600">
+                                      {formatCurrency(roiData.get(investidor.id)!.total_aportes)}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Liquidações: </span>
+                                    <span className="font-semibold text-blue-600">
+                                      {formatCurrency(roiData.get(investidor.id)!.total_liquidacoes)}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Lucro: </span>
+                                    <span className={`font-semibold ${
+                                      roiData.get(investidor.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
+                                    }`}>
+                                      {formatCurrency(roiData.get(investidor.id)!.lucro_prejuizo)}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">ROI: </span>
+                                    <span className={`font-semibold ${
+                                      roiData.get(investidor.id)!.roi_percentual >= 0 ? "text-green-600" : "text-red-600"
+                                    }`}>
+                                      {roiData.get(investidor.id)!.roi_percentual.toFixed(2)}%
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
