@@ -34,7 +34,7 @@ import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import BookmakerSelect from "@/components/bookmakers/BookmakerSelect";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
-import { Loader2, ArrowLeftRight, AlertTriangle } from "lucide-react";
+import { Loader2, ArrowLeftRight, AlertTriangle, TrendingDown, TrendingUp, Info } from "lucide-react";
 
 interface CaixaTransacaoDialogProps {
   open: boolean;
@@ -1387,6 +1387,22 @@ export function CaixaTransacaoDialog({
                             Saldo disponível: {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId))}
                           </div>
                         )}
+                        {/* Transferência Parceiro → Parceiro - Mostrar saldo anterior e novo */}
+                        {tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && 
+                         (origemTipo === "PARCEIRO_CONTA" || origemTipo === "PARCEIRO_WALLET") && 
+                         (origemContaId || origemWalletId) && parseFloat(String(valor)) > 0 && (
+                          <div className="mt-3 space-y-1">
+                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                              <TrendingDown className="h-4 w-4 text-destructive" />
+                              <span className="line-through opacity-70">
+                                {formatCurrency(getSaldoAtual(origemTipo, origemContaId || origemWalletId))}
+                              </span>
+                            </div>
+                            <div className="text-sm font-semibold text-foreground">
+                              {formatCurrency(getSaldoAtual(origemTipo, origemContaId || origemWalletId) - parseFloat(String(valor)))}
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                     {renderOrigemFields()}
@@ -1412,6 +1428,22 @@ export function CaixaTransacaoDialog({
                         {tipoTransacao === "DEPOSITO" && destinoBookmakerId && (
                           <div className="text-xs text-muted-foreground mt-2">
                             Saldo atual: {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId))}
+                          </div>
+                        )}
+                        {/* Transferência Parceiro → Parceiro - Mostrar saldo anterior e novo */}
+                        {tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && 
+                         (destinoTipo === "PARCEIRO_CONTA" || destinoTipo === "PARCEIRO_WALLET") && 
+                         (destinoContaId || destinoWalletId) && parseFloat(String(valor)) > 0 && (
+                          <div className="mt-3 space-y-1">
+                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                              <TrendingUp className="h-4 w-4 text-emerald-500" />
+                              <span className="line-through opacity-70">
+                                {formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId))}
+                              </span>
+                            </div>
+                            <div className="text-sm font-semibold text-foreground">
+                              {formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId) + parseFloat(String(valor)))}
+                            </div>
                           </div>
                         )}
                       </CardContent>
