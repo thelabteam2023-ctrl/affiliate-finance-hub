@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Filter, Calendar, ArrowRight, AlertCircle, Info } from "lucide-react";
 import { format, subDays } from "date-fns";
 
@@ -188,35 +188,81 @@ export function HistoricoMovimentacoes({
                     {getTipoLabel(transacao.tipo_transacao, transacao)}
                   </Badge>
                   <div className="flex items-center gap-2 flex-1">
-                    {transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.destino_tipo === "CAIXA_OPERACIONAL" ? (
-                      <div className="flex flex-col">
-                        <span className="text-sm text-muted-foreground">Investidor</span>
-                        <span className="text-xs text-muted-foreground/70">
-                          {transacao.nome_investidor ? 
-                            transacao.nome_investidor.split(' ').slice(0, 2).join(' ') : 
-                            'Externo'}
+                    <div className="flex items-center gap-2">
+                      {transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.destino_tipo === "CAIXA_OPERACIONAL" ? (
+                        <div className="flex flex-col">
+                          <span className="text-sm text-muted-foreground">Investidor</span>
+                          <span className="text-xs text-muted-foreground/70">
+                            {transacao.nome_investidor?.split(' ').slice(0, 2).join(' ') || 'Não informado'}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          {getOrigemLabel(transacao)}
                         </span>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        {getOrigemLabel(transacao)}
-                      </span>
-                    )}
+                      )}
+                    </div>
                     <ArrowRight className="h-4 w-4 text-primary" />
-                    {transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.origem_tipo === "CAIXA_OPERACIONAL" ? (
-                      <div className="flex flex-col">
-                        <span className="text-sm text-muted-foreground">Investidor</span>
-                        <span className="text-xs text-muted-foreground/70">
-                          {transacao.nome_investidor ? 
-                            transacao.nome_investidor.split(' ').slice(0, 2).join(' ') : 
-                            'Externo'}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        {getDestinoLabel(transacao)}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.origem_tipo === "CAIXA_OPERACIONAL" ? (
+                        <>
+                          <span className="text-sm text-muted-foreground">Caixa Operacional</span>
+                          {transacao.descricao && transacao.descricao.trim() !== '' && (
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <button className="p-1 hover:bg-muted rounded-md transition-colors">
+                                  <Info className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                                </button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Observações da Transação</DialogTitle>
+                                </DialogHeader>
+                                <div className="py-4">
+                                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{transacao.descricao}</p>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                          )}
+                        </>
+                      ) : transacao.destino_tipo === "CAIXA_OPERACIONAL" ? (
+                        <>
+                          <span className="text-sm text-muted-foreground">Caixa Operacional</span>
+                          {transacao.descricao && transacao.descricao.trim() !== '' && (
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <button className="p-1 hover:bg-muted rounded-md transition-colors">
+                                  <Info className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                                </button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Observações da Transação</DialogTitle>
+                                </DialogHeader>
+                                <div className="py-4">
+                                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{transacao.descricao}</p>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.origem_tipo === "CAIXA_OPERACIONAL" ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm text-muted-foreground">Investidor</span>
+                              <span className="text-xs text-muted-foreground/70">
+                                {transacao.nome_investidor?.split(' ').slice(0, 2).join(' ') || 'Não informado'}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              {getDestinoLabel(transacao)}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -233,20 +279,6 @@ export function HistoricoMovimentacoes({
                       {format(new Date(transacao.data_transacao), "HH:mm")}
                     </div>
                   </div>
-                  {transacao.descricao && transacao.descricao.trim() !== '' && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button className="p-1 hover:bg-muted rounded-md transition-colors">
-                            <Info className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="left" className="max-w-xs">
-                          <p className="text-sm whitespace-pre-wrap">{transacao.descricao}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
                 </div>
               </div>
             ))}
