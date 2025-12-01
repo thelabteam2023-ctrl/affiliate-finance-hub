@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
+import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import BookmakerSelect from "@/components/bookmakers/BookmakerSelect";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { Loader2, ArrowLeftRight, AlertTriangle } from "lucide-react";
@@ -168,6 +169,12 @@ export function CaixaTransacaoDialog({
   const [showNoBankAlert, setShowNoBankAlert] = useState(false);
   const [showNoWalletAlert, setShowNoWalletAlert] = useState(false);
   const [alertParceiroId, setAlertParceiroId] = useState<string>("");
+  const [alertTipo, setAlertTipo] = useState<"FIAT" | "CRYPTO">("FIAT");
+  
+  // ParceiroDialog state
+  const [parceiroDialogOpen, setParceiroDialogOpen] = useState(false);
+  const [parceiroToEdit, setParceiroToEdit] = useState<any>(null);
+  const [parceiroDialogInitialTab, setParceiroDialogInitialTab] = useState<"dados" | "bancos" | "crypto">("bancos");
 
   useEffect(() => {
     if (open) {
@@ -1261,7 +1268,7 @@ export function CaixaTransacaoDialog({
           {saldoInsuficiente && (
             <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
+              <AlertDescription className="text-center">
                 Saldo insuficiente! O saldo disponível é menor que o valor da transação.
               </AlertDescription>
             </Alert>
@@ -1383,9 +1390,21 @@ export function CaixaTransacaoDialog({
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={() => {
+              <AlertDialogAction onClick={async () => {
                 setShowNoBankAlert(false);
-                window.location.href = "/parceiros";
+                
+                // Buscar dados do parceiro
+                const { data: parceiroData } = await supabase
+                  .from("parceiros")
+                  .select("*")
+                  .eq("id", alertParceiroId)
+                  .single();
+                
+                if (parceiroData) {
+                  setParceiroToEdit(parceiroData);
+                  setParceiroDialogInitialTab("bancos");
+                  setParceiroDialogOpen(true);
+                }
               }}>
                 Cadastrar Conta
               </AlertDialogAction>
@@ -1404,15 +1423,41 @@ export function CaixaTransacaoDialog({
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={() => {
+              <AlertDialogAction onClick={async () => {
                 setShowNoWalletAlert(false);
-                window.location.href = "/parceiros";
+                
+                // Buscar dados do parceiro
+                const { data: parceiroData } = await supabase
+                  .from("parceiros")
+                  .select("*")
+                  .eq("id", alertParceiroId)
+                  .single();
+                
+                if (parceiroData) {
+                  setParceiroToEdit(parceiroData);
+                  setParceiroDialogInitialTab("crypto");
+                  setParceiroDialogOpen(true);
+                }
               }}>
                 Cadastrar Wallet
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        
+        {/* ParceiroDialog for editing partner */}
+        <ParceiroDialog
+          open={parceiroDialogOpen}
+          onClose={() => {
+            setParceiroDialogOpen(false);
+            setParceiroToEdit(null);
+            // Refresh accounts/wallets after editing
+            fetchAccountsAndWallets();
+          }}
+          parceiro={parceiroToEdit}
+          viewMode={false}
+          initialTab={parceiroDialogInitialTab}
+        />
       </DialogContent>
     </Dialog>
   );
