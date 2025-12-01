@@ -496,60 +496,51 @@ export default function ParceiroFinanceiroDialog({
                         </CardContent>
                       </Card>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         {filteredVinculados.map((bookmaker) => (
-                          <Card key={bookmaker.id} className="hover:bg-accent/50 transition-colors">
-                            <CardContent className="p-4">
-                              <div className="space-y-3">
-                                <div className="flex items-start gap-3">
-                                  {bookmaker.logo_url ? (
-                                    <img
-                                      src={bookmaker.logo_url}
-                                      alt={bookmaker.nome}
-                                      className="h-10 w-10 rounded object-contain"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = "none";
-                                      }}
-                                    />
-                                  ) : (
-                                    <div className="h-10 w-10 rounded bg-accent flex items-center justify-center">
-                                      <Building2 className="h-5 w-5 text-muted-foreground" />
-                                    </div>
-                                  )}
-                                  
-                                  <div className="flex-1">
-                                    <p className="font-semibold text-sm">{bookmaker.nome}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {bookmaker.login_username}
-                                    </p>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center gap-2">
-                                  <Badge 
-                                    variant="outline"
-                                    className={
-                                      bookmaker.status === "ativo"
-                                        ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/30"
-                                        : "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
-                                    }
-                                  >
-                                    {bookmaker.status === "ativo" ? "ATIVO" : "LIMITADA"}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs">
-                                    {bookmaker.moeda}
-                                  </Badge>
-                                </div>
-                                
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Saldo</p>
-                                  <p className="text-sm font-bold">
-                                    {formatCurrency(bookmaker.saldo_atual)}
-                                  </p>
-                                </div>
+                          <div
+                            key={bookmaker.id}
+                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors border border-border/50"
+                          >
+                            {bookmaker.logo_url ? (
+                              <img
+                                src={bookmaker.logo_url}
+                                alt={bookmaker.nome}
+                                className="h-8 w-8 rounded object-contain flex-shrink-0"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <div className="h-8 w-8 rounded bg-accent flex items-center justify-center flex-shrink-0">
+                                <Building2 className="h-4 w-4 text-muted-foreground" />
                               </div>
-                            </CardContent>
-                          </Card>
+                            )}
+                            
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{bookmaker.nome}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {bookmaker.login_username}
+                              </p>
+                            </div>
+                            
+                            <Badge 
+                              variant="outline"
+                              className={
+                                bookmaker.status === "ativo"
+                                  ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/30 flex-shrink-0"
+                                  : "bg-yellow-500/20 text-yellow-500 border-yellow-500/30 flex-shrink-0"
+                              }
+                            >
+                              {bookmaker.status === "ativo" ? "ATIVO" : "LIMITADA"}
+                            </Badge>
+                            
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-sm font-bold">
+                                {formatCurrency(bookmaker.saldo_atual)}
+                              </p>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     )}
@@ -589,42 +580,40 @@ export default function ParceiroFinanceiroDialog({
                         </CardContent>
                       </Card>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         {filteredDisponiveis.map((bookmaker) => (
-                          <Card key={bookmaker.id} className="hover:bg-accent/50 transition-colors group">
-                            <CardContent className="p-3">
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-3 flex-1">
-                                  {bookmaker.logo_url ? (
-                                    <img
-                                      src={bookmaker.logo_url}
-                                      alt={bookmaker.nome}
-                                      className="h-10 w-10 rounded object-contain"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = "none";
-                                      }}
-                                    />
-                                  ) : (
-                                    <div className="h-10 w-10 rounded bg-accent flex items-center justify-center">
-                                      <Building2 className="h-5 w-5 text-muted-foreground" />
-                                    </div>
-                                  )}
-                                  <p className="text-sm font-medium">{bookmaker.nome}</p>
-                                </div>
-                                
-                                {onCreateVinculo && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => handleCreateVinculo(bookmaker.id)}
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                  </Button>
-                                )}
+                          <div
+                            key={bookmaker.id}
+                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors border border-border/50 group"
+                          >
+                            {bookmaker.logo_url ? (
+                              <img
+                                src={bookmaker.logo_url}
+                                alt={bookmaker.nome}
+                                className="h-8 w-8 rounded object-contain flex-shrink-0"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <div className="h-8 w-8 rounded bg-accent flex items-center justify-center flex-shrink-0">
+                                <Building2 className="h-4 w-4 text-muted-foreground" />
                               </div>
-                            </CardContent>
-                          </Card>
+                            )}
+                            
+                            <p className="text-sm font-medium flex-1 truncate">{bookmaker.nome}</p>
+                            
+                            {onCreateVinculo && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                                onClick={() => handleCreateVinculo(bookmaker.id)}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         ))}
                       </div>
                     )}
