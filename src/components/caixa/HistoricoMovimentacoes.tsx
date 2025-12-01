@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { Filter, Calendar, ArrowRight, AlertCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Filter, Calendar, ArrowRight, AlertCircle, Info } from "lucide-react";
 import { format, subDays } from "date-fns";
 
 interface HistoricoMovimentacoesProps {
@@ -210,6 +211,20 @@ export function HistoricoMovimentacoes({
                       {format(new Date(transacao.data_transacao), "HH:mm")}
                     </div>
                   </div>
+                  {transacao.descricao && transacao.descricao.trim() !== '' && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button className="p-1 hover:bg-muted rounded-md transition-colors">
+                            <Info className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="max-w-xs">
+                          <p className="text-sm whitespace-pre-wrap">{transacao.descricao}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                 </div>
               </div>
             ))}
