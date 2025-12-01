@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2, LayoutGrid, List, FileText, Copy } from "lucide-react";
+import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2, LayoutGrid, List, FileText } from "lucide-react";
+import { BankAccountItem } from "@/components/parceiros/BankAccountItem";
+import { WalletItem } from "@/components/parceiros/WalletItem";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -520,27 +522,7 @@ export default function GestaoParceiros() {
                         <p className="text-xs font-medium text-muted-foreground mb-2">Contas Bancárias</p>
                         <div className="space-y-1.5">
                           {parceiro.contas_bancarias.map((conta: any) => (
-                            <div key={conta.id} className="flex items-center justify-between text-xs bg-accent/30 rounded p-2">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">{conta.banco}</p>
-                                {conta.pix_key && (
-                                  <p className="text-[10px] text-muted-foreground font-mono truncate">
-                                    PIX: ***{conta.pix_key.slice(-4)}
-                                  </p>
-                                )}
-                              </div>
-                              {conta.pix_key && (
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(conta.pix_key);
-                                    toast({ title: "PIX copiado!" });
-                                  }}
-                                  className="ml-2 p-1 hover:bg-accent rounded transition-colors"
-                                >
-                                  <Copy className="h-3 w-3" />
-                                </button>
-                              )}
-                            </div>
+                            <BankAccountItem key={conta.id} conta={conta} variant="card" />
                           ))}
                         </div>
                       </div>
@@ -552,28 +534,7 @@ export default function GestaoParceiros() {
                         <p className="text-xs font-medium text-muted-foreground mb-2">Wallets Crypto</p>
                         <div className="space-y-1.5">
                           {parceiro.wallets_crypto.map((wallet: any) => (
-                            <div key={wallet.id} className="flex items-center justify-between text-xs bg-accent/30 rounded p-2">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">{wallet.exchange || wallet.network}</p>
-                                {wallet.moeda && wallet.moeda.length > 0 && (
-                                  <p className="text-[10px] text-primary font-semibold">
-                                    {wallet.moeda.join(", ")}
-                                  </p>
-                                )}
-                                <p className="text-[10px] text-muted-foreground font-mono truncate">
-                                  ***{wallet.endereco.slice(-6)}
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(wallet.endereco);
-                                  toast({ title: "Endereço copiado!" });
-                                }}
-                                className="ml-2 p-1 hover:bg-accent rounded transition-colors"
-                              >
-                                <Copy className="h-3 w-3" />
-                              </button>
-                            </div>
+                            <WalletItem key={wallet.id} wallet={wallet} variant="card" />
                           ))}
                         </div>
                       </div>
@@ -681,27 +642,7 @@ export default function GestaoParceiros() {
                         {parceiro.contas_bancarias && parceiro.contas_bancarias.length > 0 && (
                           <div className="space-y-1">
                             {parceiro.contas_bancarias.map((conta: any) => (
-                              <div key={conta.id} className="flex items-center gap-2 bg-accent/30 rounded px-2 py-1.5 text-xs">
-                                <div className="min-w-0 flex-1">
-                                  <p className="font-medium truncate max-w-[150px]">{conta.banco}</p>
-                                  {conta.pix_key && (
-                                    <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[150px]">
-                                      PIX: ***{conta.pix_key.slice(-4)}
-                                    </p>
-                                  )}
-                                </div>
-                                {conta.pix_key && (
-                                  <button
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(conta.pix_key);
-                                      toast({ title: "PIX copiado!" });
-                                    }}
-                                    className="p-1 hover:bg-accent rounded"
-                                  >
-                                    <Copy className="h-3 w-3" />
-                                  </button>
-                                )}
-                              </div>
+                              <BankAccountItem key={conta.id} conta={conta} variant="list" />
                             ))}
                           </div>
                         )}
@@ -710,28 +651,7 @@ export default function GestaoParceiros() {
                         {parceiro.wallets_crypto && parceiro.wallets_crypto.length > 0 && (
                           <div className="space-y-1">
                             {parceiro.wallets_crypto.map((wallet: any) => (
-                              <div key={wallet.id} className="flex items-center gap-2 bg-accent/30 rounded px-2 py-1.5 text-xs">
-                                <div className="min-w-0 flex-1">
-                                  <p className="font-medium truncate max-w-[150px]">{wallet.exchange || wallet.network}</p>
-                                  {wallet.moeda && wallet.moeda.length > 0 && (
-                                    <p className="text-[10px] text-primary font-semibold">
-                                      {wallet.moeda.join(", ")}
-                                    </p>
-                                  )}
-                                  <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[150px]">
-                                    ***{wallet.endereco.slice(-6)}
-                                  </p>
-                                </div>
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(wallet.endereco);
-                                    toast({ title: "Endereço copiado!" });
-                                  }}
-                                  className="p-1 hover:bg-accent rounded"
-                                >
-                                  <Copy className="h-3 w-3" />
-                                </button>
-                              </div>
+                              <WalletItem key={wallet.id} wallet={wallet} variant="list" />
                             ))}
                           </div>
                         )}
