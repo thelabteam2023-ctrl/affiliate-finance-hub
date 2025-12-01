@@ -329,9 +329,14 @@ export function CaixaTransacaoDialog({
 
   const getSaldoAtual = (tipo: string, id?: string): number => {
     if (tipo === "CAIXA_OPERACIONAL") {
-      const moedaAtual = tipoMoeda === "FIAT" ? moeda : "USD";
-      const saldo = saldosCaixaFiat.find(s => s.moeda === moedaAtual);
-      return saldo?.saldo || 0;
+      if (tipoMoeda === "FIAT") {
+        const saldo = saldosCaixaFiat.find(s => s.moeda === moeda);
+        return saldo?.saldo || 0;
+      } else {
+        // CRYPTO - buscar saldo USD do coin específico
+        const saldo = saldosCaixaCrypto.find(s => s.coin === coin);
+        return saldo?.saldo_usd || 0;
+      }
     }
     
     if (tipo === "BOOKMAKER" && id) {
