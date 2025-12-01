@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2, LayoutGrid, List } from "lucide-react";
+import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2, LayoutGrid, List, DollarSign } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
+import ParceiroFinanceiroDialog from "@/components/parceiros/ParceiroFinanceiroDialog";
 import { formatCPF, maskCPFPartial, maskEmail } from "@/lib/validators";
 
 interface Parceiro {
@@ -57,6 +58,11 @@ export default function GestaoParceiros() {
   const [viewType, setViewType] = useState<"cards" | "list">("cards");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [parceiroToDelete, setParceiroToDelete] = useState<string | null>(null);
+  const [financeiroDialogOpen, setFinanceiroDialogOpen] = useState(false);
+  const [selectedParceiroFinanceiro, setSelectedParceiroFinanceiro] = useState<{
+    id: string;
+    nome: string;
+  } | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -252,6 +258,14 @@ export default function GestaoParceiros() {
     setEditingParceiro(null);
     setViewMode(false);
     fetchParceiros();
+  };
+
+  const handleOpenFinanceiro = (parceiro: Parceiro) => {
+    setSelectedParceiroFinanceiro({
+      id: parceiro.id,
+      nome: parceiro.nome,
+    });
+    setFinanceiroDialogOpen(true);
   };
 
   const maskCPF = (cpf: string) => {
@@ -470,47 +484,38 @@ export default function GestaoParceiros() {
                       {parceiro.wallets_crypto?.length || 0}
                     </p>
                     {roiData.has(parceiro.id) && (
-                      <>
-                        <p className="text-muted-foreground">
-                          <span className="font-medium">Bookmakers:</span>{" "}
-                          {roiData.get(parceiro.id)?.num_bookmakers || 0}
-                        </p>
-                        <p className="text-muted-foreground">
-                          <span className="font-medium">Saldo Total:</span>{" "}
-                          {formatCurrency(roiData.get(parceiro.id)?.saldo_bookmakers || 0)}
-                        </p>
-                      </>
+                      <p className="text-muted-foreground">
+                        <span className="font-medium">Bookmakers:</span>{" "}
+                        {roiData.get(parceiro.id)?.num_bookmakers || 0}
+                      </p>
                     )}
                   </div>
                   {roiData.has(parceiro.id) && (
-                    <div className="space-y-2 text-sm pt-3 border-t mt-3">
-                      <div className="grid grid-cols-2 gap-2">
+                    <div className="pt-3 border-t mt-3">
+                      <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs text-muted-foreground">Total Depositado</p>
-                          <p className="font-semibold text-sm">{formatCurrency(roiData.get(parceiro.id)!.total_depositado)}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Total Sacado</p>
-                          <p className="font-semibold text-sm">{formatCurrency(roiData.get(parceiro.id)!.total_sacado)}</p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Lucro/Prejuízo</p>
-                          <p className={`font-bold text-sm ${
+                          <p className="text-xs text-muted-foreground mb-1">Lucro/Prejuízo</p>
+                          <p className={`text-lg font-bold ${
                             roiData.get(parceiro.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
                           }`}>
                             {formatCurrency(roiData.get(parceiro.id)!.lucro_prejuizo)}
                           </p>
                         </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">ROI</p>
-                          <p className={`font-bold text-sm ${
-                            roiData.get(parceiro.id)!.roi_percentual >= 0 ? "text-green-600" : "text-red-600"
-                          }`}>
-                            {roiData.get(parceiro.id)!.roi_percentual.toFixed(2)}%
-                          </p>
-                        </div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-9 w-9"
+                              onClick={() => handleOpenFinanceiro(parceiro)}
+                            >
+                              <DollarSign className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Ver detalhes financeiros</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </div>
                   )}
@@ -607,10 +612,6 @@ export default function GestaoParceiros() {
                               <div className="text-xs">Bookmakers</div>
                             </div>
                             <div className="text-center px-3 py-2 bg-accent rounded-lg">
-                              <div className="font-bold text-foreground">{formatCurrency(roiData.get(parceiro.id)!.total_depositado)}</div>
-                              <div className="text-xs">Depositado</div>
-                            </div>
-                            <div className="text-center px-3 py-2 bg-accent rounded-lg">
                               <div className={`font-bold ${
                                 roiData.get(parceiro.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
                               }`}>
@@ -618,14 +619,15 @@ export default function GestaoParceiros() {
                               </div>
                               <div className="text-xs">Lucro</div>
                             </div>
-                            <div className="text-center px-3 py-2 bg-accent rounded-lg">
-                              <div className={`font-bold ${
-                                roiData.get(parceiro.id)!.roi_percentual >= 0 ? "text-green-600" : "text-red-600"
-                              }`}>
-                                {roiData.get(parceiro.id)!.roi_percentual.toFixed(2)}%
-                              </div>
-                              <div className="text-xs">ROI</div>
-                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              onClick={() => handleOpenFinanceiro(parceiro)}
+                            >
+                              <DollarSign className="h-4 w-4" />
+                              Detalhes
+                            </Button>
                           </>
                         )}
                       </div>
@@ -663,6 +665,16 @@ export default function GestaoParceiros() {
           parceiro={editingParceiro}
           viewMode={viewMode}
         />
+
+        {selectedParceiroFinanceiro && (
+          <ParceiroFinanceiroDialog
+            open={financeiroDialogOpen}
+            onOpenChange={setFinanceiroDialogOpen}
+            parceiroId={selectedParceiroFinanceiro.id}
+            parceiroNome={selectedParceiroFinanceiro.nome}
+            roiData={roiData.get(selectedParceiroFinanceiro.id) || null}
+          />
+        )}
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
