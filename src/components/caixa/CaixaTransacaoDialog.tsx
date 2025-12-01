@@ -7,6 +7,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -43,6 +53,7 @@ interface WalletCrypto {
   exchange: string;
   endereco: string;
   parceiro_id: string;
+  moeda: string[] | null;
 }
 
 interface Bookmaker {
@@ -152,6 +163,11 @@ export function CaixaTransacaoDialog({
   
   // Transfer flow type for TRANSFERENCIA
   const [fluxoTransferencia, setFluxoTransferencia] = useState<"CAIXA_PARCEIRO" | "PARCEIRO_PARCEIRO">("CAIXA_PARCEIRO");
+  
+  // Alert dialogs state
+  const [showNoBankAlert, setShowNoBankAlert] = useState(false);
+  const [showNoWalletAlert, setShowNoWalletAlert] = useState(false);
+  const [alertParceiroId, setAlertParceiroId] = useState<string>("");
 
   useEffect(() => {
     if (open) {
@@ -194,20 +210,29 @@ export function CaixaTransacaoDialog({
   }, [tipoTransacao]);
   
   useEffect(() => {
-    // Update origem/destino based on transfer flow
+    // Update origem/destino based on transfer flow and currency type
     if (tipoTransacao === "TRANSFERENCIA") {
       if (fluxoTransferencia === "CAIXA_PARCEIRO") {
         setOrigemTipo("CAIXA_OPERACIONAL");
-        setDestinoTipo("PARCEIRO_CONTA");
+        if (tipoMoeda === "FIAT") {
+          setDestinoTipo("PARCEIRO_CONTA");
+        } else {
+          setDestinoTipo("PARCEIRO_WALLET");
+        }
         setOrigemParceiroId("");
         setOrigemContaId("");
         setOrigemWalletId("");
       } else {
-        setOrigemTipo("PARCEIRO_CONTA");
-        setDestinoTipo("PARCEIRO_CONTA");
+        if (tipoMoeda === "FIAT") {
+          setOrigemTipo("PARCEIRO_CONTA");
+          setDestinoTipo("PARCEIRO_CONTA");
+        } else {
+          setOrigemTipo("PARCEIRO_WALLET");
+          setDestinoTipo("PARCEIRO_WALLET");
+        }
       }
     }
-  }, [fluxoTransferencia, tipoTransacao]);
+  }, [fluxoTransferencia, tipoTransacao, tipoMoeda]);
 
   const fetchAccountsAndWallets = async () => {
     try {
@@ -218,7 +243,7 @@ export function CaixaTransacaoDialog({
 
       const { data: wallets } = await supabase
         .from("wallets_crypto")
-        .select("id, exchange, endereco, parceiro_id")
+        .select("id, exchange, endereco, parceiro_id, moeda")
         .order("exchange");
 
       setContasBancarias(contas || []);
@@ -556,90 +581,101 @@ export function CaixaTransacaoDialog({
         );
       }
       
-      return (
-        <>
-          <div className="space-y-2">
-            <Label>Tipo</Label>
-            <Select value={origemTipo} onValueChange={setOrigemTipo}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="PARCEIRO_CONTA">Conta Bancária</SelectItem>
-                <SelectItem value="PARCEIRO_WALLET">Wallet Crypto</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {origemTipo === "PARCEIRO_CONTA" && (
-            <>
+      // PARCEIRO → PARCEIRO flow
+      if (tipoMoeda === "FIAT") {
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Parceiro</Label>
+              <ParceiroSelect
+                value={origemParceiroId}
+                onValueChange={(value) => {
+                  setOrigemParceiroId(value);
+                  setOrigemContaId("");
+                }}
+              />
+            </div>
+            {origemParceiroId && (
               <div className="space-y-2">
-                <Label>Parceiro</Label>
-                <ParceiroSelect
-                  value={origemParceiroId}
+                <Label>Conta Bancária</Label>
+                <Select 
+                  value={origemContaId} 
                   onValueChange={(value) => {
-                    setOrigemParceiroId(value);
-                    setOrigemContaId("");
+                    const contasDisponiveis = contasBancarias.filter((c) => c.parceiro_id === origemParceiroId);
+                    if (contasDisponiveis.length === 0) {
+                      setAlertParceiroId(origemParceiroId);
+                      setShowNoBankAlert(true);
+                      return;
+                    }
+                    setOrigemContaId(value);
                   }}
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contasBancarias
+                      .filter((c) => c.parceiro_id === origemParceiroId)
+                      .map((conta) => (
+                        <SelectItem key={conta.id} value={conta.id}>
+                          {conta.banco} - {conta.titular}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
-              {origemParceiroId && (
-                <div className="space-y-2">
-                  <Label>Conta</Label>
-                  <Select value={origemContaId} onValueChange={setOrigemContaId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {contasBancarias
-                        .filter((c) => c.parceiro_id === origemParceiroId)
-                        .map((conta) => (
-                          <SelectItem key={conta.id} value={conta.id}>
-                            {conta.banco} - {conta.titular}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </>
-          )}
-
-          {origemTipo === "PARCEIRO_WALLET" && (
-            <>
+            )}
+          </>
+        );
+      } else {
+        // CRYPTO
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Parceiro</Label>
+              <ParceiroSelect
+                value={origemParceiroId}
+                onValueChange={(value) => {
+                  setOrigemParceiroId(value);
+                  setOrigemWalletId("");
+                }}
+              />
+            </div>
+            {origemParceiroId && (
               <div className="space-y-2">
-                <Label>Parceiro</Label>
-                <ParceiroSelect
-                  value={origemParceiroId}
+                <Label>Wallet Crypto</Label>
+                <Select 
+                  value={origemWalletId} 
                   onValueChange={(value) => {
-                    setOrigemParceiroId(value);
-                    setOrigemWalletId("");
+                    const walletsDisponiveis = walletsCrypto.filter(
+                      (w) => w.parceiro_id === origemParceiroId && w.moeda?.includes(coin)
+                    );
+                    if (walletsDisponiveis.length === 0) {
+                      setAlertParceiroId(origemParceiroId);
+                      setShowNoWalletAlert(true);
+                      return;
+                    }
+                    setOrigemWalletId(value);
                   }}
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {walletsCrypto
+                      .filter((w) => w.parceiro_id === origemParceiroId && w.moeda?.includes(coin))
+                      .map((wallet) => (
+                        <SelectItem key={wallet.id} value={wallet.id}>
+                          {wallet.exchange}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
-              {origemParceiroId && (
-                <div className="space-y-2">
-                  <Label>Wallet</Label>
-                  <Select value={origemWalletId} onValueChange={setOrigemWalletId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {walletsCrypto
-                        .filter((w) => w.parceiro_id === origemParceiroId)
-                        .map((wallet) => (
-                          <SelectItem key={wallet.id} value={wallet.id}>
-                            {wallet.exchange}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </>
-          )}
-        </>
-      );
+            )}
+          </>
+        );
+      }
     }
 
     return null;
@@ -679,108 +715,9 @@ export function CaixaTransacaoDialog({
 
     if (tipoTransacao === "TRANSFERENCIA") {
       if (fluxoTransferencia === "CAIXA_PARCEIRO") {
-        return (
-          <>
-            <div className="space-y-2">
-              <Label>Tipo</Label>
-              <Select value={destinoTipo} onValueChange={setDestinoTipo}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PARCEIRO_CONTA">Conta Bancária</SelectItem>
-                  <SelectItem value="PARCEIRO_WALLET">Wallet Crypto</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {destinoTipo === "PARCEIRO_CONTA" && (
-              <>
-                <div className="space-y-2">
-                  <Label>Parceiro</Label>
-                  <ParceiroSelect
-                    value={destinoParceiroId}
-                    onValueChange={(value) => {
-                      setDestinoParceiroId(value);
-                      setDestinoContaId("");
-                    }}
-                  />
-                </div>
-                {destinoParceiroId && (
-                  <div className="space-y-2">
-                    <Label>Conta</Label>
-                    <Select value={destinoContaId} onValueChange={setDestinoContaId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {contasBancarias
-                          .filter((c) => c.parceiro_id === destinoParceiroId)
-                          .map((conta) => (
-                            <SelectItem key={conta.id} value={conta.id}>
-                              {conta.banco} - {conta.titular}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </>
-            )}
-
-            {destinoTipo === "PARCEIRO_WALLET" && (
-              <>
-                <div className="space-y-2">
-                  <Label>Parceiro</Label>
-                  <ParceiroSelect
-                    value={destinoParceiroId}
-                    onValueChange={(value) => {
-                      setDestinoParceiroId(value);
-                      setDestinoWalletId("");
-                    }}
-                  />
-                </div>
-                {destinoParceiroId && (
-                  <div className="space-y-2">
-                    <Label>Wallet</Label>
-                    <Select value={destinoWalletId} onValueChange={setDestinoWalletId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {walletsCrypto
-                          .filter((w) => w.parceiro_id === destinoParceiroId)
-                          .map((wallet) => (
-                            <SelectItem key={wallet.id} value={wallet.id}>
-                              {wallet.exchange}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </>
-            )}
-          </>
-        );
-      }
-
-      return (
-        <>
-          <div className="space-y-2">
-            <Label>Tipo</Label>
-            <Select value={destinoTipo} onValueChange={setDestinoTipo}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="PARCEIRO_CONTA">Conta Bancária</SelectItem>
-                <SelectItem value="PARCEIRO_WALLET">Wallet Crypto</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {destinoTipo === "PARCEIRO_CONTA" && (
+        // CAIXA → PARCEIRO flow
+        if (tipoMoeda === "FIAT") {
+          return (
             <>
               <div className="space-y-2">
                 <Label>Parceiro</Label>
@@ -794,8 +731,19 @@ export function CaixaTransacaoDialog({
               </div>
               {destinoParceiroId && (
                 <div className="space-y-2">
-                  <Label>Conta</Label>
-                  <Select value={destinoContaId} onValueChange={setDestinoContaId}>
+                  <Label>Conta Bancária</Label>
+                  <Select 
+                    value={destinoContaId} 
+                    onValueChange={(value) => {
+                      const contasDisponiveis = contasBancarias.filter((c) => c.parceiro_id === destinoParceiroId);
+                      if (contasDisponiveis.length === 0) {
+                        setAlertParceiroId(destinoParceiroId);
+                        setShowNoBankAlert(true);
+                        return;
+                      }
+                      setDestinoContaId(value);
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
@@ -812,9 +760,10 @@ export function CaixaTransacaoDialog({
                 </div>
               )}
             </>
-          )}
-
-          {destinoTipo === "PARCEIRO_WALLET" && (
+          );
+        } else {
+          // CRYPTO
+          return (
             <>
               <div className="space-y-2">
                 <Label>Parceiro</Label>
@@ -828,14 +777,27 @@ export function CaixaTransacaoDialog({
               </div>
               {destinoParceiroId && (
                 <div className="space-y-2">
-                  <Label>Wallet</Label>
-                  <Select value={destinoWalletId} onValueChange={setDestinoWalletId}>
+                  <Label>Wallet Crypto</Label>
+                  <Select 
+                    value={destinoWalletId} 
+                    onValueChange={(value) => {
+                      const walletsDisponiveis = walletsCrypto.filter(
+                        (w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin)
+                      );
+                      if (walletsDisponiveis.length === 0) {
+                        setAlertParceiroId(destinoParceiroId);
+                        setShowNoWalletAlert(true);
+                        return;
+                      }
+                      setDestinoWalletId(value);
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
                       {walletsCrypto
-                        .filter((w) => w.parceiro_id === destinoParceiroId)
+                        .filter((w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin))
                         .map((wallet) => (
                           <SelectItem key={wallet.id} value={wallet.id}>
                             {wallet.exchange}
@@ -846,9 +808,105 @@ export function CaixaTransacaoDialog({
                 </div>
               )}
             </>
-          )}
-        </>
-      );
+          );
+        }
+      }
+
+      // PARCEIRO → PARCEIRO flow (destino)
+      if (tipoMoeda === "FIAT") {
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Parceiro</Label>
+              <ParceiroSelect
+                value={destinoParceiroId}
+                onValueChange={(value) => {
+                  setDestinoParceiroId(value);
+                  setDestinoContaId("");
+                }}
+              />
+            </div>
+            {destinoParceiroId && (
+              <div className="space-y-2">
+                <Label>Conta Bancária</Label>
+                <Select 
+                  value={destinoContaId} 
+                  onValueChange={(value) => {
+                    const contasDisponiveis = contasBancarias.filter((c) => c.parceiro_id === destinoParceiroId);
+                    if (contasDisponiveis.length === 0) {
+                      setAlertParceiroId(destinoParceiroId);
+                      setShowNoBankAlert(true);
+                      return;
+                    }
+                    setDestinoContaId(value);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contasBancarias
+                      .filter((c) => c.parceiro_id === destinoParceiroId)
+                      .map((conta) => (
+                        <SelectItem key={conta.id} value={conta.id}>
+                          {conta.banco} - {conta.titular}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </>
+        );
+      } else {
+        // CRYPTO
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Parceiro</Label>
+              <ParceiroSelect
+                value={destinoParceiroId}
+                onValueChange={(value) => {
+                  setDestinoParceiroId(value);
+                  setDestinoWalletId("");
+                }}
+              />
+            </div>
+            {destinoParceiroId && (
+              <div className="space-y-2">
+                <Label>Wallet Crypto</Label>
+                <Select 
+                  value={destinoWalletId} 
+                  onValueChange={(value) => {
+                    const walletsDisponiveis = walletsCrypto.filter(
+                      (w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin)
+                    );
+                    if (walletsDisponiveis.length === 0) {
+                      setAlertParceiroId(destinoParceiroId);
+                      setShowNoWalletAlert(true);
+                      return;
+                    }
+                    setDestinoWalletId(value);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {walletsCrypto
+                      .filter((w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin))
+                      .map((wallet) => (
+                        <SelectItem key={wallet.id} value={wallet.id}>
+                          {wallet.exchange}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </>
+        );
+      }
     }
 
     return null;
@@ -1028,9 +1086,11 @@ export function CaixaTransacaoDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="BRL">BRL - Real Brasileiro</SelectItem>
-                    <SelectItem value="USD">USD - Dólar Americano</SelectItem>
-                    <SelectItem value="EUR">EUR - Euro</SelectItem>
+                    {saldosCaixaFiat.map((saldo) => (
+                      <SelectItem key={saldo.moeda} value={saldo.moeda}>
+                        {saldo.moeda} - {saldo.moeda === "BRL" ? "Real Brasileiro" : saldo.moeda === "USD" ? "Dólar Americano" : "Euro"}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1069,14 +1129,11 @@ export function CaixaTransacaoDialog({
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="BTC">BTC</SelectItem>
-                      <SelectItem value="CARDANO">CARDANO</SelectItem>
-                      <SelectItem value="DOGE">DOGE</SelectItem>
-                      <SelectItem value="ETH">ETH</SelectItem>
-                      <SelectItem value="LITECOIN">LITECOIN</SelectItem>
-                      <SelectItem value="TRX">TRX</SelectItem>
-                      <SelectItem value="USDC">USDC</SelectItem>
-                      <SelectItem value="USDT">USDT</SelectItem>
+                      {saldosCaixaCrypto.map((saldo) => (
+                        <SelectItem key={saldo.coin} value={saldo.coin}>
+                          {saldo.coin}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1231,6 +1288,48 @@ export function CaixaTransacaoDialog({
             Registrar Transação
           </Button>
         </div>
+
+        {/* AlertDialog for missing bank account */}
+        <AlertDialog open={showNoBankAlert} onOpenChange={setShowNoBankAlert}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Nenhuma conta bancária cadastrada</AlertDialogTitle>
+              <AlertDialogDescription>
+                Este parceiro não possui contas bancárias cadastradas. Deseja cadastrar uma nova conta agora?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => {
+                setShowNoBankAlert(false);
+                window.location.href = "/parceiros";
+              }}>
+                Cadastrar Conta
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* AlertDialog for missing wallet */}
+        <AlertDialog open={showNoWalletAlert} onOpenChange={setShowNoWalletAlert}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Nenhuma wallet cadastrada</AlertDialogTitle>
+              <AlertDialogDescription>
+                Este parceiro não possui wallets cadastradas com a moeda {coin} selecionada. Deseja cadastrar uma nova wallet agora?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => {
+                setShowNoWalletAlert(false);
+                window.location.href = "/parceiros";
+              }}>
+                Cadastrar Wallet
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );
