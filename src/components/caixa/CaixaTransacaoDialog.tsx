@@ -79,9 +79,43 @@ export function CaixaTransacaoDialog({
   const [moeda, setMoeda] = useState<string>("BRL");
   const [coin, setCoin] = useState<string>("");
   const [valor, setValor] = useState<string>("");
+  const [valorDisplay, setValorDisplay] = useState<string>("");
   const [qtdCoin, setQtdCoin] = useState<string>("");
   const [cotacao, setCotacao] = useState<string>("");
   const [descricao, setDescricao] = useState<string>("");
+
+  // Format currency for Brazilian format (1.234,56)
+  const formatCurrencyInput = (value: string): string => {
+    // Remove non-digits
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return '';
+    
+    // Convert to number and format
+    const number = parseInt(digits) / 100;
+    return number.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
+  // Handle valor change with mask
+  const handleValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    const digits = inputValue.replace(/\D/g, '');
+    
+    if (!digits) {
+      setValor('');
+      setValorDisplay('');
+      return;
+    }
+    
+    // Store numeric value for database
+    const numericValue = (parseInt(digits) / 100).toString();
+    setValor(numericValue);
+    
+    // Store formatted value for display
+    setValorDisplay(formatCurrencyInput(inputValue));
+  };
 
   // Origin/Destination state
   const [origemTipo, setOrigemTipo] = useState<string>("");
@@ -239,6 +273,7 @@ export function CaixaTransacaoDialog({
     setMoeda("BRL");
     setCoin("");
     setValor("");
+    setValorDisplay("");
     setQtdCoin("");
     setCotacao("");
     setDescricao("");
@@ -986,11 +1021,10 @@ export function CaixaTransacaoDialog({
               <div className="space-y-2">
                 <Label className="text-center block">Valor em {moeda}</Label>
                 <Input
-                  type="number"
-                  step="0.01"
-                  value={valor}
-                  onChange={(e) => setValor(e.target.value)}
-                  placeholder="0.00"
+                  type="text"
+                  value={valorDisplay}
+                  onChange={handleValorChange}
+                  placeholder="0,00"
                 />
               </div>
             </div>
@@ -1033,11 +1067,10 @@ export function CaixaTransacaoDialog({
                 <div className="space-y-2">
                   <Label className="text-center block">Valor em USD</Label>
                   <Input
-                    type="number"
-                    step="0.01"
-                    value={valor}
-                    onChange={(e) => setValor(e.target.value)}
-                    placeholder="0.00"
+                    type="text"
+                    value={valorDisplay}
+                    onChange={handleValorChange}
+                    placeholder="0,00"
                   />
                 </div>
               </div>
