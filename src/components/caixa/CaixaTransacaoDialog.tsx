@@ -263,7 +263,7 @@ export function CaixaTransacaoDialog({
     }
   }, [fluxoTransferencia, tipoTransacao, tipoMoeda]);
 
-  // Limpar destino quando origem mudar (para PARCEIRO_PARCEIRO, DEPOSITO e SAQUE)
+  // Limpar origem quando destino mudar (para SAQUE)
   useEffect(() => {
     if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO") {
       setDestinoParceiroId("");
@@ -274,10 +274,9 @@ export function CaixaTransacaoDialog({
       setDestinoBookmakerId("");
     }
     if (tipoTransacao === "SAQUE") {
-      setDestinoParceiroId("");
-      setDestinoContaId("");
+      setOrigemBookmakerId("");
     }
-  }, [origemParceiroId, origemContaId, origemWalletId, origemBookmakerId, tipoTransacao, fluxoTransferencia]);
+  }, [origemParceiroId, origemContaId, origemWalletId, destinoParceiroId, destinoContaId, tipoTransacao, fluxoTransferencia]);
 
   const fetchAccountsAndWallets = async () => {
     try {
@@ -825,14 +824,30 @@ export function CaixaTransacaoDialog({
     }
 
     if (tipoTransacao === "SAQUE") {
+      // Check if destino is complete
+      const isDestinoCompleta = destinoParceiroId && destinoContaId;
+      
       return (
-        <div className="space-y-2">
-          <Label>Bookmaker</Label>
-          <BookmakerSelect
-            value={origemBookmakerId}
-            onValueChange={setOrigemBookmakerId}
-          />
-        </div>
+        <>
+          {!isDestinoCompleta && (
+            <Alert className="border-blue-500/50 bg-blue-500/10">
+              <AlertTriangle className="h-4 w-4 text-blue-500" />
+              <AlertDescription className="text-blue-500">
+                Selecione primeiro o parceiro e a conta bancária de destino
+              </AlertDescription>
+            </Alert>
+          )}
+          <div className="space-y-2">
+            <Label>Bookmaker</Label>
+            <BookmakerSelect
+              value={origemBookmakerId}
+              onValueChange={setOrigemBookmakerId}
+              disabled={!isDestinoCompleta}
+              parceiroId={destinoParceiroId}
+              somenteComSaldo={true}
+            />
+          </div>
+        </>
       );
     }
 
@@ -984,19 +999,8 @@ export function CaixaTransacaoDialog({
     }
 
     if (tipoTransacao === "SAQUE") {
-      // Check if origem is complete
-      const isOrigemCompleta = origemBookmakerId;
-      
       return (
         <>
-          {!isOrigemCompleta && (
-            <Alert className="border-blue-500/50 bg-blue-500/10">
-              <AlertTriangle className="h-4 w-4 text-blue-500" />
-              <AlertDescription className="text-blue-500">
-                Selecione primeiro a bookmaker de origem
-              </AlertDescription>
-            </Alert>
-          )}
           <div className="space-y-2">
             <Label>Parceiro</Label>
             <ParceiroSelect
@@ -1005,7 +1009,6 @@ export function CaixaTransacaoDialog({
                 setDestinoParceiroId(value);
                 setDestinoContaId("");
               }}
-              disabled={!isOrigemCompleta}
             />
           </div>
           {destinoParceiroId && (
@@ -1016,7 +1019,6 @@ export function CaixaTransacaoDialog({
                 onValueChange={(value) => {
                   setDestinoContaId(value);
                 }}
-                disabled={!isOrigemCompleta}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
@@ -1657,132 +1659,180 @@ export function CaixaTransacaoDialog({
               <div className="pt-4">
                 <h3 className="text-sm font-medium mb-4 text-center uppercase">Fluxo da Transação</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  {/* Origem */}
-                  <div className="space-y-4 pr-4 border-r border-border/50">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-xs font-medium text-muted-foreground uppercase">
-                        Origem
-                      </h4>
-                    </div>
-                    <Card className="bg-card/30 border-border/50">
-                      <CardContent className="pt-6 text-center">
-                        <div className="text-sm font-medium uppercase">{getOrigemLabel()}</div>
-                        {(origemTipo === "CAIXA_OPERACIONAL" || 
-                          (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO") ||
-                          (tipoTransacao === "TRANSFERENCIA" && origemTipo === "CAIXA_OPERACIONAL")) && (
-                          <div className="text-xs text-muted-foreground mt-2">
-                            Saldo disponível: {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL"))}
-                          </div>
-                        )}
-                        {tipoTransacao === "DEPOSITO" && origemContaId && parseFloat(String(valor)) > 0 && (
-                          <div className="mt-3 space-y-1">
-                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                              <TrendingDown className="h-4 w-4 text-destructive" />
-                              <span className="line-through opacity-70">
-                                {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId))}
-                              </span>
-                            </div>
-                            <div className="text-sm font-semibold text-foreground">
-                              {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId) - parseFloat(String(valor)))}
-                            </div>
-                          </div>
-                        )}
-                        {tipoTransacao === "SAQUE" && origemBookmakerId && parseFloat(String(valor)) > 0 && (
-                          <div className="mt-3 space-y-1">
-                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                              <TrendingDown className="h-4 w-4 text-destructive" />
-                              <span className="line-through opacity-70">
-                                {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId))}
-                              </span>
-                            </div>
-                            <div className="text-sm font-semibold text-foreground">
-                              {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId) - parseFloat(String(valor)))}
-                            </div>
-                          </div>
-                        )}
-                        {/* Transferência Parceiro → Parceiro - Mostrar saldo anterior e novo */}
-                        {tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && 
-                         (origemTipo === "PARCEIRO_CONTA" || origemTipo === "PARCEIRO_WALLET") && 
-                         (origemContaId || origemWalletId) && parseFloat(String(valor)) > 0 && (
-                          <div className="mt-3 space-y-1">
-                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                              <TrendingDown className="h-4 w-4 text-destructive" />
-                              <span className="line-through opacity-70">
-                                {formatCurrency(getSaldoAtual(origemTipo, origemContaId || origemWalletId))}
-                              </span>
-                            </div>
-                            <div className="text-sm font-semibold text-foreground">
-                              {formatCurrency(getSaldoAtual(origemTipo, origemContaId || origemWalletId) - parseFloat(String(valor)))}
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                    {renderOrigemFields()}
-                  </div>
+                  {/* Destino - aparece primeiro no SAQUE */}
+                  {tipoTransacao === "SAQUE" ? (
+                    <>
+                      <div className="space-y-4 pr-4 border-r border-border/50">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-xs font-medium text-muted-foreground uppercase">
+                            Destino
+                          </h4>
+                        </div>
+                        <Card className="bg-card/30 border-border/50">
+                          <CardContent className="pt-6 text-center">
+                            <div className="text-sm font-medium uppercase">{getDestinoLabel()}</div>
+                            {destinoContaId && parseFloat(String(valor)) > 0 && (
+                              <div className="mt-3 space-y-1">
+                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                  <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                  <span className="line-through opacity-70">
+                                    {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId))}
+                                  </span>
+                                </div>
+                                <div className="text-sm font-semibold text-foreground">
+                                  {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId) + parseFloat(String(valor)))}
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                        {renderDestinoFields()}
+                      </div>
 
-                  {/* Destino */}
-                  <div className="space-y-4 pl-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-xs font-medium text-muted-foreground uppercase">
-                        Destino
-                      </h4>
-                    </div>
-                    <Card className="bg-card/30 border-border/50">
-                      <CardContent className="pt-6 text-center">
-                        <div className="text-sm font-medium uppercase">{getDestinoLabel()}</div>
-                        {(destinoTipo === "CAIXA_OPERACIONAL" || 
-                          (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "APORTE")) && (
-                          <div className="text-xs text-muted-foreground mt-2">
-                            Saldo atual: {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL"))}
-                          </div>
-                        )}
-                        {tipoTransacao === "DEPOSITO" && destinoBookmakerId && parseFloat(String(valor)) > 0 && (
-                          <div className="mt-3 space-y-1">
-                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                              <TrendingUp className="h-4 w-4 text-emerald-500" />
-                              <span className="line-through opacity-70">
-                                {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId))}
-                              </span>
-                            </div>
-                            <div className="text-sm font-semibold text-foreground">
-                              {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + parseFloat(String(valor)))}
-                            </div>
-                          </div>
-                        )}
-                        {tipoTransacao === "SAQUE" && destinoContaId && parseFloat(String(valor)) > 0 && (
-                          <div className="mt-3 space-y-1">
-                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                              <TrendingUp className="h-4 w-4 text-emerald-500" />
-                              <span className="line-through opacity-70">
-                                {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId))}
-                              </span>
-                            </div>
-                            <div className="text-sm font-semibold text-foreground">
-                              {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId) + parseFloat(String(valor)))}
-                            </div>
-                          </div>
-                        )}
-                        {/* Transferência Parceiro → Parceiro - Mostrar saldo anterior e novo */}
-                        {tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && 
-                         (destinoTipo === "PARCEIRO_CONTA" || destinoTipo === "PARCEIRO_WALLET") && 
-                         (destinoContaId || destinoWalletId) && parseFloat(String(valor)) > 0 && (
-                          <div className="mt-3 space-y-1">
-                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                              <TrendingUp className="h-4 w-4 text-emerald-500" />
-                              <span className="line-through opacity-70">
-                                {formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId))}
-                              </span>
-                            </div>
-                            <div className="text-sm font-semibold text-foreground">
-                              {formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId) + parseFloat(String(valor)))}
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                    {renderDestinoFields()}
-                  </div>
+                      <div className="space-y-4 pl-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-xs font-medium text-muted-foreground uppercase">
+                            Origem
+                          </h4>
+                        </div>
+                        <Card className="bg-card/30 border-border/50">
+                          <CardContent className="pt-6 text-center">
+                            <div className="text-sm font-medium uppercase">{getOrigemLabel()}</div>
+                            {origemBookmakerId && parseFloat(String(valor)) > 0 && (
+                              <div className="mt-3 space-y-1">
+                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                  <TrendingDown className="h-4 w-4 text-destructive" />
+                                  <span className="line-through opacity-70">
+                                    {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId))}
+                                  </span>
+                                </div>
+                                <div className="text-sm font-semibold text-foreground">
+                                  {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId) - parseFloat(String(valor)))}
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                        {renderOrigemFields()}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Origem - ordem normal para outros tipos */}
+                      <div className="space-y-4 pr-4 border-r border-border/50">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-xs font-medium text-muted-foreground uppercase">
+                            Origem
+                          </h4>
+                        </div>
+                        <Card className="bg-card/30 border-border/50">
+                          <CardContent className="pt-6 text-center">
+                            <div className="text-sm font-medium uppercase">{getOrigemLabel()}</div>
+                            {(origemTipo === "CAIXA_OPERACIONAL" || 
+                              (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO") ||
+                              (tipoTransacao === "TRANSFERENCIA" && origemTipo === "CAIXA_OPERACIONAL")) && (
+                              <div className="text-xs text-muted-foreground mt-2">
+                                Saldo disponível: {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL"))}
+                              </div>
+                            )}
+                            {tipoTransacao === "DEPOSITO" && origemContaId && parseFloat(String(valor)) > 0 && (
+                              <div className="mt-3 space-y-1">
+                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                  <TrendingDown className="h-4 w-4 text-destructive" />
+                                  <span className="line-through opacity-70">
+                                    {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId))}
+                                  </span>
+                                </div>
+                                <div className="text-sm font-semibold text-foreground">
+                                  {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId) - parseFloat(String(valor)))}
+                                </div>
+                              </div>
+                            )}
+                            {/* Transferência Parceiro → Parceiro - Mostrar saldo anterior e novo */}
+                            {tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && 
+                             (origemTipo === "PARCEIRO_CONTA" || origemTipo === "PARCEIRO_WALLET") && 
+                             (origemContaId || origemWalletId) && parseFloat(String(valor)) > 0 && (
+                              <div className="mt-3 space-y-1">
+                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                  <TrendingDown className="h-4 w-4 text-destructive" />
+                                  <span className="line-through opacity-70">
+                                    {formatCurrency(getSaldoAtual(origemTipo, origemContaId || origemWalletId))}
+                                  </span>
+                                </div>
+                                <div className="text-sm font-semibold text-foreground">
+                                  {formatCurrency(getSaldoAtual(origemTipo, origemContaId || origemWalletId) - parseFloat(String(valor)))}
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                        {renderOrigemFields()}
+                      </div>
+
+                      {/* Destino */}
+                      <div className="space-y-4 pl-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-xs font-medium text-muted-foreground uppercase">
+                            Destino
+                          </h4>
+                        </div>
+                        <Card className="bg-card/30 border-border/50">
+                          <CardContent className="pt-6 text-center">
+                            <div className="text-sm font-medium uppercase">{getDestinoLabel()}</div>
+                            {(destinoTipo === "CAIXA_OPERACIONAL" || 
+                              (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "APORTE")) && (
+                              <div className="text-xs text-muted-foreground mt-2">
+                                Saldo atual: {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL"))}
+                              </div>
+                            )}
+                            {tipoTransacao === "DEPOSITO" && destinoBookmakerId && parseFloat(String(valor)) > 0 && (
+                              <div className="mt-3 space-y-1">
+                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                  <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                  <span className="line-through opacity-70">
+                                    {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId))}
+                                  </span>
+                                </div>
+                                <div className="text-sm font-semibold text-foreground">
+                                  {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + parseFloat(String(valor)))}
+                                </div>
+                              </div>
+                            )}
+                            {tipoTransacao === "SAQUE" && destinoContaId && parseFloat(String(valor)) > 0 && (
+                              <div className="mt-3 space-y-1">
+                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                  <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                  <span className="line-through opacity-70">
+                                    {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId))}
+                                  </span>
+                                </div>
+                                <div className="text-sm font-semibold text-foreground">
+                                  {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId) + parseFloat(String(valor)))}
+                                </div>
+                              </div>
+                            )}
+                            {/* Transferência Parceiro → Parceiro - Mostrar saldo anterior e novo */}
+                            {tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && 
+                             (destinoTipo === "PARCEIRO_CONTA" || destinoTipo === "PARCEIRO_WALLET") && 
+                             (destinoContaId || destinoWalletId) && parseFloat(String(valor)) > 0 && (
+                              <div className="mt-3 space-y-1">
+                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                  <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                  <span className="line-through opacity-70">
+                                    {formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId))}
+                                  </span>
+                                </div>
+                                <div className="text-sm font-semibold text-foreground">
+                                  {formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId) + parseFloat(String(valor)))}
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                        {renderDestinoFields()}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </>
