@@ -482,7 +482,7 @@ export default function GestaoParceiros() {
                       </>
                     )}
                   </div>
-                  {roiData.has(parceiro.id) && roiData.get(parceiro.id)!.total_depositado > 0 && (
+                  {roiData.has(parceiro.id) && (
                     <div className="space-y-2 text-sm pt-3 border-t mt-3">
                       <div className="grid grid-cols-2 gap-2">
                         <div>
@@ -606,30 +606,26 @@ export default function GestaoParceiros() {
                               <div className="font-bold text-foreground">{roiData.get(parceiro.id)?.num_bookmakers || 0}</div>
                               <div className="text-xs">Bookmakers</div>
                             </div>
-                            {roiData.get(parceiro.id)!.total_depositado > 0 && (
-                              <>
-                                <div className="text-center px-3 py-2 bg-accent rounded-lg">
-                                  <div className="font-bold text-foreground">{formatCurrency(roiData.get(parceiro.id)!.total_depositado)}</div>
-                                  <div className="text-xs">Depositado</div>
-                                </div>
-                                <div className="text-center px-3 py-2 bg-accent rounded-lg">
-                                  <div className={`font-bold ${
-                                    roiData.get(parceiro.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
-                                  }`}>
-                                    {formatCurrency(roiData.get(parceiro.id)!.lucro_prejuizo)}
-                                  </div>
-                                  <div className="text-xs">Lucro</div>
-                                </div>
-                                <div className="text-center px-3 py-2 bg-accent rounded-lg">
-                                  <div className={`font-bold ${
-                                    roiData.get(parceiro.id)!.roi_percentual >= 0 ? "text-green-600" : "text-red-600"
-                                  }`}>
-                                    {roiData.get(parceiro.id)!.roi_percentual.toFixed(2)}%
-                                  </div>
-                                  <div className="text-xs">ROI</div>
-                                </div>
-                              </>
-                            )}
+                            <div className="text-center px-3 py-2 bg-accent rounded-lg">
+                              <div className="font-bold text-foreground">{formatCurrency(roiData.get(parceiro.id)!.total_depositado)}</div>
+                              <div className="text-xs">Depositado</div>
+                            </div>
+                            <div className="text-center px-3 py-2 bg-accent rounded-lg">
+                              <div className={`font-bold ${
+                                roiData.get(parceiro.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
+                              }`}>
+                                {formatCurrency(roiData.get(parceiro.id)!.lucro_prejuizo)}
+                              </div>
+                              <div className="text-xs">Lucro</div>
+                            </div>
+                            <div className="text-center px-3 py-2 bg-accent rounded-lg">
+                              <div className={`font-bold ${
+                                roiData.get(parceiro.id)!.roi_percentual >= 0 ? "text-green-600" : "text-red-600"
+                              }`}>
+                                {roiData.get(parceiro.id)!.roi_percentual.toFixed(2)}%
+                              </div>
+                              <div className="text-xs">ROI</div>
+                            </div>
                           </>
                         )}
                       </div>
