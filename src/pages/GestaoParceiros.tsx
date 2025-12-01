@@ -49,9 +49,16 @@ interface ParceiroROI {
   saldo_bookmakers: number;
 }
 
+interface SaldoParceiro {
+  parceiro_id: string;
+  saldo_fiat: number;
+  saldo_crypto_usd: number;
+}
+
 export default function GestaoParceiros() {
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
   const [roiData, setRoiData] = useState<Map<string, ParceiroROI>>(new Map());
+  const [saldosData, setSaldosData] = useState<Map<string, SaldoParceiro>>(new Map());
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [showCPF, setShowCPF] = useState(false);
@@ -101,8 +108,9 @@ export default function GestaoParceiros() {
       if (error) throw error;
       setParceiros(data || []);
       
-      // Fetch ROI data after fetching partners
+      // Fetch ROI data and saldos after fetching partners
       await fetchROIData();
+      await fetchSaldosData();
     } catch (error: any) {
       toast({
         title: "Erro ao carregar parceiros",
@@ -210,10 +218,71 @@ export default function GestaoParceiros() {
     }
   };
 
+  const fetchSaldosData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch FIAT balances from bank accounts
+      const { data: saldosFiat, error: errorFiat } = await supabase
+        .from("v_saldo_parceiro_contas")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (errorFiat) throw errorFiat;
+
+      // Fetch crypto balances from wallets
+      const { data: saldosCrypto, error: errorCrypto } = await supabase
+        .from("v_saldo_parceiro_wallets")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (errorCrypto) throw errorCrypto;
+
+      // Aggregate balances per partner
+      const saldosMap = new Map<string, SaldoParceiro>();
+
+      // Process FIAT balances
+      saldosFiat?.forEach((saldo) => {
+        if (!saldo.parceiro_id) return;
+        const current = saldosMap.get(saldo.parceiro_id) || {
+          parceiro_id: saldo.parceiro_id,
+          saldo_fiat: 0,
+          saldo_crypto_usd: 0,
+        };
+        current.saldo_fiat += Number(saldo.saldo || 0);
+        saldosMap.set(saldo.parceiro_id, current);
+      });
+
+      // Process crypto balances
+      saldosCrypto?.forEach((saldo) => {
+        if (!saldo.parceiro_id) return;
+        const current = saldosMap.get(saldo.parceiro_id) || {
+          parceiro_id: saldo.parceiro_id,
+          saldo_fiat: 0,
+          saldo_crypto_usd: 0,
+        };
+        current.saldo_crypto_usd += Number(saldo.saldo_usd || 0);
+        saldosMap.set(saldo.parceiro_id, current);
+      });
+
+      setSaldosData(saldosMap);
+    } catch (error: any) {
+      console.error("Erro ao carregar saldos:", error);
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
+    }).format(value);
+  };
+
+  const formatCurrencyUSD = (value: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
     }).format(value);
   };
 
@@ -271,6 +340,7 @@ export default function GestaoParceiros() {
     setEditingParceiro(null);
     setViewMode(false);
     fetchParceiros();
+    fetchSaldosData();
   };
 
   const handleOpenFinanceiro = (parceiro: Parceiro) => {
@@ -480,6 +550,20 @@ export default function GestaoParceiros() {
                           </div>
                           <div className="flex-1">
                             <CardTitle className="text-base group-hover:text-primary transition-colors">{parceiro.nome}</CardTitle>
+                            {saldosData.has(parceiro.id) && (
+                              <div className="flex gap-3 mt-1 text-xs text-muted-foreground font-mono">
+                                {saldosData.get(parceiro.id)!.saldo_fiat > 0 && (
+                                  <span>
+                                    FIAT: <span className="font-semibold text-foreground">{formatCurrency(saldosData.get(parceiro.id)!.saldo_fiat)}</span>
+                                  </span>
+                                )}
+                                {saldosData.get(parceiro.id)!.saldo_crypto_usd > 0 && (
+                                  <span>
+                                    CRYPTO: <span className="font-semibold text-foreground">{formatCurrencyUSD(saldosData.get(parceiro.id)!.saldo_crypto_usd)}</span>
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </TooltipTrigger>
@@ -590,6 +674,20 @@ export default function GestaoParceiros() {
                                     {parceiro.status}
                                   </Badge>
                                 </div>
+                                {saldosData.has(parceiro.id) && (
+                                  <div className="flex gap-3 mt-1 text-xs text-muted-foreground font-mono">
+                                    {saldosData.get(parceiro.id)!.saldo_fiat > 0 && (
+                                      <span>
+                                        FIAT: <span className="font-semibold text-foreground">{formatCurrency(saldosData.get(parceiro.id)!.saldo_fiat)}</span>
+                                      </span>
+                                    )}
+                                    {saldosData.get(parceiro.id)!.saldo_crypto_usd > 0 && (
+                                      <span>
+                                        CRYPTO: <span className="font-semibold text-foreground">{formatCurrencyUSD(saldosData.get(parceiro.id)!.saldo_crypto_usd)}</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
