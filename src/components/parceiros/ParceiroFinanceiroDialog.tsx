@@ -575,16 +575,16 @@ export default function ParceiroFinanceiroDialog({
                                 <p className="font-medium text-sm truncate">{bookmaker.nome}</p>
                                 <Popover>
                                   <PopoverTrigger asChild>
-                                    <Badge 
-                                      variant="outline"
-                                      className={`cursor-pointer transition-all hover:opacity-80 text-[10px] px-1.5 py-0 ${
+                                    <button
+                                      className={`inline-flex items-center rounded-sm px-1 py-0 text-[9px] font-medium transition-all hover:opacity-70 cursor-pointer border ${
                                         bookmaker.status === "ativo"
                                           ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/30"
                                           : "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
                                       }`}
+                                      type="button"
                                     >
                                       {bookmaker.status === "ativo" ? "ATIVO" : "LIMITADA"}
-                                    </Badge>
+                                    </button>
                                   </PopoverTrigger>
                                   <PopoverContent className="w-64 p-4" align="end">
                                     <div className="space-y-3">
