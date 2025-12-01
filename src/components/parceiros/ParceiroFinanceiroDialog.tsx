@@ -10,10 +10,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { History, TrendingUp, ArrowRightLeft, Building2, ShieldCheck, ShieldAlert, Search, Plus } from "lucide-react";
+import { History, TrendingUp, ArrowRightLeft, Building2, ShieldCheck, ShieldAlert, Search, Plus, Edit2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useToast } from "@/hooks/use-toast";
 
 interface ParceiroFinanceiroDialogProps {
   open: boolean;
@@ -78,6 +84,8 @@ export default function ParceiroFinanceiroDialog({
   const [loadingBookmakers, setLoadingBookmakers] = useState(false);
   const [searchVinculados, setSearchVinculados] = useState("");
   const [searchDisponiveis, setSearchDisponiveis] = useState("");
+  const [editingStatus, setEditingStatus] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (open) {
@@ -171,6 +179,36 @@ export default function ParceiroFinanceiroDialog({
     if (onCreateVinculo) {
       onCreateVinculo(parceiroId, bookmakerId);
       onOpenChange(false);
+    }
+  };
+
+  const handleToggleStatus = async (bookmakerId: string, currentStatus: string) => {
+    setEditingStatus(bookmakerId);
+    const newStatus = currentStatus === "ativo" ? "limitada" : "ativo";
+    
+    try {
+      const { error } = await supabase
+        .from("bookmakers")
+        .update({ status: newStatus })
+        .eq("id", bookmakerId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Status atualizado",
+        description: `Status alterado para ${newStatus.toUpperCase()}`,
+      });
+
+      // Refresh bookmakers list
+      fetchBookmakers();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao atualizar status",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setEditingStatus(null);
     }
   };
 
@@ -500,7 +538,7 @@ export default function ParceiroFinanceiroDialog({
                         {filteredVinculados.map((bookmaker) => (
                           <div
                             key={bookmaker.id}
-                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors border border-border/50"
+                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors border border-border/50 group"
                           >
                             {bookmaker.logo_url ? (
                               <img
@@ -524,16 +562,45 @@ export default function ParceiroFinanceiroDialog({
                               </p>
                             </div>
                             
-                            <Badge 
-                              variant="outline"
-                              className={
-                                bookmaker.status === "ativo"
-                                  ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/30 flex-shrink-0"
-                                  : "bg-yellow-500/20 text-yellow-500 border-yellow-500/30 flex-shrink-0"
-                              }
-                            >
-                              {bookmaker.status === "ativo" ? "ATIVO" : "LIMITADA"}
-                            </Badge>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  disabled={editingStatus === bookmaker.id}
+                                >
+                                  <Edit2 className="h-3 w-3 mr-1" />
+                                  <Badge 
+                                    variant="outline"
+                                    className={
+                                      bookmaker.status === "ativo"
+                                        ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/30"
+                                        : "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
+                                    }
+                                  >
+                                    {bookmaker.status === "ativo" ? "ATIVO" : "LIMITADA"}
+                                  </Badge>
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-4" align="end">
+                                <div className="space-y-3">
+                                  <p className="text-sm font-medium">Alterar Status</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Deseja alterar o status de <strong>{bookmaker.nome}</strong> para{" "}
+                                    <strong>{bookmaker.status === "ativo" ? "LIMITADA" : "ATIVO"}</strong>?
+                                  </p>
+                                  <Button
+                                    size="sm"
+                                    className="w-full"
+                                    onClick={() => handleToggleStatus(bookmaker.id, bookmaker.status)}
+                                    disabled={editingStatus === bookmaker.id}
+                                  >
+                                    {editingStatus === bookmaker.id ? "Alterando..." : "Confirmar"}
+                                  </Button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
                             
                             <div className="text-right flex-shrink-0">
                               <p className="text-sm font-bold">
