@@ -97,6 +97,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [enderecoErrors, setEnderecoErrors] = useState<{ [key: number]: string }>({});
   const [checkingEnderecos, setCheckingEnderecos] = useState<{ [key: number]: boolean }>({});
   const [copiedField, setCopiedField] = useState<string>("");
+  const [initialState, setInitialState] = useState<any>(null);
+  const [hasChanges, setHasChanges] = useState(false);
   const { toast } = useToast();
 
   const copyToClipboard = async (text: string, fieldName: string) => {
@@ -116,6 +118,56 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       });
     }
   };
+
+  // Capture initial state when dialog opens with parceiro data loaded
+  useEffect(() => {
+    if (open && parceiro) {
+      const captureInitialState = () => {
+        setInitialState({
+          nome,
+          cpf,
+          email,
+          telefone,
+          dataNascimento,
+          endereco,
+          cidade,
+          cep,
+          status,
+          observacoes,
+          bankAccounts: JSON.stringify(bankAccounts),
+          cryptoWallets: JSON.stringify(cryptoWallets)
+        });
+      };
+      // Small delay to ensure all parceiro data is loaded
+      setTimeout(captureInitialState, 100);
+    }
+  }, [open, parceiro]);
+
+  // Check for changes comparing current state with initial state
+  useEffect(() => {
+    if (!initialState || !parceiro) {
+      setHasChanges(false);
+      return;
+    }
+
+    const currentState = {
+      nome,
+      cpf,
+      email,
+      telefone,
+      dataNascimento,
+      endereco,
+      cidade,
+      cep,
+      status,
+      observacoes,
+      bankAccounts: JSON.stringify(bankAccounts),
+      cryptoWallets: JSON.stringify(cryptoWallets)
+    };
+
+    const changed = JSON.stringify(currentState) !== JSON.stringify(initialState);
+    setHasChanges(changed);
+  }, [nome, cpf, email, telefone, dataNascimento, endereco, cidade, cep, status, observacoes, bankAccounts, cryptoWallets, initialState, parceiro]);
 
   useEffect(() => {
     fetchBancos();
@@ -1384,7 +1436,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
               {viewMode ? "Fechar" : "Cancelar"}
             </Button>
             {!viewMode && (parceiro || parceiroId) && (
-              <Button type="submit" disabled={loading} className="flex-1">
+              <Button type="submit" disabled={loading || !hasChanges} className="flex-1">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Salvar Alterações
               </Button>
