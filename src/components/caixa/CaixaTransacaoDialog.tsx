@@ -1820,18 +1820,21 @@ export function CaixaTransacaoDialog({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-center block">Valor em USD</Label>
+                  <Label className="text-center block">Valor em USD (calculado)</Label>
                   <Input
                     type="text"
                     value={valorDisplay}
                     onChange={handleValorChange}
                     placeholder="0,00"
+                    readOnly
+                    disabled
+                    className="bg-muted/50"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-center block">Quantidade</Label>
+                  <Label className="text-center block">Quantidade de Coins</Label>
                   <Input
                     type="number"
                     step="0.00000001"
