@@ -590,22 +590,42 @@ export function CaixaTransacaoDialog({
       }
 
       // Validate origin fields
-      if (origemTipo === "PARCEIRO_CONTA" && !origemContaId) {
-        toast({
-          title: "Erro",
-          description: "Selecione a conta bancária de origem",
-          variant: "destructive",
-        });
-        return;
+      if (origemTipo === "PARCEIRO_CONTA") {
+        if (!origemParceiroId) {
+          toast({
+            title: "Erro",
+            description: "Selecione o parceiro de origem",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (!origemContaId) {
+          toast({
+            title: "Erro",
+            description: "Selecione a conta bancária de origem",
+            variant: "destructive",
+          });
+          return;
+        }
       }
 
-      if (origemTipo === "PARCEIRO_WALLET" && !origemWalletId) {
-        toast({
-          title: "Erro",
-          description: "Selecione a wallet de origem",
-          variant: "destructive",
-        });
-        return;
+      if (origemTipo === "PARCEIRO_WALLET") {
+        if (!origemParceiroId) {
+          toast({
+            title: "Erro",
+            description: "Selecione o parceiro de origem",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (!origemWalletId) {
+          toast({
+            title: "Erro",
+            description: "Selecione a wallet de origem",
+            variant: "destructive",
+          });
+          return;
+        }
       }
 
       if (origemTipo === "BOOKMAKER" && !origemBookmakerId) {
@@ -618,22 +638,42 @@ export function CaixaTransacaoDialog({
       }
 
       // Validate destination fields
-      if (destinoTipo === "PARCEIRO_CONTA" && !destinoContaId) {
-        toast({
-          title: "Erro",
-          description: "Selecione a conta bancária de destino",
-          variant: "destructive",
-        });
-        return;
+      if (destinoTipo === "PARCEIRO_CONTA") {
+        if (!destinoParceiroId) {
+          toast({
+            title: "Erro",
+            description: "Selecione o parceiro de destino",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (!destinoContaId) {
+          toast({
+            title: "Erro",
+            description: "Selecione a conta bancária de destino",
+            variant: "destructive",
+          });
+          return;
+        }
       }
 
-      if (destinoTipo === "PARCEIRO_WALLET" && !destinoWalletId) {
-        toast({
-          title: "Erro",
-          description: "Selecione a wallet de destino",
-          variant: "destructive",
-        });
-        return;
+      if (destinoTipo === "PARCEIRO_WALLET") {
+        if (!destinoParceiroId) {
+          toast({
+            title: "Erro",
+            description: "Selecione o parceiro de destino",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (!destinoWalletId) {
+          toast({
+            title: "Erro",
+            description: "Selecione a wallet de destino",
+            variant: "destructive",
+          });
+          return;
+        }
       }
 
       if (destinoTipo === "BOOKMAKER" && !destinoBookmakerId) {
@@ -885,18 +925,25 @@ export function CaixaTransacaoDialog({
         );
       }
       
-      // PARCEIRO → PARCEIRO flow
+      // PARCEIRO → PARCEIRO flow - Filtrar parceiros com saldo na moeda
       if (tipoMoeda === "FIAT") {
+        // Get parceiros com saldo disponível na moeda selecionada
+        const parceirosComSaldo = saldosParceirosContas
+          .filter(s => s.moeda === moeda && s.saldo > 0)
+          .map(s => s.parceiro_id)
+          .filter((value, index, self) => self.indexOf(value) === index); // unique
+
         return (
           <>
             <div className="space-y-2">
-              <Label>Parceiro</Label>
+              <Label>Parceiro (com saldo em {moeda})</Label>
               <ParceiroSelect
                 value={origemParceiroId}
                 onValueChange={(value) => {
                   setOrigemParceiroId(value);
                   setOrigemContaId("");
                 }}
+                onlyParceiros={parceirosComSaldo}
               />
             </div>
             {origemParceiroId && (
@@ -913,21 +960,39 @@ export function CaixaTransacaoDialog({
                   </SelectTrigger>
                   <SelectContent>
                     {contasBancarias
-                      .filter((c) => c.parceiro_id === origemParceiroId)
-                      .map((conta) => (
-                        <SelectItem key={conta.id} value={conta.id}>
-                          {conta.banco}
-                        </SelectItem>
-                      ))}
+                      .filter((c) => {
+                        if (c.parceiro_id !== origemParceiroId) return false;
+                        // Filtrar apenas contas com saldo
+                        const saldo = saldosParceirosContas.find(
+                          s => s.conta_id === c.id && s.moeda === moeda
+                        );
+                        return saldo && saldo.saldo > 0;
+                      })
+                      .map((conta) => {
+                        const saldo = saldosParceirosContas.find(
+                          s => s.conta_id === conta.id && s.moeda === moeda
+                        );
+                        return (
+                          <SelectItem key={conta.id} value={conta.id}>
+                            {conta.banco} - Saldo: {formatCurrency(saldo?.saldo || 0)}
+                          </SelectItem>
+                        );
+                      })}
                   </SelectContent>
                 </Select>
               </div>
             )}
-            {origemParceiroId && contasBancarias.filter((c) => c.parceiro_id === origemParceiroId).length === 0 && (
+            {origemParceiroId && contasBancarias.filter((c) => {
+              if (c.parceiro_id !== origemParceiroId) return false;
+              const saldo = saldosParceirosContas.find(
+                s => s.conta_id === c.id && s.moeda === moeda
+              );
+              return saldo && saldo.saldo > 0;
+            }).length === 0 && (
               <Alert variant="destructive" className="border-warning/50 bg-warning/10">
                 <AlertTriangle className="h-4 w-4 text-warning" />
                 <AlertDescription className="text-warning">
-                  Este parceiro não possui contas bancárias cadastradas.{' '}
+                  Este parceiro não possui contas bancárias com saldo em {moeda}.{' '}
                   <button
                     onClick={() => {
                       setAlertParceiroId(origemParceiroId);
@@ -943,17 +1008,23 @@ export function CaixaTransacaoDialog({
           </>
         );
       } else {
-        // CRYPTO
+        // CRYPTO - Filtrar parceiros com saldo no coin selecionado
+        const parceirosComSaldo = saldosParceirosWallets
+          .filter(s => s.coin === coin && s.saldo_usd > 0)
+          .map(s => s.parceiro_id)
+          .filter((value, index, self) => self.indexOf(value) === index); // unique
+
         return (
           <>
             <div className="space-y-2">
-              <Label>Parceiro</Label>
+              <Label>Parceiro (com saldo em {coin})</Label>
               <ParceiroSelect
                 value={origemParceiroId}
                 onValueChange={(value) => {
                   setOrigemParceiroId(value);
                   setOrigemWalletId("");
                 }}
+                onlyParceiros={parceirosComSaldo}
               />
             </div>
             {origemParceiroId && (
@@ -970,15 +1041,25 @@ export function CaixaTransacaoDialog({
                   </SelectTrigger>
                   <SelectContent>
                     {walletsCrypto
-                      .filter((w) => w.parceiro_id === origemParceiroId && w.moeda?.includes(coin))
+                      .filter((w) => {
+                        if (w.parceiro_id !== origemParceiroId || !w.moeda?.includes(coin)) return false;
+                        // Filtrar apenas wallets com saldo
+                        const saldo = saldosParceirosWallets.find(
+                          s => s.wallet_id === w.id && s.coin === coin
+                        );
+                        return saldo && saldo.saldo_usd > 0;
+                      })
                       .map((wallet) => {
+                        const saldo = saldosParceirosWallets.find(
+                          s => s.wallet_id === wallet.id && s.coin === coin
+                        );
                         const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
                         const shortenedAddress = wallet.endereco 
                           ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
                           : '';
                         return (
                           <SelectItem key={wallet.id} value={wallet.id}>
-                            <span className="font-mono">{walletName} - {shortenedAddress}</span>
+                            <span className="font-mono">{walletName} - {shortenedAddress} - Saldo: {formatCurrency(saldo?.saldo_usd || 0)}</span>
                           </SelectItem>
                         );
                       })}
@@ -986,11 +1067,17 @@ export function CaixaTransacaoDialog({
                 </Select>
               </div>
             )}
-            {origemParceiroId && walletsCrypto.filter((w) => w.parceiro_id === origemParceiroId && w.moeda?.includes(coin)).length === 0 && (
+            {origemParceiroId && walletsCrypto.filter((w) => {
+              if (w.parceiro_id !== origemParceiroId || !w.moeda?.includes(coin)) return false;
+              const saldo = saldosParceirosWallets.find(
+                s => s.wallet_id === w.id && s.coin === coin
+              );
+              return saldo && saldo.saldo_usd > 0;
+            }).length === 0 && (
               <Alert variant="destructive" className="border-warning/50 bg-warning/10">
                 <AlertTriangle className="h-4 w-4 text-warning" />
                 <AlertDescription className="text-warning">
-                  Este parceiro não possui wallets cadastradas para {coin}.{' '}
+                  Este parceiro não possui wallets com saldo em {coin}.{' '}
                   <button
                     onClick={() => {
                       setAlertParceiroId(origemParceiroId);
@@ -1838,20 +1925,28 @@ export function CaixaTransacaoDialog({
                                 </div>
                               </div>
                             )}
-                            {/* Transferência Parceiro → Parceiro - Mostrar saldo anterior e novo */}
+                            {/* Transferência Parceiro → Parceiro - Mostrar saldo SEMPRE */}
                             {tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && 
                              (origemTipo === "PARCEIRO_CONTA" || origemTipo === "PARCEIRO_WALLET") && 
-                             (origemContaId || origemWalletId) && parseFloat(String(valor)) > 0 && (
+                             (origemContaId || origemWalletId) && (
                               <div className="mt-3 space-y-1">
-                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                  <TrendingDown className="h-4 w-4 text-destructive" />
-                                  <span className="line-through opacity-70">
-                                    {formatCurrency(getSaldoAtual(origemTipo, origemContaId || origemWalletId))}
-                                  </span>
-                                </div>
-                                <div className="text-sm font-semibold text-foreground">
-                                  {formatCurrency(getSaldoAtual(origemTipo, origemContaId || origemWalletId) - parseFloat(String(valor)))}
-                                </div>
+                                {parseFloat(String(valor)) > 0 ? (
+                                  <>
+                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                      <TrendingDown className="h-4 w-4 text-destructive" />
+                                      <span className="line-through opacity-70">
+                                        {formatCurrency(getSaldoAtual(origemTipo, origemContaId || origemWalletId))}
+                                      </span>
+                                    </div>
+                                    <div className="text-sm font-semibold text-foreground">
+                                      {formatCurrency(getSaldoAtual(origemTipo, origemContaId || origemWalletId) - parseFloat(String(valor)))}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-xs text-muted-foreground">
+                                    Saldo disponível: {formatCurrency(getSaldoAtual(origemTipo, origemContaId || origemWalletId))}
+                                  </div>
+                                )}
                               </div>
                             )}
                           </CardContent>
@@ -1915,20 +2010,28 @@ export function CaixaTransacaoDialog({
                                 </div>
                               </div>
                             )}
-                            {/* Transferência Parceiro → Parceiro - Mostrar saldo anterior e novo */}
+                            {/* Transferência Parceiro → Parceiro DESTINO - Mostrar saldo SEMPRE */}
                             {tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && 
                              (destinoTipo === "PARCEIRO_CONTA" || destinoTipo === "PARCEIRO_WALLET") && 
-                             (destinoContaId || destinoWalletId) && parseFloat(String(valor)) > 0 && (
+                             (destinoContaId || destinoWalletId) && (
                               <div className="mt-3 space-y-1">
-                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                  <TrendingUp className="h-4 w-4 text-emerald-500" />
-                                  <span className="line-through opacity-70">
-                                    {formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId))}
-                                  </span>
-                                </div>
-                                <div className="text-sm font-semibold text-foreground">
-                                  {formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId) + parseFloat(String(valor)))}
-                                </div>
+                                {parseFloat(String(valor)) > 0 ? (
+                                  <>
+                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                      <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                      <span className="line-through opacity-70">
+                                        {formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId))}
+                                      </span>
+                                    </div>
+                                    <div className="text-sm font-semibold text-foreground">
+                                      {formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId) + parseFloat(String(valor)))}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-xs text-muted-foreground">
+                                    Saldo atual: {formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId))}
+                                  </div>
+                                )}
                               </div>
                             )}
                           </CardContent>
