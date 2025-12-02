@@ -411,22 +411,211 @@ export function HistoricoMovimentacoes({
                               </span>
                             </div>
                           ) : transacao.destino_tipo === "PARCEIRO_WALLET" && transacao.destino_wallet_id ? (
-                            <div className="flex flex-col">
-                              <span className="text-sm text-muted-foreground">
-                                {walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.exchange || 'Wallet'}
-                              </span>
-                              <span className="text-xs text-muted-foreground/70">
-                                {parceiros[transacao.destino_parceiro_id!] || ''}
-                              </span>
+                            <div className="flex items-center gap-2">
+                              <div className="flex flex-col">
+                                <span className="text-sm text-muted-foreground">
+                                  {walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.exchange || 'Wallet'}
+                                </span>
+                                <span className="text-xs text-muted-foreground/70">
+                                  {parceiros[transacao.destino_parceiro_id!] || ''}
+                                </span>
+                              </div>
+                              {((transacao.descricao && transacao.descricao.trim() !== '') || transacao.tipo_moeda === "CRYPTO") && (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <button className="p-1 hover:bg-muted rounded-md transition-colors">
+                                      <Info className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                                    </button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Detalhes da Transação</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="py-4 space-y-4">
+                                      {transacao.tipo_moeda === "CRYPTO" && (
+                                        <div className="space-y-2 pb-4 border-b border-border/50">
+                                          <h4 className="font-medium text-sm">Informações Crypto</h4>
+                                          <div className="space-y-1 text-sm">
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Moeda:</span> {transacao.coin}
+                                            </p>
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Quantidade:</span> {transacao.qtd_coin}
+                                            </p>
+                                            {transacao.destino_wallet_id && (
+                                              <>
+                                                <p className="text-muted-foreground">
+                                                  <span className="font-medium">Endereço Destino:</span>{" "}
+                                                  <span className="font-mono text-xs break-all">
+                                                    {walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.endereco || 'N/A'}
+                                                  </span>
+                                                </p>
+                                                <p className="text-muted-foreground">
+                                                  <span className="font-medium">Rede:</span>{" "}
+                                                  {walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.network || 'N/A'}
+                                                </p>
+                                              </>
+                                            )}
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Valor (USD):</span> ${transacao.valor_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Cotação (USD):</span> ${transacao.cotacao?.toLocaleString('pt-BR', { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground/70 mt-2 pt-2 border-t border-border/30">
+                                              Cálculo: {transacao.cotacao?.toFixed(8)} × {transacao.qtd_coin} = ${transacao.valor_usd?.toFixed(2)}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {transacao.descricao && transacao.descricao.trim() !== '' && (
+                                        <div className="space-y-2">
+                                          <h4 className="font-medium text-sm">Observações</h4>
+                                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{transacao.descricao}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
                             </div>
                           ) : transacao.destino_tipo === "BOOKMAKER" && transacao.destino_bookmaker_id ? (
-                            <div className="flex flex-col">
-                              <span className="text-sm text-muted-foreground">
-                                {bookmakers[transacao.destino_bookmaker_id] || 'Bookmaker'}
-                              </span>
-                              <span className="text-xs text-muted-foreground/70">
-                                {parceiros[transacao.destino_parceiro_id!] || ''}
-                              </span>
+                            <div className="flex items-center gap-2">
+                              <div className="flex flex-col">
+                                <span className="text-sm text-muted-foreground">
+                                  {bookmakers[transacao.destino_bookmaker_id] || 'Bookmaker'}
+                                </span>
+                                <span className="text-xs text-muted-foreground/70">
+                                  {parceiros[transacao.destino_parceiro_id!] || ''}
+                                </span>
+                              </div>
+                              {((transacao.descricao && transacao.descricao.trim() !== '') || transacao.tipo_moeda === "CRYPTO") && (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <button className="p-1 hover:bg-muted rounded-md transition-colors">
+                                      <Info className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                                    </button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Detalhes da Transação</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="py-4 space-y-4">
+                                      {transacao.tipo_moeda === "CRYPTO" && (
+                                        <div className="space-y-2 pb-4 border-b border-border/50">
+                                          <h4 className="font-medium text-sm">Informações Crypto</h4>
+                                          <div className="space-y-1 text-sm">
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Moeda:</span> {transacao.coin}
+                                            </p>
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Quantidade:</span> {transacao.qtd_coin}
+                                            </p>
+                                            {transacao.destino_wallet_id && (
+                                              <>
+                                                <p className="text-muted-foreground">
+                                                  <span className="font-medium">Endereço Destino:</span>{" "}
+                                                  <span className="font-mono text-xs break-all">
+                                                    {walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.endereco || 'N/A'}
+                                                  </span>
+                                                </p>
+                                                <p className="text-muted-foreground">
+                                                  <span className="font-medium">Rede:</span>{" "}
+                                                  {walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.network || 'N/A'}
+                                                </p>
+                                              </>
+                                            )}
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Valor (USD):</span> ${transacao.valor_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Cotação (USD):</span> ${transacao.cotacao?.toLocaleString('pt-BR', { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground/70 mt-2 pt-2 border-t border-border/30">
+                                              Cálculo: {transacao.cotacao?.toFixed(8)} × {transacao.qtd_coin} = ${transacao.valor_usd?.toFixed(2)}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {transacao.descricao && transacao.descricao.trim() !== '' && (
+                                        <div className="space-y-2">
+                                          <h4 className="font-medium text-sm">Observações</h4>
+                                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{transacao.descricao}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
+                            </div>
+                          ) : transacao.destino_tipo === "PARCEIRO_CONTA" && transacao.destino_conta_bancaria_id ? (
+                            <div className="flex items-center gap-2">
+                              <div className="flex flex-col">
+                                <span className="text-sm text-muted-foreground">
+                                  {contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id)?.banco || 'Conta Bancária'}
+                                </span>
+                                <span className="text-xs text-muted-foreground/70">
+                                  {contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id)?.titular || ''}
+                                </span>
+                              </div>
+                              {((transacao.descricao && transacao.descricao.trim() !== '') || transacao.tipo_moeda === "CRYPTO") && (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <button className="p-1 hover:bg-muted rounded-md transition-colors">
+                                      <Info className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                                    </button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Detalhes da Transação</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="py-4 space-y-4">
+                                      {transacao.tipo_moeda === "CRYPTO" && (
+                                        <div className="space-y-2 pb-4 border-b border-border/50">
+                                          <h4 className="font-medium text-sm">Informações Crypto</h4>
+                                          <div className="space-y-1 text-sm">
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Moeda:</span> {transacao.coin}
+                                            </p>
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Quantidade:</span> {transacao.qtd_coin}
+                                            </p>
+                                            {transacao.destino_wallet_id && (
+                                              <>
+                                                <p className="text-muted-foreground">
+                                                  <span className="font-medium">Endereço Destino:</span>{" "}
+                                                  <span className="font-mono text-xs break-all">
+                                                    {walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.endereco || 'N/A'}
+                                                  </span>
+                                                </p>
+                                                <p className="text-muted-foreground">
+                                                  <span className="font-medium">Rede:</span>{" "}
+                                                  {walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.network || 'N/A'}
+                                                </p>
+                                              </>
+                                            )}
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Valor (USD):</span> ${transacao.valor_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Cotação (USD):</span> ${transacao.cotacao?.toLocaleString('pt-BR', { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground/70 mt-2 pt-2 border-t border-border/30">
+                                              Cálculo: {transacao.cotacao?.toFixed(8)} × {transacao.qtd_coin} = ${transacao.valor_usd?.toFixed(2)}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {transacao.descricao && transacao.descricao.trim() !== '' && (
+                                        <div className="space-y-2">
+                                          <h4 className="font-medium text-sm">Observações</h4>
+                                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{transacao.descricao}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
                             </div>
                           ) : (
                             <>
