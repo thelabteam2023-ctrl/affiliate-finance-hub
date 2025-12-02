@@ -404,15 +404,21 @@ export function CaixaTransacaoDialog({
   const getParceirosDisponiveisDestino = () => {
     // Retorna apenas parceiros que têm contas/wallets disponíveis (excluindo a selecionada na origem)
     if (tipoMoeda === "FIAT") {
-      return contasBancarias
+      const parceirosIds = contasBancarias
         .filter((c) => c.id !== origemContaId)
         .map((c) => c.parceiro_id)
         .filter((value, index, self) => self.indexOf(value) === index); // unique
+      
+      console.log('Parceiros disponíveis para destino (FIAT):', parceirosIds);
+      return parceirosIds;
     } else {
-      return walletsCrypto
+      const parceirosIds = walletsCrypto
         .filter((w) => w.moeda?.includes(coin) && w.id !== origemWalletId)
         .map((w) => w.parceiro_id)
         .filter((value, index, self) => self.indexOf(value) === index); // unique
+      
+      console.log('Parceiros disponíveis para destino (CRYPTO):', parceirosIds);
+      return parceirosIds;
     }
   };
 
