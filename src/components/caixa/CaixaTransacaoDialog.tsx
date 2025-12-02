@@ -196,6 +196,10 @@ export function CaixaTransacaoDialog({
       if (!isNaN(qtdNum) && qtdNum > 0 && price > 0) {
         const valorUSD = qtdNum * price;
         setValor(valorUSD.toFixed(2));
+        setValorDisplay(valorUSD.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }));
         setCotacao(price.toFixed(8));
       }
     }
