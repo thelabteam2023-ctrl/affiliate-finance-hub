@@ -36,6 +36,31 @@ import BookmakerSelect from "@/components/bookmakers/BookmakerSelect";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { Loader2, ArrowLeftRight, AlertTriangle, TrendingDown, TrendingUp, Info } from "lucide-react";
 
+// Constantes de moedas disponíveis
+const MOEDAS_FIAT = [
+  { value: "BRL", label: "Real Brasileiro" },
+  { value: "USD", label: "Dólar Americano" },
+  { value: "EUR", label: "Euro" },
+];
+
+const MOEDAS_CRYPTO = [
+  { value: "USDT", label: "Tether (USDT)" },
+  { value: "USDC", label: "USD Coin (USDC)" },
+  { value: "BTC", label: "Bitcoin (BTC)" },
+  { value: "ETH", label: "Ethereum (ETH)" },
+  { value: "BNB", label: "Binance Coin (BNB)" },
+  { value: "TRX", label: "Tron (TRX)" },
+  { value: "SOL", label: "Solana (SOL)" },
+  { value: "MATIC", label: "Polygon (MATIC)" },
+  { value: "ADA", label: "Cardano (ADA)" },
+  { value: "DOT", label: "Polkadot (DOT)" },
+  { value: "AVAX", label: "Avalanche (AVAX)" },
+  { value: "LINK", label: "Chainlink (LINK)" },
+  { value: "UNI", label: "Uniswap (UNI)" },
+  { value: "LTC", label: "Litecoin (LTC)" },
+  { value: "XRP", label: "Ripple (XRP)" },
+];
+
 interface CaixaTransacaoDialogProps {
   open: boolean;
   onClose: () => void;
@@ -1433,6 +1458,45 @@ export function CaixaTransacaoDialog({
     }).format(value);
   };
 
+  // Função para determinar moedas disponíveis baseado no tipo de transação
+  const getMoedasDisponiveis = () => {
+    // APORTE (Investidor → Caixa): todas as moedas
+    if (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "APORTE") {
+      return {
+        fiat: MOEDAS_FIAT,
+        crypto: MOEDAS_CRYPTO
+      };
+    }
+    
+    // LIQUIDAÇÃO (Caixa → Investidor): apenas moedas com saldo no caixa
+    if (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO") {
+      return {
+        fiat: saldosCaixaFiat.filter(s => s.saldo > 0).map(s => {
+          const moedaInfo = MOEDAS_FIAT.find(m => m.value === s.moeda);
+          return { value: s.moeda, label: moedaInfo?.label || s.moeda, saldo: s.saldo };
+        }),
+        crypto: saldosCaixaCrypto.filter(s => s.saldo_coin > 0).map(s => ({
+          value: s.coin,
+          label: MOEDAS_CRYPTO.find(m => m.value === s.coin)?.label || s.coin,
+          saldo: s.saldo_usd
+        }))
+      };
+    }
+    
+    // Outras transações: mantém comportamento atual (moedas disponíveis na origem)
+    return {
+      fiat: saldosCaixaFiat.filter(s => s.saldo > 0).map(s => {
+        const moedaInfo = MOEDAS_FIAT.find(m => m.value === s.moeda);
+        return { value: s.moeda, label: moedaInfo?.label || s.moeda, saldo: s.saldo };
+      }),
+      crypto: saldosCaixaCrypto.filter(s => s.saldo_coin > 0).map(s => ({
+        value: s.coin,
+        label: MOEDAS_CRYPTO.find(m => m.value === s.coin)?.label || s.coin,
+        saldo: s.saldo_usd
+      }))
+    };
+  };
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -1540,9 +1604,14 @@ export function CaixaTransacaoDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {saldosCaixaFiat.map((saldo) => (
-                      <SelectItem key={saldo.moeda} value={saldo.moeda}>
-                        {saldo.moeda} - {saldo.moeda === "BRL" ? "Real Brasileiro" : saldo.moeda === "USD" ? "Dólar Americano" : "Euro"}
+                    {getMoedasDisponiveis().fiat.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.value} - {m.label}
+                        {tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO" && 'saldo' in m && typeof m.saldo === 'number' && (
+                          <span className="text-xs text-muted-foreground ml-2">
+                            (Saldo: {formatCurrency(m.saldo)})
+                          </span>
+                        )}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1583,9 +1652,14 @@ export function CaixaTransacaoDialog({
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      {saldosCaixaCrypto.map((saldo) => (
-                        <SelectItem key={saldo.coin} value={saldo.coin}>
-                          {saldo.coin}
+                      {getMoedasDisponiveis().crypto.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>
+                          {m.label}
+                          {tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO" && 'saldo' in m && typeof m.saldo === 'number' && (
+                            <span className="text-xs text-muted-foreground ml-2">
+                              (Saldo: {formatCurrency(m.saldo)})
+                            </span>
+                          )}
                         </SelectItem>
                       ))}
                     </SelectContent>
