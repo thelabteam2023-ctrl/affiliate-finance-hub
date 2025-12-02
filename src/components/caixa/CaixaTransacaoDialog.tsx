@@ -140,10 +140,18 @@ export function CaixaTransacaoDialog({
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
   const [loadingPrices, setLoadingPrices] = useState(false);
 
+  // Resetar formulário quando dialog abre
+  useEffect(() => {
+    if (open) {
+      resetForm();
+    }
+  }, [open]);
+
   // Buscar cotações em tempo real da Binance quando tipo_moeda for CRYPTO
+  // e atualizar automaticamente a cada 30 segundos
   useEffect(() => {
     const fetchCryptoPrices = async () => {
-      if (tipoMoeda !== "CRYPTO") return;
+      if (tipoMoeda !== "CRYPTO" || !open) return;
       
       setLoadingPrices(true);
       try {
@@ -169,8 +177,15 @@ export function CaixaTransacaoDialog({
       }
     };
 
+    // Busca inicial
     fetchCryptoPrices();
-  }, [tipoMoeda, toast]);
+
+    // Refresh automático a cada 30 segundos
+    const intervalId = setInterval(fetchCryptoPrices, 30000);
+
+    // Limpar intervalo quando componente desmontar ou condições mudarem
+    return () => clearInterval(intervalId);
+  }, [tipoMoeda, open, toast]);
 
   // Calcular valor USD e cotação automaticamente baseado na quantidade de coins e preço em tempo real
   useEffect(() => {
