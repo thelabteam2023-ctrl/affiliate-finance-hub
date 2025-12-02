@@ -14,12 +14,21 @@ interface ContaBancaria {
   titular: string;
 }
 
+interface WalletDetalhe {
+  id: string;
+  exchange: string;
+  endereco: string;
+  network: string;
+  parceiro_id: string;
+}
+
 interface HistoricoMovimentacoesProps {
   transacoes: any[];
   parceiros: { [key: string]: string };
   contas: { [key: string]: string };
   contasBancarias: ContaBancaria[];
   wallets: { [key: string]: string };
+  walletsDetalhes: WalletDetalhe[];
   bookmakers: { [key: string]: string };
   loading: boolean;
   filtroTipo: string;
@@ -51,6 +60,9 @@ export function HistoricoMovimentacoes({
   getDestinoLabel,
   formatCurrency,
   contasBancarias,
+  parceiros,
+  walletsDetalhes,
+  bookmakers,
 }: HistoricoMovimentacoesProps) {
   const handlePeriodoRapido = (dias: number | null) => {
     if (dias === null) {
@@ -230,6 +242,24 @@ export function HistoricoMovimentacoes({
                             {contasBancarias.find(c => c.id === transacao.origem_conta_bancaria_id)?.titular || ''}
                           </span>
                         </div>
+                      ) : transacao.origem_tipo === "PARCEIRO_WALLET" && transacao.origem_wallet_id ? (
+                        <div className="flex flex-col">
+                          <span className="text-sm text-muted-foreground">
+                            {walletsDetalhes.find(w => w.id === transacao.origem_wallet_id)?.exchange || 'Wallet'}
+                          </span>
+                          <span className="text-xs text-muted-foreground/70">
+                            {parceiros[transacao.origem_parceiro_id!] || ''}
+                          </span>
+                        </div>
+                      ) : transacao.origem_tipo === "BOOKMAKER" && transacao.origem_bookmaker_id ? (
+                        <div className="flex flex-col">
+                          <span className="text-sm text-muted-foreground">
+                            {bookmakers[transacao.origem_bookmaker_id] || 'Bookmaker'}
+                          </span>
+                          <span className="text-xs text-muted-foreground/70">
+                            {parceiros[transacao.origem_parceiro_id!] || ''}
+                          </span>
+                        </div>
                       ) : (
                         <span className="text-sm text-muted-foreground">
                           {getOrigemLabel(transacao)}
@@ -253,7 +283,7 @@ export function HistoricoMovimentacoes({
                                   <DialogTitle>Detalhes da Transação</DialogTitle>
                                 </DialogHeader>
                                 <div className="py-4 space-y-4">
-                                  {transacao.tipo_moeda === "CRYPTO" && (
+                                   {transacao.tipo_moeda === "CRYPTO" && (
                                     <div className="space-y-2 pb-4 border-b border-border/50">
                                       <h4 className="font-medium text-sm">Informações Crypto</h4>
                                       <div className="space-y-1 text-sm">
@@ -263,6 +293,20 @@ export function HistoricoMovimentacoes({
                                         <p className="text-muted-foreground">
                                           <span className="font-medium">Quantidade:</span> {transacao.qtd_coin}
                                         </p>
+                                        {transacao.destino_wallet_id && (
+                                          <>
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Endereço Destino:</span>{" "}
+                                              <span className="font-mono text-xs break-all">
+                                                {walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.endereco || 'N/A'}
+                                              </span>
+                                            </p>
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Rede:</span>{" "}
+                                              {walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.network || 'N/A'}
+                                            </p>
+                                          </>
+                                        )}
                                         <p className="text-muted-foreground">
                                           <span className="font-medium">Valor (USD):</span> ${transacao.valor_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </p>
@@ -301,7 +345,7 @@ export function HistoricoMovimentacoes({
                                   <DialogTitle>Detalhes da Transação</DialogTitle>
                                 </DialogHeader>
                                 <div className="py-4 space-y-4">
-                                  {transacao.tipo_moeda === "CRYPTO" && (
+                                   {transacao.tipo_moeda === "CRYPTO" && (
                                     <div className="space-y-2 pb-4 border-b border-border/50">
                                       <h4 className="font-medium text-sm">Informações Crypto</h4>
                                       <div className="space-y-1 text-sm">
@@ -311,6 +355,20 @@ export function HistoricoMovimentacoes({
                                         <p className="text-muted-foreground">
                                           <span className="font-medium">Quantidade:</span> {transacao.qtd_coin}
                                         </p>
+                                        {transacao.destino_wallet_id && (
+                                          <>
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Endereço Destino:</span>{" "}
+                                              <span className="font-mono text-xs break-all">
+                                                {walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.endereco || 'N/A'}
+                                              </span>
+                                            </p>
+                                            <p className="text-muted-foreground">
+                                              <span className="font-medium">Rede:</span>{" "}
+                                              {walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.network || 'N/A'}
+                                            </p>
+                                          </>
+                                        )}
                                         <p className="text-muted-foreground">
                                           <span className="font-medium">Valor (USD):</span> ${transacao.valor_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </p>
@@ -352,6 +410,24 @@ export function HistoricoMovimentacoes({
                                 {contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id)?.titular || ''}
                               </span>
                             </div>
+                          ) : transacao.destino_tipo === "PARCEIRO_WALLET" && transacao.destino_wallet_id ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm text-muted-foreground">
+                                {walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.exchange || 'Wallet'}
+                              </span>
+                              <span className="text-xs text-muted-foreground/70">
+                                {parceiros[transacao.destino_parceiro_id!] || ''}
+                              </span>
+                            </div>
+                          ) : transacao.destino_tipo === "BOOKMAKER" && transacao.destino_bookmaker_id ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm text-muted-foreground">
+                                {bookmakers[transacao.destino_bookmaker_id] || 'Bookmaker'}
+                              </span>
+                              <span className="text-xs text-muted-foreground/70">
+                                {parceiros[transacao.destino_parceiro_id!] || ''}
+                              </span>
+                            </div>
                           ) : (
                             <>
                               <span className="text-sm text-muted-foreground">
@@ -379,6 +455,20 @@ export function HistoricoMovimentacoes({
                                             <p className="text-muted-foreground">
                                               <span className="font-medium">Quantidade:</span> {transacao.qtd_coin}
                                             </p>
+                                            {transacao.destino_wallet_id && (
+                                              <>
+                                                <p className="text-muted-foreground">
+                                                  <span className="font-medium">Endereço Destino:</span>{" "}
+                                                  <span className="font-mono text-xs break-all">
+                                                    {walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.endereco || 'N/A'}
+                                                  </span>
+                                                </p>
+                                                <p className="text-muted-foreground">
+                                                  <span className="font-medium">Rede:</span>{" "}
+                                                  {walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.network || 'N/A'}
+                                                </p>
+                                              </>
+                                            )}
                                             <p className="text-muted-foreground">
                                               <span className="font-medium">Valor (USD):</span> ${transacao.valor_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </p>

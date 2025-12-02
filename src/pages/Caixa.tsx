@@ -67,6 +67,7 @@ export default function Caixa() {
   const [contas, setContas] = useState<{ [key: string]: string }>({});
   const [contasBancarias, setContasBancarias] = useState<Array<{ id: string; banco: string; titular: string }>>([]);
   const [wallets, setWallets] = useState<{ [key: string]: string }>({});
+  const [walletsDetalhes, setWalletsDetalhes] = useState<Array<{ id: string; exchange: string; endereco: string; network: string; parceiro_id: string }>>([]);
   const [bookmakers, setBookmakers] = useState<{ [key: string]: string }>({});
 
   const fetchData = async () => {
@@ -94,7 +95,7 @@ export default function Caixa() {
       
       const { data: walletsData } = await supabase
         .from("wallets_crypto")
-        .select("id, exchange");
+        .select("id, exchange, endereco, network, parceiro_id");
       
       const { data: bookmakersData } = await supabase
         .from("bookmakers")
@@ -113,6 +114,7 @@ export default function Caixa() {
       const walletsMap: { [key: string]: string } = {};
       walletsData?.forEach(w => walletsMap[w.id] = w.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET');
       setWallets(walletsMap);
+      setWalletsDetalhes(walletsData || []);
 
       const bookmakersMap: { [key: string]: string } = {};
       bookmakersData?.forEach(b => bookmakersMap[b.id] = b.nome);
@@ -486,6 +488,7 @@ export default function Caixa() {
         contas={contas}
         contasBancarias={contasBancarias}
         wallets={wallets}
+        walletsDetalhes={walletsDetalhes}
         bookmakers={bookmakers}
         loading={loading}
         filtroTipo={filtroTipo}
