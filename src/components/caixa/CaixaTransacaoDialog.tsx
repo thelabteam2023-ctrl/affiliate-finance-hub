@@ -288,7 +288,7 @@ export function CaixaTransacaoDialog({
     }
   }, [fluxoTransferencia, tipoTransacao, tipoMoeda]);
 
-  // Limpar origem quando destino mudar (para SAQUE)
+  // Limpar DESTINO quando ORIGEM mudar (para TRANSFERENCIA e DEPOSITO)
   useEffect(() => {
     if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO") {
       setDestinoParceiroId("");
@@ -298,10 +298,14 @@ export function CaixaTransacaoDialog({
     if (tipoTransacao === "DEPOSITO") {
       setDestinoBookmakerId("");
     }
+  }, [origemParceiroId, origemContaId, origemWalletId, tipoTransacao, fluxoTransferencia]);
+
+  // Limpar ORIGEM quando DESTINO mudar (somente para SAQUE)
+  useEffect(() => {
     if (tipoTransacao === "SAQUE") {
       setOrigemBookmakerId("");
     }
-  }, [origemParceiroId, origemContaId, origemWalletId, destinoParceiroId, destinoContaId, tipoTransacao, fluxoTransferencia]);
+  }, [destinoParceiroId, destinoContaId, tipoTransacao]);
 
   const fetchAccountsAndWallets = async () => {
     try {
@@ -404,21 +408,15 @@ export function CaixaTransacaoDialog({
   const getParceirosDisponiveisDestino = () => {
     // Retorna apenas parceiros que têm contas/wallets disponíveis (excluindo a selecionada na origem)
     if (tipoMoeda === "FIAT") {
-      const parceirosIds = contasBancarias
+      return contasBancarias
         .filter((c) => c.id !== origemContaId)
         .map((c) => c.parceiro_id)
         .filter((value, index, self) => self.indexOf(value) === index); // unique
-      
-      console.log('Parceiros disponíveis para destino (FIAT):', parceirosIds);
-      return parceirosIds;
     } else {
-      const parceirosIds = walletsCrypto
+      return walletsCrypto
         .filter((w) => w.moeda?.includes(coin) && w.id !== origemWalletId)
         .map((w) => w.parceiro_id)
         .filter((value, index, self) => self.indexOf(value) === index); // unique
-      
-      console.log('Parceiros disponíveis para destino (CRYPTO):', parceirosIds);
-      return parceirosIds;
     }
   };
 

@@ -55,10 +55,6 @@ export default function ParceiroSelect({ value, onValueChange, disabled, onlyPar
     ? parceiros.filter(p => onlyParceiros.includes(p.id))
     : parceiros;
 
-  console.log('ParceiroSelect - onlyParceiros:', onlyParceiros);
-  console.log('ParceiroSelect - availableParceiros:', availableParceiros.map(p => ({ id: p.id, nome: p.nome })));
-  console.log('ParceiroSelect - value:', value);
-
   const filteredParceiros = availableParceiros.filter((parceiro) =>
     parceiro.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
     parceiro.cpf.includes(searchTerm)
