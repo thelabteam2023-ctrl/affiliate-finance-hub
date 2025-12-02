@@ -455,72 +455,136 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         setParceiroId(data.id);
       }
 
-      // Save bank accounts
+      // Save bank accounts with proper UPDATE/INSERT/DELETE logic
       if (currentParceiroId) {
-        await supabase
+        // Get existing account IDs from database
+        const { data: existingAccounts } = await supabase
           .from("contas_bancarias")
-          .delete()
+          .select("id")
           .eq("parceiro_id", currentParceiroId);
-      }
-
-      for (const account of bankAccounts) {
-        if (account.banco_id && account.pix_keys.some(k => k.chave)) {
-          // Clean PIX key before saving (remove formatting)
-          let cleanPixKey = account.pix_keys[0]?.chave || null;
-          if (cleanPixKey) {
-            const pixType = account.pix_keys[0]?.tipo;
-            if (pixType === "cpf" || pixType === "cnpj") {
-              cleanPixKey = cleanPixKey.replace(/\D/g, "");
+        
+        const existingIds = new Set((existingAccounts || []).map(acc => acc.id));
+        const currentIds = new Set(bankAccounts.map(acc => acc.id).filter(Boolean));
+        
+        // DELETE accounts that were removed
+        const idsToDelete = [...existingIds].filter(id => !currentIds.has(id));
+        if (idsToDelete.length > 0) {
+          await supabase
+            .from("contas_bancarias")
+            .delete()
+            .in("id", idsToDelete);
+        }
+        
+        // UPDATE or INSERT accounts
+        for (const account of bankAccounts) {
+          if (account.banco_id && account.pix_keys.some(k => k.chave)) {
+            // Clean PIX key before saving (remove formatting)
+            let cleanPixKey = account.pix_keys[0]?.chave || null;
+            if (cleanPixKey) {
+              const pixType = account.pix_keys[0]?.tipo;
+              if (pixType === "cpf" || pixType === "cnpj") {
+                cleanPixKey = cleanPixKey.replace(/\D/g, "");
+              }
             }
-          }
-          
-          const { error: insertError } = await supabase.from("contas_bancarias").insert([{
-            parceiro_id: currentParceiroId,
-            banco_id: account.banco_id,
-            banco: bancos.find(b => b.id === account.banco_id)?.nome || "",
-            agencia: account.agencia || null,
-            conta: account.conta || null,
-            tipo_conta: account.tipo_conta,
-            titular: account.titular || nome,
-            pix_key: cleanPixKey,
-            observacoes: account.observacoes || null,
-          }]);
-          
-          if (insertError) {
-            console.error("Error inserting bank account:", insertError);
-            throw insertError;
+            
+            const accountData = {
+              parceiro_id: currentParceiroId,
+              banco_id: account.banco_id,
+              banco: bancos.find(b => b.id === account.banco_id)?.nome || "",
+              agencia: account.agencia || null,
+              conta: account.conta || null,
+              tipo_conta: account.tipo_conta,
+              titular: account.titular || nome,
+              pix_key: cleanPixKey,
+              observacoes: account.observacoes || null,
+            };
+            
+            if (account.id) {
+              // UPDATE existing account
+              const { error: updateError } = await supabase
+                .from("contas_bancarias")
+                .update(accountData)
+                .eq("id", account.id);
+              
+              if (updateError) {
+                console.error("Error updating bank account:", updateError);
+                throw updateError;
+              }
+            } else {
+              // INSERT new account
+              const { error: insertError } = await supabase
+                .from("contas_bancarias")
+                .insert([accountData]);
+              
+              if (insertError) {
+                console.error("Error inserting bank account:", insertError);
+                throw insertError;
+              }
+            }
           }
         }
       }
 
-      // Save crypto wallets
+      // Save crypto wallets with proper UPDATE/INSERT/DELETE logic
       if (currentParceiroId) {
-        await supabase
+        // Get existing wallet IDs from database
+        const { data: existingWallets } = await supabase
           .from("wallets_crypto")
-          .delete()
+          .select("id")
           .eq("parceiro_id", currentParceiroId);
-      }
+        
+        const existingIds = new Set((existingWallets || []).map(w => w.id));
+        const currentIds = new Set(cryptoWallets.map(w => w.id).filter(Boolean));
+        
+        // DELETE wallets that were removed
+        const idsToDelete = [...existingIds].filter(id => !currentIds.has(id));
+        if (idsToDelete.length > 0) {
+          await supabase
+            .from("wallets_crypto")
+            .delete()
+            .in("id", idsToDelete);
+        }
+        
+        // UPDATE or INSERT wallets
+        for (const wallet of cryptoWallets) {
+          if (wallet.moeda && wallet.moeda.length > 0 && wallet.endereco && wallet.exchange) {
+            // Encrypt observacoes if present
+            const observacoesEncrypted = wallet.observacoes 
+              ? btoa(unescape(encodeURIComponent(wallet.observacoes)))
+              : null;
 
-      for (const wallet of cryptoWallets) {
-        if (wallet.moeda && wallet.moeda.length > 0 && wallet.endereco && wallet.exchange) {
-          // Encrypt observacoes if present
-          const observacoesEncrypted = wallet.observacoes 
-            ? btoa(unescape(encodeURIComponent(wallet.observacoes)))
-            : null;
-
-          const { error: insertError } = await supabase.from("wallets_crypto").insert([{
-            parceiro_id: currentParceiroId,
-            moeda: wallet.moeda,
-            endereco: wallet.endereco,
-            network: redes.find(r => r.id === wallet.rede_id)?.nome || "",
-            rede_id: wallet.rede_id,
-            exchange: wallet.exchange,
-            observacoes_encrypted: observacoesEncrypted,
-          }]);
-          
-          if (insertError) {
-            console.error("Error inserting crypto wallet:", insertError);
-            throw insertError;
+            const walletData = {
+              parceiro_id: currentParceiroId,
+              moeda: wallet.moeda,
+              endereco: wallet.endereco,
+              network: redes.find(r => r.id === wallet.rede_id)?.nome || "",
+              rede_id: wallet.rede_id,
+              exchange: wallet.exchange,
+              observacoes_encrypted: observacoesEncrypted,
+            };
+            
+            if (wallet.id) {
+              // UPDATE existing wallet
+              const { error: updateError } = await supabase
+                .from("wallets_crypto")
+                .update(walletData)
+                .eq("id", wallet.id);
+              
+              if (updateError) {
+                console.error("Error updating crypto wallet:", updateError);
+                throw updateError;
+              }
+            } else {
+              // INSERT new wallet
+              const { error: insertError } = await supabase
+                .from("wallets_crypto")
+                .insert([walletData]);
+              
+              if (insertError) {
+                console.error("Error inserting crypto wallet:", insertError);
+                throw insertError;
+              }
+            }
           }
         }
       }
