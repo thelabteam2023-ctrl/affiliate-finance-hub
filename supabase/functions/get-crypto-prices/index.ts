@@ -8,7 +8,7 @@ const corsHeaders = {
 
 // Mapeamento de símbolos de criptomoedas para pares da Binance
 const BINANCE_SYMBOL_MAP: Record<string, string> = {
-  'USDT': 'USDTUSD',
+  'USDT': 'BUSDUSDT', // USDT é stablecoin, usar par com BUSD como aproximação
   'USDC': 'USDCUSDT',
   'BTC': 'BTCUSDT',
   'ETH': 'ETHUSDT',
@@ -55,20 +55,16 @@ serve(async (req) => {
       );
     }
 
-    // Buscar preços da Binance
-    const symbolsParam = JSON.stringify(binanceSymbols);
+    // Buscar todos os preços da Binance (endpoint público sem limite)
     const binanceUrl = `https://api.binance.com/api/v3/ticker/price`;
     
-    console.log('Calling Binance API with symbols:', binanceSymbols);
+    console.log('Fetching all prices from Binance API');
 
     const response = await fetch(binanceUrl, {
-      method: 'POST',
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        symbols: binanceSymbols
-      })
+      }
     });
 
     if (!response.ok) {
@@ -77,18 +73,22 @@ serve(async (req) => {
     }
 
     const binanceData = await response.json();
-    console.log('Binance response:', binanceData);
+    console.log('Fetched', binanceData.length, 'prices from Binance');
 
-    // Transformar resposta para formato mais amigável
+    // Transformar resposta para formato mais amigável, filtrando apenas os símbolos que precisamos
     const prices: Record<string, number> = {};
     
+    // USDT e USDC são stablecoins, sempre ~$1
+    prices['USDT'] = 1.0;
+    prices['USDC'] = 1.0;
+    
     for (const item of binanceData) {
-      // Encontrar o símbolo original
+      // Encontrar o símbolo original que corresponde ao símbolo da Binance
       const originalSymbol = Object.keys(BINANCE_SYMBOL_MAP).find(
         key => BINANCE_SYMBOL_MAP[key] === item.symbol
       );
       
-      if (originalSymbol) {
+      if (originalSymbol && binanceSymbols.includes(item.symbol)) {
         prices[originalSymbol] = parseFloat(item.price);
       }
     }
