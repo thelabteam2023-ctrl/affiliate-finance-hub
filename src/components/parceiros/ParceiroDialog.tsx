@@ -661,6 +661,34 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
   const removeCryptoWallet = (index: number) => {
     setCryptoWallets(cryptoWallets.filter((_, i) => i !== index));
+    
+    // Clear errors for this wallet and reorganize remaining errors
+    const newErrors: { [key: number]: string } = {};
+    const newChecking: { [key: number]: boolean } = {};
+    
+    Object.keys(enderecoErrors).forEach((key) => {
+      const keyIndex = parseInt(key);
+      if (keyIndex < index) {
+        // Keep errors before removed index
+        newErrors[keyIndex] = enderecoErrors[keyIndex];
+      } else if (keyIndex > index) {
+        // Shift down errors after removed index
+        newErrors[keyIndex - 1] = enderecoErrors[keyIndex];
+      }
+      // Skip the removed index
+    });
+    
+    Object.keys(checkingEnderecos).forEach((key) => {
+      const keyIndex = parseInt(key);
+      if (keyIndex < index) {
+        newChecking[keyIndex] = checkingEnderecos[keyIndex];
+      } else if (keyIndex > index) {
+        newChecking[keyIndex - 1] = checkingEnderecos[keyIndex];
+      }
+    });
+    
+    setEnderecoErrors(newErrors);
+    setCheckingEnderecos(newChecking);
   };
 
   const updateCryptoWallet = (index: number, field: string, value: any) => {
