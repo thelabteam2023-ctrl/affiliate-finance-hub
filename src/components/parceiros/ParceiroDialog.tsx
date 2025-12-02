@@ -119,27 +119,27 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     }
   };
 
-  // Capture initial state when dialog opens with parceiro data loaded
+  // Capture initial state directly from parceiro object when dialog opens
   useEffect(() => {
     if (open && parceiro) {
-      const captureInitialState = () => {
-        setInitialState({
-          nome,
-          cpf,
-          email,
-          telefone,
-          dataNascimento,
-          endereco,
-          cidade,
-          cep,
-          status,
-          observacoes,
-          bankAccounts: JSON.stringify(bankAccounts),
-          cryptoWallets: JSON.stringify(cryptoWallets)
-        });
-      };
-      // Small delay to ensure all parceiro data is loaded
-      setTimeout(captureInitialState, 100);
+      setInitialState({
+        nome: parceiro.nome || "",
+        cpf: formatCPF(parceiro.cpf || ""),
+        email: parceiro.email || "",
+        telefone: parceiro.telefone || "",
+        dataNascimento: parceiro.data_nascimento || "",
+        endereco: parceiro.endereco || "",
+        cidade: parceiro.cidade || "",
+        cep: formatCEP(parceiro.cep || ""),
+        status: parceiro.status || "ativo",
+        observacoes: parceiro.observacoes || "",
+        bankAccounts: JSON.stringify(parceiro.contas_bancarias || []),
+        cryptoWallets: JSON.stringify(parceiro.wallets_crypto || [])
+      });
+      setHasChanges(false);
+    } else if (open && !parceiro) {
+      setInitialState(null);
+      setHasChanges(false);
     }
   }, [open, parceiro]);
 
@@ -149,6 +149,28 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       setHasChanges(false);
       return;
     }
+
+    const serializeBankAccounts = (accounts: BankAccount[]) => {
+      return accounts.map(acc => ({
+        banco_id: acc.banco_id,
+        agencia: acc.agencia,
+        conta: acc.conta,
+        tipo_conta: acc.tipo_conta,
+        titular: acc.titular,
+        pix_keys: acc.pix_keys,
+        observacoes: acc.observacoes
+      }));
+    };
+
+    const serializeCryptoWallets = (wallets: CryptoWallet[]) => {
+      return wallets.map(w => ({
+        moeda: w.moeda,
+        endereco: w.endereco,
+        rede_id: w.rede_id,
+        exchange: w.exchange,
+        observacoes: w.observacoes
+      }));
+    };
 
     const currentState = {
       nome,
@@ -161,13 +183,21 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       cep,
       status,
       observacoes,
-      bankAccounts: JSON.stringify(bankAccounts),
-      cryptoWallets: JSON.stringify(cryptoWallets)
+      bankAccounts: JSON.stringify(serializeBankAccounts(bankAccounts)),
+      cryptoWallets: JSON.stringify(serializeCryptoWallets(cryptoWallets))
     };
 
     const changed = JSON.stringify(currentState) !== JSON.stringify(initialState);
     setHasChanges(changed);
   }, [nome, cpf, email, telefone, dataNascimento, endereco, cidade, cep, status, observacoes, bankAccounts, cryptoWallets, initialState, parceiro]);
+
+  // Clear initial state when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setInitialState(null);
+      setHasChanges(false);
+    }
+  }, [open]);
 
   useEffect(() => {
     fetchBancos();
