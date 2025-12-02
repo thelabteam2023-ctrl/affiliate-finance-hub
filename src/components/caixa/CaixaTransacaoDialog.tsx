@@ -136,17 +136,55 @@ export function CaixaTransacaoDialog({
   const [cotacao, setCotacao] = useState<string>("");
   const [descricao, setDescricao] = useState<string>("");
 
-  // Auto-calculate cotacao when valor and qtdCoin change (for crypto)
+  // Estados para cotação em tempo real da Binance
+  const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
+  const [loadingPrices, setLoadingPrices] = useState(false);
+
+  // Buscar cotações em tempo real da Binance quando tipo_moeda for CRYPTO
   useEffect(() => {
-    if (tipoMoeda === "CRYPTO" && valor && qtdCoin) {
-      const valorNum = parseFloat(valor);
+    const fetchCryptoPrices = async () => {
+      if (tipoMoeda !== "CRYPTO") return;
+      
+      setLoadingPrices(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('get-crypto-prices', {
+          body: { symbols: MOEDAS_CRYPTO.map(m => m.value) }
+        });
+
+        if (error) {
+          console.error('Error fetching crypto prices:', error);
+          toast({
+            title: "Erro ao buscar cotações",
+            description: "Não foi possível obter as cotações em tempo real.",
+            variant: "destructive",
+          });
+        } else if (data?.prices) {
+          setCryptoPrices(data.prices);
+          console.log('Crypto prices loaded:', data.prices);
+        }
+      } catch (err) {
+        console.error('Error fetching crypto prices:', err);
+      } finally {
+        setLoadingPrices(false);
+      }
+    };
+
+    fetchCryptoPrices();
+  }, [tipoMoeda, toast]);
+
+  // Calcular valor USD e cotação automaticamente baseado na quantidade de coins e preço em tempo real
+  useEffect(() => {
+    if (tipoMoeda === "CRYPTO" && coin && qtdCoin && cryptoPrices[coin]) {
       const qtdNum = parseFloat(qtdCoin);
-      if (!isNaN(valorNum) && !isNaN(qtdNum) && qtdNum > 0) {
-        const cotacaoCalculada = valorNum / qtdNum;
-        setCotacao(cotacaoCalculada.toFixed(8));
+      const price = cryptoPrices[coin];
+      
+      if (!isNaN(qtdNum) && qtdNum > 0 && price > 0) {
+        const valorUSD = qtdNum * price;
+        setValor(valorUSD.toFixed(2));
+        setCotacao(price.toFixed(8));
       }
     }
-  }, [valor, qtdCoin, tipoMoeda]);
+  }, [tipoMoeda, coin, qtdCoin, cryptoPrices]);
 
   // Format currency for Brazilian format (1.234,56)
   const formatCurrencyInput = (value: string): string => {
