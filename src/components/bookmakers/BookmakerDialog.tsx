@@ -111,7 +111,14 @@ export default function BookmakerDialog({
   // Inicialização quando dialog abre
   useEffect(() => {
     if (!open) {
-      // Reset quando fecha
+      // Reset COMPLETO quando fecha
+      setBookmakerId("");
+      setSelectedBookmaker(null);
+      setSelectedLink("");
+      setLoginUsername("");
+      setLoginPassword("");
+      setStatus("ativo");
+      setObservacoes("");
       setIsLoadingDetails(false);
       return;
     }
