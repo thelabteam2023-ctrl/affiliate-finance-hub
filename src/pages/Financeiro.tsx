@@ -371,6 +371,7 @@ export default function Financeiro() {
                         backdropFilter: "blur(12px)",
                         borderRadius: "8px"
                       }}
+                      cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
                       formatter={(value: number) => [formatCurrency(value), "Valor"]}
                     />
                     <Bar 
