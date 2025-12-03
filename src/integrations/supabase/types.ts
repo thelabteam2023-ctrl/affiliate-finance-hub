@@ -765,14 +765,16 @@ export type Database = {
     Views: {
       v_roi_investidores: {
         Row: {
+          aportes_crypto_usd: number | null
+          aportes_fiat_brl: number | null
+          aportes_fiat_usd: number | null
           cpf: string | null
           investidor_id: string | null
-          lucro_prejuizo: number | null
+          liquidacoes_crypto_usd: number | null
+          liquidacoes_fiat_brl: number | null
+          liquidacoes_fiat_usd: number | null
           nome: string | null
-          roi_percentual: number | null
           status: string | null
-          total_aportes: number | null
-          total_liquidacoes: number | null
           user_id: string | null
         }
         Relationships: []
