@@ -36,6 +36,9 @@ interface BookmakerDialogProps {
   open: boolean;
   onClose: () => void;
   bookmaker: any | null;
+  defaultParceiroId?: string;
+  defaultBookmakerId?: string;
+  lockParceiro?: boolean;
 }
 
 interface BookmakerCatalogo {
@@ -46,7 +49,14 @@ interface BookmakerCatalogo {
   observacoes: string | null;
 }
 
-export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerDialogProps) {
+export default function BookmakerDialog({ 
+  open, 
+  onClose, 
+  bookmaker,
+  defaultParceiroId,
+  defaultBookmakerId,
+  lockParceiro = false 
+}: BookmakerDialogProps) {
   const [loading, setLoading] = useState(false);
   const [parceiroId, setParceiroId] = useState("");
   const [bookmakerId, setBookmakerId] = useState("");
@@ -69,9 +79,16 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
       setObservacoes(bookmaker.observacoes || "");
       setSelectedLink(bookmaker.link_origem || "");
     } else {
+      // Reset form and apply defaults from context
       resetForm();
+      if (defaultParceiroId) {
+        setParceiroId(defaultParceiroId);
+      }
+      if (defaultBookmakerId) {
+        setBookmakerId(defaultBookmakerId);
+      }
     }
-  }, [bookmaker]);
+  }, [bookmaker, defaultParceiroId, defaultBookmakerId, open]);
 
   useEffect(() => {
     if (bookmakerId) {
@@ -225,8 +242,13 @@ export default function BookmakerDialog({ open, onClose, bookmaker }: BookmakerD
             <ParceiroSelect
               value={parceiroId}
               onValueChange={setParceiroId}
-              disabled={loading}
+              disabled={loading || lockParceiro}
             />
+            {lockParceiro && (
+              <p className="text-xs text-muted-foreground">
+                Parceiro selecionado a partir do contexto atual
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
