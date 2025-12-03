@@ -25,10 +25,22 @@ interface BookmakerCatalogo {
   links_json: any;
 }
 
+interface BookmakerVinculo {
+  id: string; // ID da tabela bookmakers (vínculo)
+  nome: string;
+  logo_url: string | null;
+  saldo_atual: number;
+  moeda: string;
+}
+
 export default function BookmakerSelect({ value, onValueChange, disabled, parceiroId, somenteComSaldo }: BookmakerSelectProps) {
   const [bookmakers, setBookmakers] = useState<BookmakerCatalogo[]>([]);
+  const [vinculosBookmakers, setVinculosBookmakers] = useState<BookmakerVinculo[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Determina se estamos no modo vínculo (com parceiroId) ou modo catálogo
+  const isVinculoMode = !!parceiroId;
 
   useEffect(() => {
     fetchBookmakers();
@@ -37,10 +49,20 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
   const fetchBookmakers = async () => {
     try {
       if (parceiroId) {
-        // Se parceiroId for fornecido, buscar apenas bookmakers vinculadas a esse parceiro
+        // Se parceiroId for fornecido, buscar bookmakers vinculadas a esse parceiro
+        // e retornar o ID da tabela bookmakers (não do catálogo)
         let query = supabase
           .from("bookmakers")
-          .select("id, nome, saldo_atual, moeda, bookmaker_catalogo_id")
+          .select(`
+            id,
+            nome,
+            saldo_atual,
+            moeda,
+            bookmaker_catalogo_id,
+            bookmakers_catalogo:bookmaker_catalogo_id (
+              logo_url
+            )
+          `)
           .eq("parceiro_id", parceiroId);
 
         // Se somenteComSaldo = true, filtrar apenas bookmakers com saldo > 0
@@ -48,30 +70,23 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
           query = query.gt("saldo_atual", 0);
         }
 
-        const { data: vinculosData, error: vinculosError } = await query;
-
-        if (vinculosError) throw vinculosError;
-
-        const catalogoIds = vinculosData
-          ?.map(v => v.bookmaker_catalogo_id)
-          .filter(Boolean) as string[];
-
-        if (catalogoIds.length === 0) {
-          setBookmakers([]);
-          setLoading(false);
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from("bookmakers_catalogo")
-          .select("id, nome, logo_url, links_json")
-          .in("id", catalogoIds)
-          .order("nome");
+        const { data, error } = await query.order("nome");
 
         if (error) throw error;
-        setBookmakers(data || []);
+
+        // Mapear para o formato esperado, usando o ID do vínculo (bookmakers.id)
+        const vinculos: BookmakerVinculo[] = (data || []).map((b: any) => ({
+          id: b.id, // Este é o ID da tabela bookmakers!
+          nome: b.nome,
+          logo_url: b.bookmakers_catalogo?.logo_url || null,
+          saldo_atual: b.saldo_atual,
+          moeda: b.moeda,
+        }));
+
+        setVinculosBookmakers(vinculos);
+        setBookmakers([]); // Limpar catálogo quando no modo vínculo
       } else {
-        // Sem filtro, buscar todos
+        // Sem filtro, buscar todos do catálogo
         const { data, error } = await supabase
           .from("bookmakers_catalogo")
           .select("id, nome, logo_url, links_json")
@@ -79,6 +94,7 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
 
         if (error) throw error;
         setBookmakers(data || []);
+        setVinculosBookmakers([]); // Limpar vínculos quando no modo catálogo
       }
     } catch (error) {
       console.error("Erro ao carregar bookmakers:", error);
@@ -87,29 +103,32 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
     }
   };
 
-  const filteredBookmakers = bookmakers.filter((bookmaker) =>
-    bookmaker.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtrar baseado no modo atual
+  const filteredItems = isVinculoMode
+    ? vinculosBookmakers.filter((b) => b.nome.toLowerCase().includes(searchTerm.toLowerCase()))
+    : bookmakers.filter((b) => b.nome.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  const selectedBookmaker = bookmakers.find((b) => b.id === value);
+  const selectedItem = isVinculoMode
+    ? vinculosBookmakers.find((b) => b.id === value)
+    : bookmakers.find((b) => b.id === value);
 
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled || loading}>
       <SelectTrigger className="w-full h-12">
         <SelectValue placeholder="Selecione...">
-          {selectedBookmaker && (
+          {selectedItem && (
             <div className="flex items-center gap-2">
-              {selectedBookmaker.logo_url && (
+              {selectedItem.logo_url && (
                 <img
-                  src={selectedBookmaker.logo_url}
-                  alt={selectedBookmaker.nome}
+                  src={selectedItem.logo_url}
+                  alt={selectedItem.nome}
                   className="h-6 w-6 rounded object-contain"
                   onError={(e) => {
                     e.currentTarget.style.display = "none";
                   }}
                 />
               )}
-              <span className="uppercase">{selectedBookmaker.nome}</span>
+              <span className="uppercase">{selectedItem.nome}</span>
             </div>
           )}
         </SelectValue>
@@ -126,7 +145,7 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
             />
           </div>
         </div>
-        {filteredBookmakers.length === 0 ? (
+        {filteredItems.length === 0 ? (
           <div className="py-6 text-center text-sm text-muted-foreground">
             {parceiroId 
               ? (somenteComSaldo 
@@ -135,20 +154,25 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
               : "Nenhuma bookmaker encontrada"}
           </div>
         ) : (
-          filteredBookmakers.map((bookmaker) => (
-            <SelectItem key={bookmaker.id} value={bookmaker.id}>
+          filteredItems.map((item) => (
+            <SelectItem key={item.id} value={item.id}>
               <div className="flex items-center gap-2">
-                {bookmaker.logo_url && (
+                {item.logo_url && (
                   <img
-                    src={bookmaker.logo_url}
-                    alt={bookmaker.nome}
+                    src={item.logo_url}
+                    alt={item.nome}
                     className="h-6 w-6 rounded object-contain"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
                   />
                 )}
-                <span className="uppercase">{bookmaker.nome}</span>
+                <span className="uppercase">{item.nome}</span>
+                {isVinculoMode && 'saldo_atual' in item && (
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    Saldo: {(item as BookmakerVinculo).moeda} {(item as BookmakerVinculo).saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                )}
               </div>
             </SelectItem>
           ))
