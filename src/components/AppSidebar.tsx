@@ -26,9 +26,9 @@ const mainMenuItems = [
   { title: "Casas", url: "/bookmakers", icon: Building2 },
 ];
 
-// Menu de Afiliação
-const affiliateMenuItems = [
-  { title: "Programa de Indicação", url: "/programa-indicacao", icon: UserPlus },
+// Menu de Captação
+const captacaoMenuItems = [
+  { title: "Captação de Parceiros", url: "/programa-indicacao", icon: UserPlus },
 ];
 
 export function AppSidebar() {
@@ -105,14 +105,14 @@ export function AppSidebar() {
 
         <SidebarSeparator />
 
-        {/* Menu de Afiliação */}
+        {/* Menu de Captação */}
         <SidebarGroup>
           <SidebarGroupLabel className={isCollapsed ? 'sr-only' : ''}>
-            Afiliação
+            Captação
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {affiliateMenuItems.map(renderMenuItem)}
+              {captacaoMenuItems.map(renderMenuItem)}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
