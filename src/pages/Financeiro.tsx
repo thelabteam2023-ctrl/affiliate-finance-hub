@@ -471,9 +471,9 @@ export default function Financeiro() {
           {/* Filtros de Período */}
           <div className="flex flex-wrap items-center gap-3">
           <Select value={periodoPreset} onValueChange={setPeriodoPreset}>
-            <SelectTrigger className="w-[190px]">
+            <SelectTrigger className="w-[190px] flex items-center">
               <Calendar className="h-4 w-4 mr-2 shrink-0" />
-                <SelectValue placeholder="Período" />
+              <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todo período</SelectItem>
