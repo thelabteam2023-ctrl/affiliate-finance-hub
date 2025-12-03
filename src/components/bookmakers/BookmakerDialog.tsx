@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -65,12 +65,9 @@ export default function BookmakerDialog({
   const [observacoes, setObservacoes] = useState("");
   const [showObservacoesDialog, setShowObservacoesDialog] = useState(false);
   const { toast } = useToast();
-  
-  // Ref para controlar se está inicializando (evitar trigger do useEffect de mudança manual)
-  const isInitializing = useRef(false);
 
-  // Função estável para carregar detalhes da bookmaker
-  const fetchBookmakerDetails = useCallback(async (bookmakerIdToFetch: string, presetLink?: string) => {
+  // Função para carregar detalhes da bookmaker
+  const fetchBookmakerDetails = async (bookmakerIdToFetch: string, presetLink?: string) => {
     if (!bookmakerIdToFetch) return;
     
     setIsLoadingDetails(true);
@@ -82,7 +79,10 @@ export default function BookmakerDialog({
         .maybeSingle();
 
       if (error) throw error;
-      if (!data) return;
+      if (!data) {
+        setIsLoadingDetails(false);
+        return;
+      }
       
       const bookmakerData: BookmakerCatalogo = {
         id: data.id,
@@ -105,20 +105,16 @@ export default function BookmakerDialog({
       console.error("Erro ao carregar detalhes da bookmaker:", error);
     } finally {
       setIsLoadingDetails(false);
-      isInitializing.current = false; // Marcar como não inicializando APÓS fetch completar
     }
-  }, []);
+  };
 
   // Inicialização quando dialog abre
   useEffect(() => {
-    if (!open) return;
-    
-    // Marcar como inicializando
-    isInitializing.current = true;
-    
-    // Guardar valores em variáveis locais
-    const parceiroDefault = defaultParceiroId || "";
-    const bookmakerDefault = defaultBookmakerId || "";
+    if (!open) {
+      // Reset quando fecha
+      setIsLoadingDetails(false);
+      return;
+    }
     
     if (bookmaker) {
       // Modo edição
@@ -131,11 +127,8 @@ export default function BookmakerDialog({
       setSelectedLink(bookmaker.link_origem || "");
       setSelectedBookmaker(null);
       
-      // Carregar detalhes com link pré-selecionado
       if (bookmaker.bookmaker_catalogo_id) {
         fetchBookmakerDetails(bookmaker.bookmaker_catalogo_id, bookmaker.link_origem);
-      } else {
-        isInitializing.current = false;
       }
     } else {
       // Modo criação - reset completo
@@ -145,34 +138,25 @@ export default function BookmakerDialog({
       setObservacoes("");
       setSelectedLink("");
       setSelectedBookmaker(null);
-      setParceiroId(parceiroDefault);
-      setBookmakerId(bookmakerDefault);
+      setParceiroId(defaultParceiroId || "");
+      setBookmakerId(defaultBookmakerId || "");
       
-      // Carregar detalhes SE houver default bookmaker
-      if (bookmakerDefault) {
-        fetchBookmakerDetails(bookmakerDefault);
-      } else {
-        isInitializing.current = false;
+      if (defaultBookmakerId) {
+        fetchBookmakerDetails(defaultBookmakerId);
       }
     }
-  }, [open, bookmaker, defaultParceiroId, defaultBookmakerId, fetchBookmakerDetails]);
+  }, [open, bookmaker, defaultParceiroId, defaultBookmakerId]);
 
-  // useEffect para mudanças MANUAIS no dropdown de bookmaker
-  useEffect(() => {
-    // Pular se está inicializando, carregando detalhes, dialog fechado, ou sem bookmakerId
-    if (isInitializing.current || isLoadingDetails || !open || !bookmakerId) return;
+  // Handler para mudança manual de bookmaker
+  const handleBookmakerChange = (newBookmakerId: string) => {
+    setBookmakerId(newBookmakerId);
+    setSelectedBookmaker(null);
+    setSelectedLink("");
     
-    // Usuário mudou a seleção manualmente - carregar novos detalhes
-    fetchBookmakerDetails(bookmakerId);
-  }, [bookmakerId, open, fetchBookmakerDetails]);
-
-  // Limpar selectedBookmaker quando bookmakerId é limpo
-  useEffect(() => {
-    if (!bookmakerId) {
-      setSelectedBookmaker(null);
-      setSelectedLink("");
+    if (newBookmakerId) {
+      fetchBookmakerDetails(newBookmakerId);
     }
-  }, [bookmakerId]);
+  };
 
   const encryptPassword = (password: string): string => {
     return btoa(password);
@@ -285,7 +269,7 @@ export default function BookmakerDialog({
             <Label>Bookmaker *</Label>
             <BookmakerSelect
               value={bookmakerId}
-              onValueChange={setBookmakerId}
+              onValueChange={lockBookmaker ? setBookmakerId : handleBookmakerChange}
               disabled={loading || lockBookmaker}
             />
             {lockBookmaker && (
