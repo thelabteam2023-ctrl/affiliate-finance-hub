@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
@@ -26,48 +26,37 @@ interface BookmakerCatalogo {
 }
 
 interface BookmakerVinculo {
-  id: string; // ID da tabela bookmakers (vínculo)
+  id: string;
   nome: string;
   logo_url: string | null;
   saldo_atual: number;
   moeda: string;
 }
 
-export default function BookmakerSelect({ value, onValueChange, disabled, parceiroId, somenteComSaldo }: BookmakerSelectProps) {
-  const [bookmakers, setBookmakers] = useState<BookmakerCatalogo[]>([]);
-  const [vinculosBookmakers, setVinculosBookmakers] = useState<BookmakerVinculo[]>([]);
+type BookmakerItem = BookmakerCatalogo | BookmakerVinculo;
+
+export default function BookmakerSelect({ 
+  value, 
+  onValueChange, 
+  disabled, 
+  parceiroId, 
+  somenteComSaldo 
+}: BookmakerSelectProps) {
+  const [items, setItems] = useState<BookmakerItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
-  const [selectedItem, setSelectedItem] = useState<BookmakerCatalogo | BookmakerVinculo | null>(null);
-
-  // Determina se estamos no modo vínculo (com parceiroId) ou modo catálogo
+  const [selectedItem, setSelectedItem] = useState<BookmakerItem | null>(null);
+  
+  // Refs para controle de estado
+  const fetchedValueRef = useRef<string | null>(null);
   const isVinculoMode = !!parceiroId;
 
-  useEffect(() => {
-    fetchBookmakers();
-  }, [parceiroId, somenteComSaldo]);
-
-  // Buscar bookmaker específica imediatamente quando value muda
-  useEffect(() => {
-    if (value) {
-      const currentList = isVinculoMode ? vinculosBookmakers : bookmakers;
-      const found = currentList.find(b => b.id === value);
-      if (found) {
-        setSelectedItem(found);
-      } else if (!isVinculoMode) {
-        // Se não encontrou e não está no modo vínculo, buscar diretamente do catálogo
-        fetchSelectedBookmaker(value);
-      }
-    } else {
-      setSelectedItem(null);
-    }
-  }, [value, bookmakers, vinculosBookmakers, isVinculoMode]);
-
-  const fetchBookmakers = async () => {
+  // Buscar lista de bookmakers (catálogo ou vínculos)
+  const fetchBookmakers = useCallback(async () => {
+    setLoading(true);
     try {
       if (parceiroId) {
-        // Se parceiroId for fornecido, buscar bookmakers vinculadas a esse parceiro
-        // e retornar o ID da tabela bookmakers (não do catálogo)
+        // Modo vínculo: buscar bookmakers vinculadas ao parceiro
         let query = supabase
           .from("bookmakers")
           .select(`
@@ -82,46 +71,46 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
           `)
           .eq("parceiro_id", parceiroId);
 
-        // Se somenteComSaldo = true, filtrar apenas bookmakers com saldo > 0
         if (somenteComSaldo) {
           query = query.gt("saldo_atual", 0);
         }
 
         const { data, error } = await query.order("nome");
-
         if (error) throw error;
 
-        // Mapear para o formato esperado, usando o ID do vínculo (bookmakers.id)
         const vinculos: BookmakerVinculo[] = (data || []).map((b: any) => ({
-          id: b.id, // Este é o ID da tabela bookmakers!
+          id: b.id,
           nome: b.nome,
           logo_url: b.bookmakers_catalogo?.logo_url || null,
           saldo_atual: b.saldo_atual,
           moeda: b.moeda,
         }));
 
-        setVinculosBookmakers(vinculos);
-        setBookmakers([]); // Limpar catálogo quando no modo vínculo
+        setItems(vinculos);
       } else {
-        // Sem filtro, buscar todos do catálogo
+        // Modo catálogo: buscar todos do catálogo
         const { data, error } = await supabase
           .from("bookmakers_catalogo")
           .select("id, nome, logo_url, links_json")
           .order("nome");
 
         if (error) throw error;
-        setBookmakers(data || []);
-        setVinculosBookmakers([]); // Limpar vínculos quando no modo catálogo
+        setItems(data || []);
       }
     } catch (error) {
       console.error("Erro ao carregar bookmakers:", error);
+      setItems([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [parceiroId, somenteComSaldo]);
 
-  const fetchSelectedBookmaker = async (bookmakerId: string) => {
-    if (!bookmakerId) return;
+  // Buscar bookmaker específica do catálogo por ID
+  const fetchBookmakerById = useCallback(async (bookmakerId: string) => {
+    if (!bookmakerId || fetchedValueRef.current === bookmakerId) return;
+    
+    fetchedValueRef.current = bookmakerId;
+    
     try {
       const { data, error } = await supabase
         .from("bookmakers_catalogo")
@@ -135,13 +124,48 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
       }
     } catch (error) {
       console.error("Erro ao buscar bookmaker selecionada:", error);
+      fetchedValueRef.current = null;
     }
-  };
+  }, []);
 
-  // Filtrar baseado no modo atual
-  const filteredItems = isVinculoMode
-    ? vinculosBookmakers.filter((b) => b.nome.toLowerCase().includes(searchTerm.toLowerCase()))
-    : bookmakers.filter((b) => b.nome.toLowerCase().includes(searchTerm.toLowerCase()));
+  // Carregar lista quando parceiroId ou somenteComSaldo mudam
+  useEffect(() => {
+    fetchBookmakers();
+  }, [fetchBookmakers]);
+
+  // Sincronizar selectedItem com value
+  useEffect(() => {
+    if (!value) {
+      setSelectedItem(null);
+      fetchedValueRef.current = null;
+      return;
+    }
+
+    // Se já temos o item correto selecionado, não fazer nada
+    if (selectedItem?.id === value) {
+      return;
+    }
+
+    // Tentar encontrar na lista carregada
+    const found = items.find(b => b.id === value);
+    if (found) {
+      setSelectedItem(found);
+      fetchedValueRef.current = value;
+    } else if (!loading && !isVinculoMode) {
+      // Se a lista já carregou, não encontrou, e estamos no modo catálogo, buscar diretamente
+      fetchBookmakerById(value);
+    }
+  }, [value, items, loading, selectedItem?.id, isVinculoMode, fetchBookmakerById]);
+
+  // Filtrar itens pela busca
+  const filteredItems = items.filter((item) => 
+    item.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Verificar se é um vínculo (tem saldo_atual)
+  const isVinculo = (item: BookmakerItem): item is BookmakerVinculo => {
+    return 'saldo_atual' in item;
+  };
 
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled || loading}>
@@ -152,16 +176,16 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
               <img
                 src={selectedItem.logo_url}
                 alt={selectedItem.nome}
-                className="h-6 w-6 rounded object-contain"
+                className="h-6 w-6 rounded object-contain flex-shrink-0"
                 onError={(e) => {
                   e.currentTarget.style.display = "none";
                 }}
               />
             )}
-            <span className="uppercase">{selectedItem.nome}</span>
+            <span className="uppercase truncate">{selectedItem.nome}</span>
           </div>
         ) : (
-          <SelectValue placeholder="Selecione..." />
+          <SelectValue placeholder={loading ? "Carregando..." : "Selecione..."} />
         )}
       </SelectTrigger>
       <SelectContent className="max-h-[300px]">
@@ -192,16 +216,16 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
                   <img
                     src={item.logo_url}
                     alt={item.nome}
-                    className="h-6 w-6 rounded object-contain"
+                    className="h-6 w-6 rounded object-contain flex-shrink-0"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
                   />
                 )}
                 <span className="uppercase">{item.nome}</span>
-                {isVinculoMode && 'saldo_atual' in item && (
+                {isVinculo(item) && (
                   <span className="text-xs text-muted-foreground ml-auto">
-                    Saldo: {(item as BookmakerVinculo).moeda} {(item as BookmakerVinculo).saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    Saldo: {item.moeda} {item.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 )}
               </div>

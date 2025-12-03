@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
@@ -14,7 +14,7 @@ interface ParceiroSelectProps {
   value: string;
   onValueChange: (value: string) => void;
   disabled?: boolean;
-  onlyParceiros?: string[]; // IDs dos parceiros que podem ser exibidos
+  onlyParceiros?: string[];
 }
 
 interface Parceiro {
@@ -29,28 +29,12 @@ export default function ParceiroSelect({ value, onValueChange, disabled, onlyPar
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedParceiro, setSelectedParceiro] = useState<Parceiro | null>(null);
+  
+  // Ref para rastrear se já buscamos o parceiro selecionado
+  const fetchedValueRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    fetchParceiros();
-  }, []);
-
-  // Buscar parceiro específico imediatamente quando value muda
-  useEffect(() => {
-    if (value) {
-      // Primeiro tentar encontrar na lista já carregada
-      const found = parceiros.find(p => p.id === value);
-      if (found) {
-        setSelectedParceiro(found);
-      } else {
-        // Se não encontrou, buscar diretamente do banco
-        fetchSelectedParceiro(value);
-      }
-    } else {
-      setSelectedParceiro(null);
-    }
-  }, [value, parceiros]);
-
-  const fetchParceiros = async () => {
+  // Buscar lista de parceiros
+  const fetchParceiros = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from("parceiros")
@@ -65,10 +49,14 @@ export default function ParceiroSelect({ value, onValueChange, disabled, onlyPar
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchSelectedParceiro = async (parceiroId: string) => {
-    if (!parceiroId) return;
+  // Buscar parceiro específico por ID
+  const fetchParceiroById = useCallback(async (parceiroId: string) => {
+    if (!parceiroId || fetchedValueRef.current === parceiroId) return;
+    
+    fetchedValueRef.current = parceiroId;
+    
     try {
       const { data, error } = await supabase
         .from("parceiros")
@@ -82,8 +70,38 @@ export default function ParceiroSelect({ value, onValueChange, disabled, onlyPar
       }
     } catch (error) {
       console.error("Erro ao buscar parceiro selecionado:", error);
+      fetchedValueRef.current = null;
     }
-  };
+  }, []);
+
+  // Carregar lista inicial
+  useEffect(() => {
+    fetchParceiros();
+  }, [fetchParceiros]);
+
+  // Sincronizar selectedParceiro com value
+  useEffect(() => {
+    if (!value) {
+      setSelectedParceiro(null);
+      fetchedValueRef.current = null;
+      return;
+    }
+
+    // Se já temos o parceiro correto selecionado, não fazer nada
+    if (selectedParceiro?.id === value) {
+      return;
+    }
+
+    // Tentar encontrar na lista carregada
+    const found = parceiros.find(p => p.id === value);
+    if (found) {
+      setSelectedParceiro(found);
+      fetchedValueRef.current = value;
+    } else if (!loading) {
+      // Se a lista já carregou e não encontrou, buscar diretamente
+      fetchParceiroById(value);
+    }
+  }, [value, parceiros, loading, selectedParceiro?.id, fetchParceiroById]);
 
   // Aplicar filtro de onlyParceiros se fornecido
   const availableParceiros = onlyParceiros 
@@ -100,8 +118,8 @@ export default function ParceiroSelect({ value, onValueChange, disabled, onlyPar
       <SelectTrigger className="w-full">
         {selectedParceiro ? (
           <div className="flex items-center justify-center gap-2 w-full">
-            <User className="h-4 w-4" />
-            <span>{selectedParceiro.nome}</span>
+            <User className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">{selectedParceiro.nome}</span>
           </div>
         ) : (
           <SelectValue placeholder={loading ? "Carregando..." : "Selecione um parceiro ativo"} />
@@ -128,7 +146,7 @@ export default function ParceiroSelect({ value, onValueChange, disabled, onlyPar
             filteredParceiros.map((parceiro) => (
               <SelectItem key={parceiro.id} value={parceiro.id}>
                 <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
+                  <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <span>{parceiro.nome}</span>
                   <span className="text-xs text-muted-foreground ml-auto">
                     CPF: {parceiro.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}
