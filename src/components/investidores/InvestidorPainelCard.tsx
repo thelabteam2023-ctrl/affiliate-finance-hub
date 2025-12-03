@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Edit,
   Trash2,
@@ -7,11 +6,15 @@ import {
   DollarSign,
   Bitcoin,
   Percent,
+  TrendingUp,
+  Activity,
+  Wallet,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import {
   Tooltip,
   TooltipContent,
@@ -75,6 +78,59 @@ const formatCPF = (cpf: string) => {
   return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 };
 
+// Calcula métricas com psicologia financeira positiva
+const calcularMetricasPsicologicas = (
+  aportes: number,
+  liquidacoes: number
+) => {
+  // Capital em operação = quanto ainda está "trabalhando"
+  const capitalEmOperacao = Math.max(0, aportes - liquidacoes);
+  
+  // Resultado realizado = lucro efetivo (só positivo quando liquidações > aportes)
+  const resultadoRealizado = liquidacoes > aportes ? liquidacoes - aportes : 0;
+  
+  // ROI realizado = baseado apenas no resultado realizado
+  const roiRealizado = aportes > 0 && resultadoRealizado > 0 
+    ? (resultadoRealizado / aportes) * 100 
+    : 0;
+  
+  // Status da operação
+  let statusOperacao: "aguardando" | "em_operacao" | "lucro" | "prejuizo" = "aguardando";
+  
+  if (aportes === 0) {
+    statusOperacao = "aguardando";
+  } else if (liquidacoes === 0) {
+    statusOperacao = "em_operacao";
+  } else if (liquidacoes > aportes) {
+    statusOperacao = "lucro";
+  } else if (liquidacoes > 0 && liquidacoes < aportes) {
+    statusOperacao = "em_operacao";
+  }
+  
+  // Progresso visual (quanto do capital já retornou + lucro)
+  const progressoRetorno = aportes > 0 ? Math.min(100, (liquidacoes / aportes) * 100) : 0;
+  
+  return {
+    capitalEmOperacao,
+    resultadoRealizado,
+    roiRealizado,
+    statusOperacao,
+    progressoRetorno,
+    totalRecebido: liquidacoes,
+    capitalOriginal: aportes,
+  };
+};
+
+const getStatusLabel = (status: "aguardando" | "em_operacao" | "lucro" | "prejuizo") => {
+  const labels = {
+    aguardando: { text: "Aguardando aporte", color: "text-muted-foreground", bg: "bg-muted/30" },
+    em_operacao: { text: "Capital em operação", color: "text-amber-500", bg: "bg-amber-500/10" },
+    lucro: { text: "Resultado positivo", color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    prejuizo: { text: "Resultado negativo", color: "text-destructive", bg: "bg-destructive/10" },
+  };
+  return labels[status];
+};
+
 export function InvestidorPainelCard({
   investidor,
   roi,
@@ -85,16 +141,17 @@ export function InvestidorPainelCard({
   onSimular,
   onClick,
 }: InvestidorPainelCardProps) {
-  // Calculate ROI per currency
-  const roiBRL = roi && roi.aportes_fiat_brl > 0
-    ? ((roi.liquidacoes_fiat_brl - roi.aportes_fiat_brl) / roi.aportes_fiat_brl) * 100
-    : 0;
-  const lucroFiat = roi ? roi.liquidacoes_fiat_brl - roi.aportes_fiat_brl : 0;
-
-  const roiCrypto = roi && roi.aportes_crypto_usd > 0
-    ? ((roi.liquidacoes_crypto_usd - roi.aportes_crypto_usd) / roi.aportes_crypto_usd) * 100
-    : 0;
-  const lucroCrypto = roi ? roi.liquidacoes_crypto_usd - roi.aportes_crypto_usd : 0;
+  // Métricas FIAT
+  const metricasFiat = calcularMetricasPsicologicas(
+    roi?.aportes_fiat_brl || 0,
+    roi?.liquidacoes_fiat_brl || 0
+  );
+  
+  // Métricas Crypto
+  const metricasCrypto = calcularMetricasPsicologicas(
+    roi?.aportes_crypto_usd || 0,
+    roi?.liquidacoes_crypto_usd || 0
+  );
 
   const hasFiat = roi && (roi.aportes_fiat_brl > 0 || roi.liquidacoes_fiat_brl > 0);
   const hasCrypto = roi && (roi.aportes_crypto_usd > 0 || roi.liquidacoes_crypto_usd > 0);
@@ -183,122 +240,256 @@ export function InvestidorPainelCard({
       )}
 
       <CardContent className="p-4 space-y-4">
-        {/* FIAT Mini-Balance */}
+        {/* FIAT Section - Nova estrutura psicológica */}
         {hasFiat && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-1.5">
-              <div className="p-1 rounded bg-amber-500/10">
-                <DollarSign className="h-3 w-3 text-amber-500" />
+          <div className="space-y-3">
+            {/* Header com ícone e status */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <div className="p-1 rounded bg-amber-500/10">
+                  <DollarSign className="h-3 w-3 text-amber-500" />
+                </div>
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  FIAT (BRL)
+                </span>
               </div>
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                FIAT (BRL)
-              </span>
+              <Badge 
+                variant="outline" 
+                className={`text-[9px] h-5 ${getStatusLabel(metricasFiat.statusOperacao).bg} ${getStatusLabel(metricasFiat.statusOperacao).color} border-transparent`}
+              >
+                <Activity className="h-2.5 w-2.5 mr-1" />
+                {getStatusLabel(metricasFiat.statusOperacao).text}
+              </Badge>
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs bg-muted/10 rounded-lg p-3">
-              <div>
-                <p className="text-muted-foreground text-[10px] uppercase">Aportes</p>
-                <p className="font-semibold text-emerald-500 font-mono">
-                  {formatCurrency(roi?.aportes_fiat_brl || 0, "BRL")}
-                </p>
+
+            {/* Card de métricas */}
+            <div className="bg-muted/10 rounded-lg p-3 space-y-3">
+              {/* Capital em Operação - Destaque principal */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-amber-500" />
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase">Capital em Operação</p>
+                    <p className="text-lg font-bold text-foreground font-mono">
+                      {formatCurrency(metricasFiat.capitalEmOperacao, "BRL")}
+                    </p>
+                  </div>
+                </div>
+                {metricasFiat.capitalOriginal > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <div className="text-right">
+                        <p className="text-[9px] text-muted-foreground">Aportado</p>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          {formatCurrency(metricasFiat.capitalOriginal, "BRL")}
+                        </p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Total aportado pelo investidor</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </div>
-              <div>
-                <p className="text-muted-foreground text-[10px] uppercase">Liquidações</p>
-                <p className="font-semibold text-blue-500 font-mono">
-                  {formatCurrency(roi?.liquidacoes_fiat_brl || 0, "BRL")}
-                </p>
+
+              {/* Barra de progresso visual */}
+              {metricasFiat.capitalOriginal > 0 && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[9px] text-muted-foreground">
+                    <span>Retorno do capital</span>
+                    <span>{metricasFiat.progressoRetorno.toFixed(0)}%</span>
+                  </div>
+                  <Progress 
+                    value={metricasFiat.progressoRetorno} 
+                    className="h-1.5 bg-muted/30"
+                  />
+                </div>
+              )}
+
+              <Separator className="bg-border/20" />
+
+              {/* Resultado Realizado e ROI */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase mb-1">Resultado Realizado</p>
+                  <div className="flex items-center gap-1.5">
+                    {metricasFiat.resultadoRealizado > 0 && (
+                      <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                    )}
+                    <span className={`text-base font-bold font-mono ${
+                      metricasFiat.resultadoRealizado > 0 
+                        ? "text-emerald-500" 
+                        : "text-muted-foreground"
+                    }`}>
+                      {metricasFiat.resultadoRealizado > 0 
+                        ? `+${formatCurrency(metricasFiat.resultadoRealizado, "BRL")}`
+                        : "–"
+                      }
+                    </span>
+                  </div>
+                  {metricasFiat.resultadoRealizado === 0 && metricasFiat.capitalOriginal > 0 && (
+                    <p className="text-[9px] text-muted-foreground mt-0.5">
+                      Aguardando resultados
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase mb-1">ROI Realizado</p>
+                  <Badge
+                    variant="outline"
+                    className={`font-mono text-sm px-2 py-0.5 ${
+                      metricasFiat.roiRealizado > 0
+                        ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                        : "bg-muted/20 text-muted-foreground border-muted/30"
+                    }`}
+                  >
+                    {metricasFiat.roiRealizado > 0 
+                      ? `+${metricasFiat.roiRealizado.toFixed(1)}%`
+                      : "–"
+                    }
+                  </Badge>
+                </div>
               </div>
-              <div>
-                <p className="text-muted-foreground text-[10px] uppercase">Saldo Caixa</p>
-                <p className={`font-semibold font-mono ${(roi?.saldo_fiat_brl || 0) >= 0 ? "text-foreground" : "text-destructive"}`}>
-                  {formatCurrency(roi?.saldo_fiat_brl || 0, "BRL")}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-[10px] uppercase">Lucro/Prej.</p>
-                <p className={`font-semibold font-mono ${lucroFiat >= 0 ? "text-emerald-500" : "text-destructive"}`}>
-                  {formatCurrency(lucroFiat, "BRL")}
-                </p>
-              </div>
-              <div className="col-span-2 pt-2 border-t border-border/30">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-[10px] uppercase">ROI BRL</span>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className={`font-mono text-xs ${
-                        roiBRL >= 0
-                          ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
-                          : "bg-destructive/10 text-destructive border-destructive/30"
-                      }`}
-                    >
-                      {roiBRL >= 0 ? "+" : ""}{roiBRL.toFixed(1)}%
-                    </Badge>
-                    <span className={`font-mono text-xs ${roiBRL >= 0 ? "text-emerald-500" : "text-destructive"}`}>
-                      {formatCurrency(lucroFiat, "BRL")}
+
+              {/* Total recebido (se houver) */}
+              {metricasFiat.totalRecebido > 0 && (
+                <div className="pt-2 border-t border-border/20">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Total recebido</span>
+                    <span className="font-mono text-foreground">
+                      {formatCurrency(metricasFiat.totalRecebido, "BRL")}
                     </span>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* CRYPTO Mini-Balance */}
+        {/* CRYPTO Section - Nova estrutura psicológica */}
         {hasCrypto && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-1.5">
-              <div className="p-1 rounded bg-violet-500/10">
-                <Bitcoin className="h-3 w-3 text-violet-500" />
+          <div className="space-y-3">
+            {/* Header com ícone e status */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <div className="p-1 rounded bg-violet-500/10">
+                  <Bitcoin className="h-3 w-3 text-violet-500" />
+                </div>
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  CRYPTO (USD)
+                </span>
               </div>
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                CRYPTO (USD)
-              </span>
+              <Badge 
+                variant="outline" 
+                className={`text-[9px] h-5 ${getStatusLabel(metricasCrypto.statusOperacao).bg} ${getStatusLabel(metricasCrypto.statusOperacao).color} border-transparent`}
+              >
+                <Activity className="h-2.5 w-2.5 mr-1" />
+                {getStatusLabel(metricasCrypto.statusOperacao).text}
+              </Badge>
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs bg-muted/10 rounded-lg p-3">
-              <div>
-                <p className="text-muted-foreground text-[10px] uppercase">Aportes</p>
-                <p className="font-semibold text-emerald-500 font-mono">
-                  {formatCurrency(roi?.aportes_crypto_usd || 0, "USD")}
-                </p>
+
+            {/* Card de métricas */}
+            <div className="bg-muted/10 rounded-lg p-3 space-y-3">
+              {/* Capital em Operação - Destaque principal */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-violet-500" />
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase">Capital em Operação</p>
+                    <p className="text-lg font-bold text-foreground font-mono">
+                      {formatCurrency(metricasCrypto.capitalEmOperacao, "USD")}
+                    </p>
+                  </div>
+                </div>
+                {metricasCrypto.capitalOriginal > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <div className="text-right">
+                        <p className="text-[9px] text-muted-foreground">Aportado</p>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          {formatCurrency(metricasCrypto.capitalOriginal, "USD")}
+                        </p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Total aportado pelo investidor</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </div>
-              <div>
-                <p className="text-muted-foreground text-[10px] uppercase">Liquidações</p>
-                <p className="font-semibold text-blue-500 font-mono">
-                  {formatCurrency(roi?.liquidacoes_crypto_usd || 0, "USD")}
-                </p>
+
+              {/* Barra de progresso visual */}
+              {metricasCrypto.capitalOriginal > 0 && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[9px] text-muted-foreground">
+                    <span>Retorno do capital</span>
+                    <span>{metricasCrypto.progressoRetorno.toFixed(0)}%</span>
+                  </div>
+                  <Progress 
+                    value={metricasCrypto.progressoRetorno} 
+                    className="h-1.5 bg-muted/30"
+                  />
+                </div>
+              )}
+
+              <Separator className="bg-border/20" />
+
+              {/* Resultado Realizado e ROI */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase mb-1">Resultado Realizado</p>
+                  <div className="flex items-center gap-1.5">
+                    {metricasCrypto.resultadoRealizado > 0 && (
+                      <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                    )}
+                    <span className={`text-base font-bold font-mono ${
+                      metricasCrypto.resultadoRealizado > 0 
+                        ? "text-emerald-500" 
+                        : "text-muted-foreground"
+                    }`}>
+                      {metricasCrypto.resultadoRealizado > 0 
+                        ? `+${formatCurrency(metricasCrypto.resultadoRealizado, "USD")}`
+                        : "–"
+                      }
+                    </span>
+                  </div>
+                  {metricasCrypto.resultadoRealizado === 0 && metricasCrypto.capitalOriginal > 0 && (
+                    <p className="text-[9px] text-muted-foreground mt-0.5">
+                      Aguardando resultados
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase mb-1">ROI Realizado</p>
+                  <Badge
+                    variant="outline"
+                    className={`font-mono text-sm px-2 py-0.5 ${
+                      metricasCrypto.roiRealizado > 0
+                        ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                        : "bg-muted/20 text-muted-foreground border-muted/30"
+                    }`}
+                  >
+                    {metricasCrypto.roiRealizado > 0 
+                      ? `+${metricasCrypto.roiRealizado.toFixed(1)}%`
+                      : "–"
+                    }
+                  </Badge>
+                </div>
               </div>
-              <div>
-                <p className="text-muted-foreground text-[10px] uppercase">Saldo Caixa</p>
-                <p className={`font-semibold font-mono ${(roi?.saldo_crypto_usd || 0) >= 0 ? "text-foreground" : "text-destructive"}`}>
-                  {formatCurrency(roi?.saldo_crypto_usd || 0, "USD")}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-[10px] uppercase">Lucro/Prej.</p>
-                <p className={`font-semibold font-mono ${lucroCrypto >= 0 ? "text-emerald-500" : "text-destructive"}`}>
-                  {formatCurrency(lucroCrypto, "USD")}
-                </p>
-              </div>
-              <div className="col-span-2 pt-2 border-t border-border/30">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-[10px] uppercase">ROI Crypto (USD)</span>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className={`font-mono text-xs ${
-                        roiCrypto >= 0
-                          ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
-                          : "bg-destructive/10 text-destructive border-destructive/30"
-                      }`}
-                    >
-                      {roiCrypto >= 0 ? "+" : ""}{roiCrypto.toFixed(1)}%
-                    </Badge>
-                    <span className={`font-mono text-xs ${roiCrypto >= 0 ? "text-emerald-500" : "text-destructive"}`}>
-                      {formatCurrency(lucroCrypto, "USD")}
+
+              {/* Total recebido (se houver) */}
+              {metricasCrypto.totalRecebido > 0 && (
+                <div className="pt-2 border-t border-border/20">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Total recebido</span>
+                    <span className="font-mono text-foreground">
+                      {formatCurrency(metricasCrypto.totalRecebido, "USD")}
                     </span>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         )}
@@ -306,7 +497,9 @@ export function InvestidorPainelCard({
         {/* No data message */}
         {!hasFiat && !hasCrypto && (
           <div className="text-center py-6 text-muted-foreground text-sm">
+            <Wallet className="h-8 w-8 mx-auto mb-2 opacity-30" />
             <p>Nenhuma movimentação registrada</p>
+            <p className="text-xs mt-1">Aguardando primeiro aporte</p>
           </div>
         )}
       </CardContent>
