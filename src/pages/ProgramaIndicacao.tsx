@@ -6,7 +6,8 @@ import { DashboardTab } from "@/components/programa-indicacao/DashboardTab";
 import { IndicadoresTab } from "@/components/programa-indicacao/IndicadoresTab";
 import { FornecedoresTab } from "@/components/programa-indicacao/FornecedoresTab";
 import { ParceriasTab } from "@/components/programa-indicacao/ParceriasTab";
-import { BarChart3, UserPlus, Truck, Handshake } from "lucide-react";
+import { FinanceiroTab } from "@/components/programa-indicacao/FinanceiroTab";
+import { BarChart3, UserPlus, Truck, Handshake, Wallet } from "lucide-react";
 
 export default function ProgramaIndicacao() {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ export default function ProgramaIndicacao() {
 
       {/* Tabs */}
       <Tabs defaultValue="dashboard" className="space-y-6">
-        <TabsList className="grid w-full max-w-2xl grid-cols-4">
+        <TabsList className="grid w-full max-w-3xl grid-cols-5">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             <span className="hidden sm:inline">Dashboard</span>
@@ -50,6 +51,10 @@ export default function ProgramaIndicacao() {
           <TabsTrigger value="parcerias" className="flex items-center gap-2">
             <Handshake className="h-4 w-4" />
             <span className="hidden sm:inline">Parcerias</span>
+          </TabsTrigger>
+          <TabsTrigger value="financeiro" className="flex items-center gap-2">
+            <Wallet className="h-4 w-4" />
+            <span className="hidden sm:inline">Financeiro</span>
           </TabsTrigger>
         </TabsList>
 
@@ -67,6 +72,10 @@ export default function ProgramaIndicacao() {
 
         <TabsContent value="parcerias">
           <ParceriasTab />
+        </TabsContent>
+
+        <TabsContent value="financeiro">
+          <FinanceiroTab />
         </TabsContent>
       </Tabs>
     </div>
