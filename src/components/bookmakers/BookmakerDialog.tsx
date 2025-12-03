@@ -54,6 +54,7 @@ export default function BookmakerDialog({
   lockBookmaker = false 
 }: BookmakerDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [parceiroId, setParceiroId] = useState("");
   const [bookmakerId, setBookmakerId] = useState("");
   const [selectedBookmaker, setSelectedBookmaker] = useState<BookmakerCatalogo | null>(null);
@@ -72,6 +73,7 @@ export default function BookmakerDialog({
   const fetchBookmakerDetails = useCallback(async (bookmakerIdToFetch: string, presetLink?: string) => {
     if (!bookmakerIdToFetch) return;
     
+    setIsLoadingDetails(true);
     try {
       const { data, error } = await supabase
         .from("bookmakers_catalogo")
@@ -101,6 +103,9 @@ export default function BookmakerDialog({
       }
     } catch (error: any) {
       console.error("Erro ao carregar detalhes da bookmaker:", error);
+    } finally {
+      setIsLoadingDetails(false);
+      isInitializing.current = false; // Marcar como não inicializando APÓS fetch completar
     }
   }, []);
 
@@ -129,6 +134,8 @@ export default function BookmakerDialog({
       // Carregar detalhes com link pré-selecionado
       if (bookmaker.bookmaker_catalogo_id) {
         fetchBookmakerDetails(bookmaker.bookmaker_catalogo_id, bookmaker.link_origem);
+      } else {
+        isInitializing.current = false;
       }
     } else {
       // Modo criação - reset completo
@@ -144,25 +151,20 @@ export default function BookmakerDialog({
       // Carregar detalhes SE houver default bookmaker
       if (bookmakerDefault) {
         fetchBookmakerDetails(bookmakerDefault);
+      } else {
+        isInitializing.current = false;
       }
     }
-    
-    // Após um pequeno delay, marcar como não inicializando
-    const timeoutId = setTimeout(() => {
-      isInitializing.current = false;
-    }, 200);
-    
-    return () => clearTimeout(timeoutId);
   }, [open, bookmaker, defaultParceiroId, defaultBookmakerId, fetchBookmakerDetails]);
 
   // useEffect para mudanças MANUAIS no dropdown de bookmaker
   useEffect(() => {
-    // Pular se está inicializando, dialog fechado, ou sem bookmakerId
-    if (isInitializing.current || !open || !bookmakerId) return;
+    // Pular se está inicializando, carregando detalhes, dialog fechado, ou sem bookmakerId
+    if (isInitializing.current || isLoadingDetails || !open || !bookmakerId) return;
     
     // Usuário mudou a seleção manualmente - carregar novos detalhes
     fetchBookmakerDetails(bookmakerId);
-  }, [bookmakerId, open, fetchBookmakerDetails]);
+  }, [bookmakerId, open, fetchBookmakerDetails, isLoadingDetails]);
 
   // Limpar selectedBookmaker quando bookmakerId é limpo
   useEffect(() => {
@@ -293,7 +295,14 @@ export default function BookmakerDialog({
             )}
           </div>
 
-          {selectedBookmaker && selectedBookmaker.links_json && selectedBookmaker.links_json.length > 0 && (
+          {isLoadingDetails && bookmakerId && (
+            <div className="flex items-center justify-center py-4 border rounded-lg bg-muted/30">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-sm text-muted-foreground">Carregando detalhes...</span>
+            </div>
+          )}
+
+          {!isLoadingDetails && selectedBookmaker && selectedBookmaker.links_json && selectedBookmaker.links_json.length > 0 && (
             <div className="space-y-3">
               <Label className="text-base">
                 Link de Cadastro *
@@ -379,7 +388,7 @@ export default function BookmakerDialog({
             <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || !parceiroId || !bookmakerId || !selectedLink} className="flex-1">
+            <Button type="submit" disabled={loading || isLoadingDetails || !parceiroId || !bookmakerId || !selectedLink} className="flex-1">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {bookmaker ? "Atualizar" : "Criar"} Vínculo
             </Button>
