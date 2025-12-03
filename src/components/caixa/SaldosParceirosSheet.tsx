@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Users } from "lucide-react";
+import { Users, RefreshCw } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Badge } from "@/components/ui/badge";
 
 interface SaldoContaParceiro {
   parceiro_id: string;
@@ -40,6 +41,33 @@ export function SaldosParceirosSheet() {
   const [open, setOpen] = useState(false);
   const [parceirosAgrupados, setParceirosAgrupados] = useState<ParceiroSaldoAgrupado[]>([]);
   const [loading, setLoading] = useState(false);
+  const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
+  const [pricesLoading, setPricesLoading] = useState(false);
+  const [lastPriceUpdate, setLastPriceUpdate] = useState<Date | null>(null);
+
+  const fetchCryptoPrices = async (coins: string[]) => {
+    if (coins.length === 0) return {};
+    
+    try {
+      setPricesLoading(true);
+      const uniqueCoins = [...new Set(coins)];
+      
+      const { data, error } = await supabase.functions.invoke("get-crypto-prices", {
+        body: { symbols: uniqueCoins },
+      });
+
+      if (error) throw error;
+      
+      setCryptoPrices(data.prices || {});
+      setLastPriceUpdate(new Date());
+      return data.prices || {};
+    } catch (error) {
+      console.error("Erro ao buscar preços crypto:", error);
+      return {};
+    } finally {
+      setPricesLoading(false);
+    }
+  };
 
   const fetchSaldosParceiros = async () => {
     try {
@@ -56,6 +84,16 @@ export function SaldosParceirosSheet() {
         .select("*");
 
       if (walletsError) throw walletsError;
+
+      // Extrair coins únicos para buscar preços
+      const uniqueCoins = [...new Set(
+        (saldosWallets as SaldoWalletParceiro[] || [])
+          .filter(w => w.coin)
+          .map(w => w.coin)
+      )];
+
+      // Buscar preços atualizados da Binance
+      const prices = await fetchCryptoPrices(uniqueCoins);
 
       const parceirosMap = new Map<string, ParceiroSaldoAgrupado>();
 
@@ -98,14 +136,18 @@ export function SaldosParceirosSheet() {
           });
         }
 
+        // Calcular USD com preço atual da Binance
+        const currentPrice = prices[wallet.coin] || 0;
+        const saldoUsdAtualizado = wallet.saldo_coin * currentPrice;
+
         const parceiro = parceirosMap.get(wallet.parceiro_id)!;
         parceiro.saldos_crypto.push({
           coin: wallet.coin,
           saldo_coin: wallet.saldo_coin,
-          saldo_usd: wallet.saldo_usd,
+          saldo_usd: saldoUsdAtualizado,
           exchange: wallet.exchange || "Wallet",
         });
-        parceiro.total_crypto_usd += wallet.saldo_usd || 0;
+        parceiro.total_crypto_usd += saldoUsdAtualizado;
       });
 
       const parceirosComSaldo = Array.from(parceirosMap.values())
@@ -133,6 +175,10 @@ export function SaldosParceirosSheet() {
     }).format(value);
   };
 
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  };
+
   const totalParceiros = parceirosAgrupados.length;
 
   const FiatHoverContent = ({ saldos }: { saldos: ParceiroSaldoAgrupado["saldos_fiat"] }) => (
@@ -152,9 +198,14 @@ export function SaldosParceirosSheet() {
       <p className="text-xs font-semibold text-muted-foreground border-b border-border/50 pb-1.5">Saldo por Moeda</p>
       {saldos.map((s, idx) => (
         <div key={idx} className="flex justify-between items-center gap-3 text-sm">
-          <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-foreground">{s.coin}</span>
-            <span className="text-xs text-muted-foreground">• {s.exchange}</span>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-foreground">{s.coin}</span>
+              <span className="text-xs text-muted-foreground">• {s.exchange}</span>
+            </div>
+            <span className="text-xs text-muted-foreground font-mono">
+              {s.saldo_coin.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} {s.coin}
+            </span>
           </div>
           <span className="font-mono text-blue-400 whitespace-nowrap">{formatCurrency(s.saldo_usd, "USD")}</span>
         </div>
@@ -206,6 +257,16 @@ export function SaldosParceirosSheet() {
                 <span className="text-sm text-muted-foreground">
                   {totalParceiros} parceiro{totalParceiros !== 1 ? "s" : ""} com capital
                 </span>
+                {lastPriceUpdate && (
+                  <Badge variant="outline" className="text-xs gap-1 font-normal">
+                    {pricesLoading ? (
+                      <RefreshCw className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3" />
+                    )}
+                    Binance {formatTime(lastPriceUpdate)}
+                  </Badge>
+                )}
               </div>
 
               <ScrollArea className="h-[calc(100vh-180px)]">
