@@ -50,7 +50,7 @@ import {
 } from "recharts";
 import { format, parseISO, subMonths, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { KpiExplanationDialog } from "@/components/financeiro/KpiExplanationDialog";
+import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
 import { DespesaAdministrativaDialog } from "@/components/financeiro/DespesaAdministrativaDialog";
 
 interface CaixaFiat {
@@ -112,7 +112,7 @@ export default function Financeiro() {
 
   // Dialog states
   const [kpiDialogOpen, setKpiDialogOpen] = useState(false);
-  const [kpiType, setKpiType] = useState<"resultado" | "custos" | "despesas_operacionais" | "despesas_administrativas" | "lucro" | null>(null);
+  const [kpiType, setKpiType] = useState<KpiType>(null);
   const [despesaAdminDialogOpen, setDespesaAdminDialogOpen] = useState(false);
   const [dataFim, setDataFim] = useState<string>("");
 
@@ -193,7 +193,7 @@ export default function Financeiro() {
     }
   };
 
-  const openKpiHelp = (type: "resultado" | "custos" | "despesas_operacionais" | "despesas_administrativas" | "lucro") => {
+  const openKpiHelp = (type: KpiType) => {
     setKpiType(type);
     setKpiDialogOpen(true);
   };
@@ -246,6 +246,9 @@ export default function Financeiro() {
   // Despesas administrativas
   const totalDespesasAdmin = filteredDespesasAdmin.reduce((acc, d) => acc + d.valor, 0);
 
+  // Custos operacionais (aquisição + despesas de indicação unificados)
+  const totalCustosOperacionais = totalCustosAquisicao + totalDespesasIndicacao;
+
   // Resultado operacional (saques - depósitos em BRL)
   const resultadoOperacional = filteredLedger
     .filter(l => l.moeda === "BRL")
@@ -255,9 +258,9 @@ export default function Financeiro() {
       return acc;
     }, 0);
 
-  // Margem líquida (simplificada)
+  // Capital e Margem líquida corrigida
   const capitalOperacional = saldoBRL + (saldoUSD * 5) + (totalCryptoUSD * 5);
-  const margemLiquida = capitalOperacional - totalCustosAquisicao;
+  const margemLiquida = capitalOperacional - totalCustosOperacionais - totalDespesasAdmin;
   const margemPercent = capitalOperacional > 0 ? (margemLiquida / capitalOperacional) * 100 : 0;
 
   // Chart data - Distribution
@@ -342,8 +345,7 @@ export default function Financeiro() {
   const comparisonData = [
     { name: "Caixa FIAT", valor: saldoBRL + saldoUSD * 5 },
     { name: "Caixa Crypto", valor: totalCryptoUSD * 5 },
-    { name: "Custos Aquisição", valor: totalCustosAquisicao },
-    { name: "Despesas Operacionais", valor: totalDespesasIndicacao },
+    { name: "Custos Operacionais", valor: totalCustosOperacionais },
     { name: "Despesas Admin.", valor: totalDespesasAdmin },
   ];
 
@@ -381,7 +383,12 @@ export default function Financeiro() {
         {/* Capital Operacional */}
         <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Capital Operacional</CardTitle>
+            <div className="flex items-center gap-1">
+              <CardTitle className="text-sm font-medium">Capital Operacional</CardTitle>
+              <button onClick={() => openKpiHelp("capital_operacional")} className="text-muted-foreground hover:text-foreground transition-colors">
+                <HelpCircle className="h-3.5 w-3.5" />
+              </button>
+            </div>
             <Wallet className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
@@ -397,42 +404,68 @@ export default function Financeiro() {
           </CardContent>
         </Card>
 
-        {/* Custos de Aquisição */}
+        {/* Custos Operacionais (Unificado: Aquisição + Despesas Indicação) */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Custos de Aquisição</CardTitle>
+            <div className="flex items-center gap-1">
+              <CardTitle className="text-sm font-medium">Custos Operacionais</CardTitle>
+              <button onClick={() => openKpiHelp("custos_operacionais")} className="text-muted-foreground hover:text-foreground transition-colors">
+                <HelpCircle className="h-3.5 w-3.5" />
+              </button>
+            </div>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">
-              {formatCurrency(totalCustosAquisicao)}
+              {formatCurrency(totalCustosOperacionais)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {filteredCustos.length} parceiros adquiridos
-            </p>
+            <div className="flex gap-2 mt-2 text-xs text-muted-foreground flex-wrap">
+              <span>Aquisição: {formatCurrency(totalCustosAquisicao)}</span>
+              <span>•</span>
+              <span>Indicação: {formatCurrency(totalDespesasIndicacao)}</span>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Despesas Pagas */}
+        {/* Despesas Administrativas */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Despesas Pagas</CardTitle>
-            <Banknote className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-1">
+              <CardTitle className="text-sm font-medium">Despesas Admin.</CardTitle>
+              <button onClick={() => openKpiHelp("despesas_administrativas")} className="text-muted-foreground hover:text-foreground transition-colors">
+                <HelpCircle className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={() => setDespesaAdminDialogOpen(true)}
+                className="text-muted-foreground hover:text-primary transition-colors"
+                title="Adicionar despesa"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalDespesasIndicacao)}</div>
-            <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
-              <span>Comissões: {formatCurrency(totalComissoes)}</span>
-              <span>•</span>
-              <span>Bônus: {formatCurrency(totalBonus)}</span>
+            <div className="text-2xl font-bold text-orange-500">
+              {formatCurrency(totalDespesasAdmin)}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {filteredDespesasAdmin.length} despesas no período
+            </p>
           </CardContent>
         </Card>
 
         {/* Margem Líquida */}
         <Card className={margemLiquida >= 0 ? "border-success/30" : "border-destructive/30"}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Margem Líquida</CardTitle>
+            <div className="flex items-center gap-1">
+              <CardTitle className="text-sm font-medium">Margem Líquida</CardTitle>
+              <button onClick={() => openKpiHelp("margem_liquida")} className="text-muted-foreground hover:text-foreground transition-colors">
+                <HelpCircle className="h-3.5 w-3.5" />
+              </button>
+            </div>
             {margemLiquida >= 0 ? (
               <TrendingUp className="h-4 w-4 text-success" />
             ) : (

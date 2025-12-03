@@ -5,13 +5,44 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+export type KpiType = 
+  | "capital_operacional" 
+  | "custos_operacionais" 
+  | "despesas_administrativas" 
+  | "margem_liquida"
+  | "resultado" 
+  | "custos" 
+  | "despesas_operacionais" 
+  | "lucro" 
+  | null;
+
 interface KpiExplanationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  kpiType: "resultado" | "custos" | "despesas_operacionais" | "despesas_administrativas" | "lucro" | null;
+  kpiType: KpiType;
 }
 
 const explanations: Record<string, { title: string; description: string; example?: string }> = {
+  capital_operacional: {
+    title: "Capital Operacional",
+    description: "É o total de dinheiro disponível para suas operações. Soma o saldo em reais (BRL), dólares (USD) convertidos para reais, e o valor em criptomoedas também convertido. Este é o 'caixa' que você tem para trabalhar.",
+    example: "Ex: R$ 50.000 em BRL + $2.000 USD (×5 = R$ 10.000) + $1.000 em crypto (×5 = R$ 5.000) = R$ 65.000 de capital operacional."
+  },
+  custos_operacionais: {
+    title: "Custos Operacionais",
+    description: "É a soma de todos os gastos relacionados à captação e manutenção de parceiros. Inclui: custos de aquisição (valores pagos para trazer novos parceiros através de indicadores, bônus de entrada, fornecedores) + despesas de indicação (comissões recorrentes e bônus de promoções pagos).",
+    example: "Ex: Aquisição de 5 parceiros (R$ 2.500) + Comissões pagas no mês (R$ 1.500) + Bônus de meta (R$ 500) = R$ 4.500 em custos operacionais."
+  },
+  despesas_administrativas: {
+    title: "Despesas Administrativas",
+    description: "São os gastos do dia a dia do escritório que não estão ligados diretamente à aquisição de parceiros: contas de luz/energia, internet e 4G, pagamento de operadores e funcionários, aluguel do espaço, entre outros custos fixos e variáveis.",
+    example: "Ex: Conta de energia R$ 300/mês, Internet R$ 150/mês, Salário do operador R$ 2.500/mês."
+  },
+  margem_liquida: {
+    title: "Margem Líquida",
+    description: "É o indicador de quanto sobra do seu capital depois de descontar todas as despesas. Mostra a 'saúde financeira' real do negócio. Se positivo, você tem lucro; se negativo, está operando no prejuízo.",
+    example: "Fórmula: Margem = Capital Operacional - Custos Operacionais - Despesas Administrativas. Ex: R$ 65.000 - R$ 4.500 - R$ 3.000 = R$ 57.500"
+  },
   resultado: {
     title: "Resultado Operacional",
     description: "É o dinheiro que você ganhou com as operações de apostas. Representa a diferença entre o que você sacou das casas de apostas (seus ganhos) e o que você depositou nelas (investimento). Se esse número é positivo, suas operações estão dando lucro.",
@@ -26,11 +57,6 @@ const explanations: Record<string, { title: string; description: string; example
     title: "Despesas Operacionais",
     description: "São os pagamentos recorrentes já realizados relacionados ao programa de captação: comissões mensais pagas aos indicadores pelos parceiros ativos e bônus de promoções efetivamente pagos.",
     example: "Ex: Comissão mensal de R$ 100 paga a um indicador por cada parceiro ativo, ou bônus de R$ 500 pago por atingir meta de indicação."
-  },
-  despesas_administrativas: {
-    title: "Despesas Administrativas",
-    description: "São os gastos do dia a dia do escritório que não estão ligados diretamente à aquisição de parceiros: contas de luz/energia, internet e 4G, pagamento de operadores e funcionários, aluguel do espaço, entre outros custos fixos e variáveis.",
-    example: "Ex: Conta de energia R$ 300/mês, Internet R$ 150/mês, Salário do operador R$ 2.500/mês."
   },
   lucro: {
     title: "Lucro Líquido",
