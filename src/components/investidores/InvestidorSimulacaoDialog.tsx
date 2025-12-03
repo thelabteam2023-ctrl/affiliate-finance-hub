@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 interface InvestidorDeal {
   id: string;
   tipo_deal: "FIXO" | "PROGRESSIVO";
+  base_calculo: "LUCRO" | "APORTE";
   percentual_fixo: number;
   faixas_progressivas: Array<{ limite: number; percentual: number }>;
   ativo: boolean;
@@ -69,14 +70,16 @@ export function InvestidorSimulacaoDialog({
   const retornoBruto = valorNum * Math.pow(1 + taxaMensal, periodoNum) - valorNum;
   
   // Calculate investor share based on deal
-  const calcularParticipacao = (lucro: number): number => {
-    if (!deal) return lucro * 0.4; // Default 40%
+  const calcularParticipacao = (lucro: number, aporte: number): number => {
+    if (!deal) return lucro * 0.4; // Default 40% on profits
     
     if (deal.tipo_deal === "FIXO") {
-      return lucro * (deal.percentual_fixo / 100);
+      // If base is APORTE, calculate on invested amount; otherwise on profits
+      const base = deal.base_calculo === "APORTE" ? aporte : lucro;
+      return base * (deal.percentual_fixo / 100);
     }
     
-    // Progressive
+    // Progressive (always on profits)
     let participacao = 0;
     let lucroRestante = lucro;
     const faixas = [...deal.faixas_progressivas].sort((a, b) => a.limite - b.limite);
@@ -99,7 +102,7 @@ export function InvestidorSimulacaoDialog({
     return participacao;
   };
 
-  const participacaoInvestidor = calcularParticipacao(retornoBruto);
+  const participacaoInvestidor = calcularParticipacao(retornoBruto, valorNum);
   const retornoOperador = retornoBruto - participacaoInvestidor;
   const roiProjetado = valorNum > 0 ? (participacaoInvestidor / valorNum) * 100 : 0;
   const paybackMeses = participacaoInvestidor > 0 
@@ -140,6 +143,11 @@ export function InvestidorSimulacaoDialog({
                   )}
                 </div>
               </div>
+              {deal.tipo_deal === "FIXO" && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Base: {deal.base_calculo === "APORTE" ? "Valor Aportado" : "Lucros"}
+                </p>
+              )}
               {deal.tipo_deal === "PROGRESSIVO" && (
                 <div className="mt-2 space-y-1">
                   {deal.faixas_progressivas.map((f, i) => (

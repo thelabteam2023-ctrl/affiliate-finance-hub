@@ -41,6 +41,7 @@ interface InvestidorROI {
 interface InvestidorDeal {
   id: string;
   tipo_deal: "FIXO" | "PROGRESSIVO";
+  base_calculo: "LUCRO" | "APORTE";
   percentual_fixo: number;
   faixas_progressivas: Array<{ limite: number; percentual: number }>;
   ativo: boolean;
@@ -185,7 +186,9 @@ export function InvestidorPainelCard({
               <div className="flex items-center gap-2 mt-2">
                 <Percent className="h-4 w-4 text-primary" />
                 <span className="text-xl font-bold text-primary">{deal.percentual_fixo}%</span>
-                <span className="text-xs text-muted-foreground">dos lucros</span>
+                <span className="text-xs text-muted-foreground">
+                  {deal.base_calculo === "APORTE" ? "do valor aportado" : "dos lucros"}
+                </span>
               </div>
             ) : (
               <div className="mt-2 space-y-1">

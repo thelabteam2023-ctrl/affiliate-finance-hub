@@ -485,6 +485,7 @@ export type Database = {
       investidor_deals: {
         Row: {
           ativo: boolean | null
+          base_calculo: string
           created_at: string | null
           faixas_progressivas: Json | null
           id: string
@@ -498,6 +499,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean | null
+          base_calculo?: string
           created_at?: string | null
           faixas_progressivas?: Json | null
           id?: string
@@ -511,6 +513,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean | null
+          base_calculo?: string
           created_at?: string | null
           faixas_progressivas?: Json | null
           id?: string
