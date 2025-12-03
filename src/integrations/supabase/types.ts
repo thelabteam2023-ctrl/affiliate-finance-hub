@@ -482,6 +482,48 @@ export type Database = {
           },
         ]
       }
+      fornecedores: {
+        Row: {
+          created_at: string | null
+          documento: string | null
+          email: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          status: string
+          telefone: string | null
+          tipo_documento: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          documento?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          status?: string
+          telefone?: string | null
+          tipo_documento?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          documento?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          status?: string
+          telefone?: string | null
+          tipo_documento?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       indicacoes: {
         Row: {
           created_at: string | null
@@ -548,6 +590,66 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
             referencedColumns: ["parceiro_id"]
+          },
+        ]
+      }
+      indicador_acordos: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          id: string
+          indicador_id: string
+          meta_parceiros: number | null
+          observacoes: string | null
+          orcamento_por_parceiro: number
+          updated_at: string | null
+          user_id: string
+          valor_bonus: number | null
+          vigencia_fim: string | null
+          vigencia_inicio: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          indicador_id: string
+          meta_parceiros?: number | null
+          observacoes?: string | null
+          orcamento_por_parceiro?: number
+          updated_at?: string | null
+          user_id: string
+          valor_bonus?: number | null
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          indicador_id?: string
+          meta_parceiros?: number | null
+          observacoes?: string | null
+          orcamento_por_parceiro?: number
+          updated_at?: string | null
+          user_id?: string
+          valor_bonus?: number | null
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indicador_acordos_indicador_id_fkey"
+            columns: ["indicador_id"]
+            isOneToOne: false
+            referencedRelation: "indicadores_referral"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicador_acordos_indicador_id_fkey"
+            columns: ["indicador_id"]
+            isOneToOne: false
+            referencedRelation: "v_indicador_performance"
+            referencedColumns: ["indicador_id"]
           },
         ]
       }
@@ -749,6 +851,13 @@ export type Database = {
             foreignKeyName: "movimentacoes_indicacao_parceria_id_fkey"
             columns: ["parceria_id"]
             isOneToOne: false
+            referencedRelation: "v_custos_aquisicao"
+            referencedColumns: ["parceria_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_parceria_id_fkey"
+            columns: ["parceria_id"]
+            isOneToOne: false
             referencedRelation: "v_parcerias_alerta"
             referencedColumns: ["id"]
           },
@@ -822,15 +931,20 @@ export type Database = {
           data_inicio: string
           duracao_dias: number
           elegivel_renovacao: boolean | null
+          fornecedor_id: string | null
           id: string
           indicacao_id: string | null
           motivo_encerramento: string | null
           observacoes: string | null
+          origem_tipo: string | null
           parceiro_id: string
           status: string
           updated_at: string | null
           user_id: string
           valor_comissao_indicador: number | null
+          valor_fornecedor: number | null
+          valor_indicador: number | null
+          valor_parceiro: number | null
         }
         Insert: {
           comissao_paga?: boolean | null
@@ -840,15 +954,20 @@ export type Database = {
           data_inicio?: string
           duracao_dias?: number
           elegivel_renovacao?: boolean | null
+          fornecedor_id?: string | null
           id?: string
           indicacao_id?: string | null
           motivo_encerramento?: string | null
           observacoes?: string | null
+          origem_tipo?: string | null
           parceiro_id: string
           status?: string
           updated_at?: string | null
           user_id: string
           valor_comissao_indicador?: number | null
+          valor_fornecedor?: number | null
+          valor_indicador?: number | null
+          valor_parceiro?: number | null
         }
         Update: {
           comissao_paga?: boolean | null
@@ -858,17 +977,29 @@ export type Database = {
           data_inicio?: string
           duracao_dias?: number
           elegivel_renovacao?: boolean | null
+          fornecedor_id?: string | null
           id?: string
           indicacao_id?: string | null
           motivo_encerramento?: string | null
           observacoes?: string | null
+          origem_tipo?: string | null
           parceiro_id?: string
           status?: string
           updated_at?: string | null
           user_id?: string
           valor_comissao_indicador?: number | null
+          valor_fornecedor?: number | null
+          valor_indicador?: number | null
+          valor_parceiro?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "parcerias_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "parcerias_indicacao_id_fkey"
             columns: ["indicacao_id"]
@@ -1191,6 +1322,77 @@ export type Database = {
       }
     }
     Views: {
+      v_custos_aquisicao: {
+        Row: {
+          custo_total: number | null
+          data_inicio: string | null
+          fornecedor_id: string | null
+          fornecedor_nome: string | null
+          indicacao_id: string | null
+          indicador_id: string | null
+          indicador_nome: string | null
+          origem_tipo: string | null
+          parceiro_id: string | null
+          parceiro_nome: string | null
+          parceria_id: string | null
+          status: string | null
+          user_id: string | null
+          valor_fornecedor: number | null
+          valor_indicador: number | null
+          valor_parceiro: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indicacoes_indicador_id_fkey"
+            columns: ["indicador_id"]
+            isOneToOne: false
+            referencedRelation: "indicadores_referral"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicacoes_indicador_id_fkey"
+            columns: ["indicador_id"]
+            isOneToOne: false
+            referencedRelation: "v_indicador_performance"
+            referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "parcerias_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcerias_indicacao_id_fkey"
+            columns: ["indicacao_id"]
+            isOneToOne: false
+            referencedRelation: "indicacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcerias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcerias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parcerias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+        ]
+      }
       v_indicador_performance: {
         Row: {
           cpf: string | null
