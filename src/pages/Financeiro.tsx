@@ -426,9 +426,9 @@ export default function Financeiro() {
         <TabsContent value="overview" className="space-y-6">
           {/* Filtros de Período */}
           <div className="flex flex-wrap items-center gap-3">
-            <Select value={periodoPreset} onValueChange={setPeriodoPreset}>
-              <SelectTrigger className="w-[140px]">
-                <Calendar className="h-4 w-4 mr-2" />
+          <Select value={periodoPreset} onValueChange={setPeriodoPreset}>
+            <SelectTrigger className="w-[180px]">
+              <Calendar className="h-4 w-4 mr-2 shrink-0" />
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
