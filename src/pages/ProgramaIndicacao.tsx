@@ -26,7 +26,7 @@ export default function ProgramaIndicacao() {
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Aquisição de Parceiros</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Captação de Parceiros</h1>
         <p className="text-muted-foreground">
           Gerencie indicadores, fornecedores e parcerias de aquisição
         </p>
