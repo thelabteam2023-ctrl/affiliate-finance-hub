@@ -768,6 +768,7 @@ export default function GestaoParceiros() {
         )}
 
         <BookmakerDialog
+          key={vinculoDialogOpen ? `vinculo-${preselectedVinculo?.parceiroId || 'new'}` : 'closed'}
           open={vinculoDialogOpen}
           onClose={handleVinculoDialogClose}
           bookmaker={null}
