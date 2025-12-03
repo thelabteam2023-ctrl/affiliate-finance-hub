@@ -773,7 +773,6 @@ export default function GestaoParceiros() {
           onClose={handleVinculoDialogClose}
           bookmaker={null}
           defaultParceiroId={preselectedVinculo?.parceiroId}
-          lockParceiro={!!preselectedVinculo?.parceiroId}
         />
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
