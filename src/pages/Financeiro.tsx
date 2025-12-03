@@ -435,21 +435,9 @@ export default function Financeiro() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">{formatCurrency(capitalOperacional)}</div>
-            <div className="flex gap-2 mt-2">
-              <Badge variant="outline" className="text-xs">
-                {formatCurrency(saldoBRL)}
-              </Badge>
-              {saldoUSD > 0 && (
-                <Badge variant="outline" className="text-xs">
-                  USD ${saldoUSD.toFixed(2)}
-                </Badge>
-              )}
-              {totalCryptoUSD > 0 && (
-                <Badge variant="outline" className="text-xs">
-                  Crypto ${totalCryptoUSD.toFixed(2)}
-                </Badge>
-              )}
-            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              FIAT: {formatCurrency(saldoBRL + saldoUSD * 5)} · CRYPTO: ${totalCryptoUSD.toFixed(2)}
+            </p>
           </CardContent>
         </Card>
 
