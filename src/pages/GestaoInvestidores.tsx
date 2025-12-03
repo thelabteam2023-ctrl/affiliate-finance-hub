@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, LayoutGrid, List, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, LayoutGrid, List, Edit, Trash2, DollarSign, Bitcoin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,9 +30,20 @@ interface Investidor {
 
 interface InvestidorROI {
   investidor_id: string;
-  total_aportes: number;
-  total_liquidacoes: number;
-  lucro_prejuizo: number;
+  // FIAT separado
+  aportes_fiat_brl: number;
+  aportes_fiat_usd: number;
+  liquidacoes_fiat_brl: number;
+  liquidacoes_fiat_usd: number;
+  // CRYPTO em USD
+  aportes_crypto_usd: number;
+  liquidacoes_crypto_usd: number;
+  // Calculados localmente
+  saldo_fiat_brl: number;
+  saldo_fiat_usd: number;
+  saldo_crypto_usd: number;
+  total_aportes_usd: number;
+  total_liquidacoes_usd: number;
   roi_percentual: number;
 }
 
@@ -83,8 +94,45 @@ export default function GestaoInvestidores() {
       if (error) throw error;
       
       const roiMap = new Map<string, InvestidorROI>();
-      data?.forEach((roi) => {
-        roiMap.set(roi.investidor_id, roi);
+      data?.forEach((roi: any) => {
+        // Calculate local values
+        const aportesFiatBrl = Number(roi.aportes_fiat_brl) || 0;
+        const aportesFiatUsd = Number(roi.aportes_fiat_usd) || 0;
+        const aportesCryptoUsd = Number(roi.aportes_crypto_usd) || 0;
+        const liquidacoesFiatBrl = Number(roi.liquidacoes_fiat_brl) || 0;
+        const liquidacoesFiatUsd = Number(roi.liquidacoes_fiat_usd) || 0;
+        const liquidacoesCryptoUsd = Number(roi.liquidacoes_crypto_usd) || 0;
+
+        // Saldos
+        const saldoFiatBrl = aportesFiatBrl - liquidacoesFiatBrl;
+        const saldoFiatUsd = aportesFiatUsd - liquidacoesFiatUsd;
+        const saldoCryptoUsd = aportesCryptoUsd - liquidacoesCryptoUsd;
+
+        // Total em USD para ROI (assumindo 1 BRL ≈ para simplificar, ou pode-se ignorar BRL no cálculo USD)
+        // Para ROI, vamos considerar apenas USD e Crypto em USD
+        const totalAportesUsd = aportesFiatUsd + aportesCryptoUsd;
+        const totalLiquidacoesUsd = liquidacoesFiatUsd + liquidacoesCryptoUsd;
+
+        // ROI percentual baseado em USD
+        const roiPercentual = totalAportesUsd > 0 
+          ? ((totalLiquidacoesUsd - totalAportesUsd) / totalAportesUsd) * 100 
+          : 0;
+
+        roiMap.set(roi.investidor_id, {
+          investidor_id: roi.investidor_id,
+          aportes_fiat_brl: aportesFiatBrl,
+          aportes_fiat_usd: aportesFiatUsd,
+          liquidacoes_fiat_brl: liquidacoesFiatBrl,
+          liquidacoes_fiat_usd: liquidacoesFiatUsd,
+          aportes_crypto_usd: aportesCryptoUsd,
+          liquidacoes_crypto_usd: liquidacoesCryptoUsd,
+          saldo_fiat_brl: saldoFiatBrl,
+          saldo_fiat_usd: saldoFiatUsd,
+          saldo_crypto_usd: saldoCryptoUsd,
+          total_aportes_usd: totalAportesUsd,
+          total_liquidacoes_usd: totalLiquidacoesUsd,
+          roi_percentual: roiPercentual,
+        });
       });
       setRoiData(roiMap);
     } catch (error: any) {
@@ -131,10 +179,10 @@ export default function GestaoInvestidores() {
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
+  const formatCurrency = (value: number, currency: "BRL" | "USD" = "BRL") => {
+    return new Intl.NumberFormat(currency === "BRL" ? "pt-BR" : "en-US", {
       style: "currency",
-      currency: "BRL",
+      currency: currency,
     }).format(value);
   };
 
@@ -142,6 +190,152 @@ export default function GestaoInvestidores() {
     total: investidores.length,
     ativos: investidores.filter((i) => i.status === "ativo").length,
     inativos: investidores.filter((i) => i.status === "inativo").length,
+  };
+
+  const renderROICard = (roi: InvestidorROI) => {
+    const hasFiatBrl = roi.aportes_fiat_brl > 0 || roi.liquidacoes_fiat_brl > 0;
+    const hasFiatUsd = roi.aportes_fiat_usd > 0 || roi.liquidacoes_fiat_usd > 0;
+    const hasCrypto = roi.aportes_crypto_usd > 0 || roi.liquidacoes_crypto_usd > 0;
+
+    return (
+      <div className="space-y-3">
+        {/* FIAT Section */}
+        {(hasFiatBrl || hasFiatUsd) && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <DollarSign className="h-3 w-3" />
+              FIAT
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <p className="text-muted-foreground">Aportes</p>
+                {hasFiatBrl && (
+                  <p className="font-semibold text-emerald-600">{formatCurrency(roi.aportes_fiat_brl, "BRL")}</p>
+                )}
+                {hasFiatUsd && (
+                  <p className="font-semibold text-emerald-600">{formatCurrency(roi.aportes_fiat_usd, "USD")}</p>
+                )}
+              </div>
+              <div>
+                <p className="text-muted-foreground">Liquidações</p>
+                {hasFiatBrl && (
+                  <p className="font-semibold text-blue-600">{formatCurrency(roi.liquidacoes_fiat_brl, "BRL")}</p>
+                )}
+                {hasFiatUsd && (
+                  <p className="font-semibold text-blue-600">{formatCurrency(roi.liquidacoes_fiat_usd, "USD")}</p>
+                )}
+              </div>
+              <div>
+                <p className="text-muted-foreground">Saldo</p>
+                {hasFiatBrl && (
+                  <p className={`font-semibold ${roi.saldo_fiat_brl >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                    {formatCurrency(roi.saldo_fiat_brl, "BRL")}
+                  </p>
+                )}
+                {hasFiatUsd && (
+                  <p className={`font-semibold ${roi.saldo_fiat_usd >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                    {formatCurrency(roi.saldo_fiat_usd, "USD")}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CRYPTO Section */}
+        {hasCrypto && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Bitcoin className="h-3 w-3" />
+              CRYPTO (USD)
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <p className="text-muted-foreground">Aportes</p>
+                <p className="font-semibold text-emerald-600">{formatCurrency(roi.aportes_crypto_usd, "USD")}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Liquidações</p>
+                <p className="font-semibold text-blue-600">{formatCurrency(roi.liquidacoes_crypto_usd, "USD")}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Saldo</p>
+                <p className={`font-semibold ${roi.saldo_crypto_usd >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                  {formatCurrency(roi.saldo_crypto_usd, "USD")}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ROI (only if USD values exist) */}
+        {(hasFiatUsd || hasCrypto) && (
+          <div className="pt-2 border-t border-border/50">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">ROI (USD)</span>
+              <span className={`font-bold ${roi.roi_percentual >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                {roi.roi_percentual.toFixed(2)}%
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderROIListItem = (roi: InvestidorROI) => {
+    const hasFiatBrl = roi.aportes_fiat_brl > 0 || roi.liquidacoes_fiat_brl > 0;
+    const hasFiatUsd = roi.aportes_fiat_usd > 0 || roi.liquidacoes_fiat_usd > 0;
+    const hasCrypto = roi.aportes_crypto_usd > 0 || roi.liquidacoes_crypto_usd > 0;
+
+    return (
+      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs">
+        {hasFiatBrl && (
+          <>
+            <div>
+              <span className="text-muted-foreground">Aportes BRL: </span>
+              <span className="font-semibold text-emerald-600">{formatCurrency(roi.aportes_fiat_brl, "BRL")}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Liquidações BRL: </span>
+              <span className="font-semibold text-blue-600">{formatCurrency(roi.liquidacoes_fiat_brl, "BRL")}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Saldo BRL: </span>
+              <span className={`font-semibold ${roi.saldo_fiat_brl >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                {formatCurrency(roi.saldo_fiat_brl, "BRL")}
+              </span>
+            </div>
+          </>
+        )}
+        {hasCrypto && (
+          <>
+            <div>
+              <span className="text-muted-foreground">Aportes Crypto: </span>
+              <span className="font-semibold text-emerald-600">{formatCurrency(roi.aportes_crypto_usd, "USD")}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Liquidações Crypto: </span>
+              <span className="font-semibold text-blue-600">{formatCurrency(roi.liquidacoes_crypto_usd, "USD")}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Saldo Crypto: </span>
+              <span className={`font-semibold ${roi.saldo_crypto_usd >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                {formatCurrency(roi.saldo_crypto_usd, "USD")}
+              </span>
+            </div>
+          </>
+        )}
+        {(hasFiatUsd || hasCrypto) && (
+          <div>
+            <span className="text-muted-foreground">ROI: </span>
+            <span className={`font-semibold ${roi.roi_percentual >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+              {roi.roi_percentual.toFixed(2)}%
+            </span>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -176,7 +370,7 @@ export default function GestaoInvestidores() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-600">{stats.ativos}</div>
+                <div className="text-3xl font-bold text-emerald-600">{stats.ativos}</div>
               </CardContent>
             </Card>
             <Card>
@@ -303,38 +497,7 @@ export default function GestaoInvestidores() {
                   </CardHeader>
                   <CardContent>
                     {/* ROI and Financial Data */}
-                    {roiData.has(investidor.id) && (
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Total Aportes</p>
-                          <p className="text-sm font-semibold text-green-600">
-                            {formatCurrency(roiData.get(investidor.id)!.total_aportes)}
-                          </p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Total Liquidações</p>
-                          <p className="text-sm font-semibold text-blue-600">
-                            {formatCurrency(roiData.get(investidor.id)!.total_liquidacoes)}
-                          </p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Lucro/Prejuízo</p>
-                          <p className={`text-sm font-semibold ${
-                            roiData.get(investidor.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
-                          }`}>
-                            {formatCurrency(roiData.get(investidor.id)!.lucro_prejuizo)}
-                          </p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">ROI</p>
-                          <p className={`text-sm font-semibold ${
-                            roiData.get(investidor.id)!.roi_percentual >= 0 ? "text-green-600" : "text-red-600"
-                          }`}>
-                            {roiData.get(investidor.id)!.roi_percentual.toFixed(2)}%
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                    {roiData.has(investidor.id) && renderROICard(roiData.get(investidor.id)!)}
                     
                     {investidor.observacoes && (
                       <div className="space-y-2 text-sm pt-2 border-t mt-2">
@@ -422,38 +585,7 @@ export default function GestaoInvestidores() {
                               <p className="text-sm text-muted-foreground mt-1 font-mono">{formatCPF(investidor.cpf)}</p>
                               
                               {/* ROI Data */}
-                              {roiData.has(investidor.id) && (
-                                <div className="flex gap-4 mt-2 text-xs">
-                                  <div>
-                                    <span className="text-muted-foreground">Aportes: </span>
-                                    <span className="font-semibold text-green-600">
-                                      {formatCurrency(roiData.get(investidor.id)!.total_aportes)}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span className="text-muted-foreground">Liquidações: </span>
-                                    <span className="font-semibold text-blue-600">
-                                      {formatCurrency(roiData.get(investidor.id)!.total_liquidacoes)}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span className="text-muted-foreground">Lucro: </span>
-                                    <span className={`font-semibold ${
-                                      roiData.get(investidor.id)!.lucro_prejuizo >= 0 ? "text-green-600" : "text-red-600"
-                                    }`}>
-                                      {formatCurrency(roiData.get(investidor.id)!.lucro_prejuizo)}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span className="text-muted-foreground">ROI: </span>
-                                    <span className={`font-semibold ${
-                                      roiData.get(investidor.id)!.roi_percentual >= 0 ? "text-green-600" : "text-red-600"
-                                    }`}>
-                                      {roiData.get(investidor.id)!.roi_percentual.toFixed(2)}%
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
+                              {roiData.has(investidor.id) && renderROIListItem(roiData.get(investidor.id)!)}
                             </div>
                           </div>
                         </div>
