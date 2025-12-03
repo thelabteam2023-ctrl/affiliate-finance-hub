@@ -98,14 +98,14 @@ export default function ParceiroSelect({ value, onValueChange, disabled, onlyPar
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled || loading}>
       <SelectTrigger className="w-full">
-        <SelectValue placeholder={loading ? "Carregando..." : "Selecione um parceiro ativo"}>
-          {selectedParceiro && (
-            <div className="flex items-center justify-center gap-2 w-full">
-              <User className="h-4 w-4" />
-              <span>{selectedParceiro.nome}</span>
-            </div>
-          )}
-        </SelectValue>
+        {selectedParceiro ? (
+          <div className="flex items-center gap-2 w-full">
+            <User className="h-4 w-4" />
+            <span>{selectedParceiro.nome}</span>
+          </div>
+        ) : (
+          <SelectValue placeholder={loading ? "Carregando..." : "Selecione um parceiro ativo"} />
+        )}
       </SelectTrigger>
       <SelectContent>
         <div className="p-2 border-b">

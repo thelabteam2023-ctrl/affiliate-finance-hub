@@ -146,23 +146,23 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled || loading}>
       <SelectTrigger className="w-full h-12">
-        <SelectValue placeholder="Selecione...">
-          {selectedItem && (
-            <div className="flex items-center gap-2">
-              {selectedItem.logo_url && (
-                <img
-                  src={selectedItem.logo_url}
-                  alt={selectedItem.nome}
-                  className="h-6 w-6 rounded object-contain"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
-              )}
-              <span className="uppercase">{selectedItem.nome}</span>
-            </div>
-          )}
-        </SelectValue>
+        {selectedItem ? (
+          <div className="flex items-center gap-2">
+            {selectedItem.logo_url && (
+              <img
+                src={selectedItem.logo_url}
+                alt={selectedItem.nome}
+                className="h-6 w-6 rounded object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            )}
+            <span className="uppercase">{selectedItem.nome}</span>
+          </div>
+        ) : (
+          <SelectValue placeholder="Selecione..." />
+        )}
       </SelectTrigger>
       <SelectContent className="max-h-[300px]">
         <div className="sticky top-0 z-10 bg-popover p-2 border-b">
