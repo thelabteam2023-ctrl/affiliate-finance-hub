@@ -71,9 +71,13 @@ export default function BookmakerDialog({
   const [showObservacoesDialog, setShowObservacoesDialog] = useState(false);
   const { toast } = useToast();
 
-  // Inicializar form quando dialog abre
+  // Inicializar form APENAS quando dialog abre (transição de closed para open)
   useEffect(() => {
     if (!open) return;
+    
+    // Guardar valores em variáveis locais para evitar problemas de closure
+    const parceiroDefault = defaultParceiroId || "";
+    const bookmakerDefault = defaultBookmakerId || "";
     
     if (bookmaker) {
       // Modo edição
@@ -84,7 +88,7 @@ export default function BookmakerDialog({
       setStatus(bookmaker.status || "ativo");
       setObservacoes(bookmaker.observacoes || "");
       setSelectedLink(bookmaker.link_origem || "");
-      setSelectedBookmaker(null); // Será carregado pelo useEffect abaixo
+      setSelectedBookmaker(null);
     } else {
       // Modo criação - reset completo e aplicar defaults
       setLoginUsername("");
@@ -93,10 +97,11 @@ export default function BookmakerDialog({
       setObservacoes("");
       setSelectedLink("");
       setSelectedBookmaker(null);
-      setParceiroId(defaultParceiroId || "");
-      setBookmakerId(defaultBookmakerId || "");
+      setParceiroId(parceiroDefault);
+      setBookmakerId(bookmakerDefault);
     }
-  }, [open, bookmaker, defaultParceiroId, defaultBookmakerId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]); // Dependência APENAS em open - inicializa uma vez quando abre
 
   useEffect(() => {
     if (bookmakerId) {
