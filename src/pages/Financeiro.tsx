@@ -344,6 +344,46 @@ export default function Financeiro() {
 
   const monthlyData = getMonthlyData();
 
+  // Evolução mensal das despesas administrativas por categoria
+  const getDespesasAdminMensais = () => {
+    const months: Record<string, { label: string; total: number; categorias: Record<string, number> }> = {};
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = subMonths(new Date(), i);
+      const key = format(date, "yyyy-MM");
+      months[key] = { label: format(date, "MMM/yy", { locale: ptBR }), total: 0, categorias: {} };
+    }
+
+    despesasAdmin.forEach(d => {
+      if (d.data_despesa) {
+        const key = format(parseISO(d.data_despesa), "yyyy-MM");
+        if (months[key]) {
+          months[key].categorias[d.categoria] = (months[key].categorias[d.categoria] || 0) + d.valor;
+          months[key].total += d.valor;
+        }
+      }
+    });
+
+    return Object.entries(months).map(([mes, data]) => ({ 
+      mes, 
+      label: data.label, 
+      total: data.total,
+      ...data.categorias 
+    }));
+  };
+
+  const despesasAdminMensais = getDespesasAdminMensais();
+
+  // Categorias únicas das despesas admin para cores do gráfico e passar ao dialog
+  const categoriasUnicas = [...new Set(despesasAdmin.map(d => d.categoria))];
+  const coresCategoria: Record<string, string> = {
+    ENERGIA: "hsl(var(--chart-1))",
+    INTERNET: "hsl(var(--chart-2))",
+    MOVEL: "hsl(var(--chart-3))",
+    ALUGUEL: "hsl(var(--chart-4))",
+    OPERADORES: "hsl(var(--chart-5))",
+  };
+
   // Bar chart - comparison
   const comparisonData = [
     { name: "Caixa FIAT", valor: saldoBRL + saldoUSD * 5 },
@@ -917,6 +957,53 @@ export default function Financeiro() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Gráfico Evolução Mensal */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Evolução Mensal das Despesas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {despesasAdmin.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Nenhuma despesa cadastrada para exibir o gráfico
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={despesasAdminMensais}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="label" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                    <YAxis 
+                      tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}
+                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                    />
+                    <Tooltip
+                      contentStyle={{ 
+                        backgroundColor: "rgba(0, 0, 0, 0.4)", 
+                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                        backdropFilter: "blur(12px)",
+                        borderRadius: "12px",
+                        padding: "12px 16px"
+                      }}
+                      cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
+                      formatter={(value: number, name: string) => [formatCurrency(value), name]}
+                    />
+                    <Legend />
+                    {categoriasUnicas.map((cat, index) => (
+                      <Bar 
+                        key={cat}
+                        dataKey={cat} 
+                        name={cat}
+                        stackId="a"
+                        fill={coresCategoria[cat] || `hsl(var(--chart-${(index % 5) + 1}))`}
+                        radius={index === categoriasUnicas.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                      />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="historico" className="space-y-6">
@@ -1160,6 +1247,7 @@ export default function Financeiro() {
         }}
         despesa={editingDespesa}
         onSuccess={fetchData}
+        categoriasExtras={categoriasUnicas}
       />
     </div>
   );
