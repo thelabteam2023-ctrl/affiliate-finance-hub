@@ -4,13 +4,9 @@ import {
   Trash2,
   FileText,
   Calculator,
-  TrendingUp,
-  TrendingDown,
   DollarSign,
   Bitcoin,
   Percent,
-  Clock,
-  ChevronRight,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -89,37 +85,16 @@ export function InvestidorPainelCard({
   onSimular,
   onClick,
 }: InvestidorPainelCardProps) {
-  // Calculate ROEs
-  const roeFiat = roi && roi.aportes_fiat_brl > 0
+  // Calculate ROI per currency
+  const roiBRL = roi && roi.aportes_fiat_brl > 0
     ? ((roi.liquidacoes_fiat_brl - roi.aportes_fiat_brl) / roi.aportes_fiat_brl) * 100
     : 0;
   const lucroFiat = roi ? roi.liquidacoes_fiat_brl - roi.aportes_fiat_brl : 0;
 
-  const roeCrypto = roi && roi.aportes_crypto_usd > 0
+  const roiCrypto = roi && roi.aportes_crypto_usd > 0
     ? ((roi.liquidacoes_crypto_usd - roi.aportes_crypto_usd) / roi.aportes_crypto_usd) * 100
     : 0;
   const lucroCrypto = roi ? roi.liquidacoes_crypto_usd - roi.aportes_crypto_usd : 0;
-
-  // Global ROE (USD based)
-  const totalAportesGlobal = (roi?.aportes_fiat_usd || 0) + (roi?.aportes_crypto_usd || 0);
-  const totalLiquidacoesGlobal = (roi?.liquidacoes_fiat_usd || 0) + (roi?.liquidacoes_crypto_usd || 0);
-  const roeGlobal = totalAportesGlobal > 0
-    ? ((totalLiquidacoesGlobal - totalAportesGlobal) / totalAportesGlobal) * 100
-    : 0;
-  const lucroGlobal = totalLiquidacoesGlobal - totalAportesGlobal;
-
-  // Exposure calculation
-  const patrimonioFiat = roi?.saldo_fiat_brl || 0;
-  const patrimonioCrypto = roi?.saldo_crypto_usd || 0;
-  const patrimonioTotal = patrimonioFiat + (patrimonioCrypto * 5); // Rough BRL conversion
-  const exposicaoFiat = patrimonioTotal > 0 ? (patrimonioFiat / patrimonioTotal) * 100 : 50;
-  const exposicaoCrypto = 100 - exposicaoFiat;
-
-  // Payback estimation (months)
-  const lucroMensalMedio = lucroGlobal / 12; // Simplified
-  const paybackMeses = totalAportesGlobal > 0 && lucroMensalMedio > 0
-    ? Math.ceil(totalAportesGlobal / lucroMensalMedio)
-    : null;
 
   const hasFiat = roi && (roi.aportes_fiat_brl > 0 || roi.liquidacoes_fiat_brl > 0);
   const hasCrypto = roi && (roi.aportes_crypto_usd > 0 || roi.liquidacoes_crypto_usd > 0);
@@ -246,19 +221,19 @@ export function InvestidorPainelCard({
               </div>
               <div className="col-span-2 pt-2 border-t border-border/30">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-[10px] uppercase">ROE FIAT</span>
+                  <span className="text-muted-foreground text-[10px] uppercase">ROI BRL</span>
                   <div className="flex items-center gap-2">
                     <Badge
                       variant="outline"
                       className={`font-mono text-xs ${
-                        roeFiat >= 0
+                        roiBRL >= 0
                           ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
                           : "bg-destructive/10 text-destructive border-destructive/30"
                       }`}
                     >
-                      {roeFiat >= 0 ? "+" : ""}{roeFiat.toFixed(1)}%
+                      {roiBRL >= 0 ? "+" : ""}{roiBRL.toFixed(1)}%
                     </Badge>
-                    <span className={`font-mono text-xs ${roeFiat >= 0 ? "text-emerald-500" : "text-destructive"}`}>
+                    <span className={`font-mono text-xs ${roiBRL >= 0 ? "text-emerald-500" : "text-destructive"}`}>
                       {formatCurrency(lucroFiat, "BRL")}
                     </span>
                   </div>
@@ -306,86 +281,22 @@ export function InvestidorPainelCard({
               </div>
               <div className="col-span-2 pt-2 border-t border-border/30">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-[10px] uppercase">ROE CRYPTO</span>
+                  <span className="text-muted-foreground text-[10px] uppercase">ROI Crypto (USD)</span>
                   <div className="flex items-center gap-2">
                     <Badge
                       variant="outline"
                       className={`font-mono text-xs ${
-                        roeCrypto >= 0
+                        roiCrypto >= 0
                           ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
                           : "bg-destructive/10 text-destructive border-destructive/30"
                       }`}
                     >
-                      {roeCrypto >= 0 ? "+" : ""}{roeCrypto.toFixed(1)}%
+                      {roiCrypto >= 0 ? "+" : ""}{roiCrypto.toFixed(1)}%
                     </Badge>
-                    <span className={`font-mono text-xs ${roeCrypto >= 0 ? "text-emerald-500" : "text-destructive"}`}>
+                    <span className={`font-mono text-xs ${roiCrypto >= 0 ? "text-emerald-500" : "text-destructive"}`}>
                       {formatCurrency(lucroCrypto, "USD")}
                     </span>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Consolidated Summary */}
-        {(hasFiat || hasCrypto) && (
-          <div className="space-y-3 p-3 rounded-lg bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20">
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Resumo Consolidado
-            </div>
-            
-            {/* Exposure Bar */}
-            <div className="space-y-1">
-              <div className="flex justify-between text-[10px] text-muted-foreground">
-                <span>Exposição por Classe</span>
-              </div>
-              <div className="w-full bg-muted/30 rounded-full h-2 overflow-hidden flex">
-                <div
-                  className="bg-amber-500 h-2 transition-all"
-                  style={{ width: `${exposicaoFiat}%` }}
-                />
-                <div
-                  className="bg-violet-500 h-2 transition-all"
-                  style={{ width: `${exposicaoCrypto}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px]">
-                <span className="text-amber-500">FIAT {exposicaoFiat.toFixed(0)}%</span>
-                <span className="text-violet-500">Crypto {exposicaoCrypto.toFixed(0)}%</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 text-xs">
-              {/* Patrimônio Total */}
-              <div>
-                <p className="text-muted-foreground text-[10px] uppercase">Patrimônio</p>
-                <p className="font-bold font-mono">{formatCurrency(patrimonioTotal, "BRL")}</p>
-              </div>
-
-              {/* ROE Global */}
-              <div>
-                <p className="text-muted-foreground text-[10px] uppercase">ROE Global</p>
-                <div className="flex items-center gap-1">
-                  {roeGlobal >= 0 ? (
-                    <TrendingUp className="h-3 w-3 text-emerald-500" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3 text-destructive" />
-                  )}
-                  <span className={`font-bold font-mono ${roeGlobal >= 0 ? "text-emerald-500" : "text-destructive"}`}>
-                    {roeGlobal >= 0 ? "+" : ""}{roeGlobal.toFixed(1)}%
-                  </span>
-                </div>
-              </div>
-
-              {/* Payback */}
-              <div>
-                <p className="text-muted-foreground text-[10px] uppercase">Payback</p>
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-muted-foreground" />
-                  <span className="font-bold font-mono">
-                    {paybackMeses ? `${paybackMeses}m` : "—"}
-                  </span>
                 </div>
               </div>
             </div>

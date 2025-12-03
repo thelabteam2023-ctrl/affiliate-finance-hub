@@ -104,6 +104,17 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
         if (data.faixas_progressivas && Array.isArray(data.faixas_progressivas)) {
           setFaixasProgressivas(data.faixas_progressivas as unknown as FaixaProgressiva[]);
         }
+      } else {
+        // Reset deal state when no existing deal found - CRITICAL for creating new deals per investor
+        setDealId(null);
+        setTipoDeal("FIXO");
+        setBaseCalculo("LUCRO");
+        setPercentualFixo("40");
+        setFaixasProgressivas([
+          { limite: 10000, percentual: 20 },
+          { limite: 50000, percentual: 30 },
+          { limite: 100000, percentual: 40 },
+        ]);
       }
     } catch (error) {
       console.error("Erro ao carregar deal:", error);
