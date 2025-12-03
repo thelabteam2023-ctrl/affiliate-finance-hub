@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -20,14 +20,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle, Info } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import BookmakerSelect from "./BookmakerSelect";
 import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
 import { PasswordInput } from "@/components/parceiros/PasswordInput";
@@ -70,49 +64,14 @@ export default function BookmakerDialog({
   const [observacoes, setObservacoes] = useState("");
   const [showObservacoesDialog, setShowObservacoesDialog] = useState(false);
   const { toast } = useToast();
+  
+  // Ref para controlar se está inicializando (evitar trigger do useEffect de mudança manual)
+  const isInitializing = useRef(false);
 
-  // Inicializar form APENAS quando dialog abre (transição de closed para open)
-  useEffect(() => {
-    if (!open) return;
+  // Função estável para carregar detalhes da bookmaker
+  const fetchBookmakerDetails = useCallback(async (bookmakerIdToFetch: string, presetLink?: string) => {
+    if (!bookmakerIdToFetch) return;
     
-    // Guardar valores em variáveis locais para evitar problemas de closure
-    const parceiroDefault = defaultParceiroId || "";
-    const bookmakerDefault = defaultBookmakerId || "";
-    
-    if (bookmaker) {
-      // Modo edição
-      setParceiroId(bookmaker.parceiro_id || "");
-      setBookmakerId(bookmaker.bookmaker_catalogo_id || "");
-      setLoginUsername(bookmaker.login_username || "");
-      setLoginPassword("");
-      setStatus(bookmaker.status || "ativo");
-      setObservacoes(bookmaker.observacoes || "");
-      setSelectedLink(bookmaker.link_origem || "");
-      setSelectedBookmaker(null);
-    } else {
-      // Modo criação - reset completo e aplicar defaults
-      setLoginUsername("");
-      setLoginPassword("");
-      setStatus("ativo");
-      setObservacoes("");
-      setSelectedLink("");
-      setSelectedBookmaker(null);
-      setParceiroId(parceiroDefault);
-      setBookmakerId(bookmakerDefault);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]); // Dependência APENAS em open - inicializa uma vez quando abre
-
-  useEffect(() => {
-    if (bookmakerId) {
-      fetchBookmakerDetails(bookmakerId);
-    } else {
-      setSelectedBookmaker(null);
-      setSelectedLink("");
-    }
-  }, [bookmakerId]);
-
-  const fetchBookmakerDetails = async (bookmakerIdToFetch: string) => {
     try {
       const { data, error } = await supabase
         .from("bookmakers_catalogo")
@@ -133,26 +92,85 @@ export default function BookmakerDialog({
       
       setSelectedBookmaker(bookmakerData);
       
-      // Auto-select first link (PADRÃO) if available - SEMPRE selecionar
+      // Auto-select link
       const linksArray = bookmakerData.links_json;
-      if (linksArray && linksArray.length > 0) {
+      if (presetLink) {
+        setSelectedLink(presetLink);
+      } else if (linksArray && linksArray.length > 0) {
         setSelectedLink(linksArray[0].referencia);
       }
     } catch (error: any) {
       console.error("Erro ao carregar detalhes da bookmaker:", error);
     }
-  };
+  }, []);
 
-  const resetForm = () => {
-    setParceiroId("");
-    setBookmakerId("");
-    setSelectedBookmaker(null);
-    setSelectedLink("");
-    setLoginUsername("");
-    setLoginPassword("");
-    setStatus("ativo");
-    setObservacoes("");
-  };
+  // Inicialização quando dialog abre
+  useEffect(() => {
+    if (!open) return;
+    
+    // Marcar como inicializando
+    isInitializing.current = true;
+    
+    // Guardar valores em variáveis locais
+    const parceiroDefault = defaultParceiroId || "";
+    const bookmakerDefault = defaultBookmakerId || "";
+    
+    if (bookmaker) {
+      // Modo edição
+      setParceiroId(bookmaker.parceiro_id || "");
+      setBookmakerId(bookmaker.bookmaker_catalogo_id || "");
+      setLoginUsername(bookmaker.login_username || "");
+      setLoginPassword("");
+      setStatus(bookmaker.status || "ativo");
+      setObservacoes(bookmaker.observacoes || "");
+      setSelectedLink(bookmaker.link_origem || "");
+      setSelectedBookmaker(null);
+      
+      // Carregar detalhes com link pré-selecionado
+      if (bookmaker.bookmaker_catalogo_id) {
+        fetchBookmakerDetails(bookmaker.bookmaker_catalogo_id, bookmaker.link_origem);
+      }
+    } else {
+      // Modo criação - reset completo
+      setLoginUsername("");
+      setLoginPassword("");
+      setStatus("ativo");
+      setObservacoes("");
+      setSelectedLink("");
+      setSelectedBookmaker(null);
+      setParceiroId(parceiroDefault);
+      setBookmakerId(bookmakerDefault);
+      
+      // Carregar detalhes SE houver default bookmaker
+      if (bookmakerDefault) {
+        fetchBookmakerDetails(bookmakerDefault);
+      }
+    }
+    
+    // Após um pequeno delay, marcar como não inicializando
+    const timeoutId = setTimeout(() => {
+      isInitializing.current = false;
+    }, 200);
+    
+    return () => clearTimeout(timeoutId);
+  }, [open, bookmaker, defaultParceiroId, defaultBookmakerId, fetchBookmakerDetails]);
+
+  // useEffect para mudanças MANUAIS no dropdown de bookmaker
+  useEffect(() => {
+    // Pular se está inicializando, dialog fechado, ou sem bookmakerId
+    if (isInitializing.current || !open || !bookmakerId) return;
+    
+    // Usuário mudou a seleção manualmente - carregar novos detalhes
+    fetchBookmakerDetails(bookmakerId);
+  }, [bookmakerId, open, fetchBookmakerDetails]);
+
+  // Limpar selectedBookmaker quando bookmakerId é limpo
+  useEffect(() => {
+    if (!bookmakerId) {
+      setSelectedBookmaker(null);
+      setSelectedLink("");
+    }
+  }, [bookmakerId]);
 
   const encryptPassword = (password: string): string => {
     return btoa(password);
@@ -184,10 +202,10 @@ export default function BookmakerDialog({
         bookmaker_catalogo_id: bookmakerId,
         nome: selectedBookmaker?.nome || "",
         link_origem: selectedLink,
-        login_username: loginUsername || "", // String vazia ao invés de null
-        login_password_encrypted: loginPassword ? encryptPassword(loginPassword) : "", // String vazia ao invés de null
-        saldo_atual: 0, // Sempre começa com 0
-        moeda: "BRL", // Padrão BRL
+        login_username: loginUsername || "",
+        login_password_encrypted: loginPassword ? encryptPassword(loginPassword) : "",
+        saldo_atual: 0,
+        moeda: "BRL",
         status,
         observacoes: observacoes || null,
       };
@@ -228,10 +246,6 @@ export default function BookmakerDialog({
       setLoading(false);
     }
   };
-
-  const linkUrl = selectedBookmaker?.links_json?.find(
-    (link) => link.referencia === selectedLink
-  )?.url || "";
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
