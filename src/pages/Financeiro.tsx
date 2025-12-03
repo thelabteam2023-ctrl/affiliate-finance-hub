@@ -325,44 +325,11 @@ export default function Financeiro() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Visão Financeira</h1>
-          <p className="text-muted-foreground">
-            Dashboard consolidado: Caixa Operacional + Despesas de Infraestrutura
-          </p>
-        </div>
-
-        {/* Filtros de Período */}
-        <div className="flex flex-wrap items-center gap-3">
-          <Select value={periodoPreset} onValueChange={setPeriodoPreset}>
-            <SelectTrigger className="w-[140px]">
-              <Calendar className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Período" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todo período</SelectItem>
-              <SelectItem value="1m">Último mês</SelectItem>
-              <SelectItem value="3m">3 meses</SelectItem>
-              <SelectItem value="6m">6 meses</SelectItem>
-              <SelectItem value="12m">12 meses</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <div className="flex items-center gap-2">
-            <DatePicker
-              value={dataInicio}
-              onChange={setDataInicio}
-              placeholder="Data início"
-            />
-            <span className="text-muted-foreground">até</span>
-            <DatePicker
-              value={dataFim}
-              onChange={setDataFim}
-              placeholder="Data fim"
-            />
-          </div>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Visão Financeira</h1>
+        <p className="text-muted-foreground">
+          Dashboard consolidado: Caixa Operacional + Despesas de Infraestrutura
+        </p>
       </div>
 
       {/* Main KPIs */}
@@ -457,6 +424,37 @@ export default function Financeiro() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          {/* Filtros de Período */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Select value={periodoPreset} onValueChange={setPeriodoPreset}>
+              <SelectTrigger className="w-[140px]">
+                <Calendar className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todo período</SelectItem>
+                <SelectItem value="1m">Último mês</SelectItem>
+                <SelectItem value="3m">3 meses</SelectItem>
+                <SelectItem value="6m">6 meses</SelectItem>
+                <SelectItem value="12m">12 meses</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex items-center gap-2">
+              <DatePicker
+                value={dataInicio}
+                onChange={setDataInicio}
+                placeholder="Data início"
+              />
+              <span className="text-muted-foreground">até</span>
+              <DatePicker
+                value={dataFim}
+                onChange={setDataFim}
+                placeholder="Data fim"
+              />
+            </div>
+          </div>
+
           {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Monthly Evolution */}
@@ -737,7 +735,7 @@ export default function Financeiro() {
                       padding: "12px 16px"
                     }}
                     cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
-                    formatter={(value: number) => [formatCurrency(value), ""]}
+                    formatter={(value: number, name: string) => [formatCurrency(value), name]}
                   />
                   <Legend />
                   <Bar 
