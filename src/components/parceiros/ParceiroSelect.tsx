@@ -99,7 +99,7 @@ export default function ParceiroSelect({ value, onValueChange, disabled, onlyPar
     <Select value={value} onValueChange={onValueChange} disabled={disabled || loading}>
       <SelectTrigger className="w-full">
         {selectedParceiro ? (
-          <div className="flex items-center gap-2 w-full">
+          <div className="flex items-center justify-center gap-2 w-full">
             <User className="h-4 w-4" />
             <span>{selectedParceiro.nome}</span>
           </div>
