@@ -7,9 +7,12 @@ import { subMonths, startOfMonth, endOfMonth } from "date-fns";
 
 interface ROIData {
   investidor: string;
-  totalAportes: number;
-  totalLiquidacoes: number;
-  saldo: number;
+  totalAportesFiat: number;
+  totalAportesCryptoUsd: number;
+  totalLiquidacoesFiat: number;
+  totalLiquidacoesCryptoUsd: number;
+  saldoFiat: number;
+  saldoCryptoUsd: number;
   roi: number;
 }
 
@@ -30,10 +33,11 @@ export function RelatorioROI() {
       const dataInicio = startOfMonth(subMonths(new Date(), mesesAtras));
       const dataFim = endOfMonth(new Date());
 
+      // Query usando APORTE_FINANCEIRO e distinguindo por origem_tipo/destino_tipo
       const { data: transacoes, error } = await supabase
         .from("cash_ledger")
         .select("*")
-        .in("tipo_transacao", ["APORTE", "LIQUIDACAO"])
+        .eq("tipo_transacao", "APORTE_FINANCEIRO")
         .gte("data_transacao", dataInicio.toISOString())
         .lte("data_transacao", dataFim.toISOString())
         .eq("status", "CONFIRMADO");
@@ -49,25 +53,46 @@ export function RelatorioROI() {
         if (!investidoresMap[investidor]) {
           investidoresMap[investidor] = {
             investidor,
-            totalAportes: 0,
-            totalLiquidacoes: 0,
-            saldo: 0,
+            totalAportesFiat: 0,
+            totalAportesCryptoUsd: 0,
+            totalLiquidacoesFiat: 0,
+            totalLiquidacoesCryptoUsd: 0,
+            saldoFiat: 0,
+            saldoCryptoUsd: 0,
             roi: 0,
           };
         }
 
-        if (t.tipo_transacao === "APORTE") {
-          investidoresMap[investidor].totalAportes += t.valor;
-        } else if (t.tipo_transacao === "LIQUIDACAO") {
-          investidoresMap[investidor].totalLiquidacoes += t.valor;
+        // Distinguir APORTE vs LIQUIDACAO pelo origem_tipo/destino_tipo
+        const isAporte = t.origem_tipo === "INVESTIDOR";
+        const isLiquidacao = t.destino_tipo === "INVESTIDOR";
+        const isCrypto = t.tipo_moeda === "CRYPTO";
+
+        if (isAporte) {
+          if (isCrypto) {
+            investidoresMap[investidor].totalAportesCryptoUsd += t.valor_usd || t.valor;
+          } else {
+            investidoresMap[investidor].totalAportesFiat += t.valor;
+          }
+        } else if (isLiquidacao) {
+          if (isCrypto) {
+            investidoresMap[investidor].totalLiquidacoesCryptoUsd += t.valor_usd || t.valor;
+          } else {
+            investidoresMap[investidor].totalLiquidacoesFiat += t.valor;
+          }
         }
       });
 
       // Calculate ROI and saldo
       const dadosCalculados = Object.values(investidoresMap).map((inv) => {
-        inv.saldo = inv.totalAportes - inv.totalLiquidacoes;
-        inv.roi = inv.totalAportes > 0 
-          ? ((inv.totalLiquidacoes / inv.totalAportes) * 100) - 100 
+        const totalAportes = inv.totalAportesFiat + inv.totalAportesCryptoUsd;
+        const totalLiquidacoes = inv.totalLiquidacoesFiat + inv.totalLiquidacoesCryptoUsd;
+        
+        inv.saldoFiat = inv.totalAportesFiat - inv.totalLiquidacoesFiat;
+        inv.saldoCryptoUsd = inv.totalAportesCryptoUsd - inv.totalLiquidacoesCryptoUsd;
+        
+        inv.roi = totalAportes > 0 
+          ? ((totalLiquidacoes / totalAportes) * 100) - 100 
           : 0;
         return inv;
       });
@@ -80,27 +105,32 @@ export function RelatorioROI() {
     }
   };
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number, currency: string = "BRL") => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
-      currency: "BRL",
+      currency: currency,
     }).format(value);
   };
 
   const getTotals = () => {
     return dadosROI.reduce(
       (acc, inv) => ({
-        aportes: acc.aportes + inv.totalAportes,
-        liquidacoes: acc.liquidacoes + inv.totalLiquidacoes,
-        saldo: acc.saldo + inv.saldo,
+        aportesFiat: acc.aportesFiat + inv.totalAportesFiat,
+        aportesCrypto: acc.aportesCrypto + inv.totalAportesCryptoUsd,
+        liquidacoesFiat: acc.liquidacoesFiat + inv.totalLiquidacoesFiat,
+        liquidacoesCrypto: acc.liquidacoesCrypto + inv.totalLiquidacoesCryptoUsd,
+        saldoFiat: acc.saldoFiat + inv.saldoFiat,
+        saldoCrypto: acc.saldoCrypto + inv.saldoCryptoUsd,
       }),
-      { aportes: 0, liquidacoes: 0, saldo: 0 }
+      { aportesFiat: 0, aportesCrypto: 0, liquidacoesFiat: 0, liquidacoesCrypto: 0, saldoFiat: 0, saldoCrypto: 0 }
     );
   };
 
   const totals = getTotals();
-  const roiGeral = totals.aportes > 0 
-    ? ((totals.liquidacoes / totals.aportes) * 100) - 100 
+  const totalAportes = totals.aportesFiat + totals.aportesCrypto;
+  const totalLiquidacoes = totals.liquidacoesFiat + totals.liquidacoesCrypto;
+  const roiGeral = totalAportes > 0 
+    ? ((totalLiquidacoes / totalAportes) * 100) - 100 
     : 0;
 
   return (
@@ -131,24 +161,38 @@ export function RelatorioROI() {
         ) : (
           <div className="space-y-4">
             {/* Resumo Geral */}
-            <div className="grid gap-4 md:grid-cols-3 mb-6 p-4 rounded-lg bg-muted/30 border border-border/50">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6 p-4 rounded-lg bg-muted/30 border border-border/50">
               <div className="text-center">
-                <div className="text-xs text-muted-foreground mb-1">Total Aportes</div>
+                <div className="text-xs text-muted-foreground mb-1">Aportes FIAT</div>
                 <div className="text-lg font-bold text-emerald-400">
-                  {formatCurrency(totals.aportes)}
+                  {formatCurrency(totals.aportesFiat)}
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-xs text-muted-foreground mb-1">Total Liquidações</div>
+                <div className="text-xs text-muted-foreground mb-1">Aportes Crypto</div>
+                <div className="text-lg font-bold text-emerald-400">
+                  {formatCurrency(totals.aportesCrypto, "USD")}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-xs text-muted-foreground mb-1">Liquidações FIAT</div>
                 <div className="text-lg font-bold text-amber-400">
-                  {formatCurrency(totals.liquidacoes)}
+                  {formatCurrency(totals.liquidacoesFiat)}
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-xs text-muted-foreground mb-1">ROI Geral</div>
-                <div className={`text-lg font-bold ${roiGeral >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                  {roiGeral >= 0 ? "+" : ""}{roiGeral.toFixed(2)}%
+                <div className="text-xs text-muted-foreground mb-1">Liquidações Crypto</div>
+                <div className="text-lg font-bold text-amber-400">
+                  {formatCurrency(totals.liquidacoesCrypto, "USD")}
                 </div>
+              </div>
+            </div>
+            
+            {/* ROI Geral */}
+            <div className="text-center p-3 rounded-lg bg-card/30 border border-border/50">
+              <div className="text-xs text-muted-foreground mb-1">ROI Geral</div>
+              <div className={`text-xl font-bold ${roiGeral >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {roiGeral >= 0 ? "+" : ""}{roiGeral.toFixed(2)}%
               </div>
             </div>
 
@@ -172,26 +216,60 @@ export function RelatorioROI() {
                       {inv.roi >= 0 ? "+" : ""}{inv.roi.toFixed(2)}%
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Aportes</div>
-                      <div className="font-medium text-emerald-400">
-                        {formatCurrency(inv.totalAportes)}
+                  
+                  {/* FIAT */}
+                  {(inv.totalAportesFiat > 0 || inv.totalLiquidacoesFiat > 0) && (
+                    <div className="mb-3">
+                      <div className="text-xs text-muted-foreground mb-2 font-medium">FIAT (BRL)</div>
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Aportes</div>
+                          <div className="font-medium text-emerald-400">
+                            {formatCurrency(inv.totalAportesFiat)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Liquidações</div>
+                          <div className="font-medium text-amber-400">
+                            {formatCurrency(inv.totalLiquidacoesFiat)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Saldo</div>
+                          <div className={`font-medium ${inv.saldoFiat >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                            {formatCurrency(inv.saldoFiat)}
+                          </div>
+                        </div>
                       </div>
                     </div>
+                  )}
+                  
+                  {/* CRYPTO */}
+                  {(inv.totalAportesCryptoUsd > 0 || inv.totalLiquidacoesCryptoUsd > 0) && (
                     <div>
-                      <div className="text-xs text-muted-foreground mb-1">Liquidações</div>
-                      <div className="font-medium text-amber-400">
-                        {formatCurrency(inv.totalLiquidacoes)}
+                      <div className="text-xs text-muted-foreground mb-2 font-medium">CRYPTO (USD)</div>
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Aportes</div>
+                          <div className="font-medium text-emerald-400">
+                            {formatCurrency(inv.totalAportesCryptoUsd, "USD")}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Liquidações</div>
+                          <div className="font-medium text-amber-400">
+                            {formatCurrency(inv.totalLiquidacoesCryptoUsd, "USD")}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Saldo</div>
+                          <div className={`font-medium ${inv.saldoCryptoUsd >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                            {formatCurrency(inv.saldoCryptoUsd, "USD")}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Saldo</div>
-                      <div className={`font-medium ${inv.saldo >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                        {formatCurrency(inv.saldo)}
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>

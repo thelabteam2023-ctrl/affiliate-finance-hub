@@ -10,8 +10,14 @@ interface Transacao {
   id: string;
   data_transacao: string;
   tipo_transacao: string;
+  origem_tipo: string | null;
+  destino_tipo: string | null;
+  tipo_moeda: string;
   moeda: string;
+  coin: string | null;
   valor: number;
+  valor_usd: number | null;
+  qtd_coin: number | null;
   descricao: string | null;
   nome_investidor: string;
 }
@@ -34,10 +40,11 @@ export function HistoricoInvestidor() {
 
   const fetchInvestidores = async () => {
     try {
+      // Buscar investidores usando APORTE_FINANCEIRO
       const { data, error } = await supabase
         .from("cash_ledger")
         .select("nome_investidor")
-        .in("tipo_transacao", ["APORTE", "LIQUIDACAO"])
+        .eq("tipo_transacao", "APORTE_FINANCEIRO")
         .not("nome_investidor", "is", null)
         .eq("status", "CONFIRMADO");
 
@@ -63,11 +70,12 @@ export function HistoricoInvestidor() {
     try {
       setLoading(true);
       
+      // Buscar transações usando APORTE_FINANCEIRO
       const { data, error } = await supabase
         .from("cash_ledger")
         .select("*")
         .eq("nome_investidor", investidorSelecionado)
-        .in("tipo_transacao", ["APORTE", "LIQUIDACAO"])
+        .eq("tipo_transacao", "APORTE_FINANCEIRO")
         .eq("status", "CONFIRMADO")
         .order("data_transacao", { ascending: false });
 
@@ -88,22 +96,38 @@ export function HistoricoInvestidor() {
     }).format(value);
   };
 
+  // Determinar se é APORTE ou LIQUIDACAO pelo origem_tipo/destino_tipo
+  const isAporte = (t: Transacao) => t.origem_tipo === "INVESTIDOR";
+  const isLiquidacao = (t: Transacao) => t.destino_tipo === "INVESTIDOR";
+
   const getTotals = () => {
     return transacoes.reduce(
       (acc, t) => {
-        if (t.tipo_transacao === "APORTE") {
-          acc.totalAportes += t.valor;
-        } else if (t.tipo_transacao === "LIQUIDACAO") {
-          acc.totalLiquidacoes += t.valor;
+        const isCrypto = t.tipo_moeda === "CRYPTO";
+        const valorUsd = t.valor_usd || t.valor;
+        
+        if (isAporte(t)) {
+          if (isCrypto) {
+            acc.totalAportesCryptoUsd += valorUsd;
+          } else {
+            acc.totalAportesFiat += t.valor;
+          }
+        } else if (isLiquidacao(t)) {
+          if (isCrypto) {
+            acc.totalLiquidacoesCryptoUsd += valorUsd;
+          } else {
+            acc.totalLiquidacoesFiat += t.valor;
+          }
         }
         return acc;
       },
-      { totalAportes: 0, totalLiquidacoes: 0 }
+      { totalAportesFiat: 0, totalAportesCryptoUsd: 0, totalLiquidacoesFiat: 0, totalLiquidacoesCryptoUsd: 0 }
     );
   };
 
   const totals = getTotals();
-  const saldoAtual = totals.totalAportes - totals.totalLiquidacoes;
+  const saldoFiat = totals.totalAportesFiat - totals.totalLiquidacoesFiat;
+  const saldoCryptoUsd = totals.totalAportesCryptoUsd - totals.totalLiquidacoesCryptoUsd;
 
   return (
     <>
@@ -133,27 +157,57 @@ export function HistoricoInvestidor() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Totalizadores */}
-            <div className="grid gap-4 md:grid-cols-3 p-4 rounded-lg bg-muted/30 border border-border/50">
-              <div className="text-center">
-                <div className="text-xs text-muted-foreground mb-1">Total Aportes</div>
-                <div className="text-lg font-bold text-emerald-400">
-                  {formatCurrency(totals.totalAportes, "BRL")}
+            {/* Totalizadores FIAT */}
+            <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+              <div className="text-xs text-muted-foreground mb-3 font-medium">FIAT (BRL)</div>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="text-center">
+                  <div className="text-xs text-muted-foreground mb-1">Total Aportes</div>
+                  <div className="text-lg font-bold text-emerald-400">
+                    {formatCurrency(totals.totalAportesFiat, "BRL")}
+                  </div>
                 </div>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-muted-foreground mb-1">Total Liquidações</div>
-                <div className="text-lg font-bold text-amber-400">
-                  {formatCurrency(totals.totalLiquidacoes, "BRL")}
+                <div className="text-center">
+                  <div className="text-xs text-muted-foreground mb-1">Total Liquidações</div>
+                  <div className="text-lg font-bold text-amber-400">
+                    {formatCurrency(totals.totalLiquidacoesFiat, "BRL")}
+                  </div>
                 </div>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-muted-foreground mb-1">Saldo</div>
-                <div className={`text-lg font-bold ${saldoAtual >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                  {formatCurrency(saldoAtual, "BRL")}
+                <div className="text-center">
+                  <div className="text-xs text-muted-foreground mb-1">Saldo</div>
+                  <div className={`text-lg font-bold ${saldoFiat >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                    {formatCurrency(saldoFiat, "BRL")}
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* Totalizadores CRYPTO */}
+            {(totals.totalAportesCryptoUsd > 0 || totals.totalLiquidacoesCryptoUsd > 0) && (
+              <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                <div className="text-xs text-muted-foreground mb-3 font-medium">CRYPTO (USD)</div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="text-center">
+                    <div className="text-xs text-muted-foreground mb-1">Total Aportes</div>
+                    <div className="text-lg font-bold text-emerald-400">
+                      {formatCurrency(totals.totalAportesCryptoUsd, "USD")}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-muted-foreground mb-1">Total Liquidações</div>
+                    <div className="text-lg font-bold text-amber-400">
+                      {formatCurrency(totals.totalLiquidacoesCryptoUsd, "USD")}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-muted-foreground mb-1">Saldo</div>
+                    <div className={`text-lg font-bold ${saldoCryptoUsd >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                      {formatCurrency(saldoCryptoUsd, "USD")}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Histórico */}
             <div className="space-y-2">
@@ -165,47 +219,66 @@ export function HistoricoInvestidor() {
                   Nenhuma transação encontrada
                 </div>
               ) : (
-                transacoes.map((t) => (
-                  <div
-                    key={t.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-card/30 border border-border/50 hover:bg-card/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        variant="outline"
-                        className={
-                          t.tipo_transacao === "APORTE"
-                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                            : "bg-amber-500/20 text-amber-400 border-amber-500/30"
-                        }
-                      >
-                        {t.tipo_transacao === "APORTE" ? "Aporte" : "Liquidação"}
-                      </Badge>
-                      <div>
-                        <div className="text-sm font-medium">
-                          {t.tipo_transacao === "APORTE" ? "Investidor Externo" : "Caixa Operacional"}
+                transacoes.map((t) => {
+                  const isAporteT = isAporte(t);
+                  const isCrypto = t.tipo_moeda === "CRYPTO";
+                  
+                  return (
+                    <div
+                      key={t.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-card/30 border border-border/50 hover:bg-card/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant="outline"
+                          className={
+                            isAporteT
+                              ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                              : "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                          }
+                        >
+                          {isAporteT ? "Aporte" : "Liquidação"}
+                        </Badge>
+                        {isCrypto && (
+                          <Badge variant="outline" className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                            {t.coin}
+                          </Badge>
+                        )}
+                        <div>
+                          <div className="text-sm font-medium">
+                            {isAporteT ? "Investidor Externo" : "Caixa Operacional"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {format(new Date(t.data_transacao), "dd/MM/yyyy HH:mm")}
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {format(new Date(t.data_transacao), "dd/MM/yyyy HH:mm")}
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <div className="text-sm font-medium">
+                            {isAporteT ? "Caixa Operacional" : "Investidor Externo"}
+                          </div>
+                          {t.descricao && (
+                            <div className="text-xs text-muted-foreground">{t.descricao}</div>
+                          )}
                         </div>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <div className="text-sm font-medium">
-                          {t.tipo_transacao === "APORTE" ? "Caixa Operacional" : "Investidor Externo"}
-                        </div>
-                        {t.descricao && (
-                          <div className="text-xs text-muted-foreground">{t.descricao}</div>
+                      <div className={`text-right font-bold ${
+                        isAporteT ? "text-emerald-400" : "text-amber-400"
+                      }`}>
+                        {isCrypto ? (
+                          <div className="space-y-0.5">
+                            <div className="font-mono text-sm">{t.qtd_coin?.toFixed(4)} {t.coin}</div>
+                            <div className="text-xs text-muted-foreground">
+                              ≈ {formatCurrency(t.valor_usd || t.valor, "USD")}
+                            </div>
+                          </div>
+                        ) : (
+                          formatCurrency(t.valor, t.moeda)
                         )}
                       </div>
                     </div>
-                    <div className={`text-right font-bold ${
-                      t.tipo_transacao === "APORTE" ? "text-emerald-400" : "text-amber-400"
-                    }`}>
-                      {formatCurrency(t.valor, t.moeda)}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
