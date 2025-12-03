@@ -1,13 +1,21 @@
 import { useState, useEffect } from "react";
+import { Plus, Trash2, Percent } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { validateCPF } from "@/lib/validators";
+
+interface FaixaProgressiva {
+  limite: number;
+  percentual: number;
+}
 
 interface InvestidorDialogProps {
   open: boolean;
@@ -17,8 +25,19 @@ interface InvestidorDialogProps {
   onSuccess: () => void;
 }
 
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+  }).format(value);
+};
+
 export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSuccess }: InvestidorDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("dados");
+  
+  // Dados pessoais
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
   const [status, setStatus] = useState("ativo");
@@ -26,20 +45,67 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
   const [cpfValidation, setCpfValidation] = useState<{ valid: boolean; message: string } | null>(null);
   const [cpfLoading, setCpfLoading] = useState(false);
 
+  // Deal
+  const [dealId, setDealId] = useState<string | null>(null);
+  const [tipoDeal, setTipoDeal] = useState<"FIXO" | "PROGRESSIVO">("FIXO");
+  const [percentualFixo, setPercentualFixo] = useState("40");
+  const [faixasProgressivas, setFaixasProgressivas] = useState<FaixaProgressiva[]>([
+    { limite: 10000, percentual: 20 },
+    { limite: 50000, percentual: 30 },
+    { limite: 100000, percentual: 40 },
+  ]);
+
   useEffect(() => {
     if (investidor) {
       setNome(investidor.nome || "");
       setCpf(investidor.cpf || "");
       setStatus(investidor.status || "ativo");
       setObservacoes(investidor.observacoes || "");
+      // Fetch deal if exists
+      if (mode !== "create") {
+        fetchDeal(investidor.id);
+      }
     } else {
       setNome("");
       setCpf("");
       setStatus("ativo");
       setObservacoes("");
+      setDealId(null);
+      setTipoDeal("FIXO");
+      setPercentualFixo("40");
+      setFaixasProgressivas([
+        { limite: 10000, percentual: 20 },
+        { limite: 50000, percentual: 30 },
+        { limite: 100000, percentual: 40 },
+      ]);
     }
     setCpfValidation(null);
+    setActiveTab("dados");
   }, [investidor, open]);
+
+  const fetchDeal = async (investidorId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("investidor_deals")
+        .select("*")
+        .eq("investidor_id", investidorId)
+        .eq("ativo", true)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setDealId(data.id);
+        setTipoDeal(data.tipo_deal as "FIXO" | "PROGRESSIVO");
+        setPercentualFixo(data.percentual_fixo?.toString() || "40");
+        if (data.faixas_progressivas && Array.isArray(data.faixas_progressivas)) {
+          setFaixasProgressivas(data.faixas_progressivas as unknown as FaixaProgressiva[]);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao carregar deal:", error);
+    }
+  };
 
   const validateCPFUnique = async (cpfValue: string) => {
     if (mode === "view") return;
@@ -101,6 +167,26 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
     return value;
   };
 
+  const addFaixa = () => {
+    const lastFaixa = faixasProgressivas[faixasProgressivas.length - 1];
+    setFaixasProgressivas([
+      ...faixasProgressivas,
+      { limite: lastFaixa ? lastFaixa.limite + 50000 : 10000, percentual: lastFaixa ? lastFaixa.percentual + 5 : 20 },
+    ]);
+  };
+
+  const removeFaixa = (index: number) => {
+    if (faixasProgressivas.length > 1) {
+      setFaixasProgressivas(faixasProgressivas.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateFaixa = (index: number, field: "limite" | "percentual", value: number) => {
+    const updated = [...faixasProgressivas];
+    updated[index][field] = value;
+    setFaixasProgressivas(updated);
+  };
+
   const handleSubmit = async () => {
     if (!nome.trim() || !cpf.trim()) {
       toast.error("Preencha todos os campos obrigatórios");
@@ -126,9 +212,16 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
         observacoes: observacoes.trim() || null,
       };
 
+      let investidorId = investidor?.id;
+
       if (mode === "create") {
-        const { error } = await supabase.from("investidores").insert([investidorData]);
+        const { data, error } = await supabase
+          .from("investidores")
+          .insert([investidorData])
+          .select("id")
+          .single();
         if (error) throw error;
+        investidorId = data.id;
         toast.success("Investidor criado com sucesso");
       } else if (mode === "edit") {
         const { error } = await supabase
@@ -137,6 +230,33 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
           .eq("id", investidor.id);
         if (error) throw error;
         toast.success("Investidor atualizado com sucesso");
+      }
+
+      // Save deal
+      if (investidorId && mode !== "view") {
+        const dealData = {
+          investidor_id: investidorId,
+          user_id: user.id,
+          tipo_deal: tipoDeal,
+          percentual_fixo: tipoDeal === "FIXO" ? parseFloat(percentualFixo) : null,
+          faixas_progressivas: tipoDeal === "PROGRESSIVO" ? JSON.parse(JSON.stringify(faixasProgressivas)) : [],
+          ativo: true,
+        };
+
+        if (dealId) {
+          // Update existing deal
+          const { error } = await supabase
+            .from("investidor_deals")
+            .update(dealData)
+            .eq("id", dealId);
+          if (error) throw error;
+        } else {
+          // Create new deal
+          const { error } = await supabase
+            .from("investidor_deals")
+            .insert([dealData]);
+          if (error) throw error;
+        }
       }
 
       onSuccess();
@@ -161,61 +281,177 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="nome">Nome Completo *</Label>
-            <Input
-              id="nome"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              disabled={isViewMode}
-              placeholder="Nome do investidor"
-            />
-          </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="dados">Dados Pessoais</TabsTrigger>
+            <TabsTrigger value="acordo">Acordo de Remuneração</TabsTrigger>
+          </TabsList>
 
-          <div className="space-y-2">
-            <Label htmlFor="cpf">CPF *</Label>
-            <Input
-              id="cpf"
-              value={cpf}
-              onChange={(e) => setCpf(formatCPFInput(e.target.value))}
-              disabled={isViewMode}
-              placeholder="000.000.000-00"
-              maxLength={14}
-            />
-            {!isViewMode && cpfLoading && (
-              <p className="text-xs text-muted-foreground">Validando CPF...</p>
-            )}
-            {!isViewMode && cpfValidation && !cpfValidation.valid && (
-              <p className="text-xs text-destructive">{cpfValidation.message}</p>
-            )}
-          </div>
+          <TabsContent value="dados" className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="nome">Nome Completo *</Label>
+              <Input
+                id="nome"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                disabled={isViewMode}
+                placeholder="Nome do investidor"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select value={status} onValueChange={setStatus} disabled={isViewMode}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ativo">ATIVO</SelectItem>
-                <SelectItem value="inativo">INATIVO</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="cpf">CPF *</Label>
+              <Input
+                id="cpf"
+                value={cpf}
+                onChange={(e) => setCpf(formatCPFInput(e.target.value))}
+                disabled={isViewMode}
+                placeholder="000.000.000-00"
+                maxLength={14}
+              />
+              {!isViewMode && cpfLoading && (
+                <p className="text-xs text-muted-foreground">Validando CPF...</p>
+              )}
+              {!isViewMode && cpfValidation && !cpfValidation.valid && (
+                <p className="text-xs text-destructive">{cpfValidation.message}</p>
+              )}
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="observacoes">Observações (opcional)</Label>
-            <Textarea
-              id="observacoes"
-              value={observacoes}
-              onChange={(e) => setObservacoes(e.target.value)}
-              disabled={isViewMode}
-              placeholder="Informações adicionais sobre o investidor"
-              rows={4}
-            />
-          </div>
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select value={status} onValueChange={setStatus} disabled={isViewMode}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ativo">ATIVO</SelectItem>
+                  <SelectItem value="inativo">INATIVO</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="observacoes">Observações (opcional)</Label>
+              <Textarea
+                id="observacoes"
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                disabled={isViewMode}
+                placeholder="Informações adicionais sobre o investidor"
+                rows={4}
+              />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="acordo" className="space-y-4 mt-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50">
+                <div className="space-y-1">
+                  <Label className="text-base">Tipo de Acordo</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {tipoDeal === "FIXO" 
+                      ? "Percentual fixo sobre lucros" 
+                      : "Percentual progressivo por faixas de lucro"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm ${tipoDeal === "FIXO" ? "text-primary font-semibold" : "text-muted-foreground"}`}>
+                    Fixo
+                  </span>
+                  <Switch
+                    checked={tipoDeal === "PROGRESSIVO"}
+                    onCheckedChange={(checked) => setTipoDeal(checked ? "PROGRESSIVO" : "FIXO")}
+                    disabled={isViewMode}
+                  />
+                  <span className={`text-sm ${tipoDeal === "PROGRESSIVO" ? "text-primary font-semibold" : "text-muted-foreground"}`}>
+                    Progressivo
+                  </span>
+                </div>
+              </div>
+
+              {tipoDeal === "FIXO" ? (
+                <div className="p-4 rounded-lg bg-muted/20 border border-border/50">
+                  <Label className="text-sm text-muted-foreground">Percentual Fixo</Label>
+                  <div className="flex items-center gap-3 mt-2">
+                    <Input
+                      type="number"
+                      value={percentualFixo}
+                      onChange={(e) => setPercentualFixo(e.target.value)}
+                      disabled={isViewMode}
+                      className="w-24 text-center text-lg font-bold"
+                      min={0}
+                      max={100}
+                    />
+                    <Percent className="h-5 w-5 text-primary" />
+                    <span className="text-sm text-muted-foreground">dos lucros</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Faixas Progressivas</Label>
+                    {!isViewMode && (
+                      <Button variant="outline" size="sm" onClick={addFaixa}>
+                        <Plus className="h-4 w-4 mr-1" />
+                        Adicionar Faixa
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {faixasProgressivas.map((faixa, index) => (
+                      <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/20 border border-border/50">
+                        <div className="flex-1 grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">
+                              {index === 0 ? "Até" : "Acima de"}
+                            </Label>
+                            <Input
+                              type="number"
+                              value={faixa.limite}
+                              onChange={(e) => updateFaixa(index, "limite", parseFloat(e.target.value) || 0)}
+                              disabled={isViewMode}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Percentual</Label>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Input
+                                type="number"
+                                value={faixa.percentual}
+                                onChange={(e) => updateFaixa(index, "percentual", parseFloat(e.target.value) || 0)}
+                                disabled={isViewMode}
+                                className="w-20"
+                                min={0}
+                                max={100}
+                              />
+                              <span className="text-sm font-semibold text-primary">%</span>
+                            </div>
+                          </div>
+                        </div>
+                        {!isViewMode && faixasProgressivas.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeFaixa(index)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    * O lucro é calculado de forma progressiva, aplicando cada percentual à faixa correspondente.
+                  </p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
 
         <div className="flex justify-end gap-2 mt-6">
           <Button variant="outline" onClick={() => onOpenChange(false)}>

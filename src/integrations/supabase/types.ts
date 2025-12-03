@@ -482,6 +482,63 @@ export type Database = {
           },
         ]
       }
+      investidor_deals: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          faixas_progressivas: Json | null
+          id: string
+          investidor_id: string
+          percentual_fixo: number | null
+          tipo_deal: string
+          updated_at: string | null
+          user_id: string
+          vigencia_fim: string | null
+          vigencia_inicio: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          faixas_progressivas?: Json | null
+          id?: string
+          investidor_id: string
+          percentual_fixo?: number | null
+          tipo_deal?: string
+          updated_at?: string | null
+          user_id: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          faixas_progressivas?: Json | null
+          id?: string
+          investidor_id?: string
+          percentual_fixo?: number | null
+          tipo_deal?: string
+          updated_at?: string | null
+          user_id?: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investidor_deals_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "investidores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investidor_deals_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "v_roi_investidores"
+            referencedColumns: ["investidor_id"]
+          },
+        ]
+      }
       investidores: {
         Row: {
           cpf: string
