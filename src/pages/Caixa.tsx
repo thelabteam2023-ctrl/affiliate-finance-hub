@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { CaixaRelatorios } from "@/components/caixa/CaixaRelatorios";
+import { SaldosParceirosSheet } from "@/components/caixa/SaldosParceirosSheet";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -372,10 +373,13 @@ export default function Caixa() {
             Gestão centralizada de movimentações financeiras
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Nova Transação
-        </Button>
+        <div className="flex items-center gap-2">
+          <SaldosParceirosSheet />
+          <Button onClick={() => setDialogOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Nova Transação
+          </Button>
+        </div>
       </div>
 
       {/* KPIs */}
