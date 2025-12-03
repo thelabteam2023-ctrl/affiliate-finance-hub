@@ -106,12 +106,34 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
   }, [parceria, open]);
 
   const fetchParceiros = async () => {
+    // If editing, show all active partners
+    if (parceria) {
+      const { data } = await supabase
+        .from("parceiros")
+        .select("id, nome, cpf")
+        .eq("status", "ativo")
+        .order("nome");
+      setParceiros(data || []);
+      return;
+    }
+
+    // For new partnerships, exclude partners that already have active partnerships
+    const { data: parceriasExistentes } = await supabase
+      .from("parcerias")
+      .select("parceiro_id")
+      .in("status", ["ATIVA", "EM_ENCERRAMENTO"]);
+
+    const parceirosComParceria = new Set((parceriasExistentes || []).map(p => p.parceiro_id));
+
     const { data } = await supabase
       .from("parceiros")
       .select("id, nome, cpf")
       .eq("status", "ativo")
       .order("nome");
-    setParceiros(data || []);
+
+    // Filter out partners that already have active partnerships
+    const parceirosDisponiveis = (data || []).filter(p => !parceirosComParceria.has(p.id));
+    setParceiros(parceirosDisponiveis);
   };
 
   const fetchIndicadores = async () => {
