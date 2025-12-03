@@ -47,19 +47,21 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
     fetchBookmakers();
   }, [parceiroId, somenteComSaldo]);
 
-  // Buscar bookmaker específica se value existir mas não estiver na lista
+  // Buscar bookmaker específica imediatamente quando value muda
   useEffect(() => {
-    const currentList = isVinculoMode ? vinculosBookmakers : bookmakers;
-    const foundItem = currentList.find(b => b.id === value);
-    
-    if (value && !foundItem && !loading) {
-      fetchSelectedBookmaker();
-    } else if (foundItem) {
-      setSelectedItem(foundItem);
-    } else if (!value) {
+    if (value) {
+      const currentList = isVinculoMode ? vinculosBookmakers : bookmakers;
+      const found = currentList.find(b => b.id === value);
+      if (found) {
+        setSelectedItem(found);
+      } else if (!isVinculoMode) {
+        // Se não encontrou e não está no modo vínculo, buscar diretamente do catálogo
+        fetchSelectedBookmaker(value);
+      }
+    } else {
       setSelectedItem(null);
     }
-  }, [value, bookmakers, vinculosBookmakers, isVinculoMode, loading]);
+  }, [value, bookmakers, vinculosBookmakers, isVinculoMode]);
 
   const fetchBookmakers = async () => {
     try {
@@ -118,21 +120,18 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
     }
   };
 
-  const fetchSelectedBookmaker = async () => {
-    if (!value) return;
+  const fetchSelectedBookmaker = async (bookmakerId: string) => {
+    if (!bookmakerId) return;
     try {
-      // Buscar do catálogo (quando não está no modo vínculo)
-      if (!isVinculoMode) {
-        const { data, error } = await supabase
-          .from("bookmakers_catalogo")
-          .select("id, nome, logo_url, links_json")
-          .eq("id", value)
-          .single();
+      const { data, error } = await supabase
+        .from("bookmakers_catalogo")
+        .select("id, nome, logo_url, links_json")
+        .eq("id", bookmakerId)
+        .maybeSingle();
 
-        if (error) throw error;
-        if (data) {
-          setSelectedItem(data);
-        }
+      if (error) throw error;
+      if (data) {
+        setSelectedItem(data);
       }
     } catch (error) {
       console.error("Erro ao buscar bookmaker selecionada:", error);

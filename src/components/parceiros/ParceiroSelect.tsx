@@ -34,12 +34,19 @@ export default function ParceiroSelect({ value, onValueChange, disabled, onlyPar
     fetchParceiros();
   }, []);
 
-  // Buscar parceiro específico se value existir mas não estiver na lista
+  // Buscar parceiro específico imediatamente quando value muda
   useEffect(() => {
-    if (value && !parceiros.find(p => p.id === value)) {
-      fetchSelectedParceiro();
-    } else if (value) {
-      setSelectedParceiro(parceiros.find(p => p.id === value) || null);
+    if (value) {
+      // Primeiro tentar encontrar na lista já carregada
+      const found = parceiros.find(p => p.id === value);
+      if (found) {
+        setSelectedParceiro(found);
+      } else {
+        // Se não encontrou, buscar diretamente do banco
+        fetchSelectedParceiro(value);
+      }
+    } else {
+      setSelectedParceiro(null);
     }
   }, [value, parceiros]);
 
@@ -60,14 +67,14 @@ export default function ParceiroSelect({ value, onValueChange, disabled, onlyPar
     }
   };
 
-  const fetchSelectedParceiro = async () => {
-    if (!value) return;
+  const fetchSelectedParceiro = async (parceiroId: string) => {
+    if (!parceiroId) return;
     try {
       const { data, error } = await supabase
         .from("parceiros")
         .select("id, nome, cpf, status")
-        .eq("id", value)
-        .single();
+        .eq("id", parceiroId)
+        .maybeSingle();
 
       if (error) throw error;
       if (data) {
