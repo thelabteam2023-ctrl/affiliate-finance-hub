@@ -43,8 +43,7 @@ interface DespesaAdministrativaDialogProps {
 
 const categoriasBase = [
   { value: "ENERGIA", label: "Energia" },
-  { value: "INTERNET", label: "Internet" },
-  { value: "MOVEL", label: "Móvel" },
+  { value: "INTERNET_MOVEL", label: "Internet Móvel" },
   { value: "ALUGUEL", label: "Aluguel" },
   { value: "OPERADORES", label: "Operadores" },
 ];

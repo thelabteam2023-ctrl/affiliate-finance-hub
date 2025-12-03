@@ -378,10 +378,9 @@ export default function Financeiro() {
   const categoriasUnicas = [...new Set(despesasAdmin.map(d => d.categoria))];
   const coresCategoria: Record<string, string> = {
     ENERGIA: "hsl(var(--chart-1))",
-    INTERNET: "hsl(var(--chart-2))",
-    MOVEL: "hsl(var(--chart-3))",
-    ALUGUEL: "hsl(var(--chart-4))",
-    OPERADORES: "hsl(var(--chart-5))",
+    INTERNET_MOVEL: "hsl(var(--chart-2))",
+    ALUGUEL: "hsl(var(--chart-3))",
+    OPERADORES: "hsl(var(--chart-4))",
   };
 
   // Bar chart - comparison
