@@ -373,7 +373,12 @@ export default function Financeiro() {
                       }}
                       formatter={(value: number) => [formatCurrency(value), "Valor"]}
                     />
-                    <Bar dataKey="valor" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                    <Bar 
+                      dataKey="valor" 
+                      fill="hsl(var(--primary))" 
+                      radius={[0, 4, 4, 0]}
+                      background={{ fill: "transparent" }}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
