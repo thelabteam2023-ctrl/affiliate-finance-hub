@@ -38,6 +38,7 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
   const [vinculosBookmakers, setVinculosBookmakers] = useState<BookmakerVinculo[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selectedItem, setSelectedItem] = useState<BookmakerCatalogo | BookmakerVinculo | null>(null);
 
   // Determina se estamos no modo vínculo (com parceiroId) ou modo catálogo
   const isVinculoMode = !!parceiroId;
@@ -45,6 +46,20 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
   useEffect(() => {
     fetchBookmakers();
   }, [parceiroId, somenteComSaldo]);
+
+  // Buscar bookmaker específica se value existir mas não estiver na lista
+  useEffect(() => {
+    const currentList = isVinculoMode ? vinculosBookmakers : bookmakers;
+    const foundItem = currentList.find(b => b.id === value);
+    
+    if (value && !foundItem && !loading) {
+      fetchSelectedBookmaker();
+    } else if (foundItem) {
+      setSelectedItem(foundItem);
+    } else if (!value) {
+      setSelectedItem(null);
+    }
+  }, [value, bookmakers, vinculosBookmakers, isVinculoMode, loading]);
 
   const fetchBookmakers = async () => {
     try {
@@ -103,14 +118,31 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
     }
   };
 
+  const fetchSelectedBookmaker = async () => {
+    if (!value) return;
+    try {
+      // Buscar do catálogo (quando não está no modo vínculo)
+      if (!isVinculoMode) {
+        const { data, error } = await supabase
+          .from("bookmakers_catalogo")
+          .select("id, nome, logo_url, links_json")
+          .eq("id", value)
+          .single();
+
+        if (error) throw error;
+        if (data) {
+          setSelectedItem(data);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao buscar bookmaker selecionada:", error);
+    }
+  };
+
   // Filtrar baseado no modo atual
   const filteredItems = isVinculoMode
     ? vinculosBookmakers.filter((b) => b.nome.toLowerCase().includes(searchTerm.toLowerCase()))
     : bookmakers.filter((b) => b.nome.toLowerCase().includes(searchTerm.toLowerCase()));
-
-  const selectedItem = isVinculoMode
-    ? vinculosBookmakers.find((b) => b.id === value)
-    : bookmakers.find((b) => b.id === value);
 
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled || loading}>

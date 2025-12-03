@@ -28,10 +28,20 @@ export default function ParceiroSelect({ value, onValueChange, disabled, onlyPar
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedParceiro, setSelectedParceiro] = useState<Parceiro | null>(null);
 
   useEffect(() => {
     fetchParceiros();
   }, []);
+
+  // Buscar parceiro específico se value existir mas não estiver na lista
+  useEffect(() => {
+    if (value && !parceiros.find(p => p.id === value)) {
+      fetchSelectedParceiro();
+    } else if (value) {
+      setSelectedParceiro(parceiros.find(p => p.id === value) || null);
+    }
+  }, [value, parceiros]);
 
   const fetchParceiros = async () => {
     try {
@@ -50,6 +60,24 @@ export default function ParceiroSelect({ value, onValueChange, disabled, onlyPar
     }
   };
 
+  const fetchSelectedParceiro = async () => {
+    if (!value) return;
+    try {
+      const { data, error } = await supabase
+        .from("parceiros")
+        .select("id, nome, cpf, status")
+        .eq("id", value)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setSelectedParceiro(data);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar parceiro selecionado:", error);
+    }
+  };
+
   // Aplicar filtro de onlyParceiros se fornecido
   const availableParceiros = onlyParceiros 
     ? parceiros.filter(p => onlyParceiros.includes(p.id))
@@ -59,8 +87,6 @@ export default function ParceiroSelect({ value, onValueChange, disabled, onlyPar
     parceiro.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
     parceiro.cpf.includes(searchTerm)
   );
-
-  const selectedParceiro = parceiros.find((p) => p.id === value);
 
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled || loading}>

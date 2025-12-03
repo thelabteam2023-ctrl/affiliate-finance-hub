@@ -39,6 +39,7 @@ interface BookmakerDialogProps {
   defaultParceiroId?: string;
   defaultBookmakerId?: string;
   lockParceiro?: boolean;
+  lockBookmaker?: boolean;
 }
 
 interface BookmakerCatalogo {
@@ -55,7 +56,8 @@ export default function BookmakerDialog({
   bookmaker,
   defaultParceiroId,
   defaultBookmakerId,
-  lockParceiro = false 
+  lockParceiro = false,
+  lockBookmaker = false 
 }: BookmakerDialogProps) {
   const [loading, setLoading] = useState(false);
   const [parceiroId, setParceiroId] = useState("");
@@ -256,8 +258,13 @@ export default function BookmakerDialog({
             <BookmakerSelect
               value={bookmakerId}
               onValueChange={setBookmakerId}
-              disabled={loading}
+              disabled={loading || lockBookmaker}
             />
+            {lockBookmaker && (
+              <p className="text-xs text-muted-foreground">
+                Bookmaker selecionada a partir do contexto atual
+              </p>
+            )}
           </div>
 
           {selectedBookmaker && selectedBookmaker.links_json && selectedBookmaker.links_json.length > 0 && (
