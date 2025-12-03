@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
@@ -36,10 +36,12 @@ export default function BookmakerSelect({
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [displayData, setDisplayData] = useState<{ nome: string; logo_url: string | null } | null>(null);
-
+  
+  // Ref para rastrear o último value que buscamos
+  const lastFetchedValue = useRef<string>("");
   const isVinculoMode = !!parceiroId;
 
-  // Buscar lista de bookmakers
+  // Buscar lista de bookmakers para o dropdown
   useEffect(() => {
     const fetchBookmakers = async () => {
       setLoading(true);
@@ -96,24 +98,44 @@ export default function BookmakerSelect({
     fetchBookmakers();
   }, [parceiroId, somenteComSaldo]);
 
-  // Quando value muda, buscar dados para exibição
+  // Buscar dados de exibição quando value muda - INDEPENDENTE da lista
   useEffect(() => {
+    // Se value está vazio, limpar exibição
     if (!value) {
       setDisplayData(null);
+      lastFetchedValue.current = "";
       return;
     }
 
-    // Primeiro, verificar na lista local
-    const found = items.find(b => b.id === value);
-    if (found) {
-      setDisplayData({ nome: found.nome, logo_url: found.logo_url });
+    // Se já buscamos esse value, não buscar novamente
+    if (lastFetchedValue.current === value && displayData) {
       return;
     }
 
-    // Se não encontrou na lista e não está em modo vínculo, buscar do catálogo
-    if (!isVinculoMode) {
-      const fetchDisplayData = async () => {
-        try {
+    const fetchDisplayData = async () => {
+      try {
+        if (isVinculoMode) {
+          // Modo vínculo: buscar da tabela bookmakers
+          const { data } = await supabase
+            .from("bookmakers")
+            .select(`
+              nome,
+              bookmakers_catalogo:bookmaker_catalogo_id (
+                logo_url
+              )
+            `)
+            .eq("id", value)
+            .maybeSingle();
+          
+          if (data) {
+            setDisplayData({ 
+              nome: data.nome, 
+              logo_url: (data.bookmakers_catalogo as any)?.logo_url || null 
+            });
+            lastFetchedValue.current = value;
+          }
+        } else {
+          // Modo catálogo: buscar da tabela bookmakers_catalogo
           const { data } = await supabase
             .from("bookmakers_catalogo")
             .select("nome, logo_url")
@@ -122,15 +144,16 @@ export default function BookmakerSelect({
           
           if (data) {
             setDisplayData({ nome: data.nome, logo_url: data.logo_url });
+            lastFetchedValue.current = value;
           }
-        } catch (error) {
-          console.error("Erro ao buscar bookmaker:", error);
         }
-      };
+      } catch (error) {
+        console.error("Erro ao buscar bookmaker:", error);
+      }
+    };
 
-      fetchDisplayData();
-    }
-  }, [value, items, isVinculoMode]);
+    fetchDisplayData();
+  }, [value, isVinculoMode]); // NÃO depende de items - evita re-execuções
 
   // Filtrar itens pela busca
   const filteredItems = items.filter((item) => 
