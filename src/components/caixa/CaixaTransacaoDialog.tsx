@@ -833,11 +833,13 @@ export function CaixaTransacaoDialog({
       // Set origem/destino based on transaction type and flow
       if (tipoTransacao === "APORTE_FINANCEIRO") {
         if (fluxoAporte === "APORTE") {
-          transactionData.origem_tipo = null;
+          // Aporte: Investidor → Caixa
+          transactionData.origem_tipo = "INVESTIDOR";
           transactionData.destino_tipo = "CAIXA_OPERACIONAL";
         } else {
+          // Liquidação: Caixa → Investidor
           transactionData.origem_tipo = "CAIXA_OPERACIONAL";
-          transactionData.destino_tipo = null;
+          transactionData.destino_tipo = "INVESTIDOR";
         }
       } else {
         // Add origin fields for other types
