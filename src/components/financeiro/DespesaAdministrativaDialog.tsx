@@ -21,7 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { DatePicker } from "@/components/ui/date-picker";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 
 interface DespesaAdministrativa {
   id?: string;
@@ -38,14 +38,15 @@ interface DespesaAdministrativaDialogProps {
   onOpenChange: (open: boolean) => void;
   despesa?: DespesaAdministrativa | null;
   onSuccess?: () => void;
+  categoriasExtras?: string[];
 }
 
-const categorias = [
-  { value: "ENERGIA", label: "Energia / Luz" },
-  { value: "INTERNET_4G", label: "Internet / 4G" },
+const categoriasBase = [
+  { value: "ENERGIA", label: "Energia" },
+  { value: "INTERNET", label: "Internet" },
+  { value: "MOVEL", label: "Móvel" },
   { value: "ALUGUEL", label: "Aluguel" },
-  { value: "FUNCIONARIOS", label: "Funcionários / Operadores" },
-  { value: "OUTROS", label: "Outros" },
+  { value: "OPERADORES", label: "Operadores" },
 ];
 
 export function DespesaAdministrativaDialog({
@@ -53,9 +54,12 @@ export function DespesaAdministrativaDialog({
   onOpenChange,
   despesa,
   onSuccess,
+  categoriasExtras = [],
 }: DespesaAdministrativaDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [showNovaCategoria, setShowNovaCategoria] = useState(false);
+  const [novaCategoria, setNovaCategoria] = useState("");
   const [formData, setFormData] = useState<DespesaAdministrativa>({
     categoria: "ENERGIA",
     descricao: "",
@@ -64,6 +68,14 @@ export function DespesaAdministrativaDialog({
     recorrente: false,
     status: "CONFIRMADO",
   });
+
+  // Combina categorias base com extras (personalizadas)
+  const todasCategorias = [
+    ...categoriasBase,
+    ...categoriasExtras
+      .filter(c => !categoriasBase.some(b => b.value === c))
+      .map(c => ({ value: c, label: c }))
+  ];
 
   useEffect(() => {
     if (despesa) {
@@ -149,21 +161,67 @@ export function DespesaAdministrativaDialog({
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label>Categoria *</Label>
-            <Select
-              value={formData.categoria}
-              onValueChange={(value) => setFormData({ ...formData, categoria: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categorias.map((cat) => (
-                  <SelectItem key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {showNovaCategoria ? (
+              <div className="flex gap-2">
+                <Input
+                  value={novaCategoria}
+                  onChange={(e) => setNovaCategoria(e.target.value.toUpperCase())}
+                  placeholder="Nome da nova categoria"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    if (novaCategoria.trim()) {
+                      setFormData({ ...formData, categoria: novaCategoria.trim() });
+                      setShowNovaCategoria(false);
+                      setNovaCategoria("");
+                    }
+                  }}
+                >
+                  OK
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowNovaCategoria(false);
+                    setNovaCategoria("");
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Select
+                  value={formData.categoria}
+                  onValueChange={(value) => setFormData({ ...formData, categoria: value })}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecione a categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {todasCategorias.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowNovaCategoria(true)}
+                  title="Criar nova categoria"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
