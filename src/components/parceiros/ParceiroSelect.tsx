@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Search, User } from "lucide-react";
@@ -28,80 +27,63 @@ export default function ParceiroSelect({ value, onValueChange, disabled, onlyPar
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedParceiro, setSelectedParceiro] = useState<Parceiro | null>(null);
-  
-  // Ref para rastrear se já buscamos o parceiro selecionado
-  const fetchedValueRef = useRef<string | null>(null);
+  const [displayName, setDisplayName] = useState<string>("");
 
-  // Buscar lista de parceiros
-  const fetchParceiros = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from("parceiros")
-        .select("id, nome, cpf, status")
-        .eq("status", "ativo")
-        .order("nome", { ascending: true });
-
-      if (error) throw error;
-      setParceiros(data || []);
-    } catch (error) {
-      console.error("Erro ao buscar parceiros:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Buscar parceiro específico por ID
-  const fetchParceiroById = useCallback(async (parceiroId: string) => {
-    if (!parceiroId || fetchedValueRef.current === parceiroId) return;
-    
-    fetchedValueRef.current = parceiroId;
-    
-    try {
-      const { data, error } = await supabase
-        .from("parceiros")
-        .select("id, nome, cpf, status")
-        .eq("id", parceiroId)
-        .maybeSingle();
-
-      if (error) throw error;
-      if (data) {
-        setSelectedParceiro(data);
-      }
-    } catch (error) {
-      console.error("Erro ao buscar parceiro selecionado:", error);
-      fetchedValueRef.current = null;
-    }
-  }, []);
-
-  // Carregar lista inicial
+  // Buscar lista de parceiros ativos
   useEffect(() => {
-    fetchParceiros();
-  }, [fetchParceiros]);
+    const fetchParceiros = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("parceiros")
+          .select("id, nome, cpf, status")
+          .eq("status", "ativo")
+          .order("nome", { ascending: true });
 
-  // Sincronizar selectedParceiro com value
+        if (error) throw error;
+        setParceiros(data || []);
+      } catch (error) {
+        console.error("Erro ao buscar parceiros:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchParceiros();
+  }, []);
+
+  // Quando value muda, buscar o nome para exibição
   useEffect(() => {
     if (!value) {
-      setSelectedParceiro(null);
-      fetchedValueRef.current = null;
+      setDisplayName("");
       return;
     }
 
-    // Se já temos o parceiro correto selecionado, não fazer nada
-    if (selectedParceiro?.id === value) {
-      return;
-    }
-
-    // Tentar encontrar na lista carregada
+    // Primeiro, verificar na lista local
     const found = parceiros.find(p => p.id === value);
     if (found) {
-      setSelectedParceiro(found);
-      fetchedValueRef.current = value;
-    } else if (!loading) {
-      // Se a lista já carregou e não encontrou, buscar diretamente
-      fetchParceiroById(value);
+      setDisplayName(found.nome);
+      return;
     }
-  }, [value, parceiros, loading, selectedParceiro?.id, fetchParceiroById]);
+
+    // Se não encontrou na lista (pode ser um parceiro pré-selecionado), buscar do banco
+    const fetchDisplayName = async () => {
+      try {
+        const { data } = await supabase
+          .from("parceiros")
+          .select("nome")
+          .eq("id", value)
+          .maybeSingle();
+        
+        if (data) {
+          setDisplayName(data.nome);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar nome do parceiro:", error);
+      }
+    };
+
+    fetchDisplayName();
+  }, [value, parceiros]);
 
   // Aplicar filtro de onlyParceiros se fornecido
   const availableParceiros = onlyParceiros 
@@ -116,14 +98,12 @@ export default function ParceiroSelect({ value, onValueChange, disabled, onlyPar
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled || loading}>
       <SelectTrigger className="w-full">
-        {selectedParceiro ? (
-          <div className="flex items-center justify-center gap-2 w-full">
-            <User className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">{selectedParceiro.nome}</span>
-          </div>
-        ) : (
-          <SelectValue placeholder={loading ? "Carregando..." : "Selecione um parceiro ativo"} />
-        )}
+        <div className="flex items-center justify-center gap-2 w-full">
+          <User className="h-4 w-4 flex-shrink-0" />
+          <span className="truncate">
+            {displayName || (loading ? "Carregando..." : "Selecione um parceiro ativo")}
+          </span>
+        </div>
       </SelectTrigger>
       <SelectContent>
         <div className="p-2 border-b">
