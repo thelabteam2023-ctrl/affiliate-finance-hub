@@ -285,7 +285,6 @@ export function IndicadoresTab() {
               <IndicadorCard
                 key={indicador.indicador_id}
                 indicador={indicador}
-                acordo={acordo}
                 onView={() => handleView(indicador)}
                 onEdit={() => handleEdit(indicador)}
                 onDelete={() => handleDeleteClick(indicador)}

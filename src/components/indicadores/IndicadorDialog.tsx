@@ -276,31 +276,6 @@ export function IndicadorDialog({ open, onOpenChange, indicador, isViewMode }: I
             {cpfError && <p className="text-sm text-destructive">{cpfError}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="telefone">Telefone</Label>
-              <Input
-                id="telefone"
-                value={formData.telefone}
-                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                disabled={isViewMode}
-                placeholder="(00) 00000-0000"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                disabled={isViewMode}
-                placeholder="email@exemplo.com"
-              />
-            </div>
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
             <Select

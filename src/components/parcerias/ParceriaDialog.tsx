@@ -479,35 +479,23 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => setFormData({ ...formData, status: value })}
-                disabled={isViewMode}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ATIVA">Ativa</SelectItem>
-                  <SelectItem value="EM_ENCERRAMENTO">Em Encerramento</SelectItem>
-                  <SelectItem value="ENCERRADA">Encerrada</SelectItem>
-                  <SelectItem value="RENOVADA">Renovada</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center justify-between pt-8">
-              <Label htmlFor="elegivel">Elegível para Renovação</Label>
-              <Switch
-                id="elegivel"
-                checked={formData.elegivel_renovacao}
-                onCheckedChange={(checked) => setFormData({ ...formData, elegivel_renovacao: checked })}
-                disabled={isViewMode}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={formData.status}
+              onValueChange={(value) => setFormData({ ...formData, status: value })}
+              disabled={isViewMode}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ATIVA">Ativa</SelectItem>
+                <SelectItem value="EM_ENCERRAMENTO">Em Encerramento</SelectItem>
+                <SelectItem value="ENCERRADA">Encerrada</SelectItem>
+                <SelectItem value="RENOVADA">Renovada</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
