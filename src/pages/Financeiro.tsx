@@ -365,7 +365,12 @@ export default function Financeiro() {
                       tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                     />
                     <Tooltip
-                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                      contentStyle={{ 
+                        backgroundColor: "hsl(var(--popover) / 0.95)", 
+                        border: "1px solid hsl(var(--border))",
+                        backdropFilter: "blur(8px)",
+                        borderRadius: "8px"
+                      }}
                       formatter={(value: number) => [formatCurrency(value), "Valor"]}
                     />
                     <Bar dataKey="valor" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
