@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ParceriaDialog } from "@/components/parcerias/ParceriaDialog";
 import { ParceriaCard } from "@/components/parcerias/ParceriaCard";
-import { Handshake, AlertTriangle, CheckCircle, Clock, XCircle, LayoutGrid, List, Bell } from "lucide-react";
+import { Handshake, AlertTriangle, CheckCircle, Clock, XCircle, LayoutGrid, List, Bell, UserPlus, Truck, ArrowRight } from "lucide-react";
 
 interface ParceriaAlerta {
   id: string;
@@ -30,6 +30,12 @@ interface ParceriaAlerta {
   indicador_nome: string | null;
   dias_restantes: number;
   nivel_alerta: string;
+  // New fields
+  origem_tipo?: string;
+  fornecedor_id?: string | null;
+  valor_fornecedor?: number;
+  valor_parceiro?: number;
+  valor_indicador?: number;
 }
 
 export function ParceriasTab() {
@@ -38,7 +44,7 @@ export function ParceriasTab() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
-  const [alertaFilter, setAlertaFilter] = useState<string>("todos");
+  const [origemFilter, setOrigemFilter] = useState<string>("todos");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -61,7 +67,26 @@ export function ParceriasTab() {
         .order("dias_restantes", { ascending: true });
 
       if (error) throw error;
-      setParcerias(data || []);
+
+      // Fetch additional fields from parcerias table
+      const { data: parceriasData } = await supabase
+        .from("parcerias")
+        .select("id, origem_tipo, fornecedor_id, valor_fornecedor, valor_parceiro, valor_indicador");
+
+      // Merge data
+      const mergedData = (data || []).map((p) => {
+        const parceriaExtra = parceriasData?.find((pe) => pe.id === p.id);
+        return {
+          ...p,
+          origem_tipo: parceriaExtra?.origem_tipo || "INDICADOR",
+          fornecedor_id: parceriaExtra?.fornecedor_id,
+          valor_fornecedor: parceriaExtra?.valor_fornecedor || 0,
+          valor_parceiro: parceriaExtra?.valor_parceiro || 0,
+          valor_indicador: parceriaExtra?.valor_indicador || 0,
+        };
+      });
+
+      setParcerias(mergedData);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar parcerias",
@@ -154,12 +179,27 @@ export function ParceriasTab() {
     return <Badge className={config.className}>{config.label}</Badge>;
   };
 
+  const getOrigemBadge = (origem: string) => {
+    const origemConfig: Record<string, { label: string; icon: JSX.Element; className: string }> = {
+      INDICADOR: { label: "Indicador", icon: <UserPlus className="h-3 w-3" />, className: "bg-primary/10 text-primary border-primary/20" },
+      FORNECEDOR: { label: "Fornecedor", icon: <Truck className="h-3 w-3" />, className: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
+      DIRETO: { label: "Direto", icon: <ArrowRight className="h-3 w-3" />, className: "bg-muted text-muted-foreground border-border" },
+    };
+    const config = origemConfig[origem] || origemConfig.DIRETO;
+    return (
+      <Badge variant="outline" className={config.className}>
+        {config.icon}
+        <span className="ml-1">{config.label}</span>
+      </Badge>
+    );
+  };
+
   const filteredParcerias = parcerias.filter((p) => {
     const matchesSearch = p.parceiro_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.indicador_nome?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     const matchesStatus = statusFilter === "todos" || p.status === statusFilter;
-    const matchesAlerta = alertaFilter === "todos" || p.nivel_alerta === alertaFilter;
-    return matchesSearch && matchesStatus && matchesAlerta;
+    const matchesOrigem = origemFilter === "todos" || p.origem_tipo === origemFilter;
+    return matchesSearch && matchesStatus && matchesOrigem;
   });
 
   const stats = {
@@ -265,16 +305,15 @@ export function ParceriasTab() {
           </SelectContent>
         </Select>
 
-        <Select value={alertaFilter} onValueChange={setAlertaFilter}>
+        <Select value={origemFilter} onValueChange={setOrigemFilter}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Nível de Alerta" />
+            <SelectValue placeholder="Origem" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="todos">Todos os alertas</SelectItem>
-            <SelectItem value="VENCIDA">Vencida</SelectItem>
-            <SelectItem value="ALERTA">Alerta</SelectItem>
-            <SelectItem value="ATENCAO">Atenção</SelectItem>
-            <SelectItem value="OK">OK</SelectItem>
+            <SelectItem value="todos">Todas as origens</SelectItem>
+            <SelectItem value="INDICADOR">Via Indicador</SelectItem>
+            <SelectItem value="FORNECEDOR">Via Fornecedor</SelectItem>
+            <SelectItem value="DIRETO">Aquisição Direta</SelectItem>
           </SelectContent>
         </Select>
 
@@ -302,7 +341,7 @@ export function ParceriasTab() {
           <XCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">Nenhuma parceria encontrada</h3>
           <p className="text-muted-foreground mb-4">
-            {searchTerm || statusFilter !== "todos" || alertaFilter !== "todos"
+            {searchTerm || statusFilter !== "todos" || origemFilter !== "todos"
               ? "Tente ajustar os filtros de busca"
               : "Comece cadastrando sua primeira parceria"}
           </p>
@@ -327,6 +366,7 @@ export function ParceriasTab() {
               formatCurrency={formatCurrency}
               getStatusBadge={getStatusBadge}
               getAlertaBadge={getAlertaBadge}
+              getOrigemBadge={getOrigemBadge}
             />
           ))}
         </div>
@@ -341,8 +381,12 @@ export function ParceriasTab() {
                   </div>
                   <div>
                     <div className="font-semibold">{parceria.parceiro_nome}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {parceria.indicador_nome ? `Indicado por: ${parceria.indicador_nome}` : "Sem indicação"}
+                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                      {parceria.origem_tipo === "INDICADOR" && parceria.indicador_nome
+                        ? `Indicado por: ${parceria.indicador_nome}`
+                        : parceria.origem_tipo === "FORNECEDOR"
+                        ? "Via Fornecedor"
+                        : "Aquisição Direta"}
                     </div>
                   </div>
                 </div>
@@ -352,9 +396,10 @@ export function ParceriasTab() {
                       {parceria.dias_restantes > 0 ? `${parceria.dias_restantes} dias restantes` : "Vencida"}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      Comissão: {formatCurrency(parceria.valor_comissao_indicador)}
+                      Custo: {formatCurrency((parceria.valor_indicador || 0) + (parceria.valor_parceiro || 0) + (parceria.valor_fornecedor || 0))}
                     </div>
                   </div>
+                  {getOrigemBadge(parceria.origem_tipo || "DIRETO")}
                   {getStatusBadge(parceria.status)}
                   {getAlertaBadge(parceria.nivel_alerta)}
                   <div className="flex gap-1">

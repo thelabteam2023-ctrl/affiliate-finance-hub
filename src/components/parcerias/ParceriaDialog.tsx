@@ -10,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
+import { UserPlus, Truck, ArrowRight, DollarSign } from "lucide-react";
 
 interface ParceriaDialogProps {
   open: boolean;
@@ -28,6 +30,12 @@ interface Parceiro {
 interface Indicador {
   id: string;
   nome: string;
+  orcamento_por_parceiro?: number;
+}
+
+interface Fornecedor {
+  id: string;
+  nome: string;
 }
 
 export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: ParceriaDialogProps) {
@@ -35,21 +43,30 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
   const [loading, setLoading] = useState(false);
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
   const [indicadores, setIndicadores] = useState<Indicador[]>([]);
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
+  
   const [formData, setFormData] = useState({
     parceiro_id: "",
+    origem_tipo: "INDICADOR",
     indicador_id: "",
+    fornecedor_id: "",
     data_inicio: new Date(),
     duracao_dias: 60,
-    valor_comissao_indicador: 0,
+    valor_indicador: 0,
+    valor_parceiro: 0,
+    valor_fornecedor: 0,
     status: "ATIVA",
     elegivel_renovacao: true,
     observacoes: "",
   });
 
+  const [orcamentoDisponivel, setOrcamentoDisponivel] = useState(0);
+
   useEffect(() => {
     if (open) {
       fetchParceiros();
       fetchIndicadores();
+      fetchFornecedores();
     }
   }, [open]);
 
@@ -57,10 +74,14 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
     if (parceria) {
       setFormData({
         parceiro_id: parceria.parceiro_id || "",
+        origem_tipo: parceria.origem_tipo || "INDICADOR",
         indicador_id: "",
+        fornecedor_id: parceria.fornecedor_id || "",
         data_inicio: parceria.data_inicio ? new Date(parceria.data_inicio) : new Date(),
         duracao_dias: parceria.duracao_dias || 60,
-        valor_comissao_indicador: parceria.valor_comissao_indicador || 0,
+        valor_indicador: parceria.valor_indicador || 0,
+        valor_parceiro: parceria.valor_parceiro || 0,
+        valor_fornecedor: parceria.valor_fornecedor || 0,
         status: parceria.status || "ATIVA",
         elegivel_renovacao: parceria.elegivel_renovacao ?? true,
         observacoes: parceria.observacoes || "",
@@ -68,14 +89,19 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
     } else {
       setFormData({
         parceiro_id: "",
+        origem_tipo: "INDICADOR",
         indicador_id: "",
+        fornecedor_id: "",
         data_inicio: new Date(),
         duracao_dias: 60,
-        valor_comissao_indicador: 0,
+        valor_indicador: 0,
+        valor_parceiro: 0,
+        valor_fornecedor: 0,
         status: "ATIVA",
         elegivel_renovacao: true,
         observacoes: "",
       });
+      setOrcamentoDisponivel(0);
     }
   }, [parceria, open]);
 
@@ -89,12 +115,56 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
   };
 
   const fetchIndicadores = async () => {
-    const { data } = await supabase
+    // Fetch indicadores with their acordos
+    const { data: indicadoresData } = await supabase
       .from("indicadores_referral")
       .select("id, nome")
-      .in("status", ["ATIVO", "TOP_VIP"])
+      .eq("status", "ATIVO")
       .order("nome");
-    setIndicadores(data || []);
+
+    const { data: acordosData } = await supabase
+      .from("indicador_acordos")
+      .select("indicador_id, orcamento_por_parceiro")
+      .eq("ativo", true);
+
+    const indicadoresWithAcordo = (indicadoresData || []).map((ind) => {
+      const acordo = acordosData?.find((a) => a.indicador_id === ind.id);
+      return {
+        ...ind,
+        orcamento_por_parceiro: acordo?.orcamento_por_parceiro || 0,
+      };
+    });
+
+    setIndicadores(indicadoresWithAcordo);
+  };
+
+  const fetchFornecedores = async () => {
+    const { data } = await supabase
+      .from("fornecedores")
+      .select("id, nome")
+      .eq("status", "ATIVO")
+      .order("nome");
+    setFornecedores(data || []);
+  };
+
+  const handleIndicadorChange = (indicadorId: string) => {
+    const indicador = indicadores.find((i) => i.id === indicadorId);
+    setFormData({ 
+      ...formData, 
+      indicador_id: indicadorId,
+      valor_indicador: 0,
+      valor_parceiro: 0,
+    });
+    setOrcamentoDisponivel(indicador?.orcamento_por_parceiro || 0);
+  };
+
+  const handleValorParceiroChange = (valor: number) => {
+    const valorIndicador = Math.max(0, orcamentoDisponivel - valor);
+    setFormData({
+      ...formData,
+      valor_parceiro: valor,
+      valor_indicador: valorIndicador,
+    });
   };
 
   const handleSubmit = async () => {
@@ -103,15 +173,24 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
       return;
     }
 
+    if (formData.origem_tipo === "INDICADOR" && !formData.indicador_id && !parceria) {
+      toast({ title: "Selecione um indicador", variant: "destructive" });
+      return;
+    }
+
+    if (formData.origem_tipo === "FORNECEDOR" && !formData.fornecedor_id) {
+      toast({ title: "Selecione um fornecedor", variant: "destructive" });
+      return;
+    }
+
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Check if there's an indication for this partner
-      let indicacaoId = null;
-      if (formData.indicador_id) {
-        // Create indication if selected
+      // Create indication if needed
+      let indicacaoId = parceria?.indicacao_id || null;
+      if (formData.origem_tipo === "INDICADOR" && formData.indicador_id && !parceria) {
         const { data: indicacaoData, error: indicacaoError } = await supabase
           .from("indicacoes")
           .insert({
@@ -132,10 +211,15 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
       const payload = {
         user_id: user.id,
         parceiro_id: formData.parceiro_id,
-        indicacao_id: indicacaoId,
+        indicacao_id: formData.origem_tipo === "INDICADOR" ? indicacaoId : null,
+        fornecedor_id: formData.origem_tipo === "FORNECEDOR" ? formData.fornecedor_id : null,
+        origem_tipo: formData.origem_tipo,
         data_inicio: format(formData.data_inicio, "yyyy-MM-dd"),
         duracao_dias: formData.duracao_dias,
-        valor_comissao_indicador: formData.valor_comissao_indicador,
+        valor_indicador: formData.origem_tipo === "INDICADOR" ? formData.valor_indicador : 0,
+        valor_parceiro: formData.origem_tipo === "INDICADOR" ? formData.valor_parceiro : 0,
+        valor_fornecedor: formData.origem_tipo === "FORNECEDOR" ? formData.valor_fornecedor : 0,
+        valor_comissao_indicador: formData.valor_indicador, // Keep for compatibility
         status: formData.status,
         elegivel_renovacao: formData.elegivel_renovacao,
         observacoes: formData.observacoes || null,
@@ -171,9 +255,16 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
   const diasDecorridos = parceria ? parceria.duracao_dias - (parceria.dias_restantes || 0) : 0;
   const progressPercent = parceria ? Math.min(100, (diasDecorridos / parceria.duracao_dias) * 100) : 0;
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isViewMode ? "Visualizar Parceria" : parceria ? "Editar Parceria" : "Nova Parceria"}
@@ -201,6 +292,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
             </div>
           )}
 
+          {/* Parceiro Selection */}
           <div className="space-y-2">
             <Label htmlFor="parceiro">Parceiro *</Label>
             <Select
@@ -221,29 +313,149 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
             </Select>
           </div>
 
+          {/* Origem Selection */}
           {!parceria && (
-            <div className="space-y-2">
-              <Label htmlFor="indicador">Indicador (opcional)</Label>
-              <Select
-                value={formData.indicador_id || "none"}
-                onValueChange={(value) => setFormData({ ...formData, indicador_id: value === "none" ? "" : value })}
-                disabled={isViewMode}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o indicador" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem indicação</SelectItem>
-                  {indicadores.map((i) => (
-                    <SelectItem key={i.id} value={i.id}>
-                      {i.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <Label>Origem da Parceria *</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  <Button
+                    type="button"
+                    variant={formData.origem_tipo === "INDICADOR" ? "default" : "outline"}
+                    className="h-auto py-4 flex flex-col items-center gap-2"
+                    onClick={() => setFormData({ ...formData, origem_tipo: "INDICADOR", fornecedor_id: "" })}
+                    disabled={isViewMode}
+                  >
+                    <UserPlus className="h-5 w-5" />
+                    <span className="text-xs">Via Indicador</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={formData.origem_tipo === "FORNECEDOR" ? "default" : "outline"}
+                    className="h-auto py-4 flex flex-col items-center gap-2"
+                    onClick={() => setFormData({ ...formData, origem_tipo: "FORNECEDOR", indicador_id: "" })}
+                    disabled={isViewMode}
+                  >
+                    <Truck className="h-5 w-5" />
+                    <span className="text-xs">Via Fornecedor</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={formData.origem_tipo === "DIRETO" ? "default" : "outline"}
+                    className="h-auto py-4 flex flex-col items-center gap-2"
+                    onClick={() => setFormData({ ...formData, origem_tipo: "DIRETO", indicador_id: "", fornecedor_id: "" })}
+                    disabled={isViewMode}
+                  >
+                    <ArrowRight className="h-5 w-5" />
+                    <span className="text-xs">Aquisição Direta</span>
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Indicador Fields */}
+          {formData.origem_tipo === "INDICADOR" && !parceria && (
+            <div className="space-y-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="space-y-2">
+                <Label>Indicador *</Label>
+                <Select
+                  value={formData.indicador_id || "none"}
+                  onValueChange={(value) => handleIndicadorChange(value === "none" ? "" : value)}
+                  disabled={isViewMode}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o indicador" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Selecione...</SelectItem>
+                    {indicadores.map((i) => (
+                      <SelectItem key={i.id} value={i.id}>
+                        {i.nome} {i.orcamento_por_parceiro ? `(Orçamento: ${formatCurrency(i.orcamento_por_parceiro)})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {orcamentoDisponivel > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    <span>Orçamento disponível: <strong>{formatCurrency(orcamentoDisponivel)}</strong></span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Valor para o Parceiro (R$)</Label>
+                      <Input
+                        type="number"
+                        value={formData.valor_parceiro}
+                        onChange={(e) => handleValorParceiroChange(parseFloat(e.target.value) || 0)}
+                        disabled={isViewMode}
+                        min={0}
+                        max={orcamentoDisponivel}
+                        step={0.01}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Comissão do Indicador (R$)</Label>
+                      <Input
+                        type="number"
+                        value={formData.valor_indicador}
+                        disabled
+                        className="bg-muted"
+                      />
+                      <p className="text-xs text-muted-foreground">Calculado automaticamente</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
+          {/* Fornecedor Fields */}
+          {formData.origem_tipo === "FORNECEDOR" && (
+            <div className="space-y-4 p-4 rounded-lg bg-orange-500/5 border border-orange-500/20">
+              <div className="space-y-2">
+                <Label>Fornecedor *</Label>
+                <Select
+                  value={formData.fornecedor_id || "none"}
+                  onValueChange={(value) => setFormData({ ...formData, fornecedor_id: value === "none" ? "" : value })}
+                  disabled={isViewMode}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o fornecedor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Selecione...</SelectItem>
+                    {fornecedores.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Valor Pago ao Fornecedor (R$)</Label>
+                <Input
+                  type="number"
+                  value={formData.valor_fornecedor}
+                  onChange={(e) => setFormData({ ...formData, valor_fornecedor: parseFloat(e.target.value) || 0 })}
+                  disabled={isViewMode}
+                  min={0}
+                  step={0.01}
+                />
+              </div>
+            </div>
+          )}
+
+          <Separator />
+
+          {/* Duration and Status */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Data de Início</Label>
@@ -269,19 +481,6 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="comissao">Comissão do Indicador (R$)</Label>
-              <Input
-                id="comissao"
-                type="number"
-                value={formData.valor_comissao_indicador}
-                onChange={(e) => setFormData({ ...formData, valor_comissao_indicador: parseFloat(e.target.value) || 0 })}
-                disabled={isViewMode}
-                min={0}
-                step={0.01}
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
               <Select
                 value={formData.status}
@@ -299,16 +498,16 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          <div className="flex items-center justify-between">
-            <Label htmlFor="elegivel">Elegível para Renovação</Label>
-            <Switch
-              id="elegivel"
-              checked={formData.elegivel_renovacao}
-              onCheckedChange={(checked) => setFormData({ ...formData, elegivel_renovacao: checked })}
-              disabled={isViewMode}
-            />
+            <div className="flex items-center justify-between pt-8">
+              <Label htmlFor="elegivel">Elegível para Renovação</Label>
+              <Switch
+                id="elegivel"
+                checked={formData.elegivel_renovacao}
+                onCheckedChange={(checked) => setFormData({ ...formData, elegivel_renovacao: checked })}
+                disabled={isViewMode}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
