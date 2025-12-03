@@ -105,22 +105,23 @@ export default function BookmakerDialog({
 
   useEffect(() => {
     if (bookmakerId) {
-      fetchBookmakerDetails();
+      fetchBookmakerDetails(bookmakerId);
     } else {
       setSelectedBookmaker(null);
       setSelectedLink("");
     }
   }, [bookmakerId]);
 
-  const fetchBookmakerDetails = async () => {
+  const fetchBookmakerDetails = async (bookmakerIdToFetch: string) => {
     try {
       const { data, error } = await supabase
         .from("bookmakers_catalogo")
         .select("id, nome, logo_url, links_json, observacoes")
-        .eq("id", bookmakerId)
-        .single();
+        .eq("id", bookmakerIdToFetch)
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) return;
       
       const bookmakerData: BookmakerCatalogo = {
         id: data.id,
@@ -132,9 +133,9 @@ export default function BookmakerDialog({
       
       setSelectedBookmaker(bookmakerData);
       
-      // Auto-select first link (PADRÃO) if available
+      // Auto-select first link (PADRÃO) if available - SEMPRE selecionar
       const linksArray = bookmakerData.links_json;
-      if (linksArray && linksArray.length > 0 && !selectedLink) {
+      if (linksArray && linksArray.length > 0) {
         setSelectedLink(linksArray[0].referencia);
       }
     } catch (error: any) {
