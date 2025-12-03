@@ -126,12 +126,18 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("investidores")
         .select("id")
         .eq("user_id", user.id)
-        .eq("cpf", cleanCPF)
-        .neq("id", investidor?.id || "");
+        .eq("cpf", cleanCPF);
+
+      // Only exclude current investor when editing (not creating)
+      if (mode === "edit" && investidor?.id) {
+        query = query.neq("id", investidor.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
