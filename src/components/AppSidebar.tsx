@@ -1,4 +1,4 @@
-import { Home, Users, Landmark, Wallet, Building2, TrendingUp, UserPlus } from "lucide-react";
+import { Home, Users, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -24,6 +24,7 @@ const mainMenuItems = [
   { title: "Bancos", url: "/bancos", icon: Landmark },
   { title: "Caixa", url: "/caixa", icon: Wallet },
   { title: "Casas", url: "/bookmakers", icon: Building2 },
+  { title: "Financeiro", url: "/financeiro", icon: PieChart },
 ];
 
 // Menu de Captação
