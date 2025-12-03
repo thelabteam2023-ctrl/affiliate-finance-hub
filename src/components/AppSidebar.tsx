@@ -1,4 +1,4 @@
-import { Home, Users, Landmark, Wallet, Building2, Link2, TrendingUp } from "lucide-react";
+import { Home, Users, Landmark, Wallet, Building2, Link2, TrendingUp, UserPlus, Handshake, Gift } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -20,6 +20,9 @@ const menuItems = [
   { title: "Home", url: "/", icon: Home },
   { title: "Parceiros", url: "/parceiros", icon: Users },
   { title: "Investidores", url: "/investidores", icon: TrendingUp },
+  { title: "Indicadores", url: "/indicadores", icon: UserPlus },
+  { title: "Parcerias", url: "/parcerias", icon: Handshake },
+  { title: "Promoções", url: "/promocoes", icon: Gift },
   { title: "Bancos", url: "/bancos", icon: Landmark },
   { title: "Caixa", url: "/caixa", icon: Wallet },
   { title: "Casas", url: "/bookmakers", icon: Building2 },
