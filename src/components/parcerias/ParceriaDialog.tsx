@@ -225,15 +225,15 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
             <div className="space-y-2">
               <Label htmlFor="indicador">Indicador (opcional)</Label>
               <Select
-                value={formData.indicador_id}
-                onValueChange={(value) => setFormData({ ...formData, indicador_id: value })}
+                value={formData.indicador_id || "none"}
+                onValueChange={(value) => setFormData({ ...formData, indicador_id: value === "none" ? "" : value })}
                 disabled={isViewMode}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o indicador" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem indicação</SelectItem>
+                  <SelectItem value="none">Sem indicação</SelectItem>
                   {indicadores.map((i) => (
                     <SelectItem key={i.id} value={i.id}>
                       {i.nome}
