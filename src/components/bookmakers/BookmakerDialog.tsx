@@ -72,6 +72,9 @@ export default function BookmakerDialog({
   const { toast } = useToast();
 
   useEffect(() => {
+    // Só inicializar quando o dialog abre (não em cada mudança)
+    if (!open) return;
+    
     if (bookmaker) {
       setParceiroId(bookmaker.parceiro_id || "");
       setBookmakerId(bookmaker.bookmaker_catalogo_id || "");
@@ -81,16 +84,19 @@ export default function BookmakerDialog({
       setObservacoes(bookmaker.observacoes || "");
       setSelectedLink(bookmaker.link_origem || "");
     } else {
-      // Reset form and apply defaults from context
-      resetForm();
-      if (defaultParceiroId) {
-        setParceiroId(defaultParceiroId);
-      }
-      if (defaultBookmakerId) {
-        setBookmakerId(defaultBookmakerId);
-      }
+      // Reset form e aplicar defaults do contexto
+      setLoginUsername("");
+      setLoginPassword("");
+      setStatus("ativo");
+      setObservacoes("");
+      setSelectedLink("");
+      setSelectedBookmaker(null);
+      
+      // Aplicar IDs do contexto
+      setParceiroId(defaultParceiroId || "");
+      setBookmakerId(defaultBookmakerId || "");
     }
-  }, [bookmaker, defaultParceiroId, defaultBookmakerId, open]);
+  }, [open]); // Só depende de open para evitar resets desnecessários
 
   useEffect(() => {
     if (bookmakerId) {
@@ -306,7 +312,7 @@ export default function BookmakerDialog({
                 value={loginUsername}
                 onChange={(e) => setLoginUsername(e.target.value)}
                 placeholder="username ou email"
-                disabled={loading || !bookmakerId}
+                disabled={loading}
                 autoComplete="off"
               />
             </div>
@@ -319,13 +325,13 @@ export default function BookmakerDialog({
                 value={loginPassword}
                 onChange={setLoginPassword}
                 placeholder={bookmaker ? "••••••••" : "senha"}
-                disabled={loading || !bookmakerId}
+                disabled={loading}
               />
             </div>
 
             <div className="col-span-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={status} onValueChange={setStatus} disabled={loading || !bookmakerId}>
+              <Select value={status} onValueChange={setStatus} disabled={loading}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o status" />
                 </SelectTrigger>
@@ -344,7 +350,7 @@ export default function BookmakerDialog({
                 onChange={(e) => setObservacoes(e.target.value)}
                 rows={3}
                 placeholder="Notas internas sobre este vínculo..."
-                disabled={loading || !bookmakerId}
+                disabled={loading}
               />
             </div>
           </div>
@@ -353,7 +359,7 @@ export default function BookmakerDialog({
             <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || !parceiroId || !bookmakerId} className="flex-1">
+            <Button type="submit" disabled={loading || !parceiroId || !bookmakerId || !selectedLink} className="flex-1">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {bookmaker ? "Atualizar" : "Criar"} Vínculo
             </Button>

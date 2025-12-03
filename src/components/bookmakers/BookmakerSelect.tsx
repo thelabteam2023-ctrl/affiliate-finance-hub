@@ -147,7 +147,7 @@ export default function BookmakerSelect({ value, onValueChange, disabled, parcei
     <Select value={value} onValueChange={onValueChange} disabled={disabled || loading}>
       <SelectTrigger className="w-full h-12">
         {selectedItem ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center gap-2 w-full">
             {selectedItem.logo_url && (
               <img
                 src={selectedItem.logo_url}
