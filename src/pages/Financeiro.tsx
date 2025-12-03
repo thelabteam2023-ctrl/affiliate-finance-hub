@@ -30,6 +30,8 @@ import {
   HelpCircle,
   Plus,
   Building2,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -114,6 +116,7 @@ export default function Financeiro() {
   const [kpiDialogOpen, setKpiDialogOpen] = useState(false);
   const [kpiType, setKpiType] = useState<KpiType>(null);
   const [despesaAdminDialogOpen, setDespesaAdminDialogOpen] = useState(false);
+  const [editingDespesa, setEditingDespesa] = useState<DespesaAdministrativa | null>(null);
   const [dataFim, setDataFim] = useState<string>("");
 
   useEffect(() => {
@@ -436,16 +439,7 @@ export default function Financeiro() {
                 <HelpCircle className="h-3.5 w-3.5" />
               </button>
             </div>
-            <div className="flex items-center gap-1">
-              <button 
-                onClick={() => setDespesaAdminDialogOpen(true)}
-                className="text-muted-foreground hover:text-primary transition-colors"
-                title="Adicionar despesa"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </div>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-500">
@@ -493,6 +487,10 @@ export default function Financeiro() {
           <TabsTrigger value="custos" className="flex items-center gap-2">
             <PieChart className="h-4 w-4" />
             Custos Detalhados
+          </TabsTrigger>
+          <TabsTrigger value="despesas" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Despesas Administrativas
           </TabsTrigger>
           <TabsTrigger value="historico" className="flex items-center gap-2">
             <History className="h-4 w-4" />
@@ -788,6 +786,139 @@ export default function Financeiro() {
           </div>
         </TabsContent>
 
+        {/* Tab: Despesas Administrativas */}
+        <TabsContent value="despesas" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Despesas Administrativas</h2>
+              <p className="text-sm text-muted-foreground">Gerencie as despesas do escritório</p>
+            </div>
+            <Button onClick={() => { setEditingDespesa(null); setDespesaAdminDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Despesa
+            </Button>
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/30">
+                      <th className="text-left py-3 px-4 font-medium">Data</th>
+                      <th className="text-left py-3 px-4 font-medium">Categoria</th>
+                      <th className="text-left py-3 px-4 font-medium">Descrição</th>
+                      <th className="text-right py-3 px-4 font-medium">Valor</th>
+                      <th className="text-center py-3 px-4 font-medium">Recorrente</th>
+                      <th className="text-center py-3 px-4 font-medium">Status</th>
+                      <th className="text-center py-3 px-4 font-medium">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {despesasAdmin.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                          Nenhuma despesa administrativa cadastrada
+                        </td>
+                      </tr>
+                    ) : (
+                      despesasAdmin
+                        .sort((a, b) => new Date(b.data_despesa).getTime() - new Date(a.data_despesa).getTime())
+                        .map((despesa) => (
+                          <tr key={despesa.id} className="border-b border-border/50 hover:bg-muted/30">
+                            <td className="py-3 px-4">
+                              {format(parseISO(despesa.data_despesa), "dd/MM/yyyy", { locale: ptBR })}
+                            </td>
+                            <td className="py-3 px-4">
+                              <Badge variant="outline">{despesa.categoria}</Badge>
+                            </td>
+                            <td className="py-3 px-4 text-muted-foreground">
+                              {despesa.descricao || "—"}
+                            </td>
+                            <td className="py-3 px-4 text-right font-medium text-orange-500">
+                              {formatCurrency(despesa.valor)}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {despesa.recorrente ? (
+                                <Badge variant="secondary" className="text-xs">Sim</Badge>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <Badge 
+                                variant={despesa.status === "CONFIRMADO" ? "default" : "secondary"}
+                                className="text-xs"
+                              >
+                                {despesa.status}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() => { setEditingDespesa(despesa); setDespesaAdminDialogOpen(true); }}
+                                  className="text-muted-foreground hover:text-foreground transition-colors"
+                                  title="Editar"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (confirm("Tem certeza que deseja excluir esta despesa?")) {
+                                      const { error } = await supabase.from("despesas_administrativas").delete().eq("id", despesa.id);
+                                      if (error) {
+                                        toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+                                      } else {
+                                        toast({ title: "Despesa excluída" });
+                                        fetchData();
+                                      }
+                                    }
+                                  }}
+                                  className="text-muted-foreground hover:text-destructive transition-colors"
+                                  title="Excluir"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Resumo por Categoria */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Resumo por Categoria</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {Object.entries(
+                  despesasAdmin.reduce((acc, d) => {
+                    acc[d.categoria] = (acc[d.categoria] || 0) + d.valor;
+                    return acc;
+                  }, {} as Record<string, number>)
+                ).sort((a, b) => b[1] - a[1]).map(([categoria, valor]) => (
+                  <div key={categoria} className="flex items-center justify-between">
+                    <span className="text-sm">{categoria}</span>
+                    <span className="font-medium text-orange-500">{formatCurrency(valor)}</span>
+                  </div>
+                ))}
+                {despesasAdmin.length > 0 && (
+                  <div className="pt-3 border-t flex items-center justify-between font-semibold">
+                    <span>Total</span>
+                    <span className="text-orange-500">{formatCurrency(totalDespesasAdmin)}</span>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="historico" className="space-y-6">
           {/* Gráfico Comparativo Mensal */}
           <Card>
@@ -1023,7 +1154,11 @@ export default function Financeiro() {
 
       <DespesaAdministrativaDialog
         open={despesaAdminDialogOpen}
-        onOpenChange={setDespesaAdminDialogOpen}
+        onOpenChange={(open) => {
+          setDespesaAdminDialogOpen(open);
+          if (!open) setEditingDespesa(null);
+        }}
+        despesa={editingDespesa}
         onSuccess={fetchData}
       />
     </div>
