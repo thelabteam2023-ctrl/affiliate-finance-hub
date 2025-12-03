@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Users, Info } from "lucide-react";
+import { Users } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -136,27 +136,27 @@ export function SaldosParceirosSheet() {
   const totalParceiros = parceirosAgrupados.length;
 
   const FiatHoverContent = ({ saldos }: { saldos: ParceiroSaldoAgrupado["saldos_fiat"] }) => (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium text-muted-foreground mb-2">Contas Bancárias</p>
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-muted-foreground border-b border-border/50 pb-1.5">Saldo por Banco</p>
       {saldos.map((s, idx) => (
-        <div key={idx} className="flex justify-between gap-4 text-sm">
-          <span className="text-muted-foreground truncate max-w-[140px]">{s.banco}</span>
-          <span className="font-mono text-emerald-400">{formatCurrency(s.saldo, s.moeda)}</span>
+        <div key={idx} className="flex justify-between items-center gap-3 text-sm">
+          <span className="text-foreground truncate max-w-[150px]">{s.banco}</span>
+          <span className="font-mono text-emerald-400 whitespace-nowrap">{formatCurrency(s.saldo, s.moeda)}</span>
         </div>
       ))}
     </div>
   );
 
   const CryptoHoverContent = ({ saldos }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"] }) => (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium text-muted-foreground mb-2">Wallets Crypto</p>
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-muted-foreground border-b border-border/50 pb-1.5">Saldo por Moeda</p>
       {saldos.map((s, idx) => (
-        <div key={idx} className="flex justify-between gap-4 text-sm">
-          <div className="flex items-center gap-1">
-            <span className="font-medium">{s.coin}</span>
-            <span className="text-xs text-muted-foreground">({s.exchange})</span>
+        <div key={idx} className="flex justify-between items-center gap-3 text-sm">
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-foreground">{s.coin}</span>
+            <span className="text-xs text-muted-foreground">• {s.exchange}</span>
           </div>
-          <span className="font-mono text-blue-400">{formatCurrency(s.saldo_usd, "USD")}</span>
+          <span className="font-mono text-blue-400 whitespace-nowrap">{formatCurrency(s.saldo_usd, "USD")}</span>
         </div>
       ))}
     </div>
@@ -230,23 +230,16 @@ export function SaldosParceirosSheet() {
                         {/* FIAT Cell */}
                         <TableCell className="py-2.5 text-right">
                           {parceiro.saldos_fiat.length > 0 ? (
-                            parceiro.saldos_fiat.length > 1 ? (
-                              <HoverCard openDelay={100} closeDelay={50}>
-                                <HoverCardTrigger asChild>
-                                  <button className="inline-flex items-center gap-1 text-emerald-400 font-mono text-sm hover:text-emerald-300 transition-colors">
-                                    {formatCurrency(parceiro.total_fiat_brl, "BRL")}
-                                    <Info className="h-3 w-3 opacity-60" />
-                                  </button>
-                                </HoverCardTrigger>
-                                <HoverCardContent align="end" className="w-64">
-                                  <FiatHoverContent saldos={parceiro.saldos_fiat} />
-                                </HoverCardContent>
-                              </HoverCard>
-                            ) : (
-                              <span className="text-emerald-400 font-mono text-sm">
-                                {formatCurrency(parceiro.total_fiat_brl, "BRL")}
-                              </span>
-                            )
+                            <HoverCard openDelay={100} closeDelay={50}>
+                              <HoverCardTrigger asChild>
+                                <button className="inline-flex items-center gap-1 text-emerald-400 font-mono text-sm hover:text-emerald-300 transition-colors cursor-pointer">
+                                  {formatCurrency(parceiro.total_fiat_brl, "BRL")}
+                                </button>
+                              </HoverCardTrigger>
+                              <HoverCardContent align="end" className="w-72">
+                                <FiatHoverContent saldos={parceiro.saldos_fiat} />
+                              </HoverCardContent>
+                            </HoverCard>
                           ) : (
                             <span className="text-muted-foreground/50">—</span>
                           )}
@@ -255,23 +248,16 @@ export function SaldosParceirosSheet() {
                         {/* Crypto Cell */}
                         <TableCell className="py-2.5 text-right">
                           {parceiro.saldos_crypto.length > 0 ? (
-                            parceiro.saldos_crypto.length > 1 ? (
-                              <HoverCard openDelay={100} closeDelay={50}>
-                                <HoverCardTrigger asChild>
-                                  <button className="inline-flex items-center gap-1 text-blue-400 font-mono text-sm hover:text-blue-300 transition-colors">
-                                    {formatCurrency(parceiro.total_crypto_usd, "USD")}
-                                    <Info className="h-3 w-3 opacity-60" />
-                                  </button>
-                                </HoverCardTrigger>
-                                <HoverCardContent align="end" className="w-64">
-                                  <CryptoHoverContent saldos={parceiro.saldos_crypto} />
-                                </HoverCardContent>
-                              </HoverCard>
-                            ) : (
-                              <span className="text-blue-400 font-mono text-sm">
-                                {formatCurrency(parceiro.total_crypto_usd, "USD")}
-                              </span>
-                            )
+                            <HoverCard openDelay={100} closeDelay={50}>
+                              <HoverCardTrigger asChild>
+                                <button className="inline-flex items-center gap-1 text-blue-400 font-mono text-sm hover:text-blue-300 transition-colors cursor-pointer">
+                                  {formatCurrency(parceiro.total_crypto_usd, "USD")}
+                                </button>
+                              </HoverCardTrigger>
+                              <HoverCardContent align="end" className="w-72">
+                                <CryptoHoverContent saldos={parceiro.saldos_crypto} />
+                              </HoverCardContent>
+                            </HoverCard>
                           ) : (
                             <span className="text-muted-foreground/50">—</span>
                           )}
