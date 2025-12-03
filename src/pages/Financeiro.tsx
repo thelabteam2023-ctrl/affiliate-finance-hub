@@ -471,7 +471,7 @@ export default function Financeiro() {
           {/* Filtros de Período */}
           <div className="flex flex-wrap items-center gap-3">
           <Select value={periodoPreset} onValueChange={setPeriodoPreset}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[190px]">
               <Calendar className="h-4 w-4 mr-2 shrink-0" />
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
@@ -813,55 +813,6 @@ export default function Financeiro() {
             </CardContent>
           </Card>
 
-          {/* Tabela de Histórico Mensal */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Detalhamento Mês a Mês</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-2 font-medium">Mês</th>
-                      <th className="text-right py-3 px-2 font-medium">Resultado</th>
-                      <th className="text-right py-3 px-2 font-medium">Custos Aq.</th>
-                      <th className="text-right py-3 px-2 font-medium">Desp. Oper.</th>
-                      <th className="text-right py-3 px-2 font-medium">Desp. Admin.</th>
-                      <th className="text-right py-3 px-2 font-medium">Lucro Líquido</th>
-                      <th className="text-right py-3 px-2 font-medium">Patrimônio</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {historicoMensal.map((mes, index) => (
-                      <tr key={mes.mes} className="border-b border-border/50 hover:bg-muted/30">
-                        <td className="py-3 px-2 font-medium">{mes.label}</td>
-                        <td className={`text-right py-3 px-2 ${mes.resultado >= 0 ? "text-success" : "text-destructive"}`}>
-                          {formatCurrency(mes.resultado)}
-                        </td>
-                        <td className="text-right py-3 px-2 text-destructive">
-                          {mes.custos > 0 ? `-${formatCurrency(mes.custos)}` : formatCurrency(0)}
-                        </td>
-                        <td className="text-right py-3 px-2 text-muted-foreground">
-                          {mes.despesas > 0 ? `-${formatCurrency(mes.despesas)}` : formatCurrency(0)}
-                        </td>
-                        <td className="text-right py-3 px-2 text-chart-2">
-                          {mes.despesasAdmin > 0 ? `-${formatCurrency(mes.despesasAdmin)}` : formatCurrency(0)}
-                        </td>
-                        <td className={`text-right py-3 px-2 font-medium ${mes.lucroLiquido >= 0 ? "text-success" : "text-destructive"}`}>
-                          {formatCurrency(mes.lucroLiquido)}
-                        </td>
-                        <td className={`text-right py-3 px-2 font-bold ${mes.patrimonio >= 0 ? "text-primary" : "text-destructive"}`}>
-                          {formatCurrency(mes.patrimonio)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* KPIs do Período */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <Card>
@@ -978,6 +929,55 @@ export default function Financeiro() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Tabela de Histórico Mensal */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Detalhamento Mês a Mês</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-2 font-medium">Mês</th>
+                      <th className="text-right py-3 px-2 font-medium">Resultado</th>
+                      <th className="text-right py-3 px-2 font-medium">Custos Aq.</th>
+                      <th className="text-right py-3 px-2 font-medium">Desp. Oper.</th>
+                      <th className="text-right py-3 px-2 font-medium">Desp. Admin.</th>
+                      <th className="text-right py-3 px-2 font-medium">Lucro Líquido</th>
+                      <th className="text-right py-3 px-2 font-medium">Patrimônio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historicoMensal.map((mes, index) => (
+                      <tr key={mes.mes} className="border-b border-border/50 hover:bg-muted/30">
+                        <td className="py-3 px-2 font-medium">{mes.label}</td>
+                        <td className={`text-right py-3 px-2 ${mes.resultado >= 0 ? "text-success" : "text-destructive"}`}>
+                          {formatCurrency(mes.resultado)}
+                        </td>
+                        <td className="text-right py-3 px-2 text-destructive">
+                          {mes.custos > 0 ? `-${formatCurrency(mes.custos)}` : formatCurrency(0)}
+                        </td>
+                        <td className="text-right py-3 px-2 text-muted-foreground">
+                          {mes.despesas > 0 ? `-${formatCurrency(mes.despesas)}` : formatCurrency(0)}
+                        </td>
+                        <td className="text-right py-3 px-2 text-chart-2">
+                          {mes.despesasAdmin > 0 ? `-${formatCurrency(mes.despesasAdmin)}` : formatCurrency(0)}
+                        </td>
+                        <td className={`text-right py-3 px-2 font-medium ${mes.lucroLiquido >= 0 ? "text-success" : "text-destructive"}`}>
+                          {formatCurrency(mes.lucroLiquido)}
+                        </td>
+                        <td className={`text-right py-3 px-2 font-bold ${mes.patrimonio >= 0 ? "text-primary" : "text-destructive"}`}>
+                          {formatCurrency(mes.patrimonio)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
