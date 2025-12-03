@@ -2177,6 +2177,56 @@ export function CaixaTransacaoDialog({
                                 </div>
                               </div>
                             )}
+                            {/* Transferência Caixa → Parceiro DESTINO - Mostrar saldo SEMPRE */}
+                            {tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "CAIXA_PARCEIRO" && 
+                             (destinoTipo === "PARCEIRO_CONTA" || destinoTipo === "PARCEIRO_WALLET") && 
+                             (destinoContaId || destinoWalletId) && (
+                              <div className="mt-3 space-y-1">
+                                {parseFloat(String(valor)) > 0 ? (
+                                  <>
+                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                      <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                      {tipoMoeda === "CRYPTO" && destinoTipo === "PARCEIRO_WALLET" ? (
+                                        <span className="line-through opacity-70">
+                                          {formatCryptoBalance(
+                                            getSaldoCoin(destinoTipo, destinoWalletId),
+                                            getSaldoAtual(destinoTipo, destinoWalletId),
+                                            coin
+                                          )}
+                                        </span>
+                                      ) : (
+                                        <span className="line-through opacity-70">
+                                          {formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId))}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-sm font-semibold text-foreground">
+                                      {tipoMoeda === "CRYPTO" && destinoTipo === "PARCEIRO_WALLET" ? (
+                                        formatCryptoBalance(
+                                          getSaldoCoin(destinoTipo, destinoWalletId) + parseFloat(String(qtdCoin || 0)),
+                                          getSaldoAtual(destinoTipo, destinoWalletId) + parseFloat(String(valor)),
+                                          coin
+                                        )
+                                      ) : (
+                                        formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId) + parseFloat(String(valor)))
+                                      )}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-xs text-muted-foreground">
+                                    Saldo atual: {tipoMoeda === "CRYPTO" && destinoTipo === "PARCEIRO_WALLET" ? (
+                                      formatCryptoBalance(
+                                        getSaldoCoin(destinoTipo, destinoWalletId),
+                                        getSaldoAtual(destinoTipo, destinoWalletId),
+                                        coin
+                                      )
+                                    ) : (
+                                      formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId))
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                             {/* Transferência Parceiro → Parceiro DESTINO - Mostrar saldo SEMPRE */}
                             {tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && 
                              (destinoTipo === "PARCEIRO_CONTA" || destinoTipo === "PARCEIRO_WALLET") && 
