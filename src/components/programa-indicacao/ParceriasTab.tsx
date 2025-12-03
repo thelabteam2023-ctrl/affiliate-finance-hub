@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -8,99 +7,64 @@ import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { PromocaoDialog } from "@/components/promocoes/PromocaoDialog";
-import { PromocaoCard } from "@/components/promocoes/PromocaoCard";
-import { Gift, Megaphone, CheckCircle, XCircle, LayoutGrid, List, LogOut } from "lucide-react";
+import { ParceriaDialog } from "@/components/parcerias/ParceriaDialog";
+import { ParceriaCard } from "@/components/parcerias/ParceriaCard";
+import { Handshake, AlertTriangle, CheckCircle, Clock, XCircle, LayoutGrid, List, Bell } from "lucide-react";
 
-interface Promocao {
+interface ParceriaAlerta {
   id: string;
   user_id: string;
-  nome: string;
-  descricao: string | null;
+  parceiro_id: string;
+  indicacao_id: string | null;
   data_inicio: string;
-  data_fim: string;
-  meta_parceiros: number;
-  valor_bonus: number;
+  duracao_dias: number;
+  data_fim_prevista: string;
+  data_fim_real: string | null;
+  valor_comissao_indicador: number;
+  comissao_paga: boolean;
   status: string;
-  created_at: string;
+  elegivel_renovacao: boolean;
+  observacoes: string | null;
+  parceiro_nome: string;
+  parceiro_cpf: string;
+  indicador_nome: string | null;
+  dias_restantes: number;
+  nivel_alerta: string;
 }
 
-interface PromocaoParticipante {
-  id: string;
-  promocao_id: string;
-  indicador_id: string;
-  parceiros_indicados: number;
-  meta_atingida: boolean;
-  bonus_pago: boolean;
-  indicador_nome?: string;
-}
-
-export default function GestaoPromocoes() {
-  const navigate = useNavigate();
+export function ParceriasTab() {
   const { toast } = useToast();
-  const [promocoes, setPromocoes] = useState<Promocao[]>([]);
-  const [participantes, setParticipantes] = useState<Record<string, PromocaoParticipante[]>>({});
+  const [parcerias, setParcerias] = useState<ParceriaAlerta[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
+  const [alertaFilter, setAlertaFilter] = useState<string>("todos");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedPromocao, setSelectedPromocao] = useState<Promocao | null>(null);
+  const [selectedParceria, setSelectedParceria] = useState<ParceriaAlerta | null>(null);
   const [isViewMode, setIsViewMode] = useState(false);
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [promocaoToDelete, setPromocaoToDelete] = useState<Promocao | null>(null);
+  const [parceriaToDelete, setParceriaToDelete] = useState<ParceriaAlerta | null>(null);
 
   useEffect(() => {
-    checkAuth();
-    fetchPromocoes();
+    fetchParcerias();
   }, []);
 
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-    }
-  };
-
-  const fetchPromocoes = async () => {
+  const fetchParcerias = async () => {
     try {
       setLoading(true);
-      const { data: promocoesData, error: promocoesError } = await supabase
-        .from("promocoes_indicacao")
+      const { data, error } = await supabase
+        .from("v_parcerias_alerta")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("dias_restantes", { ascending: true });
 
-      if (promocoesError) throw promocoesError;
-      setPromocoes(promocoesData || []);
-
-      // Fetch participants for each promotion
-      if (promocoesData && promocoesData.length > 0) {
-        const { data: participantesData, error: participantesError } = await supabase
-          .from("promocao_participantes")
-          .select(`
-            *,
-            indicadores_referral (nome)
-          `);
-
-        if (participantesError) throw participantesError;
-
-        const participantesByPromocao: Record<string, PromocaoParticipante[]> = {};
-        participantesData?.forEach((p: any) => {
-          if (!participantesByPromocao[p.promocao_id]) {
-            participantesByPromocao[p.promocao_id] = [];
-          }
-          participantesByPromocao[p.promocao_id].push({
-            ...p,
-            indicador_nome: p.indicadores_referral?.nome,
-          });
-        });
-        setParticipantes(participantesByPromocao);
-      }
+      if (error) throw error;
+      setParcerias(data || []);
     } catch (error: any) {
       toast({
-        title: "Erro ao carregar promoções",
+        title: "Erro ao carregar parcerias",
         description: error.message,
         variant: "destructive",
       });
@@ -109,44 +73,39 @@ export default function GestaoPromocoes() {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
-  };
-
-  const handleEdit = (promocao: Promocao) => {
-    setSelectedPromocao(promocao);
+  const handleEdit = (parceria: ParceriaAlerta) => {
+    setSelectedParceria(parceria);
     setIsViewMode(false);
     setDialogOpen(true);
   };
 
-  const handleView = (promocao: Promocao) => {
-    setSelectedPromocao(promocao);
+  const handleView = (parceria: ParceriaAlerta) => {
+    setSelectedParceria(parceria);
     setIsViewMode(true);
     setDialogOpen(true);
   };
 
-  const handleDeleteClick = (promocao: Promocao) => {
-    setPromocaoToDelete(promocao);
+  const handleDeleteClick = (parceria: ParceriaAlerta) => {
+    setParceriaToDelete(parceria);
     setDeleteDialogOpen(true);
   };
 
   const handleDelete = async () => {
-    if (!promocaoToDelete) return;
+    if (!parceriaToDelete) return;
 
     try {
       const { error } = await supabase
-        .from("promocoes_indicacao")
+        .from("parcerias")
         .delete()
-        .eq("id", promocaoToDelete.id);
+        .eq("id", parceriaToDelete.id);
 
       if (error) throw error;
 
       toast({
-        title: "Promoção excluída",
-        description: "A promoção foi removida com sucesso.",
+        title: "Parceria excluída",
+        description: "A parceria foi removida com sucesso.",
       });
-      fetchPromocoes();
+      fetchParcerias();
     } catch (error: any) {
       toast({
         title: "Erro ao excluir",
@@ -155,15 +114,15 @@ export default function GestaoPromocoes() {
       });
     } finally {
       setDeleteDialogOpen(false);
-      setPromocaoToDelete(null);
+      setParceriaToDelete(null);
     }
   };
 
   const handleDialogClose = () => {
     setDialogOpen(false);
-    setSelectedPromocao(null);
+    setSelectedParceria(null);
     setIsViewMode(false);
-    fetchPromocoes();
+    fetchParcerias();
   };
 
   const formatCurrency = (value: number) => {
@@ -173,75 +132,76 @@ export default function GestaoPromocoes() {
     }).format(value);
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("pt-BR");
-  };
-
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       ATIVA: { label: "Ativa", variant: "default" },
+      EM_ENCERRAMENTO: { label: "Em Encerramento", variant: "outline" },
       ENCERRADA: { label: "Encerrada", variant: "secondary" },
-      CANCELADA: { label: "Cancelada", variant: "destructive" },
+      RENOVADA: { label: "Renovada", variant: "default" },
     };
     const config = statusConfig[status] || { label: status, variant: "outline" };
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const isPromocaoActive = (promocao: Promocao) => {
-    const today = new Date();
-    const inicio = new Date(promocao.data_inicio);
-    const fim = new Date(promocao.data_fim);
-    return promocao.status === "ATIVA" && today >= inicio && today <= fim;
+  const getAlertaBadge = (nivel: string) => {
+    const alertaConfig: Record<string, { label: string; className: string }> = {
+      VENCIDA: { label: "Vencida", className: "bg-destructive text-destructive-foreground" },
+      ALERTA: { label: "Alerta", className: "bg-orange-500 text-white" },
+      ATENCAO: { label: "Atenção", className: "bg-yellow-500 text-black" },
+      OK: { label: "OK", className: "bg-emerald-500 text-white" },
+    };
+    const config = alertaConfig[nivel] || { label: nivel, className: "" };
+    return <Badge className={config.className}>{config.label}</Badge>;
   };
 
-  const filteredPromocoes = promocoes.filter((p) => {
-    const matchesSearch = p.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (p.descricao?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+  const filteredParcerias = parcerias.filter((p) => {
+    const matchesSearch = p.parceiro_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.indicador_nome?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     const matchesStatus = statusFilter === "todos" || p.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesAlerta = alertaFilter === "todos" || p.nivel_alerta === alertaFilter;
+    return matchesSearch && matchesStatus && matchesAlerta;
   });
 
   const stats = {
-    total: promocoes.length,
-    ativas: promocoes.filter((p) => isPromocaoActive(p)).length,
-    encerradas: promocoes.filter((p) => p.status === "ENCERRADA").length,
-    totalBonus: promocoes.reduce((acc, p) => {
-      const parts = participantes[p.id] || [];
-      const bonusPago = parts.filter((part) => part.bonus_pago).length * p.valor_bonus;
-      return acc + bonusPago;
-    }, 0),
+    total: parcerias.length,
+    ativas: parcerias.filter((p) => p.status === "ATIVA").length,
+    emEncerramento: parcerias.filter((p) => p.status === "EM_ENCERRAMENTO").length,
+    alertas: parcerias.filter((p) => p.nivel_alerta === "ALERTA" || p.nivel_alerta === "VENCIDA").length,
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Promoções de Indicação</h1>
-          <p className="text-muted-foreground">
-            Gerencie campanhas de bônus para indicadores
-          </p>
-        </div>
-        <Button variant="outline" onClick={handleLogout}>
-          <LogOut className="h-4 w-4 mr-2" />
-          Sair
-        </Button>
-      </div>
+    <div className="space-y-6">
+      {/* Alerta de Parcerias Vencendo */}
+      {stats.alertas > 0 && (
+        <Card className="border-orange-500 bg-orange-500/10">
+          <CardContent className="flex items-center gap-4 p-4">
+            <Bell className="h-6 w-6 text-orange-500" />
+            <div>
+              <p className="font-semibold text-orange-500">
+                {stats.alertas} {stats.alertas === 1 ? "parceria" : "parcerias"} {stats.alertas === 1 ? "precisa" : "precisam"} de atenção
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Verifique as parcerias próximas do vencimento ou já vencidas
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <Megaphone className="h-4 w-4 text-muted-foreground" />
+            <Handshake className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
@@ -258,20 +218,20 @@ export default function GestaoPromocoes() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Encerradas</CardTitle>
-            <XCircle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Em Encerramento</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.encerradas}</div>
+            <div className="text-2xl font-bold text-yellow-500">{stats.emEncerramento}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bônus Pagos</CardTitle>
-            <Gift className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm font-medium">Com Alertas</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{formatCurrency(stats.totalBonus)}</div>
+            <div className="text-2xl font-bold text-orange-500">{stats.alertas}</div>
           </CardContent>
         </Card>
       </div>
@@ -280,15 +240,15 @@ export default function GestaoPromocoes() {
       <div className="flex flex-col md:flex-row gap-4 items-center">
         <div className="flex-1 w-full md:max-w-sm">
           <SearchInput
-            placeholder="Buscar por nome..."
+            placeholder="Buscar por parceiro ou indicador..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onAdd={() => {
-              setSelectedPromocao(null);
+              setSelectedParceria(null);
               setIsViewMode(false);
               setDialogOpen(true);
             }}
-            addButtonLabel="Nova Promoção"
+            addButtonLabel="Nova Parceria"
           />
         </div>
 
@@ -299,8 +259,22 @@ export default function GestaoPromocoes() {
           <SelectContent>
             <SelectItem value="todos">Todos os status</SelectItem>
             <SelectItem value="ATIVA">Ativa</SelectItem>
+            <SelectItem value="EM_ENCERRAMENTO">Em Encerramento</SelectItem>
             <SelectItem value="ENCERRADA">Encerrada</SelectItem>
-            <SelectItem value="CANCELADA">Cancelada</SelectItem>
+            <SelectItem value="RENOVADA">Renovada</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={alertaFilter} onValueChange={setAlertaFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Nível de Alerta" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os alertas</SelectItem>
+            <SelectItem value="VENCIDA">Vencida</SelectItem>
+            <SelectItem value="ALERTA">Alerta</SelectItem>
+            <SelectItem value="ATENCAO">Atenção</SelectItem>
+            <SelectItem value="OK">OK</SelectItem>
           </SelectContent>
         </Select>
 
@@ -323,74 +297,74 @@ export default function GestaoPromocoes() {
       </div>
 
       {/* Content */}
-      {filteredPromocoes.length === 0 ? (
+      {filteredParcerias.length === 0 ? (
         <Card className="p-12 text-center">
-          <Megaphone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Nenhuma promoção encontrada</h3>
+          <XCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Nenhuma parceria encontrada</h3>
           <p className="text-muted-foreground mb-4">
-            {searchTerm || statusFilter !== "todos"
+            {searchTerm || statusFilter !== "todos" || alertaFilter !== "todos"
               ? "Tente ajustar os filtros de busca"
-              : "Comece criando sua primeira promoção de indicação"}
+              : "Comece cadastrando sua primeira parceria"}
           </p>
           <Button onClick={() => {
-            setSelectedPromocao(null);
+            setSelectedParceria(null);
             setIsViewMode(false);
             setDialogOpen(true);
           }}>
-            <Megaphone className="h-4 w-4 mr-2" />
-            Nova Promoção
+            <Handshake className="h-4 w-4 mr-2" />
+            Nova Parceria
           </Button>
         </Card>
       ) : viewMode === "cards" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredPromocoes.map((promocao) => (
-            <PromocaoCard
-              key={promocao.id}
-              promocao={promocao}
-              participantes={participantes[promocao.id] || []}
-              onView={() => handleView(promocao)}
-              onEdit={() => handleEdit(promocao)}
-              onDelete={() => handleDeleteClick(promocao)}
+          {filteredParcerias.map((parceria) => (
+            <ParceriaCard
+              key={parceria.id}
+              parceria={parceria}
+              onView={() => handleView(parceria)}
+              onEdit={() => handleEdit(parceria)}
+              onDelete={() => handleDeleteClick(parceria)}
               formatCurrency={formatCurrency}
-              formatDate={formatDate}
               getStatusBadge={getStatusBadge}
+              getAlertaBadge={getAlertaBadge}
             />
           ))}
         </div>
       ) : (
         <div className="space-y-2">
-          {filteredPromocoes.map((promocao) => (
-            <Card key={promocao.id} className="p-4">
+          {filteredParcerias.map((parceria) => (
+            <Card key={parceria.id} className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Megaphone className="h-5 w-5 text-primary" />
+                    <Handshake className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <div className="font-semibold">{promocao.nome}</div>
+                    <div className="font-semibold">{parceria.parceiro_nome}</div>
                     <div className="text-sm text-muted-foreground">
-                      {formatDate(promocao.data_inicio)} - {formatDate(promocao.data_fim)}
+                      {parceria.indicador_nome ? `Indicado por: ${parceria.indicador_nome}` : "Sem indicação"}
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <div className="font-semibold text-primary">
-                      {formatCurrency(promocao.valor_bonus)}
+                    <div className="font-semibold">
+                      {parceria.dias_restantes > 0 ? `${parceria.dias_restantes} dias restantes` : "Vencida"}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      Meta: {promocao.meta_parceiros} parceiros
+                      Comissão: {formatCurrency(parceria.valor_comissao_indicador)}
                     </div>
                   </div>
-                  {getStatusBadge(promocao.status)}
+                  {getStatusBadge(parceria.status)}
+                  {getAlertaBadge(parceria.nivel_alerta)}
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => handleView(promocao)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleView(parceria)}>
                       Ver
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(promocao)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(parceria)}>
                       Editar
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(promocao)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(parceria)}>
                       Excluir
                     </Button>
                   </div>
@@ -402,10 +376,10 @@ export default function GestaoPromocoes() {
       )}
 
       {/* Dialogs */}
-      <PromocaoDialog
+      <ParceriaDialog
         open={dialogOpen}
         onOpenChange={handleDialogClose}
-        promocao={selectedPromocao}
+        parceria={selectedParceria}
         isViewMode={isViewMode}
       />
 
@@ -414,7 +388,7 @@ export default function GestaoPromocoes() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir a promoção "{promocaoToDelete?.nome}"?
+              Tem certeza que deseja excluir a parceria com "{parceriaToDelete?.parceiro_nome}"?
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>

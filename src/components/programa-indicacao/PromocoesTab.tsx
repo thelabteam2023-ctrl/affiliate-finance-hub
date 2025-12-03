@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -8,65 +7,90 @@ import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { IndicadorDialog } from "@/components/indicadores/IndicadorDialog";
-import { IndicadorCard } from "@/components/indicadores/IndicadorCard";
-import { Users, UserPlus, Star, AlertTriangle, UserX, LayoutGrid, List, LogOut } from "lucide-react";
+import { PromocaoDialog } from "@/components/promocoes/PromocaoDialog";
+import { PromocaoCard } from "@/components/promocoes/PromocaoCard";
+import { Gift, Megaphone, CheckCircle, XCircle, LayoutGrid, List } from "lucide-react";
 
-interface IndicadorPerformance {
-  indicador_id: string;
+interface Promocao {
+  id: string;
   user_id: string;
   nome: string;
-  cpf: string;
+  descricao: string | null;
+  data_inicio: string;
+  data_fim: string;
+  meta_parceiros: number;
+  valor_bonus: number;
   status: string;
-  telefone: string | null;
-  email: string | null;
-  total_parceiros_indicados: number;
-  parcerias_ativas: number;
-  parcerias_encerradas: number;
-  total_comissoes: number;
-  total_bonus: number;
+  created_at: string;
 }
 
-export default function GestaoIndicadores() {
-  const navigate = useNavigate();
+interface PromocaoParticipante {
+  id: string;
+  promocao_id: string;
+  indicador_id: string;
+  parceiros_indicados: number;
+  meta_atingida: boolean;
+  bonus_pago: boolean;
+  indicador_nome?: string;
+}
+
+export function PromocoesTab() {
   const { toast } = useToast();
-  const [indicadores, setIndicadores] = useState<IndicadorPerformance[]>([]);
+  const [promocoes, setPromocoes] = useState<Promocao[]>([]);
+  const [participantes, setParticipantes] = useState<Record<string, PromocaoParticipante[]>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedIndicador, setSelectedIndicador] = useState<IndicadorPerformance | null>(null);
+  const [selectedPromocao, setSelectedPromocao] = useState<Promocao | null>(null);
   const [isViewMode, setIsViewMode] = useState(false);
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [indicadorToDelete, setIndicadorToDelete] = useState<IndicadorPerformance | null>(null);
+  const [promocaoToDelete, setPromocaoToDelete] = useState<Promocao | null>(null);
 
   useEffect(() => {
-    checkAuth();
-    fetchIndicadores();
+    fetchPromocoes();
   }, []);
 
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-    }
-  };
-
-  const fetchIndicadores = async () => {
+  const fetchPromocoes = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("v_indicador_performance")
-        .select("*");
+      const { data: promocoesData, error: promocoesError } = await supabase
+        .from("promocoes_indicacao")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      setIndicadores(data || []);
+      if (promocoesError) throw promocoesError;
+      setPromocoes(promocoesData || []);
+
+      // Fetch participants for each promotion
+      if (promocoesData && promocoesData.length > 0) {
+        const { data: participantesData, error: participantesError } = await supabase
+          .from("promocao_participantes")
+          .select(`
+            *,
+            indicadores_referral (nome)
+          `);
+
+        if (participantesError) throw participantesError;
+
+        const participantesByPromocao: Record<string, PromocaoParticipante[]> = {};
+        participantesData?.forEach((p: any) => {
+          if (!participantesByPromocao[p.promocao_id]) {
+            participantesByPromocao[p.promocao_id] = [];
+          }
+          participantesByPromocao[p.promocao_id].push({
+            ...p,
+            indicador_nome: p.indicadores_referral?.nome,
+          });
+        });
+        setParticipantes(participantesByPromocao);
+      }
     } catch (error: any) {
       toast({
-        title: "Erro ao carregar indicadores",
+        title: "Erro ao carregar promoções",
         description: error.message,
         variant: "destructive",
       });
@@ -75,44 +99,39 @@ export default function GestaoIndicadores() {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
-  };
-
-  const handleEdit = (indicador: IndicadorPerformance) => {
-    setSelectedIndicador(indicador);
+  const handleEdit = (promocao: Promocao) => {
+    setSelectedPromocao(promocao);
     setIsViewMode(false);
     setDialogOpen(true);
   };
 
-  const handleView = (indicador: IndicadorPerformance) => {
-    setSelectedIndicador(indicador);
+  const handleView = (promocao: Promocao) => {
+    setSelectedPromocao(promocao);
     setIsViewMode(true);
     setDialogOpen(true);
   };
 
-  const handleDeleteClick = (indicador: IndicadorPerformance) => {
-    setIndicadorToDelete(indicador);
+  const handleDeleteClick = (promocao: Promocao) => {
+    setPromocaoToDelete(promocao);
     setDeleteDialogOpen(true);
   };
 
   const handleDelete = async () => {
-    if (!indicadorToDelete) return;
+    if (!promocaoToDelete) return;
 
     try {
       const { error } = await supabase
-        .from("indicadores_referral")
+        .from("promocoes_indicacao")
         .delete()
-        .eq("id", indicadorToDelete.indicador_id);
+        .eq("id", promocaoToDelete.id);
 
       if (error) throw error;
 
       toast({
-        title: "Indicador excluído",
-        description: "O indicador foi removido com sucesso.",
+        title: "Promoção excluída",
+        description: "A promoção foi removida com sucesso.",
       });
-      fetchIndicadores();
+      fetchPromocoes();
     } catch (error: any) {
       toast({
         title: "Erro ao excluir",
@@ -121,15 +140,15 @@ export default function GestaoIndicadores() {
       });
     } finally {
       setDeleteDialogOpen(false);
-      setIndicadorToDelete(null);
+      setPromocaoToDelete(null);
     }
   };
 
   const handleDialogClose = () => {
     setDialogOpen(false);
-    setSelectedIndicador(null);
+    setSelectedPromocao(null);
     setIsViewMode(false);
-    fetchIndicadores();
+    fetchPromocoes();
   };
 
   const formatCurrency = (value: number) => {
@@ -139,61 +158,61 @@ export default function GestaoIndicadores() {
     }).format(value);
   };
 
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString("pt-BR");
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-      ATIVO: { label: "Ativo", variant: "default" },
-      TOP_VIP: { label: "Top VIP", variant: "secondary" },
-      EM_OBSERVACAO: { label: "Em Observação", variant: "outline" },
-      INATIVO: { label: "Inativo", variant: "destructive" },
+      ATIVA: { label: "Ativa", variant: "default" },
+      ENCERRADA: { label: "Encerrada", variant: "secondary" },
+      CANCELADA: { label: "Cancelada", variant: "destructive" },
     };
     const config = statusConfig[status] || { label: status, variant: "outline" };
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const filteredIndicadores = indicadores.filter((ind) => {
-    const matchesSearch = ind.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ind.cpf.includes(searchTerm);
-    const matchesStatus = statusFilter === "todos" || ind.status === statusFilter;
+  const isPromocaoActive = (promocao: Promocao) => {
+    const today = new Date();
+    const inicio = new Date(promocao.data_inicio);
+    const fim = new Date(promocao.data_fim);
+    return promocao.status === "ATIVA" && today >= inicio && today <= fim;
+  };
+
+  const filteredPromocoes = promocoes.filter((p) => {
+    const matchesSearch = p.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.descricao?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+    const matchesStatus = statusFilter === "todos" || p.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const stats = {
-    total: indicadores.length,
-    ativos: indicadores.filter((i) => i.status === "ATIVO").length,
-    topVip: indicadores.filter((i) => i.status === "TOP_VIP").length,
-    emObservacao: indicadores.filter((i) => i.status === "EM_OBSERVACAO").length,
+    total: promocoes.length,
+    ativas: promocoes.filter((p) => isPromocaoActive(p)).length,
+    encerradas: promocoes.filter((p) => p.status === "ENCERRADA").length,
+    totalBonus: promocoes.reduce((acc, p) => {
+      const parts = participantes[p.id] || [];
+      const bonusPago = parts.filter((part) => part.bonus_pago).length * p.valor_bonus;
+      return acc + bonusPago;
+    }, 0),
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestão de Indicadores</h1>
-          <p className="text-muted-foreground">
-            Gerencie seus indicadores e acompanhe suas comissões
-          </p>
-        </div>
-        <Button variant="outline" onClick={handleLogout}>
-          <LogOut className="h-4 w-4 mr-2" />
-          Sair
-        </Button>
-      </div>
-
+    <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Megaphone className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
@@ -201,29 +220,29 @@ export default function GestaoIndicadores() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ativos</CardTitle>
-            <UserPlus className="h-4 w-4 text-emerald-500" />
+            <CardTitle className="text-sm font-medium">Ativas</CardTitle>
+            <CheckCircle className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-500">{stats.ativos}</div>
+            <div className="text-2xl font-bold text-emerald-500">{stats.ativas}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Top VIP</CardTitle>
-            <Star className="h-4 w-4 text-yellow-500" />
+            <CardTitle className="text-sm font-medium">Encerradas</CardTitle>
+            <XCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">{stats.topVip}</div>
+            <div className="text-2xl font-bold">{stats.encerradas}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Em Observação</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-500" />
+            <CardTitle className="text-sm font-medium">Bônus Pagos</CardTitle>
+            <Gift className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-500">{stats.emObservacao}</div>
+            <div className="text-2xl font-bold text-primary">{formatCurrency(stats.totalBonus)}</div>
           </CardContent>
         </Card>
       </div>
@@ -232,28 +251,27 @@ export default function GestaoIndicadores() {
       <div className="flex flex-col md:flex-row gap-4 items-center">
         <div className="flex-1 w-full md:max-w-sm">
           <SearchInput
-            placeholder="Buscar por nome ou CPF..."
+            placeholder="Buscar por nome..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onAdd={() => {
-              setSelectedIndicador(null);
+              setSelectedPromocao(null);
               setIsViewMode(false);
               setDialogOpen(true);
             }}
-            addButtonLabel="Novo Indicador"
+            addButtonLabel="Nova Promoção"
           />
         </div>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filtrar por status" />
+            <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos os status</SelectItem>
-            <SelectItem value="ATIVO">Ativo</SelectItem>
-            <SelectItem value="TOP_VIP">Top VIP</SelectItem>
-            <SelectItem value="EM_OBSERVACAO">Em Observação</SelectItem>
-            <SelectItem value="INATIVO">Inativo</SelectItem>
+            <SelectItem value="ATIVA">Ativa</SelectItem>
+            <SelectItem value="ENCERRADA">Encerrada</SelectItem>
+            <SelectItem value="CANCELADA">Cancelada</SelectItem>
           </SelectContent>
         </Select>
 
@@ -276,70 +294,74 @@ export default function GestaoIndicadores() {
       </div>
 
       {/* Content */}
-      {filteredIndicadores.length === 0 ? (
+      {filteredPromocoes.length === 0 ? (
         <Card className="p-12 text-center">
-          <UserX className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Nenhum indicador encontrado</h3>
+          <Megaphone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Nenhuma promoção encontrada</h3>
           <p className="text-muted-foreground mb-4">
             {searchTerm || statusFilter !== "todos"
               ? "Tente ajustar os filtros de busca"
-              : "Comece cadastrando seu primeiro indicador"}
+              : "Comece criando sua primeira promoção de indicação"}
           </p>
           <Button onClick={() => {
-            setSelectedIndicador(null);
+            setSelectedPromocao(null);
             setIsViewMode(false);
             setDialogOpen(true);
           }}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Novo Indicador
+            <Megaphone className="h-4 w-4 mr-2" />
+            Nova Promoção
           </Button>
         </Card>
       ) : viewMode === "cards" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredIndicadores.map((indicador) => (
-            <IndicadorCard
-              key={indicador.indicador_id}
-              indicador={indicador}
-              onView={() => handleView(indicador)}
-              onEdit={() => handleEdit(indicador)}
-              onDelete={() => handleDeleteClick(indicador)}
+          {filteredPromocoes.map((promocao) => (
+            <PromocaoCard
+              key={promocao.id}
+              promocao={promocao}
+              participantes={participantes[promocao.id] || []}
+              onView={() => handleView(promocao)}
+              onEdit={() => handleEdit(promocao)}
+              onDelete={() => handleDeleteClick(promocao)}
               formatCurrency={formatCurrency}
+              formatDate={formatDate}
               getStatusBadge={getStatusBadge}
             />
           ))}
         </div>
       ) : (
         <div className="space-y-2">
-          {filteredIndicadores.map((indicador) => (
-            <Card key={indicador.indicador_id} className="p-4">
+          {filteredPromocoes.map((promocao) => (
+            <Card key={promocao.id} className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-primary" />
+                    <Megaphone className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <div className="font-semibold">{indicador.nome}</div>
+                    <div className="font-semibold">{promocao.nome}</div>
                     <div className="text-sm text-muted-foreground">
-                      {indicador.total_parceiros_indicados} parceiros indicados
+                      {formatDate(promocao.data_inicio)} - {formatDate(promocao.data_fim)}
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <div className="font-semibold text-emerald-500">
-                      {formatCurrency(indicador.total_comissoes + indicador.total_bonus)}
+                    <div className="font-semibold text-primary">
+                      {formatCurrency(promocao.valor_bonus)}
                     </div>
-                    <div className="text-sm text-muted-foreground">Total recebido</div>
+                    <div className="text-sm text-muted-foreground">
+                      Meta: {promocao.meta_parceiros} parceiros
+                    </div>
                   </div>
-                  {getStatusBadge(indicador.status)}
+                  {getStatusBadge(promocao.status)}
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => handleView(indicador)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleView(promocao)}>
                       Ver
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(indicador)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(promocao)}>
                       Editar
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(indicador)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(promocao)}>
                       Excluir
                     </Button>
                   </div>
@@ -351,10 +373,10 @@ export default function GestaoIndicadores() {
       )}
 
       {/* Dialogs */}
-      <IndicadorDialog
+      <PromocaoDialog
         open={dialogOpen}
         onOpenChange={handleDialogClose}
-        indicador={selectedIndicador}
+        promocao={selectedPromocao}
         isViewMode={isViewMode}
       />
 
@@ -363,7 +385,7 @@ export default function GestaoIndicadores() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o indicador "{indicadorToDelete?.nome}"?
+              Tem certeza que deseja excluir a promoção "{promocaoToDelete?.nome}"?
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -1,4 +1,4 @@
-import { Home, Users, Landmark, Wallet, Building2, Link2, TrendingUp, UserPlus, Handshake, Gift } from "lucide-react";
+import { Home, Users, Landmark, Wallet, Building2, TrendingUp, UserPlus } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -12,21 +12,23 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
+  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const menuItems = [
+// Menu principal - Operações
+const mainMenuItems = [
   { title: "Home", url: "/", icon: Home },
   { title: "Parceiros", url: "/parceiros", icon: Users },
   { title: "Investidores", url: "/investidores", icon: TrendingUp },
-  { title: "Indicadores", url: "/indicadores", icon: UserPlus },
-  { title: "Parcerias", url: "/parcerias", icon: Handshake },
-  { title: "Promoções", url: "/promocoes", icon: Gift },
   { title: "Bancos", url: "/bancos", icon: Landmark },
   { title: "Caixa", url: "/caixa", icon: Wallet },
   { title: "Casas", url: "/bookmakers", icon: Building2 },
-  { title: "Vínculos", url: "/vinculos", icon: Link2 },
+];
+
+// Menu de Afiliação
+const affiliateMenuItems = [
+  { title: "Programa de Indicação", url: "/programa-indicacao", icon: UserPlus },
 ];
 
 export function AppSidebar() {
@@ -36,6 +38,42 @@ export function AppSidebar() {
   
   const isCollapsed = state === "collapsed";
   const isActive = (path: string) => currentPath === path;
+
+  const renderMenuItem = (item: { title: string; url: string; icon: any }) => (
+    <SidebarMenuItem key={item.title}>
+      {isCollapsed ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <SidebarMenuButton asChild isActive={isActive(item.url)}>
+              <NavLink 
+                to={item.url} 
+                end 
+                className="hover:bg-accent/50 transition-colors"
+                activeClassName="bg-primary/10 text-primary font-medium border-l-2 border-primary"
+              >
+                <item.icon className="h-4 w-4" />
+              </NavLink>
+            </SidebarMenuButton>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">
+            {item.title}
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        <SidebarMenuButton asChild isActive={isActive(item.url)}>
+          <NavLink 
+            to={item.url} 
+            end 
+            className="hover:bg-accent/50 transition-colors"
+            activeClassName="bg-primary/10 text-primary font-medium border-l-2 border-primary"
+          >
+            <item.icon className="h-4 w-4 mr-2" />
+            <span>{item.title}</span>
+          </NavLink>
+        </SidebarMenuButton>
+      )}
+    </SidebarMenuItem>
+  );
 
   return (
     <Sidebar
@@ -53,48 +91,28 @@ export function AppSidebar() {
           )}
         </div>
 
+        {/* Menu Principal */}
         <SidebarGroup>
           <SidebarGroupLabel className={isCollapsed ? 'sr-only' : ''}>
             Menu Principal
           </SidebarGroupLabel>
-
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  {isCollapsed ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                          <NavLink 
-                            to={item.url} 
-                            end 
-                            className="hover:bg-accent/50 transition-colors"
-                            activeClassName="bg-primary/10 text-primary font-medium border-l-2 border-primary"
-                          >
-                            <item.icon className="h-4 w-4" />
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </TooltipTrigger>
-                      <TooltipContent side="right" className="font-medium">
-                        {item.title}
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                      <NavLink 
-                        to={item.url} 
-                        end 
-                        className="hover:bg-accent/50 transition-colors"
-                        activeClassName="bg-primary/10 text-primary font-medium border-l-2 border-primary"
-                      >
-                        <item.icon className="h-4 w-4 mr-2" />
-                        <span>{item.title}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  )}
-                </SidebarMenuItem>
-              ))}
+              {mainMenuItems.map(renderMenuItem)}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        {/* Menu de Afiliação */}
+        <SidebarGroup>
+          <SidebarGroupLabel className={isCollapsed ? 'sr-only' : ''}>
+            Afiliação
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {affiliateMenuItems.map(renderMenuItem)}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
