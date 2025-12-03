@@ -6,19 +6,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DatePicker } from "@/components/ui/date-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Wallet,
   TrendingUp,
   TrendingDown,
-  DollarSign,
   Users,
   Gift,
   Banknote,
   ArrowUpRight,
-  ArrowDownRight,
   Loader2,
   BarChart3,
   PieChart,
+  Calendar,
+  History,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -34,8 +42,10 @@ import {
   Cell,
   BarChart,
   Bar,
+  ComposedChart,
+  Line,
 } from "recharts";
-import { format, parseISO, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format, parseISO, subMonths, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface CaixaFiat {
@@ -63,6 +73,13 @@ interface CustoAquisicao {
   data_inicio: string;
 }
 
+interface CashLedgerEntry {
+  tipo_transacao: string;
+  valor: number;
+  data_transacao: string;
+  moeda: string;
+}
+
 export default function Financeiro() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -71,10 +88,43 @@ export default function Financeiro() {
   const [caixaCrypto, setCaixaCrypto] = useState<CaixaCrypto[]>([]);
   const [despesas, setDespesas] = useState<DespesaIndicacao[]>([]);
   const [custos, setCustos] = useState<CustoAquisicao[]>([]);
+  const [cashLedger, setCashLedger] = useState<CashLedgerEntry[]>([]);
+
+  // Filtros de período
+  const [periodoPreset, setPeriodoPreset] = useState<string>("all");
+  const [dataInicio, setDataInicio] = useState<string>("");
+  const [dataFim, setDataFim] = useState<string>("");
 
   useEffect(() => {
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    // Aplicar presets de período
+    const hoje = new Date();
+    switch (periodoPreset) {
+      case "1m":
+        setDataInicio(format(subMonths(hoje, 1), "yyyy-MM-dd"));
+        setDataFim(format(hoje, "yyyy-MM-dd"));
+        break;
+      case "3m":
+        setDataInicio(format(subMonths(hoje, 3), "yyyy-MM-dd"));
+        setDataFim(format(hoje, "yyyy-MM-dd"));
+        break;
+      case "6m":
+        setDataInicio(format(subMonths(hoje, 6), "yyyy-MM-dd"));
+        setDataFim(format(hoje, "yyyy-MM-dd"));
+        break;
+      case "12m":
+        setDataInicio(format(subMonths(hoje, 12), "yyyy-MM-dd"));
+        setDataFim(format(hoje, "yyyy-MM-dd"));
+        break;
+      case "all":
+        setDataInicio("");
+        setDataFim("");
+        break;
+    }
+  }, [periodoPreset]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -89,22 +139,25 @@ export default function Financeiro() {
     try {
       setLoading(true);
 
-      const [fiatResult, cryptoResult, despesasResult, custosResult] = await Promise.all([
+      const [fiatResult, cryptoResult, despesasResult, custosResult, ledgerResult] = await Promise.all([
         supabase.from("v_saldo_caixa_fiat").select("*"),
         supabase.from("v_saldo_caixa_crypto").select("*"),
         supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao").eq("status", "CONFIRMADO"),
         supabase.from("v_custos_aquisicao").select("custo_total, valor_indicador, valor_parceiro, valor_fornecedor, data_inicio"),
+        supabase.from("cash_ledger").select("tipo_transacao, valor, data_transacao, moeda").eq("status", "CONFIRMADO"),
       ]);
 
       if (fiatResult.error) throw fiatResult.error;
       if (cryptoResult.error) throw cryptoResult.error;
       if (despesasResult.error) throw despesasResult.error;
       if (custosResult.error) throw custosResult.error;
+      if (ledgerResult.error) throw ledgerResult.error;
 
       setCaixaFiat(fiatResult.data || []);
       setCaixaCrypto(cryptoResult.data || []);
       setDespesas(despesasResult.data || []);
       setCustos(custosResult.data || []);
+      setCashLedger(ledgerResult.data || []);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar dados",
@@ -123,22 +176,54 @@ export default function Financeiro() {
     }).format(value);
   };
 
+  // Filtrar dados por período
+  const filterByPeriod = <T extends { data_movimentacao?: string; data_inicio?: string; data_transacao?: string }>(
+    data: T[],
+    dateField: keyof T
+  ): T[] => {
+    if (!dataInicio && !dataFim) return data;
+    
+    return data.filter(item => {
+      const dateValue = item[dateField] as string | undefined;
+      if (!dateValue) return true;
+      
+      const itemDate = parseISO(dateValue);
+      const start = dataInicio ? startOfMonth(parseISO(dataInicio)) : new Date(0);
+      const end = dataFim ? endOfMonth(parseISO(dataFim)) : new Date();
+      
+      return isWithinInterval(itemDate, { start, end });
+    });
+  };
+
+  const filteredDespesas = filterByPeriod(despesas, "data_movimentacao");
+  const filteredCustos = filterByPeriod(custos, "data_inicio");
+  const filteredLedger = filterByPeriod(cashLedger, "data_transacao");
+
   // Calculate KPIs
   const saldoBRL = caixaFiat.find(f => f.moeda === "BRL")?.saldo || 0;
   const saldoUSD = caixaFiat.find(f => f.moeda === "USD")?.saldo || 0;
   const totalCryptoUSD = caixaCrypto.reduce((acc, c) => acc + (c.saldo_usd || 0), 0);
 
-  const totalDespesasIndicacao = despesas.reduce((acc, d) => acc + d.valor, 0);
-  const totalComissoes = despesas.filter(d => d.tipo === "COMISSAO_INDICADOR").reduce((acc, d) => acc + d.valor, 0);
-  const totalBonus = despesas.filter(d => d.tipo === "BONUS_INDICADOR").reduce((acc, d) => acc + d.valor, 0);
+  const totalDespesasIndicacao = filteredDespesas.reduce((acc, d) => acc + d.valor, 0);
+  const totalComissoes = filteredDespesas.filter(d => d.tipo === "COMISSAO_INDICADOR").reduce((acc, d) => acc + d.valor, 0);
+  const totalBonus = filteredDespesas.filter(d => d.tipo === "BONUS_INDICADOR").reduce((acc, d) => acc + d.valor, 0);
 
-  const totalCustosAquisicao = custos.reduce((acc, c) => acc + (c.custo_total || 0), 0);
-  const custoIndicadores = custos.reduce((acc, c) => acc + (c.valor_indicador || 0), 0);
-  const custoParceiros = custos.reduce((acc, c) => acc + (c.valor_parceiro || 0), 0);
-  const custoFornecedores = custos.reduce((acc, c) => acc + (c.valor_fornecedor || 0), 0);
+  const totalCustosAquisicao = filteredCustos.reduce((acc, c) => acc + (c.custo_total || 0), 0);
+  const custoIndicadores = filteredCustos.reduce((acc, c) => acc + (c.valor_indicador || 0), 0);
+  const custoParceiros = filteredCustos.reduce((acc, c) => acc + (c.valor_parceiro || 0), 0);
+  const custoFornecedores = filteredCustos.reduce((acc, c) => acc + (c.valor_fornecedor || 0), 0);
+
+  // Resultado operacional (saques - depósitos em BRL)
+  const resultadoOperacional = filteredLedger
+    .filter(l => l.moeda === "BRL")
+    .reduce((acc, l) => {
+      if (l.tipo_transacao === "SAQUE") return acc + l.valor;
+      if (l.tipo_transacao === "DEPOSITO") return acc - l.valor;
+      return acc;
+    }, 0);
 
   // Margem líquida (simplificada)
-  const capitalOperacional = saldoBRL + (saldoUSD * 5) + (totalCryptoUSD * 5); // Aproximação
+  const capitalOperacional = saldoBRL + (saldoUSD * 5) + (totalCryptoUSD * 5);
   const margemLiquida = capitalOperacional - totalCustosAquisicao;
   const margemPercent = capitalOperacional > 0 ? (margemLiquida / capitalOperacional) * 100 : 0;
 
@@ -149,19 +234,20 @@ export default function Financeiro() {
     { name: "Fornecedores", value: custoFornecedores, color: "hsl(var(--chart-3))" },
   ].filter(d => d.value > 0);
 
-  // Monthly evolution
+  // Monthly evolution data (últimos 12 meses)
   const getMonthlyData = () => {
-    const months: Record<string, { mes: string; label: string; custos: number; despesas: number }> = {};
+    const months: Record<string, { mes: string; label: string; custos: number; despesas: number; resultado: number; patrimonio: number }> = {};
     
-    // Last 6 months
-    for (let i = 5; i >= 0; i--) {
+    for (let i = 11; i >= 0; i--) {
       const date = subMonths(new Date(), i);
       const key = format(date, "yyyy-MM");
       months[key] = {
         mes: key,
-        label: format(date, "MMM", { locale: ptBR }),
+        label: format(date, "MMM/yy", { locale: ptBR }),
         custos: 0,
         despesas: 0,
+        resultado: 0,
+        patrimonio: 0,
       };
     }
 
@@ -183,7 +269,28 @@ export default function Financeiro() {
       }
     });
 
-    return Object.values(months);
+    cashLedger.forEach(l => {
+      if (l.data_transacao && l.moeda === "BRL") {
+        const key = format(parseISO(l.data_transacao), "yyyy-MM");
+        if (months[key]) {
+          if (l.tipo_transacao === "SAQUE") {
+            months[key].resultado += l.valor;
+          } else if (l.tipo_transacao === "DEPOSITO") {
+            months[key].resultado -= l.valor;
+          }
+        }
+      }
+    });
+
+    // Calcular patrimônio acumulado
+    let patrimonioAcumulado = 0;
+    const monthsArray = Object.values(months);
+    monthsArray.forEach((m, index) => {
+      patrimonioAcumulado += m.resultado - m.custos - m.despesas;
+      monthsArray[index].patrimonio = patrimonioAcumulado;
+    });
+
+    return monthsArray;
   };
 
   const monthlyData = getMonthlyData();
@@ -196,6 +303,17 @@ export default function Financeiro() {
     { name: "Despesas Pagas", valor: totalDespesasIndicacao },
   ];
 
+  // Histórico mensal detalhado
+  const getHistoricoMensal = () => {
+    return monthlyData.map(m => ({
+      ...m,
+      lucroLiquido: m.resultado - m.custos - m.despesas,
+      totalCustos: m.custos + m.despesas,
+    }));
+  };
+
+  const historicoMensal = getHistoricoMensal();
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -207,11 +325,44 @@ export default function Financeiro() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Visão Financeira</h1>
-        <p className="text-muted-foreground">
-          Dashboard consolidado: Caixa Operacional + Despesas de Infraestrutura
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Visão Financeira</h1>
+          <p className="text-muted-foreground">
+            Dashboard consolidado: Caixa Operacional + Despesas de Infraestrutura
+          </p>
+        </div>
+
+        {/* Filtros de Período */}
+        <div className="flex flex-wrap items-center gap-3">
+          <Select value={periodoPreset} onValueChange={setPeriodoPreset}>
+            <SelectTrigger className="w-[140px]">
+              <Calendar className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todo período</SelectItem>
+              <SelectItem value="1m">Último mês</SelectItem>
+              <SelectItem value="3m">3 meses</SelectItem>
+              <SelectItem value="6m">6 meses</SelectItem>
+              <SelectItem value="12m">12 meses</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-center gap-2">
+            <DatePicker
+              value={dataInicio}
+              onChange={setDataInicio}
+              placeholder="Data início"
+            />
+            <span className="text-muted-foreground">até</span>
+            <DatePicker
+              value={dataFim}
+              onChange={setDataFim}
+              placeholder="Data fim"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Main KPIs */}
@@ -246,7 +397,7 @@ export default function Financeiro() {
               {formatCurrency(totalCustosAquisicao)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {custos.length} parceiros adquiridos
+              {filteredCustos.length} parceiros adquiridos
             </p>
           </CardContent>
         </Card>
@@ -298,6 +449,10 @@ export default function Financeiro() {
           <TabsTrigger value="custos" className="flex items-center gap-2">
             <PieChart className="h-4 w-4" />
             Custos Detalhados
+          </TabsTrigger>
+          <TabsTrigger value="historico" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Histórico Mensal
           </TabsTrigger>
         </TabsList>
 
@@ -510,12 +665,12 @@ export default function Financeiro() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Pagamentos a Indicadores</span>
+                    <span>Pagamentos a Indicadores</span>
                     <span className="font-medium">{formatCurrency(custoIndicadores)}</span>
                   </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-chart-1 rounded-full"
+                    <div 
+                      className="h-full bg-chart-1 rounded-full" 
                       style={{ width: `${totalCustosAquisicao > 0 ? (custoIndicadores / totalCustosAquisicao) * 100 : 0}%` }}
                     />
                   </div>
@@ -523,12 +678,12 @@ export default function Financeiro() {
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Pagamentos a Parceiros</span>
+                    <span>Pagamentos a Parceiros</span>
                     <span className="font-medium">{formatCurrency(custoParceiros)}</span>
                   </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-chart-2 rounded-full"
+                    <div 
+                      className="h-full bg-chart-2 rounded-full" 
                       style={{ width: `${totalCustosAquisicao > 0 ? (custoParceiros / totalCustosAquisicao) * 100 : 0}%` }}
                     />
                   </div>
@@ -536,22 +691,181 @@ export default function Financeiro() {
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Pagamentos a Fornecedores</span>
+                    <span>Pagamentos a Fornecedores</span>
                     <span className="font-medium">{formatCurrency(custoFornecedores)}</span>
                   </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-chart-3 rounded-full"
+                    <div 
+                      className="h-full bg-chart-3 rounded-full" 
                       style={{ width: `${totalCustosAquisicao > 0 ? (custoFornecedores / totalCustosAquisicao) * 100 : 0}%` }}
                     />
                   </div>
                 </div>
 
                 <div className="pt-4 border-t">
-                  <div className="flex justify-between">
-                    <span className="font-medium">Total de Custos</span>
-                    <span className="font-bold text-lg">{formatCurrency(totalCustosAquisicao)}</span>
+                  <div className="flex justify-between font-medium">
+                    <span>Total Custos de Aquisição</span>
+                    <span className="text-destructive">{formatCurrency(totalCustosAquisicao)}</span>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="historico" className="space-y-6">
+          {/* Gráfico Comparativo Mensal */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Comparativo Mensal: Resultado vs Custos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={350}>
+                <ComposedChart data={historicoMensal}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="label" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                  <YAxis 
+                    tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                  />
+                  <Tooltip
+                    contentStyle={{ 
+                      backgroundColor: "rgba(0, 0, 0, 0.4)", 
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      backdropFilter: "blur(12px)",
+                      borderRadius: "12px",
+                      padding: "12px 16px"
+                    }}
+                    cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
+                    formatter={(value: number) => [formatCurrency(value), ""]}
+                  />
+                  <Legend />
+                  <Bar 
+                    dataKey="resultado" 
+                    name="Resultado Operacional" 
+                    fill="hsl(var(--primary))" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar 
+                    dataKey="custos" 
+                    name="Custos Aquisição" 
+                    fill="hsl(var(--destructive))" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar 
+                    dataKey="despesas" 
+                    name="Despesas Gerais" 
+                    fill="hsl(var(--chart-2))" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="patrimonio" 
+                    name="Patrimônio Acumulado" 
+                    stroke="hsl(var(--success))" 
+                    strokeWidth={3}
+                    dot={{ fill: "hsl(var(--success))", strokeWidth: 2 }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Tabela de Histórico Mensal */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Detalhamento Mês a Mês</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-2 font-medium">Mês</th>
+                      <th className="text-right py-3 px-2 font-medium">Resultado</th>
+                      <th className="text-right py-3 px-2 font-medium">Custos Aquisição</th>
+                      <th className="text-right py-3 px-2 font-medium">Despesas</th>
+                      <th className="text-right py-3 px-2 font-medium">Lucro Líquido</th>
+                      <th className="text-right py-3 px-2 font-medium">Patrimônio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historicoMensal.map((mes, index) => (
+                      <tr key={mes.mes} className="border-b border-border/50 hover:bg-muted/30">
+                        <td className="py-3 px-2 font-medium">{mes.label}</td>
+                        <td className={`text-right py-3 px-2 ${mes.resultado >= 0 ? "text-success" : "text-destructive"}`}>
+                          {formatCurrency(mes.resultado)}
+                        </td>
+                        <td className="text-right py-3 px-2 text-destructive">
+                          {mes.custos > 0 ? `-${formatCurrency(mes.custos)}` : formatCurrency(0)}
+                        </td>
+                        <td className="text-right py-3 px-2 text-muted-foreground">
+                          {mes.despesas > 0 ? `-${formatCurrency(mes.despesas)}` : formatCurrency(0)}
+                        </td>
+                        <td className={`text-right py-3 px-2 font-medium ${mes.lucroLiquido >= 0 ? "text-success" : "text-destructive"}`}>
+                          {formatCurrency(mes.lucroLiquido)}
+                        </td>
+                        <td className={`text-right py-3 px-2 font-bold ${mes.patrimonio >= 0 ? "text-primary" : "text-destructive"}`}>
+                          {formatCurrency(mes.patrimonio)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* KPIs do Período */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
+                  Total Resultado Operacional
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-xl font-bold ${resultadoOperacional >= 0 ? "text-success" : "text-destructive"}`}>
+                  {formatCurrency(resultadoOperacional)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
+                  Total Custos Aquisição
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold text-destructive">
+                  {formatCurrency(totalCustosAquisicao)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
+                  Total Despesas Gerais
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold text-muted-foreground">
+                  {formatCurrency(totalDespesasIndicacao)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className={resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao >= 0 ? "border-success/30" : "border-destructive/30"}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
+                  Lucro Líquido Total
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-xl font-bold ${resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao >= 0 ? "text-success" : "text-destructive"}`}>
+                  {formatCurrency(resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao)}
                 </div>
               </CardContent>
             </Card>
