@@ -164,7 +164,7 @@ export default function BookmakerDialog({
     
     // Usuário mudou a seleção manualmente - carregar novos detalhes
     fetchBookmakerDetails(bookmakerId);
-  }, [bookmakerId, open, fetchBookmakerDetails, isLoadingDetails]);
+  }, [bookmakerId, open, fetchBookmakerDetails]);
 
   // Limpar selectedBookmaker quando bookmakerId é limpo
   useEffect(() => {
