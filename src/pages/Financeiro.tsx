@@ -320,6 +320,7 @@ export default function Financeiro() {
                     />
                     <Tooltip
                       contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                      cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
                       formatter={(value: number) => [formatCurrency(value), ""]}
                     />
                     <Legend />
@@ -365,12 +366,7 @@ export default function Financeiro() {
                       tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                     />
                     <Tooltip
-                      contentStyle={{ 
-                        backgroundColor: "rgba(0, 0, 0, 0.4)", 
-                        border: "1px solid rgba(255, 255, 255, 0.1)",
-                        backdropFilter: "blur(12px)",
-                        borderRadius: "8px"
-                      }}
+                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
                       cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
                       formatter={(value: number) => [formatCurrency(value), "Valor"]}
                     />
