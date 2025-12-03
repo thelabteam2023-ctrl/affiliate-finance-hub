@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { DollarSign, Users, TrendingUp, UserPlus, Truck, ArrowRight, CalendarDays, Trophy, Award } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
-import { format, startOfMonth, startOfYear, subMonths, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfYear, subMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface CustoData {
@@ -72,14 +72,12 @@ export function DashboardTab() {
       case "mes":
         setDateRange({ from: startOfMonth(now), to: now });
         break;
+      case "mesAnterior":
+        const previousMonth = subMonths(now, 1);
+        setDateRange({ from: startOfMonth(previousMonth), to: endOfMonth(previousMonth) });
+        break;
       case "ano":
         setDateRange({ from: startOfYear(now), to: now });
-        break;
-      case "3meses":
-        setDateRange({ from: subMonths(now, 3), to: now });
-        break;
-      case "6meses":
-        setDateRange({ from: subMonths(now, 6), to: now });
         break;
       case "todos":
         setDateRange({ from: undefined, to: undefined });
@@ -214,18 +212,11 @@ export function DashboardTab() {
             Este mês
           </Button>
           <Button
-            variant={quickFilter === "3meses" ? "default" : "outline"}
+            variant={quickFilter === "mesAnterior" ? "default" : "outline"}
             size="sm"
-            onClick={() => handleQuickFilter("3meses")}
+            onClick={() => handleQuickFilter("mesAnterior")}
           >
-            Últimos 3 meses
-          </Button>
-          <Button
-            variant={quickFilter === "6meses" ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleQuickFilter("6meses")}
-          >
-            Últimos 6 meses
+            Mês anterior
           </Button>
           <Button
             variant={quickFilter === "ano" ? "default" : "outline"}
