@@ -112,6 +112,7 @@ export default function BookmakerDialog({
   useEffect(() => {
     if (!open) {
       // Reset COMPLETO quando fecha
+      setParceiroId("");
       setBookmakerId("");
       setSelectedBookmaker(null);
       setSelectedLink("");
