@@ -48,6 +48,7 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
   // Deal
   const [dealId, setDealId] = useState<string | null>(null);
   const [tipoDeal, setTipoDeal] = useState<"FIXO" | "PROGRESSIVO">("FIXO");
+  const [baseCalculo, setBaseCalculo] = useState<"LUCRO" | "APORTE">("LUCRO");
   const [percentualFixo, setPercentualFixo] = useState("40");
   const [faixasProgressivas, setFaixasProgressivas] = useState<FaixaProgressiva[]>([
     { limite: 10000, percentual: 20 },
@@ -72,6 +73,7 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
       setObservacoes("");
       setDealId(null);
       setTipoDeal("FIXO");
+      setBaseCalculo("LUCRO");
       setPercentualFixo("40");
       setFaixasProgressivas([
         { limite: 10000, percentual: 20 },
@@ -97,6 +99,7 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
       if (data) {
         setDealId(data.id);
         setTipoDeal(data.tipo_deal as "FIXO" | "PROGRESSIVO");
+        setBaseCalculo((data.base_calculo as "LUCRO" | "APORTE") || "LUCRO");
         setPercentualFixo(data.percentual_fixo?.toString() || "40");
         if (data.faixas_progressivas && Array.isArray(data.faixas_progressivas)) {
           setFaixasProgressivas(data.faixas_progressivas as unknown as FaixaProgressiva[]);
@@ -244,6 +247,7 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
           investidor_id: investidorId,
           user_id: user.id,
           tipo_deal: tipoDeal,
+          base_calculo: baseCalculo,
           percentual_fixo: tipoDeal === "FIXO" ? parseFloat(percentualFixo) : null,
           faixas_progressivas: tipoDeal === "PROGRESSIVO" ? JSON.parse(JSON.stringify(faixasProgressivas)) : [],
           ativo: true,
@@ -356,7 +360,7 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
                   <Label className="text-base">Tipo de Acordo</Label>
                   <p className="text-sm text-muted-foreground">
                     {tipoDeal === "FIXO" 
-                      ? "Percentual fixo sobre lucros" 
+                      ? `Percentual fixo sobre ${baseCalculo === "LUCRO" ? "lucros" : "valor aportado"}` 
                       : "Percentual progressivo por faixas de lucro"}
                   </p>
                 </div>
@@ -376,20 +380,57 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
               </div>
 
               {tipoDeal === "FIXO" ? (
-                <div className="p-4 rounded-lg bg-muted/20 border border-border/50">
-                  <Label className="text-sm text-muted-foreground">Percentual Fixo</Label>
-                  <div className="flex items-center gap-3 mt-2">
-                    <Input
-                      type="number"
-                      value={percentualFixo}
-                      onChange={(e) => setPercentualFixo(e.target.value)}
-                      disabled={isViewMode}
-                      className="w-24 text-center text-lg font-bold"
-                      min={0}
-                      max={100}
-                    />
-                    <Percent className="h-5 w-5 text-primary" />
-                    <span className="text-sm text-muted-foreground">dos lucros</span>
+                <div className="space-y-4">
+                  {/* Base de Cálculo */}
+                  <div className="p-4 rounded-lg bg-muted/20 border border-border/50">
+                    <Label className="text-sm text-muted-foreground mb-3 block">Base de Cálculo</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={baseCalculo === "LUCRO" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setBaseCalculo("LUCRO")}
+                        disabled={isViewMode}
+                        className="flex-1"
+                      >
+                        Sobre Lucros
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={baseCalculo === "APORTE" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setBaseCalculo("APORTE")}
+                        disabled={isViewMode}
+                        className="flex-1"
+                      >
+                        Sobre Valor Aportado
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {baseCalculo === "LUCRO" 
+                        ? "O investidor recebe o percentual sobre os lucros gerados"
+                        : "O investidor recebe o percentual sobre o valor total aportado"}
+                    </p>
+                  </div>
+
+                  {/* Percentual */}
+                  <div className="p-4 rounded-lg bg-muted/20 border border-border/50">
+                    <Label className="text-sm text-muted-foreground">Percentual Fixo</Label>
+                    <div className="flex items-center gap-3 mt-2">
+                      <Input
+                        type="number"
+                        value={percentualFixo}
+                        onChange={(e) => setPercentualFixo(e.target.value)}
+                        disabled={isViewMode}
+                        className="w-24 text-center text-lg font-bold"
+                        min={0}
+                        max={100}
+                      />
+                      <Percent className="h-5 w-5 text-primary" />
+                      <span className="text-sm text-muted-foreground">
+                        {baseCalculo === "LUCRO" ? "dos lucros" : "do valor aportado"}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ) : (

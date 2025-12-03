@@ -51,6 +51,7 @@ interface InvestidorDeal {
   id: string;
   investidor_id: string;
   tipo_deal: "FIXO" | "PROGRESSIVO";
+  base_calculo: "LUCRO" | "APORTE";
   percentual_fixo: number;
   faixas_progressivas: Array<{ limite: number; percentual: number }>;
   ativo: boolean;
@@ -167,6 +168,7 @@ export default function GestaoInvestidores() {
           id: deal.id,
           investidor_id: deal.investidor_id,
           tipo_deal: deal.tipo_deal,
+          base_calculo: deal.base_calculo || "LUCRO",
           percentual_fixo: deal.percentual_fixo || 40,
           faixas_progressivas: deal.faixas_progressivas || [],
           ativo: deal.ativo,
