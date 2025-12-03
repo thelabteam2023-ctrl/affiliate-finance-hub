@@ -27,6 +27,9 @@ import {
   PieChart,
   Calendar,
   History,
+  HelpCircle,
+  Plus,
+  Building2,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -47,6 +50,8 @@ import {
 } from "recharts";
 import { format, parseISO, subMonths, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { KpiExplanationDialog } from "@/components/financeiro/KpiExplanationDialog";
+import { DespesaAdministrativaDialog } from "@/components/financeiro/DespesaAdministrativaDialog";
 
 interface CaixaFiat {
   moeda: string;
@@ -80,6 +85,16 @@ interface CashLedgerEntry {
   moeda: string;
 }
 
+interface DespesaAdministrativa {
+  id: string;
+  categoria: string;
+  descricao: string | null;
+  valor: number;
+  data_despesa: string;
+  recorrente: boolean;
+  status: string;
+}
+
 export default function Financeiro() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -89,10 +104,16 @@ export default function Financeiro() {
   const [despesas, setDespesas] = useState<DespesaIndicacao[]>([]);
   const [custos, setCustos] = useState<CustoAquisicao[]>([]);
   const [cashLedger, setCashLedger] = useState<CashLedgerEntry[]>([]);
+  const [despesasAdmin, setDespesasAdmin] = useState<DespesaAdministrativa[]>([]);
 
   // Filtros de período
   const [periodoPreset, setPeriodoPreset] = useState<string>("all");
   const [dataInicio, setDataInicio] = useState<string>("");
+
+  // Dialog states
+  const [kpiDialogOpen, setKpiDialogOpen] = useState(false);
+  const [kpiType, setKpiType] = useState<"resultado" | "custos" | "despesas_operacionais" | "despesas_administrativas" | "lucro" | null>(null);
+  const [despesaAdminDialogOpen, setDespesaAdminDialogOpen] = useState(false);
   const [dataFim, setDataFim] = useState<string>("");
 
   useEffect(() => {
@@ -139,12 +160,13 @@ export default function Financeiro() {
     try {
       setLoading(true);
 
-      const [fiatResult, cryptoResult, despesasResult, custosResult, ledgerResult] = await Promise.all([
+      const [fiatResult, cryptoResult, despesasResult, custosResult, ledgerResult, despesasAdminResult] = await Promise.all([
         supabase.from("v_saldo_caixa_fiat").select("*"),
         supabase.from("v_saldo_caixa_crypto").select("*"),
         supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao").eq("status", "CONFIRMADO"),
         supabase.from("v_custos_aquisicao").select("custo_total, valor_indicador, valor_parceiro, valor_fornecedor, data_inicio"),
         supabase.from("cash_ledger").select("tipo_transacao, valor, data_transacao, moeda").eq("status", "CONFIRMADO"),
+        supabase.from("despesas_administrativas").select("*").eq("status", "CONFIRMADO"),
       ]);
 
       if (fiatResult.error) throw fiatResult.error;
@@ -152,12 +174,14 @@ export default function Financeiro() {
       if (despesasResult.error) throw despesasResult.error;
       if (custosResult.error) throw custosResult.error;
       if (ledgerResult.error) throw ledgerResult.error;
+      if (despesasAdminResult.error) throw despesasAdminResult.error;
 
       setCaixaFiat(fiatResult.data || []);
       setCaixaCrypto(cryptoResult.data || []);
       setDespesas(despesasResult.data || []);
       setCustos(custosResult.data || []);
       setCashLedger(ledgerResult.data || []);
+      setDespesasAdmin(despesasAdminResult.data || []);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar dados",
@@ -169,6 +193,11 @@ export default function Financeiro() {
     }
   };
 
+  const openKpiHelp = (type: "resultado" | "custos" | "despesas_operacionais" | "despesas_administrativas" | "lucro") => {
+    setKpiType(type);
+    setKpiDialogOpen(true);
+  };
+
   const formatCurrency = (value: number, currency: string = "BRL") => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -177,7 +206,7 @@ export default function Financeiro() {
   };
 
   // Filtrar dados por período
-  const filterByPeriod = <T extends { data_movimentacao?: string; data_inicio?: string; data_transacao?: string }>(
+  const filterByPeriod = <T extends { data_movimentacao?: string; data_inicio?: string; data_transacao?: string; data_despesa?: string }>(
     data: T[],
     dateField: keyof T
   ): T[] => {
@@ -198,6 +227,7 @@ export default function Financeiro() {
   const filteredDespesas = filterByPeriod(despesas, "data_movimentacao");
   const filteredCustos = filterByPeriod(custos, "data_inicio");
   const filteredLedger = filterByPeriod(cashLedger, "data_transacao");
+  const filteredDespesasAdmin = filterByPeriod(despesasAdmin, "data_despesa");
 
   // Calculate KPIs
   const saldoBRL = caixaFiat.find(f => f.moeda === "BRL")?.saldo || 0;
@@ -212,6 +242,9 @@ export default function Financeiro() {
   const custoIndicadores = filteredCustos.reduce((acc, c) => acc + (c.valor_indicador || 0), 0);
   const custoParceiros = filteredCustos.reduce((acc, c) => acc + (c.valor_parceiro || 0), 0);
   const custoFornecedores = filteredCustos.reduce((acc, c) => acc + (c.valor_fornecedor || 0), 0);
+
+  // Despesas administrativas
+  const totalDespesasAdmin = filteredDespesasAdmin.reduce((acc, d) => acc + d.valor, 0);
 
   // Resultado operacional (saques - depósitos em BRL)
   const resultadoOperacional = filteredLedger
@@ -236,7 +269,7 @@ export default function Financeiro() {
 
   // Monthly evolution data (últimos 12 meses)
   const getMonthlyData = () => {
-    const months: Record<string, { mes: string; label: string; custos: number; despesas: number; resultado: number; patrimonio: number }> = {};
+    const months: Record<string, { mes: string; label: string; custos: number; despesas: number; despesasAdmin: number; resultado: number; patrimonio: number }> = {};
     
     for (let i = 11; i >= 0; i--) {
       const date = subMonths(new Date(), i);
@@ -246,6 +279,7 @@ export default function Financeiro() {
         label: format(date, "MMM/yy", { locale: ptBR }),
         custos: 0,
         despesas: 0,
+        despesasAdmin: 0,
         resultado: 0,
         patrimonio: 0,
       };
@@ -269,6 +303,15 @@ export default function Financeiro() {
       }
     });
 
+    despesasAdmin.forEach(d => {
+      if (d.data_despesa) {
+        const key = format(parseISO(d.data_despesa), "yyyy-MM");
+        if (months[key]) {
+          months[key].despesasAdmin += d.valor || 0;
+        }
+      }
+    });
+
     cashLedger.forEach(l => {
       if (l.data_transacao && l.moeda === "BRL") {
         const key = format(parseISO(l.data_transacao), "yyyy-MM");
@@ -286,7 +329,7 @@ export default function Financeiro() {
     let patrimonioAcumulado = 0;
     const monthsArray = Object.values(months);
     monthsArray.forEach((m, index) => {
-      patrimonioAcumulado += m.resultado - m.custos - m.despesas;
+      patrimonioAcumulado += m.resultado - m.custos - m.despesas - m.despesasAdmin;
       monthsArray[index].patrimonio = patrimonioAcumulado;
     });
 
@@ -300,15 +343,16 @@ export default function Financeiro() {
     { name: "Caixa FIAT", valor: saldoBRL + saldoUSD * 5 },
     { name: "Caixa Crypto", valor: totalCryptoUSD * 5 },
     { name: "Custos Aquisição", valor: totalCustosAquisicao },
-    { name: "Despesas Pagas", valor: totalDespesasIndicacao },
+    { name: "Despesas Operacionais", valor: totalDespesasIndicacao },
+    { name: "Despesas Admin.", valor: totalDespesasAdmin },
   ];
 
   // Histórico mensal detalhado
   const getHistoricoMensal = () => {
     return monthlyData.map(m => ({
       ...m,
-      lucroLiquido: m.resultado - m.custos - m.despesas,
-      totalCustos: m.custos + m.despesas,
+      lucroLiquido: m.resultado - m.custos - m.despesas - m.despesasAdmin,
+      totalCustos: m.custos + m.despesas + m.despesasAdmin,
     }));
   };
 
@@ -781,8 +825,9 @@ export default function Financeiro() {
                     <tr className="border-b">
                       <th className="text-left py-3 px-2 font-medium">Mês</th>
                       <th className="text-right py-3 px-2 font-medium">Resultado</th>
-                      <th className="text-right py-3 px-2 font-medium">Custos Aquisição</th>
-                      <th className="text-right py-3 px-2 font-medium">Despesas</th>
+                      <th className="text-right py-3 px-2 font-medium">Custos Aq.</th>
+                      <th className="text-right py-3 px-2 font-medium">Desp. Oper.</th>
+                      <th className="text-right py-3 px-2 font-medium">Desp. Admin.</th>
                       <th className="text-right py-3 px-2 font-medium">Lucro Líquido</th>
                       <th className="text-right py-3 px-2 font-medium">Patrimônio</th>
                     </tr>
@@ -800,6 +845,9 @@ export default function Financeiro() {
                         <td className="text-right py-3 px-2 text-muted-foreground">
                           {mes.despesas > 0 ? `-${formatCurrency(mes.despesas)}` : formatCurrency(0)}
                         </td>
+                        <td className="text-right py-3 px-2 text-chart-2">
+                          {mes.despesasAdmin > 0 ? `-${formatCurrency(mes.despesasAdmin)}` : formatCurrency(0)}
+                        </td>
                         <td className={`text-right py-3 px-2 font-medium ${mes.lucroLiquido >= 0 ? "text-success" : "text-destructive"}`}>
                           {formatCurrency(mes.lucroLiquido)}
                         </td>
@@ -815,12 +863,20 @@ export default function Financeiro() {
           </Card>
 
           {/* KPIs do Período */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
-                  Total Resultado Operacional
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
+                    Resultado Operacional
+                  </CardTitle>
+                  <button
+                    onClick={() => openKpiHelp("resultado")}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className={`text-xl font-bold ${resultadoOperacional >= 0 ? "text-success" : "text-destructive"}`}>
@@ -831,9 +887,17 @@ export default function Financeiro() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
-                  Total Custos Aquisição
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
+                    Custos Aquisição
+                  </CardTitle>
+                  <button
+                    onClick={() => openKpiHelp("custos")}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-xl font-bold text-destructive">
@@ -844,9 +908,17 @@ export default function Financeiro() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
-                  Total Despesas Gerais
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
+                    Despesas Operacionais
+                  </CardTitle>
+                  <button
+                    onClick={() => openKpiHelp("despesas_operacionais")}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-xl font-bold text-muted-foreground">
@@ -855,21 +927,72 @@ export default function Financeiro() {
               </CardContent>
             </Card>
 
-            <Card className={resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao >= 0 ? "border-success/30" : "border-destructive/30"}>
+            <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
-                  Lucro Líquido Total
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
+                    Despesas Admin.
+                  </CardTitle>
+                  <button
+                    onClick={() => openKpiHelp("despesas_administrativas")}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className={`text-xl font-bold ${resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao >= 0 ? "text-success" : "text-destructive"}`}>
-                  {formatCurrency(resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao)}
+                <div className="text-xl font-bold text-chart-2">
+                  {formatCurrency(totalDespesasAdmin)}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 h-7 text-xs"
+                  onClick={() => setDespesaAdminDialogOpen(true)}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Adicionar
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className={resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao - totalDespesasAdmin >= 0 ? "border-success/30" : "border-destructive/30"}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
+                    Lucro Líquido
+                  </CardTitle>
+                  <button
+                    onClick={() => openKpiHelp("lucro")}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-xl font-bold ${resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao - totalDespesasAdmin >= 0 ? "text-success" : "text-destructive"}`}>
+                  {formatCurrency(resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao - totalDespesasAdmin)}
                 </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Dialogs */}
+      <KpiExplanationDialog
+        open={kpiDialogOpen}
+        onOpenChange={setKpiDialogOpen}
+        kpiType={kpiType}
+      />
+
+      <DespesaAdministrativaDialog
+        open={despesaAdminDialogOpen}
+        onOpenChange={setDespesaAdminDialogOpen}
+        onSuccess={fetchData}
+      />
     </div>
   );
 }

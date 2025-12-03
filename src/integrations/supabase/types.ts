@@ -482,6 +482,45 @@ export type Database = {
           },
         ]
       }
+      despesas_administrativas: {
+        Row: {
+          categoria: string
+          created_at: string
+          data_despesa: string
+          descricao: string | null
+          id: string
+          recorrente: boolean | null
+          status: string
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          categoria: string
+          created_at?: string
+          data_despesa?: string
+          descricao?: string | null
+          id?: string
+          recorrente?: boolean | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          data_despesa?: string
+          descricao?: string | null
+          id?: string
+          recorrente?: boolean | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       fornecedores: {
         Row: {
           created_at: string | null
