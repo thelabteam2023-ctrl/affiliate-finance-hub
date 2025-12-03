@@ -2,10 +2,11 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DashboardTab } from "@/components/programa-indicacao/DashboardTab";
 import { IndicadoresTab } from "@/components/programa-indicacao/IndicadoresTab";
+import { FornecedoresTab } from "@/components/programa-indicacao/FornecedoresTab";
 import { ParceriasTab } from "@/components/programa-indicacao/ParceriasTab";
-import { PromocoesTab } from "@/components/programa-indicacao/PromocoesTab";
-import { UserPlus, Handshake, Gift } from "lucide-react";
+import { BarChart3, UserPlus, Truck, Handshake } from "lucide-react";
 
 export default function ProgramaIndicacao() {
   const navigate = useNavigate();
@@ -25,39 +26,47 @@ export default function ProgramaIndicacao() {
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Programa de Indicação</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Aquisição de Parceiros</h1>
         <p className="text-muted-foreground">
-          Gerencie indicadores, parcerias e promoções de indicação
+          Gerencie indicadores, fornecedores e parcerias de aquisição
         </p>
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="indicadores" className="space-y-6">
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
+      <Tabs defaultValue="dashboard" className="space-y-6">
+        <TabsList className="grid w-full max-w-2xl grid-cols-4">
+          <TabsTrigger value="dashboard" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            <span className="hidden sm:inline">Dashboard</span>
+          </TabsTrigger>
           <TabsTrigger value="indicadores" className="flex items-center gap-2">
             <UserPlus className="h-4 w-4" />
             <span className="hidden sm:inline">Indicadores</span>
+          </TabsTrigger>
+          <TabsTrigger value="fornecedores" className="flex items-center gap-2">
+            <Truck className="h-4 w-4" />
+            <span className="hidden sm:inline">Fornecedores</span>
           </TabsTrigger>
           <TabsTrigger value="parcerias" className="flex items-center gap-2">
             <Handshake className="h-4 w-4" />
             <span className="hidden sm:inline">Parcerias</span>
           </TabsTrigger>
-          <TabsTrigger value="promocoes" className="flex items-center gap-2">
-            <Gift className="h-4 w-4" />
-            <span className="hidden sm:inline">Promoções</span>
-          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="dashboard">
+          <DashboardTab />
+        </TabsContent>
 
         <TabsContent value="indicadores">
           <IndicadoresTab />
         </TabsContent>
 
-        <TabsContent value="parcerias">
-          <ParceriasTab />
+        <TabsContent value="fornecedores">
+          <FornecedoresTab />
         </TabsContent>
 
-        <TabsContent value="promocoes">
-          <PromocoesTab />
+        <TabsContent value="parcerias">
+          <ParceriasTab />
         </TabsContent>
       </Tabs>
     </div>

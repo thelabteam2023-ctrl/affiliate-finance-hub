@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { IndicadorDialog } from "@/components/indicadores/IndicadorDialog";
 import { IndicadorCard } from "@/components/indicadores/IndicadorCard";
-import { Users, UserPlus, Star, AlertTriangle, UserX, LayoutGrid, List } from "lucide-react";
+import { Users, UserPlus, UserX, LayoutGrid, List, DollarSign } from "lucide-react";
 
 interface IndicadorPerformance {
   indicador_id: string;
@@ -26,9 +26,19 @@ interface IndicadorPerformance {
   total_bonus: number;
 }
 
+interface IndicadorAcordo {
+  id: string;
+  indicador_id: string;
+  orcamento_por_parceiro: number;
+  meta_parceiros: number | null;
+  valor_bonus: number | null;
+  ativo: boolean;
+}
+
 export function IndicadoresTab() {
   const { toast } = useToast();
   const [indicadores, setIndicadores] = useState<IndicadorPerformance[]>([]);
+  const [acordos, setAcordos] = useState<IndicadorAcordo[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
@@ -48,12 +58,14 @@ export function IndicadoresTab() {
   const fetchIndicadores = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("v_indicador_performance")
-        .select("*");
+      const [indicadoresRes, acordosRes] = await Promise.all([
+        supabase.from("v_indicador_performance").select("*"),
+        supabase.from("indicador_acordos").select("*").eq("ativo", true),
+      ]);
 
-      if (error) throw error;
-      setIndicadores(data || []);
+      if (indicadoresRes.error) throw indicadoresRes.error;
+      setIndicadores(indicadoresRes.data || []);
+      setAcordos(acordosRes.data || []);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar indicadores",
@@ -63,6 +75,10 @@ export function IndicadoresTab() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getAcordo = (indicadorId: string) => {
+    return acordos.find((a) => a.indicador_id === indicadorId);
   };
 
   const handleEdit = (indicador: IndicadorPerformance) => {
@@ -127,8 +143,6 @@ export function IndicadoresTab() {
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       ATIVO: { label: "Ativo", variant: "default" },
-      TOP_VIP: { label: "Top VIP", variant: "secondary" },
-      EM_OBSERVACAO: { label: "Em Observação", variant: "outline" },
       INATIVO: { label: "Inativo", variant: "destructive" },
     };
     const config = statusConfig[status] || { label: status, variant: "outline" };
@@ -145,8 +159,8 @@ export function IndicadoresTab() {
   const stats = {
     total: indicadores.length,
     ativos: indicadores.filter((i) => i.status === "ATIVO").length,
-    topVip: indicadores.filter((i) => i.status === "TOP_VIP").length,
-    emObservacao: indicadores.filter((i) => i.status === "EM_OBSERVACAO").length,
+    totalComissoes: indicadores.reduce((acc, i) => acc + (i.total_comissoes || 0) + (i.total_bonus || 0), 0),
+    totalParceiros: indicadores.reduce((acc, i) => acc + (i.total_parceiros_indicados || 0), 0),
   };
 
   if (loading) {
@@ -181,20 +195,20 @@ export function IndicadoresTab() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Top VIP</CardTitle>
-            <Star className="h-4 w-4 text-yellow-500" />
+            <CardTitle className="text-sm font-medium">Parceiros Indicados</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">{stats.topVip}</div>
+            <div className="text-2xl font-bold">{stats.totalParceiros}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Em Observação</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-500" />
+            <CardTitle className="text-sm font-medium">Total Pago</CardTitle>
+            <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-500">{stats.emObservacao}</div>
+            <div className="text-2xl font-bold text-primary">{formatCurrency(stats.totalComissoes)}</div>
           </CardContent>
         </Card>
       </div>
@@ -222,8 +236,6 @@ export function IndicadoresTab() {
           <SelectContent>
             <SelectItem value="todos">Todos os status</SelectItem>
             <SelectItem value="ATIVO">Ativo</SelectItem>
-            <SelectItem value="TOP_VIP">Top VIP</SelectItem>
-            <SelectItem value="EM_OBSERVACAO">Em Observação</SelectItem>
             <SelectItem value="INATIVO">Inativo</SelectItem>
           </SelectContent>
         </Select>
@@ -267,57 +279,65 @@ export function IndicadoresTab() {
         </Card>
       ) : viewMode === "cards" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredIndicadores.map((indicador) => (
-            <IndicadorCard
-              key={indicador.indicador_id}
-              indicador={indicador}
-              onView={() => handleView(indicador)}
-              onEdit={() => handleEdit(indicador)}
-              onDelete={() => handleDeleteClick(indicador)}
-              formatCurrency={formatCurrency}
-              getStatusBadge={getStatusBadge}
-            />
-          ))}
+          {filteredIndicadores.map((indicador) => {
+            const acordo = getAcordo(indicador.indicador_id);
+            return (
+              <IndicadorCard
+                key={indicador.indicador_id}
+                indicador={indicador}
+                acordo={acordo}
+                onView={() => handleView(indicador)}
+                onEdit={() => handleEdit(indicador)}
+                onDelete={() => handleDeleteClick(indicador)}
+                formatCurrency={formatCurrency}
+                getStatusBadge={getStatusBadge}
+              />
+            );
+          })}
         </div>
       ) : (
         <div className="space-y-2">
-          {filteredIndicadores.map((indicador) => (
-            <Card key={indicador.indicador_id} className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-primary" />
+          {filteredIndicadores.map((indicador) => {
+            const acordo = getAcordo(indicador.indicador_id);
+            return (
+              <Card key={indicador.indicador_id} className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Users className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="font-semibold">{indicador.nome}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {indicador.total_parceiros_indicados} parceiros indicados
+                        {acordo && ` • Orçamento: ${formatCurrency(acordo.orcamento_por_parceiro)}/parceiro`}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-semibold">{indicador.nome}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {indicador.total_parceiros_indicados} parceiros indicados
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="font-semibold text-emerald-500">
+                        {formatCurrency(indicador.total_comissoes + indicador.total_bonus)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Total recebido</div>
+                    </div>
+                    {getStatusBadge(indicador.status)}
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleView(indicador)}>
+                        Ver
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(indicador)}>
+                        Editar
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(indicador)}>
+                        Excluir
+                      </Button>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="font-semibold text-emerald-500">
-                      {formatCurrency(indicador.total_comissoes + indicador.total_bonus)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Total recebido</div>
-                  </div>
-                  {getStatusBadge(indicador.status)}
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => handleView(indicador)}>
-                      Ver
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(indicador)}>
-                      Editar
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(indicador)}>
-                      Excluir
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
 
