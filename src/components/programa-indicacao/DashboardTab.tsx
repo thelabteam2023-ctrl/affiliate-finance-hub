@@ -219,8 +219,9 @@ export function DashboardTab() {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))" }} />
                 <YAxis 
-                  tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
+                  tickFormatter={(value) => value >= 1000 ? `R$ ${(value / 1000).toFixed(1)}k` : `R$ ${value}`}
                   tick={{ fill: "hsl(var(--muted-foreground))" }}
+                  width={80}
                 />
                 <Tooltip 
                   formatter={(value: number) => [formatCurrency(value), "Valor"]}

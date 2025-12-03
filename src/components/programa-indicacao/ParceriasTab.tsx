@@ -366,7 +366,6 @@ export function ParceriasTab() {
               formatCurrency={formatCurrency}
               getStatusBadge={getStatusBadge}
               getAlertaBadge={getAlertaBadge}
-              getOrigemBadge={getOrigemBadge}
             />
           ))}
         </div>
