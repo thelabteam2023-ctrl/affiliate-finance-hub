@@ -231,9 +231,17 @@ export default function BookmakerDialog({
 
       onClose();
     } catch (error: any) {
+      let errorMessage = error.message;
+      
+      // Detectar erro de vínculo duplicado
+      if (error.message?.includes('bookmakers_user_parceiro_bookmaker_unique') || 
+          error.code === '23505') {
+        errorMessage = "Este parceiro já possui um vínculo cadastrado com esta bookmaker. Cada parceiro pode ter apenas um vínculo por casa de apostas.";
+      }
+      
       toast({
         title: "Erro ao salvar vínculo",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -264,7 +272,15 @@ export default function BookmakerDialog({
             <ParceiroSelect
               key={open ? 'parceiro-open' : 'parceiro-closed'}
               value={parceiroId}
-              onValueChange={setParceiroId}
+              onValueChange={(newParceiroId) => {
+                setParceiroId(newParceiroId);
+                // Resetar bookmaker quando parceiro muda (lista filtrada muda)
+                if (!bookmaker) {
+                  setBookmakerId("");
+                  setSelectedBookmaker(null);
+                  setSelectedLink("");
+                }
+              }}
               disabled={loading || lockParceiro}
             />
             {lockParceiro && (
@@ -277,10 +293,11 @@ export default function BookmakerDialog({
           <div className="space-y-2">
             <Label>Bookmaker *</Label>
             <BookmakerSelect
-              key={open ? 'bookmaker-open' : 'bookmaker-closed'}
+              key={open ? `bookmaker-${parceiroId || 'none'}` : 'bookmaker-closed'}
               value={bookmakerId}
               onValueChange={lockBookmaker ? setBookmakerId : handleBookmakerChange}
               disabled={loading || lockBookmaker}
+              excludeVinculosDoParceiro={!bookmaker ? parceiroId : undefined}
             />
             {lockBookmaker && (
               <p className="text-xs text-muted-foreground">

@@ -15,6 +15,7 @@ interface BookmakerSelectProps {
   disabled?: boolean;
   parceiroId?: string;
   somenteComSaldo?: boolean;
+  excludeVinculosDoParceiro?: string; // ID do parceiro para excluir bookmakers já vinculadas
 }
 
 interface BookmakerItem {
@@ -30,7 +31,8 @@ export default function BookmakerSelect({
   onValueChange, 
   disabled, 
   parceiroId, 
-  somenteComSaldo 
+  somenteComSaldo,
+  excludeVinculosDoParceiro
 }: BookmakerSelectProps) {
   const [items, setItems] = useState<BookmakerItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -85,7 +87,26 @@ export default function BookmakerSelect({
             .order("nome");
 
           if (error) throw error;
-          setItems(data || []);
+          
+          let catalogoItems = data || [];
+          
+          // Filtrar bookmakers já vinculadas ao parceiro (se especificado)
+          if (excludeVinculosDoParceiro) {
+            const { data: vinculosExistentes } = await supabase
+              .from("bookmakers")
+              .select("bookmaker_catalogo_id")
+              .eq("parceiro_id", excludeVinculosDoParceiro);
+            
+            const idsJaVinculados = new Set(
+              (vinculosExistentes || [])
+                .map(v => v.bookmaker_catalogo_id)
+                .filter(Boolean)
+            );
+            
+            catalogoItems = catalogoItems.filter(b => !idsJaVinculados.has(b.id));
+          }
+          
+          setItems(catalogoItems);
         }
       } catch (error) {
         console.error("Erro ao carregar bookmakers:", error);
@@ -96,7 +117,7 @@ export default function BookmakerSelect({
     };
 
     fetchBookmakers();
-  }, [parceiroId, somenteComSaldo]);
+  }, [parceiroId, somenteComSaldo, excludeVinculosDoParceiro]);
 
   // Buscar dados de exibição quando value muda - INDEPENDENTE da lista
   useEffect(() => {
