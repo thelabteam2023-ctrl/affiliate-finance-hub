@@ -768,11 +768,10 @@ export default function GestaoParceiros() {
         )}
 
         <BookmakerDialog
-          key={vinculoDialogOpen ? `vinculo-${preselectedVinculo?.parceiroId || 'new'}` : 'closed'}
+          key={vinculoDialogOpen ? 'vinculo-open' : 'vinculo-closed'}
           open={vinculoDialogOpen}
           onClose={handleVinculoDialogClose}
           bookmaker={null}
-          defaultParceiroId={preselectedVinculo?.parceiroId}
         />
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
