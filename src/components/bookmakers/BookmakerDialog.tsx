@@ -262,6 +262,7 @@ export default function BookmakerDialog({
           <div className="space-y-2">
             <Label>Parceiro *</Label>
             <ParceiroSelect
+              key={open ? 'parceiro-open' : 'parceiro-closed'}
               value={parceiroId}
               onValueChange={setParceiroId}
               disabled={loading || lockParceiro}
@@ -276,6 +277,7 @@ export default function BookmakerDialog({
           <div className="space-y-2">
             <Label>Bookmaker *</Label>
             <BookmakerSelect
+              key={open ? 'bookmaker-open' : 'bookmaker-closed'}
               value={bookmakerId}
               onValueChange={lockBookmaker ? setBookmakerId : handleBookmakerChange}
               disabled={loading || lockBookmaker}
