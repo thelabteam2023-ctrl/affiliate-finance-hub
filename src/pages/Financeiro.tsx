@@ -437,11 +437,18 @@ export default function Financeiro() {
             <div className="text-2xl font-bold text-primary">{formatCurrency(capitalOperacional)}</div>
             <div className="flex gap-2 mt-2">
               <Badge variant="outline" className="text-xs">
-                BRL {formatCurrency(saldoBRL)}
+                {formatCurrency(saldoBRL)}
               </Badge>
-              <Badge variant="outline" className="text-xs">
-                Crypto ${totalCryptoUSD.toFixed(2)}
-              </Badge>
+              {saldoUSD > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  USD ${saldoUSD.toFixed(2)}
+                </Badge>
+              )}
+              {totalCryptoUSD > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  Crypto ${totalCryptoUSD.toFixed(2)}
+                </Badge>
+              )}
             </div>
           </CardContent>
         </Card>
