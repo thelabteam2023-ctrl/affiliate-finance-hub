@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Users, Wallet, Bitcoin } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Users, Info } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 
 interface SaldoContaParceiro {
   parceiro_id: string;
@@ -44,24 +45,20 @@ export function SaldosParceirosSheet() {
     try {
       setLoading(true);
 
-      // Fetch FIAT balances per partner
       const { data: saldosContas, error: contasError } = await supabase
         .from("v_saldo_parceiro_contas")
         .select("*");
 
       if (contasError) throw contasError;
 
-      // Fetch Crypto balances per partner
       const { data: saldosWallets, error: walletsError } = await supabase
         .from("v_saldo_parceiro_wallets")
         .select("*");
 
       if (walletsError) throw walletsError;
 
-      // Group by partner
       const parceirosMap = new Map<string, ParceiroSaldoAgrupado>();
 
-      // Process FIAT balances
       (saldosContas as SaldoContaParceiro[] || []).forEach((conta) => {
         if (!conta.parceiro_id || conta.saldo === 0) return;
 
@@ -87,7 +84,6 @@ export function SaldosParceirosSheet() {
         }
       });
 
-      // Process Crypto balances
       (saldosWallets as SaldoWalletParceiro[] || []).forEach((wallet) => {
         if (!wallet.parceiro_id || wallet.saldo_coin === 0) return;
 
@@ -112,7 +108,6 @@ export function SaldosParceirosSheet() {
         parceiro.total_crypto_usd += wallet.saldo_usd || 0;
       });
 
-      // Filter only partners with balance and sort by total
       const parceirosComSaldo = Array.from(parceirosMap.values())
         .filter((p) => p.saldos_fiat.length > 0 || p.saldos_crypto.length > 0)
         .sort((a, b) => (b.total_fiat_brl + b.total_crypto_usd) - (a.total_fiat_brl + a.total_crypto_usd));
@@ -140,6 +135,33 @@ export function SaldosParceirosSheet() {
 
   const totalParceiros = parceirosAgrupados.length;
 
+  const FiatHoverContent = ({ saldos }: { saldos: ParceiroSaldoAgrupado["saldos_fiat"] }) => (
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium text-muted-foreground mb-2">Contas Bancárias</p>
+      {saldos.map((s, idx) => (
+        <div key={idx} className="flex justify-between gap-4 text-sm">
+          <span className="text-muted-foreground truncate max-w-[140px]">{s.banco}</span>
+          <span className="font-mono text-emerald-400">{formatCurrency(s.saldo, s.moeda)}</span>
+        </div>
+      ))}
+    </div>
+  );
+
+  const CryptoHoverContent = ({ saldos }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"] }) => (
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium text-muted-foreground mb-2">Wallets Crypto</p>
+      {saldos.map((s, idx) => (
+        <div key={idx} className="flex justify-between gap-4 text-sm">
+          <div className="flex items-center gap-1">
+            <span className="font-medium">{s.coin}</span>
+            <span className="text-xs text-muted-foreground">({s.exchange})</span>
+          </div>
+          <span className="font-mono text-blue-400">{formatCurrency(s.saldo_usd, "USD")}</span>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <Tooltip>
@@ -160,7 +182,7 @@ export function SaldosParceirosSheet() {
         </TooltipContent>
       </Tooltip>
 
-      <SheetContent className="w-full sm:max-w-lg">
+      <SheetContent className="w-full sm:max-w-md">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -180,95 +202,84 @@ export function SaldosParceirosSheet() {
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between mb-4 px-1">
+              <div className="flex items-center justify-between mb-3 px-1">
                 <span className="text-sm text-muted-foreground">
                   {totalParceiros} parceiro{totalParceiros !== 1 ? "s" : ""} com capital
                 </span>
               </div>
 
               <ScrollArea className="h-[calc(100vh-180px)]">
-                <div className="space-y-3 pr-4">
-                  {parceirosAgrupados.map((parceiro) => (
-                    <div
-                      key={parceiro.parceiro_id}
-                      className="rounded-lg border border-border/50 bg-card/30 p-4 space-y-3"
-                    >
-                      {/* Partner Name */}
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium truncate flex-1">{parceiro.parceiro_nome}</h3>
-                      </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-border/50">
+                      <TableHead className="text-xs font-medium">Parceiro</TableHead>
+                      <TableHead className="text-xs font-medium text-right">FIAT</TableHead>
+                      <TableHead className="text-xs font-medium text-right">Crypto</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {parceirosAgrupados.map((parceiro, index) => (
+                      <TableRow 
+                        key={parceiro.parceiro_id} 
+                        className={`border-border/30 ${index % 2 === 0 ? 'bg-transparent' : 'bg-muted/20'}`}
+                      >
+                        <TableCell className="py-2.5 font-medium text-sm max-w-[140px] truncate">
+                          {parceiro.parceiro_nome}
+                        </TableCell>
+                        
+                        {/* FIAT Cell */}
+                        <TableCell className="py-2.5 text-right">
+                          {parceiro.saldos_fiat.length > 0 ? (
+                            parceiro.saldos_fiat.length > 1 ? (
+                              <HoverCard openDelay={100} closeDelay={50}>
+                                <HoverCardTrigger asChild>
+                                  <button className="inline-flex items-center gap-1 text-emerald-400 font-mono text-sm hover:text-emerald-300 transition-colors">
+                                    {formatCurrency(parceiro.total_fiat_brl, "BRL")}
+                                    <Info className="h-3 w-3 opacity-60" />
+                                  </button>
+                                </HoverCardTrigger>
+                                <HoverCardContent align="end" className="w-64">
+                                  <FiatHoverContent saldos={parceiro.saldos_fiat} />
+                                </HoverCardContent>
+                              </HoverCard>
+                            ) : (
+                              <span className="text-emerald-400 font-mono text-sm">
+                                {formatCurrency(parceiro.total_fiat_brl, "BRL")}
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-muted-foreground/50">—</span>
+                          )}
+                        </TableCell>
 
-                      {/* FIAT Balances */}
-                      {parceiro.saldos_fiat.length > 0 && (
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Wallet className="h-3 w-3" />
-                            <span>FIAT</span>
-                          </div>
-                          <div className="space-y-1 pl-4">
-                            {parceiro.saldos_fiat.map((saldo, idx) => (
-                              <div key={idx} className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground truncate max-w-[150px]" title={saldo.banco}>
-                                  {saldo.banco}
-                                </span>
-                                <Badge 
-                                  variant="outline" 
-                                  className={`font-mono ${saldo.saldo >= 0 ? 'text-emerald-400 border-emerald-500/30' : 'text-red-400 border-red-500/30'}`}
-                                >
-                                  {formatCurrency(saldo.saldo, saldo.moeda)}
-                                </Badge>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Crypto Balances */}
-                      {parceiro.saldos_crypto.length > 0 && (
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Bitcoin className="h-3 w-3" />
-                            <span>CRYPTO</span>
-                          </div>
-                          <div className="space-y-1 pl-4">
-                            {parceiro.saldos_crypto.map((saldo, idx) => (
-                              <div key={idx} className="flex items-center justify-between text-sm">
-                                <div className="flex items-center gap-1.5 text-muted-foreground">
-                                  <span className="font-medium text-foreground">{saldo.coin}</span>
-                                  <span className="text-xs truncate max-w-[80px]" title={saldo.exchange}>
-                                    ({saldo.exchange})
-                                  </span>
-                                </div>
-                                <div className="text-right">
-                                  <Badge 
-                                    variant="outline" 
-                                    className={`font-mono ${saldo.saldo_usd >= 0 ? 'text-blue-400 border-blue-500/30' : 'text-red-400 border-red-500/30'}`}
-                                  >
-                                    {formatCurrency(saldo.saldo_usd, "USD")}
-                                  </Badge>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Totals */}
-                      <div className="pt-2 border-t border-border/30 flex items-center justify-end gap-3 text-xs">
-                        {parceiro.total_fiat_brl > 0 && (
-                          <span className="text-emerald-400 font-medium">
-                            {formatCurrency(parceiro.total_fiat_brl, "BRL")}
-                          </span>
-                        )}
-                        {parceiro.total_crypto_usd > 0 && (
-                          <span className="text-blue-400 font-medium">
-                            ≈ {formatCurrency(parceiro.total_crypto_usd, "USD")}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                        {/* Crypto Cell */}
+                        <TableCell className="py-2.5 text-right">
+                          {parceiro.saldos_crypto.length > 0 ? (
+                            parceiro.saldos_crypto.length > 1 ? (
+                              <HoverCard openDelay={100} closeDelay={50}>
+                                <HoverCardTrigger asChild>
+                                  <button className="inline-flex items-center gap-1 text-blue-400 font-mono text-sm hover:text-blue-300 transition-colors">
+                                    {formatCurrency(parceiro.total_crypto_usd, "USD")}
+                                    <Info className="h-3 w-3 opacity-60" />
+                                  </button>
+                                </HoverCardTrigger>
+                                <HoverCardContent align="end" className="w-64">
+                                  <CryptoHoverContent saldos={parceiro.saldos_crypto} />
+                                </HoverCardContent>
+                              </HoverCard>
+                            ) : (
+                              <span className="text-blue-400 font-mono text-sm">
+                                {formatCurrency(parceiro.total_crypto_usd, "USD")}
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-muted-foreground/50">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </ScrollArea>
             </>
           )}
