@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useCotacoes } from "@/hooks/useCotacoes";
 import { Button } from "@/components/ui/button";
 import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,8 +57,11 @@ export default function Caixa() {
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
   const [saldosFiat, setSaldosFiat] = useState<SaldoFiat[]>([]);
   const [saldosCrypto, setSaldosCrypto] = useState<SaldoCrypto[]>([]);
-  const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+
+  // Hook centralizado de cotações
+  const cryptoSymbols = useMemo(() => saldosCrypto.map(s => s.coin), [saldosCrypto]);
+  const { cotacaoUSD, cryptoPrices, getCryptoUSDValue } = useCotacoes(cryptoSymbols);
   
   // Filters
   const [filtroTipo, setFiltroTipo] = useState<string>("TODOS");
@@ -154,43 +158,10 @@ export default function Caixa() {
     fetchData();
   }, []);
 
-  // Buscar cotações crypto em tempo real
-  const fetchCryptoPrices = async (coins: string[]) => {
-    if (coins.length === 0) return;
-    try {
-      const { data, error } = await supabase.functions.invoke("get-crypto-prices", {
-        body: { symbols: coins }
-      });
-      if (error) throw error;
-      if (data?.prices) {
-        setCryptoPrices(data.prices);
-        console.log("Cotações crypto atualizadas:", data.prices);
-      }
-    } catch (error) {
-      console.error("Erro ao buscar cotações crypto:", error);
-    }
-  };
-
-  // Buscar cotações quando saldosCrypto mudar
-  useEffect(() => {
-    if (saldosCrypto.length > 0) {
-      const coins = saldosCrypto.map(s => s.coin);
-      fetchCryptoPrices(coins);
-    }
-  }, [saldosCrypto]);
-
   const getTotalCryptoUSD = () => {
-    // Usar cotações em tempo real se disponíveis
     return saldosCrypto.reduce((acc, s) => {
-      const price = cryptoPrices[s.coin] ?? (s.saldo_usd / s.saldo_coin);
-      return acc + (s.saldo_coin * price);
+      return acc + getCryptoUSDValue(s.coin, s.saldo_coin, s.saldo_usd);
     }, 0);
-  };
-
-  const getCryptoUSDValue = (coin: string, saldo_coin: number, saldo_usd_fallback: number) => {
-    const price = cryptoPrices[coin];
-    if (price) return saldo_coin * price;
-    return saldo_usd_fallback;
   };
 
   const getTransacoesFiltradas = () => {
