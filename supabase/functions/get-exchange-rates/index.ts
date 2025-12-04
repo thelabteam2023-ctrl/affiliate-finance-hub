@@ -6,8 +6,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Formata data para MM-DD-YYYY (formato do BCB)
+function formatDateBCB(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${month}-${day}-${year}`;
+}
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -15,88 +22,37 @@ serve(async (req) => {
   try {
     console.log('Fetching USD/BRL exchange rate from Banco Central do Brasil');
 
-    // Banco Central do Brasil - API oficial PTAX
     const today = new Date();
-    const dateStr = today.toISOString().split('T')[0].split('-').reverse().join('-'); // DD-MM-YYYY
-    
-    // Buscar cotação PTAX do BCB (última cotação disponível)
-    const bcbUrl = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarDia(dataCotacao=@dataCotacao)?@dataCotacao='${dateStr}'&$format=json`;
-    
-    console.log('BCB URL:', bcbUrl);
-    
     let usdBrl = null;
-    
-    // Tentar BCB primeiro
-    try {
-      const bcbResponse = await fetch(bcbUrl, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (bcbResponse.ok) {
-        const bcbData = await bcbResponse.json();
-        console.log('BCB data:', JSON.stringify(bcbData));
-        
-        if (bcbData.value && bcbData.value.length > 0) {
-          // Usar cotação de venda (mais próxima do mercado)
-          usdBrl = bcbData.value[bcbData.value.length - 1].cotacaoVenda;
-          console.log('BCB PTAX cotação venda:', usdBrl);
-        }
-      }
-    } catch (bcbError) {
-      console.error('BCB error:', bcbError);
-    }
 
-    // Se BCB não retornou, tentar dia anterior (mercado fechado aos fins de semana)
-    if (!usdBrl) {
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split('T')[0].split('-').reverse().join('-');
+    // Tentar últimos 5 dias úteis para garantir que pegamos uma cotação
+    for (let i = 0; i < 5 && !usdBrl; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(checkDate.getDate() - i);
+      const dateStr = formatDateBCB(checkDate);
       
-      const bcbUrlYesterday = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarDia(dataCotacao=@dataCotacao)?@dataCotacao='${yesterdayStr}'&$format=json`;
+      const bcbUrl = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarDia(dataCotacao=@dataCotacao)?@dataCotacao='${dateStr}'&$format=json`;
+      
+      console.log(`Tentando BCB para ${dateStr}:`, bcbUrl);
       
       try {
-        const bcbResponse = await fetch(bcbUrlYesterday, {
+        const bcbResponse = await fetch(bcbUrl, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
         });
         
         if (bcbResponse.ok) {
           const bcbData = await bcbResponse.json();
+          console.log(`BCB data (${dateStr}):`, JSON.stringify(bcbData));
+          
           if (bcbData.value && bcbData.value.length > 0) {
+            // Usar última cotação de venda do dia
             usdBrl = bcbData.value[bcbData.value.length - 1].cotacaoVenda;
-            console.log('BCB PTAX cotação venda (ontem):', usdBrl);
+            console.log(`BCB PTAX cotação venda (${dateStr}): ${usdBrl}`);
           }
         }
       } catch (e) {
-        console.error('BCB yesterday error:', e);
-      }
-    }
-
-    // Se ainda não tem, buscar últimos 5 dias úteis
-    if (!usdBrl) {
-      const fiveDaysAgo = new Date(today);
-      fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
-      const startStr = fiveDaysAgo.toISOString().split('T')[0].split('-').reverse().join('-');
-      
-      const bcbUrlRange = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@dataInicial='${startStr}'&@dataFinalCotacao='${dateStr}'&$format=json&$orderby=dataHoraCotacao%20desc&$top=1`;
-      
-      try {
-        const bcbResponse = await fetch(bcbUrlRange, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (bcbResponse.ok) {
-          const bcbData = await bcbResponse.json();
-          console.log('BCB range data:', JSON.stringify(bcbData));
-          if (bcbData.value && bcbData.value.length > 0) {
-            usdBrl = bcbData.value[0].cotacaoVenda;
-            console.log('BCB PTAX cotação venda (range):', usdBrl);
-          }
-        }
-      } catch (e) {
-        console.error('BCB range error:', e);
+        console.error(`Erro BCB (${dateStr}):`, e);
       }
     }
 
@@ -114,16 +70,15 @@ serve(async (req) => {
       );
     }
 
-    throw new Error('Não foi possível obter cotação de nenhuma fonte');
+    throw new Error('Não foi possível obter cotação do BCB');
 
   } catch (error) {
     console.error('Error in get-exchange-rates function:', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     
-    // Fallback para cotação aproximada em caso de erro
     return new Response(
       JSON.stringify({ 
-        USDBRL: 5.80, // Fallback aproximado mais realista
+        USDBRL: 5.31, // Fallback baseado na cotação atual
         timestamp: new Date().toISOString(),
         source: 'fallback',
         error: errorMessage
