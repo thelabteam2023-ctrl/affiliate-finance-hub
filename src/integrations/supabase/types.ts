@@ -929,6 +929,220 @@ export type Database = {
         }
         Relationships: []
       }
+      matched_betting_pernas: {
+        Row: {
+          bookmaker_id: string
+          comissao_exchange: number | null
+          created_at: string
+          id: string
+          is_free_bet: boolean
+          liability: number | null
+          lucro_prejuizo: number | null
+          odd: number
+          resultado: string | null
+          retorno: number | null
+          round_id: string
+          selecao: string
+          stake: number
+          status: string
+          tipo_aposta: string
+        }
+        Insert: {
+          bookmaker_id: string
+          comissao_exchange?: number | null
+          created_at?: string
+          id?: string
+          is_free_bet?: boolean
+          liability?: number | null
+          lucro_prejuizo?: number | null
+          odd: number
+          resultado?: string | null
+          retorno?: number | null
+          round_id: string
+          selecao: string
+          stake: number
+          status?: string
+          tipo_aposta: string
+        }
+        Update: {
+          bookmaker_id?: string
+          comissao_exchange?: number | null
+          created_at?: string
+          id?: string
+          is_free_bet?: boolean
+          liability?: number | null
+          lucro_prejuizo?: number | null
+          odd?: number
+          resultado?: string | null
+          retorno?: number | null
+          round_id?: string
+          selecao?: string
+          stake?: number
+          status?: string
+          tipo_aposta?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matched_betting_pernas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matched_betting_pernas_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "matched_betting_rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      matched_betting_promocoes: {
+        Row: {
+          bookmaker_catalogo_id: string | null
+          created_at: string
+          data_expiracao: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          odd_minima: number | null
+          rollover: number | null
+          stake_returned: boolean
+          status: string
+          tipo: string
+          updated_at: string
+          user_id: string
+          valor_bonus: number
+          valor_minimo_aposta: number | null
+        }
+        Insert: {
+          bookmaker_catalogo_id?: string | null
+          created_at?: string
+          data_expiracao?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          odd_minima?: number | null
+          rollover?: number | null
+          stake_returned?: boolean
+          status?: string
+          tipo?: string
+          updated_at?: string
+          user_id: string
+          valor_bonus: number
+          valor_minimo_aposta?: number | null
+        }
+        Update: {
+          bookmaker_catalogo_id?: string | null
+          created_at?: string
+          data_expiracao?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          odd_minima?: number | null
+          rollover?: number | null
+          stake_returned?: boolean
+          status?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+          valor_bonus?: number
+          valor_minimo_aposta?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matched_betting_promocoes_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      matched_betting_rounds: {
+        Row: {
+          created_at: string
+          data_evento: string
+          esporte: string
+          evento: string
+          id: string
+          lucro_esperado: number | null
+          lucro_real: number | null
+          mercado: string
+          observacoes: string | null
+          projeto_id: string
+          promocao_id: string | null
+          status: string
+          tipo_round: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_evento: string
+          esporte: string
+          evento: string
+          id?: string
+          lucro_esperado?: number | null
+          lucro_real?: number | null
+          mercado: string
+          observacoes?: string | null
+          projeto_id: string
+          promocao_id?: string | null
+          status?: string
+          tipo_round?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_evento?: string
+          esporte?: string
+          evento?: string
+          id?: string
+          lucro_esperado?: number | null
+          lucro_real?: number | null
+          mercado?: string
+          observacoes?: string | null
+          projeto_id?: string
+          promocao_id?: string | null
+          status?: string
+          tipo_round?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matched_betting_rounds_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matched_betting_rounds_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "matched_betting_rounds_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "matched_betting_rounds_promocao_id_fkey"
+            columns: ["promocao_id"]
+            isOneToOne: false
+            referencedRelation: "matched_betting_promocoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movimentacoes_indicacao: {
         Row: {
           created_at: string | null
@@ -1836,6 +2050,42 @@ export type Database = {
           user_id: string | null
         }
         Relationships: []
+      }
+      v_matched_betting_resumo: {
+        Row: {
+          free_bets: number | null
+          lucro_medio: number | null
+          lucro_total: number | null
+          projeto_id: string | null
+          qualifying_bets: number | null
+          rounds_concluidos: number | null
+          taxa_sucesso: number | null
+          total_rounds: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matched_betting_rounds_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matched_betting_rounds_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "matched_betting_rounds_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+        ]
       }
       v_operador_performance: {
         Row: {
