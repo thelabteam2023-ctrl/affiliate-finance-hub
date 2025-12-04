@@ -19,7 +19,8 @@ import {
   TrendingUp,
   TrendingDown,
   Clock,
-  Edit
+  Edit,
+  Gift
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -27,6 +28,7 @@ import { ProjetoDashboardTab } from "@/components/projeto-detalhe/ProjetoDashboa
 import { ProjetoApostasTab } from "@/components/projeto-detalhe/ProjetoApostasTab";
 import { ProjetoOperadoresTab } from "@/components/projeto-detalhe/ProjetoOperadoresTab";
 import { ProjetoParceriasTab } from "@/components/projeto-detalhe/ProjetoParceriasTab";
+import { ProjetoMatchedBettingTab } from "@/components/projeto-detalhe/ProjetoMatchedBettingTab";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 
 interface Projeto {
@@ -280,6 +282,10 @@ export default function ProjetoDetalhe() {
             <Target className="h-4 w-4" />
             Apostas
           </TabsTrigger>
+          <TabsTrigger value="matched-betting" className="flex items-center gap-2">
+            <Gift className="h-4 w-4" />
+            Matched Betting
+          </TabsTrigger>
           <TabsTrigger value="operadores" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Operadores
@@ -296,6 +302,10 @@ export default function ProjetoDetalhe() {
 
         <TabsContent value="apostas">
           <ProjetoApostasTab projetoId={id!} />
+        </TabsContent>
+
+        <TabsContent value="matched-betting">
+          <ProjetoMatchedBettingTab projetoId={id!} />
         </TabsContent>
 
         <TabsContent value="operadores">
