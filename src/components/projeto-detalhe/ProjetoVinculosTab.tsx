@@ -230,9 +230,12 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     try {
       setChangingStatus(true);
 
+      // Database expects lowercase values
+      const statusLower = newStatus.toLowerCase();
+      
       const { error } = await supabase
         .from("bookmakers")
-        .update({ status: newStatus })
+        .update({ status: statusLower })
         .eq("id", vinculoId);
 
       if (error) throw error;
