@@ -24,6 +24,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -77,6 +84,8 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [saving, setSaving] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [vinculoToRemove, setVinculoToRemove] = useState<Vinculo | null>(null);
+  const [statusPopoverId, setStatusPopoverId] = useState<string | null>(null);
+  const [changingStatus, setChangingStatus] = useState(false);
 
   useEffect(() => {
     fetchVinculos();
@@ -214,6 +223,27 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       toast.error("Erro ao liberar vínculo: " + error.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangeStatus = async (vinculoId: string, newStatus: string) => {
+    try {
+      setChangingStatus(true);
+
+      const { error } = await supabase
+        .from("bookmakers")
+        .update({ status: newStatus })
+        .eq("id", vinculoId);
+
+      if (error) throw error;
+
+      toast.success(`Status alterado para ${newStatus === "ATIVO" ? "Ativo" : "Limitada"}`);
+      setStatusPopoverId(null);
+      fetchVinculos();
+    } catch (error: any) {
+      toast.error("Erro ao alterar status: " + error.message);
+    } finally {
+      setChangingStatus(false);
     }
   };
 
@@ -384,7 +414,55 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       </p>
                     </div>
                   </div>
-                  {getStatusBadge(vinculo.bookmaker_status)}
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(vinculo.bookmaker_status)}
+                    <Popover 
+                      open={statusPopoverId === vinculo.id} 
+                      onOpenChange={(open) => setStatusPopoverId(open ? vinculo.id : null)}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Alterar Status"
+                        >
+                          <ShieldAlert className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56" align="end">
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-sm">Alterar Status</h4>
+                          <RadioGroup
+                            value={vinculo.bookmaker_status.toUpperCase()}
+                            onValueChange={(value) => handleChangeStatus(vinculo.id, value)}
+                            disabled={changingStatus}
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="ATIVO" id={`ativo-${vinculo.id}`} />
+                              <Label htmlFor={`ativo-${vinculo.id}`} className="flex items-center gap-2 cursor-pointer">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                                Ativo
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="LIMITADA" id={`limitada-${vinculo.id}`} />
+                              <Label htmlFor={`limitada-${vinculo.id}`} className="flex items-center gap-2 cursor-pointer">
+                                <ShieldAlert className="h-4 w-4 text-yellow-400" />
+                                Limitada
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                          {changingStatus && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Salvando...
+                            </div>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
