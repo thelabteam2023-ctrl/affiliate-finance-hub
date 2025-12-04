@@ -46,6 +46,9 @@ const categoriasBase = [
   { value: "INTERNET_MOVEL", label: "Internet Móvel" },
   { value: "ALUGUEL", label: "Aluguel" },
   { value: "OPERADORES", label: "Operadores" },
+  { value: "DARF", label: "DARF" },
+  { value: "CONTABILIDADE", label: "Contabilidade" },
+  { value: "OUTROS", label: "Outros" },
 ];
 
 export function DespesaAdministrativaDialog({
@@ -59,6 +62,7 @@ export function DespesaAdministrativaDialog({
   const [loading, setLoading] = useState(false);
   const [showNovaCategoria, setShowNovaCategoria] = useState(false);
   const [novaCategoria, setNovaCategoria] = useState("");
+  const [categoriasLocais, setCategoriasLocais] = useState<string[]>([]);
   const [formData, setFormData] = useState<DespesaAdministrativa>({
     categoria: "ENERGIA",
     descricao: "",
@@ -68,12 +72,15 @@ export function DespesaAdministrativaDialog({
     status: "CONFIRMADO",
   });
 
-  // Combina categorias base com extras (personalizadas)
+  // Combina categorias base com extras (do banco) e locais (criadas nesta sessão)
   const todasCategorias = [
     ...categoriasBase,
     ...categoriasExtras
       .filter(c => !categoriasBase.some(b => b.value === c))
-      .map(c => ({ value: c, label: c }))
+      .map(c => ({ value: c, label: c })),
+    ...categoriasLocais
+      .filter(c => !categoriasBase.some(b => b.value === c) && !categoriasExtras.includes(c))
+      .map(c => ({ value: c, label: c })),
   ];
 
   useEffect(() => {
@@ -173,7 +180,9 @@ export function DespesaAdministrativaDialog({
                   size="sm"
                   onClick={() => {
                     if (novaCategoria.trim()) {
-                      setFormData({ ...formData, categoria: novaCategoria.trim() });
+                      const novaCat = novaCategoria.trim();
+                      setCategoriasLocais(prev => [...prev, novaCat]);
+                      setFormData({ ...formData, categoria: novaCat });
                       setShowNovaCategoria(false);
                       setNovaCategoria("");
                     }

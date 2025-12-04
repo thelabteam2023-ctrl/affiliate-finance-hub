@@ -396,6 +396,9 @@ export default function Financeiro() {
     INTERNET_MOVEL: "hsl(var(--chart-2))",
     ALUGUEL: "hsl(var(--chart-3))",
     OPERADORES: "hsl(var(--chart-4))",
+    DARF: "hsl(var(--chart-5))",
+    CONTABILIDADE: "hsl(210 80% 60%)",
+    OUTROS: "hsl(180 60% 50%)",
   };
 
   // Bar chart - comparison
