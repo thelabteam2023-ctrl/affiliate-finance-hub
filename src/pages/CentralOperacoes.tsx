@@ -131,12 +131,10 @@ export default function CentralOperacoes() {
   };
 
   const handleSaqueAction = (alerta: Alerta) => {
-    // Navegar para Caixa com contexto para abrir dialog de saque
+    // Navegar para Caixa e abrir dialog de nova transação
     navigate("/caixa", {
       state: {
         openDialog: true,
-        tipoTransacao: "SAQUE",
-        origemBookmakerId: alerta.entidade_id,
       },
     });
   };

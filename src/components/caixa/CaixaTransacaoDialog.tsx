@@ -1962,17 +1962,25 @@ export function CaixaTransacaoDialog({
                         <Card className="bg-card/30 border-border/50">
                           <CardContent className="pt-6 text-center">
                             <div className="text-sm font-medium uppercase">{getOrigemLabel()}</div>
-                            {origemBookmakerId && parseFloat(String(valor)) > 0 && (
+                            {origemBookmakerId && (
                               <div className="mt-3 space-y-1">
-                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                  <TrendingDown className="h-4 w-4 text-destructive" />
-                                  <span className="line-through opacity-70">
+                                {parseFloat(String(valor)) > 0 ? (
+                                  <>
+                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                      <TrendingDown className="h-4 w-4 text-destructive" />
+                                      <span className="line-through opacity-70">
+                                        {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId))}
+                                      </span>
+                                    </div>
+                                    <div className="text-sm font-semibold text-foreground">
+                                      -{formatCurrency(parseFloat(String(valor)))}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-sm font-semibold text-foreground">
                                     {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId))}
-                                  </span>
-                                </div>
-                                <div className="text-sm font-semibold text-foreground">
-                                  {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId) - parseFloat(String(valor)))}
-                                </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </CardContent>
