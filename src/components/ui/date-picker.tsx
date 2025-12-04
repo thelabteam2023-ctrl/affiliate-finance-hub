@@ -16,9 +16,18 @@ interface DatePickerProps {
   onChange: (date: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  fromYear?: number;
+  toYear?: number;
 }
 
-export function DatePicker({ value, onChange, disabled, placeholder = "Selecione uma data" }: DatePickerProps) {
+export function DatePicker({ 
+  value, 
+  onChange, 
+  disabled, 
+  placeholder = "Selecione uma data",
+  fromYear = 1920,
+  toYear = new Date().getFullYear() + 10,
+}: DatePickerProps) {
   const [date, setDate] = React.useState<Date | undefined>(
     value ? new Date(value) : undefined
   );
@@ -70,6 +79,9 @@ export function DatePicker({ value, onChange, disabled, placeholder = "Selecione
           disabled={disabled}
           initialFocus
           locale={ptBR}
+          captionLayout="dropdown-buttons"
+          fromYear={fromYear}
+          toYear={toYear}
         />
       </PopoverContent>
     </Popover>
