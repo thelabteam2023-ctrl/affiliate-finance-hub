@@ -279,8 +279,11 @@ export default function Financeiro() {
   // Pagamentos de operadores
   const totalPagamentosOperadores = filteredPagamentosOp.reduce((acc, p) => acc + p.valor, 0);
 
-  // Custos operacionais (aquisição + despesas de indicação + pagamentos de operadores)
-  const totalCustosOperacionais = totalCustosAquisicao + totalDespesasIndicacao + totalPagamentosOperadores;
+  // Custos operacionais (aquisição + despesas de indicação - custos diretos de parcerias)
+  const totalCustosOperacionais = totalCustosAquisicao + totalDespesasIndicacao;
+  
+  // Despesas administrativas totais (infraestrutura + operadores)
+  const totalDespesasAdminCompleto = totalDespesasAdmin + totalPagamentosOperadores;
 
   // Resultado operacional (saques - depósitos em BRL)
   const resultadoOperacional = filteredLedger
@@ -293,7 +296,7 @@ export default function Financeiro() {
 
   // Capital e Margem líquida corrigida (usando cotação em tempo real)
   const capitalOperacional = saldoBRL + (saldoUSD * cotacaoUSD) + (totalCryptoUSD * cotacaoUSD);
-  const margemLiquida = capitalOperacional - totalCustosOperacionais - totalDespesasAdmin;
+  const margemLiquida = capitalOperacional - totalCustosOperacionais - totalDespesasAdminCompleto;
   const margemPercent = capitalOperacional > 0 ? (margemLiquida / capitalOperacional) * 100 : 0;
 
   // Chart data - Distribution
@@ -420,7 +423,7 @@ export default function Financeiro() {
     { name: "Caixa FIAT", valor: saldoBRL + saldoUSD * 5 },
     { name: "Caixa Crypto", valor: totalCryptoUSD * 5 },
     { name: "Custos Operacionais", valor: totalCustosOperacionais },
-    { name: "Despesas Admin.", valor: totalDespesasAdmin },
+    { name: "Despesas Admin.", valor: totalDespesasAdminCompleto },
   ];
 
   // Histórico mensal detalhado
@@ -580,10 +583,10 @@ export default function Financeiro() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-500">
-              {formatCurrency(totalDespesasAdmin)}
+              {formatCurrency(totalDespesasAdminCompleto)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {filteredDespesasAdmin.length} despesas no período
+              Infraestrutura + Operadores
             </p>
           </CardContent>
         </Card>
@@ -1047,10 +1050,18 @@ export default function Financeiro() {
                 ))}
                 {despesasAdmin.length > 0 && (
                   <div className="pt-3 border-t flex items-center justify-between font-semibold">
-                    <span>Total</span>
+                    <span>Subtotal Infraestrutura</span>
                     <span className="text-orange-500">{formatCurrency(totalDespesasAdmin)}</span>
                   </div>
                 )}
+                <div className="pt-3 border-t flex items-center justify-between font-semibold">
+                  <span>Operadores</span>
+                  <span className="text-blue-500">{formatCurrency(totalPagamentosOperadores)}</span>
+                </div>
+                <div className="pt-3 border-t flex items-center justify-between font-bold text-lg">
+                  <span>Total Geral</span>
+                  <span className="text-orange-500">{formatCurrency(totalDespesasAdminCompleto)}</span>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1242,7 +1253,7 @@ export default function Financeiro() {
               </CardHeader>
               <CardContent>
                 <div className="text-xl font-bold text-chart-2">
-                  {formatCurrency(totalDespesasAdmin)}
+                  {formatCurrency(totalDespesasAdminCompleto)}
                 </div>
                 <Button
                   variant="ghost"
@@ -1256,7 +1267,7 @@ export default function Financeiro() {
               </CardContent>
             </Card>
 
-            <Card className={resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao - totalDespesasAdmin >= 0 ? "border-success/30" : "border-destructive/30"}>
+            <Card className={resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao - totalDespesasAdminCompleto >= 0 ? "border-success/30" : "border-destructive/30"}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
@@ -1271,8 +1282,8 @@ export default function Financeiro() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className={`text-xl font-bold ${resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao - totalDespesasAdmin >= 0 ? "text-success" : "text-destructive"}`}>
-                  {formatCurrency(resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao - totalDespesasAdmin)}
+                <div className={`text-xl font-bold ${resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao - totalDespesasAdminCompleto >= 0 ? "text-success" : "text-destructive"}`}>
+                  {formatCurrency(resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao - totalDespesasAdminCompleto)}
                 </div>
               </CardContent>
             </Card>
