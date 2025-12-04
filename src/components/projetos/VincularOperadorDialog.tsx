@@ -32,6 +32,20 @@ interface VincularOperadorDialogProps {
   onSuccess: () => void;
 }
 
+const MODELOS_PAGAMENTO = [
+  { value: "FIXO_MENSAL", label: "Fixo Mensal" },
+  { value: "PORCENTAGEM", label: "Porcentagem" },
+  { value: "HIBRIDO", label: "Híbrido (Fixo + %)" },
+  { value: "POR_ENTREGA", label: "Por Entrega" },
+  { value: "COMISSAO_ESCALONADA", label: "Comissão Escalonada" },
+];
+
+const BASES_CALCULO = [
+  { value: "LUCRO_PROJETO", label: "Lucro do Projeto" },
+  { value: "FATURAMENTO_PROJETO", label: "Faturamento do Projeto" },
+  { value: "RESULTADO_OPERACAO", label: "Resultado da Operação" },
+];
+
 export function VincularOperadorDialog({
   open,
   onOpenChange,
@@ -45,6 +59,10 @@ export function VincularOperadorDialog({
     operador_id: "",
     funcao: "",
     data_entrada: new Date().toISOString().split("T")[0],
+    modelo_pagamento: "FIXO_MENSAL",
+    valor_fixo: "",
+    percentual: "",
+    base_calculo: "LUCRO_PROJETO",
   });
 
   useEffect(() => {
@@ -55,6 +73,10 @@ export function VincularOperadorDialog({
         operador_id: "",
         funcao: "",
         data_entrada: new Date().toISOString().split("T")[0],
+        modelo_pagamento: "FIXO_MENSAL",
+        valor_fixo: "",
+        percentual: "",
+        base_calculo: "LUCRO_PROJETO",
       });
     }
   }, [open, projetoId]);
@@ -89,6 +111,17 @@ export function VincularOperadorDialog({
       return;
     }
 
+    // Validate based on modelo_pagamento
+    const modelo = formData.modelo_pagamento;
+    if ((modelo === "FIXO_MENSAL" || modelo === "HIBRIDO") && !formData.valor_fixo) {
+      toast.error("Informe o valor fixo mensal");
+      return;
+    }
+    if ((modelo === "PORCENTAGEM" || modelo === "HIBRIDO" || modelo === "COMISSAO_ESCALONADA") && !formData.percentual) {
+      toast.error("Informe o percentual");
+      return;
+    }
+
     setLoading(true);
     try {
       const { data: session } = await supabase.auth.getSession();
@@ -104,6 +137,10 @@ export function VincularOperadorDialog({
         data_entrada: formData.data_entrada,
         status: "ATIVO",
         user_id: session.session.user.id,
+        modelo_pagamento: formData.modelo_pagamento,
+        valor_fixo: formData.valor_fixo ? parseFloat(formData.valor_fixo) : 0,
+        percentual: formData.percentual ? parseFloat(formData.percentual) : 0,
+        base_calculo: formData.base_calculo,
       });
 
       if (error) throw error;
@@ -127,9 +164,13 @@ export function VincularOperadorDialog({
     op => !operadoresVinculados.includes(op.id)
   );
 
+  const showValorFixo = ["FIXO_MENSAL", "HIBRIDO", "POR_ENTREGA"].includes(formData.modelo_pagamento);
+  const showPercentual = ["PORCENTAGEM", "HIBRIDO", "COMISSAO_ESCALONADA"].includes(formData.modelo_pagamento);
+  const showBaseCalculo = showPercentual;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Vincular Operador ao Projeto</DialogTitle>
         </DialogHeader>
@@ -160,21 +201,97 @@ export function VincularOperadorDialog({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Função no Projeto</Label>
-            <Input
-              value={formData.funcao}
-              onChange={(e) => setFormData({ ...formData, funcao: e.target.value })}
-              placeholder="Ex: Trader, Analista, etc."
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Função no Projeto</Label>
+              <Input
+                value={formData.funcao}
+                onChange={(e) => setFormData({ ...formData, funcao: e.target.value })}
+                placeholder="Ex: Trader, Analista"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Data de Entrada</Label>
+              <DatePicker
+                value={formData.data_entrada}
+                onChange={(date) => setFormData({ ...formData, data_entrada: date })}
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Data de Entrada</Label>
-            <DatePicker
-              value={formData.data_entrada}
-              onChange={(date) => setFormData({ ...formData, data_entrada: date })}
-            />
+          <div className="border-t pt-4 mt-4">
+            <h4 className="text-sm font-medium mb-3">Modelo de Pagamento</h4>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Tipo de Acordo *</Label>
+                <Select
+                  value={formData.modelo_pagamento}
+                  onValueChange={(value) => setFormData({ ...formData, modelo_pagamento: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MODELOS_PAGAMENTO.map((modelo) => (
+                      <SelectItem key={modelo.value} value={modelo.value}>
+                        {modelo.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {showValorFixo && (
+                  <div className="space-y-2">
+                    <Label>Valor Fixo (R$) *</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={formData.valor_fixo}
+                      onChange={(e) => setFormData({ ...formData, valor_fixo: e.target.value })}
+                      placeholder="0,00"
+                    />
+                  </div>
+                )}
+
+                {showPercentual && (
+                  <div className="space-y-2">
+                    <Label>Percentual (%) *</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={formData.percentual}
+                      onChange={(e) => setFormData({ ...formData, percentual: e.target.value })}
+                      placeholder="0"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {showBaseCalculo && (
+                <div className="space-y-2">
+                  <Label>Base de Cálculo</Label>
+                  <Select
+                    value={formData.base_calculo}
+                    onValueChange={(value) => setFormData({ ...formData, base_calculo: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BASES_CALCULO.map((base) => (
+                        <SelectItem key={base.value} value={base.value}>
+                          {base.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
