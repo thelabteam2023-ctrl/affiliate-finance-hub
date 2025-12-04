@@ -323,8 +323,6 @@ export function CaixaTransacaoDialog({
       setOrigemTipo("BOOKMAKER");
       setDestinoTipo("PARCEIRO_CONTA");
       setTipoMoeda("FIAT"); // SAQUE only supports FIAT
-      setOrigemTipo("BOOKMAKER");
-      setDestinoTipo("CAIXA_OPERACIONAL");
     } else if (tipoTransacao === "TRANSFERENCIA") {
       setOrigemTipo("CAIXA_OPERACIONAL");
       setDestinoTipo("PARCEIRO_CONTA");
