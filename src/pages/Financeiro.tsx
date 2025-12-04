@@ -33,7 +33,14 @@ import {
   Building2,
   Edit,
   Trash2,
+  RefreshCw,
+  Info,
 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -111,7 +118,7 @@ export default function Financeiro() {
 
   // Hook centralizado de cotações
   const cryptoSymbols = useMemo(() => caixaCrypto.map(c => c.coin), [caixaCrypto]);
-  const { cotacaoUSD, cryptoPrices, getCryptoUSDValue } = useCotacoes(cryptoSymbols);
+  const { cotacaoUSD, cryptoPrices, getCryptoUSDValue, getCryptoPrice, refreshAll: refreshCotacoes, loading: loadingCotacoes, lastUpdate, source } = useCotacoes(cryptoSymbols);
 
   // Filtros de período
   const [periodoPreset, setPeriodoPreset] = useState<string>("all");
@@ -452,13 +459,70 @@ export default function Financeiro() {
                 <span>USD:</span>
                 <span className="font-medium">${saldoUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })} <span className="text-muted-foreground/60">({formatCurrency(saldoUSD * cotacaoUSD)})</span></span>
               </p>
-              <p className="text-xs text-muted-foreground flex justify-between">
+              <div className="text-xs text-muted-foreground flex justify-between items-center">
                 <span>CRYPTO:</span>
-                <span className="font-medium">${totalCryptoUSD.toFixed(2)} <span className="text-muted-foreground/60">({formatCurrency(totalCryptoUSD * cotacaoUSD)})</span></span>
-              </p>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="font-medium flex items-center gap-1 hover:text-foreground transition-colors">
+                      ${totalCryptoUSD.toFixed(2)} <span className="text-muted-foreground/60">({formatCurrency(totalCryptoUSD * cotacaoUSD)})</span>
+                      <Info className="h-3 w-3" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72" align="end">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-medium">Cotações em tempo real (Binance)</p>
+                        <button 
+                          onClick={refreshCotacoes} 
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          disabled={loadingCotacoes}
+                        >
+                          <RefreshCw className={`h-3 w-3 ${loadingCotacoes ? 'animate-spin' : ''}`} />
+                        </button>
+                      </div>
+                      {lastUpdate && (
+                        <p className="text-[10px] text-muted-foreground">
+                          Atualizado: {format(lastUpdate, "HH:mm:ss", { locale: ptBR })}
+                        </p>
+                      )}
+                      <div className="space-y-1.5 pt-1 border-t border-border/50">
+                        {caixaCrypto.map(c => {
+                          const price = getCryptoPrice(c.coin);
+                          const usdValue = getCryptoUSDValue(c.coin, c.saldo_coin, c.saldo_usd);
+                          return (
+                            <div key={c.coin} className="flex items-center justify-between text-xs">
+                              <span className="font-mono">{c.coin}</span>
+                              <div className="text-right">
+                                <span className="text-muted-foreground">
+                                  {c.saldo_coin.toFixed(c.saldo_coin < 1 ? 6 : 4)} × 
+                                </span>
+                                <span className="font-medium ml-1">
+                                  ${price ? price.toFixed(price < 1 ? 6 : 2) : '—'}
+                                </span>
+                                <span className="text-primary ml-2">
+                                  = {formatCurrency(usdValue, "USD")}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
-            <p className="text-[10px] text-muted-foreground/50 mt-2 border-t border-border/30 pt-1">
-              Cotação USD/BRL: R$ {cotacaoUSD.toFixed(4)}
+            <p className="text-[10px] text-muted-foreground/50 mt-2 border-t border-border/30 pt-1 flex items-center justify-between">
+              <span>Cotação USD/BRL: R$ {cotacaoUSD.toFixed(4)} ({source.usd})</span>
+              {lastUpdate && (
+                <button 
+                  onClick={refreshCotacoes}
+                  className="flex items-center gap-1 hover:text-foreground transition-colors"
+                  disabled={loadingCotacoes}
+                >
+                  <RefreshCw className={`h-2.5 w-2.5 ${loadingCotacoes ? 'animate-spin' : ''}`} />
+                </button>
+              )}
             </p>
           </CardContent>
         </Card>
