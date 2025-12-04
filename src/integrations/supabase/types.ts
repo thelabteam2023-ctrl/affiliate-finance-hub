@@ -2254,6 +2254,23 @@ export type Database = {
         }
         Relationships: []
       }
+      v_painel_operacional: {
+        Row: {
+          created_at: string | null
+          data_limite: string | null
+          descricao: string | null
+          entidade_id: string | null
+          entidade_tipo: string | null
+          moeda: string | null
+          nivel_urgencia: string | null
+          ordem_urgencia: number | null
+          tipo_alerta: string | null
+          titulo: string | null
+          user_id: string | null
+          valor: number | null
+        }
+        Relationships: []
+      }
       v_parcerias_alerta: {
         Row: {
           comissao_paga: boolean | null
