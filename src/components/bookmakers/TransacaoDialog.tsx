@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -22,15 +22,23 @@ interface TransacaoDialogProps {
     saldo_atual: number;
     moeda: string;
   };
+  defaultTipo?: string;
 }
 
-export default function TransacaoDialog({ open, onClose, bookmaker }: TransacaoDialogProps) {
+export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo = "deposito" }: TransacaoDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [tipo, setTipo] = useState("deposito");
+  const [tipo, setTipo] = useState(defaultTipo);
   const [valor, setValor] = useState("");
   const [descricao, setDescricao] = useState("");
   const [referenciaExterna, setReferenciaExterna] = useState("");
   const { toast } = useToast();
+
+  // Reset tipo when dialog opens with a new defaultTipo
+  useEffect(() => {
+    if (open) {
+      setTipo(defaultTipo);
+    }
+  }, [open, defaultTipo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
