@@ -904,46 +904,58 @@ export type Database = {
       }
       operador_projetos: {
         Row: {
+          base_calculo: string | null
           created_at: string
           data_entrada: string
           data_saida: string | null
           funcao: string | null
           id: string
+          modelo_pagamento: string
           motivo_saida: string | null
           observacoes: string | null
           operador_id: string
+          percentual: number | null
           projeto_id: string
           status: string
           updated_at: string
           user_id: string
+          valor_fixo: number | null
         }
         Insert: {
+          base_calculo?: string | null
           created_at?: string
           data_entrada?: string
           data_saida?: string | null
           funcao?: string | null
           id?: string
+          modelo_pagamento?: string
           motivo_saida?: string | null
           observacoes?: string | null
           operador_id: string
+          percentual?: number | null
           projeto_id: string
           status?: string
           updated_at?: string
           user_id: string
+          valor_fixo?: number | null
         }
         Update: {
+          base_calculo?: string | null
           created_at?: string
           data_entrada?: string
           data_saida?: string | null
           funcao?: string | null
           id?: string
+          modelo_pagamento?: string
           motivo_saida?: string | null
           observacoes?: string | null
           operador_id?: string
+          percentual?: number | null
           projeto_id?: string
           status?: string
           updated_at?: string
           user_id?: string
+          valor_fixo?: number | null
         }
         Relationships: [
           {

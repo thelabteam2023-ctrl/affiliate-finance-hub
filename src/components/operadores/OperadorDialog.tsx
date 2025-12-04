@@ -66,7 +66,25 @@ interface OperadorProjeto {
   data_saida: string | null;
   status: string;
   funcao: string | null;
+  modelo_pagamento: string;
+  valor_fixo: number;
+  percentual: number;
+  base_calculo: string;
 }
+
+const MODELOS_PAGAMENTO_LABELS: Record<string, string> = {
+  FIXO_MENSAL: "Fixo Mensal",
+  PORCENTAGEM: "Porcentagem",
+  HIBRIDO: "Híbrido",
+  POR_ENTREGA: "Por Entrega",
+  COMISSAO_ESCALONADA: "Comissão Escalonada",
+};
+
+const BASES_CALCULO_LABELS: Record<string, string> = {
+  LUCRO_PROJETO: "Lucro do Projeto",
+  FATURAMENTO_PROJETO: "Faturamento do Projeto",
+  RESULTADO_OPERACAO: "Resultado da Operação",
+};
 
 interface PagamentoOperador {
   id: string;
@@ -178,6 +196,10 @@ export function OperadorDialog({
         data_saida,
         status,
         funcao,
+        modelo_pagamento,
+        valor_fixo,
+        percentual,
+        base_calculo,
         projetos!inner(nome)
       `)
       .eq("operador_id", operadorId)
@@ -193,6 +215,10 @@ export function OperadorDialog({
           data_saida: p.data_saida,
           status: p.status,
           funcao: p.funcao,
+          modelo_pagamento: p.modelo_pagamento,
+          valor_fixo: p.valor_fixo || 0,
+          percentual: p.percentual || 0,
+          base_calculo: p.base_calculo,
         }))
       );
     }
@@ -561,6 +587,34 @@ export function OperadorDialog({
                             {projeto.status}
                           </Badge>
                         </div>
+                        
+                        {/* Modelo de Pagamento */}
+                        <div className="mt-3 p-2 bg-muted/30 rounded-md">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Modelo:</span>
+                            <span className="text-sm font-medium">
+                              {MODELOS_PAGAMENTO_LABELS[projeto.modelo_pagamento] || projeto.modelo_pagamento}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 mt-1">
+                            {projeto.valor_fixo > 0 && (
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs text-muted-foreground">Fixo:</span>
+                                <span className="text-sm">{formatCurrency(projeto.valor_fixo)}</span>
+                              </div>
+                            )}
+                            {projeto.percentual > 0 && (
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs text-muted-foreground">%:</span>
+                                <span className="text-sm">{projeto.percentual}%</span>
+                                <span className="text-xs text-muted-foreground">
+                                  ({BASES_CALCULO_LABELS[projeto.base_calculo] || projeto.base_calculo})
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
                         <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
