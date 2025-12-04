@@ -375,6 +375,58 @@ export function CaixaTransacaoDialog({
     }
   }, [destinoParceiroId, destinoContaId, tipoTransacao]);
 
+  // Buscar dados da bookmaker selecionada e atualizar o array local
+  useEffect(() => {
+    const fetchSelectedBookmaker = async () => {
+      if (!origemBookmakerId) return;
+      
+      // Verificar se já temos os dados
+      const existing = bookmakers.find(b => b.id === origemBookmakerId);
+      if (existing) return;
+      
+      // Buscar dados da bookmaker
+      const { data } = await supabase
+        .from("bookmakers")
+        .select("id, nome, saldo_atual, moeda")
+        .eq("id", origemBookmakerId)
+        .single();
+      
+      if (data) {
+        setBookmakers(prev => {
+          const filtered = prev.filter(b => b.id !== data.id);
+          return [...filtered, data];
+        });
+      }
+    };
+    
+    fetchSelectedBookmaker();
+  }, [origemBookmakerId]);
+
+  // Buscar dados da bookmaker de destino quando selecionada (DEPOSITO)
+  useEffect(() => {
+    const fetchSelectedDestBookmaker = async () => {
+      if (!destinoBookmakerId) return;
+      
+      const existing = bookmakers.find(b => b.id === destinoBookmakerId);
+      if (existing) return;
+      
+      const { data } = await supabase
+        .from("bookmakers")
+        .select("id, nome, saldo_atual, moeda")
+        .eq("id", destinoBookmakerId)
+        .single();
+      
+      if (data) {
+        setBookmakers(prev => {
+          const filtered = prev.filter(b => b.id !== data.id);
+          return [...filtered, data];
+        });
+      }
+    };
+    
+    fetchSelectedDestBookmaker();
+  }, [destinoBookmakerId]);
+
   const fetchAccountsAndWallets = async () => {
     try {
       const { data: contas } = await supabase
@@ -401,7 +453,6 @@ export function CaixaTransacaoDialog({
         .select("id, nome, saldo_atual, moeda")
         .order("nome");
       
-      console.log("Bookmakers carregados:", data);
       setBookmakers(data || []);
     } catch (error) {
       console.error("Erro ao carregar bookmakers:", error);
@@ -537,10 +588,7 @@ export function CaixaTransacaoDialog({
     }
     
     if (tipo === "BOOKMAKER" && id) {
-      console.log("Buscando saldo para bookmaker ID:", id);
-      console.log("Bookmakers disponíveis:", bookmakers);
       const bm = bookmakers.find(b => b.id === id);
-      console.log("Bookmaker encontrado:", bm);
       return bm?.saldo_atual || 0;
     }
     
@@ -1938,17 +1986,25 @@ export function CaixaTransacaoDialog({
                         <Card className="bg-card/30 border-border/50">
                           <CardContent className="pt-6 text-center">
                             <div className="text-sm font-medium uppercase">{getDestinoLabel()}</div>
-                            {destinoContaId && parseFloat(String(valor)) > 0 && (
+                            {destinoContaId && (
                               <div className="mt-3 space-y-1">
-                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                  <TrendingUp className="h-4 w-4 text-emerald-500" />
-                                  <span className="line-through opacity-70">
+                                {parseFloat(String(valor)) > 0 ? (
+                                  <>
+                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                      <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                      <span className="line-through opacity-70">
+                                        {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId))}
+                                      </span>
+                                    </div>
+                                    <div className="text-sm font-semibold text-foreground">
+                                      +{formatCurrency(parseFloat(String(valor)))}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-sm font-semibold text-foreground">
                                     {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId))}
-                                  </span>
-                                </div>
-                                <div className="text-sm font-semibold text-foreground">
-                                  {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId) + parseFloat(String(valor)))}
-                                </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </CardContent>
