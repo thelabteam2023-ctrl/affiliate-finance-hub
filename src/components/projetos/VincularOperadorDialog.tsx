@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { HelpCircle, TrendingUp, DollarSign, Target } from "lucide-react";
 
 interface Operador {
   id: string;
@@ -55,6 +57,7 @@ export function VincularOperadorDialog({
   const [loading, setLoading] = useState(false);
   const [operadores, setOperadores] = useState<Operador[]>([]);
   const [operadoresVinculados, setOperadoresVinculados] = useState<string[]>([]);
+  const [showBaseCalculoHelp, setShowBaseCalculoHelp] = useState(false);
   const [formData, setFormData] = useState({
     operador_id: "",
     funcao: "",
@@ -273,7 +276,16 @@ export function VincularOperadorDialog({
 
               {showBaseCalculo && (
                 <div className="space-y-2">
-                  <Label>Base de Cálculo</Label>
+                  <div className="flex items-center gap-2">
+                    <Label>Base de Cálculo</Label>
+                    <button
+                      type="button"
+                      onClick={() => setShowBaseCalculoHelp(true)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <HelpCircle className="h-4 w-4" />
+                    </button>
+                  </div>
                   <Select
                     value={formData.base_calculo}
                     onValueChange={(value) => setFormData({ ...formData, base_calculo: value })}
@@ -291,6 +303,95 @@ export function VincularOperadorDialog({
                   </Select>
                 </div>
               )}
+
+              {/* Modal de Ajuda - Base de Cálculo */}
+              <Dialog open={showBaseCalculoHelp} onOpenChange={setShowBaseCalculoHelp}>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Base de Cálculo - Entenda as Opções</DialogTitle>
+                    <DialogDescription>
+                      Escolha como o percentual do operador será calculado
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-6 mt-4">
+                    {/* Lucro do Projeto */}
+                    <div className="flex gap-4 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                      <div className="flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                          <TrendingUp className="h-5 w-5 text-emerald-500" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-emerald-400">Lucro do Projeto</h4>
+                        <p className="text-sm text-muted-foreground">
+                          O percentual é calculado sobre o <strong>lucro líquido</strong> do projeto 
+                          (receitas menos despesas operacionais e custos).
+                        </p>
+                        <div className="text-xs text-muted-foreground mt-2 p-2 bg-background/50 rounded">
+                          <strong>Exemplo:</strong> Projeto faturou R$ 100.000, com custos de R$ 60.000. 
+                          Lucro = R$ 40.000. Se o operador tem 10%, recebe <strong>R$ 4.000</strong>.
+                        </div>
+                        <p className="text-xs text-emerald-400/70 mt-1">
+                          ✓ Recomendado para alinhar incentivos com resultado real
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Faturamento do Projeto */}
+                    <div className="flex gap-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                      <div className="flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                          <DollarSign className="h-5 w-5 text-blue-500" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-blue-400">Faturamento do Projeto</h4>
+                        <p className="text-sm text-muted-foreground">
+                          O percentual é calculado sobre o <strong>faturamento bruto</strong> total 
+                          do projeto, independente dos custos.
+                        </p>
+                        <div className="text-xs text-muted-foreground mt-2 p-2 bg-background/50 rounded">
+                          <strong>Exemplo:</strong> Projeto faturou R$ 100.000 (custos irrelevantes). 
+                          Se o operador tem 10%, recebe <strong>R$ 10.000</strong>.
+                        </div>
+                        <p className="text-xs text-blue-400/70 mt-1">
+                          ✓ Ideal para operadores com foco em volume de operações
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Resultado da Operação */}
+                    <div className="flex gap-4 p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                      <div className="flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                          <Target className="h-5 w-5 text-purple-500" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-purple-400">Resultado da Operação</h4>
+                        <p className="text-sm text-muted-foreground">
+                          O percentual é calculado sobre o <strong>resultado específico</strong> das 
+                          operações que o operador participou (ex: apostas realizadas).
+                        </p>
+                        <div className="text-xs text-muted-foreground mt-2 p-2 bg-background/50 rounded">
+                          <strong>Exemplo:</strong> Operador gerou R$ 50.000 em resultado nas operações 
+                          que ele executou. Se tem 10%, recebe <strong>R$ 5.000</strong>.
+                        </div>
+                        <p className="text-xs text-purple-400/70 mt-1">
+                          ✓ Melhor para traders com operações individuais rastreáveis
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end mt-4">
+                    <Button onClick={() => setShowBaseCalculoHelp(false)}>
+                      Entendi
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>
