@@ -105,6 +105,13 @@ interface DespesaAdministrativa {
   status: string;
 }
 
+interface PagamentoOperador {
+  tipo_pagamento: string;
+  valor: number;
+  data_pagamento: string;
+  status: string;
+}
+
 export default function Financeiro() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -115,6 +122,7 @@ export default function Financeiro() {
   const [custos, setCustos] = useState<CustoAquisicao[]>([]);
   const [cashLedger, setCashLedger] = useState<CashLedgerEntry[]>([]);
   const [despesasAdmin, setDespesasAdmin] = useState<DespesaAdministrativa[]>([]);
+  const [pagamentosOperador, setPagamentosOperador] = useState<PagamentoOperador[]>([]);
 
   // Hook centralizado de cotações
   const cryptoSymbols = useMemo(() => caixaCrypto.map(c => c.coin), [caixaCrypto]);
@@ -175,13 +183,14 @@ export default function Financeiro() {
     try {
       setLoading(true);
 
-      const [fiatResult, cryptoResult, despesasResult, custosResult, ledgerResult, despesasAdminResult] = await Promise.all([
+      const [fiatResult, cryptoResult, despesasResult, custosResult, ledgerResult, despesasAdminResult, pagamentosOpResult] = await Promise.all([
         supabase.from("v_saldo_caixa_fiat").select("*"),
         supabase.from("v_saldo_caixa_crypto").select("*"),
         supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao").eq("status", "CONFIRMADO"),
         supabase.from("v_custos_aquisicao").select("custo_total, valor_indicador, valor_parceiro, valor_fornecedor, data_inicio"),
         supabase.from("cash_ledger").select("tipo_transacao, valor, data_transacao, moeda").eq("status", "CONFIRMADO"),
         supabase.from("despesas_administrativas").select("*").eq("status", "CONFIRMADO"),
+        supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status").eq("status", "CONFIRMADO"),
       ]);
 
       if (fiatResult.error) throw fiatResult.error;
@@ -190,6 +199,7 @@ export default function Financeiro() {
       if (custosResult.error) throw custosResult.error;
       if (ledgerResult.error) throw ledgerResult.error;
       if (despesasAdminResult.error) throw despesasAdminResult.error;
+      if (pagamentosOpResult.error) throw pagamentosOpResult.error;
 
       setCaixaFiat(fiatResult.data || []);
       setCaixaCrypto(cryptoResult.data || []);
@@ -197,6 +207,7 @@ export default function Financeiro() {
       setCustos(custosResult.data || []);
       setCashLedger(ledgerResult.data || []);
       setDespesasAdmin(despesasAdminResult.data || []);
+      setPagamentosOperador(pagamentosOpResult.data || []);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar dados",
@@ -221,7 +232,7 @@ export default function Financeiro() {
   };
 
   // Filtrar dados por período
-  const filterByPeriod = <T extends { data_movimentacao?: string; data_inicio?: string; data_transacao?: string; data_despesa?: string }>(
+  const filterByPeriod = <T extends { data_movimentacao?: string; data_inicio?: string; data_transacao?: string; data_despesa?: string; data_pagamento?: string }>(
     data: T[],
     dateField: keyof T
   ): T[] => {
@@ -243,6 +254,7 @@ export default function Financeiro() {
   const filteredCustos = filterByPeriod(custos, "data_inicio");
   const filteredLedger = filterByPeriod(cashLedger, "data_transacao");
   const filteredDespesasAdmin = filterByPeriod(despesasAdmin, "data_despesa");
+  const filteredPagamentosOp = filterByPeriod(pagamentosOperador, "data_pagamento") as PagamentoOperador[];
 
   // Calculate KPIs
   const saldoBRL = caixaFiat.find(f => f.moeda === "BRL")?.saldo || 0;
@@ -264,8 +276,11 @@ export default function Financeiro() {
   // Despesas administrativas
   const totalDespesasAdmin = filteredDespesasAdmin.reduce((acc, d) => acc + d.valor, 0);
 
-  // Custos operacionais (aquisição + despesas de indicação unificados)
-  const totalCustosOperacionais = totalCustosAquisicao + totalDespesasIndicacao;
+  // Pagamentos de operadores
+  const totalPagamentosOperadores = filteredPagamentosOp.reduce((acc, p) => acc + p.valor, 0);
+
+  // Custos operacionais (aquisição + despesas de indicação + pagamentos de operadores)
+  const totalCustosOperacionais = totalCustosAquisicao + totalDespesasIndicacao + totalPagamentosOperadores;
 
   // Resultado operacional (saques - depósitos em BRL)
   const resultadoOperacional = filteredLedger
@@ -395,9 +410,8 @@ export default function Financeiro() {
     ENERGIA: "hsl(var(--chart-1))",
     INTERNET_MOVEL: "hsl(var(--chart-2))",
     ALUGUEL: "hsl(var(--chart-3))",
-    OPERADORES: "hsl(var(--chart-4))",
-    DARF: "hsl(var(--chart-5))",
-    CONTABILIDADE: "hsl(210 80% 60%)",
+    DARF: "hsl(var(--chart-4))",
+    CONTABILIDADE: "hsl(var(--chart-5))",
     OUTROS: "hsl(180 60% 50%)",
   };
 
