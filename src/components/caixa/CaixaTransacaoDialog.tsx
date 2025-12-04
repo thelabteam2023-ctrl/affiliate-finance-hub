@@ -399,9 +399,9 @@ export function CaixaTransacaoDialog({
       const { data } = await supabase
         .from("bookmakers")
         .select("id, nome, saldo_atual, moeda")
-        .in("status", ["ATIVO", "ativo", "LIMITADA", "limitada"])
         .order("nome");
       
+      console.log("Bookmakers carregados:", data);
       setBookmakers(data || []);
     } catch (error) {
       console.error("Erro ao carregar bookmakers:", error);
@@ -537,7 +537,10 @@ export function CaixaTransacaoDialog({
     }
     
     if (tipo === "BOOKMAKER" && id) {
+      console.log("Buscando saldo para bookmaker ID:", id);
+      console.log("Bookmakers disponíveis:", bookmakers);
       const bm = bookmakers.find(b => b.id === id);
+      console.log("Bookmaker encontrado:", bm);
       return bm?.saldo_atual || 0;
     }
     
