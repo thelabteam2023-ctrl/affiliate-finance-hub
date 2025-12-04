@@ -14,6 +14,111 @@ export type Database = {
   }
   public: {
     Tables: {
+      apostas: {
+        Row: {
+          aposta_relacionada_id: string | null
+          bookmaker_id: string
+          created_at: string
+          data_aposta: string
+          esporte: string
+          estrategia: string | null
+          evento: string
+          id: string
+          lucro_prejuizo: number | null
+          mercado: string | null
+          observacoes: string | null
+          odd: number
+          projeto_id: string
+          resultado: string | null
+          selecao: string
+          stake: number
+          status: string
+          updated_at: string
+          user_id: string
+          valor_retorno: number | null
+        }
+        Insert: {
+          aposta_relacionada_id?: string | null
+          bookmaker_id: string
+          created_at?: string
+          data_aposta?: string
+          esporte: string
+          estrategia?: string | null
+          evento: string
+          id?: string
+          lucro_prejuizo?: number | null
+          mercado?: string | null
+          observacoes?: string | null
+          odd: number
+          projeto_id: string
+          resultado?: string | null
+          selecao: string
+          stake: number
+          status?: string
+          updated_at?: string
+          user_id: string
+          valor_retorno?: number | null
+        }
+        Update: {
+          aposta_relacionada_id?: string | null
+          bookmaker_id?: string
+          created_at?: string
+          data_aposta?: string
+          esporte?: string
+          estrategia?: string | null
+          evento?: string
+          id?: string
+          lucro_prejuizo?: number | null
+          mercado?: string | null
+          observacoes?: string | null
+          odd?: number
+          projeto_id?: string
+          resultado?: string | null
+          selecao?: string
+          stake?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+          valor_retorno?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apostas_aposta_relacionada_id_fkey"
+            columns: ["aposta_relacionada_id"]
+            isOneToOne: false
+            referencedRelation: "apostas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "apostas_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+        ]
+      }
       bancos: {
         Row: {
           codigo: string
@@ -983,6 +1088,13 @@ export type Database = {
             foreignKeyName: "operador_projetos_projeto_id_fkey"
             columns: ["projeto_id"]
             isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
             referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
           },
@@ -1116,6 +1228,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "projetos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_operador_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
           },
           {
             foreignKeyName: "pagamentos_operador_projeto_id_fkey"
@@ -1811,6 +1930,23 @@ export type Database = {
             referencedColumns: ["parceiro_id"]
           },
         ]
+      }
+      v_projeto_apostas_resumo: {
+        Row: {
+          apostas_concluidas: number | null
+          apostas_pendentes: number | null
+          apostas_realizadas: number | null
+          greens: number | null
+          lucro_total: number | null
+          projeto_id: string | null
+          reds: number | null
+          roi_percentual: number | null
+          total_apostas: number | null
+          total_stake: number | null
+          user_id: string | null
+          voids: number | null
+        }
+        Relationships: []
       }
       v_projeto_resumo: {
         Row: {
