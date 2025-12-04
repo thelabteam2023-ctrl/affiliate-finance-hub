@@ -13,7 +13,7 @@ import {
   LayoutDashboard,
   Target,
   Users,
-  Handshake,
+  Link2,
   Calendar,
   DollarSign,
   TrendingUp,
@@ -27,7 +27,7 @@ import { ptBR } from "date-fns/locale";
 import { ProjetoDashboardTab } from "@/components/projeto-detalhe/ProjetoDashboardTab";
 import { ProjetoApostasTab } from "@/components/projeto-detalhe/ProjetoApostasTab";
 import { ProjetoOperadoresTab } from "@/components/projeto-detalhe/ProjetoOperadoresTab";
-import { ProjetoParceriasTab } from "@/components/projeto-detalhe/ProjetoParceriasTab";
+import { ProjetoVinculosTab } from "@/components/projeto-detalhe/ProjetoVinculosTab";
 import { ProjetoMatchedBettingTab } from "@/components/projeto-detalhe/ProjetoMatchedBettingTab";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 
@@ -290,9 +290,9 @@ export default function ProjetoDetalhe() {
             <Users className="h-4 w-4" />
             Operadores
           </TabsTrigger>
-          <TabsTrigger value="parcerias" className="flex items-center gap-2">
-            <Handshake className="h-4 w-4" />
-            Parcerias
+          <TabsTrigger value="vinculos" className="flex items-center gap-2">
+            <Link2 className="h-4 w-4" />
+            Vínculos
           </TabsTrigger>
         </TabsList>
 
@@ -312,8 +312,8 @@ export default function ProjetoDetalhe() {
           <ProjetoOperadoresTab projetoId={id!} />
         </TabsContent>
 
-        <TabsContent value="parcerias">
-          <ProjetoParceriasTab projetoId={id!} />
+        <TabsContent value="vinculos">
+          <ProjetoVinculosTab projetoId={id!} />
         </TabsContent>
       </Tabs>
 
