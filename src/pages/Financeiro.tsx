@@ -107,6 +107,7 @@ export default function Financeiro() {
   const [custos, setCustos] = useState<CustoAquisicao[]>([]);
   const [cashLedger, setCashLedger] = useState<CashLedgerEntry[]>([]);
   const [despesasAdmin, setDespesasAdmin] = useState<DespesaAdministrativa[]>([]);
+  const [cotacaoUSD, setCotacaoUSD] = useState<number>(6.0); // Fallback
 
   // Filtros de período
   const [periodoPreset, setPeriodoPreset] = useState<string>("all");
@@ -156,6 +157,21 @@ export default function Financeiro() {
       navigate("/auth");
     } else {
       fetchData();
+      fetchExchangeRate();
+    }
+  };
+
+  const fetchExchangeRate = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("get-exchange-rates");
+      if (error) throw error;
+      if (data?.USDBRL) {
+        setCotacaoUSD(data.USDBRL);
+        console.log("Cotação USD/BRL atualizada:", data.USDBRL);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar cotação:", error);
+      // Mantém o fallback de 6.0
     }
   };
 
@@ -261,8 +277,8 @@ export default function Financeiro() {
       return acc;
     }, 0);
 
-  // Capital e Margem líquida corrigida
-  const capitalOperacional = saldoBRL + (saldoUSD * 5) + (totalCryptoUSD * 5);
+  // Capital e Margem líquida corrigida (usando cotação em tempo real)
+  const capitalOperacional = saldoBRL + (saldoUSD * cotacaoUSD) + (totalCryptoUSD * cotacaoUSD);
   const margemLiquida = capitalOperacional - totalCustosOperacionais - totalDespesasAdmin;
   const margemPercent = capitalOperacional > 0 ? (margemLiquida / capitalOperacional) * 100 : 0;
 
@@ -436,7 +452,10 @@ export default function Financeiro() {
           <CardContent>
             <div className="text-2xl font-bold text-primary">{formatCurrency(capitalOperacional)}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              FIAT: {formatCurrency(saldoBRL + saldoUSD * 5)} · CRYPTO: ${totalCryptoUSD.toFixed(2)}
+              BRL: {formatCurrency(saldoBRL)} · USD: ${saldoUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })} · CRYPTO: ${totalCryptoUSD.toFixed(2)}
+            </p>
+            <p className="text-xs text-muted-foreground/60 mt-0.5">
+              Cotação USD: R$ {cotacaoUSD.toFixed(2)}
             </p>
           </CardContent>
         </Card>
