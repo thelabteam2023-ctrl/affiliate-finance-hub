@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -14,6 +15,12 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+
+interface LocationState {
+  openDialog?: boolean;
+  tipoTransacao?: string;
+  origemBookmakerId?: string;
+}
 
 interface Transacao {
   id: string;
@@ -53,11 +60,19 @@ interface SaldoCrypto {
 
 export default function Caixa() {
   const { toast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const locationState = location.state as LocationState | null;
+  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
   const [saldosFiat, setSaldosFiat] = useState<SaldoFiat[]>([]);
   const [saldosCrypto, setSaldosCrypto] = useState<SaldoCrypto[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Context from navigation state
+  const [defaultTipoTransacao, setDefaultTipoTransacao] = useState<string | undefined>();
+  const [defaultOrigemBookmakerId, setDefaultOrigemBookmakerId] = useState<string | undefined>();
 
   // Hook centralizado de cotações
   const cryptoSymbols = useMemo(() => saldosCrypto.map(s => s.coin), [saldosCrypto]);
@@ -158,6 +173,16 @@ export default function Caixa() {
     fetchData();
   }, []);
 
+  // Handle navigation state to open dialog with context
+  useEffect(() => {
+    if (locationState?.openDialog) {
+      setDefaultTipoTransacao(locationState.tipoTransacao);
+      setDefaultOrigemBookmakerId(locationState.origemBookmakerId);
+      setDialogOpen(true);
+      // Clear state to prevent reopening on refresh
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [locationState]);
   const getTotalCryptoUSD = () => {
     return saldosCrypto.reduce((acc, s) => {
       return acc + getCryptoUSDValue(s.coin, s.saldo_coin, s.saldo_usd);
@@ -533,11 +558,19 @@ export default function Caixa() {
       {/* Dialog */}
       <CaixaTransacaoDialog
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        onClose={() => {
+          setDialogOpen(false);
+          setDefaultTipoTransacao(undefined);
+          setDefaultOrigemBookmakerId(undefined);
+        }}
         onSuccess={() => {
           setDialogOpen(false);
+          setDefaultTipoTransacao(undefined);
+          setDefaultOrigemBookmakerId(undefined);
           fetchData();
         }}
+        defaultTipoTransacao={defaultTipoTransacao}
+        defaultOrigemBookmakerId={defaultOrigemBookmakerId}
       />
     </div>
   );
