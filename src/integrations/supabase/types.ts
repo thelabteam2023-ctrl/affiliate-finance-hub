@@ -902,6 +902,218 @@ export type Database = {
           },
         ]
       }
+      operador_projetos: {
+        Row: {
+          created_at: string
+          data_entrada: string
+          data_saida: string | null
+          funcao: string | null
+          id: string
+          motivo_saida: string | null
+          observacoes: string | null
+          operador_id: string
+          projeto_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_entrada?: string
+          data_saida?: string | null
+          funcao?: string | null
+          id?: string
+          motivo_saida?: string | null
+          observacoes?: string | null
+          operador_id: string
+          projeto_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_entrada?: string
+          data_saida?: string | null
+          funcao?: string | null
+          id?: string
+          motivo_saida?: string | null
+          observacoes?: string | null
+          operador_id?: string
+          projeto_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "operadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_performance"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+        ]
+      }
+      operadores: {
+        Row: {
+          cpf: string
+          created_at: string
+          data_admissao: string
+          data_desligamento: string | null
+          data_nascimento: string | null
+          email: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          status: string
+          telefone: string | null
+          tipo_contrato: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cpf: string
+          created_at?: string
+          data_admissao?: string
+          data_desligamento?: string | null
+          data_nascimento?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          status?: string
+          telefone?: string | null
+          tipo_contrato?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cpf?: string
+          created_at?: string
+          data_admissao?: string
+          data_desligamento?: string | null
+          data_nascimento?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          status?: string
+          telefone?: string | null
+          tipo_contrato?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pagamentos_operador: {
+        Row: {
+          cash_ledger_id: string | null
+          created_at: string
+          data_competencia: string | null
+          data_pagamento: string
+          descricao: string | null
+          id: string
+          moeda: string
+          operador_id: string
+          projeto_id: string | null
+          status: string
+          tipo_pagamento: string
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          cash_ledger_id?: string | null
+          created_at?: string
+          data_competencia?: string | null
+          data_pagamento?: string
+          descricao?: string | null
+          id?: string
+          moeda?: string
+          operador_id: string
+          projeto_id?: string | null
+          status?: string
+          tipo_pagamento?: string
+          updated_at?: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          cash_ledger_id?: string | null
+          created_at?: string
+          data_competencia?: string | null
+          data_pagamento?: string
+          descricao?: string | null
+          id?: string
+          moeda?: string
+          operador_id?: string
+          projeto_id?: string | null
+          status?: string
+          tipo_pagamento?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagamentos_operador_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "cash_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_operador_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "operadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_operador_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_performance"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "pagamentos_operador_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_operador_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+        ]
+      }
       parceiros: {
         Row: {
           cep: string | null
@@ -1090,6 +1302,51 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      projetos: {
+        Row: {
+          created_at: string
+          data_fim_prevista: string | null
+          data_fim_real: string | null
+          data_inicio: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          orcamento_inicial: number | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_fim_prevista?: string | null
+          data_fim_real?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          orcamento_inicial?: number | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_fim_prevista?: string | null
+          data_fim_real?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          orcamento_inicial?: number | null
+          status?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1449,6 +1706,48 @@ export type Database = {
         }
         Relationships: []
       }
+      v_operador_performance: {
+        Row: {
+          cpf: string | null
+          data_admissao: string | null
+          nome: string | null
+          operador_id: string | null
+          projetos_ativos: number | null
+          status: string | null
+          tipo_contrato: string | null
+          total_pago: number | null
+          total_pendente: number | null
+          total_projetos: number | null
+          user_id: string | null
+        }
+        Insert: {
+          cpf?: string | null
+          data_admissao?: string | null
+          nome?: string | null
+          operador_id?: string | null
+          projetos_ativos?: never
+          status?: string | null
+          tipo_contrato?: string | null
+          total_pago?: never
+          total_pendente?: never
+          total_projetos?: never
+          user_id?: string | null
+        }
+        Update: {
+          cpf?: string | null
+          data_admissao?: string | null
+          nome?: string | null
+          operador_id?: string | null
+          projetos_ativos?: never
+          status?: string | null
+          tipo_contrato?: string | null
+          total_pago?: never
+          total_pendente?: never
+          total_projetos?: never
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       v_parcerias_alerta: {
         Row: {
           comissao_paga: boolean | null
@@ -1500,6 +1799,42 @@ export type Database = {
             referencedColumns: ["parceiro_id"]
           },
         ]
+      }
+      v_projeto_resumo: {
+        Row: {
+          data_fim_prevista: string | null
+          data_inicio: string | null
+          nome: string | null
+          operadores_ativos: number | null
+          orcamento_inicial: number | null
+          projeto_id: string | null
+          status: string | null
+          total_gasto_operadores: number | null
+          user_id: string | null
+        }
+        Insert: {
+          data_fim_prevista?: string | null
+          data_inicio?: string | null
+          nome?: string | null
+          operadores_ativos?: never
+          orcamento_inicial?: number | null
+          projeto_id?: string | null
+          status?: string | null
+          total_gasto_operadores?: never
+          user_id?: string | null
+        }
+        Update: {
+          data_fim_prevista?: string | null
+          data_inicio?: string | null
+          nome?: string | null
+          operadores_ativos?: never
+          orcamento_inicial?: number | null
+          projeto_id?: string | null
+          status?: string | null
+          total_gasto_operadores?: never
+          user_id?: string | null
+        }
+        Relationships: []
       }
       v_roi_investidores: {
         Row: {
