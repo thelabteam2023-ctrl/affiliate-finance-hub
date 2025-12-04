@@ -18,8 +18,6 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 
 interface LocationState {
   openDialog?: boolean;
-  tipoTransacao?: string;
-  origemBookmakerId?: string;
 }
 
 interface Transacao {
@@ -69,10 +67,6 @@ export default function Caixa() {
   const [saldosFiat, setSaldosFiat] = useState<SaldoFiat[]>([]);
   const [saldosCrypto, setSaldosCrypto] = useState<SaldoCrypto[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Context from navigation state
-  const [defaultTipoTransacao, setDefaultTipoTransacao] = useState<string | undefined>();
-  const [defaultOrigemBookmakerId, setDefaultOrigemBookmakerId] = useState<string | undefined>();
 
   // Hook centralizado de cotações
   const cryptoSymbols = useMemo(() => saldosCrypto.map(s => s.coin), [saldosCrypto]);
@@ -173,11 +167,9 @@ export default function Caixa() {
     fetchData();
   }, []);
 
-  // Handle navigation state to open dialog with context
+  // Handle navigation state to open dialog
   useEffect(() => {
     if (locationState?.openDialog) {
-      setDefaultTipoTransacao(locationState.tipoTransacao);
-      setDefaultOrigemBookmakerId(locationState.origemBookmakerId);
       setDialogOpen(true);
       // Clear state to prevent reopening on refresh
       navigate(location.pathname, { replace: true, state: null });
@@ -558,19 +550,11 @@ export default function Caixa() {
       {/* Dialog */}
       <CaixaTransacaoDialog
         open={dialogOpen}
-        onClose={() => {
-          setDialogOpen(false);
-          setDefaultTipoTransacao(undefined);
-          setDefaultOrigemBookmakerId(undefined);
-        }}
+        onClose={() => setDialogOpen(false)}
         onSuccess={() => {
           setDialogOpen(false);
-          setDefaultTipoTransacao(undefined);
-          setDefaultOrigemBookmakerId(undefined);
           fetchData();
         }}
-        defaultTipoTransacao={defaultTipoTransacao}
-        defaultOrigemBookmakerId={defaultOrigemBookmakerId}
       />
     </div>
   );
