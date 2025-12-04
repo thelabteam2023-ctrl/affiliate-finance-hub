@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,8 @@ import {
   LayoutGrid,
   List,
   Edit,
-  Eye
+  Eye,
+  ExternalLink
 } from "lucide-react";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import {
@@ -44,6 +46,7 @@ interface Projeto {
 }
 
 export default function GestaoProjetos() {
+  const navigate = useNavigate();
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -209,7 +212,7 @@ export default function GestaoProjetos() {
             <Card 
               key={projeto.id} 
               className="cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => handleOpenDialog(projeto, "view")}
+              onClick={() => navigate(`/projeto/${projeto.id}`)}
             >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
@@ -264,11 +267,11 @@ export default function GestaoProjetos() {
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleOpenDialog(projeto, "view");
+                      navigate(`/projeto/${projeto.id}`);
                     }}
                   >
-                    <Eye className="h-4 w-4 mr-1" />
-                    Ver
+                    <ExternalLink className="h-4 w-4 mr-1" />
+                    Abrir
                   </Button>
                   <Button 
                     variant="outline" 
@@ -295,7 +298,7 @@ export default function GestaoProjetos() {
                 <div
                   key={projeto.id}
                   className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer"
-                  onClick={() => handleOpenDialog(projeto, "view")}
+                  onClick={() => navigate(`/projeto/${projeto.id}`)}
                 >
                   <div className="flex items-center gap-4">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -328,10 +331,10 @@ export default function GestaoProjetos() {
                         size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleOpenDialog(projeto, "view");
+                          navigate(`/projeto/${projeto.id}`);
                         }}
                       >
-                        <Eye className="h-4 w-4" />
+                        <ExternalLink className="h-4 w-4" />
                       </Button>
                       <Button 
                         variant="ghost" 
