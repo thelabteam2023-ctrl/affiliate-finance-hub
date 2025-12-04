@@ -65,6 +65,8 @@ interface CaixaTransacaoDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  defaultTipoTransacao?: string;
+  defaultOrigemBookmakerId?: string;
 }
 
 interface ContaBancaria {
@@ -119,6 +121,8 @@ export function CaixaTransacaoDialog({
   open,
   onClose,
   onSuccess,
+  defaultTipoTransacao,
+  defaultOrigemBookmakerId,
 }: CaixaTransacaoDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -140,12 +144,19 @@ export function CaixaTransacaoDialog({
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
   const [loadingPrices, setLoadingPrices] = useState(false);
 
-  // Resetar formulário quando dialog abre
+  // Aplicar defaults quando dialog abre
   useEffect(() => {
     if (open) {
       resetForm();
+      // Aplicar defaults após reset
+      if (defaultTipoTransacao) {
+        setTipoTransacao(defaultTipoTransacao);
+      }
+      if (defaultOrigemBookmakerId) {
+        setOrigemBookmakerId(defaultOrigemBookmakerId);
+      }
     }
-  }, [open]);
+  }, [open, defaultTipoTransacao, defaultOrigemBookmakerId]);
 
   // Buscar cotações em tempo real da Binance quando tipo_moeda for CRYPTO
   // e atualizar automaticamente a cada 30 segundos

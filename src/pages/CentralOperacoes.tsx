@@ -19,7 +19,6 @@ import {
   Loader2,
   FolderKanban,
 } from "lucide-react";
-import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
 
 interface Alerta {
   tipo_alerta: string;
@@ -44,13 +43,6 @@ export default function CentralOperacoes() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [transacaoDialogOpen, setTransacaoDialogOpen] = useState(false);
-  const [selectedBookmaker, setSelectedBookmaker] = useState<{
-    id: string;
-    nome: string;
-    saldo_atual: number;
-    moeda: string;
-  } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -139,23 +131,14 @@ export default function CentralOperacoes() {
   };
 
   const handleSaqueAction = (alerta: Alerta) => {
-    // Extrair nome da casa do título "Saque pendente: NOME"
-    const nomeMatch = alerta.titulo.match(/Saque pendente: (.+)/);
-    const nomeCasa = nomeMatch ? nomeMatch[1] : "Bookmaker";
-    
-    setSelectedBookmaker({
-      id: alerta.entidade_id,
-      nome: nomeCasa,
-      saldo_atual: alerta.valor || 0,
-      moeda: alerta.moeda,
+    // Navegar para Caixa com contexto para abrir dialog de saque
+    navigate("/caixa", {
+      state: {
+        openDialog: true,
+        tipoTransacao: "SAQUE",
+        origemBookmakerId: alerta.entidade_id,
+      },
     });
-    setTransacaoDialogOpen(true);
-  };
-
-  const handleTransacaoClose = () => {
-    setTransacaoDialogOpen(false);
-    setSelectedBookmaker(null);
-    fetchAlertas(true); // Refresh alerts after transaction
   };
 
   const handleParceriaAction = (alerta: Alerta) => {
@@ -384,16 +367,6 @@ export default function CentralOperacoes() {
             </Card>
           )}
         </div>
-      )}
-
-      {/* Transaction Dialog */}
-      {selectedBookmaker && (
-        <TransacaoDialog
-          open={transacaoDialogOpen}
-          onClose={handleTransacaoClose}
-          bookmaker={selectedBookmaker}
-          defaultTipo="retirada"
-        />
       )}
     </div>
   );
