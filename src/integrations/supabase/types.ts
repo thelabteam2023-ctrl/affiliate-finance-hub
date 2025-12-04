@@ -2386,6 +2386,10 @@ export type Database = {
           moeda: string | null
           nivel_urgencia: string | null
           ordem_urgencia: number | null
+          parceiro_id: string | null
+          parceiro_nome: string | null
+          projeto_id: string | null
+          projeto_nome: string | null
           tipo_alerta: string | null
           titulo: string | null
           user_id: string | null

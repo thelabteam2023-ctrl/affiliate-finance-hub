@@ -17,7 +17,9 @@ import {
   ArrowRight,
   RefreshCw,
   Loader2,
+  FolderKanban,
 } from "lucide-react";
+import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
 
 interface Alerta {
   tipo_alerta: string;
@@ -32,12 +34,23 @@ interface Alerta {
   ordem_urgencia: number;
   data_limite: string | null;
   created_at: string;
+  parceiro_id: string | null;
+  parceiro_nome: string | null;
+  projeto_id: string | null;
+  projeto_nome: string | null;
 }
 
 export default function CentralOperacoes() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [transacaoDialogOpen, setTransacaoDialogOpen] = useState(false);
+  const [selectedBookmaker, setSelectedBookmaker] = useState<{
+    id: string;
+    nome: string;
+    saldo_atual: number;
+    moeda: string;
+  } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -125,12 +138,28 @@ export default function CentralOperacoes() {
     }
   };
 
-  const handleAlertAction = (alerta: Alerta) => {
-    if (alerta.entidade_tipo === "BOOKMAKER") {
-      navigate("/caixa");
-    } else if (alerta.entidade_tipo === "PARCERIA") {
-      navigate("/programa-indicacao");
-    }
+  const handleSaqueAction = (alerta: Alerta) => {
+    // Extrair nome da casa do título "Saque pendente: NOME"
+    const nomeMatch = alerta.titulo.match(/Saque pendente: (.+)/);
+    const nomeCasa = nomeMatch ? nomeMatch[1] : "Bookmaker";
+    
+    setSelectedBookmaker({
+      id: alerta.entidade_id,
+      nome: nomeCasa,
+      saldo_atual: alerta.valor || 0,
+      moeda: alerta.moeda,
+    });
+    setTransacaoDialogOpen(true);
+  };
+
+  const handleTransacaoClose = () => {
+    setTransacaoDialogOpen(false);
+    setSelectedBookmaker(null);
+    fetchAlertas(true); // Refresh alerts after transaction
+  };
+
+  const handleParceriaAction = (alerta: Alerta) => {
+    navigate("/programa-indicacao");
   };
 
   const alertasSaques = alertas.filter((a) => a.tipo_alerta === "SAQUE_PENDENTE");
@@ -258,7 +287,20 @@ export default function CentralOperacoes() {
                         </div>
                         <div>
                           <p className="font-medium">{alerta.titulo}</p>
-                          <p className="text-sm text-muted-foreground">{alerta.descricao}</p>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            {alerta.parceiro_nome && (
+                              <span className="flex items-center gap-1">
+                                <User className="h-3 w-3" />
+                                {alerta.parceiro_nome}
+                              </span>
+                            )}
+                            {alerta.projeto_nome && (
+                              <span className="flex items-center gap-1">
+                                <FolderKanban className="h-3 w-3" />
+                                {alerta.projeto_nome}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
@@ -268,7 +310,7 @@ export default function CentralOperacoes() {
                           </span>
                         )}
                         {getUrgencyBadge(alerta.nivel_urgencia)}
-                        <Button size="sm" onClick={() => handleAlertAction(alerta)}>
+                        <Button size="sm" onClick={() => handleSaqueAction(alerta)}>
                           Processar Saque
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
@@ -329,7 +371,7 @@ export default function CentralOperacoes() {
                         <Button
                           size="sm"
                           variant={alerta.tipo_alerta === "PARCERIA_VENCIDA" ? "destructive" : "outline"}
-                          onClick={() => handleAlertAction(alerta)}
+                          onClick={() => handleParceriaAction(alerta)}
                         >
                           Ver Detalhes
                           <ArrowRight className="ml-2 h-4 w-4" />
@@ -342,6 +384,16 @@ export default function CentralOperacoes() {
             </Card>
           )}
         </div>
+      )}
+
+      {/* Transaction Dialog */}
+      {selectedBookmaker && (
+        <TransacaoDialog
+          open={transacaoDialogOpen}
+          onClose={handleTransacaoClose}
+          bookmaker={selectedBookmaker}
+          defaultTipo="retirada"
+        />
       )}
     </div>
   );
