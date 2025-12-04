@@ -47,6 +47,7 @@ import {
   Loader2,
   LayoutGrid,
   List,
+  AlertTriangle,
 } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
 
@@ -212,14 +213,34 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     try {
       setSaving(true);
 
-      const { error } = await supabase
-        .from("bookmakers")
-        .update({ projeto_id: null })
-        .eq("id", vinculoToRemove.id);
+      // Se tiver saldo, muda para AGUARDANDO_SAQUE ao invés de liberar diretamente
+      if (vinculoToRemove.saldo_atual > 0) {
+        const { error } = await supabase
+          .from("bookmakers")
+          .update({ 
+            projeto_id: null, 
+            status: "AGUARDANDO_SAQUE" 
+          })
+          .eq("id", vinculoToRemove.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast.success("Vínculo liberado do projeto");
+        toast.success(
+          `Vínculo liberado com saldo pendente de ${formatCurrency(vinculoToRemove.saldo_atual)}. Um alerta foi criado para a tesouraria.`,
+          { duration: 5000 }
+        );
+      } else {
+        // Sem saldo, libera normalmente
+        const { error } = await supabase
+          .from("bookmakers")
+          .update({ projeto_id: null })
+          .eq("id", vinculoToRemove.id);
+
+        if (error) throw error;
+
+        toast.success("Vínculo liberado do projeto");
+      }
+
       setRemoveDialogOpen(false);
       setVinculoToRemove(null);
       fetchVinculos();
@@ -715,10 +736,30 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Liberar Vínculo do Projeto?</AlertDialogTitle>
-            <AlertDialogDescription>
-              O vínculo <strong>{vinculoToRemove?.nome}</strong> do parceiro{" "}
-              <strong>{vinculoToRemove?.parceiro_nome}</strong> será liberado e poderá ser
-              usado em outros projetos.
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  O vínculo <strong>{vinculoToRemove?.nome}</strong> do parceiro{" "}
+                  <strong>{vinculoToRemove?.parceiro_nome}</strong> será liberado.
+                </p>
+                {vinculoToRemove && vinculoToRemove.saldo_atual > 0 && (
+                  <div className="p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10">
+                    <p className="text-yellow-400 font-medium flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      Atenção: Saldo pendente de {formatCurrency(vinculoToRemove.saldo_atual)}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      O vínculo será marcado como "Aguardando Saque" e um alerta será criado 
+                      na Central de Operações para a tesouraria processar o saque.
+                    </p>
+                  </div>
+                )}
+                {vinculoToRemove && vinculoToRemove.saldo_atual === 0 && (
+                  <p className="text-muted-foreground">
+                    Este vínculo está com saldo zerado e ficará disponível para outros projetos.
+                  </p>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -729,6 +770,8 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Liberando...
                 </>
+              ) : vinculoToRemove && vinculoToRemove.saldo_atual > 0 ? (
+                "Liberar e Criar Alerta"
               ) : (
                 "Liberar"
               )}

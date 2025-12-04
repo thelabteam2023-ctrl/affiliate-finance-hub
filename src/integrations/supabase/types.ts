@@ -104,6 +104,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "apostas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
             foreignKeyName: "apostas_projeto_id_fkey"
             columns: ["projeto_id"]
             isOneToOne: false
@@ -431,6 +438,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
+            columns: ["destino_bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
             foreignKeyName: "cash_ledger_destino_conta_bancaria_id_fkey"
             columns: ["destino_conta_bancaria_id"]
             isOneToOne: false
@@ -506,6 +520,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_bookmaker_disponibilidade"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_bookmaker_id_fkey"
+            columns: ["origem_bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
           },
           {
             foreignKeyName: "cash_ledger_origem_conta_bancaria_id_fkey"
@@ -1042,6 +1063,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "matched_betting_pernas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
             foreignKeyName: "matched_betting_pernas_round_id_fkey"
             columns: ["round_id"]
             isOneToOne: false
@@ -1256,6 +1284,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "parcerias"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_parceria_id_fkey"
+            columns: ["parceria_id"]
+            isOneToOne: false
+            referencedRelation: "v_alertas_parcerias"
+            referencedColumns: ["parceria_id"]
           },
           {
             foreignKeyName: "movimentacoes_indicacao_parceria_id_fkey"
@@ -1929,6 +1964,13 @@ export type Database = {
             referencedRelation: "v_bookmaker_disponibilidade"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "transacoes_bookmakers_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
         ]
       }
       user_roles: {
@@ -2022,6 +2064,20 @@ export type Database = {
       }
     }
     Views: {
+      v_alertas_parcerias: {
+        Row: {
+          data_fim_prevista: string | null
+          data_inicio: string | null
+          dias_restantes: number | null
+          duracao_dias: number | null
+          nivel_urgencia: string | null
+          parceiro_nome: string | null
+          parceria_id: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       v_bookmaker_disponibilidade: {
         Row: {
           bookmaker_status: string | null
@@ -2034,6 +2090,72 @@ export type Database = {
           projeto_nome: string | null
           projeto_status: string | null
           saldo_atual: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmakers_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_bookmakers_aguardando_saque: {
+        Row: {
+          bookmaker_id: string | null
+          bookmaker_nome: string | null
+          data_liberacao: string | null
+          moeda: string | null
+          parceiro_id: string | null
+          parceiro_nome: string | null
+          projeto_id: string | null
+          projeto_nome: string | null
+          saldo_atual: number | null
+          status: string | null
           user_id: string | null
         }
         Relationships: [

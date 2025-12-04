@@ -17,6 +17,7 @@ import ProjetoDetalhe from "./pages/ProjetoDetalhe";
 import ProgramaIndicacao from "./pages/ProgramaIndicacao";
 import Caixa from "./pages/Caixa";
 import Financeiro from "./pages/Financeiro";
+import CentralOperacoes from "./pages/CentralOperacoes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,7 +43,7 @@ const App = () => (
               {/* Main content */}
               <main className="flex-1">
                 <Routes>
-                  <Route path="/" element={<Index />} />
+                  <Route path="/" element={<CentralOperacoes />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/parceiros" element={<GestaoParceiros />} />
                   <Route path="/bookmakers" element={<GestaoBookmakers />} />
