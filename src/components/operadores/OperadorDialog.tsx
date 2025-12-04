@@ -114,16 +114,36 @@ export function OperadorDialog({
     observacoes: null,
   });
 
+  const fetchOperadorCompleto = async (operadorId: string) => {
+    const { data, error } = await supabase
+      .from("operadores")
+      .select("*")
+      .eq("id", operadorId)
+      .single();
+
+    if (!error && data) {
+      setFormData({
+        id: data.id,
+        nome: data.nome,
+        cpf: data.cpf,
+        email: data.email || null,
+        telefone: data.telefone || null,
+        status: data.status,
+        tipo_contrato: data.tipo_contrato,
+        data_admissao: data.data_admissao,
+        data_nascimento: data.data_nascimento || null,
+        data_desligamento: data.data_desligamento || null,
+        observacoes: data.observacoes || null,
+      });
+    }
+  };
+
   useEffect(() => {
     if (open) {
       if (operador && mode !== "create") {
-        setFormData({
-          ...operador,
-          data_nascimento: operador.data_nascimento || null,
-          data_desligamento: operador.data_desligamento || null,
-          observacoes: operador.observacoes || null,
-        });
+        // Fetch complete operator data from the table (view doesn't have all fields)
         if (operador.id) {
+          fetchOperadorCompleto(operador.id);
           fetchProjetosOperador(operador.id);
           fetchPagamentosOperador(operador.id);
         }
