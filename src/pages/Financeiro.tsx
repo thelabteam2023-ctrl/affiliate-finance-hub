@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useCotacoes } from "@/hooks/useCotacoes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -107,7 +108,10 @@ export default function Financeiro() {
   const [custos, setCustos] = useState<CustoAquisicao[]>([]);
   const [cashLedger, setCashLedger] = useState<CashLedgerEntry[]>([]);
   const [despesasAdmin, setDespesasAdmin] = useState<DespesaAdministrativa[]>([]);
-  const [cotacaoUSD, setCotacaoUSD] = useState<number>(6.0); // Fallback
+
+  // Hook centralizado de cotações
+  const cryptoSymbols = useMemo(() => caixaCrypto.map(c => c.coin), [caixaCrypto]);
+  const { cotacaoUSD, cryptoPrices, getCryptoUSDValue } = useCotacoes(cryptoSymbols);
 
   // Filtros de período
   const [periodoPreset, setPeriodoPreset] = useState<string>("all");
@@ -157,21 +161,6 @@ export default function Financeiro() {
       navigate("/auth");
     } else {
       fetchData();
-      fetchExchangeRate();
-    }
-  };
-
-  const fetchExchangeRate = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke("get-exchange-rates");
-      if (error) throw error;
-      if (data?.USDBRL) {
-        setCotacaoUSD(data.USDBRL);
-        console.log("Cotação USD/BRL atualizada:", data.USDBRL);
-      }
-    } catch (error) {
-      console.error("Erro ao buscar cotação:", error);
-      // Mantém o fallback de 6.0
     }
   };
 
@@ -251,7 +240,10 @@ export default function Financeiro() {
   // Calculate KPIs
   const saldoBRL = caixaFiat.find(f => f.moeda === "BRL")?.saldo || 0;
   const saldoUSD = caixaFiat.find(f => f.moeda === "USD")?.saldo || 0;
-  const totalCryptoUSD = caixaCrypto.reduce((acc, c) => acc + (c.saldo_usd || 0), 0);
+  // Usar cotações em tempo real para crypto
+  const totalCryptoUSD = caixaCrypto.reduce((acc, c) => {
+    return acc + getCryptoUSDValue(c.coin, c.saldo_coin, c.saldo_usd);
+  }, 0);
 
   const totalDespesasIndicacao = filteredDespesas.reduce((acc, d) => acc + d.valor, 0);
   const totalComissoes = filteredDespesas.filter(d => d.tipo === "COMISSAO_INDICADOR").reduce((acc, d) => acc + d.valor, 0);
