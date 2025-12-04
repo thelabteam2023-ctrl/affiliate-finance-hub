@@ -1,4 +1,4 @@
-import { Home, Users, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart } from "lucide-react";
+import { Home, Users, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -25,6 +25,12 @@ const mainMenuItems = [
   { title: "Caixa", url: "/caixa", icon: Wallet },
   { title: "Casas", url: "/bookmakers", icon: Building2 },
   { title: "Financeiro", url: "/financeiro", icon: PieChart },
+];
+
+// Menu de Operadores e Projetos
+const operacoesMenuItems = [
+  { title: "Operadores", url: "/operadores", icon: Briefcase },
+  { title: "Projetos", url: "/projetos", icon: FolderKanban },
 ];
 
 // Menu de Captação
@@ -100,6 +106,20 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {mainMenuItems.map(renderMenuItem)}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        {/* Menu de Operações */}
+        <SidebarGroup>
+          <SidebarGroupLabel className={isCollapsed ? 'sr-only' : ''}>
+            Operações
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {operacoesMenuItems.map(renderMenuItem)}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -11,6 +11,8 @@ import GestaoParceiros from "./pages/GestaoParceiros";
 import GestaoBookmakers from "./pages/GestaoBookmakers";
 import GestaoBancos from "./pages/GestaoBancos";
 import GestaoInvestidores from "./pages/GestaoInvestidores";
+import GestaoOperadores from "./pages/GestaoOperadores";
+import GestaoProjetos from "./pages/GestaoProjetos";
 import ProgramaIndicacao from "./pages/ProgramaIndicacao";
 import Caixa from "./pages/Caixa";
 import Financeiro from "./pages/Financeiro";
@@ -45,6 +47,8 @@ const App = () => (
                   <Route path="/bookmakers" element={<GestaoBookmakers />} />
                   <Route path="/bancos" element={<GestaoBancos />} />
                   <Route path="/investidores" element={<GestaoInvestidores />} />
+                  <Route path="/operadores" element={<GestaoOperadores />} />
+                  <Route path="/projetos" element={<GestaoProjetos />} />
                   <Route path="/programa-indicacao" element={<ProgramaIndicacao />} />
                   <Route path="/caixa" element={<Caixa />} />
                   <Route path="/financeiro" element={<Financeiro />} />
