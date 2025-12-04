@@ -399,7 +399,7 @@ export function CaixaTransacaoDialog({
       const { data } = await supabase
         .from("bookmakers")
         .select("id, nome, saldo_atual, moeda")
-        .eq("status", "ativo")
+        .in("status", ["ATIVO", "ativo", "LIMITADA", "limitada"])
         .order("nome");
       
       setBookmakers(data || []);
