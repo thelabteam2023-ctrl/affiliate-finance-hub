@@ -56,6 +56,7 @@ export default function Caixa() {
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
   const [saldosFiat, setSaldosFiat] = useState<SaldoFiat[]>([]);
   const [saldosCrypto, setSaldosCrypto] = useState<SaldoCrypto[]>([]);
+  const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   
   // Filters
@@ -153,8 +154,43 @@ export default function Caixa() {
     fetchData();
   }, []);
 
+  // Buscar cotações crypto em tempo real
+  const fetchCryptoPrices = async (coins: string[]) => {
+    if (coins.length === 0) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("get-crypto-prices", {
+        body: { symbols: coins }
+      });
+      if (error) throw error;
+      if (data?.prices) {
+        setCryptoPrices(data.prices);
+        console.log("Cotações crypto atualizadas:", data.prices);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar cotações crypto:", error);
+    }
+  };
+
+  // Buscar cotações quando saldosCrypto mudar
+  useEffect(() => {
+    if (saldosCrypto.length > 0) {
+      const coins = saldosCrypto.map(s => s.coin);
+      fetchCryptoPrices(coins);
+    }
+  }, [saldosCrypto]);
+
   const getTotalCryptoUSD = () => {
-    return saldosCrypto.reduce((acc, s) => acc + (s.saldo_usd || 0), 0);
+    // Usar cotações em tempo real se disponíveis
+    return saldosCrypto.reduce((acc, s) => {
+      const price = cryptoPrices[s.coin] ?? (s.saldo_usd / s.saldo_coin);
+      return acc + (s.saldo_coin * price);
+    }, 0);
+  };
+
+  const getCryptoUSDValue = (coin: string, saldo_coin: number, saldo_usd_fallback: number) => {
+    const price = cryptoPrices[coin];
+    if (price) return saldo_coin * price;
+    return saldo_usd_fallback;
   };
 
   const getTransacoesFiltradas = () => {
@@ -430,23 +466,37 @@ export default function Caixa() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent 
-                    className="w-auto min-w-[200px] z-50 bg-popover" 
+                    className="w-auto min-w-[240px] z-50 bg-popover" 
                     align="start"
                     side="right"
                     sideOffset={8}
                   >
-                    <div className={`grid gap-3 ${saldosCrypto.length > 3 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                      {saldosCrypto.map((saldo) => (
-                        <div key={saldo.coin} className="flex items-center justify-between gap-4 text-sm">
-                          <span className="font-medium">{saldo.coin}</span>
-                          <div className="text-right">
-                            <div className="font-mono text-xs">{saldo.saldo_coin.toFixed(8)}</div>
-                            <div className="text-xs text-muted-foreground">
-                              ≈ {formatCurrency(saldo.saldo_usd, "USD")}
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground mb-2">Cotações em tempo real (Binance)</p>
+                      <div className={`grid gap-3 ${saldosCrypto.length > 3 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                        {saldosCrypto.map((saldo) => {
+                          const price = cryptoPrices[saldo.coin];
+                          const usdValue = getCryptoUSDValue(saldo.coin, saldo.saldo_coin, saldo.saldo_usd);
+                          return (
+                            <div key={saldo.coin} className="flex items-center justify-between gap-4 text-sm">
+                              <div>
+                                <span className="font-medium">{saldo.coin}</span>
+                                {price && (
+                                  <div className="text-[10px] text-blue-400">
+                                    ${price.toFixed(price < 1 ? 6 : 2)}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <div className="font-mono text-xs">{saldo.saldo_coin.toFixed(saldo.saldo_coin < 1 ? 8 : 2)}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  ≈ {formatCurrency(usdValue, "USD")}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      ))}
+                          );
+                        })}
+                      </div>
                     </div>
                   </PopoverContent>
                 </Popover>
