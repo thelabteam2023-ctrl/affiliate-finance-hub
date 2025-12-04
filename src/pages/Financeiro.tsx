@@ -451,11 +451,22 @@ export default function Financeiro() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">{formatCurrency(capitalOperacional)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              BRL: {formatCurrency(saldoBRL)} · USD: ${saldoUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })} · CRYPTO: ${totalCryptoUSD.toFixed(2)}
-            </p>
-            <p className="text-xs text-muted-foreground/60 mt-0.5">
-              Cotação USD: R$ {cotacaoUSD.toFixed(2)}
+            <div className="mt-2 space-y-1">
+              <p className="text-xs text-muted-foreground flex justify-between">
+                <span>BRL:</span>
+                <span className="font-medium">{formatCurrency(saldoBRL)}</span>
+              </p>
+              <p className="text-xs text-muted-foreground flex justify-between">
+                <span>USD:</span>
+                <span className="font-medium">${saldoUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })} <span className="text-muted-foreground/60">({formatCurrency(saldoUSD * cotacaoUSD)})</span></span>
+              </p>
+              <p className="text-xs text-muted-foreground flex justify-between">
+                <span>CRYPTO:</span>
+                <span className="font-medium">${totalCryptoUSD.toFixed(2)} <span className="text-muted-foreground/60">({formatCurrency(totalCryptoUSD * cotacaoUSD)})</span></span>
+              </p>
+            </div>
+            <p className="text-[10px] text-muted-foreground/50 mt-2 border-t border-border/30 pt-1">
+              Cotação USD/BRL: R$ {cotacaoUSD.toFixed(4)}
             </p>
           </CardContent>
         </Card>
