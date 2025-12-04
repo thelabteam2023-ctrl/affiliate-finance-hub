@@ -45,7 +45,6 @@ const categoriasBase = [
   { value: "ENERGIA", label: "Energia" },
   { value: "INTERNET_MOVEL", label: "Internet Móvel" },
   { value: "ALUGUEL", label: "Aluguel" },
-  { value: "OPERADORES", label: "Operadores" },
   { value: "DARF", label: "DARF" },
   { value: "CONTABILIDADE", label: "Contabilidade" },
   { value: "OUTROS", label: "Outros" },

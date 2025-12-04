@@ -34,8 +34,15 @@ import {
   FolderKanban,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  Wallet,
+  Gift,
+  Banknote,
+  ArrowUpDown,
+  ReceiptText
 } from "lucide-react";
+import { PagamentoOperadorDialog } from "./PagamentoOperadorDialog";
 
 interface Operador {
   id?: string;
@@ -92,6 +99,7 @@ export function OperadorDialog({
   const [projetos, setProjetos] = useState<OperadorProjeto[]>([]);
   const [pagamentos, setPagamentos] = useState<PagamentoOperador[]>([]);
   const [cpfError, setCpfError] = useState<string | null>(null);
+  const [pagamentoDialogOpen, setPagamentoDialogOpen] = useState(false);
   
   const [formData, setFormData] = useState<Operador>({
     nome: "",
@@ -313,6 +321,30 @@ export function OperadorDialog({
     }
   };
 
+  const getTipoPagamentoIcon = (tipo: string) => {
+    switch (tipo) {
+      case "SALARIO": return <Wallet className="h-4 w-4" />;
+      case "COMISSAO": return <DollarSign className="h-4 w-4" />;
+      case "BONUS": return <Gift className="h-4 w-4" />;
+      case "ADIANTAMENTO": return <ArrowUpDown className="h-4 w-4" />;
+      case "REEMBOLSO": return <ReceiptText className="h-4 w-4" />;
+      default: return <Banknote className="h-4 w-4" />;
+    }
+  };
+
+  // Breakdown por tipo de pagamento
+  const getBreakdownByTipo = () => {
+    const breakdown: Record<string, number> = {};
+    pagamentos
+      .filter(p => p.status === "CONFIRMADO")
+      .forEach(p => {
+        breakdown[p.tipo_pagamento] = (breakdown[p.tipo_pagamento] || 0) + p.valor;
+      });
+    return breakdown;
+  };
+
+  const breakdown = getBreakdownByTipo();
+
   const isViewMode = mode === "view";
 
   return (
@@ -530,6 +562,17 @@ export function OperadorDialog({
             </TabsContent>
 
             <TabsContent value="financeiro" className="space-y-4 px-1">
+              {/* Botão Novo Pagamento */}
+              <div className="flex justify-end">
+                <Button 
+                  onClick={() => setPagamentoDialogOpen(true)}
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Pagamento
+                </Button>
+              </div>
+
               {/* Resumo Financeiro */}
               <div className="grid grid-cols-3 gap-4">
                 <Card>
@@ -579,6 +622,30 @@ export function OperadorDialog({
                 </Card>
               </div>
 
+              {/* Breakdown por Tipo */}
+              {Object.keys(breakdown).length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Distribuição por Tipo
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.entries(breakdown).map(([tipo, valor]) => (
+                        <div key={tipo} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                          <div className="flex items-center gap-2">
+                            {getTipoPagamentoIcon(tipo)}
+                            <span className="text-sm">{getTipoPagamentoLabel(tipo)}</span>
+                          </div>
+                          <span className="text-sm font-medium">{formatCurrency(valor)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Lista de Pagamentos */}
               {pagamentos.length === 0 ? (
                 <Card>
@@ -588,6 +655,15 @@ export function OperadorDialog({
                       <p className="mt-4 text-muted-foreground">
                         Nenhum pagamento registrado
                       </p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-4"
+                        onClick={() => setPagamentoDialogOpen(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Registrar Pagamento
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -603,19 +679,24 @@ export function OperadorDialog({
                           key={pagamento.id}
                           className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                         >
-                          <div>
-                            <p className="font-medium">
-                              {getTipoPagamentoLabel(pagamento.tipo_pagamento)}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {format(new Date(pagamento.data_pagamento), "dd/MM/yyyy", { locale: ptBR })}
-                              {pagamento.projeto_nome && ` • ${pagamento.projeto_nome}`}
-                            </p>
-                            {pagamento.descricao && (
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {pagamento.descricao}
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-muted rounded-md">
+                              {getTipoPagamentoIcon(pagamento.tipo_pagamento)}
+                            </div>
+                            <div>
+                              <p className="font-medium">
+                                {getTipoPagamentoLabel(pagamento.tipo_pagamento)}
                               </p>
-                            )}
+                              <p className="text-sm text-muted-foreground">
+                                {format(new Date(pagamento.data_pagamento), "dd/MM/yyyy", { locale: ptBR })}
+                                {pagamento.projeto_nome && ` • ${pagamento.projeto_nome}`}
+                              </p>
+                              {pagamento.descricao && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {pagamento.descricao}
+                                </p>
+                              )}
+                            </div>
                           </div>
                           <div className="text-right">
                             <p className="font-semibold">{formatCurrency(pagamento.valor)}</p>
@@ -644,6 +725,18 @@ export function OperadorDialog({
           </div>
         )}
       </DialogContent>
+
+      {/* Dialog para novo pagamento */}
+      <PagamentoOperadorDialog
+        open={pagamentoDialogOpen}
+        onOpenChange={setPagamentoDialogOpen}
+        defaultOperadorId={operador?.id}
+        onSuccess={() => {
+          if (operador?.id) {
+            fetchPagamentosOperador(operador.id);
+          }
+        }}
+      />
     </Dialog>
   );
 }
