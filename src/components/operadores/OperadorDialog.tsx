@@ -43,6 +43,7 @@ import {
   ReceiptText
 } from "lucide-react";
 import { PagamentoOperadorDialog } from "./PagamentoOperadorDialog";
+import { VincularProjetoDialog } from "./VincularProjetoDialog";
 
 interface Operador {
   id?: string;
@@ -118,6 +119,7 @@ export function OperadorDialog({
   const [pagamentos, setPagamentos] = useState<PagamentoOperador[]>([]);
   const [cpfError, setCpfError] = useState<string | null>(null);
   const [pagamentoDialogOpen, setPagamentoDialogOpen] = useState(false);
+  const [vincularProjetoDialogOpen, setVincularProjetoDialogOpen] = useState(false);
   
   const [formData, setFormData] = useState<Operador>({
     nome: "",
@@ -554,6 +556,17 @@ export function OperadorDialog({
             </TabsContent>
 
             <TabsContent value="projetos" className="space-y-4 px-1">
+              {/* Botão Vincular Projeto */}
+              <div className="flex justify-end">
+                <Button 
+                  onClick={() => setVincularProjetoDialogOpen(true)}
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Vincular Projeto
+                </Button>
+              </div>
+
               {projetos.length === 0 ? (
                 <Card>
                   <CardContent className="pt-6">
@@ -811,6 +824,18 @@ export function OperadorDialog({
           }
         }}
       />
+
+      {/* Dialog para vincular projeto */}
+      {operador?.id && (
+        <VincularProjetoDialog
+          open={vincularProjetoDialogOpen}
+          onOpenChange={setVincularProjetoDialogOpen}
+          operadorId={operador.id}
+          onSuccess={() => {
+            fetchProjetosOperador(operador.id!);
+          }}
+        />
+      )}
     </Dialog>
   );
 }
