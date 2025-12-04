@@ -45,7 +45,10 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
+  LayoutGrid,
+  List,
 } from "lucide-react";
+import { Toggle } from "@/components/ui/toggle";
 
 interface ProjetoVinculosTabProps {
   projetoId: string;
@@ -86,6 +89,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [vinculoToRemove, setVinculoToRemove] = useState<Vinculo | null>(null);
   const [statusPopoverId, setStatusPopoverId] = useState<string | null>(null);
   const [changingStatus, setChangingStatus] = useState(false);
+  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
 
   useEffect(() => {
     fetchVinculos();
@@ -369,10 +373,24 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             className="pl-10"
           />
         </div>
-        <Button onClick={handleOpenAddDialog}>
-          <Plus className="mr-2 h-4 w-4" />
-          Adicionar Vínculos
-        </Button>
+        <div className="flex items-center gap-2">
+          <Toggle
+            pressed={viewMode === "list"}
+            onPressedChange={(pressed) => setViewMode(pressed ? "list" : "cards")}
+            aria-label="Alternar modo de visualização"
+            className="data-[state=on]:bg-primary/20"
+          >
+            {viewMode === "cards" ? (
+              <List className="h-4 w-4" />
+            ) : (
+              <LayoutGrid className="h-4 w-4" />
+            )}
+          </Toggle>
+          <Button onClick={handleOpenAddDialog}>
+            <Plus className="mr-2 h-4 w-4" />
+            Adicionar Vínculos
+          </Button>
+        </div>
       </div>
 
       {/* Vínculos Grid */}
@@ -392,7 +410,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             </div>
           </CardContent>
         </Card>
-      ) : (
+      ) : viewMode === "cards" ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredVinculos.map((vinculo) => (
             <Card key={vinculo.id} className="relative group">
@@ -497,6 +515,118 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             </Card>
           ))}
         </div>
+      ) : (
+        /* List View */
+        <Card>
+          <CardContent className="p-0">
+            <div className="divide-y divide-border">
+              {filteredVinculos.map((vinculo) => (
+                <div
+                  key={vinculo.id}
+                  className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors"
+                >
+                  {/* Logo */}
+                  {vinculo.logo_url ? (
+                    <img
+                      src={vinculo.logo_url}
+                      alt={vinculo.nome}
+                      className="h-10 w-10 rounded-lg object-contain bg-white p-1 flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <Building2 className="h-5 w-5 text-primary" />
+                    </div>
+                  )}
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium truncate">{vinculo.nome}</span>
+                      <span className="text-sm text-muted-foreground">@{vinculo.login_username}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <User className="h-3 w-3" />
+                      <span className="truncate">{vinculo.parceiro_nome || "Sem parceiro"}</span>
+                    </div>
+                  </div>
+
+                  {/* Saldo */}
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm text-muted-foreground">Saldo</p>
+                    <p className="font-semibold">{formatCurrency(vinculo.saldo_atual)}</p>
+                  </div>
+
+                  {/* Status Badge */}
+                  <div className="flex-shrink-0">
+                    {getStatusBadge(vinculo.bookmaker_status)}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Popover 
+                      open={statusPopoverId === vinculo.id} 
+                      onOpenChange={(open) => setStatusPopoverId(open ? vinculo.id : null)}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Alterar Status"
+                        >
+                          <ShieldAlert className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56" align="end">
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-sm">Alterar Status</h4>
+                          <RadioGroup
+                            value={vinculo.bookmaker_status.toUpperCase()}
+                            onValueChange={(value) => handleChangeStatus(vinculo.id, value)}
+                            disabled={changingStatus}
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="ATIVO" id={`ativo-list-${vinculo.id}`} />
+                              <Label htmlFor={`ativo-list-${vinculo.id}`} className="flex items-center gap-2 cursor-pointer">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                                Ativo
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="LIMITADA" id={`limitada-list-${vinculo.id}`} />
+                              <Label htmlFor={`limitada-list-${vinculo.id}`} className="flex items-center gap-2 cursor-pointer">
+                                <ShieldAlert className="h-4 w-4 text-yellow-400" />
+                                Limitada
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                          {changingStatus && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Salvando...
+                            </div>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      title="Liberar do Projeto"
+                      onClick={() => {
+                        setVinculoToRemove(vinculo);
+                        setRemoveDialogOpen(true);
+                      }}
+                    >
+                      <Link2Off className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Add Dialog */}
