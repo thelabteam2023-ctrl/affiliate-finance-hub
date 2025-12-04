@@ -1,4 +1,4 @@
-import { Home, Users, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban } from "lucide-react";
+import { Bell, Users, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -18,7 +18,7 @@ import {
 
 // Menu principal - Operações
 const mainMenuItems = [
-  { title: "Home", url: "/", icon: Home },
+  { title: "Central", url: "/", icon: Bell },
   { title: "Parceiros", url: "/parceiros", icon: Users },
   { title: "Investidores", url: "/investidores", icon: TrendingUp },
   { title: "Bancos", url: "/bancos", icon: Landmark },
