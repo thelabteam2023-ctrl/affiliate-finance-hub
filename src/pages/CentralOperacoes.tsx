@@ -101,90 +101,97 @@ export default function CentralOperacoes() {
         setLoading(true);
       }
 
-      // Fetch alertas
-      const { data: alertasData, error: alertasError } = await supabase
-        .from("v_painel_operacional")
-        .select("*");
-
-      if (alertasError) throw alertasError;
-      setAlertas(alertasData || []);
-
-      // Fetch entregas pendentes
-      const { data: entregasData, error: entregasError } = await supabase
-        .from("v_entregas_pendentes")
-        .select("*")
-        .in("status_conciliacao", ["PRONTA"]);
-
-      if (entregasError) throw entregasError;
-      setEntregasPendentes(entregasData || []);
-
-      // Fetch pagamentos pendentes a parceiros (captação)
-      const { data: parceirosData, error: parceirosError } = await supabase
-        .from("parcerias")
-        .select(`
-          id,
-          valor_parceiro,
-          origem_tipo,
-          data_fim_prevista,
-          custo_aquisicao_isento,
-          parceiro:parceiros(nome)
-        `)
-        .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-        .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
-        .gt("valor_parceiro", 0);
-
-      if (parceirosError) throw parceirosError;
-
-      // Calculate dias restantes and map to pendentes
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
 
-      const pagamentosMap: PagamentoParceiroPendente[] = (parceirosData || []).map((p: any) => {
-        const dataFim = p.data_fim_prevista ? new Date(p.data_fim_prevista) : null;
-        let diasRestantes = 999;
-        if (dataFim) {
-          dataFim.setHours(0, 0, 0, 0);
-          diasRestantes = Math.ceil((dataFim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-        }
-        return {
-          parceriaId: p.id,
-          parceiroNome: p.parceiro?.nome || "N/A",
-          valorParceiro: p.valor_parceiro,
-          origemTipo: p.origem_tipo || "INDICADOR",
-          diasRestantes,
-        };
-      });
-      setPagamentosParceiros(pagamentosMap);
+      // Fetch all data in parallel
+      const [
+        alertasResult,
+        entregasResult,
+        parceirosResult,
+        movimentacoesResult,
+        encerResult
+      ] = await Promise.all([
+        supabase.from("v_painel_operacional").select("*"),
+        supabase.from("v_entregas_pendentes").select("*").in("status_conciliacao", ["PRONTA"]),
+        supabase
+          .from("parcerias")
+          .select(`
+            id,
+            valor_parceiro,
+            origem_tipo,
+            data_fim_prevista,
+            custo_aquisicao_isento,
+            parceiro:parceiros(nome)
+          `)
+          .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+          .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
+          .gt("valor_parceiro", 0),
+        supabase
+          .from("movimentacoes_indicacao")
+          .select("parceria_id, tipo, status")
+          .eq("tipo", "PAGTO_PARCEIRO")
+          .eq("status", "CONFIRMADO"),
+        supabase
+          .from("parcerias")
+          .select(`
+            id,
+            data_fim_prevista,
+            parceiro:parceiros(nome)
+          `)
+          .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+          .not("data_fim_prevista", "is", null)
+      ]);
 
-      // Fetch parcerias próximas do encerramento (≤ 7 dias)
-      const { data: encerData, error: encerError } = await supabase
-        .from("parcerias")
-        .select(`
-          id,
-          data_fim_prevista,
-          parceiro:parceiros(nome)
-        `)
-        .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-        .not("data_fim_prevista", "is", null);
+      if (alertasResult.error) throw alertasResult.error;
+      setAlertas(alertasResult.data || []);
 
-      if (encerError) throw encerError;
+      if (entregasResult.error) throw entregasResult.error;
+      setEntregasPendentes(entregasResult.data || []);
 
-      const alertasEncer: ParceriaAlertaEncerramento[] = (encerData || [])
-        .map((p: any) => {
-          const dataFim = new Date(p.data_fim_prevista);
-          dataFim.setHours(0, 0, 0, 0);
-          const diasRestantes = Math.ceil((dataFim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-          return {
-            id: p.id,
-            parceiroNome: p.parceiro?.nome || "N/A",
-            diasRestantes,
-            dataFim: p.data_fim_prevista,
-          };
-        })
-        .filter((p) => p.diasRestantes <= 7)
-        .sort((a, b) => a.diasRestantes - b.diasRestantes);
+      // Pagamentos pendentes a parceiros - excluir os já pagos
+      if (!parceirosResult.error && !movimentacoesResult.error) {
+        const parceriasPagas = (movimentacoesResult.data || []).map((m: any) => m.parceria_id);
+        
+        const pagamentosMap: PagamentoParceiroPendente[] = (parceirosResult.data || [])
+          .filter((p: any) => !parceriasPagas.includes(p.id))
+          .map((p: any) => {
+            const dataFim = p.data_fim_prevista ? new Date(p.data_fim_prevista) : null;
+            let diasRestantes = 999;
+            if (dataFim) {
+              dataFim.setHours(0, 0, 0, 0);
+              diasRestantes = Math.ceil((dataFim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+            }
+            return {
+              parceriaId: p.id,
+              parceiroNome: p.parceiro?.nome || "N/A",
+              valorParceiro: p.valor_parceiro,
+              origemTipo: p.origem_tipo || "INDICADOR",
+              diasRestantes,
+            };
+          });
+        setPagamentosParceiros(pagamentosMap);
+      }
 
-      setParceriasEncerramento(alertasEncer);
+      // Parcerias próximas do encerramento (≤ 7 dias)
+      if (!encerResult.error) {
+        const alertasEncer: ParceriaAlertaEncerramento[] = (encerResult.data || [])
+          .map((p: any) => {
+            const dataFim = new Date(p.data_fim_prevista);
+            dataFim.setHours(0, 0, 0, 0);
+            const diasRestantes = Math.ceil((dataFim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+            return {
+              id: p.id,
+              parceiroNome: p.parceiro?.nome || "N/A",
+              diasRestantes,
+              dataFim: p.data_fim_prevista,
+            };
+          })
+          .filter((p) => p.diasRestantes <= 7)
+          .sort((a, b) => a.diasRestantes - b.diasRestantes);
+
+        setParceriasEncerramento(alertasEncer);
+      }
     } catch (error: any) {
       toast.error("Erro ao carregar dados: " + error.message);
     } finally {
