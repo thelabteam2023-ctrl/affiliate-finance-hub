@@ -18,6 +18,7 @@ import ProgramaIndicacao from "./pages/ProgramaIndicacao";
 import Caixa from "./pages/Caixa";
 import Financeiro from "./pages/Financeiro";
 import CentralOperacoes from "./pages/CentralOperacoes";
+import Testes from "./pages/Testes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,7 @@ const App = () => (
                   <Route path="/programa-indicacao" element={<ProgramaIndicacao />} />
                   <Route path="/caixa" element={<Caixa />} />
                   <Route path="/financeiro" element={<Financeiro />} />
+                  <Route path="/testes" element={<Testes />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
