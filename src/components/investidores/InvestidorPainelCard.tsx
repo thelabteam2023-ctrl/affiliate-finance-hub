@@ -2,10 +2,8 @@ import {
   Edit,
   Trash2,
   FileText,
-  Calculator,
   DollarSign,
   Bitcoin,
-  Percent,
   TrendingUp,
   Activity,
   Wallet,
@@ -62,7 +60,7 @@ interface InvestidorPainelCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onExtrato: () => void;
-  onSimular: () => void;
+  onSimular?: () => void;
   onClick?: () => void;
 }
 
@@ -216,7 +214,6 @@ export function InvestidorPainelCard({
             </div>
             {deal.tipo_deal === "FIXO" ? (
               <div className="flex items-center gap-2 mt-2">
-                <Percent className="h-4 w-4 text-primary" />
                 <span className="text-xl font-bold text-primary">{deal.percentual_fixo}%</span>
                 <span className="text-xs text-muted-foreground">
                   {deal.base_calculo === "APORTE" ? "do valor aportado" : "dos lucros"}
@@ -525,15 +522,6 @@ export function InvestidorPainelCard({
               </Button>
             </TooltipTrigger>
             <TooltipContent>Ver Extrato</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full" onClick={onSimular}>
-                <Calculator className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Simular Retorno</TooltipContent>
           </Tooltip>
 
           <Tooltip>

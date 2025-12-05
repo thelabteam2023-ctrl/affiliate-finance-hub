@@ -41,6 +41,7 @@ const MOEDAS_FIAT = [
   { value: "BRL", label: "Real Brasileiro" },
   { value: "USD", label: "Dólar Americano" },
   { value: "EUR", label: "Euro" },
+  { value: "GBP", label: "Libra Esterlina" },
 ];
 
 const MOEDAS_CRYPTO = [

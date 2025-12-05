@@ -152,7 +152,7 @@ export function SaldosParceirosSheet() {
 
       const parceirosComSaldo = Array.from(parceirosMap.values())
         .filter((p) => p.saldos_fiat.length > 0 || p.saldos_crypto.length > 0)
-        .sort((a, b) => (b.total_fiat_brl + b.total_crypto_usd) - (a.total_fiat_brl + a.total_crypto_usd));
+        .sort((a, b) => (a.total_fiat_brl + a.total_crypto_usd) - (b.total_fiat_brl + b.total_crypto_usd));
 
       setParceirosAgrupados(parceirosComSaldo);
     } catch (error) {

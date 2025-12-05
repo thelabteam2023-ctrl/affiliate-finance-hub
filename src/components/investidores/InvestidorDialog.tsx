@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Percent } from "lucide-react";
+import { Plus, Trash2, HelpCircle, Percent } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { validateCPF } from "@/lib/validators";
@@ -369,7 +370,24 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
             <div className="space-y-4">
               <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50">
                 <div className="space-y-1">
-                  <Label className="text-base">Tipo de Acordo</Label>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-base">Tipo de Acordo</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                            <HelpCircle className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          <div className="space-y-2 text-xs">
+                            <p><strong>Fixo:</strong> Percentual único aplicado a todos os resultados. Ideal para acordos simples e previsíveis.</p>
+                            <p><strong>Progressivo:</strong> Percentuais diferentes por faixa de lucro. Ideal para incentivar maior performance com remuneração escalonada.</p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     {tipoDeal === "FIXO" 
                       ? `Percentual fixo sobre ${baseCalculo === "LUCRO" ? "lucros" : "valor aportado"}` 

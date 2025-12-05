@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { InvestidorDialog } from "@/components/investidores/InvestidorDialog";
 import { InvestidorPainelCard } from "@/components/investidores/InvestidorPainelCard";
 import { InvestidorExtratoDialog } from "@/components/investidores/InvestidorExtratoDialog";
-import { InvestidorSimulacaoDialog } from "@/components/investidores/InvestidorSimulacaoDialog";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertDialog,
@@ -72,7 +71,6 @@ export default function GestaoInvestidores() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [investidorToDelete, setInvestidorToDelete] = useState<Investidor | null>(null);
   const [extratoDialogOpen, setExtratoDialogOpen] = useState(false);
-  const [simulacaoDialogOpen, setSimulacaoDialogOpen] = useState(false);
 
   const fetchInvestidores = async () => {
     try {
@@ -382,10 +380,6 @@ export default function GestaoInvestidores() {
                     setSelectedInvestidor(investidor);
                     setExtratoDialogOpen(true);
                   }}
-                  onSimular={() => {
-                    setSelectedInvestidor(investidor);
-                    setSimulacaoDialogOpen(true);
-                  }}
                 />
               ))}
             </div>
@@ -415,10 +409,6 @@ export default function GestaoInvestidores() {
                     setSelectedInvestidor(investidor);
                     setExtratoDialogOpen(true);
                   }}
-                  onSimular={() => {
-                    setSelectedInvestidor(investidor);
-                    setSimulacaoDialogOpen(true);
-                  }}
                 />
               ))}
             </div>
@@ -441,13 +431,6 @@ export default function GestaoInvestidores() {
             open={extratoDialogOpen}
             onOpenChange={setExtratoDialogOpen}
             investidor={selectedInvestidor}
-          />
-          <InvestidorSimulacaoDialog
-            open={simulacaoDialogOpen}
-            onOpenChange={setSimulacaoDialogOpen}
-            investidor={selectedInvestidor}
-            deal={dealsData.get(selectedInvestidor.id)}
-            currentROI={roiData.get(selectedInvestidor.id)}
           />
         </>
       )}
