@@ -692,6 +692,114 @@ export type Database = {
         }
         Relationships: []
       }
+      entregas: {
+        Row: {
+          ajuste: number | null
+          base_calculo: string | null
+          conciliado: boolean | null
+          created_at: string | null
+          data_conciliacao: string | null
+          data_fim_prevista: string | null
+          data_fim_real: string | null
+          data_inicio: string
+          data_pagamento: string | null
+          descricao: string | null
+          excedente_proximo: number | null
+          id: string
+          meta_percentual: number | null
+          meta_valor: number | null
+          numero_entrega: number
+          observacoes_conciliacao: string | null
+          operador_projeto_id: string
+          pagamento_realizado: boolean | null
+          resultado_nominal: number | null
+          resultado_real: number | null
+          saldo_inicial: number | null
+          status: string
+          tipo_ajuste: string | null
+          tipo_gatilho: string
+          tipo_meta: string | null
+          updated_at: string | null
+          user_id: string
+          valor_pagamento_operador: number | null
+        }
+        Insert: {
+          ajuste?: number | null
+          base_calculo?: string | null
+          conciliado?: boolean | null
+          created_at?: string | null
+          data_conciliacao?: string | null
+          data_fim_prevista?: string | null
+          data_fim_real?: string | null
+          data_inicio?: string
+          data_pagamento?: string | null
+          descricao?: string | null
+          excedente_proximo?: number | null
+          id?: string
+          meta_percentual?: number | null
+          meta_valor?: number | null
+          numero_entrega?: number
+          observacoes_conciliacao?: string | null
+          operador_projeto_id: string
+          pagamento_realizado?: boolean | null
+          resultado_nominal?: number | null
+          resultado_real?: number | null
+          saldo_inicial?: number | null
+          status?: string
+          tipo_ajuste?: string | null
+          tipo_gatilho?: string
+          tipo_meta?: string | null
+          updated_at?: string | null
+          user_id: string
+          valor_pagamento_operador?: number | null
+        }
+        Update: {
+          ajuste?: number | null
+          base_calculo?: string | null
+          conciliado?: boolean | null
+          created_at?: string | null
+          data_conciliacao?: string | null
+          data_fim_prevista?: string | null
+          data_fim_real?: string | null
+          data_inicio?: string
+          data_pagamento?: string | null
+          descricao?: string | null
+          excedente_proximo?: number | null
+          id?: string
+          meta_percentual?: number | null
+          meta_valor?: number | null
+          numero_entrega?: number
+          observacoes_conciliacao?: string | null
+          operador_projeto_id?: string
+          pagamento_realizado?: boolean | null
+          resultado_nominal?: number | null
+          resultado_real?: number | null
+          saldo_inicial?: number | null
+          status?: string
+          tipo_ajuste?: string | null
+          tipo_gatilho?: string
+          tipo_meta?: string | null
+          updated_at?: string | null
+          user_id?: string
+          valor_pagamento_operador?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entregas_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "operador_projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_sem_entrega"
+            referencedColumns: ["operador_projeto_id"]
+          },
+        ]
+      }
       fornecedores: {
         Row: {
           created_at: string | null
@@ -1314,8 +1422,12 @@ export type Database = {
           created_at: string
           data_entrada: string
           data_saida: string | null
+          faixas_escalonadas: Json | null
+          frequencia_entrega: string | null
           funcao: string | null
           id: string
+          meta_percentual: number | null
+          meta_valor: number | null
           modelo_pagamento: string
           motivo_saida: string | null
           observacoes: string | null
@@ -1323,6 +1435,7 @@ export type Database = {
           percentual: number | null
           projeto_id: string
           status: string
+          tipo_meta: string | null
           updated_at: string
           user_id: string
           valor_fixo: number | null
@@ -1332,8 +1445,12 @@ export type Database = {
           created_at?: string
           data_entrada?: string
           data_saida?: string | null
+          faixas_escalonadas?: Json | null
+          frequencia_entrega?: string | null
           funcao?: string | null
           id?: string
+          meta_percentual?: number | null
+          meta_valor?: number | null
           modelo_pagamento?: string
           motivo_saida?: string | null
           observacoes?: string | null
@@ -1341,6 +1458,7 @@ export type Database = {
           percentual?: number | null
           projeto_id: string
           status?: string
+          tipo_meta?: string | null
           updated_at?: string
           user_id: string
           valor_fixo?: number | null
@@ -1350,8 +1468,12 @@ export type Database = {
           created_at?: string
           data_entrada?: string
           data_saida?: string | null
+          faixas_escalonadas?: Json | null
+          frequencia_entrega?: string | null
           funcao?: string | null
           id?: string
+          meta_percentual?: number | null
+          meta_valor?: number | null
           modelo_pagamento?: string
           motivo_saida?: string | null
           observacoes?: string | null
@@ -1359,6 +1481,7 @@ export type Database = {
           percentual?: number | null
           projeto_id?: string
           status?: string
+          tipo_meta?: string | null
           updated_at?: string
           user_id?: string
           valor_fixo?: number | null
@@ -2366,6 +2489,86 @@ export type Database = {
           },
         ]
       }
+      v_entregas_pendentes: {
+        Row: {
+          base_calculo: string | null
+          created_at: string | null
+          data_fim_prevista: string | null
+          data_inicio: string | null
+          descricao: string | null
+          id: string | null
+          meta_percentual: number | null
+          meta_valor: number | null
+          modelo_pagamento: string | null
+          nivel_urgencia: string | null
+          numero_entrega: number | null
+          operador_id: string | null
+          operador_nome: string | null
+          operador_projeto_id: string | null
+          percentual: number | null
+          projeto_id: string | null
+          projeto_nome: string | null
+          resultado_nominal: number | null
+          saldo_inicial: number | null
+          status: string | null
+          status_conciliacao: string | null
+          tipo_gatilho: string | null
+          tipo_meta: string | null
+          user_id: string | null
+          valor_fixo: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entregas_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "operador_projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_sem_entrega"
+            referencedColumns: ["operador_projeto_id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "operadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_performance"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+        ]
+      }
       v_indicador_performance: {
         Row: {
           cpf: string | null
@@ -2460,6 +2663,55 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      v_operadores_sem_entrega: {
+        Row: {
+          modelo_pagamento: string | null
+          operador_id: string | null
+          operador_nome: string | null
+          operador_projeto_id: string | null
+          projeto_id: string | null
+          projeto_nome: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "operadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_performance"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+        ]
       }
       v_painel_operacional: {
         Row: {
