@@ -694,6 +694,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       if (error.message?.includes('Este endereço de wallet já está cadastrado')) {
         errorMessage = "Este endereço de wallet já está cadastrado para outro parceiro.";
       }
+      // Check for duplicate PIX key error
+      if (error.message?.includes('Esta chave PIX já está cadastrada')) {
+        errorMessage = "Esta chave PIX já está cadastrada em outra conta bancária.";
+      }
       
       toast({
         title: "Erro ao salvar parceiro",
