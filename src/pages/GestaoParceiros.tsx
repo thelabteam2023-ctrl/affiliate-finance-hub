@@ -587,7 +587,7 @@ export default function GestaoParceiros() {
                             </span>
                           </div>
                           <div className="flex-1">
-                            <CardTitle className="text-base group-hover:text-primary transition-colors">{parceiro.nome}</CardTitle>
+                            <CardTitle className="text-base group-hover:text-primary transition-colors uppercase">{parceiro.nome.toUpperCase()}</CardTitle>
                             {saldosData.has(parceiro.id) && (
                               <div className="flex gap-3 mt-1 text-xs text-muted-foreground font-mono">
                                 {saldosData.get(parceiro.id)!.saldo_fiat > 0 && (
@@ -704,7 +704,7 @@ export default function GestaoParceiros() {
                             </div>
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                  <h3 className="font-semibold text-base">{parceiro.nome}</h3>
+                                  <h3 className="font-semibold text-base uppercase">{parceiro.nome.toUpperCase()}</h3>
                                   <Badge 
                                     variant={parceiro.status === "ativo" ? "default" : "secondary"} 
                                     className={`text-xs ${parceiro.status === "inativo" ? "bg-warning/20 text-warning border-warning/30" : ""}`}
