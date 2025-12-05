@@ -1316,7 +1316,6 @@ export type Database = {
           data_saida: string | null
           funcao: string | null
           id: string
-          modelo_absorcao_taxas: string
           modelo_pagamento: string
           motivo_saida: string | null
           observacoes: string | null
@@ -1335,7 +1334,6 @@ export type Database = {
           data_saida?: string | null
           funcao?: string | null
           id?: string
-          modelo_absorcao_taxas?: string
           modelo_pagamento?: string
           motivo_saida?: string | null
           observacoes?: string | null
@@ -1354,7 +1352,6 @@ export type Database = {
           data_saida?: string | null
           funcao?: string | null
           id?: string
-          modelo_absorcao_taxas?: string
           modelo_pagamento?: string
           motivo_saida?: string | null
           observacoes?: string | null
@@ -1825,6 +1822,7 @@ export type Database = {
           data_inicio: string | null
           descricao: string | null
           id: string
+          modelo_absorcao_taxas: string
           nome: string
           observacoes: string | null
           orcamento_inicial: number | null
@@ -1841,6 +1839,7 @@ export type Database = {
           data_inicio?: string | null
           descricao?: string | null
           id?: string
+          modelo_absorcao_taxas?: string
           nome: string
           observacoes?: string | null
           orcamento_inicial?: number | null
@@ -1857,6 +1856,7 @@ export type Database = {
           data_inicio?: string | null
           descricao?: string | null
           id?: string
+          modelo_absorcao_taxas?: string
           nome?: string
           observacoes?: string | null
           orcamento_inicial?: number | null

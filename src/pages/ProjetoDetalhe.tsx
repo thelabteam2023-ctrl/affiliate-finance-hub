@@ -20,7 +20,8 @@ import {
   TrendingDown,
   Clock,
   Edit,
-  Gift
+  Gift,
+  Coins
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -41,6 +42,9 @@ interface Projeto {
   data_fim_real: string | null;
   orcamento_inicial: number | null;
   observacoes: string | null;
+  tem_investimento_crypto: boolean;
+  conciliado: boolean;
+  modelo_absorcao_taxas: string;
 }
 
 interface ProjetoResumo {
@@ -197,6 +201,17 @@ export default function ProjetoDetalhe() {
               {projeto.descricao && (
                 <p className="text-muted-foreground">{projeto.descricao}</p>
               )}
+              {projeto.tem_investimento_crypto && (
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">
+                    <Coins className="h-3 w-3 mr-1" />
+                    Crypto
+                  </Badge>
+                  <Badge className={projeto.conciliado ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"}>
+                    {projeto.conciliado ? "Conciliado" : "Pendente"}
+                  </Badge>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -329,6 +344,9 @@ export default function ProjetoDetalhe() {
           data_inicio: projeto.data_inicio,
           data_fim_prevista: projeto.data_fim_prevista,
           orcamento_inicial: projeto.orcamento_inicial || 0,
+          tem_investimento_crypto: projeto.tem_investimento_crypto,
+          conciliado: projeto.conciliado,
+          modelo_absorcao_taxas: projeto.modelo_absorcao_taxas,
         }}
         mode="edit"
         onSuccess={fetchProjeto}
