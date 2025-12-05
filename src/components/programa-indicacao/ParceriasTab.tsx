@@ -50,6 +50,7 @@ export function ParceriasTab() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedParceria, setSelectedParceria] = useState<ParceriaAlerta | null>(null);
   const [isViewMode, setIsViewMode] = useState(false);
+  const [isRenewalMode, setIsRenewalMode] = useState(false);
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [parceriaToDelete, setParceriaToDelete] = useState<ParceriaAlerta | null>(null);
@@ -115,6 +116,13 @@ export function ParceriasTab() {
     setDeleteDialogOpen(true);
   };
 
+  const handleRenew = (parceria: ParceriaAlerta) => {
+    setSelectedParceria(parceria);
+    setIsViewMode(false);
+    setIsRenewalMode(true);
+    setDialogOpen(true);
+  };
+
   const handleDelete = async () => {
     if (!parceriaToDelete) return;
 
@@ -147,6 +155,7 @@ export function ParceriasTab() {
     setDialogOpen(false);
     setSelectedParceria(null);
     setIsViewMode(false);
+    setIsRenewalMode(false);
     fetchParcerias();
   };
 
@@ -363,6 +372,7 @@ export function ParceriasTab() {
               onView={() => handleView(parceria)}
               onEdit={() => handleEdit(parceria)}
               onDelete={() => handleDeleteClick(parceria)}
+              onRenew={() => handleRenew(parceria)}
               formatCurrency={formatCurrency}
               getStatusBadge={getStatusBadge}
               getAlertaBadge={getAlertaBadge}
@@ -425,6 +435,7 @@ export function ParceriasTab() {
         onOpenChange={handleDialogClose}
         parceria={selectedParceria}
         isViewMode={isViewMode}
+        isRenewalMode={isRenewalMode}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

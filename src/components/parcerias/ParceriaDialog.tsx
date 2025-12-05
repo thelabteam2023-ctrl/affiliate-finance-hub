@@ -20,6 +20,7 @@ interface ParceriaDialogProps {
   onOpenChange: (open: boolean) => void;
   parceria: any | null;
   isViewMode: boolean;
+  isRenewalMode?: boolean;
 }
 
 interface Parceiro {
@@ -39,7 +40,7 @@ interface Fornecedor {
   nome: string;
 }
 
-export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: ParceriaDialogProps) {
+export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRenewalMode = false }: ParceriaDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
@@ -83,7 +84,24 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
     
     const hojeString = getTodayString();
     
-    if (parceria) {
+    if (isRenewalMode && parceria) {
+      // Renewal mode: pre-fill partner but reset dates and values for new partnership
+      setFormData({
+        parceiro_id: parceria.parceiro_id || "",
+        origem_tipo: "DIRETO", // Renewal is always direct acquisition type
+        indicador_id: "",
+        fornecedor_id: "",
+        data_inicio: hojeString,
+        duracao_dias: parceria.duracao_dias || 60,
+        valor_indicador: 0,
+        valor_parceiro: parceria.valor_parceiro || 0,
+        valor_fornecedor: 0,
+        status: "ATIVA",
+        elegivel_renovacao: true,
+        observacoes: `Renovação da parceria anterior (${parceria.data_inicio} - ${parceria.data_fim_prevista})`,
+        custo_aquisicao_isento: false,
+      });
+    } else if (parceria) {
       setFormData({
         parceiro_id: parceria.parceiro_id || "",
         origem_tipo: parceria.origem_tipo || "INDICADOR",
@@ -267,7 +285,20 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
         custo_aquisicao_isento: formData.origem_tipo === "DIRETO" ? formData.custo_aquisicao_isento : false,
       };
 
-      if (parceria?.id) {
+      if (isRenewalMode && parceria?.id) {
+        // Renewal: close old partnership and create new one
+        const { error: updateError } = await supabase
+          .from("parcerias")
+          .update({ status: "ENCERRADA", data_fim_real: getTodayString() })
+          .eq("id", parceria.id);
+        if (updateError) throw updateError;
+
+        const { error: insertError } = await supabase
+          .from("parcerias")
+          .insert(payload);
+        if (insertError) throw insertError;
+        toast({ title: "Parceria renovada com sucesso" });
+      } else if (parceria?.id) {
         const { error } = await supabase
           .from("parcerias")
           .update(payload)
@@ -309,13 +340,13 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isViewMode ? "Visualizar Parceria" : parceria ? "Editar Parceria" : "Nova Parceria"}
+            {isViewMode ? "Visualizar Parceria" : isRenewalMode ? "Renovar Parceria" : parceria ? "Editar Parceria" : "Nova Parceria"}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Progress bar for existing partnerships */}
-          {parceria && (
+          {/* Progress bar for existing partnerships (not in renewal mode) */}
+          {parceria && !isRenewalMode && (
             <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
               <div className="flex justify-between text-sm">
                 <span>Progresso da Parceria</span>
@@ -334,13 +365,26 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
             </div>
           )}
 
+          {/* Renewal info */}
+          {isRenewalMode && parceria && (
+            <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg space-y-2">
+              <p className="font-medium text-primary">Renovando parceria de: {parceria.parceiro_nome}</p>
+              <p className="text-sm text-muted-foreground">
+                Parceria anterior: {parceria.data_inicio} - {parceria.data_fim_prevista}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                A parceria anterior será encerrada e uma nova será criada com as configurações abaixo.
+              </p>
+            </div>
+          )}
+
           {/* Parceiro Selection */}
           <div className="space-y-2">
             <Label htmlFor="parceiro">Parceiro *</Label>
             <Select
               value={formData.parceiro_id}
               onValueChange={(value) => setFormData({ ...formData, parceiro_id: value })}
-              disabled={isViewMode || !!parceria}
+              disabled={isViewMode || !!parceria || isRenewalMode}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o parceiro" />
@@ -356,7 +400,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
           </div>
 
           {/* Origem Selection */}
-          {!parceria && (
+          {!parceria && !isRenewalMode && (
             <>
               <Separator />
               <div className="space-y-3">

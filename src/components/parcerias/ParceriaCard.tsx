@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Handshake, Eye, Pencil, Trash2, User, Calendar, Clock } from "lucide-react";
+import { Handshake, Eye, Pencil, Trash2, User, Calendar, Clock, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -33,6 +33,7 @@ interface ParceriaCardProps {
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onRenew?: () => void;
   formatCurrency: (value: number) => string;
   getStatusBadge: (status: string) => JSX.Element;
   getAlertaBadge: (nivel: string) => JSX.Element;
@@ -43,6 +44,7 @@ export function ParceriaCard({
   onView,
   onEdit,
   onDelete,
+  onRenew,
   formatCurrency,
   getStatusBadge,
   getAlertaBadge,
@@ -135,6 +137,11 @@ export function ParceriaCard({
           <Button variant="ghost" size="icon" onClick={onEdit}>
             <Pencil className="h-4 w-4" />
           </Button>
+          {onRenew && (parceria.status === "EM_ENCERRAMENTO" || parceria.nivel_alerta === "VENCIDA" || parceria.nivel_alerta === "ALERTA") && (
+            <Button variant="ghost" size="icon" onClick={onRenew} title="Renovar Parceria">
+              <RefreshCw className="h-4 w-4 text-primary" />
+            </Button>
+          )}
           <Button variant="ghost" size="icon" onClick={onDelete}>
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
