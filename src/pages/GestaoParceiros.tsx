@@ -276,23 +276,27 @@ export default function GestaoParceiros() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Buscar parcerias ativas com dias restantes
+      // Buscar parcerias ativas com dias restantes e info de custo
       const { data: parcerias, error } = await supabase
         .from("parcerias")
-        .select("id, parceiro_id, data_fim_prevista")
+        .select("id, parceiro_id, data_fim_prevista, custo_aquisicao_isento, valor_parceiro")
         .eq("user_id", user.id)
         .in("status", ["ATIVA", "EM_ENCERRAMENTO"]);
 
       if (error) throw error;
 
-      // Buscar pagamentos de parceiros
-      const parceriaIds = parcerias?.map(p => p.id) || [];
-      const { data: pagamentos } = await supabase
-        .from("movimentacoes_indicacao")
-        .select("parceria_id")
-        .in("parceria_id", parceriaIds)
-        .eq("tipo", "PAGTO_PARCEIRO")
-        .eq("status", "CONFIRMADO");
+      // Buscar pagamentos de parceiros (apenas para parcerias que têm custo)
+      const parceriasComCusto = parcerias?.filter(p => !p.custo_aquisicao_isento && p.valor_parceiro && p.valor_parceiro > 0) || [];
+      const parceriaIdsComCusto = parceriasComCusto.map(p => p.id);
+      
+      const { data: pagamentos } = parceriaIdsComCusto.length > 0 
+        ? await supabase
+            .from("movimentacoes_indicacao")
+            .select("parceria_id")
+            .in("parceria_id", parceriaIdsComCusto)
+            .eq("tipo", "PAGTO_PARCEIRO")
+            .eq("status", "CONFIRMADO")
+        : { data: [] };
 
       const pagamentosSet = new Set((pagamentos || []).map(p => p.parceria_id));
 
@@ -309,10 +313,16 @@ export default function GestaoParceiros() {
         const diffTime = dataFim.getTime() - hoje.getTime();
         const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
+        // Se parceria é gratuita (custo_aquisicao_isento=true ou valor_parceiro=0/null), 
+        // considera como pagamento realizado (não há pendência)
+        const isGratuita = parceria.custo_aquisicao_isento === true || 
+                          !parceria.valor_parceiro || 
+                          parceria.valor_parceiro === 0;
+        
         parceriasMap.set(parceria.parceiro_id, {
           parceiro_id: parceria.parceiro_id,
           dias_restantes: diasRestantes,
-          pagamento_parceiro_realizado: pagamentosSet.has(parceria.id),
+          pagamento_parceiro_realizado: isGratuita || pagamentosSet.has(parceria.id),
         });
       });
 
