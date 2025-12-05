@@ -2421,10 +2421,10 @@ export function CaixaTransacaoDialog({
               <AlertDialogAction onClick={async () => {
                 setShowNoBankAlert(false);
                 
-                // Buscar dados do parceiro
+                // Buscar dados do parceiro com contas e wallets
                 const { data: parceiroData } = await supabase
                   .from("parceiros")
-                  .select("*")
+                  .select("*, contas_bancarias(*), wallets_crypto(*)")
                   .eq("id", alertParceiroId)
                   .single();
                 
@@ -2454,10 +2454,10 @@ export function CaixaTransacaoDialog({
               <AlertDialogAction onClick={async () => {
                 setShowNoWalletAlert(false);
                 
-                // Buscar dados do parceiro
+                // Buscar dados do parceiro com contas e wallets
                 const { data: parceiroData } = await supabase
                   .from("parceiros")
-                  .select("*")
+                  .select("*, contas_bancarias(*), wallets_crypto(*)")
                   .eq("id", alertParceiroId)
                   .single();
                 

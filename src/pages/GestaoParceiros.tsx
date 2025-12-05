@@ -67,7 +67,7 @@ interface SaldoCryptoRaw {
 interface ParceriaStatus {
   parceiro_id: string;
   dias_restantes: number;
-  comissao_paga: boolean;
+  pagamento_parceiro_realizado: boolean;
 }
 
 export default function GestaoParceiros() {
@@ -277,17 +277,28 @@ export default function GestaoParceiros() {
       if (!user) return;
 
       // Buscar parcerias ativas com dias restantes
-      const { data, error } = await supabase
+      const { data: parcerias, error } = await supabase
         .from("parcerias")
-        .select("parceiro_id, data_fim_prevista, comissao_paga")
+        .select("id, parceiro_id, data_fim_prevista")
         .eq("user_id", user.id)
         .in("status", ["ATIVA", "EM_ENCERRAMENTO"]);
 
       if (error) throw error;
 
+      // Buscar pagamentos de parceiros
+      const parceriaIds = parcerias?.map(p => p.id) || [];
+      const { data: pagamentos } = await supabase
+        .from("movimentacoes_indicacao")
+        .select("parceria_id")
+        .in("parceria_id", parceriaIds)
+        .eq("tipo", "PAGTO_PARCEIRO")
+        .eq("status", "CONFIRMADO");
+
+      const pagamentosSet = new Set((pagamentos || []).map(p => p.parceria_id));
+
       const parceriasMap = new Map<string, ParceriaStatus>();
       
-      data?.forEach((parceria) => {
+      parcerias?.forEach((parceria) => {
         if (!parceria.parceiro_id || !parceria.data_fim_prevista) return;
         
         // Calcular dias restantes
@@ -301,7 +312,7 @@ export default function GestaoParceiros() {
         parceriasMap.set(parceria.parceiro_id, {
           parceiro_id: parceria.parceiro_id,
           dias_restantes: diasRestantes,
-          comissao_paga: parceria.comissao_paga || false,
+          pagamento_parceiro_realizado: pagamentosSet.has(parceria.id),
         });
       });
 
@@ -722,7 +733,7 @@ export default function GestaoParceiros() {
                     {parceriasData.has(parceiro.id) && (
                       <ParceiroStatusIcon
                         diasRestantes={parceriasData.get(parceiro.id)!.dias_restantes}
-                        pagamentoRealizado={parceriasData.get(parceiro.id)!.comissao_paga}
+                        pagamentoRealizado={parceriasData.get(parceiro.id)!.pagamento_parceiro_realizado}
                       />
                     )}
                   </div>
@@ -824,7 +835,7 @@ export default function GestaoParceiros() {
                                   {parceriasData.has(parceiro.id) && (
                                     <ParceiroStatusIcon
                                       diasRestantes={parceriasData.get(parceiro.id)!.dias_restantes}
-                                      pagamentoRealizado={parceriasData.get(parceiro.id)!.comissao_paga}
+                                      pagamentoRealizado={parceriasData.get(parceiro.id)!.pagamento_parceiro_realizado}
                                     />
                                   )}
                                 </div>

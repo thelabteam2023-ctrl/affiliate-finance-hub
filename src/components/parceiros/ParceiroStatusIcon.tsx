@@ -43,13 +43,12 @@ export function ParceiroStatusIcon({
 
   const getTooltipContent = () => {
     const diasText = `📅 Dias restantes: ${diasRestantes}`;
-    const pagamentoText = pagamentoRealizado ? "✓ Pago" : "⏳ Pendente";
     
     if (diasRestantes <= 5) {
       return (
         <div className="text-sm">
           <p>{diasText}</p>
-          <p>💰 {pagamentoText}</p>
+          {!pagamentoRealizado && <p className="text-red-400">💰 Pagamento pendente</p>}
           <p className="text-red-400 font-semibold">⚠️ Encerrar parceria!</p>
         </div>
       );
@@ -66,7 +65,6 @@ export function ParceiroStatusIcon({
       return (
         <div className="text-sm">
           <p>{diasText}</p>
-          <p>💰 {pagamentoText}</p>
           <p className="text-lime-400">⏳ Vencimento próximo</p>
         </div>
       );
@@ -74,7 +72,6 @@ export function ParceiroStatusIcon({
     return (
       <div className="text-sm">
         <p>{diasText}</p>
-        <p>💰 {pagamentoText}</p>
       </div>
     );
   };
