@@ -167,15 +167,8 @@ export default function Testes() {
     }
   };
 
-  const bancosDisponiveis = [
-    { codigo: '001', nome: 'Banco do Brasil' },
-    { codigo: '033', nome: 'Santander' },
-    { codigo: '104', nome: 'Caixa Econômica' },
-    { codigo: '237', nome: 'Bradesco' },
-    { codigo: '341', nome: 'Itaú' },
-    { codigo: '260', nome: 'Nubank' },
-    { codigo: '077', nome: 'Inter' },
-  ];
+  // Lista de códigos de bancos para buscar na tabela
+  const codigosBancosPreferidos = ['001', '033', '104', '237', '341', '260', '077'];
 
   const handleGerarParceirosAleatorios = async () => {
     setLoading("parceiros_gerar");
@@ -214,11 +207,22 @@ export default function Testes() {
         throw new Error("Nenhum parceiro foi criado");
       }
 
+      // Buscar bancos reais da tabela para obter os IDs
+      const { data: bancosData } = await supabase
+        .from("bancos")
+        .select("id, nome, codigo")
+        .in("codigo", codigosBancosPreferidos);
+
+      const bancosDisponiveis = bancosData && bancosData.length > 0 
+        ? bancosData 
+        : [{ id: null, nome: 'Banco Padrão', codigo: '000' }];
+
       // Criar contas bancárias para cada parceiro
       const contasBancarias = parceirosCriados.map((parceiro, index) => {
         const banco = bancosDisponiveis[Math.floor(Math.random() * bancosDisponiveis.length)];
         return {
           parceiro_id: parceiro.id,
+          banco_id: banco.id,
           banco: banco.nome,
           titular: parceiro.nome,
           tipo_conta: Math.random() > 0.5 ? 'corrente' : 'poupanca',
