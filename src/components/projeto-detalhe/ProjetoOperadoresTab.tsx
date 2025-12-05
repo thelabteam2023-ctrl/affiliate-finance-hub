@@ -27,6 +27,9 @@ interface OperadorProjeto {
   percentual: number | null;
   base_calculo: string | null;
   frequencia_entrega: string | null;
+  tipo_meta: string | null;
+  meta_valor: number | null;
+  meta_percentual: number | null;
   status: string;
   operador?: {
     nome: string;
@@ -231,6 +234,16 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
                     {op.percentual && op.percentual > 0 && (
                       <div className="text-sm text-emerald-500">
                         {op.percentual}% {op.base_calculo && `sobre ${op.base_calculo.replace(/_/g, " ").toLowerCase()}`}
+                      </div>
+                    )}
+                    {/* Meta para POR_ENTREGA */}
+                    {op.modelo_pagamento === "POR_ENTREGA" && op.tipo_meta && (
+                      <div className="text-sm text-emerald-500">
+                        Meta: {op.tipo_meta === "VALOR_FIXO" && op.meta_valor
+                          ? formatCurrency(op.meta_valor)
+                          : op.tipo_meta === "PERCENTUAL" && op.meta_percentual
+                          ? `${op.meta_percentual}% sobre ${op.base_calculo?.replace(/_/g, " ").toLowerCase() || "lucro"}`
+                          : "Não definida"}
                       </div>
                     )}
                   </div>
