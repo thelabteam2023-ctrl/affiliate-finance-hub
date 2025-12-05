@@ -269,6 +269,13 @@ export function HistoricoMovimentacoes({
                     <ArrowRight className="h-4 w-4 text-primary" />
                     <div className="flex items-center gap-2">
                       {transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.origem_tipo === "CAIXA_OPERACIONAL" ? (
+                        <div className="flex flex-col">
+                          <span className="text-sm text-muted-foreground">Investidor</span>
+                          <span className="text-xs text-muted-foreground/70">
+                            {transacao.nome_investidor?.split(' ').slice(0, 2).join(' ') || 'Não informado'}
+                          </span>
+                        </div>
+                      ) : transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.destino_tipo === "CAIXA_OPERACIONAL" ? (
                         <>
                           <span className="text-sm text-muted-foreground">Caixa Operacional</span>
                           {((transacao.descricao && transacao.descricao.trim() !== '') || transacao.tipo_moeda === "CRYPTO") && (
