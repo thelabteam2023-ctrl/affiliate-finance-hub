@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -45,15 +45,44 @@ const MOEDAS_DISPONIVEIS = [
 export function MoedaMultiSelect({ moedas, onChange, disabled = false }: MoedaMultiSelectProps) {
   const [open, setOpen] = useState(false);
   
-  // Ensure moedas is always an array (handles null from database)
-  const safeMoedas = Array.isArray(moedas) ? moedas : [];
+  // Use ref to store the last valid array of moedas
+  // This prevents data loss when parent temporarily passes undefined/null
+  const lastValidMoedasRef = useRef<string[]>([]);
+  
+  // Sync ref when valid moedas prop is received
+  useEffect(() => {
+    if (Array.isArray(moedas) && moedas.length > 0) {
+      lastValidMoedasRef.current = [...moedas];
+    }
+  }, [moedas]);
+  
+  // Calculate safe moedas value
+  const safeMoedas = (() => {
+    // If moedas is a valid non-empty array, use it
+    if (Array.isArray(moedas) && moedas.length > 0) {
+      return moedas;
+    }
+    // If moedas is an empty array and popover is open (user actively deselecting), use it
+    if (Array.isArray(moedas) && moedas.length === 0 && open) {
+      return moedas;
+    }
+    // Otherwise, use the last known valid value
+    return lastValidMoedasRef.current;
+  })();
 
   const toggleMoeda = (moedaValue: string) => {
-    if (safeMoedas.includes(moedaValue)) {
-      onChange(safeMoedas.filter(m => m !== moedaValue));
+    const currentMoedas = safeMoedas;
+    let newMoedas: string[];
+    
+    if (currentMoedas.includes(moedaValue)) {
+      newMoedas = currentMoedas.filter(m => m !== moedaValue);
     } else {
-      onChange([...safeMoedas, moedaValue]);
+      newMoedas = [...currentMoedas, moedaValue];
     }
+    
+    // Update ref immediately
+    lastValidMoedasRef.current = newMoedas;
+    onChange(newMoedas);
   };
 
   const getDisplayText = () => {
@@ -96,14 +125,14 @@ export function MoedaMultiSelect({ moedas, onChange, disabled = false }: MoedaMu
                     className="justify-between hover:bg-accent focus:bg-accent cursor-pointer"
                   >
                     <div className="flex items-center gap-2">
-                    <div
-                      className={cn(
-                        "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                        safeMoedas.includes(moeda.value)
-                          ? "bg-primary text-primary-foreground"
-                          : "opacity-50 [&_svg]:invisible"
-                      )}
-                    >
+                      <div
+                        className={cn(
+                          "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                          safeMoedas.includes(moeda.value)
+                            ? "bg-primary text-primary-foreground"
+                            : "opacity-50 [&_svg]:invisible"
+                        )}
+                      >
                         <Check className="h-3 w-3" />
                       </div>
                       <span>{moeda.label}</span>
