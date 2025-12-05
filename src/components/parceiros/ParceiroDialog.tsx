@@ -561,7 +561,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         }
         
         // UPDATE or INSERT accounts
-        for (const account of bankAccounts) {
+        for (let i = 0; i < bankAccounts.length; i++) {
+          const account = bankAccounts[i];
           if (account.banco_id && account.pix_keys.some(k => k.chave)) {
             // Clean PIX key before saving (remove formatting)
             let cleanPixKey = account.pix_keys[0]?.chave || null;
@@ -596,14 +597,23 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 throw updateError;
               }
             } else {
-              // INSERT new account
-              const { error: insertError } = await supabase
+              // INSERT new account and capture the returned ID
+              const { data: insertedData, error: insertError } = await supabase
                 .from("contas_bancarias")
-                .insert([accountData]);
+                .insert([accountData])
+                .select('id')
+                .single();
               
               if (insertError) {
                 console.error("Error inserting bank account:", insertError);
                 throw insertError;
+              }
+              
+              // Update the account in state with the new ID to prevent re-insertion
+              if (insertedData?.id) {
+                const updatedAccounts = [...bankAccounts];
+                updatedAccounts[i] = { ...updatedAccounts[i], id: insertedData.id };
+                setBankAccounts(updatedAccounts);
               }
             }
           }
@@ -631,7 +641,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         }
         
         // UPDATE or INSERT wallets
-        for (const wallet of cryptoWallets) {
+        for (let i = 0; i < cryptoWallets.length; i++) {
+          const wallet = cryptoWallets[i];
           if (wallet.moeda && wallet.moeda.length > 0 && wallet.endereco && wallet.exchange) {
             // Encrypt observacoes if present
             const observacoesEncrypted = wallet.observacoes 
@@ -660,14 +671,23 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 throw updateError;
               }
             } else {
-              // INSERT new wallet
-              const { error: insertError } = await supabase
+              // INSERT new wallet and capture the returned ID
+              const { data: insertedData, error: insertError } = await supabase
                 .from("wallets_crypto")
-                .insert([walletData]);
+                .insert([walletData])
+                .select('id')
+                .single();
               
               if (insertError) {
                 console.error("Error inserting crypto wallet:", insertError);
                 throw insertError;
+              }
+              
+              // Update the wallet in state with the new ID to prevent re-insertion
+              if (insertedData?.id) {
+                const updatedWallets = [...cryptoWallets];
+                updatedWallets[i] = { ...updatedWallets[i], id: insertedData.id };
+                setCryptoWallets(updatedWallets);
               }
             }
           }
