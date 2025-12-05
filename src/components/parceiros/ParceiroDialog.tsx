@@ -1115,9 +1115,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   <Input
                     id="nome"
                     value={nome}
-                    onChange={(e) => setNome(e.target.value)}
+                    onChange={(e) => setNome(e.target.value.toUpperCase())}
                     required
                     disabled={loading || viewMode}
+                    className="uppercase"
                   />
                 </div>
                 <div>
@@ -1241,7 +1242,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                     <Input
                       id="endereco"
                       value={endereco}
-                      onChange={(e) => setEndereco(e.target.value)}
+                      onChange={(e) => setEndereco(e.target.value.toUpperCase())}
+                      className="uppercase"
                       placeholder="Rua, número"
                       disabled={loading || viewMode}
                     />
@@ -1271,7 +1273,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                     <Input
                       id="cidade"
                       value={cidade}
-                      onChange={(e) => setCidade(e.target.value)}
+                      onChange={(e) => setCidade(e.target.value.toUpperCase())}
+                      className="uppercase"
                       placeholder="Virgem da Lapa - MG"
                       disabled={loading || viewMode}
                     />
@@ -1469,8 +1472,9 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         <Label>Titular *</Label>
                         <Input
                           value={account.titular}
-                          onChange={(e) => updateBankAccount(index, "titular", e.target.value)}
+                          onChange={(e) => updateBankAccount(index, "titular", e.target.value.toUpperCase())}
                           placeholder="Nome do titular"
+                          className="uppercase"
                           disabled={viewMode}
                         />
                       </div>

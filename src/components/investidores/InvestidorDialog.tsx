@@ -314,9 +314,10 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
               <Input
                 id="nome"
                 value={nome}
-                onChange={(e) => setNome(e.target.value)}
+                onChange={(e) => setNome(e.target.value.toUpperCase())}
                 disabled={isViewMode}
                 placeholder="Nome do investidor"
+                className="uppercase"
               />
             </div>
 

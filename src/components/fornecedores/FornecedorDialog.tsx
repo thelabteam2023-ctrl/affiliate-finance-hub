@@ -127,9 +127,10 @@ export function FornecedorDialog({ open, onOpenChange, fornecedor, isViewMode }:
             <Input
               id="nome"
               value={formData.nome}
-              onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, nome: e.target.value.toUpperCase() })}
               disabled={isViewMode}
               placeholder="Nome do fornecedor"
+              className="uppercase"
             />
           </div>
 
