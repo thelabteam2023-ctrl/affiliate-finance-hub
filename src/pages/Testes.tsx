@@ -306,6 +306,41 @@ export default function Testes() {
     }
   };
 
+  const handleGerarInvestidorAleatorio = async () => {
+    setLoading("investidor_gerar");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+
+      const nomesInvestidores = [
+        "CARLOS EDUARDO MENDES", "ROBERTO SILVA SANTOS", "FERNANDA COSTA LIMA",
+        "MARCELO OLIVEIRA NETO", "PATRICIA ALMEIDA ROCHA", "RICARDO SOUZA DIAS"
+      ];
+
+      const nomeAleatorio = nomesInvestidores[Math.floor(Math.random() * nomesInvestidores.length)];
+
+      const novoInvestidor = {
+        user_id: user.id,
+        nome: nomeAleatorio,
+        cpf: gerarCPF(),
+        status: "ativo",
+      };
+
+      const { error } = await supabase.from("investidores").insert([novoInvestidor]);
+      if (error) throw error;
+
+      toast.success("1 investidor criado com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao gerar investidor:", error);
+      toast.error(`Erro ao gerar investidor: ${error.message}`);
+    } finally {
+      setLoading(null);
+    }
+  };
+
   const handleGerarOperadoresAleatorios = async () => {
     setLoading("operadores_gerar");
     try {
@@ -549,6 +584,26 @@ export default function Testes() {
                 <Users className="h-4 w-4 mr-2" />
               )}
               Gerar Operadores
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <p className="font-medium">Gerar 1 Investidor Aleatório</p>
+              <p className="text-sm text-muted-foreground">
+                Cria 1 investidor com nome e CPF válido gerado automaticamente
+              </p>
+            </div>
+            <Button 
+              onClick={handleGerarInvestidorAleatorio}
+              disabled={loading === "investidor_gerar"}
+            >
+              {loading === "investidor_gerar" ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <TrendingUp className="h-4 w-4 mr-2" />
+              )}
+              Gerar Investidor
             </Button>
           </div>
 
