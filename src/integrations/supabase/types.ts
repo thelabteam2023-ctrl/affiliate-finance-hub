@@ -1316,6 +1316,7 @@ export type Database = {
           data_saida: string | null
           funcao: string | null
           id: string
+          modelo_absorcao_taxas: string
           modelo_pagamento: string
           motivo_saida: string | null
           observacoes: string | null
@@ -1334,6 +1335,7 @@ export type Database = {
           data_saida?: string | null
           funcao?: string | null
           id?: string
+          modelo_absorcao_taxas?: string
           modelo_pagamento?: string
           motivo_saida?: string | null
           observacoes?: string | null
@@ -1352,6 +1354,7 @@ export type Database = {
           data_saida?: string | null
           funcao?: string | null
           id?: string
+          modelo_absorcao_taxas?: string
           modelo_pagamento?: string
           motivo_saida?: string | null
           observacoes?: string | null
@@ -1737,8 +1740,85 @@ export type Database = {
         }
         Relationships: []
       }
+      projeto_conciliacoes: {
+        Row: {
+          ajuste_crypto_usd: number
+          ajuste_fiat: number
+          created_at: string
+          data_conciliacao: string
+          descricao: string | null
+          id: string
+          observacoes: string | null
+          projeto_id: string
+          saldo_nominal_crypto_usd: number
+          saldo_nominal_fiat: number
+          saldo_real_crypto_usd: number
+          saldo_real_fiat: number
+          tipo_ajuste: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ajuste_crypto_usd?: number
+          ajuste_fiat?: number
+          created_at?: string
+          data_conciliacao?: string
+          descricao?: string | null
+          id?: string
+          observacoes?: string | null
+          projeto_id: string
+          saldo_nominal_crypto_usd?: number
+          saldo_nominal_fiat?: number
+          saldo_real_crypto_usd?: number
+          saldo_real_fiat?: number
+          tipo_ajuste?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ajuste_crypto_usd?: number
+          ajuste_fiat?: number
+          created_at?: string
+          data_conciliacao?: string
+          descricao?: string | null
+          id?: string
+          observacoes?: string | null
+          projeto_id?: string
+          saldo_nominal_crypto_usd?: number
+          saldo_nominal_fiat?: number
+          saldo_real_crypto_usd?: number
+          saldo_real_fiat?: number
+          tipo_ajuste?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projeto_conciliacoes_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_conciliacoes_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "projeto_conciliacoes_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+        ]
+      }
       projetos: {
         Row: {
+          conciliado: boolean
           created_at: string
           data_fim_prevista: string | null
           data_fim_real: string | null
@@ -1749,10 +1829,12 @@ export type Database = {
           observacoes: string | null
           orcamento_inicial: number | null
           status: string
+          tem_investimento_crypto: boolean
           updated_at: string
           user_id: string
         }
         Insert: {
+          conciliado?: boolean
           created_at?: string
           data_fim_prevista?: string | null
           data_fim_real?: string | null
@@ -1763,10 +1845,12 @@ export type Database = {
           observacoes?: string | null
           orcamento_inicial?: number | null
           status?: string
+          tem_investimento_crypto?: boolean
           updated_at?: string
           user_id: string
         }
         Update: {
+          conciliado?: boolean
           created_at?: string
           data_fim_prevista?: string | null
           data_fim_real?: string | null
@@ -1777,6 +1861,7 @@ export type Database = {
           observacoes?: string | null
           orcamento_inicial?: number | null
           status?: string
+          tem_investimento_crypto?: boolean
           updated_at?: string
           user_id?: string
         }

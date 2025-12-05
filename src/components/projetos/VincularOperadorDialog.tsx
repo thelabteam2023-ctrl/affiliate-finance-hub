@@ -48,6 +48,12 @@ const BASES_CALCULO = [
   { value: "RESULTADO_OPERACAO", label: "Resultado da Operação" },
 ];
 
+const MODELOS_ABSORCAO = [
+  { value: "EMPRESA_100", label: "Empresa absorve 100%", description: "Taxas são custo operacional da empresa" },
+  { value: "OPERADOR_100", label: "Operador absorve 100%", description: "Taxas deduzidas do lucro antes de calcular comissão" },
+  { value: "PROPORCIONAL", label: "Divisão proporcional ao deal", description: "Se deal é 60/40, taxas também são 60/40" },
+];
+
 export function VincularOperadorDialog({
   open,
   onOpenChange,
@@ -66,6 +72,7 @@ export function VincularOperadorDialog({
     valor_fixo: "",
     percentual: "",
     base_calculo: "LUCRO_PROJETO",
+    modelo_absorcao_taxas: "EMPRESA_100",
   });
 
   useEffect(() => {
@@ -80,6 +87,7 @@ export function VincularOperadorDialog({
         valor_fixo: "",
         percentual: "",
         base_calculo: "LUCRO_PROJETO",
+        modelo_absorcao_taxas: "EMPRESA_100",
       });
     }
   }, [open, projetoId]);
@@ -144,6 +152,7 @@ export function VincularOperadorDialog({
         valor_fixo: formData.valor_fixo ? parseFloat(formData.valor_fixo) : 0,
         percentual: formData.percentual ? parseFloat(formData.percentual) : 0,
         base_calculo: formData.base_calculo,
+        modelo_absorcao_taxas: formData.modelo_absorcao_taxas,
       });
 
       if (error) throw error;
@@ -303,6 +312,34 @@ export function VincularOperadorDialog({
                   </Select>
                 </div>
               )}
+
+              {/* Modelo de Absorção de Taxas */}
+              <div className="space-y-2 border-t pt-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <Label>Absorção de Taxas Friccionais (Crypto)</Label>
+                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Define quem absorve as taxas de swap, transferência e slippage em operações com crypto
+                </p>
+                <Select
+                  value={formData.modelo_absorcao_taxas}
+                  onValueChange={(value) => setFormData({ ...formData, modelo_absorcao_taxas: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MODELOS_ABSORCAO.map((modelo) => (
+                      <SelectItem key={modelo.value} value={modelo.value}>
+                        <div className="flex flex-col">
+                          <span>{modelo.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               {/* Modal de Ajuda - Base de Cálculo */}
               <Dialog open={showBaseCalculoHelp} onOpenChange={setShowBaseCalculoHelp}>
