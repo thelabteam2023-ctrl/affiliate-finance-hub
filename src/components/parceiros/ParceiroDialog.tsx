@@ -931,6 +931,157 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     }
   };
 
+  // Function to save bank accounts and navigate to crypto tab
+  const saveBankAccountsAndContinue = async () => {
+    if (!parceiroId && !parceiro) return;
+    
+    const currentParceiroId = parceiroId || parceiro?.id;
+    if (!currentParceiroId) return;
+
+    // Validate PIX key uniqueness within current partner's accounts
+    const allPixKeys = bankAccounts.flatMap((acc, accIndex) => 
+      acc.pix_keys
+        .filter(k => k.chave)
+        .map(k => ({ chave: k.chave, accountIndex: accIndex }))
+    );
+    
+    const pixKeyMap = new Map<string, number>();
+    for (const { chave, accountIndex } of allPixKeys) {
+      if (pixKeyMap.has(chave) && pixKeyMap.get(chave) !== accountIndex) {
+        toast({
+          title: "Chave PIX duplicada",
+          description: "A mesma chave PIX não pode ser usada em contas diferentes.",
+          variant: "destructive",
+        });
+        return;
+      }
+      pixKeyMap.set(chave, accountIndex);
+    }
+
+    setLoading(true);
+
+    try {
+      // Get existing account IDs from database
+      const { data: existingAccounts } = await supabase
+        .from("contas_bancarias")
+        .select("id")
+        .eq("parceiro_id", currentParceiroId);
+      
+      const existingIds = new Set((existingAccounts || []).map(acc => acc.id));
+      const currentIds = new Set(bankAccounts.map(acc => acc.id).filter(Boolean));
+      
+      // DELETE accounts that were removed
+      const idsToDelete = [...existingIds].filter(id => !currentIds.has(id));
+      if (idsToDelete.length > 0) {
+        await supabase
+          .from("contas_bancarias")
+          .delete()
+          .in("id", idsToDelete);
+      }
+      
+      // UPDATE or INSERT accounts
+      for (const account of bankAccounts) {
+        if (account.banco_id && account.pix_keys.some(k => k.chave)) {
+          // Clean PIX key before saving (remove formatting)
+          let cleanPixKey = account.pix_keys[0]?.chave || null;
+          if (cleanPixKey) {
+            const pixType = account.pix_keys[0]?.tipo;
+            if (pixType === "cpf" || pixType === "cnpj") {
+              cleanPixKey = cleanPixKey.replace(/\D/g, "");
+            }
+          }
+          
+          const accountData = {
+            parceiro_id: currentParceiroId,
+            banco_id: account.banco_id,
+            banco: bancos.find(b => b.id === account.banco_id)?.nome || "",
+            agencia: account.agencia || null,
+            conta: account.conta || null,
+            tipo_conta: account.tipo_conta,
+            titular: account.titular || nome,
+            pix_key: cleanPixKey,
+            observacoes: account.observacoes || null,
+          };
+          
+          if (account.id) {
+            // UPDATE existing account
+            const { error: updateError } = await supabase
+              .from("contas_bancarias")
+              .update(accountData)
+              .eq("id", account.id);
+            
+            if (updateError) {
+              console.error("Error updating bank account:", updateError);
+              throw updateError;
+            }
+          } else {
+            // INSERT new account
+            const { error: insertError } = await supabase
+              .from("contas_bancarias")
+              .insert([accountData]);
+            
+            if (insertError) {
+              console.error("Error inserting bank account:", insertError);
+              throw insertError;
+            }
+          }
+        }
+      }
+
+      // Reload bank accounts with IDs
+      const { data: savedAccounts } = await supabase
+        .from("contas_bancarias")
+        .select("*")
+        .eq("parceiro_id", currentParceiroId);
+
+      if (savedAccounts) {
+        const detectType = (key: string) => {
+          if (!key) return "";
+          const cleanKey = key.replace(/\D/g, "");
+          if (cleanKey.length === 11) return "cpf";
+          if (cleanKey.length === 14) return "cnpj";
+          if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(key)) return "email";
+          if (/^\+/.test(key) && /\d/.test(key)) return "telefone";
+          return "aleatoria";
+        };
+        
+        setBankAccounts(savedAccounts.map(acc => ({
+          id: acc.id,
+          banco_id: acc.banco_id || "",
+          agencia: acc.agencia || "",
+          conta: acc.conta || "",
+          tipo_conta: acc.tipo_conta,
+          titular: acc.titular,
+          pix_keys: acc.pix_key ? [{ tipo: detectType(acc.pix_key), chave: acc.pix_key }] : [{ tipo: "", chave: "" }],
+          observacoes: acc.observacoes || ""
+        })));
+      }
+
+      toast({
+        title: "Contas bancárias salvas",
+        description: "Agora você pode adicionar wallets crypto.",
+      });
+
+      // Switch to crypto tab
+      setActiveTab("crypto");
+    } catch (error: any) {
+      let errorMessage = error.message;
+      
+      // Check for duplicate PIX key error
+      if (error.message?.includes('Esta chave PIX já está cadastrada')) {
+        errorMessage = "Esta chave PIX já está cadastrada em outra conta bancária.";
+      }
+      
+      toast({
+        title: "Erro ao salvar contas bancárias",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -1348,6 +1499,21 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   </CardContent>
                 </Card>
               )))}
+
+              {/* Salvar e Continuar button for new partners */}
+              {!viewMode && parceiroId && !parceiro && bankAccounts.length > 0 && (
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    type="button"
+                    onClick={saveBankAccountsAndContinue}
+                    disabled={loading || !bankAccounts.some(acc => acc.banco_id && acc.pix_keys.some(k => k.chave))}
+                    className="w-full"
+                  >
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Salvar e Continuar
+                  </Button>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="crypto" className="space-y-4">
