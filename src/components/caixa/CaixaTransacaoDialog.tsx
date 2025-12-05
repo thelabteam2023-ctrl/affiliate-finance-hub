@@ -2000,8 +2000,8 @@ export function CaixaTransacaoDialog({
                                     </div>
                                   </>
                                 ) : (
-                                  <div className="text-sm font-semibold text-foreground">
-                                    {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId))}
+                                  <div className="text-xs text-muted-foreground">
+                                    Saldo atual: {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId))}
                                   </div>
                                 )}
                               </div>
@@ -2035,8 +2035,8 @@ export function CaixaTransacaoDialog({
                                     </div>
                                   </>
                                 ) : (
-                                  <div className="text-sm font-semibold text-foreground">
-                                    {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId))}
+                                  <div className="text-xs text-muted-foreground">
+                                    Saldo atual: {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId))}
                                   </div>
                                 )}
                               </div>
@@ -2106,17 +2106,25 @@ export function CaixaTransacaoDialog({
                                 )}
                               </div>
                             )}
-                            {tipoTransacao === "DEPOSITO" && origemContaId && parseFloat(String(valor)) > 0 && (
+                            {tipoTransacao === "DEPOSITO" && origemContaId && (
                               <div className="mt-3 space-y-1">
-                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                  <TrendingDown className="h-4 w-4 text-destructive" />
-                                  <span className="line-through opacity-70">
-                                    {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId))}
-                                  </span>
-                                </div>
-                                <div className="text-sm font-semibold text-foreground">
-                                  {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId) - parseFloat(String(valor)))}
-                                </div>
+                                {parseFloat(String(valor)) > 0 ? (
+                                  <>
+                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                      <TrendingDown className="h-4 w-4 text-destructive" />
+                                      <span className="line-through opacity-70">
+                                        {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId))}
+                                      </span>
+                                    </div>
+                                    <div className="text-sm font-semibold text-foreground">
+                                      {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId) - parseFloat(String(valor)))}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-xs text-muted-foreground">
+                                    Saldo atual: {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId))}
+                                  </div>
+                                )}
                               </div>
                             )}
                             {/* Transferência Parceiro → Parceiro - Mostrar saldo SEMPRE */}
@@ -2230,17 +2238,25 @@ export function CaixaTransacaoDialog({
                                 )}
                               </div>
                             )}
-                            {tipoTransacao === "DEPOSITO" && destinoBookmakerId && parseFloat(String(valor)) > 0 && (
+                            {tipoTransacao === "DEPOSITO" && destinoBookmakerId && (
                               <div className="mt-3 space-y-1">
-                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                  <TrendingUp className="h-4 w-4 text-emerald-500" />
-                                  <span className="line-through opacity-70">
-                                    {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId))}
-                                  </span>
-                                </div>
-                                <div className="text-sm font-semibold text-foreground">
-                                  {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + parseFloat(String(valor)))}
-                                </div>
+                                {parseFloat(String(valor)) > 0 ? (
+                                  <>
+                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                      <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                      <span className="line-through opacity-70">
+                                        {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId))}
+                                      </span>
+                                    </div>
+                                    <div className="text-sm font-semibold text-foreground">
+                                      {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + parseFloat(String(valor)))}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-xs text-muted-foreground">
+                                    Saldo atual: {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId))}
+                                  </div>
+                                )}
                               </div>
                             )}
                             {tipoTransacao === "SAQUE" && destinoContaId && parseFloat(String(valor)) > 0 && (
