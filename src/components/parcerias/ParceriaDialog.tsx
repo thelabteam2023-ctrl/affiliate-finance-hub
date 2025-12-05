@@ -12,7 +12,8 @@ import { Progress } from "@/components/ui/progress";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
-import { UserPlus, Truck, ArrowRight, DollarSign } from "lucide-react";
+import { UserPlus, Truck, ArrowRight, DollarSign, HelpCircle } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface ParceriaDialogProps {
   open: boolean;
@@ -494,22 +495,39 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
           {formData.origem_tipo === "DIRETO" && (
             <div className="space-y-4 p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
               <div className="space-y-3">
-                <Label>Custo de Aquisição do CPF</Label>
+                <div className="flex items-center gap-2">
+                  <Label>Custo de Aquisição do CPF</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full">
+                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 text-sm">
+                      <div className="space-y-2">
+                        <p className="font-medium">Opções de custo:</p>
+                        <p><strong>Sem pagamento:</strong> Parceiro indicado por amigo/família, sem custos associados.</p>
+                        <p><strong>Pagamento ao parceiro:</strong> CPF com valor acordado a ser pago ao parceiro.</p>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
                 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                  <span className={`text-sm font-medium ${formData.custo_aquisicao_isento ? 'text-muted-foreground' : 'text-emerald-600'}`}>
+                    Sem pagamento ao parceiro
+                  </span>
                   <Switch 
-                    checked={formData.custo_aquisicao_isento}
+                    checked={!formData.custo_aquisicao_isento}
                     onCheckedChange={(checked) => setFormData({
                       ...formData, 
-                      custo_aquisicao_isento: checked,
-                      valor_parceiro: checked ? 0 : formData.valor_parceiro
+                      custo_aquisicao_isento: !checked,
+                      valor_parceiro: !checked ? 0 : formData.valor_parceiro
                     })}
                     disabled={isViewMode}
                   />
-                  <span className="text-sm">
-                    {formData.custo_aquisicao_isento 
-                      ? "Sem custo" 
-                      : "Pagamento ao parceiro"}
+                  <span className={`text-sm font-medium ${!formData.custo_aquisicao_isento ? 'text-muted-foreground' : 'text-emerald-600'}`}>
+                    Pagamento ao parceiro
                   </span>
                 </div>
 
@@ -539,7 +557,12 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
               <Label>Data de Início</Label>
               <DatePicker
                 value={format(formData.data_inicio, "yyyy-MM-dd")}
-                onChange={(date) => setFormData({ ...formData, data_inicio: new Date(date) })}
+                onChange={(date) => {
+                  // Fix timezone: parse date string correctly to avoid day-before bug
+                  const [year, month, day] = date.split('-').map(Number);
+                  const correctedDate = new Date(year, month - 1, day, 12, 0, 0);
+                  setFormData({ ...formData, data_inicio: correctedDate });
+                }}
                 disabled={isViewMode}
               />
             </div>

@@ -552,11 +552,15 @@ export default function ParceiroFinanceiroDialog({
                               
                               {/* Seta direcional colorida */}
                               {(() => {
-                                const isOrigem = transacao.origem_parceiro_id === parceiroId;
-                                const isSaida = transacao.tipo_transacao === "DEPOSITO" || 
-                                              transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.origem_tipo === "CAIXA_OPERACIONAL" ||
-                                              isOrigem;
-                                const arrowColor = isSaida ? "text-red-500" : "text-green-500";
+                                // Determina se o parceiro RECEBE (entrada) ou ENVIA (saída)
+                                const parceiroRecebe = 
+                                  transacao.destino_parceiro_id === parceiroId ||
+                                  (transacao.destino_conta_bancaria_id && 
+                                    contasBancarias.some(c => c.id === transacao.destino_conta_bancaria_id && c.parceiro_id === parceiroId)) ||
+                                  (transacao.destino_wallet_id && 
+                                    walletsCrypto.some(w => w.id === transacao.destino_wallet_id && w.parceiro_id === parceiroId));
+                                
+                                const arrowColor = parceiroRecebe ? "text-green-500" : "text-red-500";
                                 return <ArrowRight className={`h-4 w-4 ${arrowColor}`} />;
                               })()}
                               
@@ -609,16 +613,25 @@ export default function ParceiroFinanceiroDialog({
                           </div>
 
                           <div className="text-right">
-                            <p
-                              className={`text-lg font-bold ${
-                                transacao.tipo_transacao === "SAQUE"
-                                  ? "text-green-600"
-                                  : "text-red-600"
-                              }`}
-                            >
-                              {transacao.tipo_transacao === "SAQUE" ? "+" : "-"}
-                              {formatCurrency(transacao.valor)}
-                            </p>
+                            {(() => {
+                              // Determina se o parceiro RECEBE (entrada) ou ENVIA (saída)
+                              const parceiroRecebe = 
+                                transacao.destino_parceiro_id === parceiroId ||
+                                (transacao.destino_conta_bancaria_id && 
+                                  contasBancarias.some(c => c.id === transacao.destino_conta_bancaria_id && c.parceiro_id === parceiroId)) ||
+                                (transacao.destino_wallet_id && 
+                                  walletsCrypto.some(w => w.id === transacao.destino_wallet_id && w.parceiro_id === parceiroId));
+                              
+                              const isEntrada = parceiroRecebe;
+                              const colorClass = isEntrada ? "text-green-600" : "text-red-600";
+                              const sinal = isEntrada ? "+" : "-";
+                              
+                              return (
+                                <p className={`text-lg font-bold ${colorClass}`}>
+                                  {sinal}{formatCurrency(transacao.valor)}
+                                </p>
+                              );
+                            })()}
                           </div>
                         </div>
                       </CardContent>
