@@ -1,4 +1,5 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Calendar, DollarSign, AlertTriangle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ParceiroStatusIconProps {
@@ -42,36 +43,60 @@ export function ParceiroStatusIcon({
   };
 
   const getTooltipContent = () => {
-    const diasText = `📅 Dias restantes: ${diasRestantes}`;
-    
     if (diasRestantes <= 5) {
       return (
-        <div className="text-sm">
-          <p>{diasText}</p>
-          {!pagamentoRealizado && <p className="text-red-400">💰 Pagamento pendente</p>}
-          <p className="text-red-400 font-semibold">⚠️ Encerrar parceria!</p>
+        <div className="text-sm space-y-1">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="h-3.5 w-3.5" />
+            <span>Dias restantes: {diasRestantes}</span>
+          </div>
+          {!pagamentoRealizado && (
+            <div className="flex items-center gap-1.5 text-red-400">
+              <DollarSign className="h-3.5 w-3.5" />
+              <span>Pagamento pendente</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 text-red-400 font-semibold">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            <span>Encerrar parceria!</span>
+          </div>
         </div>
       );
     }
     if (!pagamentoRealizado) {
       return (
-        <div className="text-sm">
-          <p>{diasText}</p>
-          <p className="text-red-400">💰 Pagamento pendente</p>
+        <div className="text-sm space-y-1">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="h-3.5 w-3.5" />
+            <span>Dias restantes: {diasRestantes}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-red-400">
+            <DollarSign className="h-3.5 w-3.5" />
+            <span>Pagamento pendente</span>
+          </div>
         </div>
       );
     }
     if (diasRestantes <= 20) {
       return (
-        <div className="text-sm">
-          <p>{diasText}</p>
-          <p className="text-lime-400">⏳ Vencimento próximo</p>
+        <div className="text-sm space-y-1">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="h-3.5 w-3.5" />
+            <span>Dias restantes: {diasRestantes}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-lime-400">
+            <Clock className="h-3.5 w-3.5" />
+            <span>Vencimento próximo</span>
+          </div>
         </div>
       );
     }
     return (
       <div className="text-sm">
-        <p>{diasText}</p>
+        <div className="flex items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5" />
+          <span>Dias restantes: {diasRestantes}</span>
+        </div>
       </div>
     );
   };
