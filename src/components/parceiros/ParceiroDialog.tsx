@@ -511,7 +511,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         cpf: cpf.replace(/\D/g, ""),
         email,
         telefone: telefone.replace(/[^\d+]/g, ""),
-        data_nascimento: dataNascimento,
+        data_nascimento: dataNascimento || null,
         endereco: endereco || null,
         cidade: cidade || null,
         cep: cep.replace(/\D/g, "") || null,
