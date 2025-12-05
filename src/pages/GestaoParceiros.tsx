@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
-import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2, LayoutGrid, List, FileText } from "lucide-react";
+import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2, LayoutGrid, List } from "lucide-react";
+import { ParceiroStatusIcon } from "@/components/parceiros/ParceiroStatusIcon";
 import { BankAccountItem } from "@/components/parceiros/BankAccountItem";
 import { WalletItem } from "@/components/parceiros/WalletItem";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -63,11 +64,18 @@ interface SaldoCryptoRaw {
   saldo_usd: number;
 }
 
+interface ParceriaStatus {
+  parceiro_id: string;
+  dias_restantes: number;
+  comissao_paga: boolean;
+}
+
 export default function GestaoParceiros() {
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
   const [roiData, setRoiData] = useState<Map<string, ParceiroROI>>(new Map());
   const [saldosData, setSaldosData] = useState<Map<string, SaldoParceiro>>(new Map());
   const [saldosCryptoRaw, setSaldosCryptoRaw] = useState<SaldoCryptoRaw[]>([]);
+  const [parceriasData, setParceriasData] = useState<Map<string, ParceriaStatus>>(new Map());
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [showCPF, setShowCPF] = useState(false);
@@ -129,6 +137,7 @@ export default function GestaoParceiros() {
   useEffect(() => {
     checkAuth();
     fetchParceiros();
+    fetchParceriasStatus();
   }, []);
 
   const checkAuth = async () => {
@@ -259,6 +268,46 @@ export default function GestaoParceiros() {
       setRoiData(roiMap);
     } catch (error: any) {
       console.error("Erro ao carregar ROI:", error);
+    }
+  };
+
+  const fetchParceriasStatus = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Buscar parcerias ativas com dias restantes
+      const { data, error } = await supabase
+        .from("parcerias")
+        .select("parceiro_id, data_fim_prevista, comissao_paga")
+        .eq("user_id", user.id)
+        .in("status", ["ATIVA", "EM_ENCERRAMENTO"]);
+
+      if (error) throw error;
+
+      const parceriasMap = new Map<string, ParceriaStatus>();
+      
+      data?.forEach((parceria) => {
+        if (!parceria.parceiro_id || !parceria.data_fim_prevista) return;
+        
+        // Calcular dias restantes
+        const dataFim = new Date(parceria.data_fim_prevista);
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        dataFim.setHours(0, 0, 0, 0);
+        const diffTime = dataFim.getTime() - hoje.getTime();
+        const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        parceriasMap.set(parceria.parceiro_id, {
+          parceiro_id: parceria.parceiro_id,
+          dias_restantes: diasRestantes,
+          comissao_paga: parceria.comissao_paga || false,
+        });
+      });
+
+      setParceriasData(parceriasMap);
+    } catch (error: any) {
+      console.error("Erro ao carregar status de parcerias:", error);
     }
   };
 
@@ -670,6 +719,12 @@ export default function GestaoParceiros() {
                     >
                       {parceiro.status.toUpperCase()}
                     </Badge>
+                    {parceriasData.has(parceiro.id) && (
+                      <ParceiroStatusIcon
+                        diasRestantes={parceriasData.get(parceiro.id)!.dias_restantes}
+                        pagamentoRealizado={parceriasData.get(parceiro.id)!.comissao_paga}
+                      />
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -766,6 +821,12 @@ export default function GestaoParceiros() {
                                   >
                                     {parceiro.status}
                                   </Badge>
+                                  {parceriasData.has(parceiro.id) && (
+                                    <ParceiroStatusIcon
+                                      diasRestantes={parceriasData.get(parceiro.id)!.dias_restantes}
+                                      pagamentoRealizado={parceriasData.get(parceiro.id)!.comissao_paga}
+                                    />
+                                  )}
                                 </div>
                                 {saldosData.has(parceiro.id) && (
                                   <div className="flex gap-3 mt-1 text-xs text-muted-foreground font-mono">
