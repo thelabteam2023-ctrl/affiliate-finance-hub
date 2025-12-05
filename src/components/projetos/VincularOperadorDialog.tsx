@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { HelpCircle, TrendingUp, DollarSign, Target } from "lucide-react";
+import { FaixasEscalonadasInput } from "@/components/entregas/FaixasEscalonadasInput";
 
 interface Operador {
   id: string;
@@ -48,6 +49,22 @@ const BASES_CALCULO = [
   { value: "RESULTADO_OPERACAO", label: "Resultado da Operação" },
 ];
 
+const FREQUENCIAS = [
+  { value: "SEMANAL", label: "Semanal" },
+  { value: "QUINZENAL", label: "Quinzenal" },
+  { value: "MENSAL", label: "Mensal" },
+];
+
+const TIPOS_META = [
+  { value: "VALOR_FIXO", label: "Valor Fixo (R$)" },
+  { value: "PERCENTUAL", label: "Percentual (%)" },
+];
+
+interface Faixa {
+  min: number;
+  max: number | null;
+  percentual: number;
+}
 
 export function VincularOperadorDialog({
   open,
@@ -67,7 +84,16 @@ export function VincularOperadorDialog({
     valor_fixo: "",
     percentual: "",
     base_calculo: "LUCRO_PROJETO",
+    frequencia_entrega: "MENSAL",
+    tipo_meta: "VALOR_FIXO",
+    meta_valor: "",
+    meta_percentual: "",
   });
+  const [faixasEscalonadas, setFaixasEscalonadas] = useState<Faixa[]>([
+    { min: 0, max: 10000, percentual: 5 },
+    { min: 10001, max: 30000, percentual: 8 },
+    { min: 30001, max: null, percentual: 12 },
+  ]);
 
   useEffect(() => {
     if (open) {
@@ -81,7 +107,16 @@ export function VincularOperadorDialog({
         valor_fixo: "",
         percentual: "",
         base_calculo: "LUCRO_PROJETO",
+        frequencia_entrega: "MENSAL",
+        tipo_meta: "VALOR_FIXO",
+        meta_valor: "",
+        meta_percentual: "",
       });
+      setFaixasEscalonadas([
+        { min: 0, max: 10000, percentual: 5 },
+        { min: 10001, max: 30000, percentual: 8 },
+        { min: 30001, max: null, percentual: 12 },
+      ]);
     }
   }, [open, projetoId]);
 
@@ -115,14 +150,17 @@ export function VincularOperadorDialog({
       return;
     }
 
-    // Validate based on modelo_pagamento
     const modelo = formData.modelo_pagamento;
     if ((modelo === "FIXO_MENSAL" || modelo === "HIBRIDO") && !formData.valor_fixo) {
       toast.error("Informe o valor fixo mensal");
       return;
     }
-    if ((modelo === "PORCENTAGEM" || modelo === "HIBRIDO" || modelo === "COMISSAO_ESCALONADA") && !formData.percentual) {
+    if ((modelo === "PORCENTAGEM" || modelo === "HIBRIDO") && !formData.percentual) {
       toast.error("Informe o percentual");
+      return;
+    }
+    if (modelo === "POR_ENTREGA" && !formData.meta_valor && !formData.meta_percentual) {
+      toast.error("Informe a meta de entrega");
       return;
     }
 
@@ -134,7 +172,7 @@ export function VincularOperadorDialog({
         return;
       }
 
-      const { error } = await supabase.from("operador_projetos").insert({
+      const insertData: any = {
         operador_id: formData.operador_id,
         projeto_id: projetoId,
         funcao: formData.funcao || null,
@@ -145,7 +183,20 @@ export function VincularOperadorDialog({
         valor_fixo: formData.valor_fixo ? parseFloat(formData.valor_fixo) : 0,
         percentual: formData.percentual ? parseFloat(formData.percentual) : 0,
         base_calculo: formData.base_calculo,
-      });
+        frequencia_entrega: formData.frequencia_entrega,
+      };
+
+      if (modelo === "POR_ENTREGA") {
+        insertData.tipo_meta = formData.tipo_meta;
+        insertData.meta_valor = formData.meta_valor ? parseFloat(formData.meta_valor) : null;
+        insertData.meta_percentual = formData.meta_percentual ? parseFloat(formData.meta_percentual) : null;
+      }
+
+      if (modelo === "COMISSAO_ESCALONADA") {
+        insertData.faixas_escalonadas = faixasEscalonadas;
+      }
+
+      const { error } = await supabase.from("operador_projetos").insert(insertData);
 
       if (error) throw error;
       
@@ -163,18 +214,20 @@ export function VincularOperadorDialog({
     }
   };
 
-  // Filtrar operadores que já estão vinculados ativos
   const operadoresDisponiveis = operadores.filter(
     op => !operadoresVinculados.includes(op.id)
   );
 
-  const showValorFixo = ["FIXO_MENSAL", "HIBRIDO", "POR_ENTREGA"].includes(formData.modelo_pagamento);
-  const showPercentual = ["PORCENTAGEM", "HIBRIDO", "COMISSAO_ESCALONADA"].includes(formData.modelo_pagamento);
-  const showBaseCalculo = showPercentual;
+  const showValorFixo = ["FIXO_MENSAL", "HIBRIDO"].includes(formData.modelo_pagamento);
+  const showPercentual = ["PORCENTAGEM", "HIBRIDO"].includes(formData.modelo_pagamento);
+  const showBaseCalculo = showPercentual || formData.modelo_pagamento === "POR_ENTREGA";
+  const showFrequencia = ["FIXO_MENSAL", "PORCENTAGEM", "HIBRIDO", "COMISSAO_ESCALONADA"].includes(formData.modelo_pagamento);
+  const showFaixas = formData.modelo_pagamento === "COMISSAO_ESCALONADA";
+  const showMetaPorEntrega = formData.modelo_pagamento === "POR_ENTREGA";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Vincular Operador ao Projeto</DialogTitle>
         </DialogHeader>
@@ -247,6 +300,27 @@ export function VincularOperadorDialog({
                 </Select>
               </div>
 
+              {showFrequencia && (
+                <div className="space-y-2">
+                  <Label>Frequência de Conciliação</Label>
+                  <Select
+                    value={formData.frequencia_entrega}
+                    onValueChange={(value) => setFormData({ ...formData, frequencia_entrega: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FREQUENCIAS.map((freq) => (
+                        <SelectItem key={freq.value} value={freq.value}>
+                          {freq.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 {showValorFixo && (
                   <div className="space-y-2">
@@ -305,6 +379,68 @@ export function VincularOperadorDialog({
                 </div>
               )}
 
+              {/* Meta Por Entrega */}
+              {showMetaPorEntrega && (
+                <div className="border-t pt-4 space-y-4">
+                  <h4 className="text-sm font-medium">Configuração da Meta</h4>
+                  
+                  <div className="space-y-2">
+                    <Label>Tipo de Meta</Label>
+                    <Select
+                      value={formData.tipo_meta}
+                      onValueChange={(value) => setFormData({ ...formData, tipo_meta: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIPOS_META.map((tipo) => (
+                          <SelectItem key={tipo.value} value={tipo.value}>
+                            {tipo.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {formData.tipo_meta === "VALOR_FIXO" ? (
+                      <div className="space-y-2">
+                        <Label>Meta (R$) *</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={formData.meta_valor}
+                          onChange={(e) => setFormData({ ...formData, meta_valor: e.target.value })}
+                          placeholder="30000"
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label>Meta (%) *</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={formData.meta_percentual}
+                          onChange={(e) => setFormData({ ...formData, meta_percentual: e.target.value })}
+                          placeholder="10"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Faixas Escalonadas */}
+              {showFaixas && (
+                <div className="border-t pt-4">
+                  <FaixasEscalonadasInput
+                    value={faixasEscalonadas}
+                    onChange={setFaixasEscalonadas}
+                  />
+                </div>
+              )}
+
               {/* Modal de Ajuda - Base de Cálculo */}
               <Dialog open={showBaseCalculoHelp} onOpenChange={setShowBaseCalculoHelp}>
                 <DialogContent className="max-w-2xl">
@@ -316,7 +452,6 @@ export function VincularOperadorDialog({
                   </DialogHeader>
 
                   <div className="space-y-6 mt-4">
-                    {/* Lucro do Projeto */}
                     <div className="flex gap-4 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                       <div className="flex-shrink-0">
                         <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
@@ -326,20 +461,15 @@ export function VincularOperadorDialog({
                       <div className="space-y-1">
                         <h4 className="font-medium text-emerald-400">Lucro do Projeto</h4>
                         <p className="text-sm text-muted-foreground">
-                          O percentual é calculado sobre o <strong>lucro líquido</strong> do projeto 
-                          (receitas menos despesas operacionais e custos).
+                          O percentual é calculado sobre o <strong>lucro líquido</strong> do projeto.
                         </p>
                         <div className="text-xs text-muted-foreground mt-2 p-2 bg-background/50 rounded">
                           <strong>Exemplo:</strong> Projeto faturou R$ 100.000, com custos de R$ 60.000. 
                           Lucro = R$ 40.000. Se o operador tem 10%, recebe <strong>R$ 4.000</strong>.
                         </div>
-                        <p className="text-xs text-emerald-400/70 mt-1">
-                          ✓ Recomendado para alinhar incentivos com resultado real
-                        </p>
                       </div>
                     </div>
 
-                    {/* Faturamento do Projeto */}
                     <div className="flex gap-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
                       <div className="flex-shrink-0">
                         <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
@@ -349,20 +479,15 @@ export function VincularOperadorDialog({
                       <div className="space-y-1">
                         <h4 className="font-medium text-blue-400">Faturamento do Projeto</h4>
                         <p className="text-sm text-muted-foreground">
-                          O percentual é calculado sobre o <strong>faturamento bruto</strong> total 
-                          do projeto, independente dos custos.
+                          O percentual é calculado sobre o <strong>faturamento bruto</strong> total.
                         </p>
                         <div className="text-xs text-muted-foreground mt-2 p-2 bg-background/50 rounded">
-                          <strong>Exemplo:</strong> Projeto faturou R$ 100.000 (custos irrelevantes). 
+                          <strong>Exemplo:</strong> Projeto faturou R$ 100.000. 
                           Se o operador tem 10%, recebe <strong>R$ 10.000</strong>.
                         </div>
-                        <p className="text-xs text-blue-400/70 mt-1">
-                          ✓ Ideal para operadores com foco em volume de operações
-                        </p>
                       </div>
                     </div>
 
-                    {/* Resultado da Operação */}
                     <div className="flex gap-4 p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
                       <div className="flex-shrink-0">
                         <div className="h-10 w-10 rounded-full bg-purple-500/20 flex items-center justify-center">
@@ -373,15 +498,12 @@ export function VincularOperadorDialog({
                         <h4 className="font-medium text-purple-400">Resultado da Operação</h4>
                         <p className="text-sm text-muted-foreground">
                           O percentual é calculado sobre o <strong>resultado específico</strong> das 
-                          operações que o operador participou (ex: apostas realizadas).
+                          operações que o operador participou.
                         </p>
                         <div className="text-xs text-muted-foreground mt-2 p-2 bg-background/50 rounded">
-                          <strong>Exemplo:</strong> Operador gerou R$ 50.000 em resultado nas operações 
-                          que ele executou. Se tem 10%, recebe <strong>R$ 5.000</strong>.
+                          <strong>Exemplo:</strong> Operador gerou R$ 50.000 em resultado. 
+                          Se tem 10%, recebe <strong>R$ 5.000</strong>.
                         </div>
-                        <p className="text-xs text-purple-400/70 mt-1">
-                          ✓ Melhor para traders com operações individuais rastreáveis
-                        </p>
                       </div>
                     </div>
                   </div>

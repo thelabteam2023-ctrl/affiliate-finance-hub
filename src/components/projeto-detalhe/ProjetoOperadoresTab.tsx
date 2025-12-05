@@ -3,13 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Plus, Users, DollarSign, Calendar } from "lucide-react";
+import { Plus, Users, DollarSign, Calendar, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { VincularOperadorDialog } from "@/components/projetos/VincularOperadorDialog";
+import { EntregasSection } from "@/components/entregas/EntregasSection";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface ProjetoOperadoresTabProps {
   projetoId: string;
@@ -25,17 +26,21 @@ interface OperadorProjeto {
   valor_fixo: number | null;
   percentual: number | null;
   base_calculo: string | null;
+  frequencia_entrega: string | null;
   status: string;
   operador?: {
     nome: string;
     cpf: string;
   };
+  entregas_count?: number;
+  has_active_entrega?: boolean;
 }
 
 export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
   const [operadores, setOperadores] = useState<OperadorProjeto[]>([]);
   const [loading, setLoading] = useState(true);
   const [vincularDialogOpen, setVincularDialogOpen] = useState(false);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchOperadores();
@@ -54,7 +59,24 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
         .order("data_entrada", { ascending: false });
 
       if (error) throw error;
-      setOperadores(data || []);
+
+      // Fetch entregas count for each operador_projeto
+      const operadoresWithEntregas = await Promise.all(
+        (data || []).map(async (op) => {
+          const { data: entregas, error: entregasError } = await supabase
+            .from("entregas")
+            .select("id, status")
+            .eq("operador_projeto_id", op.id);
+
+          return {
+            ...op,
+            entregas_count: entregas?.length || 0,
+            has_active_entrega: entregas?.some(e => e.status === "EM_ANDAMENTO") || false,
+          };
+        })
+      );
+
+      setOperadores(operadoresWithEntregas);
     } catch (error: any) {
       toast.error("Erro ao carregar operadores: " + error.message);
     } finally {
@@ -80,12 +102,31 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
     }
   };
 
+  const getFrequenciaLabel = (freq: string | null) => {
+    switch (freq) {
+      case "SEMANAL": return "Semanal";
+      case "QUINZENAL": return "Quinzenal";
+      case "MENSAL": return "Mensal";
+      default: return "Mensal";
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "ATIVO": return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
       case "INATIVO": return "bg-gray-500/20 text-gray-400 border-gray-500/30";
       default: return "bg-gray-500/20 text-gray-400 border-gray-500/30";
     }
+  };
+
+  const toggleCardExpanded = (id: string) => {
+    const newExpanded = new Set(expandedCards);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedCards(newExpanded);
   };
 
   if (loading) {
@@ -101,6 +142,8 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
     );
   }
 
+  const operadoresSemEntrega = operadores.filter(op => op.status === "ATIVO" && !op.has_active_entrega && op.entregas_count > 0);
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -110,6 +153,20 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
           Vincular Operador
         </Button>
       </div>
+
+      {/* Alerta de operadores sem entrega ativa */}
+      {operadoresSemEntrega.length > 0 && (
+        <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-400" />
+            <span className="font-medium text-yellow-400">Atenção: Operadores sem entrega ativa</span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {operadoresSemEntrega.map(op => op.operador?.nome).join(", ")} não possuem entrega em andamento. 
+            Crie novas entregas para dar continuidade às operações.
+          </p>
+        </div>
+      )}
 
       {operadores.length === 0 ? (
         <Card>
@@ -125,52 +182,94 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {operadores.map((op) => (
-            <Card key={op.id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Users className="h-5 w-5 text-primary" />
+          {operadores.map((op) => {
+            const isExpanded = expandedCards.has(op.id);
+            const needsAttention = op.status === "ATIVO" && !op.has_active_entrega && op.entregas_count > 0;
+
+            return (
+              <Card key={op.id} className={needsAttention ? "border-yellow-500/30" : ""}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center ${needsAttention ? 'bg-yellow-500/10' : 'bg-primary/10'}`}>
+                        <Users className={`h-5 w-5 ${needsAttention ? 'text-yellow-400' : 'text-primary'}`} />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">{op.operador?.nome}</CardTitle>
+                        {op.funcao && (
+                          <p className="text-sm text-muted-foreground">{op.funcao}</p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-base">{op.operador?.nome}</CardTitle>
-                      {op.funcao && (
-                        <p className="text-sm text-muted-foreground">{op.funcao}</p>
+                    <Badge className={getStatusColor(op.status)}>
+                      {op.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span>
+                        Desde {format(new Date(op.data_entrada), "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      <span>{getModeloLabel(op.modelo_pagamento)}</span>
+                      {op.frequencia_entrega && op.modelo_pagamento !== "POR_ENTREGA" && (
+                        <span className="text-xs text-muted-foreground">
+                          ({getFrequenciaLabel(op.frequencia_entrega)})
+                        </span>
                       )}
                     </div>
+                    {op.valor_fixo && op.valor_fixo > 0 && (
+                      <div className="text-sm text-emerald-500">
+                        {formatCurrency(op.valor_fixo)} / mês
+                      </div>
+                    )}
+                    {op.percentual && op.percentual > 0 && (
+                      <div className="text-sm text-emerald-500">
+                        {op.percentual}% {op.base_calculo && `sobre ${op.base_calculo.replace(/_/g, " ").toLowerCase()}`}
+                      </div>
+                    )}
                   </div>
-                  <Badge className={getStatusColor(op.status)}>
-                    {op.status}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>
-                      Desde {format(new Date(op.data_entrada), "dd/MM/yyyy", { locale: ptBR })}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span>{getModeloLabel(op.modelo_pagamento)}</span>
-                  </div>
-                  {op.valor_fixo && (
-                    <div className="text-sm text-emerald-500">
-                      {formatCurrency(op.valor_fixo)} / mês
+
+                  {/* Seção de Entregas */}
+                  <Collapsible open={isExpanded} onOpenChange={() => toggleCardExpanded(op.id)}>
+                    <div className="border-t pt-3">
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm" className="w-full justify-between">
+                          <span className="flex items-center gap-2">
+                            Entregas
+                            {needsAttention && (
+                              <AlertTriangle className="h-3 w-3 text-yellow-400" />
+                            )}
+                          </span>
+                          {isExpanded ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-3">
+                        <EntregasSection
+                          operadorProjetoId={op.id}
+                          operadorNome={op.operador?.nome || ""}
+                          modeloPagamento={op.modelo_pagamento}
+                          valorFixo={op.valor_fixo || 0}
+                          percentual={op.percentual || 0}
+                          frequenciaEntrega={op.frequencia_entrega || "MENSAL"}
+                          expanded={isExpanded}
+                        />
+                      </CollapsibleContent>
                     </div>
-                  )}
-                  {op.percentual && (
-                    <div className="text-sm text-emerald-500">
-                      {op.percentual}% {op.base_calculo && `sobre ${op.base_calculo.replace("_", " ").toLowerCase()}`}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  </Collapsible>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 

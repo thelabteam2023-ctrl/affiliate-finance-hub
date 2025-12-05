@@ -18,7 +18,10 @@ import {
   RefreshCw,
   Loader2,
   FolderKanban,
+  Package,
+  Target,
 } from "lucide-react";
+import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliacaoDialog";
 
 interface Alerta {
   tipo_alerta: string;
@@ -39,17 +42,39 @@ interface Alerta {
   projeto_nome: string | null;
 }
 
+interface EntregaPendente {
+  id: string;
+  numero_entrega: number;
+  resultado_nominal: number;
+  saldo_inicial: number;
+  meta_valor: number | null;
+  meta_percentual: number | null;
+  tipo_gatilho: string;
+  data_inicio: string;
+  data_fim_prevista: string | null;
+  status_conciliacao: string;
+  nivel_urgencia: string;
+  operador_nome: string;
+  projeto_nome: string;
+  modelo_pagamento: string;
+  valor_fixo: number | null;
+  percentual: number | null;
+}
+
 export default function CentralOperacoes() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const [entregasPendentes, setEntregasPendentes] = useState<EntregaPendente[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
+  const [selectedEntrega, setSelectedEntrega] = useState<EntregaPendente | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchAlertas();
+    fetchData();
   }, []);
 
-  const fetchAlertas = async (isRefresh = false) => {
+  const fetchData = async (isRefresh = false) => {
     try {
       if (isRefresh) {
         setRefreshing(true);
@@ -57,15 +82,24 @@ export default function CentralOperacoes() {
         setLoading(true);
       }
 
-      const { data, error } = await supabase
+      // Fetch alertas
+      const { data: alertasData, error: alertasError } = await supabase
         .from("v_painel_operacional")
         .select("*");
 
-      if (error) throw error;
+      if (alertasError) throw alertasError;
+      setAlertas(alertasData || []);
 
-      setAlertas(data || []);
+      // Fetch entregas pendentes
+      const { data: entregasData, error: entregasError } = await supabase
+        .from("v_entregas_pendentes")
+        .select("*")
+        .in("status_conciliacao", ["PRONTA"]);
+
+      if (entregasError) throw entregasError;
+      setEntregasPendentes(entregasData || []);
     } catch (error: any) {
-      toast.error("Erro ao carregar alertas: " + error.message);
+      toast.error("Erro ao carregar dados: " + error.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -117,21 +151,7 @@ export default function CentralOperacoes() {
     }
   };
 
-  const getAlertTypeIcon = (tipo: string) => {
-    switch (tipo) {
-      case "SAQUE_PENDENTE":
-        return <DollarSign className="h-5 w-5 text-emerald-400" />;
-      case "PARCERIA_VENCIDA":
-        return <AlertTriangle className="h-5 w-5 text-red-400" />;
-      case "PARCERIA_VENCENDO":
-        return <Calendar className="h-5 w-5 text-yellow-400" />;
-      default:
-        return <Bell className="h-5 w-5 text-muted-foreground" />;
-    }
-  };
-
   const handleSaqueAction = (alerta: Alerta) => {
-    // Navegar para Caixa e abrir dialog de nova transação
     navigate("/caixa", {
       state: {
         openDialog: true,
@@ -141,6 +161,11 @@ export default function CentralOperacoes() {
 
   const handleParceriaAction = (alerta: Alerta) => {
     navigate("/programa-indicacao");
+  };
+
+  const handleConciliarEntrega = (entrega: EntregaPendente) => {
+    setSelectedEntrega(entrega);
+    setConciliacaoOpen(true);
   };
 
   const alertasSaques = alertas.filter((a) => a.tipo_alerta === "SAQUE_PENDENTE");
@@ -153,8 +178,8 @@ export default function CentralOperacoes() {
     return (
       <div className="p-6 space-y-6">
         <Skeleton className="h-10 w-64" />
-        <div className="grid gap-4 md:grid-cols-3">
-          {[1, 2, 3].map((i) => (
+        <div className="grid gap-4 md:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-24" />
           ))}
         </div>
@@ -162,6 +187,8 @@ export default function CentralOperacoes() {
       </div>
     );
   }
+
+  const totalAlertas = alertasCriticos.length + entregasPendentes.filter(e => e.nivel_urgencia === "CRITICA").length;
 
   return (
     <div className="p-6 space-y-6">
@@ -175,7 +202,7 @@ export default function CentralOperacoes() {
         </div>
         <Button
           variant="outline"
-          onClick={() => fetchAlertas(true)}
+          onClick={() => fetchData(true)}
           disabled={refreshing}
         >
           {refreshing ? (
@@ -188,15 +215,26 @@ export default function CentralOperacoes() {
       </div>
 
       {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card className="border-red-500/30 bg-red-500/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Alertas Críticos</CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-400">{alertasCriticos.length}</div>
+            <div className="text-2xl font-bold text-red-400">{totalAlertas}</div>
             <p className="text-xs text-muted-foreground">Exigem ação imediata</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-purple-500/30 bg-purple-500/5">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Entregas Pendentes</CardTitle>
+            <Package className="h-4 w-4 text-purple-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-400">{entregasPendentes.length}</div>
+            <p className="text-xs text-muted-foreground">Aguardando conciliação</p>
           </CardContent>
         </Card>
 
@@ -229,7 +267,7 @@ export default function CentralOperacoes() {
       </div>
 
       {/* Alertas List */}
-      {alertas.length === 0 ? (
+      {alertas.length === 0 && entregasPendentes.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-10">
@@ -243,6 +281,84 @@ export default function CentralOperacoes() {
         </Card>
       ) : (
         <div className="space-y-4">
+          {/* Entregas Pendentes de Conciliação */}
+          {entregasPendentes.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5 text-purple-400" />
+                  Entregas Pendentes de Conciliação
+                </CardTitle>
+                <CardDescription>
+                  Entregas que atingiram a meta ou período encerrado
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {entregasPendentes.map((entrega) => (
+                    <div
+                      key={entrega.id}
+                      className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
+                        entrega.nivel_urgencia === "CRITICA"
+                          ? "border-red-500/30 bg-red-500/5"
+                          : "bg-card hover:bg-muted/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div
+                          className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                            entrega.nivel_urgencia === "CRITICA"
+                              ? "bg-red-500/10"
+                              : "bg-purple-500/10"
+                          }`}
+                        >
+                          <Target
+                            className={`h-5 w-5 ${
+                              entrega.nivel_urgencia === "CRITICA"
+                                ? "text-red-400"
+                                : "text-purple-400"
+                            }`}
+                          />
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {entrega.operador_nome} - Entrega #{entrega.numero_entrega}
+                          </p>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <FolderKanban className="h-3 w-3" />
+                              {entrega.projeto_nome}
+                            </span>
+                            {entrega.meta_valor && (
+                              <span>Meta: {formatCurrency(entrega.meta_valor)}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-lg font-bold text-emerald-400">
+                          {formatCurrency(entrega.resultado_nominal)}
+                        </span>
+                        {getUrgencyBadge(entrega.nivel_urgencia)}
+                        <Badge className={
+                          entrega.tipo_gatilho === "META_ATINGIDA"
+                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                            : "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                        }>
+                          {entrega.tipo_gatilho === "META_ATINGIDA" ? "Meta Atingida" : "Período Fim"}
+                        </Badge>
+                        <Button size="sm" onClick={() => handleConciliarEntrega(entrega)}>
+                          Conciliar
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Saques Pendentes */}
           {alertasSaques.length > 0 && (
             <Card>
@@ -365,6 +481,30 @@ export default function CentralOperacoes() {
             </Card>
           )}
         </div>
+      )}
+
+      {/* Dialog de Conciliação */}
+      {selectedEntrega && (
+        <EntregaConciliacaoDialog
+          open={conciliacaoOpen}
+          onOpenChange={setConciliacaoOpen}
+          entrega={{
+            id: selectedEntrega.id,
+            numero_entrega: selectedEntrega.numero_entrega,
+            resultado_nominal: selectedEntrega.resultado_nominal,
+            saldo_inicial: selectedEntrega.saldo_inicial,
+            meta_valor: selectedEntrega.meta_valor,
+            meta_percentual: selectedEntrega.meta_percentual,
+            tipo_gatilho: selectedEntrega.tipo_gatilho,
+            data_inicio: selectedEntrega.data_inicio,
+            data_fim_prevista: selectedEntrega.data_fim_prevista,
+          }}
+          operadorNome={selectedEntrega.operador_nome}
+          modeloPagamento={selectedEntrega.modelo_pagamento}
+          valorFixo={selectedEntrega.valor_fixo || 0}
+          percentual={selectedEntrega.percentual || 0}
+          onSuccess={() => fetchData(true)}
+        />
       )}
     </div>
   );
