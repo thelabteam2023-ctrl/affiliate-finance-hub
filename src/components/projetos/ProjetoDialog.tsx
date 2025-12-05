@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   Select,
@@ -28,12 +29,15 @@ import { ptBR } from "date-fns/locale";
 import { 
   FolderKanban, 
   Users, 
-  DollarSign,
   Calendar,
-  Plus,
-  UserPlus
+  UserPlus,
+  Coins,
+  Calculator,
+  AlertTriangle,
+  CheckCircle2
 } from "lucide-react";
 import { VincularOperadorDialog } from "@/components/projetos/VincularOperadorDialog";
+import { ProjetoConciliacaoDialog } from "@/components/projetos/ProjetoConciliacaoDialog";
 
 interface Projeto {
   id?: string;
@@ -45,6 +49,8 @@ interface Projeto {
   data_fim_real?: string | null;
   orcamento_inicial: number;
   observacoes?: string | null;
+  tem_investimento_crypto?: boolean;
+  conciliado?: boolean;
 }
 
 interface OperadorVinculado {
@@ -76,6 +82,8 @@ export function ProjetoDialog({
   const [activeTab, setActiveTab] = useState("dados");
   const [operadores, setOperadores] = useState<OperadorVinculado[]>([]);
   const [vincularDialogOpen, setVincularDialogOpen] = useState(false);
+  const [conciliacaoDialogOpen, setConciliacaoDialogOpen] = useState(false);
+  const [temConciliacao, setTemConciliacao] = useState(false);
   
   const [formData, setFormData] = useState<Projeto>({
     nome: "",
@@ -86,6 +94,8 @@ export function ProjetoDialog({
     data_fim_real: null,
     orcamento_inicial: 0,
     observacoes: null,
+    tem_investimento_crypto: false,
+    conciliado: false,
   });
 
   useEffect(() => {
@@ -98,9 +108,12 @@ export function ProjetoDialog({
           data_fim_prevista: projeto.data_fim_prevista || null,
           data_fim_real: projeto.data_fim_real || null,
           observacoes: projeto.observacoes || null,
+          tem_investimento_crypto: projeto.tem_investimento_crypto || false,
+          conciliado: projeto.conciliado || false,
         });
         if (projeto.id) {
           fetchOperadoresProjeto(projeto.id);
+          checkConciliacao(projeto.id);
         }
       } else {
         setFormData({
@@ -112,8 +125,11 @@ export function ProjetoDialog({
           data_fim_real: null,
           orcamento_inicial: 0,
           observacoes: null,
+          tem_investimento_crypto: false,
+          conciliado: false,
         });
         setOperadores([]);
+        setTemConciliacao(false);
       }
       setActiveTab("dados");
     }
@@ -149,9 +165,27 @@ export function ProjetoDialog({
     }
   };
 
+  const checkConciliacao = async (projetoId: string) => {
+    const { data, error } = await supabase
+      .from("projeto_conciliacoes")
+      .select("id")
+      .eq("projeto_id", projetoId)
+      .limit(1);
+
+    if (!error && data) {
+      setTemConciliacao(data.length > 0);
+    }
+  };
+
   const handleSave = async () => {
     if (!formData.nome.trim()) {
       toast.error("Nome é obrigatório");
+      return;
+    }
+
+    // Validar conciliação obrigatória para projetos crypto ao finalizar
+    if (formData.status === "FINALIZADO" && formData.tem_investimento_crypto && !formData.conciliado) {
+      toast.error("Projetos com investimento crypto precisam ser conciliados antes de finalizar");
       return;
     }
 
@@ -172,6 +206,7 @@ export function ProjetoDialog({
         data_fim_real: formData.data_fim_real || null,
         orcamento_inicial: formData.orcamento_inicial || 0,
         observacoes: formData.observacoes || null,
+        tem_investimento_crypto: formData.tem_investimento_crypto || false,
         user_id: session.session.user.id,
       };
 
@@ -217,24 +252,8 @@ export function ProjetoDialog({
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "PLANEJADO": return "Planejado";
-      case "EM_ANDAMENTO": return "Em Andamento";
-      case "PAUSADO": return "Pausado";
-      case "FINALIZADO": return "Finalizado";
-      default: return status;
-    }
-  };
-
   const isViewMode = mode === "view";
+  const precisaConciliacao = formData.tem_investimento_crypto && !formData.conciliado;
 
   return (
     <>
@@ -347,6 +366,68 @@ export function ProjetoDialog({
                   />
                 </div>
 
+                {/* Investimento Crypto */}
+                <Card className={formData.tem_investimento_crypto ? "border-orange-500/30" : ""}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="tem_crypto"
+                        checked={formData.tem_investimento_crypto}
+                        onCheckedChange={(checked) => 
+                          setFormData({ ...formData, tem_investimento_crypto: checked as boolean })
+                        }
+                        disabled={isViewMode}
+                      />
+                      <div className="space-y-1">
+                        <Label htmlFor="tem_crypto" className="flex items-center gap-2 cursor-pointer">
+                          <Coins className="h-4 w-4 text-orange-500" />
+                          Projeto com Investimento Crypto
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Ativa a obrigatoriedade de conciliação patrimonial antes de finalizar o projeto
+                        </p>
+                      </div>
+                    </div>
+
+                    {formData.tem_investimento_crypto && mode !== "create" && (
+                      <div className={`mt-4 p-3 rounded-lg flex items-center justify-between ${
+                        formData.conciliado 
+                          ? "bg-emerald-500/10 border border-emerald-500/20" 
+                          : "bg-amber-500/10 border border-amber-500/20"
+                      }`}>
+                        <div className="flex items-center gap-2">
+                          {formData.conciliado ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4 text-amber-500" />
+                          )}
+                          <span className="text-sm">
+                            {formData.conciliado 
+                              ? "Projeto conciliado" 
+                              : "Conciliação pendente"
+                            }
+                          </span>
+                        </div>
+                        {!formData.conciliado && !isViewMode && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setConciliacaoDialogOpen(true)}
+                          >
+                            <Calculator className="h-4 w-4 mr-2" />
+                            Realizar Conciliação
+                          </Button>
+                        )}
+                        {formData.conciliado && (
+                          <Badge className="bg-emerald-500/20 text-emerald-400">
+                            Conciliado
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
                 <div className="space-y-2">
                   <Label>Observações</Label>
                   <Textarea
@@ -444,23 +525,48 @@ export function ProjetoDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleSave} disabled={loading}>
+              <Button 
+                onClick={handleSave} 
+                disabled={loading || (formData.status === "FINALIZADO" && precisaConciliacao)}
+              >
                 {loading ? "Salvando..." : mode === "create" ? "Criar Projeto" : "Salvar Alterações"}
               </Button>
             </div>
+          )}
+
+          {formData.status === "FINALIZADO" && precisaConciliacao && !isViewMode && (
+            <p className="text-xs text-amber-500 text-right mt-2">
+              ⚠️ Realize a conciliação antes de finalizar o projeto
+            </p>
           )}
         </DialogContent>
       </Dialog>
 
       {projeto?.id && (
-        <VincularOperadorDialog
-          open={vincularDialogOpen}
-          onOpenChange={setVincularDialogOpen}
-          projetoId={projeto.id}
-          onSuccess={() => {
-            fetchOperadoresProjeto(projeto.id!);
-          }}
-        />
+        <>
+          <VincularOperadorDialog
+            open={vincularDialogOpen}
+            onOpenChange={setVincularDialogOpen}
+            projetoId={projeto.id}
+            onSuccess={() => {
+              fetchOperadoresProjeto(projeto.id!);
+            }}
+          />
+          <ProjetoConciliacaoDialog
+            open={conciliacaoDialogOpen}
+            onOpenChange={setConciliacaoDialogOpen}
+            projeto={{
+              id: projeto.id,
+              nome: formData.nome,
+              tem_investimento_crypto: formData.tem_investimento_crypto,
+            }}
+            onSuccess={() => {
+              setFormData(prev => ({ ...prev, conciliado: true }));
+              setTemConciliacao(true);
+              checkConciliacao(projeto.id!);
+            }}
+          />
+        </>
       )}
     </>
   );
