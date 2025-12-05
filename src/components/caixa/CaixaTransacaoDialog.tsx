@@ -2093,7 +2093,7 @@ export function CaixaTransacaoDialog({
                             )}
                             {(origemTipo === "CAIXA_OPERACIONAL" || 
                               (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO") ||
-                              (tipoTransacao === "TRANSFERENCIA" && origemTipo === "CAIXA_OPERACIONAL")) && parseFloat(String(valor)) === 0 && (
+                              (tipoTransacao === "TRANSFERENCIA" && origemTipo === "CAIXA_OPERACIONAL")) && (!valor || parseFloat(String(valor)) === 0) && (
                               <div className="text-xs text-muted-foreground mt-2">
                                 Saldo disponível: {tipoMoeda === "CRYPTO" ? (
                                   formatCryptoBalance(
@@ -2225,7 +2225,7 @@ export function CaixaTransacaoDialog({
                               </div>
                             )}
                             {(destinoTipo === "CAIXA_OPERACIONAL" || 
-                              (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "APORTE")) && parseFloat(String(valor)) === 0 && (
+                              (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "APORTE")) && (!valor || parseFloat(String(valor)) === 0) && (
                               <div className="text-xs text-muted-foreground mt-2">
                                 Saldo atual: {tipoMoeda === "CRYPTO" ? (
                                   formatCryptoBalance(
