@@ -144,6 +144,39 @@ export default function Testes() {
     "PRISCILA MELO DUARTE", "GUILHERME ANDRADE CASTRO", "CAROLINA FREITAS VIEIRA"
   ];
 
+  // Função para gerar endereço de wallet aleatório
+  const gerarEnderecoWallet = () => {
+    const chars = '0123456789abcdef';
+    let endereco = '0x';
+    for (let i = 0; i < 40; i++) {
+      endereco += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return endereco;
+  };
+
+  // Função para gerar chave PIX aleatória (email ou telefone)
+  const gerarChavePix = (nome: string, index: number) => {
+    const tipoChave = Math.random() > 0.5 ? 'email' : 'telefone';
+    if (tipoChave === 'email') {
+      const nomeNormalizado = nome.toLowerCase().replace(/\s+/g, '.').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      return `${nomeNormalizado}${index}@email.com`;
+    } else {
+      const ddd = ['11', '21', '31', '41', '51'][Math.floor(Math.random() * 5)];
+      const numero = Math.floor(Math.random() * 900000000) + 100000000;
+      return `${ddd}9${numero}`;
+    }
+  };
+
+  const bancosDisponiveis = [
+    { codigo: '001', nome: 'Banco do Brasil' },
+    { codigo: '033', nome: 'Santander' },
+    { codigo: '104', nome: 'Caixa Econômica' },
+    { codigo: '237', nome: 'Bradesco' },
+    { codigo: '341', nome: 'Itaú' },
+    { codigo: '260', nome: 'Nubank' },
+    { codigo: '077', nome: 'Inter' },
+  ];
+
   const handleGerarParceirosAleatorios = async () => {
     setLoading("parceiros_gerar");
     try {
@@ -170,10 +203,63 @@ export default function Testes() {
         status: "ativo",
       }));
 
-      const { error } = await supabase.from("parceiros").insert(novosParceiros);
-      if (error) throw error;
+      // Inserir parceiros e recuperar os IDs
+      const { data: parceirosCriados, error: parceirosError } = await supabase
+        .from("parceiros")
+        .insert(novosParceiros)
+        .select("id, nome");
 
-      toast.success("3 parceiros criados com sucesso!");
+      if (parceirosError) throw parceirosError;
+      if (!parceirosCriados || parceirosCriados.length === 0) {
+        throw new Error("Nenhum parceiro foi criado");
+      }
+
+      // Criar contas bancárias para cada parceiro
+      const contasBancarias = parceirosCriados.map((parceiro, index) => {
+        const banco = bancosDisponiveis[Math.floor(Math.random() * bancosDisponiveis.length)];
+        return {
+          parceiro_id: parceiro.id,
+          banco: banco.nome,
+          titular: parceiro.nome,
+          tipo_conta: Math.random() > 0.5 ? 'CORRENTE' : 'POUPANCA',
+          pix_key: gerarChavePix(parceiro.nome, index),
+        };
+      });
+
+      const { error: contasError } = await supabase.from("contas_bancarias").insert(contasBancarias);
+      if (contasError) throw contasError;
+
+      // Criar wallets crypto para cada parceiro
+      const walletsCrypto: any[] = [];
+      
+      parceirosCriados.forEach((parceiro, index) => {
+        // Wallet principal com USDT na rede ERC20
+        walletsCrypto.push({
+          parceiro_id: parceiro.id,
+          endereco: gerarEnderecoWallet(),
+          network: 'ERC20',
+          exchange: 'Binance',
+          moeda: ['USDT'],
+        });
+
+        // Para alguns parceiros, adicionar uma segunda wallet com outras moedas
+        if (index < 2) {
+          const moedasExtras = index === 0 ? ['USDC', 'ETH'] : ['BTC'];
+          const redesExtras = index === 0 ? 'ERC20' : 'BTC';
+          walletsCrypto.push({
+            parceiro_id: parceiro.id,
+            endereco: gerarEnderecoWallet(),
+            network: redesExtras,
+            exchange: index === 0 ? 'MetaMask' : 'Ledger',
+            moeda: moedasExtras,
+          });
+        }
+      });
+
+      const { error: walletsError } = await supabase.from("wallets_crypto").insert(walletsCrypto);
+      if (walletsError) throw walletsError;
+
+      toast.success(`3 parceiros criados com ${contasBancarias.length} contas e ${walletsCrypto.length} wallets!`);
     } catch (error: any) {
       console.error("Erro ao gerar parceiros:", error);
       toast.error(`Erro ao gerar parceiros: ${error.message}`);
