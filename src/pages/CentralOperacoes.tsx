@@ -78,11 +78,19 @@ interface ParceriaAlertaEncerramento {
   dataFim: string;
 }
 
+interface ParceiroSemParceria {
+  id: string;
+  nome: string;
+  cpf: string;
+  createdAt: string;
+}
+
 export default function CentralOperacoes() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [entregasPendentes, setEntregasPendentes] = useState<EntregaPendente[]>([]);
   const [pagamentosParceiros, setPagamentosParceiros] = useState<PagamentoParceiroPendente[]>([]);
   const [parceriasEncerramento, setParceriasEncerramento] = useState<ParceriaAlertaEncerramento[]>([]);
+  const [parceirosSemParceria, setParceirosSemParceria] = useState<ParceiroSemParceria[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
@@ -110,7 +118,9 @@ export default function CentralOperacoes() {
         entregasResult,
         parceirosResult,
         movimentacoesResult,
-        encerResult
+        encerResult,
+        todosParceirosResult,
+        todasParceriasResult
       ] = await Promise.all([
         supabase.from("v_painel_operacional").select("*"),
         supabase.from("v_entregas_pendentes").select("*").in("status_conciliacao", ["PRONTA"]),
@@ -140,7 +150,17 @@ export default function CentralOperacoes() {
             parceiro:parceiros(nome)
           `)
           .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-          .not("data_fim_prevista", "is", null)
+          .not("data_fim_prevista", "is", null),
+        // Buscar todos os parceiros ativos
+        supabase
+          .from("parceiros")
+          .select("id, nome, cpf, created_at")
+          .eq("status", "ativo"),
+        // Buscar todas as parcerias ativas ou em encerramento (para identificar parceiros com parceria)
+        supabase
+          .from("parcerias")
+          .select("parceiro_id")
+          .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
       ]);
 
       if (alertasResult.error) throw alertasResult.error;
@@ -191,6 +211,24 @@ export default function CentralOperacoes() {
           .sort((a, b) => a.diasRestantes - b.diasRestantes);
 
         setParceriasEncerramento(alertasEncer);
+      }
+
+      // Parceiros sem parceria ativa - identificar parceiros que precisam ter parceria criada
+      if (!todosParceirosResult.error && !todasParceriasResult.error) {
+        const parceirosComParceria = new Set(
+          (todasParceriasResult.data || []).map((p: any) => p.parceiro_id)
+        );
+        
+        const semParceria: ParceiroSemParceria[] = (todosParceirosResult.data || [])
+          .filter((p: any) => !parceirosComParceria.has(p.id))
+          .map((p: any) => ({
+            id: p.id,
+            nome: p.nome,
+            cpf: p.cpf,
+            createdAt: p.created_at,
+          }));
+        
+        setParceirosSemParceria(semParceria);
       }
     } catch (error: any) {
       toast.error("Erro ao carregar dados: " + error.message);
@@ -351,8 +389,9 @@ export default function CentralOperacoes() {
             <Users className="h-4 w-4 text-cyan-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-cyan-400">{pagamentosParceiros.length + parceriasEncerramento.length}</div>
+            <div className="text-2xl font-bold text-cyan-400">{pagamentosParceiros.length + parceriasEncerramento.length + parceirosSemParceria.length}</div>
             <p className="text-xs text-muted-foreground">
+              {parceirosSemParceria.length > 0 && `${parceirosSemParceria.length} sem parceria • `}
               {formatCurrency(pagamentosParceiros.reduce((acc, p) => acc + p.valorParceiro, 0))} pendentes
             </p>
           </CardContent>
@@ -360,7 +399,7 @@ export default function CentralOperacoes() {
       </div>
 
       {/* Alertas List */}
-      {alertas.length === 0 && entregasPendentes.length === 0 && pagamentosParceiros.length === 0 && parceriasEncerramento.length === 0 ? (
+      {alertas.length === 0 && entregasPendentes.length === 0 && pagamentosParceiros.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-10">
@@ -375,7 +414,7 @@ export default function CentralOperacoes() {
       ) : (
         <div className="space-y-4">
           {/* SEÇÃO: CAPTAÇÃO DE PARCERIAS */}
-          {(pagamentosParceiros.length > 0 || parceriasEncerramento.length > 0) && (
+          {(pagamentosParceiros.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -383,10 +422,53 @@ export default function CentralOperacoes() {
                   Captação de Parcerias
                 </CardTitle>
                 <CardDescription>
-                  Pagamentos pendentes e alertas de encerramento de parcerias
+                  Parceiros sem parceria, pagamentos pendentes e alertas de encerramento
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Parceiros sem Parceria Cadastrada */}
+                {parceirosSemParceria.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-orange-400" />
+                      Parceiros sem Parceria ({parceirosSemParceria.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {parceirosSemParceria.map((parceiro) => (
+                        <div
+                          key={parceiro.id}
+                          className="flex items-center justify-between p-3 rounded-lg border border-orange-500/30 bg-orange-500/5 hover:bg-orange-500/10 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                              <User className="h-4 w-4 text-orange-400" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">{parceiro.nome}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Cadastrado em {new Date(parceiro.createdAt).toLocaleDateString("pt-BR")}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">
+                              Sem parceria
+                            </Badge>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => navigate("/programa-indicacao", { state: { tab: "parcerias" } })}
+                            >
+                              Criar Parceria
+                              <ArrowRight className="ml-2 h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Pagamentos Pendentes a Parceiros */}
                 {pagamentosParceiros.length > 0 && (
                   <div>
