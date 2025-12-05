@@ -431,9 +431,10 @@ export function OperadorDialog({
                   <Label>Nome *</Label>
                   <Input
                     value={formData.nome}
-                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, nome: e.target.value.toUpperCase() })}
                     disabled={isViewMode}
                     placeholder="Nome completo"
+                    className="uppercase"
                   />
                 </div>
                 <div className="space-y-2">
