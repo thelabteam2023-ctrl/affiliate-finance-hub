@@ -109,11 +109,11 @@ export function ParceriaCard({
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Calendar className="h-4 w-4" />
-            <span>Início: {format(new Date(parceria.data_inicio), "dd/MM/yy", { locale: ptBR })}</span>
+            <span>Início: {format(parseLocalDate(parceria.data_inicio), "dd/MM/yy", { locale: ptBR })}</span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <Clock className="h-4 w-4" />
-            <span>Fim: {format(new Date(parceria.data_fim_prevista), "dd/MM/yy", { locale: ptBR })}</span>
+            <span>Fim: {format(parseLocalDate(parceria.data_fim_prevista), "dd/MM/yy", { locale: ptBR })}</span>
           </div>
         </div>
 
