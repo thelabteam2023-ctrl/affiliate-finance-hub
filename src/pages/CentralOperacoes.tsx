@@ -431,7 +431,7 @@ export default function CentralOperacoes() {
                   <div>
                     <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-orange-400" />
-                      Parceiros sem Parceria ({parceirosSemParceria.length})
+                      Parceiros sem Registro de Captação e Pagamento ({parceirosSemParceria.length})
                     </h4>
                     <div className="space-y-2">
                       {parceirosSemParceria.map((parceiro) => (
