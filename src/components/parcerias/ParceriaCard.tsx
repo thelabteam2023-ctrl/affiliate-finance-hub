@@ -77,7 +77,6 @@ export function ParceriaCard({
           </div>
           <div className="flex flex-col gap-1 items-end">
             {getStatusBadge(parceria.status)}
-            {getAlertaBadge(parceria.nivel_alerta)}
           </div>
         </div>
       </CardHeader>
