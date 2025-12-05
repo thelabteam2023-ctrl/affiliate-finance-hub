@@ -305,10 +305,34 @@ export default function Testes() {
         status: "ATIVO",
       }));
 
-      const { error } = await supabase.from("indicadores_referral").insert(novosIndicadores);
+      // Inserir indicadores e recuperar IDs
+      const { data: indicadoresCriados, error } = await supabase
+        .from("indicadores_referral")
+        .insert(novosIndicadores)
+        .select("id");
+      
       if (error) throw error;
+      if (!indicadoresCriados || indicadoresCriados.length === 0) {
+        throw new Error("Nenhum indicador foi criado");
+      }
 
-      toast.success("2 indicadores criados com sucesso!");
+      // Criar acordos de comissão para cada indicador (obrigatório)
+      const acordos = indicadoresCriados.map((indicador, index) => ({
+        user_id: user.id,
+        indicador_id: indicador.id,
+        orcamento_por_parceiro: [500, 750, 600, 800][index % 4], // Valores variados
+        meta_parceiros: [5, 10, 8, 15][index % 4],
+        valor_bonus: [1000, 2000, 1500, 2500][index % 4],
+        ativo: true,
+      }));
+
+      const { error: acordoError } = await supabase
+        .from("indicador_acordos")
+        .insert(acordos);
+      
+      if (acordoError) throw acordoError;
+
+      toast.success("2 indicadores criados com acordos de comissão!");
     } catch (error: any) {
       console.error("Erro ao gerar indicadores:", error);
       toast.error(`Erro ao gerar indicadores: ${error.message}`);
