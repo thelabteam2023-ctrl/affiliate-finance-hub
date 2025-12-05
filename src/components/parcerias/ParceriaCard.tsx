@@ -5,6 +5,12 @@ import { Handshake, Eye, Pencil, Trash2, User, Calendar, Clock } from "lucide-re
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+// Helper to parse YYYY-MM-DD as local date (not UTC)
+const parseLocalDate = (dateString: string): Date => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 interface ParceriaAlerta {
   id: string;
   parceiro_id: string;
