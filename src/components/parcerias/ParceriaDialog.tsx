@@ -562,7 +562,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
                 </div>
                 
                 <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                  <span className={`text-sm font-medium ${formData.custo_aquisicao_isento ? 'text-muted-foreground' : 'text-emerald-600'}`}>
+                  <span className={`text-sm font-medium ${!formData.custo_aquisicao_isento ? 'text-muted-foreground' : 'text-emerald-600'}`}>
                     Sem pagamento ao parceiro
                   </span>
                   <Switch 
@@ -574,7 +574,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
                     })}
                     disabled={isViewMode}
                   />
-                  <span className={`text-sm font-medium ${!formData.custo_aquisicao_isento ? 'text-muted-foreground' : 'text-emerald-600'}`}>
+                  <span className={`text-sm font-medium ${formData.custo_aquisicao_isento ? 'text-muted-foreground' : 'text-emerald-600'}`}>
                     Pagamento ao parceiro
                   </span>
                 </div>

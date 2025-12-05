@@ -313,11 +313,11 @@ export default function GestaoParceiros() {
         const diffTime = dataFim.getTime() - hoje.getTime();
         const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
-        // Se parceria é gratuita (custo_aquisicao_isento=true ou valor_parceiro=0/null), 
+        // Se parceria é gratuita (custo_aquisicao_isento=true ou valor_parceiro<=0/null), 
         // considera como pagamento realizado (não há pendência)
-        const isGratuita = parceria.custo_aquisicao_isento === true || 
-                          !parceria.valor_parceiro || 
-                          parceria.valor_parceiro === 0;
+        const valorParceiro = Number(parceria.valor_parceiro) || 0;
+        const custoIsento = parceria.custo_aquisicao_isento === true;
+        const isGratuita = custoIsento || valorParceiro <= 0;
         
         parceriasMap.set(parceria.parceiro_id, {
           parceiro_id: parceria.parceiro_id,
