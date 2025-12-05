@@ -291,13 +291,51 @@ export default function GestaoParceiros() {
     navigate("/auth");
   };
 
-  const handleDeleteClick = (id: string) => {
+  const handleDeleteClick = async (id: string) => {
+    // Check if partner has balance before allowing deletion
+    const roiInfo = roiData.get(id);
+    const saldoInfo = saldosData.get(id);
+    
+    const saldoBookmakers = roiInfo?.saldo_bookmakers || 0;
+    const saldoFiat = saldoInfo?.saldo_fiat || 0;
+    const saldoCrypto = saldoInfo?.saldo_crypto_usd || 0;
+    const totalSaldo = saldoBookmakers + saldoFiat + saldoCrypto;
+
+    if (totalSaldo > 0) {
+      toast({
+        title: "Exclusão bloqueada",
+        description: `Este parceiro possui saldo pendente de ${formatCurrency(saldoBookmakers + saldoFiat)} + ${formatCurrencyUSD(saldoCrypto)} em crypto. Realize o saque antes de excluir.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setParceiroToDelete(id);
     setDeleteDialogOpen(true);
   };
 
   const handleDelete = async () => {
     if (!parceiroToDelete) return;
+
+    // Double-check balance before deletion
+    const roiInfo = roiData.get(parceiroToDelete);
+    const saldoInfo = saldosData.get(parceiroToDelete);
+    
+    const saldoBookmakers = roiInfo?.saldo_bookmakers || 0;
+    const saldoFiat = saldoInfo?.saldo_fiat || 0;
+    const saldoCrypto = saldoInfo?.saldo_crypto_usd || 0;
+    const totalSaldo = saldoBookmakers + saldoFiat + saldoCrypto;
+
+    if (totalSaldo > 0) {
+      toast({
+        title: "Exclusão bloqueada",
+        description: "Este parceiro possui saldo pendente. Realize o saque antes de excluir.",
+        variant: "destructive",
+      });
+      setDeleteDialogOpen(false);
+      setParceiroToDelete(null);
+      return;
+    }
 
     try {
       const { error } = await supabase
