@@ -182,8 +182,8 @@ export default function GestaoBookmakers() {
   };
 
   const handleAddTransaction = (bookmaker: Bookmaker) => {
-    setSelectedBookmaker(bookmaker);
-    setTransacaoDialogOpen(true);
+    // Navegar para Caixa Operacional para escolher tipo de transação
+    navigate("/caixa", { state: { openDialog: true } });
   };
 
   const handleViewHistory = (bookmaker: Bookmaker) => {

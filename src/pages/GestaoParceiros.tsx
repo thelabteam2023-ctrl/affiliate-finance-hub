@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useCotacoes } from "@/hooks/useCotacoes";
 import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2, LayoutGrid, List, FileText } from "lucide-react";
 import { BankAccountItem } from "@/components/parceiros/BankAccountItem";
 import { WalletItem } from "@/components/parceiros/WalletItem";
@@ -55,10 +56,18 @@ interface SaldoParceiro {
   saldo_crypto_usd: number;
 }
 
+interface SaldoCryptoRaw {
+  parceiro_id: string;
+  coin: string;
+  saldo_coin: number;
+  saldo_usd: number;
+}
+
 export default function GestaoParceiros() {
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
   const [roiData, setRoiData] = useState<Map<string, ParceiroROI>>(new Map());
   const [saldosData, setSaldosData] = useState<Map<string, SaldoParceiro>>(new Map());
+  const [saldosCryptoRaw, setSaldosCryptoRaw] = useState<SaldoCryptoRaw[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [showCPF, setShowCPF] = useState(false);
@@ -81,6 +90,41 @@ export default function GestaoParceiros() {
   } | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Hook de cotações com atualização automática
+  const cryptoSymbols = useMemo(() => {
+    const symbols = saldosCryptoRaw.map(s => s.coin);
+    return [...new Set(symbols)];
+  }, [saldosCryptoRaw]);
+  
+  const { cryptoPrices, getCryptoUSDValue } = useCotacoes(cryptoSymbols);
+
+  // Recalcular saldos crypto quando preços atualizarem
+  useEffect(() => {
+    if (saldosCryptoRaw.length === 0) return;
+    
+    const saldosMap = new Map<string, SaldoParceiro>(saldosData);
+    
+    // Reset crypto values
+    saldosMap.forEach((saldo, key) => {
+      saldo.saldo_crypto_usd = 0;
+    });
+    
+    // Recalculate with real-time prices
+    saldosCryptoRaw.forEach((saldo) => {
+      if (!saldo.parceiro_id) return;
+      const current = saldosMap.get(saldo.parceiro_id) || {
+        parceiro_id: saldo.parceiro_id,
+        saldo_fiat: 0,
+        saldo_crypto_usd: 0,
+      };
+      const usdValue = getCryptoUSDValue(saldo.coin, saldo.saldo_coin, saldo.saldo_usd);
+      current.saldo_crypto_usd += usdValue;
+      saldosMap.set(saldo.parceiro_id, current);
+    });
+    
+    setSaldosData(new Map(saldosMap));
+  }, [cryptoPrices, saldosCryptoRaw]);
 
   useEffect(() => {
     checkAuth();
@@ -239,7 +283,18 @@ export default function GestaoParceiros() {
 
       if (errorCrypto) throw errorCrypto;
 
-      // Aggregate balances per partner
+      // Store raw crypto data for real-time price updates
+      const cryptoRaw: SaldoCryptoRaw[] = (saldosCrypto || [])
+        .filter((s: any) => s.parceiro_id && s.saldo_coin > 0)
+        .map((s: any) => ({
+          parceiro_id: s.parceiro_id,
+          coin: s.coin,
+          saldo_coin: Number(s.saldo_coin || 0),
+          saldo_usd: Number(s.saldo_usd || 0),
+        }));
+      setSaldosCryptoRaw(cryptoRaw);
+
+      // Aggregate FIAT balances per partner
       const saldosMap = new Map<string, SaldoParceiro>();
 
       // Process FIAT balances
@@ -254,9 +309,9 @@ export default function GestaoParceiros() {
         saldosMap.set(saldo.parceiro_id, current);
       });
 
-      // Process crypto balances
+      // Process crypto balances with initial values (will be updated by useEffect)
       saldosCrypto?.forEach((saldo) => {
-        if (!saldo.parceiro_id) return;
+        if (!saldo.parceiro_id || Number(saldo.saldo_coin) === 0) return;
         const current = saldosMap.get(saldo.parceiro_id) || {
           parceiro_id: saldo.parceiro_id,
           saldo_fiat: 0,
