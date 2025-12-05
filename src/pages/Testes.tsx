@@ -110,6 +110,155 @@ export default function Testes() {
     }
   };
 
+  // Função para gerar CPF válido aleatório
+  const gerarCPF = () => {
+    const random = (n: number) => Math.floor(Math.random() * n);
+    const mod = (dividendo: number, divisor: number) => Math.round(dividendo - (Math.floor(dividendo / divisor) * divisor));
+    
+    const n = Array.from({ length: 9 }, () => random(9));
+    let d1 = n.reduce((acc, val, i) => acc + val * (10 - i), 0);
+    d1 = 11 - mod(d1, 11);
+    if (d1 >= 10) d1 = 0;
+    
+    let d2 = d1 * 2 + n.reduce((acc, val, i) => acc + val * (11 - i), 0);
+    d2 = 11 - mod(d2, 11);
+    if (d2 >= 10) d2 = 0;
+    
+    return `${n.slice(0, 3).join('')}.${n.slice(3, 6).join('')}.${n.slice(6, 9).join('')}-${d1}${d2}`;
+  };
+
+  const nomesParceiros = [
+    "MARIA SILVA SANTOS", "JOSE CARLOS OLIVEIRA", "ANA PAULA FERREIRA",
+    "PEDRO HENRIQUE COSTA", "FERNANDA RODRIGUES LIMA", "LUCAS GABRIEL SOUZA",
+    "JULIANA ALMEIDA PEREIRA", "RAFAEL MARTINS GOMES", "CAMILA RIBEIRO DIAS",
+    "BRUNO CARVALHO NUNES", "PATRICIA MENDES BARROS", "THIAGO ARAUJO PINTO"
+  ];
+
+  const nomesIndicadores = [
+    "CARLOS EDUARDO SILVA", "AMANDA COSTA REIS", "ROBERTO FERREIRA LIMA",
+    "VANESSA SANTOS OLIVEIRA", "MARCELO ALVES JUNIOR", "TATIANA GOMES PEREIRA"
+  ];
+
+  const nomesOperadores = [
+    "FELIPE AUGUSTO ROCHA", "LARISSA CRISTINA MOURA", "DIEGO SANTOS NASCIMENTO",
+    "PRISCILA MELO DUARTE", "GUILHERME ANDRADE CASTRO", "CAROLINA FREITAS VIEIRA"
+  ];
+
+  const handleGerarParceirosAleatorios = async () => {
+    setLoading("parceiros_gerar");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+
+      const shuffle = <T,>(array: T[]): T[] => {
+        const arr = [...array];
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      };
+
+      const nomesEmbaralhados = shuffle(nomesParceiros);
+      const novosParceiros = nomesEmbaralhados.slice(0, 3).map(nome => ({
+        user_id: user.id,
+        nome,
+        cpf: gerarCPF(),
+        status: "ativo",
+      }));
+
+      const { error } = await supabase.from("parceiros").insert(novosParceiros);
+      if (error) throw error;
+
+      toast.success("3 parceiros criados com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao gerar parceiros:", error);
+      toast.error(`Erro ao gerar parceiros: ${error.message}`);
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleGerarIndicadoresAleatorios = async () => {
+    setLoading("indicadores_gerar");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+
+      const shuffle = <T,>(array: T[]): T[] => {
+        const arr = [...array];
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      };
+
+      const nomesEmbaralhados = shuffle(nomesIndicadores);
+      const novosIndicadores = nomesEmbaralhados.slice(0, 2).map(nome => ({
+        user_id: user.id,
+        nome,
+        cpf: gerarCPF(),
+        status: "ATIVO",
+      }));
+
+      const { error } = await supabase.from("indicadores_referral").insert(novosIndicadores);
+      if (error) throw error;
+
+      toast.success("2 indicadores criados com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao gerar indicadores:", error);
+      toast.error(`Erro ao gerar indicadores: ${error.message}`);
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleGerarOperadoresAleatorios = async () => {
+    setLoading("operadores_gerar");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+
+      const shuffle = <T,>(array: T[]): T[] => {
+        const arr = [...array];
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      };
+
+      const nomesEmbaralhados = shuffle(nomesOperadores);
+      const novosOperadores = nomesEmbaralhados.slice(0, 2).map(nome => ({
+        user_id: user.id,
+        nome,
+        cpf: gerarCPF(),
+        status: "ATIVO",
+        tipo_contrato: "PJ",
+      }));
+
+      const { error } = await supabase.from("operadores").insert(novosOperadores);
+      if (error) throw error;
+
+      toast.success("2 operadores criados com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao gerar operadores:", error);
+      toast.error(`Erro ao gerar operadores: ${error.message}`);
+    } finally {
+      setLoading(null);
+    }
+  };
+
   const handleGerarVinculosAleatorios = async () => {
     setLoading("vinculos");
     try {
@@ -257,6 +406,66 @@ export default function Testes() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <p className="font-medium">Gerar 3 Parceiros Aleatórios</p>
+              <p className="text-sm text-muted-foreground">
+                Cria 3 parceiros com nomes e CPFs válidos gerados automaticamente
+              </p>
+            </div>
+            <Button 
+              onClick={handleGerarParceirosAleatorios}
+              disabled={loading === "parceiros_gerar"}
+            >
+              {loading === "parceiros_gerar" ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Users className="h-4 w-4 mr-2" />
+              )}
+              Gerar Parceiros
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <p className="font-medium">Gerar 2 Indicadores Aleatórios</p>
+              <p className="text-sm text-muted-foreground">
+                Cria 2 indicadores com nomes e CPFs válidos gerados automaticamente
+              </p>
+            </div>
+            <Button 
+              onClick={handleGerarIndicadoresAleatorios}
+              disabled={loading === "indicadores_gerar"}
+            >
+              {loading === "indicadores_gerar" ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <UserPlus className="h-4 w-4 mr-2" />
+              )}
+              Gerar Indicadores
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <p className="font-medium">Gerar 2 Operadores Aleatórios</p>
+              <p className="text-sm text-muted-foreground">
+                Cria 2 operadores com nomes e CPFs válidos gerados automaticamente
+              </p>
+            </div>
+            <Button 
+              onClick={handleGerarOperadoresAleatorios}
+              disabled={loading === "operadores_gerar"}
+            >
+              {loading === "operadores_gerar" ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Users className="h-4 w-4 mr-2" />
+              )}
+              Gerar Operadores
+            </Button>
+          </div>
+
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div>
               <p className="font-medium">Gerar 3 Vínculos Aleatórios por Parceiro</p>
