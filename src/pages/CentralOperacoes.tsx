@@ -20,6 +20,8 @@ import {
   FolderKanban,
   Package,
   Target,
+  Users,
+  Banknote,
 } from "lucide-react";
 import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliacaoDialog";
 
@@ -61,9 +63,26 @@ interface EntregaPendente {
   percentual: number | null;
 }
 
+interface PagamentoParceiroPendente {
+  parceriaId: string;
+  parceiroNome: string;
+  valorParceiro: number;
+  origemTipo: string;
+  diasRestantes: number;
+}
+
+interface ParceriaAlertaEncerramento {
+  id: string;
+  parceiroNome: string;
+  diasRestantes: number;
+  dataFim: string;
+}
+
 export default function CentralOperacoes() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [entregasPendentes, setEntregasPendentes] = useState<EntregaPendente[]>([]);
+  const [pagamentosParceiros, setPagamentosParceiros] = useState<PagamentoParceiroPendente[]>([]);
+  const [parceriasEncerramento, setParceriasEncerramento] = useState<ParceriaAlertaEncerramento[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
@@ -98,6 +117,74 @@ export default function CentralOperacoes() {
 
       if (entregasError) throw entregasError;
       setEntregasPendentes(entregasData || []);
+
+      // Fetch pagamentos pendentes a parceiros (captação)
+      const { data: parceirosData, error: parceirosError } = await supabase
+        .from("parcerias")
+        .select(`
+          id,
+          valor_parceiro,
+          origem_tipo,
+          data_fim_prevista,
+          custo_aquisicao_isento,
+          parceiro:parceiros(nome)
+        `)
+        .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+        .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
+        .gt("valor_parceiro", 0);
+
+      if (parceirosError) throw parceirosError;
+
+      // Calculate dias restantes and map to pendentes
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+
+      const pagamentosMap: PagamentoParceiroPendente[] = (parceirosData || []).map((p: any) => {
+        const dataFim = p.data_fim_prevista ? new Date(p.data_fim_prevista) : null;
+        let diasRestantes = 999;
+        if (dataFim) {
+          dataFim.setHours(0, 0, 0, 0);
+          diasRestantes = Math.ceil((dataFim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+        }
+        return {
+          parceriaId: p.id,
+          parceiroNome: p.parceiro?.nome || "N/A",
+          valorParceiro: p.valor_parceiro,
+          origemTipo: p.origem_tipo || "INDICADOR",
+          diasRestantes,
+        };
+      });
+      setPagamentosParceiros(pagamentosMap);
+
+      // Fetch parcerias próximas do encerramento (≤ 7 dias)
+      const { data: encerData, error: encerError } = await supabase
+        .from("parcerias")
+        .select(`
+          id,
+          data_fim_prevista,
+          parceiro:parceiros(nome)
+        `)
+        .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+        .not("data_fim_prevista", "is", null);
+
+      if (encerError) throw encerError;
+
+      const alertasEncer: ParceriaAlertaEncerramento[] = (encerData || [])
+        .map((p: any) => {
+          const dataFim = new Date(p.data_fim_prevista);
+          dataFim.setHours(0, 0, 0, 0);
+          const diasRestantes = Math.ceil((dataFim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+          return {
+            id: p.id,
+            parceiroNome: p.parceiro?.nome || "N/A",
+            diasRestantes,
+            dataFim: p.data_fim_prevista,
+          };
+        })
+        .filter((p) => p.diasRestantes <= 7)
+        .sort((a, b) => a.diasRestantes - b.diasRestantes);
+
+      setParceriasEncerramento(alertasEncer);
     } catch (error: any) {
       toast.error("Erro ao carregar dados: " + error.message);
     } finally {
@@ -169,9 +256,6 @@ export default function CentralOperacoes() {
   };
 
   const alertasSaques = alertas.filter((a) => a.tipo_alerta === "SAQUE_PENDENTE");
-  const alertasParcerias = alertas.filter(
-    (a) => a.tipo_alerta === "PARCERIA_VENCIDA" || a.tipo_alerta === "PARCERIA_VENCENDO"
-  );
   const alertasCriticos = alertas.filter((a) => a.nivel_urgencia === "CRITICA");
 
   if (loading) {
@@ -254,20 +338,22 @@ export default function CentralOperacoes() {
           </CardContent>
         </Card>
 
-        <Card className="border-yellow-500/30 bg-yellow-500/5">
+        <Card className="border-cyan-500/30 bg-cyan-500/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Parcerias em Alerta</CardTitle>
-            <Calendar className="h-4 w-4 text-yellow-400" />
+            <CardTitle className="text-sm font-medium">Captação Pendente</CardTitle>
+            <Users className="h-4 w-4 text-cyan-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-400">{alertasParcerias.length}</div>
-            <p className="text-xs text-muted-foreground">Próximas do vencimento</p>
+            <div className="text-2xl font-bold text-cyan-400">{pagamentosParceiros.length + parceriasEncerramento.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {formatCurrency(pagamentosParceiros.reduce((acc, p) => acc + p.valorParceiro, 0))} pendentes
+            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Alertas List */}
-      {alertas.length === 0 && entregasPendentes.length === 0 ? (
+      {alertas.length === 0 && entregasPendentes.length === 0 && pagamentosParceiros.length === 0 && parceriasEncerramento.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-10">
@@ -281,6 +367,144 @@ export default function CentralOperacoes() {
         </Card>
       ) : (
         <div className="space-y-4">
+          {/* SEÇÃO: CAPTAÇÃO DE PARCERIAS */}
+          {(pagamentosParceiros.length > 0 || parceriasEncerramento.length > 0) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-cyan-400" />
+                  Captação de Parcerias
+                </CardTitle>
+                <CardDescription>
+                  Pagamentos pendentes e alertas de encerramento de parcerias
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Pagamentos Pendentes a Parceiros */}
+                {pagamentosParceiros.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                      <Banknote className="h-4 w-4" />
+                      Pagamentos Pendentes a Parceiros ({pagamentosParceiros.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {pagamentosParceiros.map((pag) => (
+                        <div
+                          key={pag.parceriaId}
+                          className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                              <User className="h-4 w-4 text-cyan-400" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">{pag.parceiroNome}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {pag.origemTipo === "DIRETO" ? "Aquisição Direta" : "Via Indicador"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-bold text-cyan-400">
+                              {formatCurrency(pag.valorParceiro)}
+                            </span>
+                            <Button size="sm" variant="outline" onClick={() => navigate("/programa-indicacao")}>
+                              Pagar
+                              <ArrowRight className="ml-2 h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Alertas de Encerramento de Parcerias */}
+                {parceriasEncerramento.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Parcerias Próximas do Encerramento ({parceriasEncerramento.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {parceriasEncerramento.map((parc) => {
+                        // ≤5 dias = vermelho, ≤7 dias = amarelo
+                        const isRed = parc.diasRestantes <= 5;
+                        const isYellow = parc.diasRestantes > 5 && parc.diasRestantes <= 7;
+                        
+                        return (
+                          <div
+                            key={parc.id}
+                            className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                              isRed
+                                ? "border-red-500/30 bg-red-500/5"
+                                : isYellow
+                                ? "border-yellow-500/30 bg-yellow-500/5"
+                                : "bg-card hover:bg-muted/50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                                  isRed
+                                    ? "bg-red-500/10"
+                                    : isYellow
+                                    ? "bg-yellow-500/10"
+                                    : "bg-muted"
+                                }`}
+                              >
+                                <Calendar
+                                  className={`h-4 w-4 ${
+                                    isRed
+                                      ? "text-red-400"
+                                      : isYellow
+                                      ? "text-yellow-400"
+                                      : "text-muted-foreground"
+                                  }`}
+                                />
+                              </div>
+                              <div>
+                                <p className="font-medium text-sm">{parc.parceiroNome}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Vence em {new Date(parc.dataFim).toLocaleDateString("pt-BR")}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Badge
+                                className={
+                                  isRed
+                                    ? "bg-red-500/20 text-red-400 border-red-500/30"
+                                    : isYellow
+                                    ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                                    : "bg-muted text-muted-foreground"
+                                }
+                              >
+                                {parc.diasRestantes <= 0
+                                  ? "Vencida"
+                                  : parc.diasRestantes === 1
+                                  ? "1 dia restante"
+                                  : `${parc.diasRestantes} dias restantes`}
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant={isRed ? "destructive" : "outline"}
+                                onClick={() => navigate("/programa-indicacao")}
+                              >
+                                {isRed ? "Encerrar" : "Ver"}
+                                <ArrowRight className="ml-2 h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Entregas Pendentes de Conciliação */}
           {entregasPendentes.length > 0 && (
             <Card>
@@ -419,67 +643,6 @@ export default function CentralOperacoes() {
             </Card>
           )}
 
-          {/* Parcerias */}
-          {alertasParcerias.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-yellow-400" />
-                  Parcerias em Alerta
-                </CardTitle>
-                <CardDescription>
-                  Parcerias próximas do vencimento ou já vencidas
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {alertasParcerias.map((alerta) => (
-                    <div
-                      key={alerta.entidade_id}
-                      className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
-                        alerta.tipo_alerta === "PARCERIA_VENCIDA"
-                          ? "border-red-500/30 bg-red-500/5"
-                          : "bg-card hover:bg-muted/50"
-                      }`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div
-                          className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                            alerta.tipo_alerta === "PARCERIA_VENCIDA"
-                              ? "bg-red-500/10"
-                              : "bg-yellow-500/10"
-                          }`}
-                        >
-                          <User
-                            className={`h-5 w-5 ${
-                              alerta.tipo_alerta === "PARCERIA_VENCIDA"
-                                ? "text-red-400"
-                                : "text-yellow-400"
-                            }`}
-                          />
-                        </div>
-                        <div>
-                          <p className="font-medium">{alerta.titulo}</p>
-                          <p className="text-sm text-muted-foreground">{alerta.descricao}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        {getUrgencyBadge(alerta.nivel_urgencia)}
-                        <Button
-                          size="sm"
-                          variant={alerta.tipo_alerta === "PARCERIA_VENCIDA" ? "destructive" : "outline"}
-                          onClick={() => handleParceriaAction(alerta)}
-                        >
-                          Ver Detalhes
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       )}
 
