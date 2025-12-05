@@ -144,6 +144,16 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
   // Check for changes comparing current state with initial state
   useEffect(() => {
+    // For new partner after first save, always allow saving if there are bank accounts or wallets
+    if (parceiroId && !parceiro) {
+      const hasNewAccounts = bankAccounts.some(acc => !acc.id && acc.banco_id);
+      const hasNewWallets = cryptoWallets.some(w => !w.id && w.endereco);
+      if (hasNewAccounts || hasNewWallets) {
+        setHasChanges(true);
+        return;
+      }
+    }
+
     if (!initialState || !parceiro) {
       setHasChanges(false);
       return;
@@ -166,7 +176,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
     const changed = JSON.stringify(currentState) !== JSON.stringify(initialState);
     setHasChanges(changed);
-  }, [nome, cpf, email, telefone, dataNascimento, endereco, cidade, cep, status, observacoes, bankAccounts, cryptoWallets, initialState, parceiro]);
+  }, [nome, cpf, email, telefone, dataNascimento, endereco, cidade, cep, status, observacoes, bankAccounts, cryptoWallets, initialState, parceiro, parceiroId]);
 
   useEffect(() => {
     fetchBancos();
@@ -446,6 +456,29 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
           variant: "destructive",
         });
         return;
+      }
+    }
+
+    // Check for duplicate PIX keys across all bank accounts
+    const allPixKeys: string[] = [];
+    for (const account of bankAccounts) {
+      for (const pixKey of account.pix_keys) {
+        if (pixKey.chave) {
+          // Normalize the key for comparison (remove formatting)
+          const normalizedKey = pixKey.tipo === "cpf" || pixKey.tipo === "cnpj" 
+            ? pixKey.chave.replace(/\D/g, "") 
+            : pixKey.chave.toLowerCase().trim();
+          
+          if (allPixKeys.includes(normalizedKey)) {
+            toast({
+              title: "Chave PIX duplicada",
+              description: `A chave PIX "${pixKey.chave}" está cadastrada em mais de uma conta bancária.`,
+              variant: "destructive",
+            });
+            return;
+          }
+          allPixKeys.push(normalizedKey);
+        }
       }
     }
     
@@ -1435,7 +1468,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
               {viewMode ? "Fechar" : "Cancelar"}
             </Button>
             {!viewMode && (parceiro || parceiroId) && (
-              <Button type="submit" disabled={loading || !hasChanges} className="flex-1">
+              <Button type="submit" disabled={loading || (!hasChanges && bankAccounts.length === 0 && cryptoWallets.length === 0)} className="flex-1">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Salvar Alterações
               </Button>
