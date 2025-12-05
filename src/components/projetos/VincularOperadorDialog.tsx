@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { HelpCircle, TrendingUp, DollarSign, Target } from "lucide-react";
+import { HelpCircle, TrendingUp, DollarSign, Target, Calendar, Layers, Percent, Clock } from "lucide-react";
 import { FaixasEscalonadasInput } from "@/components/entregas/FaixasEscalonadasInput";
 
 interface Operador {
@@ -56,8 +56,14 @@ const FREQUENCIAS = [
 ];
 
 const TIPOS_META = [
-  { value: "VALOR_FIXO", label: "Valor Fixo (R$)" },
+  { value: "VALOR_FIXO", label: "Valor Fixo" },
   { value: "PERCENTUAL", label: "Percentual (%)" },
+];
+
+const MOEDAS = [
+  { value: "BRL", label: "R$ (BRL)", symbol: "R$" },
+  { value: "USD", label: "$ (USD)", symbol: "$" },
+  { value: "EUR", label: "€ (EUR)", symbol: "€" },
 ];
 
 interface Faixa {
@@ -76,17 +82,20 @@ export function VincularOperadorDialog({
   const [operadores, setOperadores] = useState<Operador[]>([]);
   const [operadoresVinculados, setOperadoresVinculados] = useState<string[]>([]);
   const [showBaseCalculoHelp, setShowBaseCalculoHelp] = useState(false);
+  const [showModelosHelp, setShowModelosHelp] = useState(false);
   const [formData, setFormData] = useState({
     operador_id: "",
     funcao: "",
     data_entrada: new Date().toISOString().split("T")[0],
     modelo_pagamento: "FIXO_MENSAL",
     valor_fixo: "",
+    moeda_valor_fixo: "BRL",
     percentual: "",
     base_calculo: "LUCRO_PROJETO",
     frequencia_entrega: "MENSAL",
     tipo_meta: "VALOR_FIXO",
     meta_valor: "",
+    moeda_meta: "BRL",
     meta_percentual: "",
   });
   const [faixasEscalonadas, setFaixasEscalonadas] = useState<Faixa[]>([
@@ -94,6 +103,19 @@ export function VincularOperadorDialog({
     { min: 10001, max: 30000, percentual: 8 },
     { min: 30001, max: null, percentual: 12 },
   ]);
+
+  const handleNumericChange = (field: string, value: string, allowNegative = false) => {
+    if (value === "") {
+      setFormData({ ...formData, [field]: "" });
+      return;
+    }
+    const num = parseFloat(value);
+    if (!allowNegative && num < 0) {
+      toast.error("Valores negativos não são permitidos");
+      return;
+    }
+    setFormData({ ...formData, [field]: value });
+  };
 
   useEffect(() => {
     if (open) {
@@ -105,11 +127,13 @@ export function VincularOperadorDialog({
         data_entrada: new Date().toISOString().split("T")[0],
         modelo_pagamento: "FIXO_MENSAL",
         valor_fixo: "",
+        moeda_valor_fixo: "BRL",
         percentual: "",
         base_calculo: "LUCRO_PROJETO",
         frequencia_entrega: "MENSAL",
         tipo_meta: "VALOR_FIXO",
         meta_valor: "",
+        moeda_meta: "BRL",
         meta_percentual: "",
       });
       setFaixasEscalonadas([
@@ -282,7 +306,16 @@ export function VincularOperadorDialog({
             
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Tipo de Acordo *</Label>
+                <div className="flex items-center gap-2">
+                  <Label>Tipo de Acordo *</Label>
+                  <button
+                    type="button"
+                    onClick={() => setShowModelosHelp(true)}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </div>
                 <Select
                   value={formData.modelo_pagamento}
                   onValueChange={(value) => setFormData({ ...formData, modelo_pagamento: value })}
@@ -321,33 +354,52 @@ export function VincularOperadorDialog({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                {showValorFixo && (
-                  <div className="space-y-2">
-                    <Label>Valor Fixo (R$) *</Label>
+              {showValorFixo && (
+                <div className="space-y-2">
+                  <Label>Valor Fixo *</Label>
+                  <div className="flex gap-2">
+                    <Select
+                      value={formData.moeda_valor_fixo}
+                      onValueChange={(value) => setFormData({ ...formData, moeda_valor_fixo: value })}
+                    >
+                      <SelectTrigger className="w-28">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MOEDAS.map((m) => (
+                          <SelectItem key={m.value} value={m.value}>
+                            {m.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Input
                       type="number"
                       step="0.01"
+                      min="0"
                       value={formData.valor_fixo}
-                      onChange={(e) => setFormData({ ...formData, valor_fixo: e.target.value })}
+                      onChange={(e) => handleNumericChange("valor_fixo", e.target.value)}
                       placeholder="0,00"
+                      className="flex-1"
                     />
                   </div>
-                )}
+                </div>
+              )}
 
-                {showPercentual && (
-                  <div className="space-y-2">
-                    <Label>Percentual (%) *</Label>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      value={formData.percentual}
-                      onChange={(e) => setFormData({ ...formData, percentual: e.target.value })}
-                      placeholder="0"
-                    />
-                  </div>
-                )}
-              </div>
+              {showPercentual && (
+                <div className="space-y-2">
+                  <Label>Percentual (%) *</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={formData.percentual}
+                    onChange={(e) => handleNumericChange("percentual", e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+              )}
 
               {showBaseCalculo && (
                 <div className="space-y-2">
@@ -403,31 +455,56 @@ export function VincularOperadorDialog({
                     </Select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    {formData.tipo_meta === "VALOR_FIXO" ? (
-                      <div className="space-y-2">
-                        <Label>Meta (R$) *</Label>
+                  {formData.tipo_meta === "VALOR_FIXO" ? (
+                    <div className="space-y-2">
+                      <Label>Meta *</Label>
+                      <div className="flex gap-2">
+                        <Select
+                          value={formData.moeda_meta}
+                          onValueChange={(value) => setFormData({ ...formData, moeda_meta: value })}
+                        >
+                          <SelectTrigger className="w-28">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {MOEDAS.map((m) => (
+                              <SelectItem key={m.value} value={m.value}>
+                                {m.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <Input
                           type="number"
                           step="0.01"
+                          min="0"
                           value={formData.meta_valor}
-                          onChange={(e) => setFormData({ ...formData, meta_valor: e.target.value })}
+                          onChange={(e) => handleNumericChange("meta_valor", e.target.value)}
                           placeholder="30000"
+                          className="flex-1"
                         />
                       </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <Label>Meta (%) *</Label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          value={formData.meta_percentual}
-                          onChange={(e) => setFormData({ ...formData, meta_percentual: e.target.value })}
-                          placeholder="10"
-                        />
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label>Meta (%) *</Label>
+                      <p className="text-xs text-muted-foreground">
+                        % sobre {formData.base_calculo === "LUCRO_PROJETO" ? "Lucro" : formData.base_calculo === "FATURAMENTO_PROJETO" ? "Faturamento" : "Resultado"}
+                      </p>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        value={formData.meta_percentual}
+                        onChange={(e) => handleNumericChange("meta_percentual", e.target.value)}
+                        placeholder="10"
+                      />
+                      <p className="text-xs text-amber-400">
+                        Conciliação ocorrerá ao final de cada período ({formData.frequencia_entrega.toLowerCase()})
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -510,6 +587,123 @@ export function VincularOperadorDialog({
 
                   <div className="flex justify-end mt-4">
                     <Button onClick={() => setShowBaseCalculoHelp(false)}>
+                      Entendi
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {/* Modal de Ajuda - Tipos de Acordo */}
+              <Dialog open={showModelosHelp} onOpenChange={setShowModelosHelp}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Tipos de Acordo - Entenda as Opções</DialogTitle>
+                    <DialogDescription>
+                      Escolha o modelo de pagamento que melhor se adapta ao operador
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4 mt-4">
+                    <div className="flex gap-4 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                      <div className="flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                          <DollarSign className="h-5 w-5 text-emerald-500" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-emerald-400">Fixo Mensal</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Valor fixo pago ao operador independente do resultado do projeto.
+                        </p>
+                        <div className="text-xs text-muted-foreground mt-2 p-2 bg-background/50 rounded">
+                          <strong>Conciliação:</strong> Ao final de cada período (semanal, quinzenal ou mensal).
+                          <br />
+                          <strong>Exemplo:</strong> R$ 3.000 fixos por mês.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                      <div className="flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                          <Percent className="h-5 w-5 text-blue-500" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-blue-400">Porcentagem</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Percentual sobre a base de cálculo escolhida (lucro, faturamento ou resultado).
+                        </p>
+                        <div className="text-xs text-muted-foreground mt-2 p-2 bg-background/50 rounded">
+                          <strong>Conciliação:</strong> Ao final de cada período configurado.
+                          <br />
+                          <strong>Exemplo:</strong> 10% do lucro do projeto = se lucro foi R$ 50.000, recebe R$ 5.000.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                      <div className="flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                          <TrendingUp className="h-5 w-5 text-purple-500" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-purple-400">Híbrido (Fixo + %)</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Combina um valor fixo garantido + percentual variável sobre resultado.
+                        </p>
+                        <div className="text-xs text-muted-foreground mt-2 p-2 bg-background/50 rounded">
+                          <strong>Conciliação:</strong> Ao final de cada período configurado.
+                          <br />
+                          <strong>Exemplo:</strong> R$ 2.000 fixo + 5% do lucro.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                      <div className="flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                          <Target className="h-5 w-5 text-amber-500" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-amber-400">Por Entrega</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Pagamento vinculado ao atingimento de uma meta específica (valor fixo ou percentual).
+                        </p>
+                        <div className="text-xs text-muted-foreground mt-2 p-2 bg-background/50 rounded">
+                          <strong>Conciliação - Meta Valor Fixo:</strong> Quando o resultado atingir o valor definido.
+                          <br />
+                          <strong>Conciliação - Meta Percentual:</strong> Ao final de cada período configurado, verificando se % foi alcançado.
+                          <br />
+                          <strong>Exemplo:</strong> Meta de R$ 30.000 ou 15% de ROI. Excedente transfere para próxima entrega.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 p-4 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+                      <div className="flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                          <Layers className="h-5 w-5 text-cyan-500" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-cyan-400">Comissão Escalonada</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Faixas progressivas de comissão que aumentam conforme o resultado.
+                        </p>
+                        <div className="text-xs text-muted-foreground mt-2 p-2 bg-background/50 rounded">
+                          <strong>Conciliação:</strong> Ao final de cada período configurado.
+                          <br />
+                          <strong>Exemplo:</strong> Até R$ 10.000 = 5%, de R$ 10.001 a R$ 30.000 = 8%, acima = 12%.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end mt-4">
+                    <Button onClick={() => setShowModelosHelp(false)}>
                       Entendi
                     </Button>
                   </div>
