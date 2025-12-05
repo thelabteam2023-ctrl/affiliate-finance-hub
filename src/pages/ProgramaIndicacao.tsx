@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardTab } from "@/components/programa-indicacao/DashboardTab";
@@ -11,10 +11,22 @@ import { BarChart3, UserPlus, Truck, Handshake, Wallet } from "lucide-react";
 
 export default function ProgramaIndicacao() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   useEffect(() => {
     checkAuth();
   }, []);
+
+  // Handle navigation state for initial tab
+  useEffect(() => {
+    const state = location.state as { tab?: string } | null;
+    if (state?.tab) {
+      setActiveTab(state.tab);
+      // Clear the state to avoid persisting on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -34,7 +46,7 @@ export default function ProgramaIndicacao() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="dashboard" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full max-w-3xl grid-cols-5">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />

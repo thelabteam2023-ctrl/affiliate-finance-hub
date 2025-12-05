@@ -415,7 +415,7 @@ export default function CentralOperacoes() {
                             <span className="text-sm font-bold text-cyan-400">
                               {formatCurrency(pag.valorParceiro)}
                             </span>
-                            <Button size="sm" variant="outline" onClick={() => navigate("/programa-indicacao")}>
+                            <Button size="sm" variant="outline" onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })}>
                               Pagar
                               <ArrowRight className="ml-2 h-3 w-3" />
                             </Button>
