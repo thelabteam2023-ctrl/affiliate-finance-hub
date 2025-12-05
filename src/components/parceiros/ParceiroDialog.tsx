@@ -235,9 +235,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       });
       setBankAccounts(mappedAccounts);
       
-      // Decrypt wallet observacoes when loading
+      // Decrypt wallet observacoes when loading and ensure moeda is always an array
       const decryptedWallets = (parceiro.wallets_crypto || []).map((wallet: any) => ({
         ...wallet,
+        moeda: Array.isArray(wallet.moeda) ? wallet.moeda : [],
         observacoes: wallet.observacoes_encrypted 
           ? decodeURIComponent(escape(atob(wallet.observacoes_encrypted)))
           : ""

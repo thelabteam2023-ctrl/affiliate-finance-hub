@@ -42,24 +42,27 @@ const MOEDAS_DISPONIVEIS = [
   { value: "XRP", label: "Ripple (XRP)" },
 ];
 
-export function MoedaMultiSelect({ moedas = [], onChange, disabled = false }: MoedaMultiSelectProps) {
+export function MoedaMultiSelect({ moedas, onChange, disabled = false }: MoedaMultiSelectProps) {
   const [open, setOpen] = useState(false);
+  
+  // Ensure moedas is always an array (handles null from database)
+  const safeMoedas = Array.isArray(moedas) ? moedas : [];
 
   const toggleMoeda = (moedaValue: string) => {
-    if (moedas.includes(moedaValue)) {
-      onChange(moedas.filter(m => m !== moedaValue));
+    if (safeMoedas.includes(moedaValue)) {
+      onChange(safeMoedas.filter(m => m !== moedaValue));
     } else {
-      onChange([...moedas, moedaValue]);
+      onChange([...safeMoedas, moedaValue]);
     }
   };
 
   const getDisplayText = () => {
-    if (moedas.length === 0) return "Selecione uma moeda";
-    if (moedas.length === 1) {
-      const moeda = MOEDAS_DISPONIVEIS.find(m => m.value === moedas[0]);
-      return moeda?.label || moedas[0];
+    if (safeMoedas.length === 0) return "Selecione uma moeda";
+    if (safeMoedas.length === 1) {
+      const moeda = MOEDAS_DISPONIVEIS.find(m => m.value === safeMoedas[0]);
+      return moeda?.label || safeMoedas[0];
     }
-    return `${moedas.length} moedas selecionadas`;
+    return `${safeMoedas.length} moedas selecionadas`;
   };
 
   return (
@@ -93,14 +96,14 @@ export function MoedaMultiSelect({ moedas = [], onChange, disabled = false }: Mo
                     className="justify-between hover:bg-accent focus:bg-accent cursor-pointer"
                   >
                     <div className="flex items-center gap-2">
-                      <div
-                        className={cn(
-                          "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                          moedas.includes(moeda.value)
-                            ? "bg-primary text-primary-foreground"
-                            : "opacity-50 [&_svg]:invisible"
-                        )}
-                      >
+                    <div
+                      className={cn(
+                        "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                        safeMoedas.includes(moeda.value)
+                          ? "bg-primary text-primary-foreground"
+                          : "opacity-50 [&_svg]:invisible"
+                      )}
+                    >
                         <Check className="h-3 w-3" />
                       </div>
                       <span>{moeda.label}</span>
@@ -113,9 +116,9 @@ export function MoedaMultiSelect({ moedas = [], onChange, disabled = false }: Mo
         </PopoverContent>
       </Popover>
 
-      {moedas.length > 0 && (
+      {safeMoedas.length > 0 && (
         <div className="flex flex-wrap gap-1.5 justify-center">
-          {moedas.map((moeda) => {
+          {safeMoedas.map((moeda) => {
             const moedaInfo = MOEDAS_DISPONIVEIS.find(m => m.value === moeda);
             return (
               <Badge
