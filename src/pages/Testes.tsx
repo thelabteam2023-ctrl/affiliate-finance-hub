@@ -221,7 +221,7 @@ export default function Testes() {
           parceiro_id: parceiro.id,
           banco: banco.nome,
           titular: parceiro.nome,
-          tipo_conta: Math.random() > 0.5 ? 'CORRENTE' : 'POUPANCA',
+          tipo_conta: Math.random() > 0.5 ? 'corrente' : 'poupanca',
           pix_key: gerarChavePix(parceiro.nome, index),
         };
       });
