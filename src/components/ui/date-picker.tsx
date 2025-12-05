@@ -20,6 +20,14 @@ interface DatePickerProps {
   toYear?: number;
 }
 
+// Parse YYYY-MM-DD string as local date (not UTC)
+const parseLocalDate = (dateString: string): Date | undefined => {
+  if (!dateString) return undefined;
+  const [year, month, day] = dateString.split('-').map(Number);
+  if (!year || !month || !day) return undefined;
+  return new Date(year, month - 1, day);
+};
+
 export function DatePicker({ 
   value, 
   onChange, 
@@ -29,15 +37,14 @@ export function DatePicker({
   toYear = new Date().getFullYear() + 10,
 }: DatePickerProps) {
   const [date, setDate] = React.useState<Date | undefined>(
-    value ? new Date(value) : undefined
+    value ? parseLocalDate(value) : undefined
   );
 
   // Sync internal state when value prop changes (fixes view mode loading issue)
   React.useEffect(() => {
     if (value) {
-      const parsedDate = new Date(value);
-      // Only update if the date is valid
-      if (!isNaN(parsedDate.getTime())) {
+      const parsedDate = parseLocalDate(value);
+      if (parsedDate && !isNaN(parsedDate.getTime())) {
         setDate(parsedDate);
       }
     } else {
