@@ -229,6 +229,11 @@ export default function Testes() {
       const { error: contasError } = await supabase.from("contas_bancarias").insert(contasBancarias);
       if (contasError) throw contasError;
 
+      // Buscar redes crypto para obter os IDs
+      const { data: redesData } = await supabase.from("redes_crypto").select("id, codigo");
+      const redeERC20 = redesData?.find(r => r.codigo === 'ERC20');
+      const redeBTC = redesData?.find(r => r.codigo === 'BTC');
+
       // Criar wallets crypto para cada parceiro
       const walletsCrypto: any[] = [];
       
@@ -238,6 +243,7 @@ export default function Testes() {
           parceiro_id: parceiro.id,
           endereco: gerarEnderecoWallet(),
           network: 'ERC20',
+          rede_id: redeERC20?.id || null,
           exchange: 'Binance',
           moeda: ['USDT'],
         });
@@ -245,11 +251,12 @@ export default function Testes() {
         // Para alguns parceiros, adicionar uma segunda wallet com outras moedas
         if (index < 2) {
           const moedasExtras = index === 0 ? ['USDC', 'ETH'] : ['BTC'];
-          const redesExtras = index === 0 ? 'ERC20' : 'BTC';
+          const redeExtra = index === 0 ? redeERC20 : redeBTC;
           walletsCrypto.push({
             parceiro_id: parceiro.id,
             endereco: gerarEnderecoWallet(),
-            network: redesExtras,
+            network: redeExtra?.codigo || (index === 0 ? 'ERC20' : 'BTC'),
+            rede_id: redeExtra?.id || null,
             exchange: index === 0 ? 'MetaMask' : 'Ledger',
             moeda: moedasExtras,
           });
