@@ -15,11 +15,13 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
+  User,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PagamentoBonusDialog } from "./PagamentoBonusDialog";
 import { PagamentoComissaoDialog } from "./PagamentoComissaoDialog";
+import { PagamentoParceiroDialog } from "./PagamentoParceiroDialog";
 
 interface Movimentacao {
   id: string;
@@ -49,17 +51,27 @@ interface ComissaoPendente {
   valorComissao: number;
 }
 
+interface ParceiroPendente {
+  parceriaId: string;
+  parceiroNome: string;
+  valorParceiro: number;
+  origemTipo: string;
+}
+
 export function FinanceiroTab() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
   const [bonusPendentes, setBonusPendentes] = useState<BonusPendente[]>([]);
   const [comissoesPendentes, setComissoesPendentes] = useState<ComissaoPendente[]>([]);
+  const [parceirosPendentes, setParceirosPendentes] = useState<ParceiroPendente[]>([]);
   
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
   const [comissaoDialogOpen, setComissaoDialogOpen] = useState(false);
+  const [parceiroDialogOpen, setParceiroDialogOpen] = useState(false);
   const [selectedBonus, setSelectedBonus] = useState<BonusPendente | null>(null);
   const [selectedComissao, setSelectedComissao] = useState<ComissaoPendente | null>(null);
+  const [selectedParceiro, setSelectedParceiro] = useState<ParceiroPendente | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -70,7 +82,7 @@ export function FinanceiroTab() {
       setLoading(true);
 
       // Fetch all data in parallel
-      const [movResult, custosResult, acordosResult, parceriasResult] = await Promise.all([
+      const [movResult, custosResult, acordosResult, parceriasResult, parceirosResult] = await Promise.all([
         supabase
           .from("movimentacoes_indicacao")
           .select("*")
@@ -91,6 +103,18 @@ export function FinanceiroTab() {
           .eq("comissao_paga", false)
           .not("valor_comissao_indicador", "is", null)
           .gt("valor_comissao_indicador", 0),
+        // Fetch parcerias with valor_parceiro that haven't been paid
+        supabase
+          .from("parcerias")
+          .select(`
+            id,
+            valor_parceiro,
+            origem_tipo,
+            status,
+            parceiro:parceiros(nome)
+          `)
+          .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+          .gt("valor_parceiro", 0),
       ]);
 
       if (movResult.error) throw movResult.error;
@@ -148,6 +172,24 @@ export function FinanceiroTab() {
           }));
         setComissoesPendentes(comissoes);
       }
+
+      // Calculate parceiros pendentes (partner payments)
+      if (parceirosResult.data && movResult.data) {
+        // Get parcerias that already had a partner payment
+        const parceriasPagas = (movResult.data || [])
+          .filter((m) => m.tipo === "PAGTO_PARCEIRO" && m.status === "CONFIRMADO")
+          .map((m) => m.parceria_id);
+
+        const pendentes: ParceiroPendente[] = parceirosResult.data
+          .filter((p: any) => !parceriasPagas.includes(p.id))
+          .map((p: any) => ({
+            parceriaId: p.id,
+            parceiroNome: p.parceiro?.nome || "N/A",
+            valorParceiro: p.valor_parceiro || 0,
+            origemTipo: p.origem_tipo || "DIRETO",
+          }));
+        setParceirosPendentes(pendentes);
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao carregar dados",
@@ -201,7 +243,7 @@ export function FinanceiroTab() {
   const totalBonus = movimentacoes
     .filter((m) => m.tipo === "BONUS_INDICADOR" && m.status === "CONFIRMADO")
     .reduce((acc, m) => acc + m.valor, 0);
-  const totalPendencias = bonusPendentes.length + comissoesPendentes.length;
+  const totalPendencias = bonusPendentes.length + comissoesPendentes.length + parceirosPendentes.length;
 
   if (loading) {
     return (
@@ -265,7 +307,7 @@ export function FinanceiroTab() {
       </div>
 
       {/* Pendências */}
-      {(bonusPendentes.length > 0 || comissoesPendentes.length > 0) && (
+      {(bonusPendentes.length > 0 || comissoesPendentes.length > 0 || parceirosPendentes.length > 0) && (
         <Card className="border-warning/30 bg-warning/5">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -274,6 +316,47 @@ export function FinanceiroTab() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Pagamentos ao Parceiro Pendentes */}
+            {parceirosPendentes.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-muted-foreground">Pagamentos ao Parceiro (CPF)</h4>
+                {parceirosPendentes.map((parceiro) => (
+                  <div
+                    key={parceiro.parceriaId}
+                    className="flex items-center justify-between p-3 bg-background rounded-lg border"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                        <User className="h-4 w-4 text-emerald-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{parceiro.parceiroNome}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {parceiro.origemTipo === "INDICADOR" ? "Via Indicador" : 
+                           parceiro.origemTipo === "FORNECEDOR" ? "Via Fornecedor" : "Aquisição Direta"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-emerald-500">
+                        {formatCurrency(parceiro.valorParceiro)}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={() => {
+                          setSelectedParceiro(parceiro);
+                          setParceiroDialogOpen(true);
+                        }}
+                      >
+                        Pagar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Bônus Pendentes */}
             {bonusPendentes.length > 0 && (
               <div className="space-y-2">
@@ -438,6 +521,21 @@ export function FinanceiroTab() {
                 indicadorNome: selectedComissao.indicadorNome,
                 indicadorId: selectedComissao.indicadorId,
                 valorComissao: selectedComissao.valorComissao,
+              }
+            : null
+        }
+        onSuccess={fetchData}
+      />
+
+      <PagamentoParceiroDialog
+        open={parceiroDialogOpen}
+        onOpenChange={setParceiroDialogOpen}
+        parceria={
+          selectedParceiro
+            ? {
+                id: selectedParceiro.parceriaId,
+                parceiroNome: selectedParceiro.parceiroNome,
+                valorParceiro: selectedParceiro.valorParceiro,
               }
             : null
         }
