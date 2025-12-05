@@ -32,9 +32,16 @@ interface ProjetoConciliacaoDialogProps {
     id: string;
     nome: string;
     tem_investimento_crypto?: boolean;
+    modelo_absorcao_taxas?: string;
   };
   onSuccess: () => void;
 }
+
+const MODELOS_ABSORCAO_LABELS: Record<string, string> = {
+  EMPRESA_100: "Empresa absorve 100%",
+  OPERADOR_100: "Operador absorve 100%",
+  PROPORCIONAL: "Divisão proporcional (50/50)",
+};
 
 interface SaldosNominais {
   fiat: number;
@@ -308,6 +315,20 @@ export function ProjetoConciliacaoDialog({
                 )}
               </CardContent>
             </Card>
+
+            {/* Modelo de Absorção */}
+            {projeto.modelo_absorcao_taxas && (
+              <Card className="border-primary/30">
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Modelo de Absorção Acordado</p>
+                      <p className="font-medium">{MODELOS_ABSORCAO_LABELS[projeto.modelo_absorcao_taxas] || projeto.modelo_absorcao_taxas}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Resumo */}
             <Card className={totalAjuste !== 0 ? (

@@ -51,7 +51,14 @@ interface Projeto {
   observacoes?: string | null;
   tem_investimento_crypto?: boolean;
   conciliado?: boolean;
+  modelo_absorcao_taxas?: string;
 }
+
+const MODELOS_ABSORCAO = [
+  { value: "EMPRESA_100", label: "Empresa absorve 100%", description: "Taxas são custo operacional da empresa" },
+  { value: "OPERADOR_100", label: "Operador absorve 100%", description: "Taxas deduzidas do lucro antes de calcular comissão" },
+  { value: "PROPORCIONAL", label: "Divisão proporcional (50/50)", description: "Taxas divididas igualmente entre empresa e operador" },
+];
 
 interface OperadorVinculado {
   id: string;
@@ -96,6 +103,7 @@ export function ProjetoDialog({
     observacoes: null,
     tem_investimento_crypto: false,
     conciliado: false,
+    modelo_absorcao_taxas: "EMPRESA_100",
   });
 
   useEffect(() => {
@@ -110,6 +118,7 @@ export function ProjetoDialog({
           observacoes: projeto.observacoes || null,
           tem_investimento_crypto: projeto.tem_investimento_crypto || false,
           conciliado: projeto.conciliado || false,
+          modelo_absorcao_taxas: projeto.modelo_absorcao_taxas || "EMPRESA_100",
         });
         if (projeto.id) {
           fetchOperadoresProjeto(projeto.id);
@@ -127,6 +136,7 @@ export function ProjetoDialog({
           observacoes: null,
           tem_investimento_crypto: false,
           conciliado: false,
+          modelo_absorcao_taxas: "EMPRESA_100",
         });
         setOperadores([]);
         setTemConciliacao(false);
@@ -207,6 +217,7 @@ export function ProjetoDialog({
         orcamento_inicial: formData.orcamento_inicial || 0,
         observacoes: formData.observacoes || null,
         tem_investimento_crypto: formData.tem_investimento_crypto || false,
+        modelo_absorcao_taxas: formData.tem_investimento_crypto ? formData.modelo_absorcao_taxas : "EMPRESA_100",
         user_id: session.session.user.id,
       };
 
@@ -389,41 +400,69 @@ export function ProjetoDialog({
                       </div>
                     </div>
 
-                    {formData.tem_investimento_crypto && mode !== "create" && (
-                      <div className={`mt-4 p-3 rounded-lg flex items-center justify-between ${
-                        formData.conciliado 
-                          ? "bg-emerald-500/10 border border-emerald-500/20" 
-                          : "bg-amber-500/10 border border-amber-500/20"
-                      }`}>
-                        <div className="flex items-center gap-2">
-                          {formData.conciliado ? (
-                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                          ) : (
-                            <AlertTriangle className="h-4 w-4 text-amber-500" />
-                          )}
-                          <span className="text-sm">
-                            {formData.conciliado 
-                              ? "Projeto conciliado" 
-                              : "Conciliação pendente"
-                            }
-                          </span>
-                        </div>
-                        {!formData.conciliado && !isViewMode && (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => setConciliacaoDialogOpen(true)}
+                    {formData.tem_investimento_crypto && (
+                      <>
+                        {/* Modelo de Absorção de Taxas */}
+                        <div className="mt-4 space-y-2">
+                          <Label>Modelo de Absorção de Taxas *</Label>
+                          <Select
+                            value={formData.modelo_absorcao_taxas}
+                            onValueChange={(value) => setFormData({ ...formData, modelo_absorcao_taxas: value })}
+                            disabled={isViewMode}
                           >
-                            <Calculator className="h-4 w-4 mr-2" />
-                            Realizar Conciliação
-                          </Button>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {MODELOS_ABSORCAO.map((modelo) => (
+                                <SelectItem key={modelo.value} value={modelo.value}>
+                                  {modelo.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground">
+                            Define quem paga as perdas friccionais (slippage, taxas de conversão)
+                          </p>
+                        </div>
+
+                        {mode !== "create" && (
+                          <div className={`mt-4 p-3 rounded-lg flex items-center justify-between ${
+                            formData.conciliado 
+                              ? "bg-emerald-500/10 border border-emerald-500/20" 
+                              : "bg-amber-500/10 border border-amber-500/20"
+                          }`}>
+                            <div className="flex items-center gap-2">
+                              {formData.conciliado ? (
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                              ) : (
+                                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                              )}
+                              <span className="text-sm">
+                                {formData.conciliado 
+                                  ? "Projeto conciliado" 
+                                  : "Conciliação pendente"
+                                }
+                              </span>
+                            </div>
+                            {!formData.conciliado && !isViewMode && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => setConciliacaoDialogOpen(true)}
+                              >
+                                <Calculator className="h-4 w-4 mr-2" />
+                                Realizar Conciliação
+                              </Button>
+                            )}
+                            {formData.conciliado && (
+                              <Badge className="bg-emerald-500/20 text-emerald-400">
+                                Conciliado
+                              </Badge>
+                            )}
+                          </div>
                         )}
-                        {formData.conciliado && (
-                          <Badge className="bg-emerald-500/20 text-emerald-400">
-                            Conciliado
-                          </Badge>
-                        )}
-                      </div>
+                      </>
                     )}
                   </CardContent>
                 </Card>
