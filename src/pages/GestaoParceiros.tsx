@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
-import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2, LayoutGrid, List, Shuffle } from "lucide-react";
+import { Plus, Search, LogOut, Eye, EyeOff, Edit, Trash2, LayoutGrid, List } from "lucide-react";
 import { ParceiroStatusIcon } from "@/components/parceiros/ParceiroStatusIcon";
 import { BankAccountItem } from "@/components/parceiros/BankAccountItem";
 import { WalletItem } from "@/components/parceiros/WalletItem";
@@ -504,125 +504,6 @@ export default function GestaoParceiros() {
     fetchParceiros(); // Refresh to update bookmaker counts
   };
 
-  const handleGerarVinculosAleatorios = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Erro",
-          description: "Usuário não autenticado",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Fetch all bookmakers from catalog
-      const { data: catalogo, error: catalogoError } = await supabase
-        .from("bookmakers_catalogo")
-        .select("id, nome, links_json")
-        .eq("status", "REGULAMENTADA");
-
-      if (catalogoError) throw catalogoError;
-      if (!catalogo || catalogo.length < 3) {
-        toast({
-          title: "Erro",
-          description: "Não há bookmakers suficientes no catálogo (mínimo 3)",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Fetch existing bookmaker links
-      const { data: existingLinks, error: existingError } = await supabase
-        .from("bookmakers")
-        .select("parceiro_id, bookmaker_catalogo_id")
-        .eq("user_id", user.id);
-
-      if (existingError) throw existingError;
-
-      // Create a map of existing links per partner
-      const existingMap = new Map<string, Set<string>>();
-      existingLinks?.forEach(link => {
-        if (link.parceiro_id && link.bookmaker_catalogo_id) {
-          if (!existingMap.has(link.parceiro_id)) {
-            existingMap.set(link.parceiro_id, new Set());
-          }
-          existingMap.get(link.parceiro_id)!.add(link.bookmaker_catalogo_id);
-        }
-      });
-
-      // Create links for each partner
-      let totalCreated = 0;
-      const newLinks: any[] = [];
-
-      for (const parceiro of parceiros) {
-        const existingForPartner = existingMap.get(parceiro.id) || new Set();
-        
-        // Filter available bookmakers (not already linked)
-        const availableBookmakers = catalogo.filter(
-          bm => !existingForPartner.has(bm.id)
-        );
-
-        if (availableBookmakers.length === 0) continue;
-
-        // Shuffle and pick up to 3
-        const shuffled = availableBookmakers.sort(() => Math.random() - 0.5);
-        const toCreate = shuffled.slice(0, 3);
-
-        for (const bookmaker of toCreate) {
-          // Get first link from links_json or default
-          let linkOrigem = "PADRÃO";
-          if (bookmaker.links_json && Array.isArray(bookmaker.links_json) && bookmaker.links_json.length > 0) {
-            linkOrigem = (bookmaker.links_json as any[])[0]?.url || "PADRÃO";
-          }
-
-          newLinks.push({
-            user_id: user.id,
-            parceiro_id: parceiro.id,
-            bookmaker_catalogo_id: bookmaker.id,
-            nome: bookmaker.nome,
-            link_origem: linkOrigem,
-            login_username: "",
-            login_password_encrypted: "",
-            saldo_atual: 0,
-            moeda: "BRL",
-            status: "ativo",
-          });
-          totalCreated++;
-        }
-      }
-
-      if (newLinks.length === 0) {
-        toast({
-          title: "Nenhum vínculo criado",
-          description: "Todos os parceiros já possuem vínculos com todas as bookmakers disponíveis",
-        });
-        return;
-      }
-
-      // Insert all links at once
-      const { error: insertError } = await supabase
-        .from("bookmakers")
-        .insert(newLinks);
-
-      if (insertError) throw insertError;
-
-      toast({
-        title: "Vínculos criados com sucesso!",
-        description: `${totalCreated} vínculos criados para ${parceiros.length} parceiros`,
-      });
-
-      // Refresh data
-      fetchParceiros();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao criar vínculos",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
   const maskCPF = (cpf: string) => {
     if (showCPF) return formatCPF(cpf);
     return maskCPFPartial(cpf);
@@ -752,21 +633,6 @@ export default function GestaoParceiros() {
                  </TooltipTrigger>
                  <TooltipContent>
                    <p>{viewType === "cards" ? "Visualizar como lista" : "Visualizar como cards"}</p>
-                 </TooltipContent>
-               </Tooltip>
-               <Tooltip>
-                 <TooltipTrigger asChild>
-                   <Button
-                     variant="outline"
-                     size="icon"
-                     onClick={handleGerarVinculosAleatorios}
-                     className="shrink-0"
-                   >
-                     <Shuffle className="h-4 w-4" />
-                   </Button>
-                 </TooltipTrigger>
-                 <TooltipContent>
-                   <p>Gerar 3 vínculos aleatórios por parceiro</p>
                  </TooltipContent>
                </Tooltip>
                <Tooltip>
