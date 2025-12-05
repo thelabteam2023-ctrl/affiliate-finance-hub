@@ -46,12 +46,18 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
   const [indicadores, setIndicadores] = useState<Indicador[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   
+  // Helper to get today's date string in YYYY-MM-DD format (local timezone)
+  const getTodayString = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+
   const [formData, setFormData] = useState({
     parceiro_id: "",
     origem_tipo: "INDICADOR",
     indicador_id: "",
     fornecedor_id: "",
-    data_inicio: new Date(),
+    data_inicio: getTodayString(), // Store as string to avoid timezone issues
     duracao_dias: 60,
     valor_indicador: 0,
     valor_parceiro: 0,
@@ -75,9 +81,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
   useEffect(() => {
     if (!open) return;
     
-    // Always create a fresh date for today
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
+    const hojeString = getTodayString();
     
     if (parceria) {
       setFormData({
@@ -85,7 +89,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
         origem_tipo: parceria.origem_tipo || "INDICADOR",
         indicador_id: "",
         fornecedor_id: parceria.fornecedor_id || "",
-        data_inicio: parceria.data_inicio ? new Date(parceria.data_inicio) : hoje,
+        data_inicio: parceria.data_inicio || hojeString,
         duracao_dias: parceria.duracao_dias || 60,
         valor_indicador: parceria.valor_indicador || 0,
         valor_parceiro: parceria.valor_parceiro || 0,
@@ -102,7 +106,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
         origem_tipo: "INDICADOR",
         indicador_id: "",
         fornecedor_id: "",
-        data_inicio: hoje,
+        data_inicio: hojeString,
         duracao_dias: 60,
         valor_indicador: 0,
         valor_parceiro: 0,
@@ -247,7 +251,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
         indicacao_id: formData.origem_tipo === "INDICADOR" ? indicacaoId : null,
         fornecedor_id: formData.origem_tipo === "FORNECEDOR" ? formData.fornecedor_id : null,
         origem_tipo: formData.origem_tipo,
-        data_inicio: format(formData.data_inicio, "yyyy-MM-dd"),
+        data_inicio: formData.data_inicio, // Already in YYYY-MM-DD format
         duracao_dias: formData.duracao_dias,
         valor_indicador: formData.origem_tipo === "INDICADOR" ? formData.valor_indicador : 0,
         valor_parceiro: formData.origem_tipo === "INDICADOR" 
@@ -495,8 +499,8 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
           {formData.origem_tipo === "DIRETO" && (
             <div className="space-y-4 p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
               <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Label>Custo de Aquisição do CPF</Label>
+              <div className="flex items-center gap-2">
+                  <Label>Custo de Aquisição do Parceiro</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full">
@@ -506,8 +510,8 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
                     <PopoverContent className="w-80 text-sm">
                       <div className="space-y-2">
                         <p className="font-medium">Opções de custo:</p>
-                        <p><strong>Sem pagamento:</strong> Parceiro indicado por amigo/família, sem custos associados.</p>
-                        <p><strong>Pagamento ao parceiro:</strong> CPF com valor acordado a ser pago ao parceiro.</p>
+                        <p><strong>Sem pagamento:</strong> Parceiro indicado sem nenhum custo associado (amigo, família, contato).</p>
+                        <p><strong>Pagamento ao parceiro:</strong> Parceiro com valor acordado a ser pago diretamente.</p>
                       </div>
                     </PopoverContent>
                   </Popover>
@@ -556,13 +560,8 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
             <div className="space-y-2">
               <Label>Data de Início</Label>
               <DatePicker
-                value={format(formData.data_inicio, "yyyy-MM-dd")}
-                onChange={(date) => {
-                  // Fix timezone: parse date string correctly to avoid day-before bug
-                  const [year, month, day] = date.split('-').map(Number);
-                  const correctedDate = new Date(year, month - 1, day, 12, 0, 0);
-                  setFormData({ ...formData, data_inicio: correctedDate });
-                }}
+                value={formData.data_inicio}
+                onChange={(date) => setFormData({ ...formData, data_inicio: date })}
                 disabled={isViewMode}
               />
             </div>
