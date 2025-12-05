@@ -72,13 +72,19 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
   }, [open]);
 
   useEffect(() => {
+    if (!open) return;
+    
+    // Always create a fresh date for today
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    
     if (parceria) {
       setFormData({
         parceiro_id: parceria.parceiro_id || "",
         origem_tipo: parceria.origem_tipo || "INDICADOR",
         indicador_id: "",
         fornecedor_id: parceria.fornecedor_id || "",
-        data_inicio: parceria.data_inicio ? new Date(parceria.data_inicio) : new Date(),
+        data_inicio: parceria.data_inicio ? new Date(parceria.data_inicio) : hoje,
         duracao_dias: parceria.duracao_dias || 60,
         valor_indicador: parceria.valor_indicador || 0,
         valor_parceiro: parceria.valor_parceiro || 0,
@@ -89,12 +95,13 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
         custo_aquisicao_isento: parceria.custo_aquisicao_isento ?? false,
       });
     } else {
+      // New partnership: always set data_inicio to TODAY
       setFormData({
         parceiro_id: "",
         origem_tipo: "INDICADOR",
         indicador_id: "",
         fornecedor_id: "",
-        data_inicio: new Date(),
+        data_inicio: hoje,
         duracao_dias: 60,
         valor_indicador: 0,
         valor_parceiro: 0,
