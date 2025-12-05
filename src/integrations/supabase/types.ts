@@ -1732,6 +1732,7 @@ export type Database = {
         Row: {
           comissao_paga: boolean | null
           created_at: string | null
+          custo_aquisicao_isento: boolean | null
           data_fim_prevista: string | null
           data_fim_real: string | null
           data_inicio: string
@@ -1755,6 +1756,7 @@ export type Database = {
         Insert: {
           comissao_paga?: boolean | null
           created_at?: string | null
+          custo_aquisicao_isento?: boolean | null
           data_fim_prevista?: string | null
           data_fim_real?: string | null
           data_inicio?: string
@@ -1778,6 +1780,7 @@ export type Database = {
         Update: {
           comissao_paga?: boolean | null
           created_at?: string | null
+          custo_aquisicao_isento?: boolean | null
           data_fim_prevista?: string | null
           data_fim_real?: string | null
           data_inicio?: string

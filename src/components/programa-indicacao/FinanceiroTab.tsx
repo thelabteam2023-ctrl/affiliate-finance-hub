@@ -103,7 +103,7 @@ export function FinanceiroTab() {
           .eq("comissao_paga", false)
           .not("valor_comissao_indicador", "is", null)
           .gt("valor_comissao_indicador", 0),
-        // Fetch parcerias with valor_parceiro that haven't been paid
+        // Fetch parcerias with valor_parceiro that haven't been paid (exclude exempt)
         supabase
           .from("parcerias")
           .select(`
@@ -111,9 +111,11 @@ export function FinanceiroTab() {
             valor_parceiro,
             origem_tipo,
             status,
+            custo_aquisicao_isento,
             parceiro:parceiros(nome)
           `)
           .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+          .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
           .gt("valor_parceiro", 0),
       ]);
 

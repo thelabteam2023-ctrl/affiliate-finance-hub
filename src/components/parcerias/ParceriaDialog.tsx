@@ -58,6 +58,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
     status: "ATIVA",
     elegivel_renovacao: true,
     observacoes: "",
+    custo_aquisicao_isento: false,
   });
 
   const [orcamentoDisponivel, setOrcamentoDisponivel] = useState(0);
@@ -85,6 +86,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
         status: parceria.status || "ATIVA",
         elegivel_renovacao: parceria.elegivel_renovacao ?? true,
         observacoes: parceria.observacoes || "",
+        custo_aquisicao_isento: parceria.custo_aquisicao_isento ?? false,
       });
     } else {
       setFormData({
@@ -100,6 +102,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
         status: "ATIVA",
         elegivel_renovacao: true,
         observacoes: "",
+        custo_aquisicao_isento: false,
       });
       setOrcamentoDisponivel(0);
     }
@@ -239,12 +242,17 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
         data_inicio: format(formData.data_inicio, "yyyy-MM-dd"),
         duracao_dias: formData.duracao_dias,
         valor_indicador: formData.origem_tipo === "INDICADOR" ? formData.valor_indicador : 0,
-        valor_parceiro: formData.origem_tipo === "INDICADOR" ? formData.valor_parceiro : 0,
+        valor_parceiro: formData.origem_tipo === "INDICADOR" 
+          ? formData.valor_parceiro 
+          : formData.origem_tipo === "DIRETO" 
+            ? formData.valor_parceiro 
+            : 0,
         valor_fornecedor: formData.origem_tipo === "FORNECEDOR" ? formData.valor_fornecedor : 0,
         valor_comissao_indicador: formData.valor_indicador, // Keep for compatibility
         status: formData.status,
         elegivel_renovacao: formData.elegivel_renovacao,
         observacoes: formData.observacoes || null,
+        custo_aquisicao_isento: formData.origem_tipo === "DIRETO" ? formData.custo_aquisicao_isento : false,
       };
 
       if (parceria?.id) {
@@ -471,6 +479,47 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode }: Par
                   min={0}
                   step={0.01}
                 />
+              </div>
+            </div>
+          )}
+
+          {/* Aquisição Direta - Custo de Aquisição */}
+          {formData.origem_tipo === "DIRETO" && (
+            <div className="space-y-4 p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+              <div className="space-y-3">
+                <Label>Custo de Aquisição do CPF</Label>
+                
+                <div className="flex items-center gap-3">
+                  <Switch 
+                    checked={formData.custo_aquisicao_isento}
+                    onCheckedChange={(checked) => setFormData({
+                      ...formData, 
+                      custo_aquisicao_isento: checked,
+                      valor_parceiro: checked ? 0 : formData.valor_parceiro
+                    })}
+                    disabled={isViewMode}
+                  />
+                  <span className="text-sm">
+                    {formData.custo_aquisicao_isento 
+                      ? "Sem custo" 
+                      : "Pagamento ao parceiro"}
+                  </span>
+                </div>
+
+                {!formData.custo_aquisicao_isento && (
+                  <div className="space-y-2">
+                    <Label>Valor a Pagar (R$)</Label>
+                    <Input
+                      type="number"
+                      value={formData.valor_parceiro}
+                      onChange={(e) => setFormData({...formData, valor_parceiro: parseFloat(e.target.value) || 0})}
+                      disabled={isViewMode}
+                      min={0}
+                      step={0.01}
+                      placeholder="Ex: 500.00"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
