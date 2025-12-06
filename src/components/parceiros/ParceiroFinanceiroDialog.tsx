@@ -110,11 +110,43 @@ export default function ParceiroFinanceiroDialog({
   const fetchTransacoes = async () => {
     setLoading(true);
     try {
-      // Fetch all transactions related to the partner
+      // Primeiro, buscar contas bancárias e wallets do parceiro
+      const { data: contasDoParceiroData } = await supabase
+        .from("contas_bancarias")
+        .select("id")
+        .eq("parceiro_id", parceiroId);
+
+      const { data: walletsDoParceiroData } = await supabase
+        .from("wallets_crypto")
+        .select("id")
+        .eq("parceiro_id", parceiroId);
+
+      const contasIds = contasDoParceiroData?.map(c => c.id) || [];
+      const walletsIds = walletsDoParceiroData?.map(w => w.id) || [];
+
+      // Construir query para buscar transações relacionadas ao parceiro
+      // Inclui: parceiro_id direto, contas bancárias do parceiro, wallets do parceiro
+      let orConditions = [
+        `origem_parceiro_id.eq.${parceiroId}`,
+        `destino_parceiro_id.eq.${parceiroId}`
+      ];
+
+      // Adicionar condições para contas bancárias
+      if (contasIds.length > 0) {
+        orConditions.push(`origem_conta_bancaria_id.in.(${contasIds.join(',')})`);
+        orConditions.push(`destino_conta_bancaria_id.in.(${contasIds.join(',')})`);
+      }
+
+      // Adicionar condições para wallets
+      if (walletsIds.length > 0) {
+        orConditions.push(`origem_wallet_id.in.(${walletsIds.join(',')})`);
+        orConditions.push(`destino_wallet_id.in.(${walletsIds.join(',')})`);
+      }
+
       const { data: transacoesData, error: transacoesError } = await supabase
         .from("cash_ledger")
         .select("*")
-        .or(`origem_parceiro_id.eq.${parceiroId},destino_parceiro_id.eq.${parceiroId}`)
+        .or(orConditions.join(','))
         .eq("status", "CONFIRMADO")
         .order("data_transacao", { ascending: false });
 
