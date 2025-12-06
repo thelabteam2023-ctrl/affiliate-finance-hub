@@ -2637,6 +2637,7 @@ export type Database = {
           saldo_total: number | null
           stake_bloqueada: number | null
           status: string | null
+          user_id: string | null
         }
         Relationships: [
           {
@@ -2680,6 +2681,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
