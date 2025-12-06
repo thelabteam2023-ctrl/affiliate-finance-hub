@@ -276,7 +276,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   // Campos comuns
   const [dataAposta, setDataAposta] = useState("");
   const [esporte, setEsporte] = useState("");
-  const [evento, setEvento] = useState("");
+  const [mandante, setMandante] = useState("");
+  const [visitante, setVisitante] = useState("");
   const [mercado, setMercado] = useState("");
   const [selecao, setSelecao] = useState("");
   const [odd, setOdd] = useState("");
@@ -284,6 +285,39 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   const [statusResultado, setStatusResultado] = useState("PENDENTE");
   const [valorRetorno, setValorRetorno] = useState("");
   const [observacoes, setObservacoes] = useState("");
+
+  // Computed evento
+  const evento = mandante && visitante ? `${mandante} x ${visitante}` : "";
+
+  // Opções de seleção baseadas no mercado e times
+  const getSelecaoOptions = (): string[] => {
+    if (!mandante || !visitante) return [];
+    
+    const mercadosMoneyline = ["Moneyline / 1X2", "Moneyline", "Dupla Chance", "Draw No Bet", "Vencedor do Jogo", "Vencedor"];
+    const mercadosOver = ["Over (Gols)", "Over (Pontos)", "Over (Games)", "Over (Runs)", "Over (Rounds)", "Over (Mapas)", "Over"];
+    const mercadosUnder = ["Under (Gols)", "Under (Pontos)", "Under (Games)", "Under (Runs)", "Under (Rounds)", "Under (Mapas)", "Under"];
+    const mercadosBTTS = ["Ambas Marcam (BTTS)", "Ambas Marcam"];
+    
+    if (mercadosMoneyline.includes(mercado)) {
+      return [mandante, "Empate", visitante];
+    }
+    if (mercadosOver.some(m => mercado.includes("Over"))) {
+      return ["Over 0.5", "Over 1.5", "Over 2.5", "Over 3.5", "Over 4.5"];
+    }
+    if (mercadosUnder.some(m => mercado.includes("Under"))) {
+      return ["Under 0.5", "Under 1.5", "Under 2.5", "Under 3.5", "Under 4.5"];
+    }
+    if (mercadosBTTS.includes(mercado)) {
+      return ["Sim", "Não"];
+    }
+    if (mercado.includes("Handicap")) {
+      return [`${mandante} -0.5`, `${mandante} -1.0`, `${mandante} -1.5`, `${visitante} +0.5`, `${visitante} +1.0`, `${visitante} +1.5`];
+    }
+    
+    return [];
+  };
+
+  const selecaoOptions = getSelecaoOptions();
 
   // Bookmaker mode
   const [bookmakerId, setBookmakerId] = useState("");
@@ -309,7 +343,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       if (aposta) {
         setDataAposta(aposta.data_aposta.slice(0, 16));
         setEsporte(aposta.esporte);
-        setEvento(aposta.evento);
+        // Parse evento para mandante/visitante
+        const eventoParts = aposta.evento?.split(" x ") || [];
+        setMandante(eventoParts[0] || aposta.evento || "");
+        setVisitante(eventoParts[1] || "");
         setMercado(aposta.mercado || "");
         setSelecao(aposta.selecao);
         setOdd(aposta.odd.toString());
@@ -394,7 +431,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     setTipoAposta("bookmaker");
     setDataAposta(new Date().toISOString().slice(0, 16));
     setEsporte("");
-    setEvento("");
+    setMandante("");
+    setVisitante("");
     setMercado("");
     setSelecao("");
     setOdd("");
@@ -607,7 +645,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
 
           <div className="grid gap-4 py-4">
             {/* Campos comuns: Data/Hora, Esporte, Evento */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Data/Hora *</Label>
                 <Input
@@ -632,12 +670,24 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Mandante e Visitante */}
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Evento *</Label>
+                <Label>Mandante *</Label>
                 <Input
-                  value={evento}
-                  onChange={(e) => setEvento(e.target.value)}
-                  placeholder="Ex: Real Madrid x Barcelona"
+                  value={mandante}
+                  onChange={(e) => setMandante(e.target.value)}
+                  placeholder="Ex: Real Madrid"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Visitante *</Label>
+                <Input
+                  value={visitante}
+                  onChange={(e) => setVisitante(e.target.value)}
+                  placeholder="Ex: Barcelona"
                 />
               </div>
             </div>
@@ -646,7 +696,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Mercado</Label>
-                <Select value={mercado} onValueChange={setMercado} disabled={!esporte}>
+                <Select value={mercado} onValueChange={(val) => {
+                  setMercado(val);
+                  setSelecao(""); // Reset seleção ao mudar mercado
+                }} disabled={!esporte}>
                   <SelectTrigger>
                     <SelectValue placeholder={esporte ? "Selecione o mercado" : "Selecione o esporte primeiro"} />
                   </SelectTrigger>
@@ -659,11 +712,24 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               </div>
               <div className="space-y-2">
                 <Label>Seleção *</Label>
-                <Input
-                  value={selecao}
-                  onChange={(e) => setSelecao(e.target.value)}
-                  placeholder="Ex: Real Madrid, Over 2.5"
-                />
+                {selecaoOptions.length > 0 ? (
+                  <Select value={selecao} onValueChange={setSelecao}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selecaoOptions.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={selecao}
+                    onChange={(e) => setSelecao(e.target.value)}
+                    placeholder="Ex: Real Madrid, Over 2.5"
+                  />
+                )}
               </div>
             </div>
 
