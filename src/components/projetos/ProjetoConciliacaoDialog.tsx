@@ -46,6 +46,7 @@ const MODELOS_ABSORCAO_LABELS: Record<string, string> = {
 interface SaldosNominais {
   fiat: number;
   crypto_usd: number;
+  saldo_irrecuperavel_total: number;
 }
 
 export function ProjetoConciliacaoDialog({
@@ -56,10 +57,12 @@ export function ProjetoConciliacaoDialog({
 }: ProjetoConciliacaoDialogProps) {
   const [loading, setLoading] = useState(false);
   const [loadingNominal, setLoadingNominal] = useState(true);
-  const [saldosNominais, setSaldosNominais] = useState<SaldosNominais>({ fiat: 0, crypto_usd: 0 });
+  const [saldosNominais, setSaldosNominais] = useState<SaldosNominais>({ fiat: 0, crypto_usd: 0, saldo_irrecuperavel_total: 0 });
   const [formData, setFormData] = useState({
     saldo_real_fiat: "",
     saldo_real_crypto_usd: "",
+    perdas_confirmadas: "",
+    motivo_perda: "",
     observacoes: "",
   });
 
@@ -69,6 +72,8 @@ export function ProjetoConciliacaoDialog({
       setFormData({
         saldo_real_fiat: "",
         saldo_real_crypto_usd: "",
+        perdas_confirmadas: "",
+        motivo_perda: "",
         observacoes: "",
       });
     }
@@ -80,15 +85,18 @@ export function ProjetoConciliacaoDialog({
       // Buscar saldos dos bookmakers vinculados ao projeto
       const { data: bookmakers, error } = await supabase
         .from("bookmakers")
-        .select("saldo_atual, moeda")
+        .select("saldo_atual, saldo_irrecuperavel, moeda")
         .eq("projeto_id", projeto.id);
 
       if (error) throw error;
 
       let totalFiat = 0;
       let totalCryptoUSD = 0;
+      let totalIrrecuperavel = 0;
 
       bookmakers?.forEach((bk) => {
+        totalIrrecuperavel += bk.saldo_irrecuperavel || 0;
+        
         if (bk.moeda === "BRL") {
           totalFiat += bk.saldo_atual || 0;
         } else if (bk.moeda === "USD" || bk.moeda === "EUR") {
@@ -99,7 +107,7 @@ export function ProjetoConciliacaoDialog({
         }
       });
 
-      setSaldosNominais({ fiat: totalFiat, crypto_usd: totalCryptoUSD });
+      setSaldosNominais({ fiat: totalFiat, crypto_usd: totalCryptoUSD, saldo_irrecuperavel_total: totalIrrecuperavel });
       setFormData(prev => ({
         ...prev,
         saldo_real_fiat: totalFiat.toFixed(2),
@@ -144,6 +152,8 @@ export function ProjetoConciliacaoDialog({
         return;
       }
 
+      const perdasConfirmadas = parseFloat(formData.perdas_confirmadas) || 0;
+
       // Inserir conciliação
       const { error: conciliacaoError } = await supabase
         .from("projeto_conciliacoes")
@@ -156,6 +166,8 @@ export function ProjetoConciliacaoDialog({
           saldo_real_crypto_usd: realCrypto,
           ajuste_fiat: ajusteFiat,
           ajuste_crypto_usd: ajusteCrypto,
+          perdas_confirmadas: perdasConfirmadas,
+          motivo_perda: formData.motivo_perda || null,
           tipo_ajuste: tipoAjuste === "NEUTRO" ? "PERDA_FRICCIONAL" : tipoAjuste,
           observacoes: formData.observacoes || null,
         });
@@ -384,13 +396,71 @@ export function ProjetoConciliacaoDialog({
               </CardContent>
             </Card>
 
+            {/* Saldo Irrecuperável Info */}
+            {saldosNominais.saldo_irrecuperavel_total > 0 && (
+              <Card className="border-amber-500/30 bg-amber-500/5">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    <span className="text-sm font-medium">Saldo Irrecuperável nos Bookmakers</span>
+                  </div>
+                  <p className="text-2xl font-mono text-amber-400">
+                    {formatCurrency(saldosNominais.saldo_irrecuperavel_total)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Total de saldos bloqueados/perdidos registrados nos vínculos
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Perdas Confirmadas */}
+            <Card className="border-red-500/30">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingDown className="h-5 w-5 text-red-500" />
+                  <h4 className="font-medium">Perdas Confirmadas</h4>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Valor das Perdas Confirmadas (R$)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.perdas_confirmadas}
+                      onChange={(e) => setFormData({ ...formData, perdas_confirmadas: e.target.value })}
+                      placeholder="0,00"
+                      className="font-mono"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Perdas definitivas como contas banidas, saldos bloqueados permanentemente, etc.
+                    </p>
+                  </div>
+
+                  {parseFloat(formData.perdas_confirmadas) > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-xs">Motivo das Perdas</Label>
+                      <Textarea
+                        value={formData.motivo_perda}
+                        onChange={(e) => setFormData({ ...formData, motivo_perda: e.target.value })}
+                        placeholder="Ex: Conta na BET365 banida com R$ 5.000 de saldo..."
+                        rows={2}
+                      />
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Observações */}
             <div className="space-y-2">
-              <Label>Observações</Label>
+              <Label>Observações Gerais</Label>
               <Textarea
                 value={formData.observacoes}
                 onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                placeholder="Detalhes sobre a conciliação, motivos das diferenças encontradas..."
+                placeholder="Detalhes adicionais sobre a conciliação..."
                 rows={3}
               />
             </div>
