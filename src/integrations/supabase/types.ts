@@ -17,6 +17,8 @@ export type Database = {
       apostas: {
         Row: {
           aposta_relacionada_id: string | null
+          back_comissao: number | null
+          back_em_exchange: boolean | null
           bookmaker_id: string
           created_at: string
           data_aposta: string
@@ -45,6 +47,8 @@ export type Database = {
         }
         Insert: {
           aposta_relacionada_id?: string | null
+          back_comissao?: number | null
+          back_em_exchange?: boolean | null
           bookmaker_id: string
           created_at?: string
           data_aposta?: string
@@ -73,6 +77,8 @@ export type Database = {
         }
         Update: {
           aposta_relacionada_id?: string | null
+          back_comissao?: number | null
+          back_em_exchange?: boolean | null
           bookmaker_id?: string
           created_at?: string
           data_aposta?: string
