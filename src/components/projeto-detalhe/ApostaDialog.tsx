@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 
 interface Aposta {
   id: string;
@@ -704,11 +705,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             {/* Campos comuns: Data/Hora, Esporte, Evento */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="block text-center uppercase text-xs tracking-wider">Data/Hora *</Label>
-                <Input
-                  type="datetime-local"
+                <Label className="block text-center uppercase text-xs tracking-wider">Data e Hora do Evento *</Label>
+                <DateTimePicker
                   value={dataAposta}
-                  onChange={(e) => setDataAposta(e.target.value)}
+                  onChange={setDataAposta}
+                  placeholder="Selecione"
                 />
               </div>
               <div className="space-y-2">
