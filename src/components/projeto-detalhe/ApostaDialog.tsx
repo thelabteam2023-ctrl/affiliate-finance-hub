@@ -285,9 +285,22 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   const [statusResultado, setStatusResultado] = useState("PENDENTE");
   const [valorRetorno, setValorRetorno] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  
+  // Handicap specific fields
+  const [handicapTime, setHandicapTime] = useState<"mandante" | "visitante" | "">("");
+  const [handicapLinha, setHandicapLinha] = useState("");
 
   // Computed evento
   const evento = mandante && visitante ? `${mandante} x ${visitante}` : "";
+
+  // Check if current mercado is handicap
+  const isHandicapMercado = mercado.includes("Handicap");
+
+  // Handicap lines options
+  const HANDICAP_LINHAS = [
+    "-5.5", "-5.0", "-4.5", "-4.0", "-3.5", "-3.0", "-2.5", "-2.0", "-1.5", "-1.0", "-0.5",
+    "0", "+0.5", "+1.0", "+1.5", "+2.0", "+2.5", "+3.0", "+3.5", "+4.0", "+4.5", "+5.0", "+5.5"
+  ];
 
   // Opções de seleção baseadas no mercado e times
   const getSelecaoOptions = (): string[] => {
@@ -310,23 +323,23 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     if (mercadosBTTS.includes(mercado)) {
       return ["Sim", "Não"];
     }
-    if (mercado.includes("Handicap Asiático")) {
-      // Handicap Asiático com linhas expandidas para cada time
-      const handicapLines = ["-0.5", "-1.0", "-1.5", "-2.0", "-2.5", "-3.0", "-3.5", "-4.0", "-4.5", "-5.0", "-5.5"];
-      const mandanteOptions = handicapLines.map(line => `${mandante} ${line}`);
-      const visitanteOptions = handicapLines.map(line => `${visitante} ${line.replace("-", "+")}`);
-      return [...mandanteOptions, ...visitanteOptions];
-    }
-    if (mercado.includes("Handicap")) {
-      // Handicap Europeu - opções mais simples
-      return [
-        `${mandante} -1`, `${mandante} -2`, `${mandante} -3`,
-        `${visitante} +1`, `${visitante} +2`, `${visitante} +3`
-      ];
+    // Handicap is handled separately with dedicated fields
+    if (isHandicapMercado) {
+      return [];
     }
     
     return [];
   };
+
+  // Build handicap selection from separate fields
+  const getHandicapSelecao = (): string => {
+    if (!isHandicapMercado || !handicapTime || !handicapLinha) return "";
+    const timeNome = handicapTime === "mandante" ? mandante : visitante;
+    return `${timeNome} ${handicapLinha}`;
+  };
+
+  // Get effective selecao (either from handicap fields or regular selecao)
+  const effectiveSelecao = isHandicapMercado ? getHandicapSelecao() : selecao;
 
   const selecaoOptions = getSelecaoOptions();
 
@@ -396,8 +409,18 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   useEffect(() => {
     if (!aposta) {
       setMercado("");
+      setSelecao("");
+      setHandicapTime("");
+      setHandicapLinha("");
     }
   }, [esporte]);
+
+  // Reset handicap fields when mercado changes
+  useEffect(() => {
+    setHandicapTime("");
+    setHandicapLinha("");
+    setSelecao("");
+  }, [mercado]);
 
   // Calcular Lay Stake e Liability para modo Bookmaker + Lay
   useEffect(() => {
@@ -446,6 +469,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     setVisitante("");
     setMercado("");
     setSelecao("");
+    setHandicapTime("");
+    setHandicapLinha("");
     setOdd("");
     setStake("");
     setStatusResultado("PENDENTE");
@@ -550,7 +575,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         esporte,
         evento,
         mercado: mercado || null,
-        selecao,
+        selecao: effectiveSelecao,
         odd: parseFloat(odd),
         stake: parseFloat(stake),
         status: statusResultado === "PENDENTE" ? "PENDENTE" : "CONCLUIDA",
@@ -726,27 +751,60 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Seleção *</Label>
-                {selecaoOptions.length > 0 ? (
-                  <Select value={selecao} onValueChange={setSelecao}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selecaoOptions.map((opt) => (
-                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    value={selecao}
-                    onChange={(e) => setSelecao(e.target.value)}
-                    placeholder="Ex: Real Madrid, Over 2.5"
-                  />
-                )}
-              </div>
+              {/* Seleção - mostra campos de Handicap ou select normal */}
+              {isHandicapMercado ? (
+                <div className="space-y-2">
+                  <Label>Seleção de Handicap *</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Select value={handicapTime} onValueChange={(v) => setHandicapTime(v as "mandante" | "visitante")}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o time" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mandante">{mandante || "Mandante"}</SelectItem>
+                        <SelectItem value="visitante">{visitante || "Visitante"}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={handicapLinha} onValueChange={setHandicapLinha} disabled={!handicapTime}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a linha" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {HANDICAP_LINHAS.map((linha) => (
+                          <SelectItem key={linha} value={linha}>{linha}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {effectiveSelecao && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Seleção: <span className="font-medium text-foreground">{effectiveSelecao}</span>
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Seleção *</Label>
+                  {selecaoOptions.length > 0 ? (
+                    <Select value={selecao} onValueChange={setSelecao}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selecaoOptions.map((opt) => (
+                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={selecao}
+                      onChange={(e) => setSelecao(e.target.value)}
+                      placeholder="Ex: Real Madrid, Over 2.5"
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Abas: Bookmaker vs Exchange */}
