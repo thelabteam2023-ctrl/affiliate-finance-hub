@@ -127,54 +127,55 @@ const CustomTooltip = ({
   return null;
 };
 
-// Custom label with curved connecting lines
+// Custom label with curved connecting lines - positioned further away
 const renderCustomLabel = ({
-  cx, cy, midAngle, innerRadius, outerRadius, percent, name, fill
+  cx, cy, midAngle, innerRadius, outerRadius, percent, name, fill, viewBox
 }: any) => {
   const RADIAN = Math.PI / 180;
-  const radius = outerRadius + 25;
+  // Increase radius for labels to prevent overlap
+  const radius = outerRadius + 40;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
   
   // Calculate connection line points
-  const lineRadius = outerRadius + 8;
+  const lineRadius = outerRadius + 10;
   const lineX = cx + lineRadius * Math.cos(-midAngle * RADIAN);
   const lineY = cy + lineRadius * Math.sin(-midAngle * RADIAN);
 
   // Only show label if percentage is significant enough
-  if (percent < 0.05) return null;
+  if (percent < 0.08) return null;
 
   return (
     <g>
       {/* Curved connecting line */}
       <path
-        d={`M${lineX},${lineY} Q${(lineX + x) / 2},${(lineY + y) / 2 - 5} ${x},${y}`}
+        d={`M${lineX},${lineY} L${x},${y}`}
         stroke={fill}
-        strokeWidth={1.5}
+        strokeWidth={1}
         fill="none"
-        strokeOpacity={0.6}
+        strokeOpacity={0.5}
         style={{ transition: "all 0.3s ease" }}
       />
       {/* Label dot */}
-      <circle cx={x} cy={y} r={3} fill={fill} />
+      <circle cx={x} cy={y} r={2} fill={fill} />
       {/* Label text */}
       <text
-        x={x + (x > cx ? 8 : -8)}
-        y={y}
+        x={x + (x > cx ? 6 : -6)}
+        y={y - 6}
         textAnchor={x > cx ? "start" : "end"}
         dominantBaseline="central"
-        className="text-xs fill-foreground font-medium"
-        style={{ fontSize: "11px" }}
+        className="fill-foreground font-medium"
+        style={{ fontSize: "10px" }}
       >
         {name}
       </text>
       <text
-        x={x + (x > cx ? 8 : -8)}
-        y={y + 14}
+        x={x + (x > cx ? 6 : -6)}
+        y={y + 6}
         textAnchor={x > cx ? "start" : "end"}
         dominantBaseline="central"
-        className="text-xs fill-muted-foreground font-mono"
-        style={{ fontSize: "10px" }}
+        className="fill-muted-foreground font-mono"
+        style={{ fontSize: "9px" }}
       >
         {(percent * 100).toFixed(0)}%
       </text>
@@ -286,6 +287,9 @@ export function ModernDonutChart({
                 formatTooltip={formatTooltip}
               />
             }
+            wrapperStyle={{ zIndex: 1000 }}
+            position={{ x: 0, y: 0 }}
+            offset={20}
           />
         </PieChart>
       </ResponsiveContainer>
