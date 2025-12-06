@@ -42,6 +42,7 @@ interface Alerta {
   parceiro_nome: string | null;
   projeto_id: string | null;
   projeto_nome: string | null;
+  status_anterior: string | null;
 }
 
 interface EntregaPendente {
@@ -720,9 +721,11 @@ export default function CentralOperacoes() {
                           </span>
                         )}
                         {getUrgencyBadge(alerta.nivel_urgencia)}
-                        <Button size="sm" variant="outline" onClick={() => navigate("/projetos")}>
-                          Realocar
-                        </Button>
+                        {alerta.status_anterior !== "limitada" && (
+                          <Button size="sm" variant="outline" onClick={() => navigate("/projetos")}>
+                            Realocar
+                          </Button>
+                        )}
                         <Button size="sm" onClick={() => handleSaqueAction(alerta)}>
                           Processar Saque
                           <ArrowRight className="ml-2 h-4 w-4" />
