@@ -403,7 +403,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {historicoCount.total > 0 ? historicoCount.total : vinculos.length}
+              {vinculos.length}
             </div>
             <p className="text-xs text-muted-foreground">
               <span className="text-emerald-400">{vinculosAtivos} ativas</span>
