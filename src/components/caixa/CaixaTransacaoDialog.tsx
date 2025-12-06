@@ -272,6 +272,7 @@ export function CaixaTransacaoDialog({
   const [saldosParceirosContas, setSaldosParceirosContas] = useState<SaldoParceiroContas[]>([]);
   const [saldosParceirosWallets, setSaldosParceirosWallets] = useState<SaldoParceiroWallets[]>([]);
   const [investidores, setInvestidores] = useState<Array<{ id: string; nome: string }>>([]);
+  const [saquesPendentes, setSaquesPendentes] = useState<Record<string, number>>({});
   
   // Transfer flow type for TRANSFERENCIA
   const [fluxoTransferencia, setFluxoTransferencia] = useState<"CAIXA_PARCEIRO" | "PARCEIRO_PARCEIRO">("CAIXA_PARCEIRO");
@@ -294,6 +295,7 @@ export function CaixaTransacaoDialog({
       fetchSaldosCaixa();
       fetchSaldosParceiros();
       fetchInvestidores();
+      fetchSaquesPendentes();
     }
   }, [open]);
 
@@ -510,6 +512,31 @@ export function CaixaTransacaoDialog({
     }
   };
 
+  const fetchSaquesPendentes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("cash_ledger")
+        .select("origem_bookmaker_id, valor")
+        .eq("tipo_transacao", "SAQUE")
+        .eq("status", "PENDENTE")
+        .not("origem_bookmaker_id", "is", null);
+
+      if (error) throw error;
+
+      // Agrupar por bookmaker_id
+      const pendentesMap: Record<string, number> = {};
+      (data || []).forEach((saque) => {
+        if (saque.origem_bookmaker_id) {
+          pendentesMap[saque.origem_bookmaker_id] = 
+            (pendentesMap[saque.origem_bookmaker_id] || 0) + (saque.valor || 0);
+        }
+      });
+      setSaquesPendentes(pendentesMap);
+    } catch (error) {
+      console.error("Erro ao carregar saques pendentes:", error);
+    }
+  };
+
   // Funções auxiliares para filtrar parceiros e contas/wallets disponíveis no destino
   const getContasDisponiveisDestino = (parceiroId: string) => {
     return contasBancarias.filter(
@@ -588,7 +615,10 @@ export function CaixaTransacaoDialog({
     
     if (tipo === "BOOKMAKER" && id) {
       const bm = bookmakers.find(b => b.id === id);
-      return bm?.saldo_atual || 0;
+      const saldoBase = bm?.saldo_atual || 0;
+      // Subtrair saques pendentes para calcular saldo disponível real
+      const pendenteBookmaker = saquesPendentes[id] || 0;
+      return saldoBase - pendenteBookmaker;
     }
     
     if (tipo === "PARCEIRO_CONTA" && id) {
@@ -602,6 +632,17 @@ export function CaixaTransacaoDialog({
     }
     
     return 0;
+  };
+
+  // Retorna o saldo bruto da bookmaker (sem descontar pendentes) para exibição
+  const getSaldoBrutoBookmaker = (id: string): number => {
+    const bm = bookmakers.find(b => b.id === id);
+    return bm?.saldo_atual || 0;
+  };
+
+  // Retorna o valor total de saques pendentes para uma bookmaker
+  const getSaquesPendentesBookmaker = (id: string): number => {
+    return saquesPendentes[id] || 0;
   };
 
   const getSaldoCoin = (tipo: string, id?: string): number => {
@@ -2039,21 +2080,29 @@ export function CaixaTransacaoDialog({
                             <div className="text-sm font-medium uppercase">{getOrigemLabel()}</div>
                             {origemBookmakerId && (
                               <div className="mt-3 space-y-1">
+                                {getSaquesPendentesBookmaker(origemBookmakerId) > 0 && (
+                                  <div className="text-xs text-yellow-500 flex items-center justify-center gap-1">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    <span>
+                                      Pendente: {formatCurrency(getSaquesPendentesBookmaker(origemBookmakerId))}
+                                    </span>
+                                  </div>
+                                )}
                                 {parseFloat(String(valor)) > 0 ? (
                                   <>
                                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                                       <TrendingDown className="h-4 w-4 text-destructive" />
                                       <span className="line-through opacity-70">
-                                        {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId))}
+                                        Disponível: {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId))}
                                       </span>
                                     </div>
                                     <div className="text-sm font-semibold text-foreground">
-                                      -{formatCurrency(parseFloat(String(valor)))}
+                                      {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId) - parseFloat(String(valor)))}
                                     </div>
                                   </>
                                 ) : (
                                   <div className="text-xs text-muted-foreground">
-                                    Saldo atual: {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId))}
+                                    Saldo disponível: {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId))}
                                   </div>
                                 )}
                               </div>
