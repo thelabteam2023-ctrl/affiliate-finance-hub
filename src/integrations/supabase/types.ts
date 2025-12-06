@@ -1948,6 +1948,88 @@ export type Database = {
           },
         ]
       }
+      projeto_perdas: {
+        Row: {
+          bookmaker_id: string | null
+          categoria: string
+          created_at: string
+          data_registro: string
+          descricao: string | null
+          id: string
+          projeto_id: string
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          bookmaker_id?: string | null
+          categoria: string
+          created_at?: string
+          data_registro?: string
+          descricao?: string | null
+          id?: string
+          projeto_id: string
+          updated_at?: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          bookmaker_id?: string | null
+          categoria?: string
+          created_at?: string
+          data_registro?: string
+          descricao?: string | null
+          id?: string
+          projeto_id?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projeto_perdas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_perdas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_perdas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "projeto_perdas_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_perdas_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "projeto_perdas_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+        ]
+      }
       projetos: {
         Row: {
           conciliado: boolean
