@@ -65,6 +65,8 @@ interface Bookmaker {
   nome: string;
   parceiro_id: string;
   saldo_atual: number;
+  saldo_total: number;
+  saldo_disponivel: number;
   moeda: string;
   parceiro?: {
     nome: string;
@@ -311,12 +313,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     const mercadosBTTS = ["Ambas Marcam (BTTS)", "Ambas Marcam"];
     
     // Usa nomes genéricos se mandante/visitante não estiverem preenchidos
-    const timeCasa = mandante || "Time Casa";
-    const timeFora = visitante || "Time Fora";
+    const timeCasa = mandante || "TIME CASA";
+    const timeFora = visitante || "TIME FORA";
     
-    // Moneyline - mostra mandante, empate, visitante
+    // Moneyline - mostra mandante, empate, visitante (UPPERCASE)
     if (mercadosMoneyline.includes(mercado)) {
-      return [timeCasa, "Empate", timeFora];
+      return [timeCasa, "EMPATE", timeFora];
     }
     
     // Over - qualquer mercado que contenha "Over"
@@ -331,7 +333,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     
     // BTTS
     if (mercadosBTTS.includes(mercado)) {
-      return ["Sim", "Não"];
+      return ["SIM", "NÃO"];
     }
     
     // Handicap is handled separately with dedicated fields
@@ -382,13 +384,37 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         const eventoParts = aposta.evento?.split(" x ") || [];
         setMandante(eventoParts[0] || aposta.evento || "");
         setVisitante(eventoParts[1] || "");
-        setMercado(aposta.mercado || "");
-        setSelecao(aposta.selecao);
         setOdd(aposta.odd.toString());
         setStake(aposta.stake.toString());
         setStatusResultado(aposta.resultado || aposta.status);
         setValorRetorno(aposta.valor_retorno?.toString() || "");
         setObservacoes(aposta.observacoes || "");
+
+        // Parse handicap selection if applicable
+        const savedMercado = aposta.mercado || "";
+        const savedSelecao = aposta.selecao || "";
+        
+        // Set mercado first without triggering reset
+        setTimeout(() => {
+          setMercado(savedMercado);
+          
+          // Check if it's a handicap selection (contains a line like +1.5, -2.0, etc.)
+          const handicapMatch = savedSelecao.match(/^(.+?)\s([+-]?\d+\.?\d*)$/);
+          if (savedMercado.includes("Handicap") && handicapMatch) {
+            const teamName = handicapMatch[1].trim();
+            const linha = handicapMatch[2];
+            // Determine which team based on name
+            const eventoParts = aposta.evento?.split(" x ") || [];
+            if (teamName === eventoParts[0]) {
+              setHandicapTime("mandante");
+            } else if (teamName === eventoParts[1]) {
+              setHandicapTime("visitante");
+            }
+            setHandicapLinha(linha.startsWith("+") || linha.startsWith("-") ? linha : `+${linha}`);
+          } else {
+            setSelecao(savedSelecao);
+          }
+        }, 50);
 
         // Determinar tipo de aposta baseado nos dados salvos
         if (aposta.back_em_exchange && aposta.lay_odd) {
@@ -426,12 +452,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     }
   }, [esporte]);
 
-  // Reset handicap fields when mercado changes
+  // Reset handicap fields when mercado changes (only for new bets)
   useEffect(() => {
-    setHandicapTime("");
-    setHandicapLinha("");
-    setSelecao("");
-  }, [mercado]);
+    if (!aposta) {
+      setHandicapTime("");
+      setHandicapLinha("");
+      setSelecao("");
+    }
+  }, [mercado, aposta]);
 
   // Calcular Lay Stake e Liability para modo Bookmaker + Lay
   useEffect(() => {
@@ -501,7 +529,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
 
   const fetchBookmakers = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch bookmakers com informação de saldo disponível
+      const { data: bookmakersData, error: bkError } = await supabase
         .from("bookmakers")
         .select(`
           id,
@@ -512,19 +541,42 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           parceiro:parceiros(nome)
         `)
         .eq("projeto_id", projetoId)
-        .in("status", ["ATIVO", "LIMITADA", "ativo", "limitada"])
-        .gt("saldo_atual", 0);
+        .in("status", ["ATIVO", "LIMITADA", "ativo", "limitada"]);
 
-      if (error) throw error;
+      if (bkError) throw bkError;
 
-      const formatted = (data || []).map((bk: any) => ({
-        id: bk.id,
-        nome: bk.nome,
-        parceiro_id: bk.parceiro_id,
-        saldo_atual: bk.saldo_atual || 0,
-        moeda: bk.moeda || "BRL",
-        parceiro: bk.parceiro
-      }));
+      // Buscar apostas pendentes para calcular saldo disponível
+      const bookmakerIds = (bookmakersData || []).map(b => b.id);
+      
+      let pendingStakes: Record<string, number> = {};
+      if (bookmakerIds.length > 0) {
+        const { data: pendingBets } = await supabase
+          .from("apostas")
+          .select("bookmaker_id, stake")
+          .in("bookmaker_id", bookmakerIds)
+          .eq("status", "PENDENTE");
+
+        pendingStakes = (pendingBets || []).reduce((acc, bet) => {
+          acc[bet.bookmaker_id] = (acc[bet.bookmaker_id] || 0) + (bet.stake || 0);
+          return acc;
+        }, {} as Record<string, number>);
+      }
+
+      const formatted = (bookmakersData || []).map((bk: any) => {
+        const saldoTotal = bk.saldo_atual || 0;
+        const stakeBloqueada = pendingStakes[bk.id] || 0;
+        const saldoDisponivel = saldoTotal - stakeBloqueada;
+        return {
+          id: bk.id,
+          nome: bk.nome,
+          parceiro_id: bk.parceiro_id,
+          saldo_atual: saldoTotal,
+          saldo_total: saldoTotal,
+          saldo_disponivel: saldoDisponivel,
+          moeda: bk.moeda || "BRL",
+          parceiro: bk.parceiro
+        };
+      }).filter(bk => bk.saldo_disponivel > 0 || (aposta && aposta.bookmaker_id === bk.id));
 
       setBookmakers(formatted);
     } catch (error) {
@@ -585,8 +637,23 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
 
   const handleSave = async () => {
     // Validações básicas
-    if (!esporte || !evento || !selecao || !odd || !stake) {
+    const finalSelecao = isHandicapMercado ? effectiveSelecao : selecao;
+    if (!esporte || !evento || !finalSelecao || !odd || !stake) {
       toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    // Validação de Odd > 1
+    const oddNum = parseFloat(odd);
+    if (isNaN(oddNum) || oddNum <= 1) {
+      toast.error("Odd deve ser maior que 1.00");
+      return;
+    }
+
+    // Validação de Stake > 0
+    const stakeNum = parseFloat(stake);
+    if (isNaN(stakeNum) || stakeNum <= 0) {
+      toast.error("Stake deve ser maior que 0");
       return;
     }
 
@@ -595,12 +662,21 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       return;
     }
 
-    // Validar stake vs saldo da bookmaker
+    // Validar stake vs saldo disponível da bookmaker (considerando apostas pendentes)
     if (tipoAposta === "bookmaker" && bookmakerId) {
       const selectedBookmaker = bookmakers.find(b => b.id === bookmakerId);
-      if (selectedBookmaker && parseFloat(stake) > selectedBookmaker.saldo_atual) {
-        toast.error(`Stake maior que o saldo disponível (${selectedBookmaker.saldo_atual.toFixed(2)})`);
-        return;
+      if (selectedBookmaker) {
+        // Para nova aposta, verificar contra saldo disponível
+        // Para edição de aposta pendente existente, considerar que a stake anterior já está bloqueada
+        const stakeAnterior = aposta?.status === "PENDENTE" ? aposta.stake : 0;
+        const saldoDisponivel = (selectedBookmaker as any).saldo_disponivel ?? selectedBookmaker.saldo_atual;
+        const saldoParaValidar = saldoDisponivel + stakeAnterior;
+        
+        if (stakeNum > saldoParaValidar) {
+          const moeda = selectedBookmaker.moeda;
+          toast.error(`Stake maior que o saldo disponível (${formatCurrencyWithSymbol(saldoParaValidar, moeda)})`);
+          return;
+        }
       }
     }
 
@@ -742,23 +818,36 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     oddNovo: number
   ) => {
     try {
-      // Primeiro, reverter o efeito do resultado anterior (se havia)
+      // Sistema de dois saldos:
+      // - saldo_total (saldo_atual no banco) = dinheiro real na conta
+      // - saldo_disponivel = saldo_total - stakes bloqueadas (apostas pendentes)
+      //
+      // Quando aposta é PENDENTE: stake fica bloqueada (saldo_disponivel diminui, saldo_total não muda)
+      // Quando aposta é resolvida:
+      //   - GREEN: saldo_total += lucro (odd*stake - stake = stake*(odd-1))
+      //   - RED: saldo_total -= stake
+      //   - VOID: saldo_total não muda (stake desbloqueia e retorna)
+      //   - HALF: saldo_total += lucro parcial
+
       let saldoAjuste = 0;
 
       // Calcular efeito do resultado anterior para reverter
-      if (resultadoAnterior) {
+      if (resultadoAnterior && resultadoAnterior !== "PENDENTE") {
         switch (resultadoAnterior) {
           case "GREEN":
-            saldoAjuste -= (stakeAnterior * oddAnterior); // Reverter ganho
+            // Reverter lucro: subtrair (odd-1)*stake
+            saldoAjuste -= stakeAnterior * (oddAnterior - 1);
             break;
           case "RED":
-            saldoAjuste += stakeAnterior; // Reverter perda
+            // Reverter perda: devolver a stake
+            saldoAjuste += stakeAnterior;
             break;
           case "VOID":
             // Nada a reverter
             break;
           case "HALF":
-            saldoAjuste -= stakeAnterior + (stakeAnterior * ((oddAnterior - 1) / 2));
+            // Reverter lucro parcial
+            saldoAjuste -= stakeAnterior * ((oddAnterior - 1) / 2);
             break;
         }
       }
@@ -767,16 +856,19 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       if (resultadoNovo && resultadoNovo !== "PENDENTE") {
         switch (resultadoNovo) {
           case "GREEN":
-            saldoAjuste += (stakeNovo * oddNovo); // Adicionar retorno
+            // Adicionar lucro: (odd-1)*stake
+            saldoAjuste += stakeNovo * (oddNovo - 1);
             break;
           case "RED":
-            saldoAjuste -= stakeNovo; // Subtrair stake perdida
+            // Subtrair stake perdida
+            saldoAjuste -= stakeNovo;
             break;
           case "VOID":
-            // Nada a fazer, stake retorna
+            // Stake já estava bloqueada, agora desbloqueia - saldo não muda
             break;
           case "HALF":
-            saldoAjuste += stakeNovo + (stakeNovo * ((oddNovo - 1) / 2));
+            // Lucro parcial: metade do lucro potencial
+            saldoAjuste += stakeNovo * ((oddNovo - 1) / 2);
             break;
         }
       }
@@ -787,10 +879,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           .from("bookmakers")
           .select("saldo_atual")
           .eq("id", bookmakerIdToUpdate)
-          .single();
+          .maybeSingle();
 
         if (bookmaker) {
-          const novoSaldo = bookmaker.saldo_atual + saldoAjuste;
+          const novoSaldo = Math.max(0, bookmaker.saldo_atual + saldoAjuste);
           await supabase
             .from("bookmakers")
             .update({ saldo_atual: novoSaldo })
@@ -993,7 +1085,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                         ) : (
                           bookmakers.map((bk) => (
                             <SelectItem key={bk.id} value={bk.id}>
-                              {bk.nome} • {bk.parceiro?.nome} • {formatCurrencyWithSymbol(bk.saldo_atual, bk.moeda)}
+                              <div className="flex items-center justify-between w-full gap-2">
+                                <span>{bk.nome} • {bk.parceiro?.nome}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  Disp: {formatCurrencyWithSymbol(bk.saldo_disponivel, bk.moeda)}
+                                </span>
+                              </div>
                             </SelectItem>
                           ))
                         )}
@@ -1005,24 +1102,44 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                     <Input
                       type="number"
                       step="0.01"
+                      min="1.01"
                       value={odd}
-                      onChange={(e) => setOdd(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // Allow typing but validate on blur
+                        setOdd(val);
+                      }}
+                      onBlur={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (!isNaN(val) && val < 1.01) {
+                          setOdd("1.01");
+                        }
+                      }}
                       placeholder="1.85"
-                      className="text-center"
+                      className={`text-center ${parseFloat(odd) <= 1 && odd !== "" ? "border-destructive" : ""}`}
                     />
+                    {parseFloat(odd) <= 1 && odd !== "" && (
+                      <p className="text-xs text-destructive mt-1">Odd deve ser &gt; 1.00</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label className="block text-center uppercase text-xs tracking-wider">Stake ({getSelectedBookmakerMoeda()}) *</Label>
                     <Input
                       type="number"
                       step="0.01"
+                      min="0.01"
                       value={stake}
-                      onChange={(e) => setStake(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // Block negative values
+                        if (parseFloat(val) < 0) return;
+                        setStake(val);
+                      }}
                       placeholder="100.00"
                       className={`text-center ${(() => {
                         const selectedBk = bookmakers.find(b => b.id === bookmakerId);
                         const stakeNum = parseFloat(stake);
-                        if (selectedBk && !isNaN(stakeNum) && stakeNum > selectedBk.saldo_atual) {
+                        if (selectedBk && !isNaN(stakeNum) && stakeNum > selectedBk.saldo_disponivel) {
                           return "border-destructive focus-visible:ring-destructive";
                         }
                         return "";
@@ -1031,10 +1148,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                     {(() => {
                       const selectedBk = bookmakers.find(b => b.id === bookmakerId);
                       const stakeNum = parseFloat(stake);
-                      if (selectedBk && !isNaN(stakeNum) && stakeNum > selectedBk.saldo_atual) {
+                      if (selectedBk && !isNaN(stakeNum) && stakeNum > selectedBk.saldo_disponivel) {
                         return (
                           <p className="text-xs text-destructive mt-1">
-                            Máx: {formatCurrencyWithSymbol(selectedBk.saldo_atual, selectedBk.moeda)}
+                            Disponível: {formatCurrencyWithSymbol(selectedBk.saldo_disponivel, selectedBk.moeda)}
                           </p>
                         );
                       }
@@ -1237,21 +1354,31 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               </TabsContent>
             </Tabs>
 
-            {/* Status / Resultado */}
+            {/* Status / Resultado - Pills clicáveis */}
             <div className="space-y-2">
               <Label className="block text-center uppercase text-xs tracking-wider">Status / Resultado</Label>
-              <Select value={statusResultado} onValueChange={setStatusResultado}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PENDENTE">PENDENTE</SelectItem>
-                  <SelectItem value="GREEN">GREEN</SelectItem>
-                  <SelectItem value="RED">RED</SelectItem>
-                  <SelectItem value="VOID">VOID</SelectItem>
-                  <SelectItem value="HALF">HALF</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {[
+                  { value: "PENDENTE", label: "PENDENTE", color: "bg-amber-500/20 text-amber-400 border-amber-500/40 hover:bg-amber-500/30" },
+                  { value: "GREEN", label: "GREEN", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30" },
+                  { value: "RED", label: "RED", color: "bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/30" },
+                  { value: "VOID", label: "VOID", color: "bg-slate-500/20 text-slate-400 border-slate-500/40 hover:bg-slate-500/30" },
+                  { value: "HALF", label: "HALF", color: "bg-purple-500/20 text-purple-400 border-purple-500/40 hover:bg-purple-500/30" },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setStatusResultado(option.value)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-all cursor-pointer ${
+                      statusResultado === option.value 
+                        ? option.color + " ring-2 ring-offset-2 ring-offset-background ring-current" 
+                        : "bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/50"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Lucro/Prejuízo calculado automaticamente */}
