@@ -162,6 +162,18 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
       <Card>
         <CardContent className="pt-4">
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => setViewMode(viewMode === "cards" ? "list" : "cards")}
+            >
+              {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+            </Button>
+            <Button onClick={() => handleOpenDialog(null)} size="sm" className="h-9">
+              <Plus className="mr-1 h-4 w-4" />
+              Nova Aposta
+            </Button>
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -194,18 +206,6 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
                 <SelectItem value="HALF">Half</SelectItem>
               </SelectContent>
             </Select>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => setViewMode(viewMode === "cards" ? "list" : "cards")}
-            >
-              {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
-            </Button>
-            <Button onClick={() => handleOpenDialog(null)} size="sm" className="h-9">
-              <Plus className="mr-1 h-4 w-4" />
-              Nova Aposta
-            </Button>
           </div>
         </CardContent>
       </Card>
