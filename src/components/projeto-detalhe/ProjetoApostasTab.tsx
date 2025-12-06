@@ -32,6 +32,7 @@ import {
 
 interface ProjetoApostasTabProps {
   projetoId: string;
+  onDataChange?: () => void;
 }
 
 interface Aposta {
@@ -64,7 +65,7 @@ interface Aposta {
   };
 }
 
-export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
+export function ProjetoApostasTab({ projetoId, onDataChange }: ProjetoApostasTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -395,7 +396,10 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
         onOpenChange={setDialogOpen}
         aposta={selectedAposta}
         projetoId={projetoId}
-        onSuccess={fetchApostas}
+        onSuccess={() => {
+          fetchApostas();
+          onDataChange?.();
+        }}
       />
     </div>
   );

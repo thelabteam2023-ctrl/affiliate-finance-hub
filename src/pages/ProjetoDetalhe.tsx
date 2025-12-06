@@ -511,7 +511,7 @@ export default function ProjetoDetalhe() {
         </TabsContent>
 
         <TabsContent value="apostas">
-          <ProjetoApostasTab projetoId={id!} />
+          <ProjetoApostasTab projetoId={id!} onDataChange={fetchApostasResumo} />
         </TabsContent>
 
         <TabsContent value="matched-betting">
