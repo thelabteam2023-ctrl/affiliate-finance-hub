@@ -66,9 +66,13 @@ interface Aposta {
   bookmaker?: {
     nome: string;
     parceiro_id: string;
+    bookmaker_catalogo_id?: string | null;
     parceiro?: {
       nome: string;
     };
+    bookmakers_catalogo?: {
+      logo_url: string | null;
+    } | null;
   };
 }
 
@@ -124,7 +128,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
           bookmaker:bookmakers (
             nome,
             parceiro_id,
-            parceiro:parceiros (nome)
+            bookmaker_catalogo_id,
+            parceiro:parceiros (nome),
+            bookmakers_catalogo (logo_url)
           )
         `)
         .eq("projeto_id", projetoId)
@@ -361,11 +367,24 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
                     </span>
                     {aposta.bookmaker && (
-                      <span className="truncate ml-2">
-                        {aposta.bookmaker.nome}
-                        {aposta.bookmaker.parceiro?.nome && (
-                          <> - {getFirstLastName(aposta.bookmaker.parceiro.nome)}</>
+                      <span className="flex items-center gap-1.5 truncate ml-2">
+                        {aposta.bookmaker.bookmakers_catalogo?.logo_url ? (
+                          <img 
+                            src={aposta.bookmaker.bookmakers_catalogo.logo_url} 
+                            alt={aposta.bookmaker.nome}
+                            className="h-4 w-4 rounded-sm object-contain flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="h-4 w-4 rounded-sm bg-muted flex items-center justify-center flex-shrink-0">
+                            <Target className="h-2.5 w-2.5 text-muted-foreground" />
+                          </div>
                         )}
+                        <span className="truncate">
+                          {aposta.bookmaker.nome}
+                          {aposta.bookmaker.parceiro?.nome && (
+                            <> - {getFirstLastName(aposta.bookmaker.parceiro.nome)}</>
+                          )}
+                        </span>
                       </span>
                     )}
                   </div>
@@ -387,9 +406,17 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                     className="flex items-center gap-4 flex-1 cursor-pointer"
                     onClick={() => handleOpenDialog(aposta)}
                   >
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Target className="h-5 w-5 text-primary" />
-                    </div>
+                    {aposta.bookmaker?.bookmakers_catalogo?.logo_url ? (
+                      <img 
+                        src={aposta.bookmaker.bookmakers_catalogo.logo_url} 
+                        alt={aposta.bookmaker.nome}
+                        className="h-10 w-10 rounded-lg object-contain bg-muted/50 p-1"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Target className="h-5 w-5 text-primary" />
+                      </div>
+                    )}
                     <div>
                       <p className="font-medium">
                         {aposta.evento}
