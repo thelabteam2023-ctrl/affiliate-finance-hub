@@ -18,11 +18,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  Legend
 } from "recharts";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
+import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
@@ -372,35 +370,28 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={esportesData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis 
-                  dataKey="esporte" 
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                />
-                <YAxis 
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: "rgba(0, 0, 0, 0.4)",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    backdropFilter: "blur(12px)",
-                    borderRadius: "12px",
-                    padding: "12px 16px"
-                  }}
-                  cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
-                />
-                <Legend />
-                <Bar dataKey="greens" fill="#10b981" name="Greens" />
-                <Bar dataKey="reds" fill="#ef4444" name="Reds" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <ModernBarChart
+            data={esportesData}
+            categoryKey="esporte"
+            bars={[
+              { 
+                dataKey: "greens", 
+                label: "Greens", 
+                gradientStart: "#22C55E", 
+                gradientEnd: "#16A34A" 
+              },
+              { 
+                dataKey: "reds", 
+                label: "Reds", 
+                gradientStart: "#EF4444", 
+                gradientEnd: "#DC2626" 
+              },
+            ]}
+            height={250}
+            barSize={24}
+            showLabels={true}
+            showLegend={true}
+          />
         </CardContent>
       </Card>
     </div>
