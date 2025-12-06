@@ -1,7 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -52,6 +59,7 @@ interface DailyData {
 export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRange }: ProjetoDashboardTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEsporte, setSelectedEsporte] = useState<string>("");
 
   const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
     const today = new Date();
@@ -179,18 +187,44 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     return acc;
   }, {});
 
-  const esportesData = Object.entries(esportesMap).map(([esporte, data]) => {
-    const totalApostas = data.greens + data.reds + data.meioGreens + data.meioReds;
-    return {
-      esporte,
-      greens: data.greens,
-      reds: data.reds,
-      meioGreens: data.meioGreens,
-      meioReds: data.meioReds,
-      lucro: data.lucro,
-      totalApostas,
-    };
-  });
+  const esportesData = useMemo(() => {
+    const data = Object.entries(esportesMap).map(([esporte, data]) => {
+      const totalApostas = data.greens + data.reds + data.meioGreens + data.meioReds;
+      return {
+        esporte,
+        greens: data.greens,
+        reds: data.reds,
+        meioGreens: data.meioGreens,
+        meioReds: data.meioReds,
+        lucro: data.lucro,
+        totalApostas,
+      };
+    });
+    // Sort by total bets (most bets first)
+    return data.sort((a, b) => b.totalApostas - a.totalApostas);
+  }, [esportesMap]);
+
+  // Auto-select the sport with most bets
+  useEffect(() => {
+    if (esportesData.length > 0 && !selectedEsporte) {
+      setSelectedEsporte(esportesData[0].esporte);
+    }
+  }, [esportesData, selectedEsporte]);
+
+  // Reset selection when period changes and current selection is no longer available
+  useEffect(() => {
+    if (selectedEsporte && esportesData.length > 0) {
+      const stillExists = esportesData.some(e => e.esporte === selectedEsporte);
+      if (!stillExists) {
+        setSelectedEsporte(esportesData[0].esporte);
+      }
+    }
+  }, [esportesData, selectedEsporte]);
+
+  // Filtered data for the chart (single sport)
+  const filteredEsportesData = useMemo(() => {
+    return esportesData.filter(e => e.esporte === selectedEsporte);
+  }, [esportesData, selectedEsporte]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -380,15 +414,29 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
 
       {/* Performance por Esporte */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
             Performance por Esporte
           </CardTitle>
+          {esportesData.length > 0 && (
+            <Select value={selectedEsporte} onValueChange={setSelectedEsporte}>
+              <SelectTrigger className="w-[180px] h-8 text-sm">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {esportesData.map(esporte => (
+                  <SelectItem key={esporte.esporte} value={esporte.esporte}>
+                    {esporte.esporte} ({esporte.totalApostas})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </CardHeader>
         <CardContent>
           <ModernBarChart
-            data={esportesData}
+            data={filteredEsportesData}
             categoryKey="esporte"
             bars={[
               { 
