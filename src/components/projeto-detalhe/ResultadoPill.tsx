@@ -232,38 +232,36 @@ export function ResultadoPill({
 
   return (
     <div className="flex items-center gap-1">
-      {/* Pill de Resultado - clicável apenas se pendente */}
-      {isPending ? (
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Badge 
-              className={`${getResultadoColor(displayValue)} text-[10px] px-1.5 py-0 cursor-pointer hover:opacity-80 transition-opacity`}
-            >
-              {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : getDisplayLabel(displayValue)}
-            </Badge>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-2" align="end">
-            <div className="flex flex-col gap-1">
-              <p className="text-xs text-muted-foreground mb-1 font-medium">Resultado</p>
-              {RESULTADO_OPTIONS.map((option) => (
-                <Button
-                  key={option.value}
-                  size="sm"
-                  className={`${option.color} text-white justify-start text-xs h-7`}
-                  onClick={() => handleResultadoSelect(option.value)}
-                  disabled={loading}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
-      ) : (
-        <Badge className={`${getResultadoColor(displayValue)} text-[10px] px-1.5 py-0`}>
-          {getDisplayLabel(displayValue)}
-        </Badge>
-      )}
+      {/* Pill de Resultado - sempre clicável para alterar resultado */}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Badge 
+            className={`${getResultadoColor(displayValue)} text-[10px] px-1.5 py-0 cursor-pointer hover:opacity-80 transition-opacity`}
+          >
+            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : getDisplayLabel(displayValue)}
+          </Badge>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-2" align="end">
+          <div className="flex flex-col gap-1">
+            <p className="text-xs text-muted-foreground mb-1 font-medium">Alterar Resultado</p>
+            {RESULTADO_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                size="sm"
+                variant={resultado === option.value ? "default" : "outline"}
+                className={resultado === option.value 
+                  ? `${option.color} text-white justify-start text-xs h-7`
+                  : "justify-start text-xs h-7 hover:bg-accent"
+                }
+                onClick={() => handleResultadoSelect(option.value)}
+                disabled={loading}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
 
       {/* Botão de edição completa */}
       <Button
