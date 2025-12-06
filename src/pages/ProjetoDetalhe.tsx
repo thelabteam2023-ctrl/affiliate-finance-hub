@@ -199,10 +199,18 @@ export default function ProjetoDetalhe() {
                 <Badge className={getStatusColor(projeto.status)}>
                   {getStatusLabel(projeto.status)}
                 </Badge>
+                {projeto.data_inicio && (
+                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {getDiasAtivos()} dias
+                  </span>
+                )}
               </div>
-              {projeto.descricao && (
-                <p className="text-muted-foreground">{projeto.descricao}</p>
-              )}
+              <div className="flex items-center gap-2 mt-1">
+                {projeto.descricao && (
+                  <p className="text-muted-foreground">{projeto.descricao}</p>
+                )}
+              </div>
               {projeto.tem_investimento_crypto && (
                 <div className="flex items-center gap-2 mt-1">
                   <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">
@@ -224,35 +232,8 @@ export default function ProjetoDetalhe() {
       </div>
 
       {/* KPIs Resumo */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Dias Ativos</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{getDiasAtivos()}</div>
-            {projeto.data_inicio && (
-              <p className="text-xs text-muted-foreground">
-                Desde {format(new Date(projeto.data_inicio), "dd/MM/yyyy", { locale: ptBR })}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Operadores</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{resumo?.operadores_ativos || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              {formatCurrency(resumo?.total_gasto_operadores || 0)} em pagamentos
-            </p>
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-4 md:grid-cols-3">
+        {/* Apostas */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Apostas</CardTitle>
@@ -268,21 +249,38 @@ export default function ProjetoDetalhe() {
           </CardContent>
         </Card>
 
+        {/* Volume em Apostas */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ROI</CardTitle>
-            {(apostasResumo?.roi_percentual || 0) >= 0 ? (
+            <CardTitle className="text-sm font-medium">Volume em Apostas</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(apostasResumo?.total_stake || 0)}</div>
+            <p className="text-xs text-muted-foreground">
+              Total apostado
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Resultado */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              {(apostasResumo?.lucro_total || 0) >= 0 ? "Lucro" : "Prejuízo"}
+            </CardTitle>
+            {(apostasResumo?.lucro_total || 0) >= 0 ? (
               <TrendingUp className="h-4 w-4 text-emerald-500" />
             ) : (
               <TrendingDown className="h-4 w-4 text-red-500" />
             )}
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${(apostasResumo?.roi_percentual || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-              {(apostasResumo?.roi_percentual || 0).toFixed(2)}%
+            <div className={`text-2xl font-bold ${(apostasResumo?.lucro_total || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+              {formatCurrency(Math.abs(apostasResumo?.lucro_total || 0))}
             </div>
             <p className="text-xs text-muted-foreground">
-              {formatCurrency(apostasResumo?.lucro_total || 0)} lucro
+              ROI: {(apostasResumo?.roi_percentual || 0).toFixed(2)}%
             </p>
           </CardContent>
         </Card>
