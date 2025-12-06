@@ -8,8 +8,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, Users, TrendingUp, UserPlus, Truck, ArrowRight, CalendarDays, Trophy, Award, Target, CheckCircle2, Gift } from "lucide-react";
-import { ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
+import { ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
+import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { format, startOfMonth, endOfMonth, startOfYear, subMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -393,29 +394,21 @@ export function DashboardTab() {
             <CardTitle className="text-base">Pagamentos por Categoria</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={barData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis 
-                  tickFormatter={(value) => value >= 1000 ? `R$ ${(value / 1000).toFixed(1)}k` : `R$ ${value}`}
-                  tick={{ fill: "hsl(var(--muted-foreground))" }}
-                  width={80}
-                />
-                <Tooltip 
-                  formatter={(value: number) => [formatCurrency(value), "Valor"]}
-                  contentStyle={{ 
-                    backgroundColor: "rgba(0, 0, 0, 0.4)", 
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    backdropFilter: "blur(12px)",
-                    borderRadius: "12px",
-                    padding: "12px 16px"
-                  }}
-                  cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
-                />
-                <Bar dataKey="valor" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <ModernBarChart
+              data={barData}
+              categoryKey="name"
+              bars={[
+                { 
+                  dataKey: "valor", 
+                  label: "Valor", 
+                  gradientStart: "#22C55E", 
+                  gradientEnd: "#16A34A" 
+                },
+              ]}
+              height={250}
+              barSize={40}
+              formatValue={(value) => formatCurrency(value)}
+            />
           </CardContent>
         </Card>
       </div>
