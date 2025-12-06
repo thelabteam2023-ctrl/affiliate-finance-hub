@@ -62,6 +62,7 @@ export default function BookmakerDialog({
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [status, setStatus] = useState("ativo");
+  const [saldoIrrecuperavel, setSaldoIrrecuperavel] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [showObservacoesDialog, setShowObservacoesDialog] = useState(false);
   const { toast } = useToast();
@@ -119,6 +120,7 @@ export default function BookmakerDialog({
       setLoginUsername("");
       setLoginPassword("");
       setStatus("ativo");
+      setSaldoIrrecuperavel("");
       setObservacoes("");
       setIsLoadingDetails(false);
       return;
@@ -131,6 +133,7 @@ export default function BookmakerDialog({
       setLoginUsername(bookmaker.login_username || "");
       setLoginPassword("");
       setStatus(bookmaker.status || "ativo");
+      setSaldoIrrecuperavel(bookmaker.saldo_irrecuperavel?.toString() || "0");
       setObservacoes(bookmaker.observacoes || "");
       setSelectedLink(bookmaker.link_origem || "");
       setSelectedBookmaker(null);
@@ -143,6 +146,7 @@ export default function BookmakerDialog({
       setLoginUsername("");
       setLoginPassword("");
       setStatus("ativo");
+      setSaldoIrrecuperavel("");
       setObservacoes("");
       setSelectedLink("");
       setSelectedBookmaker(null);
@@ -199,6 +203,7 @@ export default function BookmakerDialog({
         login_username: loginUsername || "",
         login_password_encrypted: loginPassword ? encryptPassword(loginPassword) : "",
         saldo_atual: 0,
+        saldo_irrecuperavel: parseFloat(saldoIrrecuperavel) || 0,
         moeda: "BRL",
         status,
         observacoes: observacoes || null,
@@ -369,7 +374,7 @@ export default function BookmakerDialog({
               />
             </div>
 
-            <div className="col-span-2">
+            <div>
               <Label htmlFor="status">Status</Label>
               <Select value={status} onValueChange={setStatus} disabled={loading}>
                 <SelectTrigger>
@@ -380,6 +385,27 @@ export default function BookmakerDialog({
                   <SelectItem value="limitada">Limitada</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="saldoIrrecuperavel" className="flex items-center gap-2">
+                Saldo Irrecuperável
+                <span className="text-xs text-muted-foreground">(R$)</span>
+              </Label>
+              <Input
+                id="saldoIrrecuperavel"
+                type="number"
+                step="0.01"
+                min="0"
+                value={saldoIrrecuperavel}
+                onChange={(e) => setSaldoIrrecuperavel(e.target.value)}
+                placeholder="0,00"
+                disabled={loading}
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Valor bloqueado/perdido que não pode ser sacado
+              </p>
             </div>
 
             <div className="col-span-2">
