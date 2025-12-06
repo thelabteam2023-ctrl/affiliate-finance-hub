@@ -2927,6 +2927,7 @@ export type Database = {
           parceiro_nome: string | null
           projeto_id: string | null
           projeto_nome: string | null
+          status_anterior: string | null
           tipo_alerta: string | null
           titulo: string | null
           user_id: string | null
