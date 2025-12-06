@@ -177,6 +177,7 @@ export type Database = {
           parceiro_id: string | null
           projeto_id: string | null
           saldo_atual: number
+          saldo_irrecuperavel: number
           status: string
           updated_at: string
           url: string | null
@@ -195,6 +196,7 @@ export type Database = {
           parceiro_id?: string | null
           projeto_id?: string | null
           saldo_atual?: number
+          saldo_irrecuperavel?: number
           status?: string
           updated_at?: string
           url?: string | null
@@ -213,6 +215,7 @@ export type Database = {
           parceiro_id?: string | null
           projeto_id?: string | null
           saldo_atual?: number
+          saldo_irrecuperavel?: number
           status?: string
           updated_at?: string
           url?: string | null
@@ -1871,7 +1874,9 @@ export type Database = {
           data_conciliacao: string
           descricao: string | null
           id: string
+          motivo_perda: string | null
           observacoes: string | null
+          perdas_confirmadas: number
           projeto_id: string
           saldo_nominal_crypto_usd: number
           saldo_nominal_fiat: number
@@ -1888,7 +1893,9 @@ export type Database = {
           data_conciliacao?: string
           descricao?: string | null
           id?: string
+          motivo_perda?: string | null
           observacoes?: string | null
+          perdas_confirmadas?: number
           projeto_id: string
           saldo_nominal_crypto_usd?: number
           saldo_nominal_fiat?: number
@@ -1905,7 +1912,9 @@ export type Database = {
           data_conciliacao?: string
           descricao?: string | null
           id?: string
+          motivo_perda?: string | null
           observacoes?: string | null
+          perdas_confirmadas?: number
           projeto_id?: string
           saldo_nominal_crypto_usd?: number
           saldo_nominal_fiat?: number
