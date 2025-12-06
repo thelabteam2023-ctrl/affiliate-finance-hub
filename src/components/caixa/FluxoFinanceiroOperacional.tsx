@@ -12,13 +12,11 @@ import {
   Tooltip, 
   ResponsiveContainer, 
   Cell,
-  PieChart,
-  Pie,
   Legend
 } from "recharts";
-import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { format, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, DollarSign, AlertCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, DollarSign, AlertCircle, Building2, Users } from "lucide-react";
 
 interface Transacao {
   id: string;
@@ -36,30 +34,20 @@ interface FluxoFinanceiroOperacionalProps {
   transacoes: Transacao[];
   dataInicio?: Date;
   dataFim?: Date;
+  saldoBookmakers?: number;
   onTransacaoClick?: (transacoes: Transacao[]) => void;
 }
 
 type Periodo = "dia" | "semana" | "mes";
 
-const CATEGORIAS_ENTRADAS = [
-  { key: "aportes", label: "Aportes de Investidores", color: "hsl(142, 76%, 50%)" },
-  { key: "saques_bookmaker", label: "Saques de Bookmakers", color: "hsl(142, 76%, 36%)" },
-];
-
-const CATEGORIAS_SAIDAS = [
-  { key: "liquidacoes", label: "Liquidações a Investidores", color: "hsl(0, 84%, 60%)" },
-  { key: "depositos_bookmaker", label: "Depósitos em Bookmakers", color: "hsl(0, 84%, 45%)" },
-  { key: "transferencias", label: "Transferências", color: "hsl(25, 95%, 53%)" },
-];
-
 export function FluxoFinanceiroOperacional({
   transacoes,
   dataInicio,
   dataFim,
+  saldoBookmakers = 0,
   onTransacaoClick,
 }: FluxoFinanceiroOperacionalProps) {
   const [periodo, setPeriodo] = useState<Periodo>("dia");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   // Filtrar transações pelo período selecionado
   const transacoesFiltradas = useMemo(() => {
@@ -76,13 +64,13 @@ export function FluxoFinanceiroOperacional({
     });
   }, [transacoes, dataInicio, dataFim]);
 
-  // Calcular dados para o gráfico de fluxo líquido por período
-  const dadosFluxoLiquido = useMemo(() => {
-    if (transacoesFiltradas.length === 0) return [];
-
-    const agrupamentos: Map<string, { entradas: number; saidas: number; transacoes: Transacao[] }> = new Map();
+  // 1. Fluxo de Capital Externo (Investidores)
+  const dadosCapitalExterno = useMemo(() => {
+    const agrupamentos: Map<string, { aportes: number; liquidacoes: number; transacoes: Transacao[] }> = new Map();
 
     transacoesFiltradas.forEach((t) => {
+      if (t.tipo_transacao !== "APORTE_FINANCEIRO") return;
+      
       const data = parseISO(t.data_transacao);
       let chave: string;
 
@@ -91,8 +79,7 @@ export function FluxoFinanceiroOperacional({
           chave = format(data, "dd/MM");
           break;
         case "semana":
-          const inicioSemana = startOfWeek(data, { weekStartsOn: 1 });
-          chave = `Sem ${format(inicioSemana, "dd/MM")}`;
+          chave = `Sem ${format(data, "w")}`;
           break;
         case "mes":
           chave = format(data, "MMM/yy", { locale: ptBR });
@@ -102,124 +89,113 @@ export function FluxoFinanceiroOperacional({
       }
 
       if (!agrupamentos.has(chave)) {
-        agrupamentos.set(chave, { entradas: 0, saidas: 0, transacoes: [] });
+        agrupamentos.set(chave, { aportes: 0, liquidacoes: 0, transacoes: [] });
       }
 
       const grupo = agrupamentos.get(chave)!;
       grupo.transacoes.push(t);
-
-      // Classificar como entrada ou saída baseado no fluxo real do caixa operacional
-      // ENTRADAS: Aportes de investidores (destino=CAIXA) + Saques de bookmakers
-      // SAÍDAS: Liquidações a investidores (origem=CAIXA) + Depósitos em bookmakers + Transferências
-      const isEntrada = 
-        (t.tipo_transacao === "APORTE_FINANCEIRO" && t.destino_tipo === "CAIXA_OPERACIONAL") ||
-        t.tipo_transacao === "SAQUE";
-
-      const isSaida = 
-        (t.tipo_transacao === "APORTE_FINANCEIRO" && t.origem_tipo === "CAIXA_OPERACIONAL") ||
-        t.tipo_transacao === "DEPOSITO" ||
-        (t.tipo_transacao === "TRANSFERENCIA" && t.origem_tipo === "CAIXA_OPERACIONAL");
-
       const valor = t.tipo_moeda === "CRYPTO" ? (t.valor_usd || 0) : t.valor;
 
-      if (isEntrada) {
-        grupo.entradas += valor;
-      } else if (isSaida) {
-        grupo.saidas += valor;
+      // Aporte: Investidor → Caixa
+      if (t.destino_tipo === "CAIXA_OPERACIONAL") {
+        grupo.aportes += valor;
+      }
+      // Liquidação: Caixa → Investidor
+      if (t.origem_tipo === "CAIXA_OPERACIONAL") {
+        grupo.liquidacoes += valor;
       }
     });
 
-    return Array.from(agrupamentos.entries())
+    const dados = Array.from(agrupamentos.entries())
       .map(([chave, dados]) => ({
         periodo: chave,
-        entradas: dados.entradas,
-        saidas: dados.saidas,
-        liquido: dados.entradas - dados.saidas,
+        aportes: dados.aportes,
+        liquidacoes: -dados.liquidacoes,
+        liquido: dados.aportes - dados.liquidacoes,
         transacoes: dados.transacoes,
       }))
-      .slice(-12); // Últimos 12 períodos
+      .slice(-12);
+
+    const totalAportes = dados.reduce((sum, d) => sum + d.aportes, 0);
+    const totalLiquidacoes = dados.reduce((sum, d) => sum + Math.abs(d.liquidacoes), 0);
+
+    return { dados, totalAportes, totalLiquidacoes, liquido: totalAportes - totalLiquidacoes };
   }, [transacoesFiltradas, periodo]);
 
-  // Calcular distribuição por categoria
-  const dadosDistribuicao = useMemo(() => {
-    const categorias = {
-      aportes: 0,
-      saques_bookmaker: 0,
-      liquidacoes: 0,
-      depositos_bookmaker: 0,
-      transferencias: 0,
-    };
-
-    const transacoesPorCategoria: Record<string, Transacao[]> = {
-      aportes: [],
-      saques_bookmaker: [],
-      liquidacoes: [],
-      depositos_bookmaker: [],
-      transferencias: [],
-    };
+  // 2. Capital Alocado em Operação (Bookmakers)
+  const dadosCapitalOperacao = useMemo(() => {
+    const agrupamentos: Map<string, { depositos: number; saques: number; transacoes: Transacao[] }> = new Map();
 
     transacoesFiltradas.forEach((t) => {
+      if (t.tipo_transacao !== "DEPOSITO" && t.tipo_transacao !== "SAQUE") return;
+      
+      const data = parseISO(t.data_transacao);
+      let chave: string;
+
+      switch (periodo) {
+        case "dia":
+          chave = format(data, "dd/MM");
+          break;
+        case "semana":
+          chave = `Sem ${format(data, "w")}`;
+          break;
+        case "mes":
+          chave = format(data, "MMM/yy", { locale: ptBR });
+          break;
+        default:
+          chave = format(data, "dd/MM");
+      }
+
+      if (!agrupamentos.has(chave)) {
+        agrupamentos.set(chave, { depositos: 0, saques: 0, transacoes: [] });
+      }
+
+      const grupo = agrupamentos.get(chave)!;
+      grupo.transacoes.push(t);
       const valor = t.tipo_moeda === "CRYPTO" ? (t.valor_usd || 0) : t.valor;
 
-      // ENTRADAS
-      if (t.tipo_transacao === "APORTE_FINANCEIRO" && t.destino_tipo === "CAIXA_OPERACIONAL") {
-        // Aporte de investidor → Caixa Operacional
-        categorias.aportes += valor;
-        transacoesPorCategoria.aportes.push(t);
+      if (t.tipo_transacao === "DEPOSITO") {
+        grupo.depositos += valor;
       } else if (t.tipo_transacao === "SAQUE") {
-        // Saque de bookmaker → conta bancária (capital recuperado)
-        categorias.saques_bookmaker += valor;
-        transacoesPorCategoria.saques_bookmaker.push(t);
-      }
-      // SAÍDAS
-      else if (t.tipo_transacao === "APORTE_FINANCEIRO" && t.origem_tipo === "CAIXA_OPERACIONAL") {
-        // Liquidação: Caixa Operacional → Investidor
-        categorias.liquidacoes += valor;
-        transacoesPorCategoria.liquidacoes.push(t);
-      } else if (t.tipo_transacao === "DEPOSITO") {
-        // Depósito em bookmaker
-        categorias.depositos_bookmaker += valor;
-        transacoesPorCategoria.depositos_bookmaker.push(t);
-      } else if (t.tipo_transacao === "TRANSFERENCIA" && t.origem_tipo === "CAIXA_OPERACIONAL") {
-        // Transferência saindo do caixa operacional
-        categorias.transferencias += valor;
-        transacoesPorCategoria.transferencias.push(t);
+        grupo.saques += valor;
       }
     });
 
-    const entradas = [
-      { name: "Aportes de Investidores", value: categorias.aportes, key: "aportes", color: "hsl(142, 76%, 50%)" },
-      { name: "Saques de Bookmakers", value: categorias.saques_bookmaker, key: "saques_bookmaker", color: "hsl(142, 76%, 36%)" },
-    ].filter(item => item.value > 0);
+    const dados = Array.from(agrupamentos.entries())
+      .map(([chave, dados]) => ({
+        periodo: chave,
+        depositos: dados.depositos,
+        saques: dados.saques,
+        alocacaoLiquida: dados.depositos - dados.saques,
+        transacoes: dados.transacoes,
+      }))
+      .slice(-12);
 
-    const saidas = [
-      { name: "Liquidações a Investidores", value: categorias.liquidacoes, key: "liquidacoes", color: "hsl(0, 84%, 60%)" },
-      { name: "Depósitos em Bookmakers", value: categorias.depositos_bookmaker, key: "depositos_bookmaker", color: "hsl(0, 84%, 45%)" },
-      { name: "Transferências", value: categorias.transferencias, key: "transferencias", color: "hsl(25, 95%, 53%)" },
-    ].filter(item => item.value > 0);
+    const totalDepositos = dados.reduce((sum, d) => sum + d.depositos, 0);
+    const totalSaques = dados.reduce((sum, d) => sum + d.saques, 0);
 
-    const totalEntradas = entradas.reduce((sum, item) => sum + item.value, 0);
-    const totalSaidas = saidas.reduce((sum, item) => sum + item.value, 0);
+    return { dados, totalDepositos, totalSaques, alocacaoLiquida: totalDepositos - totalSaques };
+  }, [transacoesFiltradas, periodo]);
 
-    return {
-      entradas,
-      saidas,
-      totalEntradas,
-      totalSaidas,
-      transacoesPorCategoria,
+  // 3. Resultado Operacional
+  const resultadoOperacional = useMemo(() => {
+    const totalDepositos = dadosCapitalOperacao.totalDepositos;
+    const totalSaques = dadosCapitalOperacao.totalSaques;
+    
+    // Resultado = Saldo Atual em Bookmakers + Total Sacado - Total Depositado
+    const resultado = saldoBookmakers + totalSaques - totalDepositos;
+    const percentualRetorno = totalDepositos > 0 
+      ? ((resultado / totalDepositos) * 100) 
+      : 0;
+
+    return { 
+      totalDepositos, 
+      totalSaques, 
+      saldoBookmakers,
+      resultado,
+      percentualRetorno 
     };
-  }, [transacoesFiltradas]);
-
-  // Totais gerais
-  const totais = useMemo(() => {
-    const totalEntradas = dadosFluxoLiquido.reduce((sum, d) => sum + d.entradas, 0);
-    const totalSaidas = dadosFluxoLiquido.reduce((sum, d) => sum + d.saidas, 0);
-    return {
-      entradas: totalEntradas,
-      saidas: totalSaidas,
-      liquido: totalEntradas - totalSaidas,
-    };
-  }, [dadosFluxoLiquido]);
+  }, [dadosCapitalOperacao, saldoBookmakers]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -238,7 +214,7 @@ export function FluxoFinanceiroOperacional({
     padding: "12px 16px",
   };
 
-  const CustomTooltipFluxo = ({ active, payload, label }: any) => {
+  const CustomTooltipExterno = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0]?.payload;
       return (
@@ -246,17 +222,17 @@ export function FluxoFinanceiroOperacional({
           <p className="font-medium text-sm mb-2">{label}</p>
           <div className="space-y-1 text-sm">
             <div className="flex justify-between gap-4">
-              <span className="text-emerald-500">Entradas:</span>
-              <span className="font-mono">{formatCurrency(data?.entradas || 0)}</span>
+              <span className="text-emerald-500">Aportes:</span>
+              <span className="font-mono">{formatCurrency(data?.aportes || 0)}</span>
             </div>
             <div className="flex justify-between gap-4">
-              <span className="text-destructive">Saídas:</span>
-              <span className="font-mono">{formatCurrency(data?.saidas || 0)}</span>
+              <span className="text-amber-500">Liquidações:</span>
+              <span className="font-mono">{formatCurrency(Math.abs(data?.liquidacoes || 0))}</span>
             </div>
             <div className="border-t border-white/10 pt-1 mt-1">
               <div className="flex justify-between gap-4 font-medium">
                 <span className={data?.liquido >= 0 ? "text-emerald-500" : "text-destructive"}>
-                  Resultado Líquido:
+                  Saldo:
                 </span>
                 <span className="font-mono">{formatCurrency(data?.liquido || 0)}</span>
               </div>
@@ -268,30 +244,34 @@ export function FluxoFinanceiroOperacional({
     return null;
   };
 
-  const CustomTooltipDistribuicao = ({ active, payload }: any) => {
+  const CustomTooltipOperacao = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const data = payload[0];
-      const total = data.payload.tipo === "entrada" ? dadosDistribuicao.totalEntradas : dadosDistribuicao.totalSaidas;
-      const percentual = total > 0 ? ((data.value / total) * 100).toFixed(1) : "0";
-      
+      const data = payload[0]?.payload;
       return (
         <div style={tooltipStyle}>
-          <p className="font-medium text-sm mb-1">{data.name}</p>
-          <div className="text-sm space-y-1">
-            <p className="font-mono">{formatCurrency(data.value)}</p>
-            <p className="text-muted-foreground">{percentual}% do total</p>
+          <p className="font-medium text-sm mb-2">{label}</p>
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between gap-4">
+              <span className="text-blue-500">Depósitos:</span>
+              <span className="font-mono">{formatCurrency(data?.depositos || 0)}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-purple-500">Saques:</span>
+              <span className="font-mono">{formatCurrency(data?.saques || 0)}</span>
+            </div>
+            <div className="border-t border-white/10 pt-1 mt-1">
+              <div className="flex justify-between gap-4 font-medium">
+                <span className={data?.alocacaoLiquida >= 0 ? "text-blue-500" : "text-purple-500"}>
+                  Alocação Líquida:
+                </span>
+                <span className="font-mono">{formatCurrency(data?.alocacaoLiquida || 0)}</span>
+              </div>
+            </div>
           </div>
         </div>
       );
     }
     return null;
-  };
-
-  const handleCategoryClick = (key: string) => {
-    if (onTransacaoClick && dadosDistribuicao.transacoesPorCategoria[key]) {
-      onTransacaoClick(dadosDistribuicao.transacoesPorCategoria[key]);
-    }
-    setSelectedCategory(key);
   };
 
   const handleBarClick = (data: any) => {
@@ -306,7 +286,7 @@ export function FluxoFinanceiroOperacional({
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
-            Fluxo Financeiro Operacional
+            Análise Financeira
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -325,7 +305,7 @@ export function FluxoFinanceiroOperacional({
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
-            Fluxo Financeiro Operacional
+            Análise Financeira
           </CardTitle>
           <div className="flex items-center gap-2">
             <Button
@@ -354,238 +334,271 @@ export function FluxoFinanceiroOperacional({
             </Button>
           </div>
         </div>
-
-        {/* KPIs Resumo */}
-        <div className="grid grid-cols-3 gap-4 mt-4">
-          <div className="bg-emerald-500/10 rounded-lg p-3 border border-emerald-500/20">
-            <div className="flex items-center gap-2 text-emerald-500 mb-1">
-              <TrendingUp className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase">Entradas</span>
-            </div>
-            <span className="text-lg font-bold text-emerald-400 font-mono">
-              {formatCurrency(totais.entradas)}
-            </span>
-          </div>
-          <div className="bg-destructive/10 rounded-lg p-3 border border-destructive/20">
-            <div className="flex items-center gap-2 text-destructive mb-1">
-              <TrendingDown className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase">Saídas</span>
-            </div>
-            <span className="text-lg font-bold text-destructive font-mono">
-              {formatCurrency(totais.saidas)}
-            </span>
-          </div>
-          <div className={`rounded-lg p-3 border ${
-            totais.liquido >= 0 
-              ? "bg-emerald-500/10 border-emerald-500/20" 
-              : "bg-destructive/10 border-destructive/20"
-          }`}>
-            <div className={`flex items-center gap-2 mb-1 ${
-              totais.liquido >= 0 ? "text-emerald-500" : "text-destructive"
-            }`}>
-              <ArrowRightLeft className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase">Resultado Líquido</span>
-            </div>
-            <span className={`text-lg font-bold font-mono ${
-              totais.liquido >= 0 ? "text-emerald-400" : "text-destructive"
-            }`}>
-              {totais.liquido >= 0 ? "+" : ""}{formatCurrency(totais.liquido)}
-            </span>
-          </div>
-        </div>
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <Tabs defaultValue="fluxo" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="fluxo" className="gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Fluxo Líquido por Período
+        <Tabs defaultValue="externo" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="externo" className="gap-2 text-xs sm:text-sm">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Capital Externo</span>
+              <span className="sm:hidden">Externo</span>
             </TabsTrigger>
-            <TabsTrigger value="distribuicao" className="gap-2">
-              <Wallet className="h-4 w-4" />
-              Distribuição por Categoria
+            <TabsTrigger value="operacao" className="gap-2 text-xs sm:text-sm">
+              <Building2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Capital em Operação</span>
+              <span className="sm:hidden">Operação</span>
+            </TabsTrigger>
+            <TabsTrigger value="resultado" className="gap-2 text-xs sm:text-sm">
+              <DollarSign className="h-4 w-4" />
+              <span className="hidden sm:inline">Resultado</span>
+              <span className="sm:hidden">Resultado</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="fluxo" className="mt-4">
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                  data={dadosFluxoLiquido} 
-                  margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
-                  onClick={(e) => e?.activePayload && handleBarClick(e.activePayload[0]?.payload)}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="periodo" 
-                    stroke="hsl(var(--muted-foreground))" 
-                    fontSize={11}
-                    tickLine={false}
-                  />
-                  <YAxis 
-                    stroke="hsl(var(--muted-foreground))" 
-                    fontSize={11}
-                    tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-                    tickLine={false}
-                  />
-                  <Tooltip content={<CustomTooltipFluxo />} cursor={{ fill: "rgba(255, 255, 255, 0.05)" }} />
-                  <Bar 
-                    dataKey="liquido" 
-                    radius={[4, 4, 0, 0]}
-                    cursor="pointer"
-                  >
-                    {dadosFluxoLiquido.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={entry.liquido >= 0 ? "hsl(142, 76%, 36%)" : "hsl(0, 84%, 60%)"} 
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+          {/* Aba 1: Capital Externo (Investidores) */}
+          <TabsContent value="externo" className="mt-4 space-y-4">
+            {/* KPIs */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-emerald-500/10 rounded-lg p-3 border border-emerald-500/20">
+                <div className="flex items-center gap-2 text-emerald-500 mb-1">
+                  <TrendingUp className="h-4 w-4" />
+                  <span className="text-xs font-medium uppercase">Aportes</span>
+                </div>
+                <span className="text-lg font-bold text-emerald-400 font-mono">
+                  {formatCurrency(dadosCapitalExterno.totalAportes)}
+                </span>
+              </div>
+              <div className="bg-amber-500/10 rounded-lg p-3 border border-amber-500/20">
+                <div className="flex items-center gap-2 text-amber-500 mb-1">
+                  <TrendingDown className="h-4 w-4" />
+                  <span className="text-xs font-medium uppercase">Liquidações</span>
+                </div>
+                <span className="text-lg font-bold text-amber-400 font-mono">
+                  {formatCurrency(dadosCapitalExterno.totalLiquidacoes)}
+                </span>
+              </div>
+              <div className={`rounded-lg p-3 border ${
+                dadosCapitalExterno.liquido >= 0 
+                  ? "bg-emerald-500/10 border-emerald-500/20" 
+                  : "bg-destructive/10 border-destructive/20"
+              }`}>
+                <div className={`flex items-center gap-2 mb-1 ${
+                  dadosCapitalExterno.liquido >= 0 ? "text-emerald-500" : "text-destructive"
+                }`}>
+                  <ArrowRightLeft className="h-4 w-4" />
+                  <span className="text-xs font-medium uppercase">Saldo Líquido</span>
+                </div>
+                <span className={`text-lg font-bold font-mono ${
+                  dadosCapitalExterno.liquido >= 0 ? "text-emerald-400" : "text-destructive"
+                }`}>
+                  {dadosCapitalExterno.liquido >= 0 ? "+" : ""}{formatCurrency(dadosCapitalExterno.liquido)}
+                </span>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground text-center mt-2">
-              Clique em uma barra para ver as transações do período
+
+            {/* Gráfico */}
+            {dadosCapitalExterno.dados.length > 0 ? (
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart 
+                    data={dadosCapitalExterno.dados} 
+                    margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
+                    onClick={(e) => e?.activePayload && handleBarClick(e.activePayload[0]?.payload)}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey="periodo" 
+                      stroke="hsl(var(--muted-foreground))" 
+                      fontSize={11}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      stroke="hsl(var(--muted-foreground))" 
+                      fontSize={11}
+                      tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                      tickLine={false}
+                    />
+                    <Tooltip content={<CustomTooltipExterno />} cursor={{ fill: "rgba(255, 255, 255, 0.05)" }} />
+                    <Legend 
+                      wrapperStyle={{ paddingTop: '16px' }}
+                      formatter={(value) => value === 'aportes' ? 'Aportes' : 'Liquidações'}
+                    />
+                    <Bar dataKey="aportes" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} name="aportes" />
+                    <Bar dataKey="liquidacoes" fill="hsl(25, 95%, 53%)" radius={[4, 4, 0, 0]} name="liquidacoes" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                Nenhuma movimentação de investidores no período
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground text-center">
+              Quanto capital novo entrou (aportes) vs quanto foi devolvido (liquidações) aos investidores
             </p>
           </TabsContent>
 
-          <TabsContent value="distribuicao" className="mt-4">
-            <div className="grid grid-cols-2 gap-6">
-              {/* Entradas */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="h-4 w-4 text-emerald-500" />
-                  <h4 className="font-medium text-sm">Entradas</h4>
-                  <Badge variant="outline" className="ml-auto text-emerald-500 border-emerald-500/30">
-                    {formatCurrency(dadosDistribuicao.totalEntradas)}
-                  </Badge>
+          {/* Aba 2: Capital em Operação (Bookmakers) */}
+          <TabsContent value="operacao" className="mt-4 space-y-4">
+            {/* KPIs */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
+                <div className="flex items-center gap-2 text-blue-500 mb-1">
+                  <TrendingUp className="h-4 w-4" />
+                  <span className="text-xs font-medium uppercase">Depósitos</span>
                 </div>
-                {dadosDistribuicao.entradas.length > 0 ? (
-                  <div className="h-[200px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={dadosDistribuicao.entradas.map(e => ({ ...e, tipo: "entrada" }))}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={70}
-                          paddingAngle={2}
-                          dataKey="value"
-                          onClick={(data) => handleCategoryClick(data.key)}
-                          cursor="pointer"
-                        >
-                          {dadosDistribuicao.entradas.map((entry, index) => (
-                            <Cell 
-                              key={`cell-${index}`} 
-                              fill={entry.color}
-                              stroke={selectedCategory === entry.key ? "hsl(var(--primary))" : "transparent"}
-                              strokeWidth={2}
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<CustomTooltipDistribuicao />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
-                    Nenhuma entrada no período
-                  </div>
-                )}
-                <div className="space-y-1 mt-2">
-                  {dadosDistribuicao.entradas.map((item) => (
-                    <button
-                      key={item.key}
-                      onClick={() => handleCategoryClick(item.key)}
-                      className={`w-full flex items-center justify-between text-xs p-2 rounded hover:bg-muted/50 transition-colors ${
-                        selectedCategory === item.key ? "bg-muted" : ""
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <span>{item.name}</span>
-                      </div>
-                      <span className="font-mono text-muted-foreground">
-                        {formatCurrency(item.value)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+                <span className="text-lg font-bold text-blue-400 font-mono">
+                  {formatCurrency(dadosCapitalOperacao.totalDepositos)}
+                </span>
               </div>
-
-              {/* Saídas */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <TrendingDown className="h-4 w-4 text-destructive" />
-                  <h4 className="font-medium text-sm">Saídas</h4>
-                  <Badge variant="outline" className="ml-auto text-destructive border-destructive/30">
-                    {formatCurrency(dadosDistribuicao.totalSaidas)}
-                  </Badge>
+              <div className="bg-purple-500/10 rounded-lg p-3 border border-purple-500/20">
+                <div className="flex items-center gap-2 text-purple-500 mb-1">
+                  <TrendingDown className="h-4 w-4" />
+                  <span className="text-xs font-medium uppercase">Saques</span>
                 </div>
-                {dadosDistribuicao.saidas.length > 0 ? (
-                  <div className="h-[200px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={dadosDistribuicao.saidas.map(e => ({ ...e, tipo: "saida" }))}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={70}
-                          paddingAngle={2}
-                          dataKey="value"
-                          onClick={(data) => handleCategoryClick(data.key)}
-                          cursor="pointer"
-                        >
-                          {dadosDistribuicao.saidas.map((entry, index) => (
-                            <Cell 
-                              key={`cell-${index}`} 
-                              fill={entry.color}
-                              stroke={selectedCategory === entry.key ? "hsl(var(--primary))" : "transparent"}
-                              strokeWidth={2}
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<CustomTooltipDistribuicao />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
-                    Nenhuma saída no período
-                  </div>
-                )}
-                <div className="space-y-1 mt-2">
-                  {dadosDistribuicao.saidas.map((item) => (
-                    <button
-                      key={item.key}
-                      onClick={() => handleCategoryClick(item.key)}
-                      className={`w-full flex items-center justify-between text-xs p-2 rounded hover:bg-muted/50 transition-colors ${
-                        selectedCategory === item.key ? "bg-muted" : ""
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <span>{item.name}</span>
-                      </div>
-                      <span className="font-mono text-muted-foreground">
-                        {formatCurrency(item.value)}
-                      </span>
-                    </button>
-                  ))}
+                <span className="text-lg font-bold text-purple-400 font-mono">
+                  {formatCurrency(dadosCapitalOperacao.totalSaques)}
+                </span>
+              </div>
+              <div className={`rounded-lg p-3 border ${
+                dadosCapitalOperacao.alocacaoLiquida >= 0 
+                  ? "bg-blue-500/10 border-blue-500/20" 
+                  : "bg-purple-500/10 border-purple-500/20"
+              }`}>
+                <div className={`flex items-center gap-2 mb-1 ${
+                  dadosCapitalOperacao.alocacaoLiquida >= 0 ? "text-blue-500" : "text-purple-500"
+                }`}>
+                  <ArrowRightLeft className="h-4 w-4" />
+                  <span className="text-xs font-medium uppercase">Alocação Líquida</span>
                 </div>
+                <span className={`text-lg font-bold font-mono ${
+                  dadosCapitalOperacao.alocacaoLiquida >= 0 ? "text-blue-400" : "text-purple-400"
+                }`}>
+                  {dadosCapitalOperacao.alocacaoLiquida >= 0 ? "+" : ""}{formatCurrency(dadosCapitalOperacao.alocacaoLiquida)}
+                </span>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground text-center mt-4">
-              Clique em uma categoria para ver as transações relacionadas
+
+            {/* Gráfico */}
+            {dadosCapitalOperacao.dados.length > 0 ? (
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart 
+                    data={dadosCapitalOperacao.dados} 
+                    margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
+                    onClick={(e) => e?.activePayload && handleBarClick(e.activePayload[0]?.payload)}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey="periodo" 
+                      stroke="hsl(var(--muted-foreground))" 
+                      fontSize={11}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      stroke="hsl(var(--muted-foreground))" 
+                      fontSize={11}
+                      tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                      tickLine={false}
+                    />
+                    <Tooltip content={<CustomTooltipOperacao />} cursor={{ fill: "rgba(255, 255, 255, 0.05)" }} />
+                    <Legend 
+                      wrapperStyle={{ paddingTop: '16px' }}
+                      formatter={(value) => value === 'depositos' ? 'Depósitos' : 'Saques'}
+                    />
+                    <Bar dataKey="depositos" fill="hsl(217, 91%, 60%)" radius={[4, 4, 0, 0]} name="depositos" />
+                    <Bar dataKey="saques" fill="hsl(262, 83%, 58%)" radius={[4, 4, 0, 0]} name="saques" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                Nenhuma movimentação de bookmakers no período
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground text-center">
+              Quanto capital está sendo alocado (depósitos) ou recuperado (saques) das operações em bookmakers
+            </p>
+          </TabsContent>
+
+          {/* Aba 3: Resultado Operacional */}
+          <TabsContent value="resultado" className="mt-4 space-y-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+                <div className="text-xs text-muted-foreground mb-1">Total Depositado</div>
+                <span className="text-xl font-bold text-blue-400 font-mono">
+                  {formatCurrency(resultadoOperacional.totalDepositos)}
+                </span>
+              </div>
+              <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/20">
+                <div className="text-xs text-muted-foreground mb-1">Total Sacado</div>
+                <span className="text-xl font-bold text-purple-400 font-mono">
+                  {formatCurrency(resultadoOperacional.totalSaques)}
+                </span>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
+                <div className="text-xs text-muted-foreground mb-1">Saldo em Bookmakers</div>
+                <span className="text-xl font-bold font-mono">
+                  {formatCurrency(resultadoOperacional.saldoBookmakers)}
+                </span>
+              </div>
+              <div className={`rounded-lg p-4 border ${
+                resultadoOperacional.resultado >= 0 
+                  ? "bg-emerald-500/10 border-emerald-500/20" 
+                  : "bg-destructive/10 border-destructive/20"
+              }`}>
+                <div className="text-xs text-muted-foreground mb-1">Resultado Estimado</div>
+                <span className={`text-xl font-bold font-mono ${
+                  resultadoOperacional.resultado >= 0 ? "text-emerald-400" : "text-destructive"
+                }`}>
+                  {resultadoOperacional.resultado >= 0 ? "+" : ""}{formatCurrency(resultadoOperacional.resultado)}
+                </span>
+              </div>
+            </div>
+
+            {/* Explicação visual */}
+            <div className="bg-muted/20 rounded-lg p-4 border border-border/50">
+              <h4 className="font-medium mb-3 text-sm">Como é calculado o resultado:</h4>
+              <div className="flex items-center justify-center gap-2 text-sm flex-wrap">
+                <Badge variant="outline" className="text-blue-400 border-blue-500/30 bg-blue-500/10">
+                  Saldo Bookmakers
+                </Badge>
+                <span className="text-muted-foreground">+</span>
+                <Badge variant="outline" className="text-purple-400 border-purple-500/30 bg-purple-500/10">
+                  Total Sacado
+                </Badge>
+                <span className="text-muted-foreground">-</span>
+                <Badge variant="outline" className="text-blue-400 border-blue-500/30 bg-blue-500/10">
+                  Total Depositado
+                </Badge>
+                <span className="text-muted-foreground">=</span>
+                <Badge variant="outline" className={`${
+                  resultadoOperacional.resultado >= 0 
+                    ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" 
+                    : "text-destructive border-destructive/30 bg-destructive/10"
+                }`}>
+                  Resultado
+                </Badge>
+              </div>
+              
+              {resultadoOperacional.totalDepositos > 0 && (
+                <div className="mt-4 text-center">
+                  <span className="text-sm text-muted-foreground">Retorno sobre capital investido: </span>
+                  <span className={`font-mono font-bold ${
+                    resultadoOperacional.percentualRetorno >= 0 ? "text-emerald-400" : "text-destructive"
+                  }`}>
+                    {resultadoOperacional.percentualRetorno >= 0 ? "+" : ""}
+                    {resultadoOperacional.percentualRetorno.toFixed(2)}%
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center">
+              O resultado considera o capital atual em bookmakers mais os saques realizados, subtraindo os depósitos feitos
             </p>
           </TabsContent>
         </Tabs>

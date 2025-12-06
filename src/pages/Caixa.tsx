@@ -11,6 +11,7 @@ import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { CaixaRelatorios } from "@/components/caixa/CaixaRelatorios";
 import { SaldosParceirosSheet } from "@/components/caixa/SaldosParceirosSheet";
 import { FluxoFinanceiroOperacional } from "@/components/caixa/FluxoFinanceiroOperacional";
+import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { subDays, startOfDay, endOfDay } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -66,6 +67,9 @@ export default function Caixa() {
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
   const [saldosFiat, setSaldosFiat] = useState<SaldoFiat[]>([]);
   const [saldosCrypto, setSaldosCrypto] = useState<SaldoCrypto[]>([]);
+  const [saldoBookmakers, setSaldoBookmakers] = useState(0);
+  const [saldoContasParceiros, setSaldoContasParceiros] = useState(0);
+  const [saldoWalletsParceiros, setSaldoWalletsParceiros] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Hook centralizado de cotações
@@ -150,6 +154,30 @@ export default function Caixa() {
 
       if (cryptoError) throw cryptoError;
       setSaldosCrypto(saldosCryptoData || []);
+
+      // Fetch total bookmaker balance
+      const { data: bookmakersBalanceData } = await supabase
+        .from("bookmakers")
+        .select("saldo_atual");
+      
+      const totalBookmakers = bookmakersBalanceData?.reduce((sum, b) => sum + (b.saldo_atual || 0), 0) || 0;
+      setSaldoBookmakers(totalBookmakers);
+
+      // Fetch partner bank accounts balance
+      const { data: contasSaldoData } = await supabase
+        .from("v_saldo_parceiro_contas")
+        .select("saldo");
+      
+      const totalContas = contasSaldoData?.reduce((sum, c) => sum + (c.saldo || 0), 0) || 0;
+      setSaldoContasParceiros(totalContas);
+
+      // Fetch partner wallets balance (in USD)
+      const { data: walletsSaldoData } = await supabase
+        .from("v_saldo_parceiro_wallets")
+        .select("saldo_usd");
+      
+      const totalWallets = walletsSaldoData?.reduce((sum, w) => sum + (w.saldo_usd || 0), 0) || 0;
+      setSaldoWalletsParceiros(totalWallets);
 
     } catch (error: any) {
       console.error("Erro ao carregar dados:", error);
@@ -437,11 +465,22 @@ export default function Caixa() {
         </Card>
       </div>
 
-      {/* Fluxo Financeiro Operacional - Novo componente */}
+      {/* Posição de Capital */}
+      <PosicaoCapital
+        saldoCaixaFiat={saldosFiat.reduce((sum, s) => s.moeda === 'BRL' ? sum + s.saldo : sum, 0)}
+        saldoCaixaCrypto={saldosCrypto.reduce((sum, s) => sum + s.saldo_usd, 0)}
+        saldoBookmakers={saldoBookmakers}
+        saldoContasParceiros={saldoContasParceiros}
+        saldoWalletsParceiros={saldoWalletsParceiros}
+        cotacaoUSD={cotacaoUSD}
+      />
+
+      {/* Análise Financeira */}
       <FluxoFinanceiroOperacional
         transacoes={transacoes}
         dataInicio={dataInicio}
         dataFim={dataFim}
+        saldoBookmakers={saldoBookmakers}
       />
 
 
