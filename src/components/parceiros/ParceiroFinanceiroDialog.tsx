@@ -147,7 +147,6 @@ export default function ParceiroFinanceiroDialog({
         .from("cash_ledger")
         .select("*")
         .or(orConditions.join(','))
-        .in("status", ["CONFIRMADO", "RECUSADO"])
         .order("data_transacao", { ascending: false });
 
       if (transacoesError) throw transacoesError;
