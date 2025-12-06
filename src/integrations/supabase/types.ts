@@ -3128,17 +3128,16 @@ export type Database = {
       }
       v_projeto_apostas_resumo: {
         Row: {
-          apostas_concluidas: number | null
           apostas_pendentes: number | null
-          apostas_realizadas: number | null
           greens: number | null
           lucro_total: number | null
+          meio_greens: number | null
+          meio_reds: number | null
           projeto_id: string | null
           reds: number | null
           roi_percentual: number | null
           total_apostas: number | null
           total_stake: number | null
-          user_id: string | null
           voids: number | null
         }
         Relationships: []
