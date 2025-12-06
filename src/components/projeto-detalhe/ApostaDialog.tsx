@@ -1106,25 +1106,46 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   <div className="space-y-2">
                     <Label className="block text-center uppercase text-xs tracking-wider">Bookmaker *</Label>
                     <Select value={bookmakerId} onValueChange={setBookmakerId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
+                      <SelectTrigger className="w-full">
+                        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                          <span className="truncate" title={(() => {
+                            const selectedBk = bookmakers.find(b => b.id === bookmakerId);
+                            if (selectedBk) {
+                              return `${selectedBk.nome} • ${selectedBk.parceiro?.nome || ""}`;
+                            }
+                            return "";
+                          })()}>
+                            {bookmakerId ? (() => {
+                              const selectedBk = bookmakers.find(b => b.id === bookmakerId);
+                              if (selectedBk) {
+                                return `${selectedBk.nome} • ${selectedBk.parceiro?.nome || ""}`;
+                              }
+                              return "Selecione";
+                            })() : "Selecione"}
+                          </span>
+                        </div>
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-w-[400px]">
                         {bookmakers.length === 0 ? (
                           <div className="p-3 text-center text-sm text-muted-foreground">
                             Nenhuma bookmaker com saldo disponível
                           </div>
                         ) : (
-                          bookmakers.map((bk) => (
-                            <SelectItem key={bk.id} value={bk.id}>
-                              <div className="flex items-center justify-between w-full gap-2">
-                                <span>{bk.nome} • {bk.parceiro?.nome}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  Disp: {formatCurrencyWithSymbol(bk.saldo_disponivel, bk.moeda)}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))
+                          bookmakers.map((bk) => {
+                            const displayName = `${bk.nome} • ${bk.parceiro?.nome || ""}`;
+                            return (
+                              <SelectItem key={bk.id} value={bk.id} className="max-w-full">
+                                <div className="flex items-center justify-between w-full gap-2 min-w-0">
+                                  <span className="truncate min-w-0 flex-1" title={displayName}>
+                                    {displayName}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground flex-shrink-0">
+                                    Disp: {formatCurrencyWithSymbol(bk.saldo_disponivel, bk.moeda)}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            );
+                          })
                         )}
                       </SelectContent>
                     </Select>
