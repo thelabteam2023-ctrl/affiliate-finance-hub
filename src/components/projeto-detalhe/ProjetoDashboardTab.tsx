@@ -147,44 +147,47 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     });
   })();
 
-  // Prepare results pie chart data with gradient colors
+  // Prepare results pie chart data with all outcome types
   const resultadosData = [
     { name: "GREEN", value: apostas.filter(a => a.resultado === "GREEN").length },
     { name: "RED", value: apostas.filter(a => a.resultado === "RED").length },
+    { name: "MEIO_GREEN", value: apostas.filter(a => a.resultado === "MEIO_GREEN").length },
+    { name: "MEIO_RED", value: apostas.filter(a => a.resultado === "MEIO_RED").length },
     { name: "VOID", value: apostas.filter(a => a.resultado === "VOID").length },
-    { name: "HALF", value: apostas.filter(a => a.resultado === "HALF").length },
-    { name: "Pendente", value: apostas.filter(a => !a.resultado).length },
+    { name: "Pendente", value: apostas.filter(a => !a.resultado || a.resultado === "PENDENTE").length },
   ].filter(d => d.value > 0);
 
-  // Colors for resultados (green, red, gray, amber, blue)
-  const resultadosColors = ["#22C55E", "#EF4444", "#6B7280", "#F59E0B", "#3B82F6"];
+  // Colors for resultados (green, red, light green, light red, gray, blue)
+  const resultadosColors = ["#22C55E", "#EF4444", "#4ADE80", "#F87171", "#6B7280", "#3B82F6"];
 
-  // Prepare sports bar chart data with extended metrics
+  // Prepare sports bar chart data with extended metrics including MEIO_GREEN and MEIO_RED
   const esportesMap = apostas.reduce((acc: Record<string, { 
     greens: number; 
     reds: number; 
-    volume: number; 
+    meioGreens: number;
+    meioReds: number;
     lucro: number;
   }>, aposta) => {
     if (!acc[aposta.esporte]) {
-      acc[aposta.esporte] = { greens: 0, reds: 0, volume: 0, lucro: 0 };
+      acc[aposta.esporte] = { greens: 0, reds: 0, meioGreens: 0, meioReds: 0, lucro: 0 };
     }
     if (aposta.resultado === "GREEN") acc[aposta.esporte].greens++;
     if (aposta.resultado === "RED") acc[aposta.esporte].reds++;
-    // Add stake to volume (assuming stake field exists, otherwise use a default)
+    if (aposta.resultado === "MEIO_GREEN") acc[aposta.esporte].meioGreens++;
+    if (aposta.resultado === "MEIO_RED") acc[aposta.esporte].meioReds++;
     acc[aposta.esporte].lucro += aposta.lucro_prejuizo || 0;
     return acc;
   }, {});
 
   const esportesData = Object.entries(esportesMap).map(([esporte, data]) => {
-    const totalApostas = data.greens + data.reds;
-    const roi = data.volume > 0 ? (data.lucro / data.volume) * 100 : (totalApostas > 0 ? (data.lucro / totalApostas) * 100 : 0);
+    const totalApostas = data.greens + data.reds + data.meioGreens + data.meioReds;
     return {
       esporte,
       greens: data.greens,
       reds: data.reds,
+      meioGreens: data.meioGreens,
+      meioReds: data.meioReds,
       lucro: data.lucro,
-      roi: roi,
       totalApostas,
     };
   });
@@ -395,21 +398,34 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
                 gradientEnd: "#16A34A" 
               },
               { 
+                dataKey: "meioGreens", 
+                label: "Meio Green", 
+                gradientStart: "#4ADE80", 
+                gradientEnd: "#22C55E" 
+              },
+              { 
                 dataKey: "reds", 
                 label: "Reds", 
                 gradientStart: "#EF4444", 
                 gradientEnd: "#DC2626" 
               },
+              { 
+                dataKey: "meioReds", 
+                label: "Meio Red", 
+                gradientStart: "#F87171", 
+                gradientEnd: "#EF4444" 
+              },
             ]}
             height={250}
-            barSize={24}
-            showLabels={true}
+            barSize={16}
+            showLabels={false}
             showLegend={true}
             customTooltipContent={(payload, label) => {
               const data = payload[0]?.payload;
               if (!data) return null;
-              const totalApostas = data.greens + data.reds;
-              const winRate = totalApostas > 0 ? ((data.greens / totalApostas) * 100).toFixed(1) : "0";
+              const totalApostas = data.greens + data.reds + data.meioGreens + data.meioReds;
+              const totalWins = data.greens + (data.meioGreens * 0.5);
+              const winRate = totalApostas > 0 ? ((totalWins / totalApostas) * 100).toFixed(1) : "0";
               return (
                 <>
                   <p className="font-medium text-sm mb-3 text-foreground">{label}</p>
@@ -421,6 +437,15 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
                       </div>
                       <span className="text-sm font-semibold font-mono">{data.greens}</span>
                     </div>
+                    {data.meioGreens > 0 && (
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#4ADE80] to-[#22C55E]" />
+                          <span className="text-xs text-muted-foreground">Meio Green</span>
+                        </div>
+                        <span className="text-sm font-semibold font-mono">{data.meioGreens}</span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#EF4444] to-[#DC2626]" />
@@ -428,6 +453,15 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
                       </div>
                       <span className="text-sm font-semibold font-mono">{data.reds}</span>
                     </div>
+                    {data.meioReds > 0 && (
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#F87171] to-[#EF4444]" />
+                          <span className="text-xs text-muted-foreground">Meio Red</span>
+                        </div>
+                        <span className="text-sm font-semibold font-mono">{data.meioReds}</span>
+                      </div>
+                    )}
                     <div className="border-t border-border/50 pt-2 mt-2 space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">Total Apostas</span>
