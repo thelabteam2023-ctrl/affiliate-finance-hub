@@ -212,10 +212,10 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Update bookmakers with projeto_id
+      // Update bookmakers with projeto_id and reset status to ativo
       const { error } = await supabase
         .from("bookmakers")
-        .update({ projeto_id: projetoId })
+        .update({ projeto_id: projetoId, status: "ativo" })
         .in("id", selectedIds);
 
       if (error) throw error;
