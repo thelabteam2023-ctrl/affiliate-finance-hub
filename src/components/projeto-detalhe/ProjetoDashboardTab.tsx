@@ -159,21 +159,35 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
   // Colors for resultados (green, red, gray, amber, blue)
   const resultadosColors = ["#22C55E", "#EF4444", "#6B7280", "#F59E0B", "#3B82F6"];
 
-  // Prepare sports bar chart data
-  const esportesMap = apostas.reduce((acc: Record<string, { greens: number; reds: number }>, aposta) => {
+  // Prepare sports bar chart data with extended metrics
+  const esportesMap = apostas.reduce((acc: Record<string, { 
+    greens: number; 
+    reds: number; 
+    volume: number; 
+    lucro: number;
+  }>, aposta) => {
     if (!acc[aposta.esporte]) {
-      acc[aposta.esporte] = { greens: 0, reds: 0 };
+      acc[aposta.esporte] = { greens: 0, reds: 0, volume: 0, lucro: 0 };
     }
     if (aposta.resultado === "GREEN") acc[aposta.esporte].greens++;
     if (aposta.resultado === "RED") acc[aposta.esporte].reds++;
+    // Add stake to volume (assuming stake field exists, otherwise use a default)
+    acc[aposta.esporte].lucro += aposta.lucro_prejuizo || 0;
     return acc;
   }, {});
 
-  const esportesData = Object.entries(esportesMap).map(([esporte, data]) => ({
-    esporte,
-    greens: data.greens,
-    reds: data.reds
-  }));
+  const esportesData = Object.entries(esportesMap).map(([esporte, data]) => {
+    const totalApostas = data.greens + data.reds;
+    const roi = data.volume > 0 ? (data.lucro / data.volume) * 100 : (totalApostas > 0 ? (data.lucro / totalApostas) * 100 : 0);
+    return {
+      esporte,
+      greens: data.greens,
+      reds: data.reds,
+      lucro: data.lucro,
+      roi: roi,
+      totalApostas,
+    };
+  });
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -391,6 +405,49 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
             barSize={24}
             showLabels={true}
             showLegend={true}
+            customTooltipContent={(payload, label) => {
+              const data = payload[0]?.payload;
+              if (!data) return null;
+              const totalApostas = data.greens + data.reds;
+              const winRate = totalApostas > 0 ? ((data.greens / totalApostas) * 100).toFixed(1) : "0";
+              return (
+                <>
+                  <p className="font-medium text-sm mb-3 text-foreground">{label}</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#22C55E] to-[#16A34A]" />
+                        <span className="text-xs text-muted-foreground">Greens</span>
+                      </div>
+                      <span className="text-sm font-semibold font-mono">{data.greens}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#EF4444] to-[#DC2626]" />
+                        <span className="text-xs text-muted-foreground">Reds</span>
+                      </div>
+                      <span className="text-sm font-semibold font-mono">{data.reds}</span>
+                    </div>
+                    <div className="border-t border-border/50 pt-2 mt-2 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Total Apostas</span>
+                        <span className="text-sm font-mono">{totalApostas}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Lucro/Prejuízo</span>
+                        <span className={`text-sm font-mono font-semibold ${data.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                          {formatCurrency(data.lucro)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Win Rate</span>
+                        <span className="text-sm font-mono">{winRate}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            }}
           />
         </CardContent>
       </Card>

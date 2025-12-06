@@ -32,6 +32,7 @@ interface ModernBarChartProps {
   showLegend?: boolean;
   formatValue?: (value: number) => string;
   formatTooltip?: (dataKey: string, value: number) => string;
+  customTooltipContent?: (payload: any, label: string) => React.ReactNode;
 }
 
 // Custom animated label component
@@ -78,8 +79,18 @@ const CustomTooltip = ({
   bars,
   formatValue,
   formatTooltip,
+  customTooltipContent,
 }: any) => {
   if (active && payload && payload.length) {
+    // Use custom content if provided
+    if (customTooltipContent) {
+      return (
+        <div className="bg-background/90 backdrop-blur-xl border border-border/50 rounded-xl px-4 py-3 shadow-2xl min-w-[180px]">
+          {customTooltipContent(payload, label)}
+        </div>
+      );
+    }
+
     return (
       <div className="bg-background/90 backdrop-blur-xl border border-border/50 rounded-xl px-4 py-3 shadow-2xl min-w-[160px]">
         <p className="font-medium text-sm mb-2 text-foreground">{label}</p>
@@ -145,6 +156,7 @@ export function ModernBarChart({
   showLegend = true,
   formatValue,
   formatTooltip,
+  customTooltipContent,
 }: ModernBarChartProps) {
   const [isAnimated, setIsAnimated] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -219,6 +231,7 @@ export function ModernBarChart({
                 bars={bars}
                 formatValue={formatValue}
                 formatTooltip={formatTooltip}
+                customTooltipContent={customTooltipContent}
               />
             }
             cursor={{ fill: "rgba(255, 255, 255, 0.03)", radius: 4 }}
