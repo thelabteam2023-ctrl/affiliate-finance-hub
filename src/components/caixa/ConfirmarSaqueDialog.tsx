@@ -152,12 +152,12 @@ export function ConfirmarSaqueDialog({
           .single();
 
         if (historico?.projeto_id) {
-          // Revincular bookmaker ao projeto com status AGUARDANDO_SAQUE para nova tentativa
+          // Revincular bookmaker ao projeto com status LIMITADA (pois está retornando ao projeto)
           const { error: bookmakerError } = await supabase
             .from("bookmakers")
             .update({ 
               projeto_id: historico.projeto_id,
-              status: "AGUARDANDO_SAQUE" 
+              status: "LIMITADA" 
             })
             .eq("id", saque.origem_bookmaker_id);
 
@@ -168,7 +168,7 @@ export function ConfirmarSaqueDialog({
             .from("projeto_bookmaker_historico")
             .update({ 
               data_desvinculacao: null,
-              status_final: "AGUARDANDO_SAQUE"
+              status_final: "LIMITADA"
             })
             .eq("bookmaker_id", saque.origem_bookmaker_id)
             .eq("projeto_id", historico.projeto_id);

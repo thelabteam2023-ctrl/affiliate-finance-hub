@@ -31,6 +31,8 @@ interface PerdaOperacionalDialogProps {
 interface Bookmaker {
   id: string;
   nome: string;
+  saldo_atual: number;
+  moeda: string;
   parceiro: {
     nome: string;
   } | null;
@@ -80,7 +82,7 @@ export function PerdaOperacionalDialog({
       setLoading(true);
       const { data, error } = await supabase
         .from("bookmakers")
-        .select("id, nome, parceiro:parceiros(nome)")
+        .select("id, nome, saldo_atual, moeda, parceiro:parceiros(nome)")
         .eq("projeto_id", projetoId)
         .order("nome");
 
@@ -158,11 +160,33 @@ export function PerdaOperacionalDialog({
               <SelectContent>
                 {bookmakers.map((bk) => (
                   <SelectItem key={bk.id} value={bk.id}>
-                    {bk.nome} {bk.parceiro?.nome ? `- ${bk.parceiro.nome}` : ""}
+                    <div className="flex items-center justify-between w-full gap-4">
+                      <span>{bk.nome} {bk.parceiro?.nome ? `- ${bk.parceiro.nome}` : ""}</span>
+                      <span className="text-xs text-muted-foreground">
+                        Saldo: {bk.moeda} {bk.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {/* Exibir saldo atual da bookmaker selecionada */}
+            {bookmakerId && (() => {
+              const selectedBk = bookmakers.find(b => b.id === bookmakerId);
+              if (selectedBk) {
+                return (
+                  <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Saldo atual da casa:</span>
+                      <span className="text-lg font-semibold text-primary">
+                        {selectedBk.moeda} {selectedBk.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
 
           {/* Categoria */}
