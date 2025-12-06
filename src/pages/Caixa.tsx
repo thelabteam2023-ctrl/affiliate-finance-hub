@@ -12,6 +12,7 @@ import { CaixaRelatorios } from "@/components/caixa/CaixaRelatorios";
 import { SaldosParceirosSheet } from "@/components/caixa/SaldosParceirosSheet";
 import { FluxoFinanceiroOperacional } from "@/components/caixa/FluxoFinanceiroOperacional";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
+import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { subDays, startOfDay, endOfDay } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -71,6 +72,10 @@ export default function Caixa() {
   const [saldoContasParceiros, setSaldoContasParceiros] = useState(0);
   const [saldoWalletsParceiros, setSaldoWalletsParceiros] = useState(0);
   const [loading, setLoading] = useState(true);
+  
+  // Estado para confirmação de saque
+  const [saqueParaConfirmar, setSaqueParaConfirmar] = useState<any>(null);
+  const [confirmSaqueDialogOpen, setConfirmSaqueDialogOpen] = useState(false);
 
   // Hook centralizado de cotações
   const cryptoSymbols = useMemo(() => saldosCrypto.map(s => s.coin), [saldosCrypto]);
@@ -513,9 +518,13 @@ export default function Caixa() {
         getOrigemLabel={getOrigemLabel}
         getDestinoLabel={getDestinoLabel}
         formatCurrency={formatCurrency}
+        onConfirmarSaque={(transacao) => {
+          setSaqueParaConfirmar(transacao);
+          setConfirmSaqueDialogOpen(true);
+        }}
       />
 
-      {/* Dialog */}
+      {/* Dialog Nova Transação */}
       <CaixaTransacaoDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
@@ -523,6 +532,31 @@ export default function Caixa() {
           setDialogOpen(false);
           fetchData();
         }}
+      />
+
+      {/* Dialog Confirmar Saque */}
+      <ConfirmarSaqueDialog
+        open={confirmSaqueDialogOpen}
+        onClose={() => {
+          setConfirmSaqueDialogOpen(false);
+          setSaqueParaConfirmar(null);
+        }}
+        onSuccess={() => {
+          fetchData();
+        }}
+        saque={saqueParaConfirmar ? {
+          id: saqueParaConfirmar.id,
+          valor: saqueParaConfirmar.valor,
+          moeda: saqueParaConfirmar.moeda,
+          data_transacao: saqueParaConfirmar.data_transacao,
+          descricao: saqueParaConfirmar.descricao,
+          origem_bookmaker_id: saqueParaConfirmar.origem_bookmaker_id,
+          destino_parceiro_id: saqueParaConfirmar.destino_parceiro_id,
+          destino_conta_bancaria_id: saqueParaConfirmar.destino_conta_bancaria_id,
+          bookmaker_nome: bookmakers[saqueParaConfirmar.origem_bookmaker_id]?.nome,
+          parceiro_nome: parceiros[saqueParaConfirmar.destino_parceiro_id],
+          banco_nome: contasBancarias.find(c => c.id === saqueParaConfirmar.destino_conta_bancaria_id)?.banco,
+        } : null}
       />
     </div>
   );

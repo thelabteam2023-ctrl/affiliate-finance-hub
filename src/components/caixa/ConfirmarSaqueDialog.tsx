@@ -184,7 +184,7 @@ export function ConfirmarSaqueDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-yellow-500" />
@@ -257,36 +257,38 @@ export function ConfirmarSaqueDialog({
             </div>
           </div>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex flex-col gap-3 sm:flex-row sm:justify-between pt-4">
             <Button
               variant="outline"
               onClick={onClose}
               disabled={loading}
-              className="sm:flex-1"
+              className="w-full sm:w-auto"
             >
               Cancelar
             </Button>
-            <Button
-              variant="destructive"
-              onClick={() => setShowRecusaConfirm(true)}
-              disabled={loading}
-              className="sm:flex-1"
-            >
-              <XCircle className="mr-2 h-4 w-4" />
-              Saque Recusado
-            </Button>
-            <Button
-              onClick={handleConfirmar}
-              disabled={loading}
-              className="sm:flex-1 bg-emerald-600 hover:bg-emerald-700"
-            >
-              {loading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-              )}
-              Confirmar Recebimento
-            </Button>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button
+                variant="destructive"
+                onClick={() => setShowRecusaConfirm(true)}
+                disabled={loading}
+                className="flex-1 sm:flex-none"
+              >
+                <XCircle className="mr-2 h-4 w-4" />
+                Recusado
+              </Button>
+              <Button
+                onClick={handleConfirmar}
+                disabled={loading}
+                className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700"
+              >
+                {loading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                )}
+                Confirmar
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

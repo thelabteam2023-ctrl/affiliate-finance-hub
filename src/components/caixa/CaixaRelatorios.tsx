@@ -22,6 +22,7 @@ interface CaixaRelatoriosProps {
   getOrigemLabel: (transacao: any) => string;
   getDestinoLabel: (transacao: any) => string;
   formatCurrency: (value: number, currency: string) => string;
+  onConfirmarSaque?: (transacao: any) => void;
 }
 
 export function CaixaRelatorios(props: CaixaRelatoriosProps) {
