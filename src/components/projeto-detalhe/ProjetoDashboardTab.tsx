@@ -11,8 +11,8 @@ import {
   BarChart3
 } from "lucide-react";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -225,53 +225,60 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
         <CardContent>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={evolutionData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <AreaChart data={evolutionData}>
+                <defs>
+                  <linearGradient id="saldoGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#2dd4bf" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="#2dd4bf" stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid 
+                  strokeDasharray="0" 
+                  stroke="hsl(var(--border)/0.3)" 
+                  vertical={false}
+                />
                 <XAxis 
                   dataKey="data" 
                   stroke="hsl(var(--muted-foreground))"
                   fontSize={12}
+                  axisLine={false}
+                  tickLine={false}
                 />
                 <YAxis 
                   stroke="hsl(var(--muted-foreground))"
                   fontSize={12}
-                  tickFormatter={(value) => formatCurrency(value)}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(value) => `${(value / 1).toLocaleString('pt-BR')} R$`}
                 />
                 <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: "rgba(0, 0, 0, 0.4)",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    backdropFilter: "blur(12px)",
-                    borderRadius: "12px",
-                    padding: "12px 16px"
-                  }}
-                  cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload as DailyData;
                       return (
-                        <div className="bg-background/80 backdrop-blur-xl border border-border/50 rounded-lg p-3 shadow-xl">
-                          <p className="text-sm font-medium mb-1">{data.dataCompleta}</p>
-                          <p className={`text-sm ${data.lucro_dia >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            Lucro do dia: {formatCurrency(data.lucro_dia)}
-                          </p>
-                          <p className={`text-sm font-semibold ${data.saldo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            Saldo: {formatCurrency(data.saldo)}
+                        <div className="bg-background/90 backdrop-blur-xl border border-border/50 rounded-lg px-3 py-2 shadow-xl">
+                          <p className="text-sm font-medium">{data.dataCompleta}</p>
+                          <p className="text-sm text-muted-foreground">
+                            <span className="inline-block w-2 h-2 rounded-sm bg-teal-400 mr-2" />
+                            Lucro: {formatCurrency(data.saldo)}
                           </p>
                         </div>
                       );
                     }
                     return null;
                   }}
+                  cursor={{ stroke: 'rgba(45, 212, 191, 0.3)', strokeWidth: 1 }}
                 />
-                <Line
-                  type="monotone" 
-                  dataKey="saldo" 
-                  stroke="hsl(var(--primary))" 
+                <Area
+                  type="monotone"
+                  dataKey="saldo"
+                  stroke="#2dd4bf"
                   strokeWidth={2}
-                  dot={{ fill: "hsl(var(--primary))", strokeWidth: 2 }}
+                  fill="url(#saldoGradient)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: "#2dd4bf", strokeWidth: 0 }}
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
