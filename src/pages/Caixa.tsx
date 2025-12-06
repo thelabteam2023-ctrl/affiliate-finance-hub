@@ -10,8 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { CaixaRelatorios } from "@/components/caixa/CaixaRelatorios";
 import { SaldosParceirosSheet } from "@/components/caixa/SaldosParceirosSheet";
-import { format, subDays, startOfDay, endOfDay } from "date-fns";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { FluxoFinanceiroOperacional } from "@/components/caixa/FluxoFinanceiroOperacional";
+import { subDays, startOfDay, endOfDay } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -196,63 +196,6 @@ export default function Caixa() {
     });
   };
 
-  const getChartData = () => {
-    if (transacoes.length === 0) return [];
-
-    // Sort transactions by date
-    const sortedTransacoes = [...transacoes].sort(
-      (a, b) => new Date(a.data_transacao).getTime() - new Date(b.data_transacao).getTime()
-    );
-
-    const dataPoints: { [key: string]: any } = {};
-
-    sortedTransacoes.forEach((t) => {
-      const dateKey = format(new Date(t.data_transacao), "dd/MM");
-      
-      if (!dataPoints[dateKey]) {
-        dataPoints[dateKey] = { date: dateKey, BRL: 0, USD: 0, EUR: 0, Crypto: 0 };
-      }
-
-      // Calculate balance impact
-      const valorImpacto = t.tipo_transacao === "APORTE" || t.destino_tipo === "CAIXA_OPERACIONAL"
-        ? t.valor
-        : t.tipo_transacao === "LIQUIDACAO" || t.origem_tipo === "CAIXA_OPERACIONAL"
-        ? -t.valor
-        : 0;
-
-      if (t.tipo_moeda === "FIAT") {
-        if (dataPoints[dateKey][t.moeda] !== undefined) {
-          dataPoints[dateKey][t.moeda] += valorImpacto;
-        }
-      } else if (t.tipo_moeda === "CRYPTO" && t.valor_usd) {
-        dataPoints[dateKey].Crypto += t.valor_usd;
-      }
-    });
-
-    // Convert to array and accumulate values
-    const chartData: any[] = [];
-    let accumulatedBRL = 0;
-    let accumulatedUSD = 0;
-    let accumulatedEUR = 0;
-    let accumulatedCrypto = 0;
-
-    Object.keys(dataPoints).forEach((date) => {
-      accumulatedBRL += dataPoints[date].BRL || 0;
-      accumulatedUSD += dataPoints[date].USD || 0;
-      accumulatedEUR += dataPoints[date].EUR || 0;
-      accumulatedCrypto += dataPoints[date].Crypto || 0;
-
-      chartData.push({
-        date,
-        BRL: accumulatedBRL,
-        USD: accumulatedUSD,
-        EUR: accumulatedEUR,
-        Crypto: accumulatedCrypto,
-      });
-    });
-
-    return chartData;
-  };
 
   const getTipoLabel = (tipo: string, transacao?: Transacao) => {
     // Para APORTE_FINANCEIRO, determinamos se é Aporte ou Liquidação pela direção
@@ -494,33 +437,12 @@ export default function Caixa() {
         </Card>
       </div>
 
-      {/* Gráfico de Evolução */}
-      <Card className="bg-card/50 backdrop-blur border-border/50">
-        <CardHeader>
-          <CardTitle className="text-lg">Evolução dos Saldos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={getChartData()}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
-              <YAxis stroke="hsl(var(--muted-foreground))" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--popover))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px",
-                }}
-              />
-              <Legend />
-              <Line type="monotone" dataKey="BRL" stroke="#10b981" strokeWidth={2} />
-              <Line type="monotone" dataKey="USD" stroke="#3b82f6" strokeWidth={2} />
-              <Line type="monotone" dataKey="EUR" stroke="#f59e0b" strokeWidth={2} />
-              <Line type="monotone" dataKey="Crypto" stroke="#8b5cf6" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {/* Fluxo Financeiro Operacional - Novo componente */}
+      <FluxoFinanceiroOperacional
+        transacoes={transacoes}
+        dataInicio={dataInicio}
+        dataFim={dataFim}
+      />
 
 
       {/* Relatórios Consolidados */}
