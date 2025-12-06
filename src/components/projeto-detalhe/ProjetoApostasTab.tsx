@@ -30,9 +30,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { DateRange } from "react-day-picker";
+import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
+
+type PeriodFilter = "hoje" | "ontem" | "7dias" | "mes" | "ano" | "todo" | "custom";
+
 interface ProjetoApostasTabProps {
   projetoId: string;
   onDataChange?: () => void;
+  periodFilter?: PeriodFilter;
+  dateRange?: DateRange;
 }
 
 interface Aposta {
@@ -65,7 +72,7 @@ interface Aposta {
   };
 }
 
-export function ProjetoApostasTab({ projetoId, onDataChange }: ProjetoApostasTabProps) {
+export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "todo", dateRange }: ProjetoApostasTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -75,14 +82,42 @@ export function ProjetoApostasTab({ projetoId, onDataChange }: ProjetoApostasTab
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
 
+  const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
+    const today = new Date();
+    
+    switch (periodFilter) {
+      case "hoje":
+        return { start: startOfDay(today), end: endOfDay(today) };
+      case "ontem":
+        const yesterday = subDays(today, 1);
+        return { start: startOfDay(yesterday), end: endOfDay(yesterday) };
+      case "7dias":
+        return { start: startOfDay(subDays(today, 7)), end: endOfDay(today) };
+      case "mes":
+        return { start: startOfMonth(today), end: endOfDay(today) };
+      case "ano":
+        return { start: startOfYear(today), end: endOfDay(today) };
+      case "custom":
+        return { 
+          start: dateRange?.from || null, 
+          end: dateRange?.to || dateRange?.from || null 
+        };
+      case "todo":
+      default:
+        return { start: null, end: null };
+    }
+  };
+
   useEffect(() => {
     fetchApostas();
-  }, [projetoId]);
+  }, [projetoId, periodFilter, dateRange]);
 
   const fetchApostas = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { start, end } = getDateRangeFromFilter();
+      
+      let query = supabase
         .from("apostas")
         .select(`
           *,
@@ -94,6 +129,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange }: ProjetoApostasTab
         `)
         .eq("projeto_id", projetoId)
         .order("data_aposta", { ascending: false });
+      
+      if (start) {
+        query = query.gte("data_aposta", start.toISOString());
+      }
+      if (end) {
+        query = query.lte("data_aposta", end.toISOString());
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setApostas(data || []);
@@ -102,6 +146,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange }: ProjetoApostasTab
     } finally {
       setLoading(false);
     }
+  };
+  
+  const handleApostaUpdated = () => {
+    fetchApostas();
+    onDataChange?.();
   };
 
   const filteredApostas = apostas.filter((aposta) => {
@@ -276,7 +325,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange }: ProjetoApostasTab
                       status={aposta.status}
                       stake={aposta.stake}
                       odd={aposta.odd}
-                      onResultadoUpdated={fetchApostas}
+                      onResultadoUpdated={handleApostaUpdated}
                       onEditClick={() => handleOpenDialog(aposta)}
                     />
                   </div>
@@ -379,7 +428,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange }: ProjetoApostasTab
                       status={aposta.status}
                       stake={aposta.stake}
                       odd={aposta.odd}
-                      onResultadoUpdated={fetchApostas}
+                      onResultadoUpdated={handleApostaUpdated}
                       onEditClick={() => handleOpenDialog(aposta)}
                     />
                   </div>
