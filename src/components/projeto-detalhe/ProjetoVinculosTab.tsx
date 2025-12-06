@@ -48,6 +48,7 @@ import {
   LayoutGrid,
   List,
   AlertTriangle,
+  Target,
 } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
 
@@ -63,9 +64,11 @@ interface Vinculo {
   projeto_id: string | null;
   bookmaker_status: string;
   saldo_atual: number;
+  moeda: string;
   login_username: string;
   bookmaker_catalogo_id: string | null;
   logo_url?: string | null;
+  totalApostas: number;
 }
 
 interface BookmakerDisponivel {
@@ -112,6 +115,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           projeto_id,
           status,
           saldo_atual,
+          moeda,
           login_username,
           bookmaker_catalogo_id,
           parceiros!bookmakers_parceiro_id_fkey (nome),
@@ -121,6 +125,24 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
 
       if (vinculosError) throw vinculosError;
 
+      // Fetch apostas count per bookmaker
+      const bookmakerIds = (vinculosData || []).map((v: any) => v.id);
+      
+      let apostasCount: Record<string, number> = {};
+      if (bookmakerIds.length > 0) {
+        const { data: apostasData } = await supabase
+          .from("apostas")
+          .select("bookmaker_id")
+          .eq("projeto_id", projetoId)
+          .in("bookmaker_id", bookmakerIds);
+
+        if (apostasData) {
+          apostasData.forEach((a: any) => {
+            apostasCount[a.bookmaker_id] = (apostasCount[a.bookmaker_id] || 0) + 1;
+          });
+        }
+      }
+
       const mappedVinculos: Vinculo[] = (vinculosData || []).map((v: any) => ({
         id: v.id,
         nome: v.nome,
@@ -129,9 +151,11 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         projeto_id: v.projeto_id,
         bookmaker_status: v.status,
         saldo_atual: v.saldo_atual,
+        moeda: v.moeda || "BRL",
         login_username: v.login_username,
         bookmaker_catalogo_id: v.bookmaker_catalogo_id,
         logo_url: v.bookmakers_catalogo?.logo_url || null,
+        totalApostas: apostasCount[v.id] || 0,
       }));
 
       setVinculos(mappedVinculos);
@@ -282,7 +306,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         if (error) throw error;
 
         toast.success(
-          `Vínculo liberado com saldo pendente de ${formatCurrency(vinculoToRemove.saldo_atual)}. Um alerta foi criado para a tesouraria.`,
+          `Vínculo liberado com saldo pendente de ${formatCurrency(vinculoToRemove.saldo_atual, vinculoToRemove.moeda)}. Um alerta foi criado para a tesouraria.`,
           { duration: 5000 }
         );
       } else {
@@ -332,11 +356,14 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
+  const formatCurrency = (value: number, moeda: string = "BRL") => {
+    const symbols: Record<string, string> = {
+      BRL: "R$",
+      USD: "$",
+      EUR: "€",
+      GBP: "£"
+    };
+    return `${symbols[moeda] || moeda} ${value.toFixed(2)}`;
   };
 
   const getStatusBadge = (status: string) => {
@@ -582,9 +609,18 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       {vinculo.parceiro_nome || "Sem parceiro"}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <span className="text-sm text-muted-foreground">Saldo</span>
-                    <span className="font-semibold">{formatCurrency(vinculo.saldo_atual)}</span>
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Saldo</span>
+                      <span className="text-sm font-semibold">{formatCurrency(vinculo.saldo_atual, vinculo.moeda)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Apostas</span>
+                      <span className="text-sm font-medium flex items-center gap-1">
+                        <Target className="h-3 w-3 text-primary" />
+                        {vinculo.totalApostas}
+                      </span>
+                    </div>
                   </div>
                   <Button
                     variant="outline"
@@ -638,10 +674,19 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                     </div>
                   </div>
 
+                  {/* Apostas */}
+                  <div className="text-center flex-shrink-0 px-2">
+                    <p className="text-xs text-muted-foreground">Apostas</p>
+                    <p className="font-medium flex items-center justify-center gap-1">
+                      <Target className="h-3 w-3 text-primary" />
+                      {vinculo.totalApostas}
+                    </p>
+                  </div>
+
                   {/* Saldo */}
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm text-muted-foreground">Saldo</p>
-                    <p className="font-semibold">{formatCurrency(vinculo.saldo_atual)}</p>
+                  <div className="text-right flex-shrink-0 min-w-[100px]">
+                    <p className="text-xs text-muted-foreground">Saldo</p>
+                    <p className="font-semibold">{formatCurrency(vinculo.saldo_atual, vinculo.moeda)}</p>
                   </div>
 
                   {/* Status Badge */}
@@ -813,7 +858,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                   <div className="p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10">
                     <p className="text-yellow-400 font-medium flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4" />
-                      Atenção: Saldo pendente de {formatCurrency(vinculoToRemove.saldo_atual)}
+                      Atenção: Saldo pendente de {formatCurrency(vinculoToRemove.saldo_atual, vinculoToRemove.moeda)}
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
                       O vínculo será marcado como "Aguardando Saque" e um alerta será criado 
