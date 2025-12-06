@@ -46,9 +46,11 @@ interface Projeto {
   operadores_ativos?: number;
   total_gasto_operadores?: number;
   saldo_bookmakers?: number;
+  saldo_irrecuperavel?: number;
   total_depositado?: number;
   total_sacado?: number;
   total_bookmakers?: number;
+  perdas_confirmadas?: number;
 }
 
 export default function GestaoProjetos() {
@@ -265,7 +267,10 @@ export default function GestaoProjetos() {
                     </div>
                     
                     {(() => {
-                      const resultado = (projeto.total_sacado || 0) + (projeto.saldo_bookmakers || 0) - (projeto.total_depositado || 0);
+                      // Saldo recuperável = Saldo Bookmakers - Saldo Irrecuperável
+                      const saldoRecuperavel = (projeto.saldo_bookmakers || 0) - (projeto.saldo_irrecuperavel || 0);
+                      // Resultado = Sacado + Saldo Recuperável - Depositado - Perdas Confirmadas
+                      const resultado = (projeto.total_sacado || 0) + saldoRecuperavel - (projeto.total_depositado || 0) - (projeto.perdas_confirmadas || 0);
                       const isPositive = resultado >= 0;
                       return (
                         <div className="flex items-center justify-between text-sm">
@@ -354,7 +359,8 @@ export default function GestaoProjetos() {
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">Resultado Est.</p>
                       {(() => {
-                        const resultado = (projeto.total_sacado || 0) + (projeto.saldo_bookmakers || 0) - (projeto.total_depositado || 0);
+                        const saldoRecuperavel = (projeto.saldo_bookmakers || 0) - (projeto.saldo_irrecuperavel || 0);
+                        const resultado = (projeto.total_sacado || 0) + saldoRecuperavel - (projeto.total_depositado || 0) - (projeto.perdas_confirmadas || 0);
                         const isPositive = resultado >= 0;
                         return (
                           <p className={`text-sm font-medium ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>

@@ -2825,8 +2825,10 @@ export type Database = {
           nome: string | null
           operadores_ativos: number | null
           orcamento_inicial: number | null
+          perdas_confirmadas: number | null
           projeto_id: string | null
           saldo_bookmakers: number | null
+          saldo_irrecuperavel: number | null
           status: string | null
           tem_investimento_crypto: boolean | null
           total_bookmakers: number | null
@@ -2844,8 +2846,10 @@ export type Database = {
           nome?: string | null
           operadores_ativos?: never
           orcamento_inicial?: number | null
+          perdas_confirmadas?: never
           projeto_id?: string | null
           saldo_bookmakers?: never
+          saldo_irrecuperavel?: never
           status?: string | null
           tem_investimento_crypto?: boolean | null
           total_bookmakers?: never
@@ -2863,8 +2867,10 @@ export type Database = {
           nome?: string | null
           operadores_ativos?: never
           orcamento_inicial?: number | null
+          perdas_confirmadas?: never
           projeto_id?: string | null
           saldo_bookmakers?: never
+          saldo_irrecuperavel?: never
           status?: string | null
           tem_investimento_crypto?: boolean | null
           total_bookmakers?: never
