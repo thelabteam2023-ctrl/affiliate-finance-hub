@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
-import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
+import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard, HelpCircle } from "lucide-react";
 
 interface PosicaoCapitalProps {
   saldoCaixaFiat: number;
@@ -38,25 +39,29 @@ export function PosicaoCapital({
         name: "Caixa Operacional", 
         value: caixaTotal, 
         icon: Wallet,
-        detail: `R$ ${saldoCaixaFiat.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} + $${saldoCaixaCrypto.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} crypto`
+        detail: `R$ ${saldoCaixaFiat.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} + $${saldoCaixaCrypto.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} crypto`,
+        help: "Saldo disponível no caixa central para uso imediato (FIAT + Crypto)"
       },
       { 
         name: "Bookmakers", 
         value: saldoBookmakers, 
         icon: Building2,
-        detail: `Em operação`
+        detail: "Em operação",
+        help: "Capital alocado em casas de apostas para operações"
       },
       { 
         name: "Contas Parceiros", 
         value: saldoContasParceiros, 
         icon: CreditCard,
-        detail: `Bancos`
+        detail: "Bancos",
+        help: "Saldo em contas bancárias de parceiros disponível para movimentação"
       },
       { 
         name: "Wallets Parceiros", 
         value: walletsTotal, 
         icon: Coins,
-        detail: `$${saldoWalletsParceiros.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USD`
+        detail: `$${saldoWalletsParceiros.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USD`,
+        help: "Capital em carteiras crypto de parceiros"
       },
     ].filter(item => item.value > 0);
 
@@ -111,10 +116,22 @@ export function PosicaoCapital({
     <Card className="bg-card/50 backdrop-blur border-border/50">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <PieChartIcon className="h-5 w-5 text-primary" />
-            Posição de Capital
-          </CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <PieChartIcon className="h-5 w-5 text-primary" />
+              Posição de Capital
+            </CardTitle>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-[280px] text-xs">
+                  Mostra onde o patrimônio está distribuído. Todos os valores são convertidos para BRL usando a cotação atual.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <Badge variant="outline" className="text-base font-mono">
             {formatCurrency(dadosPosicao.total)}
           </Badge>
@@ -145,7 +162,7 @@ export function PosicaoCapital({
                     />
                   ))}
                 </Pie>
-                <Tooltip content={<CustomTooltip />} />
+                <RechartsTooltip content={<CustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -171,7 +188,19 @@ export function PosicaoCapital({
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm">{item.name}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium text-sm">{item.name}</span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3 w-3 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[200px] text-xs">
+                              {item.help}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                       <span className="text-xs text-muted-foreground">{percentual}%</span>
                     </div>
                     <div className="flex items-center justify-between mt-0.5">
