@@ -877,7 +877,27 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                       value={stake}
                       onChange={(e) => setStake(e.target.value)}
                       placeholder="Ex: 100.00"
+                      className={(() => {
+                        const selectedBk = bookmakers.find(b => b.id === bookmakerId);
+                        const stakeNum = parseFloat(stake);
+                        if (selectedBk && !isNaN(stakeNum) && stakeNum > selectedBk.saldo_atual) {
+                          return "border-destructive focus-visible:ring-destructive";
+                        }
+                        return "";
+                      })()}
                     />
+                    {(() => {
+                      const selectedBk = bookmakers.find(b => b.id === bookmakerId);
+                      const stakeNum = parseFloat(stake);
+                      if (selectedBk && !isNaN(stakeNum) && stakeNum > selectedBk.saldo_atual) {
+                        return (
+                          <p className="text-xs text-destructive mt-1">
+                            Saldo indisponível (máx: R$ {selectedBk.saldo_atual.toFixed(2)})
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
 
