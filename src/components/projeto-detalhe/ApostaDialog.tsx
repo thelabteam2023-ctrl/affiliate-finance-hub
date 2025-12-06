@@ -588,15 +588,27 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     const stakeNum = parseFloat(stake) || 0;
     const oddNum = parseFloat(odd) || 0;
 
+    // Cálculo de lucro/prejuízo por tipo de resultado:
+    // GREEN: lucro completo = stake * (odd - 1)
+    // RED: perda completa = -stake
+    // MEIO_GREEN: 50% do lucro potencial = stake * (odd - 1) / 2
+    // MEIO_RED: 50% da perda = -stake / 2
+    // VOID: 0 (stake devolvida)
+    // HALF: (legado) tratado como MEIO_GREEN
     switch (statusResultado) {
       case "GREEN":
-        return (stakeNum * oddNum) - stakeNum;
+        return stakeNum * (oddNum - 1);
       case "RED":
         return -stakeNum;
+      case "MEIO_GREEN":
+        return stakeNum * (oddNum - 1) / 2;
+      case "MEIO_RED":
+        return -stakeNum / 2;
       case "VOID":
         return 0;
       case "HALF":
-        return (stakeNum * ((oddNum - 1) / 2)) - (stakeNum / 2);
+        // Legado: tratar HALF como MEIO_GREEN
+        return stakeNum * (oddNum - 1) / 2;
       default:
         return null;
     }
@@ -606,15 +618,27 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     const stakeNum = parseFloat(stake) || 0;
     const oddNum = parseFloat(odd) || 0;
 
+    // Cálculo de valor de retorno por tipo de resultado:
+    // GREEN: stake * odd (stake + lucro completo)
+    // RED: 0 (tudo perdido)
+    // MEIO_GREEN: stake + (stake * (odd - 1) / 2)
+    // MEIO_RED: stake / 2 (metade da stake devolvida)
+    // VOID: stake (stake devolvida integralmente)
+    // HALF: (legado) tratado como MEIO_GREEN
     switch (statusResultado) {
       case "GREEN":
         return stakeNum * oddNum;
       case "RED":
         return 0;
+      case "MEIO_GREEN":
+        return stakeNum + (stakeNum * (oddNum - 1) / 2);
+      case "MEIO_RED":
+        return stakeNum / 2;
       case "VOID":
         return stakeNum;
       case "HALF":
-        return stakeNum + (stakeNum * ((oddNum - 1) / 2));
+        // Legado: tratar HALF como MEIO_GREEN
+        return stakeNum + (stakeNum * (oddNum - 1) / 2);
       default:
         return null;
     }
@@ -822,12 +846,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       // - saldo_total (saldo_atual no banco) = dinheiro real na conta
       // - saldo_disponivel = saldo_total - stakes bloqueadas (apostas pendentes)
       //
-      // Quando aposta é PENDENTE: stake fica bloqueada (saldo_disponivel diminui, saldo_total não muda)
-      // Quando aposta é resolvida:
-      //   - GREEN: saldo_total += lucro (odd*stake - stake = stake*(odd-1))
-      //   - RED: saldo_total -= stake
-      //   - VOID: saldo_total não muda (stake desbloqueia e retorna)
-      //   - HALF: saldo_total += lucro parcial
+      // Tipos de resultado e seus cálculos:
+      // - GREEN: lucro completo = stake * (odd - 1)
+      // - RED: perda completa = -stake
+      // - MEIO_GREEN: 50% do lucro potencial = stake * (odd - 1) / 2
+      // - MEIO_RED: 50% da perda = -stake / 2
+      // - VOID: nenhuma alteração (stake devolvida)
+      // - HALF: (legado) tratado como MEIO_GREEN
 
       let saldoAjuste = 0;
 
@@ -835,19 +860,19 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       if (resultadoAnterior && resultadoAnterior !== "PENDENTE") {
         switch (resultadoAnterior) {
           case "GREEN":
-            // Reverter lucro: subtrair (odd-1)*stake
             saldoAjuste -= stakeAnterior * (oddAnterior - 1);
             break;
           case "RED":
-            // Reverter perda: devolver a stake
             saldoAjuste += stakeAnterior;
             break;
-          case "VOID":
-            // Nada a reverter
-            break;
+          case "MEIO_GREEN":
           case "HALF":
-            // Reverter lucro parcial
             saldoAjuste -= stakeAnterior * ((oddAnterior - 1) / 2);
+            break;
+          case "MEIO_RED":
+            saldoAjuste += stakeAnterior / 2;
+            break;
+          case "VOID":
             break;
         }
       }
@@ -856,19 +881,19 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       if (resultadoNovo && resultadoNovo !== "PENDENTE") {
         switch (resultadoNovo) {
           case "GREEN":
-            // Adicionar lucro: (odd-1)*stake
             saldoAjuste += stakeNovo * (oddNovo - 1);
             break;
           case "RED":
-            // Subtrair stake perdida
             saldoAjuste -= stakeNovo;
             break;
-          case "VOID":
-            // Stake já estava bloqueada, agora desbloqueia - saldo não muda
-            break;
+          case "MEIO_GREEN":
           case "HALF":
-            // Lucro parcial: metade do lucro potencial
             saldoAjuste += stakeNovo * ((oddNovo - 1) / 2);
+            break;
+          case "MEIO_RED":
+            saldoAjuste -= stakeNovo / 2;
+            break;
+          case "VOID":
             break;
         }
       }
@@ -1354,22 +1379,23 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               </TabsContent>
             </Tabs>
 
-            {/* Status / Resultado - Pills clicáveis */}
+            {/* Resultado - Pills clicáveis */}
             <div className="space-y-2">
-              <Label className="block text-center uppercase text-xs tracking-wider">Status / Resultado</Label>
+              <Label className="block text-center uppercase text-xs tracking-wider">Resultado</Label>
               <div className="flex flex-wrap gap-2 justify-center">
                 {[
-                  { value: "PENDENTE", label: "PENDENTE", color: "bg-amber-500/20 text-amber-400 border-amber-500/40 hover:bg-amber-500/30" },
-                  { value: "GREEN", label: "GREEN", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30" },
-                  { value: "RED", label: "RED", color: "bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/30" },
-                  { value: "VOID", label: "VOID", color: "bg-slate-500/20 text-slate-400 border-slate-500/40 hover:bg-slate-500/30" },
-                  { value: "HALF", label: "HALF", color: "bg-purple-500/20 text-purple-400 border-purple-500/40 hover:bg-purple-500/30" },
+                  { value: "PENDENTE", label: "Pendente", color: "bg-amber-500/20 text-amber-400 border-amber-500/40 hover:bg-amber-500/30" },
+                  { value: "GREEN", label: "Green", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30" },
+                  { value: "RED", label: "Red", color: "bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/30" },
+                  { value: "MEIO_GREEN", label: "Meio Green", color: "bg-teal-500/20 text-teal-400 border-teal-500/40 hover:bg-teal-500/30" },
+                  { value: "MEIO_RED", label: "Meio Red", color: "bg-orange-500/20 text-orange-400 border-orange-500/40 hover:bg-orange-500/30" },
+                  { value: "VOID", label: "Void", color: "bg-slate-500/20 text-slate-400 border-slate-500/40 hover:bg-slate-500/30" },
                 ].map((option) => (
                   <button
                     key={option.value}
                     type="button"
                     onClick={() => setStatusResultado(option.value)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${
                       statusResultado === option.value 
                         ? option.color + " ring-2 ring-offset-2 ring-offset-background ring-current" 
                         : "bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/50"

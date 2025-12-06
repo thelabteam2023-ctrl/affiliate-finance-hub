@@ -21,6 +21,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
+import { ResultadoPill } from "@/components/projeto-detalhe/ResultadoPill";
 import {
   Select,
   SelectContent,
@@ -123,18 +124,19 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
     switch (resultado) {
       case "GREEN": return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
       case "RED": return "bg-red-500/20 text-red-400 border-red-500/30";
+      case "MEIO_GREEN": return "bg-teal-500/20 text-teal-400 border-teal-500/30";
+      case "MEIO_RED": return "bg-orange-500/20 text-orange-400 border-orange-500/30";
       case "VOID": return "bg-gray-500/20 text-gray-400 border-gray-500/30";
       case "HALF": return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
       default: return "bg-blue-500/20 text-blue-400 border-blue-500/30";
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "PENDENTE": return "bg-blue-500/20 text-blue-400 border-blue-500/30";
-      case "REALIZADA": return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
-      case "CONCLUIDA": return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
-      default: return "bg-gray-500/20 text-gray-400 border-gray-500/30";
+  const getResultadoLabel = (resultado: string | null) => {
+    switch (resultado) {
+      case "MEIO_GREEN": return "Meio Green";
+      case "MEIO_RED": return "Meio Red";
+      default: return resultado;
     }
   };
 
@@ -195,15 +197,16 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
               </SelectContent>
             </Select>
             <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
-              <SelectTrigger className="w-[120px] h-9">
+              <SelectTrigger className="w-[140px] h-9">
                 <SelectValue placeholder="Resultado" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="GREEN">Green</SelectItem>
                 <SelectItem value="RED">Red</SelectItem>
+                <SelectItem value="MEIO_GREEN">Meio Green</SelectItem>
+                <SelectItem value="MEIO_RED">Meio Red</SelectItem>
                 <SelectItem value="VOID">Void</SelectItem>
-                <SelectItem value="HALF">Half</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -230,30 +233,39 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
           {filteredApostas.map((aposta) => (
             <Card 
               key={aposta.id} 
-              className="cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => handleOpenDialog(aposta)}
+              className="hover:border-primary/50 transition-colors"
             >
               <CardHeader className="pb-1 pt-3 px-3">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
+                  <div 
+                    className="min-w-0 flex-1 cursor-pointer"
+                    onClick={() => handleOpenDialog(aposta)}
+                  >
                     <CardTitle className="text-sm truncate">{aposta.evento}</CardTitle>
                     <p className="text-xs text-muted-foreground truncate">{aposta.esporte}</p>
                   </div>
-                  <div className="flex gap-1 flex-shrink-0">
+                  <div className="flex gap-1 flex-shrink-0 items-center">
                     {aposta.modo_entrada === "LAYBACK" && (
                       <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px] px-1.5 py-0">
                         <ArrowLeftRight className="h-2.5 w-2.5 mr-0.5" />
                         LB
                       </Badge>
                     )}
-                    <Badge className={`${getResultadoColor(aposta.resultado || aposta.status)} text-[10px] px-1.5 py-0`}>
-                      {aposta.resultado || aposta.status}
-                    </Badge>
+                    <ResultadoPill
+                      apostaId={aposta.id}
+                      bookmarkerId={aposta.bookmaker_id}
+                      resultado={aposta.resultado}
+                      status={aposta.status}
+                      stake={aposta.stake}
+                      odd={aposta.odd}
+                      onResultadoUpdated={fetchApostas}
+                      onEditClick={() => handleOpenDialog(aposta)}
+                    />
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="pt-1 pb-3 px-3">
-                <div className="space-y-1">
+              <CardContent className="pt-1 pb-3 px-3" onClick={() => handleOpenDialog(aposta)}>
+                <div className="space-y-1 cursor-pointer">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground truncate flex-1">{aposta.selecao}</span>
                     <span className="font-medium ml-2">@{aposta.odd.toFixed(2)}</span>
@@ -292,10 +304,12 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
               {filteredApostas.map((aposta) => (
                 <div
                   key={aposta.id}
-                  className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer"
-                  onClick={() => handleOpenDialog(aposta)}
+                  className="flex items-center justify-between p-4 hover:bg-muted/50"
                 >
-                  <div className="flex items-center gap-4">
+                  <div 
+                    className="flex items-center gap-4 flex-1 cursor-pointer"
+                    onClick={() => handleOpenDialog(aposta)}
+                  >
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <Target className="h-5 w-5 text-primary" />
                     </div>
@@ -315,16 +329,16 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
                         </p>
                       )}
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <Badge className={getStatusColor(aposta.status)}>
-                        {aposta.status}
-                      </Badge>
-                      {aposta.resultado && (
-                        <Badge className={getResultadoColor(aposta.resultado)}>
-                          {aposta.resultado}
-                        </Badge>
-                      )}
-                    </div>
+                    <ResultadoPill
+                      apostaId={aposta.id}
+                      bookmarkerId={aposta.bookmaker_id}
+                      resultado={aposta.resultado}
+                      status={aposta.status}
+                      stake={aposta.stake}
+                      odd={aposta.odd}
+                      onResultadoUpdated={fetchApostas}
+                      onEditClick={() => handleOpenDialog(aposta)}
+                    />
                   </div>
                 </div>
               ))}
