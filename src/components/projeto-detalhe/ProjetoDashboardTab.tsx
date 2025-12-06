@@ -25,9 +25,16 @@ import {
   Bar,
   Legend
 } from "recharts";
+import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { DateRange } from "react-day-picker";
+
+type PeriodFilter = "hoje" | "ontem" | "7dias" | "mes" | "ano" | "todo" | "custom";
 
 interface ProjetoDashboardTabProps {
   projetoId: string;
+  periodFilter?: PeriodFilter;
+  dateRange?: DateRange;
 }
 
 interface Aposta {
@@ -39,21 +46,66 @@ interface Aposta {
   esporte: string;
 }
 
-export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
+interface DailyData {
+  data: string;
+  dataCompleta: string;
+  lucro_dia: number;
+  saldo: number;
+}
+
+export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRange }: ProjetoDashboardTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
+    const today = new Date();
+    
+    switch (periodFilter) {
+      case "hoje":
+        return { start: startOfDay(today), end: endOfDay(today) };
+      case "ontem":
+        const yesterday = subDays(today, 1);
+        return { start: startOfDay(yesterday), end: endOfDay(yesterday) };
+      case "7dias":
+        return { start: startOfDay(subDays(today, 7)), end: endOfDay(today) };
+      case "mes":
+        return { start: startOfMonth(today), end: endOfDay(today) };
+      case "ano":
+        return { start: startOfYear(today), end: endOfDay(today) };
+      case "custom":
+        return { 
+          start: dateRange?.from || null, 
+          end: dateRange?.to || dateRange?.from || null 
+        };
+      case "todo":
+      default:
+        return { start: null, end: null };
+    }
+  };
+
   useEffect(() => {
     fetchApostas();
-  }, [projetoId]);
+  }, [projetoId, periodFilter, dateRange]);
 
   const fetchApostas = async () => {
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+      const { start, end } = getDateRangeFromFilter();
+      
+      let query = supabase
         .from("apostas")
         .select("id, data_aposta, lucro_prejuizo, resultado, estrategia, esporte")
         .eq("projeto_id", projetoId)
         .order("data_aposta", { ascending: true });
+
+      if (start) {
+        query = query.gte("data_aposta", start.toISOString());
+      }
+      if (end) {
+        query = query.lte("data_aposta", end.toISOString());
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setApostas(data || []);
@@ -64,20 +116,40 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     }
   };
 
-  // Prepare evolution chart data
-  const evolutionData = apostas.reduce((acc: any[], aposta) => {
-    const date = new Date(aposta.data_aposta).toLocaleDateString("pt-BR");
-    const lastBalance = acc.length > 0 ? acc[acc.length - 1].saldo : 0;
-    const newBalance = lastBalance + (aposta.lucro_prejuizo || 0);
-    
-    acc.push({
-      data: date,
-      saldo: newBalance,
-      lucro: aposta.lucro_prejuizo || 0
+  // Parse date string as local time
+  const parseLocalDateTime = (dateString: string): Date => {
+    if (!dateString) return new Date();
+    const cleanDate = dateString.replace(/\+00:00$/, '').replace(/Z$/, '').replace(/\+\d{2}:\d{2}$/, '');
+    const [datePart] = cleanDate.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  // Aggregate data by day
+  const evolutionData: DailyData[] = (() => {
+    // Group apostas by day
+    const dailyMap = apostas.reduce((acc: Record<string, number>, aposta) => {
+      const dateKey = aposta.data_aposta.split('T')[0]; // Extract YYYY-MM-DD
+      acc[dateKey] = (acc[dateKey] || 0) + (aposta.lucro_prejuizo || 0);
+      return acc;
+    }, {});
+
+    // Sort dates and calculate cumulative balance
+    const sortedDates = Object.keys(dailyMap).sort();
+    let cumulativeBalance = 0;
+
+    return sortedDates.map(dateKey => {
+      const dailyProfit = dailyMap[dateKey];
+      cumulativeBalance += dailyProfit;
+      
+      return {
+        data: format(parseLocalDateTime(dateKey), "dd/MM", { locale: ptBR }),
+        dataCompleta: format(parseLocalDateTime(dateKey), "dd/MM/yyyy", { locale: ptBR }),
+        lucro_dia: dailyProfit,
+        saldo: cumulativeBalance
+      };
     });
-    
-    return acc;
-  }, []);
+  })();
 
   // Prepare results pie chart data
   const resultadosData = [
@@ -174,9 +246,25 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
                     padding: "12px 16px"
                   }}
                   cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
-                  formatter={(value: number) => [formatCurrency(value), "Saldo"]}
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload as DailyData;
+                      return (
+                        <div className="bg-background/80 backdrop-blur-xl border border-border/50 rounded-lg p-3 shadow-xl">
+                          <p className="text-sm font-medium mb-1">{data.dataCompleta}</p>
+                          <p className={`text-sm ${data.lucro_dia >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            Lucro do dia: {formatCurrency(data.lucro_dia)}
+                          </p>
+                          <p className={`text-sm font-semibold ${data.saldo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            Saldo: {formatCurrency(data.saldo)}
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
                 />
-                <Line 
+                <Line
                   type="monotone" 
                   dataKey="saldo" 
                   stroke="hsl(var(--primary))" 

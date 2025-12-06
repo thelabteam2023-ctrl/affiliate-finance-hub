@@ -503,7 +503,11 @@ export default function ProjetoDetalhe() {
         </TabsList>
 
         <TabsContent value="dashboard">
-          <ProjetoDashboardTab projetoId={id!} />
+          <ProjetoDashboardTab 
+            projetoId={id!} 
+            periodFilter={periodFilter}
+            dateRange={dateRange}
+          />
         </TabsContent>
 
         <TabsContent value="apostas">
