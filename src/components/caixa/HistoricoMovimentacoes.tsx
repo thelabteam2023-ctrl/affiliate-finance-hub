@@ -762,7 +762,7 @@ export function HistoricoMovimentacoes({
                       className="h-7 px-2 text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
                     >
                       <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Confirmar
+                      Atualizar Status
                     </Button>
                   )}
                   <div className="text-right">

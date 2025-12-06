@@ -24,6 +24,7 @@ interface BookmakerItem {
   logo_url: string | null;
   saldo_atual?: number;
   moeda?: string;
+  status?: string;
 }
 
 export default function BookmakerSelect({ 
@@ -57,6 +58,7 @@ export default function BookmakerSelect({
               nome,
               saldo_atual,
               moeda,
+              status,
               bookmakers_catalogo:bookmaker_catalogo_id (
                 logo_url
               )
@@ -76,6 +78,7 @@ export default function BookmakerSelect({
             logo_url: b.bookmakers_catalogo?.logo_url || null,
             saldo_atual: b.saldo_atual,
             moeda: b.moeda,
+            status: b.status,
           }));
 
           setItems(mapped);
@@ -219,26 +222,33 @@ export default function BookmakerSelect({
               : "Nenhuma bookmaker encontrada"}
           </div>
         ) : (
-          filteredItems.map((item) => (
-            <SelectItem key={item.id} value={item.id}>
-              <div className="flex items-center gap-2">
-                {item.logo_url && (
-                  <img
-                    src={item.logo_url}
-                    alt=""
-                    className="h-6 w-6 rounded object-contain flex-shrink-0"
-                    onError={(e) => { e.currentTarget.style.display = "none"; }}
-                  />
-                )}
-                <span className="uppercase">{item.nome}</span>
-                {item.saldo_atual !== undefined && (
-                  <span className="text-xs text-muted-foreground ml-auto">
-                    Saldo: {item.moeda} {item.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                )}
-              </div>
-            </SelectItem>
-          ))
+          filteredItems.map((item) => {
+            const isLimitada = item.status === "LIMITADA";
+            return (
+              <SelectItem 
+                key={item.id} 
+                value={item.id}
+                className={isLimitada ? "data-[highlighted]:bg-yellow-500/20" : "data-[highlighted]:bg-emerald-500/20"}
+              >
+                <div className="flex items-center gap-2">
+                  {item.logo_url && (
+                    <img
+                      src={item.logo_url}
+                      alt=""
+                      className="h-6 w-6 rounded object-contain flex-shrink-0"
+                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                    />
+                  )}
+                  <span className={`uppercase ${isLimitada ? "text-yellow-400" : ""}`}>{item.nome}</span>
+                  {item.saldo_atual !== undefined && (
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      Saldo: {item.moeda} {item.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  )}
+                </div>
+              </SelectItem>
+            );
+          })
         )}
       </SelectContent>
     </Select>
