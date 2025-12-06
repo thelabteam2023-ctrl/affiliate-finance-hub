@@ -544,7 +544,7 @@ export default function CentralOperacoes() {
                               onClick={() => handleConfirmarSaque(saque)}
                               className="bg-yellow-600 hover:bg-yellow-700 h-7 text-xs"
                             >
-                              Confirmar
+                              Atualizar Status
                             </Button>
                           </div>
                         </div>
