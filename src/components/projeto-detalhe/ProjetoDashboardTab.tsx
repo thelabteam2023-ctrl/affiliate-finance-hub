@@ -225,60 +225,115 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
         <CardContent>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={evolutionData}>
-                <defs>
-                  <linearGradient id="saldoGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2dd4bf" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="#2dd4bf" stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid 
-                  strokeDasharray="0" 
-                  stroke="hsl(var(--border)/0.3)" 
-                  vertical={false}
-                />
-                <XAxis 
-                  dataKey="data" 
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis 
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(value) => `${(value / 1).toLocaleString('pt-BR')} R$`}
-                />
-                <Tooltip 
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload as DailyData;
-                      return (
-                        <div className="bg-background/90 backdrop-blur-xl border border-border/50 rounded-lg px-3 py-2 shadow-xl">
-                          <p className="text-sm font-medium">{data.dataCompleta}</p>
-                          <p className="text-sm text-muted-foreground">
-                            <span className="inline-block w-2 h-2 rounded-sm bg-teal-400 mr-2" />
-                            Lucro: {formatCurrency(data.saldo)}
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                  cursor={{ stroke: 'rgba(45, 212, 191, 0.3)', strokeWidth: 1 }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="saldo"
-                  stroke="#2dd4bf"
-                  strokeWidth={2}
-                  fill="url(#saldoGradient)"
-                  dot={false}
-                  activeDot={{ r: 4, fill: "#2dd4bf", strokeWidth: 0 }}
-                />
-              </AreaChart>
+              {(() => {
+                // Calculate min/max for gradient positioning
+                const values = evolutionData.map(d => d.saldo);
+                const minValue = Math.min(...values, 0);
+                const maxValue = Math.max(...values, 0);
+                const range = maxValue - minValue;
+                
+                // Calculate zero position as percentage from top (0 = top, 1 = bottom)
+                const zeroPosition = range > 0 ? maxValue / range : 0.5;
+                const zeroPercent = Math.max(0, Math.min(100, zeroPosition * 100));
+                
+                const allPositive = minValue >= 0;
+                const allNegative = maxValue <= 0;
+
+                return (
+                  <AreaChart data={evolutionData}>
+                    <defs>
+                      <linearGradient id="saldoBicolorGradient" x1="0" y1="0" x2="0" y2="1">
+                        {allNegative ? (
+                          <>
+                            <stop offset="0%" stopColor="#ef4444" stopOpacity={0.1} />
+                            <stop offset="100%" stopColor="#ef4444" stopOpacity={0.4} />
+                          </>
+                        ) : allPositive ? (
+                          <>
+                            <stop offset="0%" stopColor="#2dd4bf" stopOpacity={0.4} />
+                            <stop offset="100%" stopColor="#2dd4bf" stopOpacity={0.05} />
+                          </>
+                        ) : (
+                          <>
+                            <stop offset="0%" stopColor="#2dd4bf" stopOpacity={0.4} />
+                            <stop offset={`${zeroPercent}%`} stopColor="#2dd4bf" stopOpacity={0.1} />
+                            <stop offset={`${zeroPercent}%`} stopColor="#ef4444" stopOpacity={0.1} />
+                            <stop offset="100%" stopColor="#ef4444" stopOpacity={0.4} />
+                          </>
+                        )}
+                      </linearGradient>
+                      <linearGradient id="saldoStrokeGradient" x1="0" y1="0" x2="0" y2="1">
+                        {allNegative ? (
+                          <>
+                            <stop offset="0%" stopColor="#ef4444" />
+                            <stop offset="100%" stopColor="#ef4444" />
+                          </>
+                        ) : allPositive ? (
+                          <>
+                            <stop offset="0%" stopColor="#2dd4bf" />
+                            <stop offset="100%" stopColor="#2dd4bf" />
+                          </>
+                        ) : (
+                          <>
+                            <stop offset="0%" stopColor="#2dd4bf" />
+                            <stop offset={`${zeroPercent}%`} stopColor="#2dd4bf" />
+                            <stop offset={`${zeroPercent}%`} stopColor="#ef4444" />
+                            <stop offset="100%" stopColor="#ef4444" />
+                          </>
+                        )}
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid 
+                      strokeDasharray="0" 
+                      stroke="hsl(var(--border)/0.3)" 
+                      vertical={false}
+                    />
+                    <XAxis 
+                      dataKey="data" 
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      axisLine={false}
+                      tickLine={false}
+                      domain={[(dataMin: number) => Math.min(dataMin, 0), (dataMax: number) => Math.max(dataMax, 0)]}
+                      tickFormatter={(value) => `${value.toLocaleString('pt-BR')} R$`}
+                    />
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload as DailyData;
+                          const isPositive = data.saldo >= 0;
+                          return (
+                            <div className="bg-background/90 backdrop-blur-xl border border-border/50 rounded-lg px-3 py-2 shadow-xl">
+                              <p className="text-sm font-medium">{data.dataCompleta}</p>
+                              <p className="text-sm text-muted-foreground">
+                                <span className={`inline-block w-2 h-2 rounded-sm mr-2 ${isPositive ? 'bg-teal-400' : 'bg-red-400'}`} />
+                                Lucro: {formatCurrency(data.saldo)}
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                      cursor={{ stroke: 'rgba(255, 255, 255, 0.1)', strokeWidth: 1 }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="saldo"
+                      stroke="url(#saldoStrokeGradient)"
+                      strokeWidth={2}
+                      fill="url(#saldoBicolorGradient)"
+                      dot={false}
+                      activeDot={{ r: 4, strokeWidth: 0 }}
+                    />
+                  </AreaChart>
+                );
+              })()}
             </ResponsiveContainer>
           </div>
         </CardContent>
