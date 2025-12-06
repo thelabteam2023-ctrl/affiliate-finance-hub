@@ -69,10 +69,17 @@ interface BookmakerMetrics {
   roi: number;
 }
 
+type BookmakerFilter = "all" | "bookmaker" | "parceiro";
+
 export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRange }: ProjetoDashboardTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEsporte, setSelectedEsporte] = useState<string>("");
+  
+  // Filtros para Performance por Casa
+  const [bookmakerFilterType, setBookmakerFilterType] = useState<BookmakerFilter>("all");
+  const [selectedBookmakerId, setSelectedBookmakerId] = useState<string>("");
+  const [selectedParceiro, setSelectedParceiro] = useState<string>("");
 
   const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
     const today = new Date();
@@ -225,6 +232,48 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
       }))
       .sort((a, b) => b.totalApostas - a.totalApostas);
   }, [apostas]);
+
+  // Listas únicas para filtros
+  const uniqueBookmakers = useMemo(() => {
+    const map = new Map<string, { id: string; nome: string }>();
+    apostas.forEach(a => {
+      if (!map.has(a.bookmaker_id)) {
+        map.set(a.bookmaker_id, { id: a.bookmaker_id, nome: a.bookmaker_nome });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [apostas]);
+
+  const uniqueParceiros = useMemo(() => {
+    const set = new Set<string>();
+    apostas.forEach(a => {
+      if (a.parceiro_nome) set.add(a.parceiro_nome);
+    });
+    return Array.from(set).sort();
+  }, [apostas]);
+
+  // Filtrar métricas por bookmaker
+  const filteredBookmakerMetrics = useMemo(() => {
+    if (bookmakerFilterType === "all") return bookmakerMetrics;
+    
+    if (bookmakerFilterType === "bookmaker" && selectedBookmakerId) {
+      return bookmakerMetrics.filter(bm => bm.bookmaker_id === selectedBookmakerId);
+    }
+    
+    if (bookmakerFilterType === "parceiro" && selectedParceiro) {
+      return bookmakerMetrics.filter(bm => bm.parceiro_nome === selectedParceiro);
+    }
+    
+    return bookmakerMetrics;
+  }, [bookmakerMetrics, bookmakerFilterType, selectedBookmakerId, selectedParceiro]);
+
+  // Reset seleção quando muda o tipo de filtro
+  useEffect(() => {
+    if (bookmakerFilterType === "all") {
+      setSelectedBookmakerId("");
+      setSelectedParceiro("");
+    }
+  }, [bookmakerFilterType]);
 
   // Aggregate by sport
   const esportesMap = apostas.reduce((acc: Record<string, { 
@@ -444,10 +493,54 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
       {/* Performance por Casa - Lista */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Performance por Casa
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Performance por Casa
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Select value={bookmakerFilterType} onValueChange={(v) => setBookmakerFilterType(v as BookmakerFilter)}>
+                <SelectTrigger className="w-[130px] h-8 text-xs">
+                  <SelectValue placeholder="Filtrar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="bookmaker">Por Casa</SelectItem>
+                  <SelectItem value="parceiro">Por Usuário</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {bookmakerFilterType === "bookmaker" && uniqueBookmakers.length > 0 && (
+                <Select value={selectedBookmakerId} onValueChange={setSelectedBookmakerId}>
+                  <SelectTrigger className="w-[150px] h-8 text-xs">
+                    <SelectValue placeholder="Selecione a casa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {uniqueBookmakers.map(bm => (
+                      <SelectItem key={bm.id} value={bm.id}>
+                        {bm.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              
+              {bookmakerFilterType === "parceiro" && uniqueParceiros.length > 0 && (
+                <Select value={selectedParceiro} onValueChange={setSelectedParceiro}>
+                  <SelectTrigger className="w-[150px] h-8 text-xs">
+                    <SelectValue placeholder="Selecione o usuário" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {uniqueParceiros.map(nome => (
+                      <SelectItem key={nome} value={nome}>
+                        {nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="px-0">
           <ScrollArea className="h-[260px]">
@@ -462,38 +555,46 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
             
             {/* Rows */}
             <div className="divide-y divide-border/30">
-              {bookmakerMetrics.map((bm) => (
-                <div 
-                  key={bm.bookmaker_id} 
-                  className="grid grid-cols-5 gap-2 px-6 py-3 hover:bg-muted/30 transition-colors"
-                >
-                  <div className="col-span-1">
-                    <p className="text-sm font-medium truncate">{bm.bookmaker_nome}</p>
-                    {bm.parceiro_nome && (
-                      <p className="text-xs text-muted-foreground truncate">{bm.parceiro_nome}</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-mono">{bm.totalApostas}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {bm.greens}G / {bm.reds}R
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-mono">{formatCurrency(bm.totalStake)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-sm font-mono font-medium ${bm.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {formatCurrency(bm.lucro)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-sm font-mono font-medium ${bm.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {bm.roi.toFixed(1)}%
-                    </p>
-                  </div>
+              {filteredBookmakerMetrics.length === 0 ? (
+                <div className="px-6 py-8 text-center text-sm text-muted-foreground">
+                  {bookmakerFilterType !== "all" && !(selectedBookmakerId || selectedParceiro) 
+                    ? "Selecione um filtro" 
+                    : "Nenhum resultado encontrado"}
                 </div>
-              ))}
+              ) : (
+                filteredBookmakerMetrics.map((bm) => (
+                  <div 
+                    key={bm.bookmaker_id} 
+                    className="grid grid-cols-5 gap-2 px-6 py-3 hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="col-span-1">
+                      <p className="text-sm font-medium truncate">{bm.bookmaker_nome}</p>
+                      {bm.parceiro_nome && (
+                        <p className="text-xs text-muted-foreground truncate">{bm.parceiro_nome}</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-mono">{bm.totalApostas}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {bm.greens}G / {bm.reds}R
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-mono">{formatCurrency(bm.totalStake)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-mono font-medium ${bm.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {formatCurrency(bm.lucro)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-mono font-medium ${bm.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {bm.roi.toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </ScrollArea>
         </CardContent>

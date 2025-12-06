@@ -511,7 +511,12 @@ export default function ProjetoDetalhe() {
         </TabsContent>
 
         <TabsContent value="apostas">
-          <ProjetoApostasTab projetoId={id!} onDataChange={fetchApostasResumo} />
+          <ProjetoApostasTab 
+            projetoId={id!} 
+            onDataChange={fetchApostasResumo}
+            periodFilter={periodFilter}
+            dateRange={dateRange}
+          />
         </TabsContent>
 
         <TabsContent value="matched-betting">
