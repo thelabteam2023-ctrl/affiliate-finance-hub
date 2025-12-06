@@ -235,6 +235,9 @@ export function ModernBarChart({
               />
             }
             cursor={{ fill: "rgba(255, 255, 255, 0.03)", radius: 4 }}
+            wrapperStyle={{ zIndex: 1000 }}
+            position={{ x: 0, y: -20 }}
+            offset={20}
           />
           
           {bars.map((bar, barIndex) => (
