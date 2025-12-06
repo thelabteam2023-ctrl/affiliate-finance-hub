@@ -15,7 +15,8 @@ import {
   TrendingUp,
   TrendingDown,
   LayoutGrid,
-  List
+  List,
+  ArrowLeftRight
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -48,6 +49,11 @@ interface Aposta {
   lucro_prejuizo: number | null;
   observacoes: string | null;
   bookmaker_id: string;
+  modo_entrada?: string;
+  lay_exchange?: string | null;
+  lay_odd?: number | null;
+  lay_stake?: number | null;
+  lay_liability?: number | null;
   bookmaker?: {
     nome: string;
     parceiro_id: string;
@@ -242,6 +248,12 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
                     <p className="text-sm text-muted-foreground">{aposta.esporte}</p>
                   </div>
                   <div className="flex flex-col gap-1 items-end">
+                    {aposta.modo_entrada === "LAYBACK" && (
+                      <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
+                        <ArrowLeftRight className="h-3 w-3 mr-1" />
+                        LayBack
+                      </Badge>
+                    )}
                     <Badge className={getStatusColor(aposta.status)}>
                       {aposta.status}
                     </Badge>

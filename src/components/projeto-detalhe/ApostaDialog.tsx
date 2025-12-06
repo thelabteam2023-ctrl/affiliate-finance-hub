@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2 } from "lucide-react";
+import { Loader2, Save, Trash2, ArrowLeftRight } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -30,6 +30,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 
 interface Aposta {
   id: string;
@@ -47,6 +49,12 @@ interface Aposta {
   lucro_prejuizo: number | null;
   observacoes: string | null;
   bookmaker_id: string;
+  modo_entrada?: string;
+  lay_exchange?: string | null;
+  lay_odd?: number | null;
+  lay_stake?: number | null;
+  lay_liability?: number | null;
+  lay_comissao?: number | null;
 }
 
 interface Bookmaker {
@@ -66,29 +74,164 @@ interface ApostaDialogProps {
   onSuccess: () => void;
 }
 
+// Lista de esportes com ordem de prioridade
 const ESPORTES = [
   "Futebol",
   "Basquete",
   "Tênis",
+  "Baseball",
+  "Hockey",
+  "Futebol Americano",
   "Vôlei",
   "MMA/UFC",
   "Boxe",
-  "E-sports",
-  "Corrida de Cavalos",
-  "NFL",
-  "MLB",
-  "NHL",
-  "Outros"
+  "Golfe",
+  "League of Legends",
+  "Counter-Strike",
+  "Dota 2",
+  "eFootball",
+  "Outro"
 ];
 
-const ESTRATEGIAS = [
-  { value: "VALOR", label: "Aposta de Valor" },
-  { value: "SUREBET", label: "Surebet" },
-  { value: "ARBITRAGEM", label: "Arbitragem" },
-  { value: "DUTCHING", label: "Dutching" },
-  { value: "MATCHED_BETTING", label: "Matched Betting" },
-  { value: "TRADING", label: "Trading" },
-  { value: "OUTRO", label: "Outro" },
+// Mercados dinâmicos por esporte
+const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
+  "Futebol": [
+    "Moneyline / 1X2",
+    "Over/Under (Gols)",
+    "Handicap Asiático",
+    "Handicap Europeu",
+    "Ambas Marcam (BTTS)",
+    "Resultado Exato",
+    "Dupla Chance",
+    "Draw No Bet",
+    "Primeiro/Último Gol",
+    "Total de Cantos",
+    "Outro"
+  ],
+  "Basquete": [
+    "Moneyline",
+    "Spread",
+    "Total de Pontos (Over/Under)",
+    "Handicap",
+    "1º/2º Tempo",
+    "Margem de Vitória",
+    "Outro"
+  ],
+  "Tênis": [
+    "Vencedor do Jogo",
+    "Handicap de Games",
+    "Total de Games (Over/Under)",
+    "Vencedor do Set",
+    "Resultado Exato (Sets)",
+    "Outro"
+  ],
+  "Baseball": [
+    "Moneyline",
+    "Run Line (+1.5 / -1.5)",
+    "Total de Runs (Over/Under)",
+    "1ª Metade (1st 5 Innings)",
+    "Handicap",
+    "Outro"
+  ],
+  "Hockey": [
+    "Moneyline",
+    "Puck Line (+1.5 / -1.5)",
+    "Total de Gols (Over/Under)",
+    "1º/2º/3º Período",
+    "Handicap",
+    "Outro"
+  ],
+  "Futebol Americano": [
+    "Moneyline",
+    "Spread",
+    "Total de Pontos (Over/Under)",
+    "1º/2º Tempo",
+    "Margem de Vitória",
+    "Primeiro TD",
+    "Outro"
+  ],
+  "Vôlei": [
+    "Vencedor",
+    "Handicap de Sets",
+    "Total de Pontos",
+    "Resultado Exato (Sets)",
+    "Outro"
+  ],
+  "MMA/UFC": [
+    "Vencedor",
+    "Método de Vitória",
+    "Round de Finalização",
+    "Vai para Decisão?",
+    "Over/Under Rounds",
+    "Outro"
+  ],
+  "Boxe": [
+    "Vencedor",
+    "Método de Vitória",
+    "Round de Finalização",
+    "Total de Rounds",
+    "Outro"
+  ],
+  "Golfe": [
+    "Vencedor do Torneio",
+    "Top 5/10/20",
+    "Head-to-Head",
+    "Fazer o Cut",
+    "Outro"
+  ],
+  "League of Legends": [
+    "Vencedor do Mapa",
+    "Vencedor da Série",
+    "Handicap de Mapas",
+    "Total de Mapas",
+    "Primeiro Dragão",
+    "Primeiro Barão",
+    "Primeiro Torre",
+    "First Blood",
+    "Outro"
+  ],
+  "Counter-Strike": [
+    "Vencedor do Mapa",
+    "Vencedor da Série",
+    "Handicap de Rounds",
+    "Total de Rounds",
+    "Handicap de Mapas",
+    "Pistol Round",
+    "Outro"
+  ],
+  "Dota 2": [
+    "Vencedor do Mapa",
+    "Vencedor da Série",
+    "Handicap de Mapas",
+    "Total de Mapas",
+    "Primeiro Roshan",
+    "Primeiro Barracks",
+    "First Blood",
+    "Outro"
+  ],
+  "eFootball": [
+    "Vencedor",
+    "Over/Under (Gols)",
+    "Handicap",
+    "Ambas Marcam",
+    "Resultado Exato",
+    "Outro"
+  ],
+  "Outro": [
+    "Vencedor",
+    "Over/Under",
+    "Handicap",
+    "Outro"
+  ]
+};
+
+const EXCHANGES = [
+  "Betfair",
+  "Smarkets",
+  "Betdaq",
+  "Matchbook",
+  "Orbit Exchange",
+  "Outra"
 ];
 
 export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess }: ApostaDialogProps) {
@@ -105,11 +248,23 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   const [selecao, setSelecao] = useState("");
   const [odd, setOdd] = useState("");
   const [stake, setStake] = useState("");
-  const [estrategia, setEstrategia] = useState("VALOR");
   const [status, setStatus] = useState("PENDENTE");
   const [resultado, setResultado] = useState("");
   const [valorRetorno, setValorRetorno] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  
+  // LayBack mode state
+  const [modoLayBack, setModoLayBack] = useState(false);
+  const [layExchange, setLayExchange] = useState("");
+  const [layOdd, setLayOdd] = useState("");
+  const [layComissao, setLayComissao] = useState("5");
+
+  // Calculated lay values
+  const [layStake, setLayStake] = useState<number | null>(null);
+  const [layLiability, setLayLiability] = useState<number | null>(null);
+
+  // Mercados disponíveis baseado no esporte selecionado
+  const mercadosDisponiveis = esporte ? MERCADOS_POR_ESPORTE[esporte] || MERCADOS_POR_ESPORTE["Outro"] : [];
 
   useEffect(() => {
     if (open) {
@@ -123,16 +278,52 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         setSelecao(aposta.selecao);
         setOdd(aposta.odd.toString());
         setStake(aposta.stake.toString());
-        setEstrategia(aposta.estrategia || "VALOR");
         setStatus(aposta.status);
         setResultado(aposta.resultado || "");
         setValorRetorno(aposta.valor_retorno?.toString() || "");
         setObservacoes(aposta.observacoes || "");
+        // LayBack fields
+        setModoLayBack(aposta.modo_entrada === "LAYBACK");
+        setLayExchange(aposta.lay_exchange || "");
+        setLayOdd(aposta.lay_odd?.toString() || "");
+        setLayComissao(aposta.lay_comissao?.toString() || "5");
       } else {
         resetForm();
       }
     }
   }, [open, aposta]);
+
+  // Reset mercado quando esporte muda
+  useEffect(() => {
+    if (!aposta) {
+      setMercado("");
+    }
+  }, [esporte]);
+
+  // Calcular Lay Stake e Liability quando valores mudam
+  useEffect(() => {
+    if (modoLayBack && stake && odd && layOdd) {
+      const backStake = parseFloat(stake);
+      const backOdd = parseFloat(odd);
+      const layOddNum = parseFloat(layOdd);
+      const comissao = parseFloat(layComissao) / 100;
+
+      if (backStake > 0 && backOdd > 0 && layOddNum > 1) {
+        // Fórmula: Lay Stake = (Back Stake * Back Odd) / (Lay Odd - Comissão)
+        const calculatedLayStake = (backStake * backOdd) / (layOddNum - comissao);
+        const calculatedLiability = calculatedLayStake * (layOddNum - 1);
+        
+        setLayStake(Math.round(calculatedLayStake * 100) / 100);
+        setLayLiability(Math.round(calculatedLiability * 100) / 100);
+      } else {
+        setLayStake(null);
+        setLayLiability(null);
+      }
+    } else {
+      setLayStake(null);
+      setLayLiability(null);
+    }
+  }, [modoLayBack, stake, odd, layOdd, layComissao]);
 
   const resetForm = () => {
     setBookmakerId("");
@@ -143,11 +334,16 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     setSelecao("");
     setOdd("");
     setStake("");
-    setEstrategia("VALOR");
     setStatus("PENDENTE");
     setResultado("");
     setValorRetorno("");
     setObservacoes("");
+    setModoLayBack(false);
+    setLayExchange("");
+    setLayOdd("");
+    setLayComissao("5");
+    setLayStake(null);
+    setLayLiability(null);
   };
 
   const fetchBookmakers = async () => {
@@ -172,16 +368,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       console.error("Erro ao carregar bookmakers:", error);
     }
   };
-
-  // Calculate lucro_prejuizo when resultado or valorRetorno changes
-  useEffect(() => {
-    if (resultado && valorRetorno && stake) {
-      const stakeNum = parseFloat(stake);
-      const retornoNum = parseFloat(valorRetorno);
-      // lucro = retorno - stake (se GREEN, retorno é o valor recebido total)
-      // Se RED, retorno seria 0 ou o valor perdido
-    }
-  }, [resultado, valorRetorno, stake]);
 
   const calculateLucroPrejuizo = () => {
     const stakeNum = parseFloat(stake) || 0;
@@ -208,6 +394,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       return;
     }
 
+    if (modoLayBack && (!layExchange || !layOdd)) {
+      toast.error("Preencha os campos de Lay para o modo LayBack");
+      return;
+    }
+
     try {
       setLoading(true);
       const { data: userData } = await supabase.auth.getUser();
@@ -229,12 +420,18 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         selecao,
         odd: parseFloat(odd),
         stake: parseFloat(stake),
-        estrategia,
+        estrategia: modoLayBack ? "LAYBACK" : "VALOR",
         status,
         resultado: resultado || null,
         valor_retorno: valorRetorno ? parseFloat(valorRetorno) : null,
         lucro_prejuizo: lucroPrejuizo,
         observacoes: observacoes || null,
+        modo_entrada: modoLayBack ? "LAYBACK" : "PADRAO",
+        lay_exchange: modoLayBack ? layExchange : null,
+        lay_odd: modoLayBack && layOdd ? parseFloat(layOdd) : null,
+        lay_stake: modoLayBack ? layStake : null,
+        lay_liability: modoLayBack ? layLiability : null,
+        lay_comissao: modoLayBack ? parseFloat(layComissao) : null,
       };
 
       if (aposta) {
@@ -283,36 +480,32 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     }
   };
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
               {aposta ? "Editar Aposta" : "Nova Aposta"}
+              {modoLayBack && (
+                <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
+                  <ArrowLeftRight className="h-3 w-3 mr-1" />
+                  LayBack
+                </Badge>
+              )}
             </DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            {/* Bookmaker */}
-            <div className="space-y-2">
-              <Label>Bookmaker / Vínculo *</Label>
-              <Select value={bookmakerId} onValueChange={setBookmakerId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o bookmaker" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bookmakers.map((bk) => (
-                    <SelectItem key={bk.id} value={bk.id}>
-                      {bk.nome} • {bk.parceiro?.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Data e Esporte */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Linha 1: Data/Hora, Esporte, Evento */}
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Data/Hora *</Label>
                 <Input
@@ -334,10 +527,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* Evento e Mercado */}
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Evento *</Label>
                 <Input
@@ -346,18 +535,23 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   placeholder="Ex: Real Madrid x Barcelona"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Mercado</Label>
-                <Input
-                  value={mercado}
-                  onChange={(e) => setMercado(e.target.value)}
-                  placeholder="Ex: Resultado Final, Over/Under"
-                />
-              </div>
             </div>
 
-            {/* Seleção e Estratégia */}
+            {/* Linha 2: Mercado e Seleção */}
             <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Mercado</Label>
+                <Select value={mercado} onValueChange={setMercado} disabled={!esporte}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={esporte ? "Selecione o mercado" : "Selecione o esporte primeiro"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mercadosDisponiveis.map((m) => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label>Seleção *</Label>
                 <Input
@@ -366,44 +560,128 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   placeholder="Ex: Real Madrid, Over 2.5"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Estratégia</Label>
-                <Select value={estrategia} onValueChange={setEstrategia}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ESTRATEGIAS.map((est) => (
-                      <SelectItem key={est.value} value={est.value}>{est.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            </div>
+
+            {/* Toggle Modo LayBack */}
+            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border">
+              <div className="space-y-0.5">
+                <Label className="text-base font-medium">Modo LayBack</Label>
+                <p className="text-sm text-muted-foreground">
+                  Ativar para registrar Back + Lay simultâneos
+                </p>
+              </div>
+              <Switch
+                checked={modoLayBack}
+                onCheckedChange={setModoLayBack}
+              />
+            </div>
+
+            {/* Modo Padrão ou Back (LayBack) */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-muted-foreground">
+                {modoLayBack ? "BACK (Bookmaker)" : "Aposta"}
+              </Label>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Bookmaker *</Label>
+                  <Select value={bookmakerId} onValueChange={setBookmakerId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bookmakers.map((bk) => (
+                        <SelectItem key={bk.id} value={bk.id}>
+                          {bk.nome} • {bk.parceiro?.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Odd *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={odd}
+                    onChange={(e) => setOdd(e.target.value)}
+                    placeholder="Ex: 1.85"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Stake (R$) *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={stake}
+                    onChange={(e) => setStake(e.target.value)}
+                    placeholder="Ex: 100.00"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Odd e Stake */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Odd *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={odd}
-                  onChange={(e) => setOdd(e.target.value)}
-                  placeholder="Ex: 1.85"
-                />
+            {/* Campos Lay (apenas em modo LayBack) */}
+            {modoLayBack && (
+              <div className="space-y-2 p-4 rounded-lg border border-purple-500/30 bg-purple-500/5">
+                <Label className="text-sm font-medium text-purple-400">LAY (Exchange)</Label>
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label>Exchange *</Label>
+                    <Select value={layExchange} onValueChange={setLayExchange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EXCHANGES.map((ex) => (
+                          <SelectItem key={ex} value={ex}>{ex}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Odd Lay *</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={layOdd}
+                      onChange={(e) => setLayOdd(e.target.value)}
+                      placeholder="Ex: 1.90"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Stake Lay</Label>
+                    <Input
+                      type="text"
+                      value={layStake !== null ? formatCurrency(layStake) : "-"}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Liability</Label>
+                    <Input
+                      type="text"
+                      value={layLiability !== null ? formatCurrency(layLiability) : "-"}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground">Comissão Exchange:</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={layComissao}
+                      onChange={(e) => setLayComissao(e.target.value)}
+                      className="w-20 h-8"
+                    />
+                    <span className="text-xs text-muted-foreground">%</span>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Stake (R$) *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={stake}
-                  onChange={(e) => setStake(e.target.value)}
-                  placeholder="Ex: 100.00"
-                />
-              </div>
-            </div>
+            )}
 
             {/* Status e Resultado */}
             <div className="grid grid-cols-2 gap-4">
@@ -449,7 +727,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                 />
                 {calculateLucroPrejuizo() !== null && (
                   <p className={`text-sm ${calculateLucroPrejuizo()! >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                    Lucro/Prejuízo: R$ {calculateLucroPrejuizo()!.toFixed(2)}
+                    Lucro/Prejuízo: {formatCurrency(calculateLucroPrejuizo()!)}
                   </p>
                 )}
               </div>
@@ -462,7 +740,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                 value={observacoes}
                 onChange={(e) => setObservacoes(e.target.value)}
                 placeholder="Notas sobre a aposta..."
-                rows={3}
+                rows={2}
               />
             </div>
           </div>
@@ -501,7 +779,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
