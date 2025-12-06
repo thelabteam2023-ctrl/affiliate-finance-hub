@@ -72,6 +72,7 @@ interface HistoricoMovimentacoesProps {
   getOrigemLabel: (transacao: any) => string;
   getDestinoLabel: (transacao: any) => string;
   formatCurrency: (value: number, currency: string) => string;
+  onConfirmarSaque?: (transacao: any) => void;
 }
 
 export function HistoricoMovimentacoes({
@@ -92,6 +93,7 @@ export function HistoricoMovimentacoes({
   parceiros,
   walletsDetalhes,
   bookmakers,
+  onConfirmarSaque,
 }: HistoricoMovimentacoesProps) {
   const handlePeriodoRapido = (dias: number | null) => {
     if (dias === null) {
@@ -741,7 +743,7 @@ export function HistoricoMovimentacoes({
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <div className="font-medium">
                     {transacao.tipo_moeda === "FIAT"
                       ? formatCurrency(transacao.valor, transacao.moeda)
@@ -750,6 +752,18 @@ export function HistoricoMovimentacoes({
                   {/* Status Badge para SAQUE */}
                   {transacao.tipo_transacao === "SAQUE" && transacao.status && transacao.status !== "CONFIRMADO" && (
                     getStatusBadge(transacao.status)
+                  )}
+                  {/* Botão de ação para saques pendentes */}
+                  {transacao.tipo_transacao === "SAQUE" && transacao.status === "PENDENTE" && onConfirmarSaque && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onConfirmarSaque(transacao)}
+                      className="h-7 px-2 text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
+                    >
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Confirmar
+                    </Button>
                   )}
                   <div className="text-right">
                     <div className="text-sm font-medium">
