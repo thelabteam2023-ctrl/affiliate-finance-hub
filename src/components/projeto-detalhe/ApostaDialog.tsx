@@ -838,7 +838,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
 
               {/* Aba Bookmaker */}
               <TabsContent value="bookmaker" className="space-y-4 mt-4">
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-4 gap-3">
                   <div className="space-y-2">
                     <Label className="block text-center uppercase text-xs tracking-wider">Bookmaker *</Label>
                     <Select value={bookmakerId} onValueChange={setBookmakerId}>
@@ -867,7 +867,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                       step="0.01"
                       value={odd}
                       onChange={(e) => setOdd(e.target.value)}
-                      placeholder="Ex: 1.85"
+                      placeholder="1.85"
+                      className="text-center"
                     />
                   </div>
                   <div className="space-y-2">
@@ -877,15 +878,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                       step="0.01"
                       value={stake}
                       onChange={(e) => setStake(e.target.value)}
-                      placeholder="Ex: 100.00"
-                      className={(() => {
+                      placeholder="100.00"
+                      className={`text-center ${(() => {
                         const selectedBk = bookmakers.find(b => b.id === bookmakerId);
                         const stakeNum = parseFloat(stake);
                         if (selectedBk && !isNaN(stakeNum) && stakeNum > selectedBk.saldo_atual) {
                           return "border-destructive focus-visible:ring-destructive";
                         }
                         return "";
-                      })()}
+                      })()}`}
                     />
                     {(() => {
                       const selectedBk = bookmakers.find(b => b.id === bookmakerId);
@@ -893,12 +894,26 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                       if (selectedBk && !isNaN(stakeNum) && stakeNum > selectedBk.saldo_atual) {
                         return (
                           <p className="text-xs text-destructive mt-1">
-                            Saldo indisponível (máx: R$ {selectedBk.saldo_atual.toFixed(2)})
+                            Máx: R$ {selectedBk.saldo_atual.toFixed(2)}
                           </p>
                         );
                       }
                       return null;
                     })()}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="block text-center uppercase text-xs tracking-wider">Retorno</Label>
+                    <div className="h-9 flex items-center justify-center rounded-md border border-input bg-muted/50 px-3 text-sm font-medium text-emerald-500">
+                      {(() => {
+                        const oddNum = parseFloat(odd);
+                        const stakeNum = parseFloat(stake);
+                        if (!isNaN(oddNum) && !isNaN(stakeNum) && oddNum > 0 && stakeNum > 0) {
+                          const retorno = oddNum * stakeNum;
+                          return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(retorno);
+                        }
+                        return "R$ 0,00";
+                      })()}
+                    </div>
                   </div>
                 </div>
 
