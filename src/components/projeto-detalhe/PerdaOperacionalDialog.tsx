@@ -31,6 +31,9 @@ interface PerdaOperacionalDialogProps {
 interface Bookmaker {
   id: string;
   nome: string;
+  parceiro: {
+    nome: string;
+  } | null;
 }
 
 const CATEGORIAS = [
@@ -77,7 +80,7 @@ export function PerdaOperacionalDialog({
       setLoading(true);
       const { data, error } = await supabase
         .from("bookmakers")
-        .select("id, nome")
+        .select("id, nome, parceiro:parceiros(nome)")
         .eq("projeto_id", projetoId)
         .order("nome");
 
@@ -91,6 +94,11 @@ export function PerdaOperacionalDialog({
   };
 
   const handleSubmit = async () => {
+    if (!bookmakerId) {
+      toast.error("Selecione um bookmaker");
+      return;
+    }
+
     if (!categoria) {
       toast.error("Selecione uma categoria");
       return;
@@ -111,7 +119,7 @@ export function PerdaOperacionalDialog({
       const { error } = await supabase.from("projeto_perdas").insert({
         user_id: user.id,
         projeto_id: projetoId,
-        bookmaker_id: bookmakerId || null,
+        bookmaker_id: bookmakerId,
         valor: valorNumerico,
         categoria,
         descricao: descricao || null,
@@ -142,7 +150,7 @@ export function PerdaOperacionalDialog({
         <div className="grid gap-4 py-4">
           {/* Bookmaker */}
           <div className="grid gap-2">
-            <Label htmlFor="bookmaker">Bookmaker (opcional)</Label>
+            <Label htmlFor="bookmaker">Bookmaker *</Label>
             <Select value={bookmakerId} onValueChange={setBookmakerId}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o bookmaker" />
@@ -150,7 +158,7 @@ export function PerdaOperacionalDialog({
               <SelectContent>
                 {bookmakers.map((bk) => (
                   <SelectItem key={bk.id} value={bk.id}>
-                    {bk.nome}
+                    {bk.nome} {bk.parceiro?.nome ? `- ${bk.parceiro.nome}` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
