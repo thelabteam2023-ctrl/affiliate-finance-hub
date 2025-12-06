@@ -160,19 +160,19 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
     <div className="space-y-4">
       {/* Filtros e Ações */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
+        <CardContent className="pt-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por evento, esporte, seleção..."
+                placeholder="Buscar..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-9"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-[130px] h-9">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -183,7 +183,7 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
               </SelectContent>
             </Select>
             <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-[120px] h-9">
                 <SelectValue placeholder="Resultado" />
               </SelectTrigger>
               <SelectContent>
@@ -194,24 +194,16 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
                 <SelectItem value="HALF">Half</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex gap-1">
-              <Button
-                variant={viewMode === "cards" ? "default" : "outline"}
-                size="icon"
-                onClick={() => setViewMode("cards")}
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "outline"}
-                size="icon"
-                onClick={() => setViewMode("list")}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-            <Button onClick={() => handleOpenDialog(null)}>
-              <Plus className="mr-2 h-4 w-4" />
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => setViewMode(viewMode === "cards" ? "list" : "cards")}
+            >
+              {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+            </Button>
+            <Button onClick={() => handleOpenDialog(null)} size="sm" className="h-9">
+              <Plus className="mr-1 h-4 w-4" />
               Nova Aposta
             </Button>
           </div>
@@ -234,69 +226,60 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
           </CardContent>
         </Card>
       ) : viewMode === "cards" ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredApostas.map((aposta) => (
             <Card 
               key={aposta.id} 
               className="cursor-pointer hover:border-primary/50 transition-colors"
               onClick={() => handleOpenDialog(aposta)}
             >
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-base">{aposta.evento}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{aposta.esporte}</p>
+              <CardHeader className="pb-1 pt-3 px-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-sm truncate">{aposta.evento}</CardTitle>
+                    <p className="text-xs text-muted-foreground truncate">{aposta.esporte}</p>
                   </div>
-                  <div className="flex flex-col gap-1 items-end">
+                  <div className="flex gap-1 flex-shrink-0">
                     {aposta.modo_entrada === "LAYBACK" && (
-                      <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
-                        <ArrowLeftRight className="h-3 w-3 mr-1" />
-                        LayBack
+                      <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px] px-1.5 py-0">
+                        <ArrowLeftRight className="h-2.5 w-2.5 mr-0.5" />
+                        LB
                       </Badge>
                     )}
-                    <Badge className={getStatusColor(aposta.status)}>
-                      {aposta.status}
+                    <Badge className={`${getResultadoColor(aposta.resultado || aposta.status)} text-[10px] px-1.5 py-0`}>
+                      {aposta.resultado || aposta.status}
                     </Badge>
-                    {aposta.resultado && (
-                      <Badge className={getResultadoColor(aposta.resultado)}>
-                        {aposta.resultado}
-                      </Badge>
-                    )}
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Seleção:</span>
-                    <span className="font-medium">{aposta.selecao}</span>
+              <CardContent className="pt-1 pb-3 px-3">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground truncate flex-1">{aposta.selecao}</span>
+                    <span className="font-medium ml-2">@{aposta.odd.toFixed(2)}</span>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Odd:</span>
-                    <span className="font-medium">{aposta.odd.toFixed(2)}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Stake:</span>
                     <span className="font-medium">{formatCurrency(aposta.stake)}</span>
                   </div>
                   {aposta.lucro_prejuizo !== null && (
-                    <div className="flex items-center justify-between text-sm pt-2 border-t">
-                      <span className="text-muted-foreground">Lucro/Prejuízo:</span>
-                      <span className={`font-medium flex items-center gap-1 ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
+                      <span className="text-muted-foreground">P/L:</span>
+                      <span className={`font-medium flex items-center gap-0.5 ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                         {aposta.lucro_prejuizo >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                         {formatCurrency(aposta.lucro_prejuizo)}
                       </span>
                     </div>
                   )}
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-                    <Calendar className="h-3 w-3" />
-                    {format(new Date(aposta.data_aposta), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-2.5 w-2.5" />
+                      {format(new Date(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
+                    </span>
+                    {aposta.bookmaker && (
+                      <span className="truncate ml-2">{aposta.bookmaker.nome}</span>
+                    )}
                   </div>
-                  {aposta.bookmaker && (
-                    <div className="text-xs text-muted-foreground">
-                      {aposta.bookmaker.nome} • {aposta.bookmaker.parceiro?.nome}
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
