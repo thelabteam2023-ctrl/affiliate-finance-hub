@@ -18,13 +18,11 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
   BarChart,
   Bar,
   Legend
 } from "recharts";
+import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
@@ -151,14 +149,17 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     });
   })();
 
-  // Prepare results pie chart data
+  // Prepare results pie chart data with gradient colors
   const resultadosData = [
-    { name: "GREEN", value: apostas.filter(a => a.resultado === "GREEN").length, color: "#10b981" },
-    { name: "RED", value: apostas.filter(a => a.resultado === "RED").length, color: "#ef4444" },
-    { name: "VOID", value: apostas.filter(a => a.resultado === "VOID").length, color: "#6b7280" },
-    { name: "HALF", value: apostas.filter(a => a.resultado === "HALF").length, color: "#f59e0b" },
-    { name: "Pendente", value: apostas.filter(a => !a.resultado).length, color: "#3b82f6" },
+    { name: "GREEN", value: apostas.filter(a => a.resultado === "GREEN").length },
+    { name: "RED", value: apostas.filter(a => a.resultado === "RED").length },
+    { name: "VOID", value: apostas.filter(a => a.resultado === "VOID").length },
+    { name: "HALF", value: apostas.filter(a => a.resultado === "HALF").length },
+    { name: "Pendente", value: apostas.filter(a => !a.resultado).length },
   ].filter(d => d.value > 0);
+
+  // Colors for resultados (green, red, gray, amber, blue)
+  const resultadosColors = ["#22C55E", "#EF4444", "#6B7280", "#F59E0B", "#3B82F6"];
 
   // Prepare sports bar chart data
   const esportesMap = apostas.reduce((acc: Record<string, { greens: number; reds: number }>, aposta) => {
@@ -349,33 +350,15 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
         </CardHeader>
         <CardContent>
           <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <RechartsPieChart>
-                <Pie
-                  data={resultadosData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`}
-                >
-                  {resultadosData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: "rgba(0, 0, 0, 0.4)",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    backdropFilter: "blur(12px)",
-                    borderRadius: "12px",
-                    padding: "12px 16px"
-                  }}
-                />
-              </RechartsPieChart>
-            </ResponsiveContainer>
+            <ModernDonutChart
+              data={resultadosData}
+              height={250}
+              innerRadius={55}
+              outerRadius={85}
+              showLabels={true}
+              colors={resultadosColors}
+              formatValue={(value) => `${value} apostas`}
+            />
           </div>
         </CardContent>
       </Card>

@@ -8,7 +8,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, Users, TrendingUp, UserPlus, Truck, ArrowRight, CalendarDays, Trophy, Award, Target, CheckCircle2, Gift } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
+import { ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
+import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
 import { format, startOfMonth, endOfMonth, startOfYear, subMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -201,12 +202,14 @@ export function DashboardTab() {
     }).format(value);
   };
 
-  // Pie chart data
+  // Pie chart data with modern gradient colors
   const pieData = [
-    { name: "Via Indicador", value: porOrigem.indicador, color: "hsl(var(--primary))" },
-    { name: "Via Fornecedor", value: porOrigem.fornecedor, color: "hsl(var(--chart-2))" },
-    { name: "Direto", value: porOrigem.direto, color: "hsl(var(--chart-3))" },
+    { name: "Via Indicador", value: porOrigem.indicador },
+    { name: "Via Fornecedor", value: porOrigem.fornecedor },
+    { name: "Direto", value: porOrigem.direto },
   ].filter((d) => d.value > 0);
+  
+  const pieColors = ["#22C55E", "#3B82F6", "#8B5CF6"];
 
   // Bar chart data
   const barData = [
@@ -372,40 +375,15 @@ export function DashboardTab() {
             <CardTitle className="text-base">Distribuição por Origem</CardTitle>
           </CardHeader>
           <CardContent>
-            {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value) => [`${value} parceiros`, ""]} 
-                    contentStyle={{ 
-                      backgroundColor: "rgba(0, 0, 0, 0.4)", 
-                      border: "1px solid rgba(255, 255, 255, 0.1)",
-                      backdropFilter: "blur(12px)",
-                      borderRadius: "12px",
-                      padding: "12px 16px"
-                    }}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[250px] text-muted-foreground">
-                Sem dados para exibir
-              </div>
-            )}
+            <ModernDonutChart
+              data={pieData}
+              height={250}
+              innerRadius={60}
+              outerRadius={90}
+              showLegend={true}
+              colors={pieColors}
+              formatValue={(value) => `${value} parceiros`}
+            />
           </CardContent>
         </Card>
 
