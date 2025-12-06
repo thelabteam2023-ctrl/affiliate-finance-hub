@@ -63,6 +63,7 @@ interface Bookmaker {
   id: string;
   nome: string;
   parceiro_id: string;
+  saldo_atual: number;
   parceiro?: {
     nome: string;
   };
@@ -504,10 +505,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           id,
           nome,
           parceiro_id,
+          saldo_atual,
           parceiro:parceiros(nome)
         `)
         .eq("projeto_id", projetoId)
-        .in("status", ["ATIVO", "LIMITADA"]);
+        .in("status", ["ATIVO", "LIMITADA"])
+        .gt("saldo_atual", 0);
 
       if (error) throw error;
 
@@ -515,6 +518,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         id: bk.id,
         nome: bk.nome,
         parceiro_id: bk.parceiro_id,
+        saldo_atual: bk.saldo_atual || 0,
         parceiro: bk.parceiro
       }));
 
@@ -553,6 +557,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     if (tipoAposta === "bookmaker" && !bookmakerId) {
       toast.error("Selecione a bookmaker");
       return;
+    }
+
+    // Validar stake vs saldo da bookmaker
+    if (tipoAposta === "bookmaker" && bookmakerId) {
+      const selectedBookmaker = bookmakers.find(b => b.id === bookmakerId);
+      if (selectedBookmaker && parseFloat(stake) > selectedBookmaker.saldo_atual) {
+        toast.error(`Stake maior que o saldo disponível (${selectedBookmaker.saldo_atual.toFixed(2)})`);
+        return;
+      }
     }
 
     if (tipoAposta === "bookmaker" && modoBackLay && (!layExchange || !layOdd)) {
@@ -832,11 +845,17 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
-                        {bookmakers.map((bk) => (
-                          <SelectItem key={bk.id} value={bk.id}>
-                            {bk.nome} • {bk.parceiro?.nome}
-                          </SelectItem>
-                        ))}
+                        {bookmakers.length === 0 ? (
+                          <div className="p-3 text-center text-sm text-muted-foreground">
+                            Nenhuma bookmaker com saldo disponível
+                          </div>
+                        ) : (
+                          bookmakers.map((bk) => (
+                            <SelectItem key={bk.id} value={bk.id}>
+                              {bk.nome} • {bk.parceiro?.nome} • R$ {bk.saldo_atual.toFixed(2)}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
