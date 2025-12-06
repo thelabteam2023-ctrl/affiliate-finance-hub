@@ -302,16 +302,27 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       return [mandante, "Empate", visitante];
     }
     if (mercadosOver.some(m => mercado.includes("Over"))) {
-      return ["Over 0.5", "Over 1.5", "Over 2.5", "Over 3.5", "Over 4.5"];
+      return ["Over 0.5", "Over 1.5", "Over 2.5", "Over 3.5", "Over 4.5", "Over 5.5"];
     }
     if (mercadosUnder.some(m => mercado.includes("Under"))) {
-      return ["Under 0.5", "Under 1.5", "Under 2.5", "Under 3.5", "Under 4.5"];
+      return ["Under 0.5", "Under 1.5", "Under 2.5", "Under 3.5", "Under 4.5", "Under 5.5"];
     }
     if (mercadosBTTS.includes(mercado)) {
       return ["Sim", "Não"];
     }
+    if (mercado.includes("Handicap Asiático")) {
+      // Handicap Asiático com linhas expandidas para cada time
+      const handicapLines = ["-0.5", "-1.0", "-1.5", "-2.0", "-2.5", "-3.0", "-3.5", "-4.0", "-4.5", "-5.0", "-5.5"];
+      const mandanteOptions = handicapLines.map(line => `${mandante} ${line}`);
+      const visitanteOptions = handicapLines.map(line => `${visitante} ${line.replace("-", "+")}`);
+      return [...mandanteOptions, ...visitanteOptions];
+    }
     if (mercado.includes("Handicap")) {
-      return [`${mandante} -0.5`, `${mandante} -1.0`, `${mandante} -1.5`, `${visitante} +0.5`, `${visitante} +1.0`, `${visitante} +1.5`];
+      // Handicap Europeu - opções mais simples
+      return [
+        `${mandante} -1`, `${mandante} -2`, `${mandante} -3`,
+        `${visitante} +1`, `${visitante} +2`, `${visitante} +3`
+      ];
     }
     
     return [];
@@ -673,21 +684,26 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             </div>
 
             {/* Mandante e Visitante */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Mandante *</Label>
+            <div className="flex items-end gap-2">
+              <div className="flex-1 space-y-2">
+                <Label className="block text-center">Mandante *</Label>
                 <Input
                   value={mandante}
-                  onChange={(e) => setMandante(e.target.value)}
-                  placeholder="Ex: Real Madrid"
+                  onChange={(e) => setMandante(e.target.value.toUpperCase())}
+                  placeholder="EX: REAL MADRID"
+                  className="uppercase text-center"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Visitante *</Label>
+              <div className="flex items-center justify-center pb-2">
+                <span className="text-xl font-bold text-muted-foreground">X</span>
+              </div>
+              <div className="flex-1 space-y-2">
+                <Label className="block text-center">Visitante *</Label>
                 <Input
                   value={visitante}
-                  onChange={(e) => setVisitante(e.target.value)}
-                  placeholder="Ex: Barcelona"
+                  onChange={(e) => setVisitante(e.target.value.toUpperCase())}
+                  placeholder="EX: BARCELONA"
+                  className="uppercase text-center"
                 />
               </div>
             </div>
