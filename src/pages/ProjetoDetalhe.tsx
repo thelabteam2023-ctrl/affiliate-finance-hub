@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { 
   ArrowLeft, 
   FolderKanban, 
@@ -14,7 +17,7 @@ import {
   Target,
   Users,
   Link2,
-  Calendar,
+  CalendarIcon,
   DollarSign,
   TrendingUp,
   TrendingDown,
@@ -22,9 +25,10 @@ import {
   Edit,
   Gift,
   Coins,
-  AlertTriangle
+  AlertTriangle,
+  Percent
 } from "lucide-react";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ProjetoDashboardTab } from "@/components/projeto-detalhe/ProjetoDashboardTab";
 import { ProjetoApostasTab } from "@/components/projeto-detalhe/ProjetoApostasTab";
@@ -33,6 +37,7 @@ import { ProjetoVinculosTab } from "@/components/projeto-detalhe/ProjetoVinculos
 import { ProjetoMatchedBettingTab } from "@/components/projeto-detalhe/ProjetoMatchedBettingTab";
 import { ProjetoPerdasTab } from "@/components/projeto-detalhe/ProjetoPerdasTab";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
+import { DateRange } from "react-day-picker";
 
 interface Projeto {
   id: string;
@@ -60,10 +65,14 @@ interface ApostasResumo {
   greens: number;
   reds: number;
   voids: number;
+  meio_greens: number;
+  meio_reds: number;
   total_stake: number;
   lucro_total: number;
   roi_percentual: number;
 }
+
+type PeriodFilter = "hoje" | "ontem" | "7dias" | "mes" | "ano" | "todo" | "custom";
 
 export default function ProjetoDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -73,12 +82,96 @@ export default function ProjetoDetalhe() {
   const [apostasResumo, setApostasResumo] = useState<ApostasResumo | null>(null);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  
+  // Period filter state
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("todo");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchProjeto();
     }
   }, [id]);
+
+  // Refetch KPIs when period changes
+  useEffect(() => {
+    if (id && projeto) {
+      fetchApostasResumo();
+    }
+  }, [periodFilter, dateRange]);
+
+  const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
+    const today = new Date();
+    
+    switch (periodFilter) {
+      case "hoje":
+        return { start: startOfDay(today), end: endOfDay(today) };
+      case "ontem":
+        const yesterday = subDays(today, 1);
+        return { start: startOfDay(yesterday), end: endOfDay(yesterday) };
+      case "7dias":
+        return { start: startOfDay(subDays(today, 7)), end: endOfDay(today) };
+      case "mes":
+        return { start: startOfMonth(today), end: endOfDay(today) };
+      case "ano":
+        return { start: startOfYear(today), end: endOfDay(today) };
+      case "custom":
+        return { 
+          start: dateRange?.from || null, 
+          end: dateRange?.to || dateRange?.from || null 
+        };
+      case "todo":
+      default:
+        return { start: null, end: null };
+    }
+  };
+
+  const fetchApostasResumo = async () => {
+    try {
+      const { start, end } = getDateRangeFromFilter();
+      
+      // Build query for apostas with date filter
+      let query = supabase
+        .from("apostas")
+        .select("stake, lucro_prejuizo, status, resultado")
+        .eq("projeto_id", id);
+      
+      if (start) {
+        query = query.gte("data_aposta", start.toISOString());
+      }
+      if (end) {
+        query = query.lte("data_aposta", end.toISOString());
+      }
+      
+      const { data: apostas, error } = await query;
+      
+      if (error) throw error;
+      
+      // Calculate summary from filtered apostas
+      const summary: ApostasResumo = {
+        total_apostas: apostas?.length || 0,
+        apostas_pendentes: apostas?.filter(a => a.status === "PENDENTE").length || 0,
+        greens: apostas?.filter(a => a.resultado === "GREEN").length || 0,
+        reds: apostas?.filter(a => a.resultado === "RED").length || 0,
+        voids: apostas?.filter(a => a.resultado === "VOID").length || 0,
+        meio_greens: apostas?.filter(a => a.resultado === "MEIO_GREEN" || a.resultado === "HALF").length || 0,
+        meio_reds: apostas?.filter(a => a.resultado === "MEIO_RED").length || 0,
+        total_stake: apostas?.reduce((acc, a) => acc + Number(a.stake || 0), 0) || 0,
+        lucro_total: apostas?.reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0) || 0,
+        roi_percentual: 0
+      };
+      
+      // Calculate ROI
+      if (summary.total_stake > 0) {
+        summary.roi_percentual = (summary.lucro_total / summary.total_stake) * 100;
+      }
+      
+      setApostasResumo(summary);
+    } catch (error: any) {
+      console.error("Erro ao carregar resumo de apostas:", error.message);
+    }
+  };
 
   const fetchProjeto = async () => {
     try {
@@ -111,21 +204,47 @@ export default function ProjetoDetalhe() {
         setResumo(resumoData as ProjetoResumo);
       }
 
-      // Fetch apostas summary
-      const { data: apostasData } = await supabase
-        .from("v_projeto_apostas_resumo")
-        .select("*")
-        .eq("projeto_id", id)
-        .maybeSingle();
-
-      if (apostasData) {
-        setApostasResumo(apostasData as ApostasResumo);
-      }
+      // Fetch apostas summary (will use period filter)
+      await fetchApostasResumo();
 
     } catch (error: any) {
       toast.error("Erro ao carregar projeto: " + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePeriodChange = (period: PeriodFilter) => {
+    setPeriodFilter(period);
+    if (period !== "custom") {
+      setDateRange(undefined);
+    }
+  };
+
+  const handleDateRangeSelect = (range: DateRange | undefined) => {
+    setDateRange(range);
+    if (range?.from) {
+      setPeriodFilter("custom");
+    }
+  };
+
+  const getPeriodLabel = (): string => {
+    switch (periodFilter) {
+      case "hoje": return "Hoje";
+      case "ontem": return "Ontem";
+      case "7dias": return "7 dias";
+      case "mes": return "Este mês";
+      case "ano": return "Este ano";
+      case "todo": return "Todo período";
+      case "custom":
+        if (dateRange?.from && dateRange?.to) {
+          return `${format(dateRange.from, "dd/MM")} - ${format(dateRange.to, "dd/MM")}`;
+        }
+        if (dateRange?.from) {
+          return format(dateRange.from, "dd/MM/yyyy");
+        }
+        return "Período";
+      default: return "Todo período";
     }
   };
 
@@ -231,8 +350,58 @@ export default function ProjetoDetalhe() {
         </Button>
       </div>
 
+      {/* Period Filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted-foreground">Período:</span>
+        <div className="flex flex-wrap gap-1">
+          {[
+            { value: "hoje", label: "Hoje" },
+            { value: "ontem", label: "Ontem" },
+            { value: "7dias", label: "7 dias" },
+            { value: "mes", label: "Mês" },
+            { value: "ano", label: "Ano" },
+            { value: "todo", label: "Tudo" },
+          ].map((period) => (
+            <Button
+              key={period.value}
+              variant={periodFilter === period.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => handlePeriodChange(period.value as PeriodFilter)}
+              className="h-8"
+            >
+              {period.label}
+            </Button>
+          ))}
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant={periodFilter === "custom" ? "default" : "outline"}
+                size="sm"
+                className="h-8"
+              >
+                <CalendarIcon className="h-4 w-4 mr-1" />
+                {periodFilter === "custom" ? getPeriodLabel() : "Período"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={(range) => {
+                  handleDateRangeSelect(range);
+                  if (range?.to) setCalendarOpen(false);
+                }}
+                locale={ptBR}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+
       {/* KPIs Resumo */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         {/* Apostas */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -241,9 +410,11 @@ export default function ProjetoDetalhe() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{apostasResumo?.total_apostas || 0}</div>
-            <div className="flex gap-2 text-xs">
+            <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs">
               <span className="text-emerald-500">{apostasResumo?.greens || 0} G</span>
               <span className="text-red-500">{apostasResumo?.reds || 0} R</span>
+              <span className="text-lime-400">{apostasResumo?.meio_greens || 0} ½G</span>
+              <span className="text-orange-400">{apostasResumo?.meio_reds || 0} ½R</span>
               <span className="text-gray-400">{apostasResumo?.voids || 0} V</span>
             </div>
           </CardContent>
@@ -252,7 +423,7 @@ export default function ProjetoDetalhe() {
         {/* Volume em Apostas */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Volume em Apostas</CardTitle>
+            <CardTitle className="text-sm font-medium">Volume</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -280,7 +451,23 @@ export default function ProjetoDetalhe() {
               {formatCurrency(Math.abs(apostasResumo?.lucro_total || 0))}
             </div>
             <p className="text-xs text-muted-foreground">
-              ROI: {(apostasResumo?.roi_percentual || 0).toFixed(2)}%
+              Resultado do período
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* ROI */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">ROI</CardTitle>
+            <Percent className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${(apostasResumo?.roi_percentual || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+              {(apostasResumo?.roi_percentual || 0).toFixed(2)}%
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Retorno sobre investimento
             </p>
           </CardContent>
         </Card>
