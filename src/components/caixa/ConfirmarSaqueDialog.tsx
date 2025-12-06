@@ -142,22 +142,25 @@ export function ConfirmarSaqueDialog({
 
       // 2. Se tinha bookmaker origem, revincular ao projeto original
       if (saque.origem_bookmaker_id) {
-        // Buscar o projeto original do histórico
+        // Buscar o projeto original e status anterior do histórico
         const { data: historico } = await supabase
           .from("projeto_bookmaker_historico")
-          .select("projeto_id")
+          .select("projeto_id, status_final")
           .eq("bookmaker_id", saque.origem_bookmaker_id)
           .order("data_vinculacao", { ascending: false })
           .limit(1)
           .single();
 
         if (historico?.projeto_id) {
-          // Revincular bookmaker ao projeto com status LIMITADA (pois está retornando ao projeto)
+          // Usar o status anterior do histórico (preservar LIMITADA se estava limitada)
+          const statusAnterior = historico.status_final === "LIMITADA" ? "LIMITADA" : "ativo";
+          
+          // Revincular bookmaker ao projeto com status anterior
           const { error: bookmakerError } = await supabase
             .from("bookmakers")
             .update({ 
               projeto_id: historico.projeto_id,
-              status: "LIMITADA" 
+              status: statusAnterior 
             })
             .eq("id", saque.origem_bookmaker_id);
 
@@ -168,7 +171,7 @@ export function ConfirmarSaqueDialog({
             .from("projeto_bookmaker_historico")
             .update({ 
               data_desvinculacao: null,
-              status_final: "LIMITADA"
+              status_final: statusAnterior
             })
             .eq("bookmaker_id", saque.origem_bookmaker_id)
             .eq("projeto_id", historico.projeto_id);
