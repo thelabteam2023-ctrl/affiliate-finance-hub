@@ -140,6 +140,23 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
     }
   };
 
+  const parseLocalDateTime = (dateString: string): Date => {
+    if (!dateString) return new Date();
+    // Remove timezone info e trata como horário local
+    const cleanDate = dateString.replace(/\+00:00$/, '').replace(/Z$/, '').replace(/\+\d{2}:\d{2}$/, '');
+    const [datePart, timePart] = cleanDate.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes] = (timePart || '00:00').split(':').map(Number);
+    return new Date(year, month - 1, day, hours || 0, minutes || 0);
+  };
+
+  const getFirstLastName = (fullName: string): string => {
+    if (!fullName) return "";
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    return `${parts[0]} ${parts[parts.length - 1]}`;
+  };
+
   const handleOpenDialog = (aposta: Aposta | null) => {
     setSelectedAposta(aposta);
     setDialogOpen(true);
@@ -291,10 +308,15 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
                   <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-2.5 w-2.5" />
-                      {format(new Date(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
+                      {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
                     </span>
                     {aposta.bookmaker && (
-                      <span className="truncate ml-2">{aposta.bookmaker.nome}</span>
+                      <span className="truncate ml-2">
+                        {aposta.bookmaker.nome}
+                        {aposta.bookmaker.parceiro?.nome && (
+                          <> - {getFirstLastName(aposta.bookmaker.parceiro.nome)}</>
+                        )}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -319,9 +341,19 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
                       <Target className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-medium">{aposta.evento}</p>
+                      <p className="font-medium">
+                        {aposta.evento}
+                        {aposta.bookmaker && (
+                          <span className="text-muted-foreground font-normal text-sm ml-2">
+                            • {aposta.bookmaker.nome}
+                            {aposta.bookmaker.parceiro?.nome && (
+                              <> - {getFirstLastName(aposta.bookmaker.parceiro.nome)}</>
+                            )}
+                          </span>
+                        )}
+                      </p>
                       <p className="text-sm text-muted-foreground">
-                        {aposta.esporte} • {aposta.selecao} @ {aposta.odd.toFixed(2)}
+                        {aposta.esporte} • {aposta.selecao} @ {aposta.odd.toFixed(2)} • {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
                       </p>
                     </div>
                   </div>
