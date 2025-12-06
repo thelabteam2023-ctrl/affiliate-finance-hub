@@ -255,14 +255,16 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     try {
       setSaving(true);
 
-      const statusFinal = vinculoToRemove.saldo_atual > 0 ? "AGUARDANDO_SAQUE" : "DEVOLVIDA";
+      // Salvar o status ORIGINAL do bookmaker (ativo ou limitada) antes de alterar
+      // Isso permite que a Central de Operações saiba se pode realocar ou só processar saque
+      const statusAnterior = vinculoToRemove.bookmaker_status; // "ativo" ou "LIMITADA"
 
-      // Update history record with unlink date
+      // Update history record with unlink date and original status
       await supabase
         .from("projeto_bookmaker_historico")
         .update({ 
           data_desvinculacao: new Date().toISOString(),
-          status_final: statusFinal
+          status_final: statusAnterior // Salvar status original, não o futuro
         })
         .eq("projeto_id", projetoId)
         .eq("bookmaker_id", vinculoToRemove.id);
