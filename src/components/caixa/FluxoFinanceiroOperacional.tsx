@@ -224,11 +224,19 @@ export function FluxoFinanceiroOperacional({
     }).format(value);
   };
 
+  const tooltipStyle = {
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    border: "1px solid rgba(255, 255, 255, 0.1)",
+    backdropFilter: "blur(12px)",
+    borderRadius: "12px",
+    padding: "12px 16px",
+  };
+
   const CustomTooltipFluxo = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0]?.payload;
       return (
-        <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
+        <div style={tooltipStyle}>
           <p className="font-medium text-sm mb-2">{label}</p>
           <div className="space-y-1 text-sm">
             <div className="flex justify-between gap-4">
@@ -239,7 +247,7 @@ export function FluxoFinanceiroOperacional({
               <span className="text-destructive">Saídas:</span>
               <span className="font-mono">{formatCurrency(data?.saidas || 0)}</span>
             </div>
-            <div className="border-t border-border pt-1 mt-1">
+            <div className="border-t border-white/10 pt-1 mt-1">
               <div className="flex justify-between gap-4 font-medium">
                 <span className={data?.liquido >= 0 ? "text-emerald-500" : "text-destructive"}>
                   Resultado Líquido:
@@ -261,7 +269,7 @@ export function FluxoFinanceiroOperacional({
       const percentual = total > 0 ? ((data.value / total) * 100).toFixed(1) : "0";
       
       return (
-        <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
+        <div style={tooltipStyle}>
           <p className="font-medium text-sm mb-1">{data.name}</p>
           <div className="text-sm space-y-1">
             <p className="font-mono">{formatCurrency(data.value)}</p>
@@ -415,7 +423,7 @@ export function FluxoFinanceiroOperacional({
                     tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
                     tickLine={false}
                   />
-                  <Tooltip content={<CustomTooltipFluxo />} />
+                  <Tooltip content={<CustomTooltipFluxo />} cursor={{ fill: "rgba(255, 255, 255, 0.05)" }} />
                   <Bar 
                     dataKey="liquido" 
                     radius={[4, 4, 0, 0]}

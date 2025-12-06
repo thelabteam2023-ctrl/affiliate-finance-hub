@@ -167,10 +167,13 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
                 />
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px"
+                    backgroundColor: "rgba(0, 0, 0, 0.4)",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    backdropFilter: "blur(12px)",
+                    borderRadius: "12px",
+                    padding: "12px 16px"
                   }}
+                  cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
                   formatter={(value: number) => [formatCurrency(value), "Saldo"]}
                 />
                 <Line 
@@ -212,7 +215,15 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: "rgba(0, 0, 0, 0.4)",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    backdropFilter: "blur(12px)",
+                    borderRadius: "12px",
+                    padding: "12px 16px"
+                  }}
+                />
               </RechartsPieChart>
             </ResponsiveContainer>
           </div>
@@ -243,10 +254,13 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
                 />
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px"
+                    backgroundColor: "rgba(0, 0, 0, 0.4)",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    backdropFilter: "blur(12px)",
+                    borderRadius: "12px",
+                    padding: "12px 16px"
                   }}
+                  cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
                 />
                 <Legend />
                 <Bar dataKey="greens" fill="#10b981" name="Greens" />
