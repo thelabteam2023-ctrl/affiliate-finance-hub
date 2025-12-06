@@ -354,13 +354,8 @@ export function FluxoFinanceiroOperacional({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <Tabs defaultValue="externo" className="w-full">
+        <Tabs defaultValue="operacao" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="externo" className="gap-2 text-xs sm:text-sm">
-              <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Capital Externo</span>
-              <span className="sm:hidden">Externo</span>
-            </TabsTrigger>
             <TabsTrigger value="operacao" className="gap-2 text-xs sm:text-sm">
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Capital em Operação</span>
@@ -370,6 +365,11 @@ export function FluxoFinanceiroOperacional({
               <DollarSign className="h-4 w-4" />
               <span className="hidden sm:inline">Resultado</span>
               <span className="sm:hidden">Resultado</span>
+            </TabsTrigger>
+            <TabsTrigger value="externo" className="gap-2 text-xs sm:text-sm">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Capital Externo</span>
+              <span className="sm:hidden">Externo</span>
             </TabsTrigger>
           </TabsList>
 

@@ -312,15 +312,15 @@ export default function GestaoBookmakers() {
           </div>
         </div>
 
-        <Tabs defaultValue="catalogo" className="space-y-6">
+        <Tabs defaultValue="contas" className="space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="catalogo" className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              Bookmakers
-            </TabsTrigger>
             <TabsTrigger value="contas" className="flex items-center gap-2">
               <Wallet className="h-4 w-4" />
               Vínculos
+            </TabsTrigger>
+            <TabsTrigger value="catalogo" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              Bookmakers
             </TabsTrigger>
           </TabsList>
 
