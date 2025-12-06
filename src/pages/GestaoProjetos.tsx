@@ -14,11 +14,13 @@ import {
   FolderKanban, 
   Calendar, 
   Users, 
-  DollarSign,
+  Wallet,
+  TrendingUp,
+  TrendingDown,
+  Receipt,
   LayoutGrid,
   List,
   Edit,
-  Eye,
   ExternalLink
 } from "lucide-react";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
@@ -43,6 +45,10 @@ interface Projeto {
   orcamento_inicial: number;
   operadores_ativos?: number;
   total_gasto_operadores?: number;
+  saldo_bookmakers?: number;
+  total_depositado?: number;
+  total_sacado?: number;
+  total_bookmakers?: number;
 }
 
 export default function GestaoProjetos() {
@@ -246,19 +252,46 @@ export default function GestaoProjetos() {
                   )}
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Users className="h-4 w-4" />
-                    <span>{projeto.operadores_ativos || 0} operador(es) ativo(s)</span>
+                    <span>{projeto.operadores_ativos || 0} operador(es) • {projeto.total_bookmakers || 0} bookmaker(s)</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <DollarSign className="h-4 w-4 text-emerald-500" />
-                    <span className="text-emerald-500">
-                      {formatCurrency(projeto.total_gasto_operadores || 0)} gastos
-                    </span>
-                  </div>
-                  {projeto.orcamento_inicial > 0 && (
-                    <div className="text-sm text-muted-foreground">
-                      Orçamento: {formatCurrency(projeto.orcamento_inicial)}
+                  
+                  <div className="pt-2 border-t space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Wallet className="h-4 w-4" />
+                        <span>Saldo Bookmakers</span>
+                      </div>
+                      <span className="font-medium">{formatCurrency(projeto.saldo_bookmakers || 0)}</span>
                     </div>
-                  )}
+                    
+                    {(() => {
+                      const resultado = (projeto.total_sacado || 0) - (projeto.total_depositado || 0);
+                      const isPositive = resultado >= 0;
+                      return (
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            {isPositive ? (
+                              <TrendingUp className="h-4 w-4 text-emerald-500" />
+                            ) : (
+                              <TrendingDown className="h-4 w-4 text-red-500" />
+                            )}
+                            <span>Resultado Est.</span>
+                          </div>
+                          <span className={`font-medium ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {isPositive ? '+' : ''}{formatCurrency(resultado)}
+                          </span>
+                        </div>
+                      );
+                    })()}
+                    
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Receipt className="h-4 w-4" />
+                        <span>Gastos Operadores</span>
+                      </div>
+                      <span className="font-medium text-amber-500">{formatCurrency(projeto.total_gasto_operadores || 0)}</span>
+                    </div>
+                  </div>
                 </div>
                 <div className="flex gap-2 mt-4 pt-4 border-t">
                   <Button 
@@ -313,14 +346,26 @@ export default function GestaoProjetos() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-6">
                     <div className="text-right">
-                      <p className="text-sm text-muted-foreground">
-                        {projeto.operadores_ativos || 0} operadores
-                      </p>
-                      <p className="text-sm text-emerald-500">
-                        {formatCurrency(projeto.total_gasto_operadores || 0)}
-                      </p>
+                      <p className="text-xs text-muted-foreground">Saldo Bookmakers</p>
+                      <p className="text-sm font-medium">{formatCurrency(projeto.saldo_bookmakers || 0)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Resultado Est.</p>
+                      {(() => {
+                        const resultado = (projeto.total_sacado || 0) - (projeto.total_depositado || 0);
+                        const isPositive = resultado >= 0;
+                        return (
+                          <p className={`text-sm font-medium ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {isPositive ? '+' : ''}{formatCurrency(resultado)}
+                          </p>
+                        );
+                      })()}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Operadores</p>
+                      <p className="text-sm">{projeto.operadores_ativos || 0}</p>
                     </div>
                     <Badge className={getStatusColor(projeto.status)}>
                       {getStatusLabel(projeto.status)}

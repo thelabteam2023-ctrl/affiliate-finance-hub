@@ -2808,36 +2808,60 @@ export type Database = {
       }
       v_projeto_resumo: {
         Row: {
+          conciliado: boolean | null
           data_fim_prevista: string | null
+          data_fim_real: string | null
           data_inicio: string | null
+          descricao: string | null
           nome: string | null
           operadores_ativos: number | null
           orcamento_inicial: number | null
           projeto_id: string | null
+          saldo_bookmakers: number | null
           status: string | null
+          tem_investimento_crypto: boolean | null
+          total_bookmakers: number | null
+          total_depositado: number | null
           total_gasto_operadores: number | null
+          total_sacado: number | null
           user_id: string | null
         }
         Insert: {
+          conciliado?: boolean | null
           data_fim_prevista?: string | null
+          data_fim_real?: string | null
           data_inicio?: string | null
+          descricao?: string | null
           nome?: string | null
           operadores_ativos?: never
           orcamento_inicial?: number | null
           projeto_id?: string | null
+          saldo_bookmakers?: never
           status?: string | null
+          tem_investimento_crypto?: boolean | null
+          total_bookmakers?: never
+          total_depositado?: never
           total_gasto_operadores?: never
+          total_sacado?: never
           user_id?: string | null
         }
         Update: {
+          conciliado?: boolean | null
           data_fim_prevista?: string | null
+          data_fim_real?: string | null
           data_inicio?: string | null
+          descricao?: string | null
           nome?: string | null
           operadores_ativos?: never
           orcamento_inicial?: number | null
           projeto_id?: string | null
+          saldo_bookmakers?: never
           status?: string | null
+          tem_investimento_crypto?: boolean | null
+          total_bookmakers?: never
+          total_depositado?: never
           total_gasto_operadores?: never
+          total_sacado?: never
           user_id?: string | null
         }
         Relationships: []
