@@ -4,17 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip as RechartsTooltip, 
-  ResponsiveContainer, 
-  Cell,
-  Legend
-} from "recharts";
+import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { format, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, DollarSign, AlertCircle, Building2, Users, HelpCircle } from "lucide-react";
@@ -419,36 +409,27 @@ export function FluxoFinanceiroOperacional({
 
             {/* Gráfico */}
             {dadosCapitalExterno.dados.length > 0 ? (
-              <div className="h-[280px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart 
-                    data={dadosCapitalExterno.dados} 
-                    margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
-                    onClick={(e) => e?.activePayload && handleBarClick(e.activePayload[0]?.payload)}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis 
-                      dataKey="periodo" 
-                      stroke="hsl(var(--muted-foreground))" 
-                      fontSize={11}
-                      tickLine={false}
-                    />
-                    <YAxis 
-                      stroke="hsl(var(--muted-foreground))" 
-                      fontSize={11}
-                      tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-                      tickLine={false}
-                    />
-                    <RechartsTooltip content={<CustomTooltipExterno />} cursor={{ fill: "rgba(255, 255, 255, 0.05)" }} />
-                    <Legend 
-                      wrapperStyle={{ paddingTop: '16px' }}
-                      formatter={(value) => value === 'aportes' ? 'Aportes' : 'Liquidações'}
-                    />
-                    <Bar dataKey="aportes" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} name="aportes" />
-                    <Bar dataKey="liquidacoes" fill="hsl(25, 95%, 53%)" radius={[4, 4, 0, 0]} name="liquidacoes" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <ModernBarChart
+                data={dadosCapitalExterno.dados}
+                categoryKey="periodo"
+                bars={[
+                  { 
+                    dataKey: "aportes", 
+                    label: "Aportes", 
+                    gradientStart: "#22C55E", 
+                    gradientEnd: "#16A34A" 
+                  },
+                  { 
+                    dataKey: "liquidacoes", 
+                    label: "Liquidações", 
+                    gradientStart: "#F97316", 
+                    gradientEnd: "#EA580C" 
+                  },
+                ]}
+                height={280}
+                barSize={24}
+                formatValue={(value) => formatCurrency(value)}
+              />
             ) : (
               <div className="flex items-center justify-center h-[200px] text-muted-foreground">
                 Nenhuma movimentação de investidores no período
@@ -506,36 +487,27 @@ export function FluxoFinanceiroOperacional({
 
             {/* Gráfico */}
             {dadosCapitalOperacao.dados.length > 0 ? (
-              <div className="h-[280px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart 
-                    data={dadosCapitalOperacao.dados} 
-                    margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
-                    onClick={(e) => e?.activePayload && handleBarClick(e.activePayload[0]?.payload)}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis 
-                      dataKey="periodo" 
-                      stroke="hsl(var(--muted-foreground))" 
-                      fontSize={11}
-                      tickLine={false}
-                    />
-                    <YAxis 
-                      stroke="hsl(var(--muted-foreground))" 
-                      fontSize={11}
-                      tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-                      tickLine={false}
-                    />
-                    <RechartsTooltip content={<CustomTooltipOperacao />} cursor={{ fill: "rgba(255, 255, 255, 0.05)" }} />
-                    <Legend 
-                      wrapperStyle={{ paddingTop: '16px' }}
-                      formatter={(value) => value === 'depositos' ? 'Depósitos' : 'Saques'}
-                    />
-                    <Bar dataKey="depositos" fill="hsl(217, 91%, 60%)" radius={[4, 4, 0, 0]} name="depositos" />
-                    <Bar dataKey="saques" fill="hsl(262, 83%, 58%)" radius={[4, 4, 0, 0]} name="saques" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <ModernBarChart
+                data={dadosCapitalOperacao.dados}
+                categoryKey="periodo"
+                bars={[
+                  { 
+                    dataKey: "depositos", 
+                    label: "Depósitos", 
+                    gradientStart: "#3B82F6", 
+                    gradientEnd: "#2563EB" 
+                  },
+                  { 
+                    dataKey: "saques", 
+                    label: "Saques", 
+                    gradientStart: "#8B5CF6", 
+                    gradientEnd: "#7C3AED" 
+                  },
+                ]}
+                height={280}
+                barSize={24}
+                formatValue={(value) => formatCurrency(value)}
+              />
             ) : (
               <div className="flex items-center justify-center h-[200px] text-muted-foreground">
                 Nenhuma movimentação de bookmakers no período

@@ -12,7 +12,7 @@ import {
 } from "recharts";
 
 interface BarDataItem {
-  [key: string]: string | number;
+  [key: string]: any;
 }
 
 interface BarConfig {
