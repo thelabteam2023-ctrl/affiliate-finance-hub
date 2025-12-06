@@ -8,6 +8,12 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface BookmakerSelectProps {
   value: string;
@@ -185,72 +191,95 @@ export default function BookmakerSelect({
   );
 
   return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled || loading}>
-      <SelectTrigger className="w-full h-12">
-        <div className="flex items-center justify-center gap-2 w-full">
-          {displayData?.logo_url && (
-            <img
-              src={displayData.logo_url}
-              alt=""
-              className="h-6 w-6 rounded object-contain flex-shrink-0"
-              onError={(e) => { e.currentTarget.style.display = "none"; }}
-            />
+    <TooltipProvider>
+      <Select value={value} onValueChange={onValueChange} disabled={disabled || loading}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <SelectTrigger className="w-full h-12">
+              <div className="flex items-center justify-center gap-2 w-full min-w-0 overflow-hidden">
+                {displayData?.logo_url && (
+                  <img
+                    src={displayData.logo_url}
+                    alt=""
+                    className="h-6 w-6 rounded object-contain flex-shrink-0"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                )}
+                <span className="uppercase truncate max-w-[calc(100%-40px)]">
+                  {displayData?.nome || (loading ? "Carregando..." : "Selecione...")}
+                </span>
+              </div>
+            </SelectTrigger>
+          </TooltipTrigger>
+          {displayData?.nome && displayData.nome.length > 20 && (
+            <TooltipContent side="top" className="max-w-xs">
+              <p className="uppercase">{displayData.nome}</p>
+            </TooltipContent>
           )}
-          <span className="uppercase truncate">
-            {displayData?.nome || (loading ? "Carregando..." : "Selecione...")}
-          </span>
-        </div>
-      </SelectTrigger>
-      <SelectContent className="max-h-[300px]">
-        <div className="sticky top-0 z-10 bg-popover p-2 border-b">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar bookmaker..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 h-9"
-            />
+        </Tooltip>
+        <SelectContent className="max-h-[300px] max-w-[320px]">
+          <div className="sticky top-0 z-10 bg-popover p-2 border-b">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar bookmaker..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 h-9"
+              />
+            </div>
           </div>
-        </div>
-        {filteredItems.length === 0 ? (
-          <div className="py-6 text-center text-sm text-muted-foreground">
-            {parceiroId 
-              ? (somenteComSaldo 
-                  ? "Este parceiro não possui bookmakers com saldo disponível" 
-                  : "Este parceiro não possui bookmakers vinculadas")
-              : "Nenhuma bookmaker encontrada"}
-          </div>
-        ) : (
-          filteredItems.map((item) => {
-            const isLimitada = item.status === "LIMITADA";
-            return (
-              <SelectItem 
-                key={item.id} 
-                value={item.id}
-                className={isLimitada ? "data-[highlighted]:bg-yellow-500/20" : "data-[highlighted]:bg-emerald-500/20"}
-              >
-                <div className="flex items-center gap-2">
-                  {item.logo_url && (
-                    <img
-                      src={item.logo_url}
-                      alt=""
-                      className="h-6 w-6 rounded object-contain flex-shrink-0"
-                      onError={(e) => { e.currentTarget.style.display = "none"; }}
-                    />
+          {filteredItems.length === 0 ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              {parceiroId 
+                ? (somenteComSaldo 
+                    ? "Este parceiro não possui bookmakers com saldo disponível" 
+                    : "Este parceiro não possui bookmakers vinculadas")
+                : "Nenhuma bookmaker encontrada"}
+            </div>
+          ) : (
+            filteredItems.map((item) => {
+              const isLimitada = item.status === "LIMITADA";
+              return (
+                <Tooltip key={item.id}>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <SelectItem 
+                        value={item.id}
+                        className={`${isLimitada ? "data-[highlighted]:bg-yellow-500/20" : "data-[highlighted]:bg-emerald-500/20"}`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0 max-w-full overflow-hidden">
+                          {item.logo_url && (
+                            <img
+                              src={item.logo_url}
+                              alt=""
+                              className="h-6 w-6 rounded object-contain flex-shrink-0"
+                              onError={(e) => { e.currentTarget.style.display = "none"; }}
+                            />
+                          )}
+                          <span className={`uppercase truncate ${isLimitada ? "text-yellow-400" : ""}`}>
+                            {item.nome}
+                          </span>
+                          {item.saldo_atual !== undefined && (
+                            <span className="text-xs text-muted-foreground ml-auto flex-shrink-0">
+                              {item.moeda} {item.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    </div>
+                  </TooltipTrigger>
+                  {item.nome.length > 15 && (
+                    <TooltipContent side="left" className="max-w-xs">
+                      <p className="uppercase">{item.nome}</p>
+                    </TooltipContent>
                   )}
-                  <span className={`uppercase ${isLimitada ? "text-yellow-400" : ""}`}>{item.nome}</span>
-                  {item.saldo_atual !== undefined && (
-                    <span className="text-xs text-muted-foreground ml-auto">
-                      Saldo: {item.moeda} {item.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  )}
-                </div>
-              </SelectItem>
-            );
-          })
-        )}
-      </SelectContent>
-    </Select>
+                </Tooltip>
+              );
+            })
+          )}
+        </SelectContent>
+      </Select>
+    </TooltipProvider>
   );
 }
