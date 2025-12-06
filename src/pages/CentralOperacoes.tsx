@@ -501,394 +501,338 @@ export default function CentralOperacoes() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {/* SEÇÃO: SAQUES PENDENTES DE CONFIRMAÇÃO */}
-          {saquesPendentes.length > 0 && (
-            <Card className="border-yellow-500/30">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-yellow-400" />
-                  Saques Aguardando Confirmação
-                </CardTitle>
-                <CardDescription>
-                  Verifique se o valor foi recebido no banco/wallet antes de confirmar
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {saquesPendentes.map((saque) => (
-                    <div
-                      key={saque.id}
-                      className="flex items-center justify-between p-4 rounded-lg border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-                          <Building2 className="h-5 w-5 text-yellow-400" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{saque.bookmaker_nome}</p>
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <ArrowRight className="h-3 w-3" />
-                              {saque.banco_nome}
-                            </span>
-                            {saque.parceiro_nome && (
-                              <span className="flex items-center gap-1">
-                                <User className="h-3 w-3" />
-                                {saque.parceiro_nome}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-lg font-bold text-yellow-400">
-                          {formatCurrency(saque.valor, saque.moeda)}
-                        </span>
-                        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-                          <Clock className="h-3 w-3 mr-1" />
-                          Aguardando
-                        </Badge>
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleConfirmarSaque(saque)}
-                          className="bg-yellow-600 hover:bg-yellow-700"
-                        >
-                          Confirmar Saque
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* SEÇÃO: CAPTAÇÃO DE PARCERIAS */}
-          {(pagamentosParceiros.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-cyan-400" />
-                  Captação de Parcerias
-                </CardTitle>
-                <CardDescription>
-                  Parceiros sem parceria, pagamentos pendentes e alertas de encerramento
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Parceiros sem Parceria Cadastrada */}
-                {parceirosSemParceria.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-orange-400" />
-                      Parceiros sem Registro de Captação e Pagamento ({parceirosSemParceria.length})
-                    </h4>
+        <div className="space-y-6">
+          {/* GRID: Saques Agrupados (Aguardando Confirmação + Pendentes de Processamento) */}
+          {(saquesPendentes.length > 0 || alertasSaques.length > 0) && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {/* Saques Aguardando Confirmação */}
+              {saquesPendentes.length > 0 && (
+                <Card className="border-yellow-500/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Clock className="h-5 w-5 text-yellow-400" />
+                      Saques Aguardando Confirmação
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Verifique se o valor foi recebido antes de confirmar
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
                     <div className="space-y-2">
-                      {parceirosSemParceria.map((parceiro) => (
+                      {saquesPendentes.map((saque) => (
                         <div
-                          key={parceiro.id}
-                          className="flex items-center justify-between p-3 rounded-lg border border-orange-500/30 bg-orange-500/5 hover:bg-orange-500/10 transition-colors"
+                          key={saque.id}
+                          className="flex items-center justify-between p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                              <User className="h-4 w-4 text-orange-400" />
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="h-8 w-8 rounded-lg bg-yellow-500/10 flex items-center justify-center shrink-0">
+                              <Building2 className="h-4 w-4 text-yellow-400" />
                             </div>
-                            <div>
-                              <p className="font-medium text-sm">{parceiro.nome}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Cadastrado em {new Date(parceiro.createdAt).toLocaleDateString("pt-BR")}
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate">{saque.bookmaker_nome}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                → {saque.banco_nome}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">
-                              Sem parceria
-                            </Badge>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-sm font-bold text-yellow-400">
+                              {formatCurrency(saque.valor, saque.moeda)}
+                            </span>
                             <Button 
                               size="sm" 
-                              variant="outline"
-                              onClick={() => navigate("/programa-indicacao", { state: { tab: "parcerias" } })}
+                              onClick={() => handleConfirmarSaque(saque)}
+                              className="bg-yellow-600 hover:bg-yellow-700 h-7 text-xs"
                             >
-                              Criar Parceria
-                              <ArrowRight className="ml-2 h-3 w-3" />
+                              Confirmar
                             </Button>
                           </div>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  </CardContent>
+                </Card>
+              )}
 
-                {/* Pagamentos Pendentes a Parceiros */}
-                {pagamentosParceiros.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                      <Banknote className="h-4 w-4" />
-                      Pagamentos Pendentes a Parceiros ({pagamentosParceiros.length})
-                    </h4>
+              {/* Saques Pendentes de Processamento */}
+              {alertasSaques.length > 0 && (
+                <Card className="border-emerald-500/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <DollarSign className="h-5 w-5 text-emerald-400" />
+                      Saques Pendentes de Processamento
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Bookmakers liberados com saldo a resgatar
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
                     <div className="space-y-2">
-                      {pagamentosParceiros.map((pag) => (
+                      {alertasSaques.map((alerta) => (
                         <div
-                          key={pag.parceriaId}
+                          key={alerta.entidade_id}
                           className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-                              <User className="h-4 w-4 text-cyan-400" />
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                              <Building2 className="h-4 w-4 text-emerald-400" />
                             </div>
-                            <div>
-                              <p className="font-medium text-sm">{pag.parceiroNome}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {pag.origemTipo === "DIRETO" ? "Aquisição Direta" : "Via Indicador"}
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate">{alerta.titulo}</p>
+                              {alerta.parceiro_nome && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {alerta.parceiro_nome}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {alerta.valor && (
+                              <span className="text-sm font-bold text-emerald-400">
+                                {formatCurrency(alerta.valor, alerta.moeda)}
+                              </span>
+                            )}
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleSaqueAction(alerta)}
+                              className="h-7 text-xs"
+                            >
+                              Processar
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Placeholder para manter grid 2 colunas quando só tem 1 */}
+              {saquesPendentes.length > 0 && alertasSaques.length === 0 && (
+                <div className="hidden lg:block" />
+              )}
+              {alertasSaques.length > 0 && saquesPendentes.length === 0 && (
+                <div className="hidden lg:block" />
+              )}
+            </div>
+          )}
+
+          {/* GRID: Entregas + Captação de Parcerias */}
+          {(entregasPendentes.length > 0 || pagamentosParceiros.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0) && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {/* Entregas Pendentes de Conciliação */}
+              {entregasPendentes.length > 0 && (
+                <Card className="border-purple-500/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Package className="h-5 w-5 text-purple-400" />
+                      Entregas Pendentes
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Entregas que atingiram a meta ou período encerrado
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {entregasPendentes.map((entrega) => (
+                        <div
+                          key={entrega.id}
+                          className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                            entrega.nivel_urgencia === "CRITICA"
+                              ? "border-red-500/30 bg-red-500/5"
+                              : "bg-card hover:bg-muted/50"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div
+                              className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                entrega.nivel_urgencia === "CRITICA"
+                                  ? "bg-red-500/10"
+                                  : "bg-purple-500/10"
+                              }`}
+                            >
+                              <Target
+                                className={`h-4 w-4 ${
+                                  entrega.nivel_urgencia === "CRITICA"
+                                    ? "text-red-400"
+                                    : "text-purple-400"
+                                }`}
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate">
+                                {entrega.operador_nome} - #{entrega.numero_entrega}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {entrega.projeto_nome}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-bold text-cyan-400">
-                              {formatCurrency(pag.valorParceiro)}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-sm font-bold text-emerald-400">
+                              {formatCurrency(entrega.resultado_nominal)}
                             </span>
-                            <Button size="sm" variant="outline" onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })}>
-                              Pagar
-                              <ArrowRight className="ml-2 h-3 w-3" />
+                            <Button size="sm" onClick={() => handleConciliarEntrega(entrega)} className="h-7 text-xs">
+                              Conciliar
                             </Button>
                           </div>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  </CardContent>
+                </Card>
+              )}
 
-                {/* Alertas de Encerramento de Parcerias */}
-                {parceriasEncerramento.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      Parcerias Próximas do Encerramento ({parceriasEncerramento.length})
-                    </h4>
-                    <div className="space-y-2">
-                      {parceriasEncerramento.map((parc) => {
-                        // ≤5 dias = vermelho, ≤7 dias = amarelo
-                        const isRed = parc.diasRestantes <= 5;
-                        const isYellow = parc.diasRestantes > 5 && parc.diasRestantes <= 7;
-                        
-                        return (
-                          <div
-                            key={parc.id}
-                            className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                              isRed
-                                ? "border-red-500/30 bg-red-500/5"
-                                : isYellow
-                                ? "border-yellow-500/30 bg-yellow-500/5"
-                                : "bg-card hover:bg-muted/50"
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`h-8 w-8 rounded-lg flex items-center justify-center ${
-                                  isRed
-                                    ? "bg-red-500/10"
-                                    : isYellow
-                                    ? "bg-yellow-500/10"
-                                    : "bg-muted"
-                                }`}
-                              >
-                                <Calendar
-                                  className={`h-4 w-4 ${
-                                    isRed
-                                      ? "text-red-400"
-                                      : isYellow
-                                      ? "text-yellow-400"
-                                      : "text-muted-foreground"
-                                  }`}
-                                />
+              {/* Captação de Parcerias */}
+              {(pagamentosParceiros.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0) && (
+                <Card className="border-cyan-500/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Users className="h-5 w-5 text-cyan-400" />
+                      Captação de Parcerias
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Parceiros, pagamentos e alertas de encerramento
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Parceiros sem Parceria */}
+                    {parceirosSemParceria.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3 text-orange-400" />
+                          Sem Parceria ({parceirosSemParceria.length})
+                        </h4>
+                        <div className="space-y-1">
+                          {parceirosSemParceria.slice(0, 3).map((parceiro) => (
+                            <div
+                              key={parceiro.id}
+                              className="flex items-center justify-between p-2 rounded-lg border border-orange-500/30 bg-orange-500/5"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <User className="h-3 w-3 text-orange-400 shrink-0" />
+                                <span className="text-xs font-medium truncate">{parceiro.nome}</span>
                               </div>
-                              <div>
-                                <p className="font-medium text-sm">{parc.parceiroNome}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Vence em {new Date(parc.dataFim).toLocaleDateString("pt-BR")}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Badge
-                                className={
-                                  isRed
-                                    ? "bg-red-500/20 text-red-400 border-red-500/30"
-                                    : isYellow
-                                    ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-                                    : "bg-muted text-muted-foreground"
-                                }
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                className="h-6 text-xs px-2"
+                                onClick={() => navigate("/programa-indicacao", { state: { tab: "parcerias" } })}
                               >
-                                {parc.diasRestantes <= 0
-                                  ? "Vencida"
-                                  : parc.diasRestantes === 1
-                                  ? "1 dia restante"
-                                  : `${parc.diasRestantes} dias restantes`}
-                              </Badge>
-                              <Button
-                                size="sm"
-                                variant={isRed ? "destructive" : "outline"}
-                                onClick={() => navigate("/programa-indicacao")}
-                              >
-                                {isRed ? "Encerrar" : "Ver"}
-                                <ArrowRight className="ml-2 h-3 w-3" />
+                                Criar
                               </Button>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                          ))}
+                          {parceirosSemParceria.length > 3 && (
+                            <p className="text-xs text-muted-foreground text-center py-1">
+                              +{parceirosSemParceria.length - 3} parceiros
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
-          {/* Entregas Pendentes de Conciliação */}
-          {entregasPendentes.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-purple-400" />
-                  Entregas Pendentes de Conciliação
-                </CardTitle>
-                <CardDescription>
-                  Entregas que atingiram a meta ou período encerrado
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {entregasPendentes.map((entrega) => (
-                    <div
-                      key={entrega.id}
-                      className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
-                        entrega.nivel_urgencia === "CRITICA"
-                          ? "border-red-500/30 bg-red-500/5"
-                          : "bg-card hover:bg-muted/50"
-                      }`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div
-                          className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                            entrega.nivel_urgencia === "CRITICA"
-                              ? "bg-red-500/10"
-                              : "bg-purple-500/10"
-                          }`}
-                        >
-                          <Target
-                            className={`h-5 w-5 ${
-                              entrega.nivel_urgencia === "CRITICA"
-                                ? "text-red-400"
-                                : "text-purple-400"
-                            }`}
-                          />
-                        </div>
-                        <div>
-                          <p className="font-medium">
-                            {entrega.operador_nome} - Entrega #{entrega.numero_entrega}
-                          </p>
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <FolderKanban className="h-3 w-3" />
-                              {entrega.projeto_nome}
-                            </span>
-                            {entrega.meta_valor && (
-                              <span>Meta: {formatCurrency(entrega.meta_valor)}</span>
-                            )}
-                          </div>
+                    {/* Pagamentos Pendentes */}
+                    {pagamentosParceiros.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                          <Banknote className="h-3 w-3" />
+                          Pagamentos ({pagamentosParceiros.length})
+                        </h4>
+                        <div className="space-y-1">
+                          {pagamentosParceiros.slice(0, 3).map((pag) => (
+                            <div
+                              key={pag.parceriaId}
+                              className="flex items-center justify-between p-2 rounded-lg border bg-card"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <User className="h-3 w-3 text-cyan-400 shrink-0" />
+                                <span className="text-xs font-medium truncate">{pag.parceiroNome}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-cyan-400">
+                                  {formatCurrency(pag.valorParceiro)}
+                                </span>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost"
+                                  className="h-6 text-xs px-2"
+                                  onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })}
+                                >
+                                  Pagar
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                          {pagamentosParceiros.length > 3 && (
+                            <p className="text-xs text-muted-foreground text-center py-1">
+                              +{pagamentosParceiros.length - 3} pagamentos
+                            </p>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-lg font-bold text-emerald-400">
-                          {formatCurrency(entrega.resultado_nominal)}
-                        </span>
-                        {getUrgencyBadge(entrega.nivel_urgencia)}
-                        <Badge className={
-                          entrega.tipo_gatilho === "META_ATINGIDA"
-                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                            : "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                        }>
-                          {entrega.tipo_gatilho === "META_ATINGIDA" ? "Meta Atingida" : "Período Fim"}
-                        </Badge>
-                        <Button size="sm" onClick={() => handleConciliarEntrega(entrega)}>
-                          Conciliar
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                    )}
 
-          {/* Saques Pendentes */}
-          {alertasSaques.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-emerald-400" />
-                  Saques Pendentes
-                </CardTitle>
-                <CardDescription>
-                  Bookmakers liberados de projetos com saldo a resgatar
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {alertasSaques.map((alerta) => (
-                    <div
-                      key={alerta.entidade_id}
-                      className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                          <Building2 className="h-5 w-5 text-emerald-400" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{alerta.titulo}</p>
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                            {alerta.parceiro_nome && (
-                              <span className="flex items-center gap-1">
-                                <User className="h-3 w-3" />
-                                {alerta.parceiro_nome}
-                              </span>
-                            )}
-                            {alerta.projeto_nome && (
-                              <span className="flex items-center gap-1">
-                                <FolderKanban className="h-3 w-3" />
-                                {alerta.projeto_nome}
-                              </span>
-                            )}
-                          </div>
+                    {/* Parcerias Encerrando */}
+                    {parceriasEncerramento.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Encerrando ({parceriasEncerramento.length})
+                        </h4>
+                        <div className="space-y-1">
+                          {parceriasEncerramento.slice(0, 3).map((parc) => {
+                            const isRed = parc.diasRestantes <= 5;
+                            return (
+                              <div
+                                key={parc.id}
+                                className={`flex items-center justify-between p-2 rounded-lg border ${
+                                  isRed ? "border-red-500/30 bg-red-500/5" : "border-yellow-500/30 bg-yellow-500/5"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Calendar className={`h-3 w-3 shrink-0 ${isRed ? "text-red-400" : "text-yellow-400"}`} />
+                                  <span className="text-xs font-medium truncate">{parc.parceiroNome}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge className={`text-[10px] h-5 ${
+                                    isRed ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"
+                                  }`}>
+                                    {parc.diasRestantes}d
+                                  </Badge>
+                                  <Button 
+                                    size="sm" 
+                                    variant={isRed ? "destructive" : "ghost"}
+                                    className="h-6 text-xs px-2"
+                                    onClick={() => navigate("/programa-indicacao")}
+                                  >
+                                    {isRed ? "Encerrar" : "Ver"}
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {parceriasEncerramento.length > 3 && (
+                            <p className="text-xs text-muted-foreground text-center py-1">
+                              +{parceriasEncerramento.length - 3} parcerias
+                            </p>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        {alerta.valor && (
-                          <span className="text-lg font-bold text-emerald-400">
-                            {formatCurrency(alerta.valor, alerta.moeda)}
-                          </span>
-                        )}
-                        {getUrgencyBadge(alerta.nivel_urgencia)}
-                        {alerta.status_anterior !== "limitada" && (
-                          <Button size="sm" variant="outline" onClick={() => navigate("/projetos")}>
-                            Realocar
-                          </Button>
-                        )}
-                        <Button size="sm" onClick={() => handleSaqueAction(alerta)}>
-                          Processar Saque
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
+              {/* Placeholders para manter grid equilibrado */}
+              {entregasPendentes.length > 0 && pagamentosParceiros.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 && (
+                <div className="hidden lg:block" />
+              )}
+              {entregasPendentes.length === 0 && (pagamentosParceiros.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0) && (
+                <div className="hidden lg:block" />
+              )}
+            </div>
+          )}
         </div>
       )}
 
