@@ -5,8 +5,37 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Filter, Calendar, ArrowRight, AlertCircle, Info } from "lucide-react";
+import { Filter, Calendar, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { format, subDays, startOfDay, endOfDay, isToday } from "date-fns";
+
+// Helper para renderizar badge de status
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case "PENDENTE":
+      return (
+        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 gap-1">
+          <Clock className="h-3 w-3" />
+          Pendente
+        </Badge>
+      );
+    case "CONFIRMADO":
+      return (
+        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 gap-1">
+          <CheckCircle2 className="h-3 w-3" />
+          Confirmado
+        </Badge>
+      );
+    case "RECUSADO":
+      return (
+        <Badge className="bg-red-500/20 text-red-400 border-red-500/30 gap-1">
+          <XCircle className="h-3 w-3" />
+          Recusado
+        </Badge>
+      );
+    default:
+      return null;
+  }
+};
 
 interface ContaBancaria {
   id: string;
@@ -700,6 +729,10 @@ export function HistoricoMovimentacoes({
                       ? formatCurrency(transacao.valor, transacao.moeda)
                       : `${transacao.qtd_coin} ${transacao.coin}`}
                   </div>
+                  {/* Status Badge para SAQUE */}
+                  {transacao.tipo_transacao === "SAQUE" && transacao.status && transacao.status !== "CONFIRMADO" && (
+                    getStatusBadge(transacao.status)
+                  )}
                   <div className="text-right">
                     <div className="text-sm font-medium">
                       {format(new Date(transacao.data_transacao), "dd/MM/yyyy")}
