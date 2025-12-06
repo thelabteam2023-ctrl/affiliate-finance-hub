@@ -939,6 +939,18 @@ export function CaixaTransacaoDialog({
 
       if (error) throw error;
 
+      // Se for SAQUE, atualizar status do bookmaker para indicar saque em processamento
+      if (tipoTransacao === "SAQUE" && origemBookmakerId) {
+        const { error: updateBookmakerError } = await supabase
+          .from("bookmakers")
+          .update({ status: "SAQUE_PENDENTE" })
+          .eq("id", origemBookmakerId);
+        
+        if (updateBookmakerError) {
+          console.error("Erro ao atualizar status do bookmaker:", updateBookmakerError);
+        }
+      }
+
       toast({
         title: "Sucesso",
         description: tipoTransacao === "SAQUE" 
