@@ -265,7 +265,7 @@ export default function GestaoProjetos() {
                     </div>
                     
                     {(() => {
-                      const resultado = (projeto.total_sacado || 0) - (projeto.total_depositado || 0);
+                      const resultado = (projeto.total_sacado || 0) + (projeto.saldo_bookmakers || 0) - (projeto.total_depositado || 0);
                       const isPositive = resultado >= 0;
                       return (
                         <div className="flex items-center justify-between text-sm">
@@ -354,7 +354,7 @@ export default function GestaoProjetos() {
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">Resultado Est.</p>
                       {(() => {
-                        const resultado = (projeto.total_sacado || 0) - (projeto.total_depositado || 0);
+                        const resultado = (projeto.total_sacado || 0) + (projeto.saldo_bookmakers || 0) - (projeto.total_depositado || 0);
                         const isPositive = resultado >= 0;
                         return (
                           <p className={`text-sm font-medium ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
