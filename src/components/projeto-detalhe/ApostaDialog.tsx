@@ -55,6 +55,8 @@ interface Aposta {
   lay_stake?: number | null;
   lay_liability?: number | null;
   lay_comissao?: number | null;
+  back_em_exchange?: boolean;
+  back_comissao?: number | null;
 }
 
 interface Bookmaker {
@@ -259,6 +261,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   const [layOdd, setLayOdd] = useState("");
   const [layComissao, setLayComissao] = useState("5");
 
+  // Back em Exchange state (para modo padrão)
+  const [backEmExchange, setBackEmExchange] = useState(false);
+  const [backComissao, setBackComissao] = useState("5");
+
   // Calculated lay values
   const [layStake, setLayStake] = useState<number | null>(null);
   const [layLiability, setLayLiability] = useState<number | null>(null);
@@ -287,6 +293,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         setLayExchange(aposta.lay_exchange || "");
         setLayOdd(aposta.lay_odd?.toString() || "");
         setLayComissao(aposta.lay_comissao?.toString() || "5");
+        // Back em Exchange fields
+        setBackEmExchange(aposta.back_em_exchange || false);
+        setBackComissao(aposta.back_comissao?.toString() || "5");
       } else {
         resetForm();
       }
@@ -344,6 +353,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     setLayComissao("5");
     setLayStake(null);
     setLayLiability(null);
+    setBackEmExchange(false);
+    setBackComissao("5");
   };
 
   const fetchBookmakers = async () => {
@@ -432,6 +443,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         lay_stake: modoLayBack ? layStake : null,
         lay_liability: modoLayBack ? layLiability : null,
         lay_comissao: modoLayBack ? parseFloat(layComissao) : null,
+        back_em_exchange: !modoLayBack ? backEmExchange : false,
+        back_comissao: !modoLayBack && backEmExchange ? parseFloat(backComissao) : null,
       };
 
       if (aposta) {
@@ -618,6 +631,35 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   />
                 </div>
               </div>
+              
+              {/* Toggle Back em Exchange (apenas no modo padrão) */}
+              {!modoLayBack && (
+                <div className="col-span-3 flex items-center justify-between p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={backEmExchange}
+                      onCheckedChange={setBackEmExchange}
+                      id="back-exchange"
+                    />
+                    <Label htmlFor="back-exchange" className="text-sm cursor-pointer">
+                      Aposta em Exchange
+                    </Label>
+                  </div>
+                  {backEmExchange && (
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-muted-foreground">Comissão:</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={backComissao}
+                        onChange={(e) => setBackComissao(e.target.value)}
+                        className="w-20 h-8"
+                      />
+                      <span className="text-xs text-muted-foreground">%</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Campos Lay (apenas em modo LayBack) */}
