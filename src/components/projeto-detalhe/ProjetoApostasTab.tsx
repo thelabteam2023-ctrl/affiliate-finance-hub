@@ -310,10 +310,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
             >
               <CardHeader className="pb-1 pt-3 px-3">
                 <div className="flex items-start justify-between gap-2">
-                  <div 
-                    className="min-w-0 flex-1 cursor-pointer"
-                    onClick={() => handleOpenDialog(aposta)}
-                  >
+                  <div className="min-w-0 flex-1">
                     <CardTitle className="text-sm truncate">{aposta.evento}</CardTitle>
                     <p className="text-xs text-muted-foreground truncate">{aposta.esporte}</p>
                   </div>
@@ -337,8 +334,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="pt-1 pb-3 px-3" onClick={() => handleOpenDialog(aposta)}>
-                <div className="space-y-1 cursor-pointer">
+              <CardContent className="pt-1 pb-3 px-3">
+                <div className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground truncate flex-1">{aposta.selecao}</span>
                     <span className="font-medium ml-2">@{aposta.odd.toFixed(2)}</span>
