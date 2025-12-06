@@ -505,10 +505,10 @@ export function InvestidorPainelCard({
 
       {/* Actions Section */}
       <div className="p-3 bg-muted/10">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="flex justify-center gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full" onClick={onEdit}>
+              <Button variant="outline" size="sm" onClick={onEdit}>
                 <Edit className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
@@ -517,7 +517,7 @@ export function InvestidorPainelCard({
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full" onClick={onExtrato}>
+              <Button variant="outline" size="sm" onClick={onExtrato}>
                 <FileText className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
@@ -529,7 +529,7 @@ export function InvestidorPainelCard({
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={onDelete}
               >
                 <Trash2 className="h-3.5 w-3.5" />
