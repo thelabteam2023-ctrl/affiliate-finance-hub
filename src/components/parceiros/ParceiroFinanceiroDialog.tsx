@@ -244,6 +244,17 @@ export default function ParceiroFinanceiroDialog({
       return isOrigem ? "Transferência Enviada" : "Transferência Recebida";
     }
     
+    // Verificar se a transação foi recusada
+    if (transacao?.status === "RECUSADO") {
+      const labels: Record<string, string> = {
+        DEPOSITO: "Depósito Recusado",
+        SAQUE: "Saque Recusado",
+        TRANSFERENCIA: "Transferência Recusada",
+        APORTE_FINANCEIRO: "Aporte Recusado",
+      };
+      return labels[tipo] || `${tipo} Recusado`;
+    }
+    
     const labels: Record<string, string> = {
       DEPOSITO: "Depósito",
       SAQUE: "Saque",
@@ -253,7 +264,12 @@ export default function ParceiroFinanceiroDialog({
     return labels[tipo] || tipo;
   };
 
-  const getTipoBadgeColor = (tipo: string) => {
+  const getTipoBadgeColor = (tipo: string, status?: string) => {
+    // Se recusado, mostrar em cinza/neutro
+    if (status === "RECUSADO") {
+      return "bg-gray-500/20 text-gray-400 border-gray-500/30";
+    }
+    
     if (tipo === "DEPOSITO") return "bg-red-500/20 text-red-500 border-red-500/30";
     if (tipo === "SAQUE") return "bg-green-500/20 text-green-500 border-green-500/30";
     if (tipo === "TRANSFERENCIA") return "bg-blue-500/20 text-blue-500 border-blue-500/30";
@@ -536,7 +552,7 @@ export default function ParceiroFinanceiroDialog({
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center gap-2">
-                              <Badge className={getTipoBadgeColor(transacao.tipo_transacao)}>
+                              <Badge className={getTipoBadgeColor(transacao.tipo_transacao, transacao.status)}>
                                 {getTipoLabel(transacao.tipo_transacao, transacao)}
                               </Badge>
                               <Badge variant="outline" className="text-xs">
@@ -583,6 +599,11 @@ export default function ParceiroFinanceiroDialog({
                               
                               {/* Seta direcional colorida */}
                               {(() => {
+                                // Se recusado, seta cinza
+                                if (transacao.status === "RECUSADO") {
+                                  return <ArrowRight className="h-4 w-4 text-muted-foreground" />;
+                                }
+                                
                                 // Determina se o parceiro RECEBE (entrada) ou ENVIA (saída)
                                 const parceiroRecebe = 
                                   transacao.destino_parceiro_id === parceiroId ||
@@ -645,6 +666,15 @@ export default function ParceiroFinanceiroDialog({
 
                           <div className="text-right">
                             {(() => {
+                              // Se recusado, mostrar neutro (branco, sem sinal)
+                              if (transacao.status === "RECUSADO") {
+                                return (
+                                  <p className="text-lg font-bold text-muted-foreground">
+                                    {formatCurrency(transacao.valor)}
+                                  </p>
+                                );
+                              }
+                              
                               // Determina se o parceiro RECEBE (entrada) ou ENVIA (saída)
                               const parceiroRecebe = 
                                 transacao.destino_parceiro_id === parceiroId ||
