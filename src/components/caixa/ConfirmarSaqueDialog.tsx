@@ -97,6 +97,14 @@ export function ConfirmarSaqueDialog({
 
       if (error) throw error;
 
+      // Atualizar status do bookmaker para 'ativo' após confirmação
+      if (saque.origem_bookmaker_id) {
+        await supabase
+          .from("bookmakers")
+          .update({ status: "ativo" })
+          .eq("id", saque.origem_bookmaker_id);
+      }
+
       toast.success("Saque confirmado com sucesso! O saldo foi atualizado.");
       setObservacoes("");
       onSuccess();
@@ -144,12 +152,12 @@ export function ConfirmarSaqueDialog({
           .single();
 
         if (historico?.projeto_id) {
-          // Revincular bookmaker ao projeto com status SAQUE_RECUSADO
+          // Revincular bookmaker ao projeto com status AGUARDANDO_SAQUE para nova tentativa
           const { error: bookmakerError } = await supabase
             .from("bookmakers")
             .update({ 
               projeto_id: historico.projeto_id,
-              status: "SAQUE_RECUSADO" 
+              status: "AGUARDANDO_SAQUE" 
             })
             .eq("id", saque.origem_bookmaker_id);
 
@@ -160,7 +168,7 @@ export function ConfirmarSaqueDialog({
             .from("projeto_bookmaker_historico")
             .update({ 
               data_desvinculacao: null,
-              status_final: "SAQUE_RECUSADO"
+              status_final: "AGUARDANDO_SAQUE"
             })
             .eq("bookmaker_id", saque.origem_bookmaker_id)
             .eq("projeto_id", historico.projeto_id);
