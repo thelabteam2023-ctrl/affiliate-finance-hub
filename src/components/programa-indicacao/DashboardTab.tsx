@@ -343,7 +343,14 @@ export function DashboardTab() {
                   tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
                 />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                  contentStyle={{ 
+                    backgroundColor: "rgba(0, 0, 0, 0.4)", 
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    backdropFilter: "blur(12px)",
+                    borderRadius: "12px",
+                    padding: "12px 16px"
+                  }}
+                  cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
                   formatter={(value: number, name: string) => [
                     name === "quantidade" ? `${value} parceiros` : formatCurrency(value),
                     name === "quantidade" ? "Quantidade" : "Custo Total"
@@ -381,7 +388,16 @@ export function DashboardTab() {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [`${value} parceiros`, ""]} />
+                  <Tooltip 
+                    formatter={(value) => [`${value} parceiros`, ""]} 
+                    contentStyle={{ 
+                      backgroundColor: "rgba(0, 0, 0, 0.4)", 
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      backdropFilter: "blur(12px)",
+                      borderRadius: "12px",
+                      padding: "12px 16px"
+                    }}
+                  />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -410,7 +426,14 @@ export function DashboardTab() {
                 />
                 <Tooltip 
                   formatter={(value: number) => [formatCurrency(value), "Valor"]}
-                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                  contentStyle={{ 
+                    backgroundColor: "rgba(0, 0, 0, 0.4)", 
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    backdropFilter: "blur(12px)",
+                    borderRadius: "12px",
+                    padding: "12px 16px"
+                  }}
+                  cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
                 />
                 <Bar dataKey="valor" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               </BarChart>
