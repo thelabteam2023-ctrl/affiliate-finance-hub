@@ -22,8 +22,12 @@ import {
   Target,
   Users,
   Banknote,
+  CheckCircle2,
+  XCircle,
+  Landmark,
 } from "lucide-react";
 import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliacaoDialog";
+import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 
 interface Alerta {
   tipo_alerta: string;
@@ -86,16 +90,33 @@ interface ParceiroSemParceria {
   createdAt: string;
 }
 
+interface SaquePendenteConfirmacao {
+  id: string;
+  valor: number;
+  moeda: string;
+  data_transacao: string;
+  descricao: string | null;
+  origem_bookmaker_id: string | null;
+  destino_parceiro_id: string | null;
+  destino_conta_bancaria_id: string | null;
+  bookmaker_nome?: string;
+  parceiro_nome?: string;
+  banco_nome?: string;
+}
+
 export default function CentralOperacoes() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [entregasPendentes, setEntregasPendentes] = useState<EntregaPendente[]>([]);
   const [pagamentosParceiros, setPagamentosParceiros] = useState<PagamentoParceiroPendente[]>([]);
   const [parceriasEncerramento, setParceriasEncerramento] = useState<ParceriaAlertaEncerramento[]>([]);
   const [parceirosSemParceria, setParceirosSemParceria] = useState<ParceiroSemParceria[]>([]);
+  const [saquesPendentes, setSaquesPendentes] = useState<SaquePendenteConfirmacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
   const [selectedEntrega, setSelectedEntrega] = useState<EntregaPendente | null>(null);
+  const [confirmarSaqueOpen, setConfirmarSaqueOpen] = useState(false);
+  const [selectedSaque, setSelectedSaque] = useState<SaquePendenteConfirmacao | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -121,7 +142,8 @@ export default function CentralOperacoes() {
         movimentacoesResult,
         encerResult,
         todosParceirosResult,
-        todasParceriasResult
+        todasParceriasResult,
+        saquesPendentesResult
       ] = await Promise.all([
         supabase.from("v_painel_operacional").select("*"),
         supabase.from("v_entregas_pendentes").select("*").in("status_conciliacao", ["PRONTA"]),
@@ -161,7 +183,23 @@ export default function CentralOperacoes() {
         supabase
           .from("parcerias")
           .select("parceiro_id")
-          .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+          .in("status", ["ATIVA", "EM_ENCERRAMENTO"]),
+        // Buscar saques pendentes de confirmação
+        supabase
+          .from("cash_ledger")
+          .select(`
+            id,
+            valor,
+            moeda,
+            data_transacao,
+            descricao,
+            origem_bookmaker_id,
+            destino_parceiro_id,
+            destino_conta_bancaria_id
+          `)
+          .eq("tipo_transacao", "SAQUE")
+          .eq("status", "PENDENTE")
+          .order("data_transacao", { ascending: false })
       ]);
 
       if (alertasResult.error) throw alertasResult.error;
@@ -230,6 +268,51 @@ export default function CentralOperacoes() {
           }));
         
         setParceirosSemParceria(semParceria);
+      }
+
+      // Saques pendentes de confirmação - buscar nomes relacionados
+      if (!saquesPendentesResult.error && saquesPendentesResult.data) {
+        // Buscar dados adicionais para os saques
+        const bookmakersIds = saquesPendentesResult.data
+          .map((s: any) => s.origem_bookmaker_id)
+          .filter(Boolean);
+        const parceirosIds = saquesPendentesResult.data
+          .map((s: any) => s.destino_parceiro_id)
+          .filter(Boolean);
+        const contasIds = saquesPendentesResult.data
+          .map((s: any) => s.destino_conta_bancaria_id)
+          .filter(Boolean);
+
+        const [bookmakersNomes, parceirosNomes, contasNomes] = await Promise.all([
+          bookmakersIds.length > 0
+            ? supabase.from("bookmakers").select("id, nome").in("id", bookmakersIds)
+            : Promise.resolve({ data: [] }),
+          parceirosIds.length > 0
+            ? supabase.from("parceiros").select("id, nome").in("id", parceirosIds)
+            : Promise.resolve({ data: [] }),
+          contasIds.length > 0
+            ? supabase.from("contas_bancarias").select("id, banco, titular").in("id", contasIds)
+            : Promise.resolve({ data: [] }),
+        ]);
+
+        const bookmakersMap = Object.fromEntries(
+          (bookmakersNomes.data || []).map((b: any) => [b.id, b.nome])
+        );
+        const parceirosMap = Object.fromEntries(
+          (parceirosNomes.data || []).map((p: any) => [p.id, p.nome])
+        );
+        const contasMap = Object.fromEntries(
+          (contasNomes.data || []).map((c: any) => [c.id, `${c.banco} - ${c.titular}`])
+        );
+
+        const saquesEnriquecidos: SaquePendenteConfirmacao[] = saquesPendentesResult.data.map((s: any) => ({
+          ...s,
+          bookmaker_nome: bookmakersMap[s.origem_bookmaker_id] || "Bookmaker",
+          parceiro_nome: parceirosMap[s.destino_parceiro_id] || "",
+          banco_nome: contasMap[s.destino_conta_bancaria_id] || "Conta Bancária",
+        }));
+
+        setSaquesPendentes(saquesEnriquecidos);
       }
     } catch (error: any) {
       toast.error("Erro ao carregar dados: " + error.message);
@@ -301,6 +384,11 @@ export default function CentralOperacoes() {
     setConciliacaoOpen(true);
   };
 
+  const handleConfirmarSaque = (saque: SaquePendenteConfirmacao) => {
+    setSelectedSaque(saque);
+    setConfirmarSaqueOpen(true);
+  };
+
   const alertasSaques = alertas.filter((a) => a.tipo_alerta === "SAQUE_PENDENTE");
   const alertasCriticos = alertas.filter((a) => a.nivel_urgencia === "CRITICA");
 
@@ -368,18 +456,18 @@ export default function CentralOperacoes() {
           </CardContent>
         </Card>
 
-        <Card className="border-emerald-500/30 bg-emerald-500/5">
+        <Card className="border-yellow-500/30 bg-yellow-500/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saques Pendentes</CardTitle>
-            <DollarSign className="h-4 w-4 text-emerald-400" />
+            <CardTitle className="text-sm font-medium">Saques Aguardando</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-400">{alertasSaques.length}</div>
+            <div className="text-2xl font-bold text-yellow-400">{saquesPendentes.length}</div>
             <p className="text-xs text-muted-foreground">
               {formatCurrency(
-                alertasSaques.reduce((acc, a) => acc + (a.valor || 0), 0)
+                saquesPendentes.reduce((acc, s) => acc + (s.valor || 0), 0)
               )}{" "}
-              a resgatar
+              aguardando confirmação
             </p>
           </CardContent>
         </Card>
@@ -400,7 +488,7 @@ export default function CentralOperacoes() {
       </div>
 
       {/* Alertas List */}
-      {alertas.length === 0 && entregasPendentes.length === 0 && pagamentosParceiros.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 ? (
+      {alertas.length === 0 && entregasPendentes.length === 0 && pagamentosParceiros.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 && saquesPendentes.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-10">
@@ -414,6 +502,69 @@ export default function CentralOperacoes() {
         </Card>
       ) : (
         <div className="space-y-4">
+          {/* SEÇÃO: SAQUES PENDENTES DE CONFIRMAÇÃO */}
+          {saquesPendentes.length > 0 && (
+            <Card className="border-yellow-500/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-yellow-400" />
+                  Saques Aguardando Confirmação
+                </CardTitle>
+                <CardDescription>
+                  Verifique se o valor foi recebido no banco/wallet antes de confirmar
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {saquesPendentes.map((saque) => (
+                    <div
+                      key={saque.id}
+                      className="flex items-center justify-between p-4 rounded-lg border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+                          <Building2 className="h-5 w-5 text-yellow-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{saque.bookmaker_nome}</p>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <ArrowRight className="h-3 w-3" />
+                              {saque.banco_nome}
+                            </span>
+                            {saque.parceiro_nome && (
+                              <span className="flex items-center gap-1">
+                                <User className="h-3 w-3" />
+                                {saque.parceiro_nome}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-lg font-bold text-yellow-400">
+                          {formatCurrency(saque.valor, saque.moeda)}
+                        </span>
+                        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Aguardando
+                        </Badge>
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleConfirmarSaque(saque)}
+                          className="bg-yellow-600 hover:bg-yellow-700"
+                        >
+                          Confirmar Saque
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* SEÇÃO: CAPTAÇÃO DE PARCERIAS */}
           {(pagamentosParceiros.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0) && (
             <Card>
@@ -764,6 +915,17 @@ export default function CentralOperacoes() {
           onSuccess={() => fetchData(true)}
         />
       )}
+
+      {/* Dialog de Confirmação de Saque */}
+      <ConfirmarSaqueDialog
+        open={confirmarSaqueOpen}
+        onClose={() => {
+          setConfirmarSaqueOpen(false);
+          setSelectedSaque(null);
+        }}
+        onSuccess={() => fetchData(true)}
+        saque={selectedSaque}
+      />
     </div>
   );
 }

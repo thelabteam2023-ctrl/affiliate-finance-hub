@@ -869,6 +869,9 @@ export function CaixaTransacaoDialog({
       // Find investor name if APORTE_FINANCEIRO
       const investidor = investidores.find(inv => inv.id === investidorId);
       
+      // SAQUE inicia como PENDENTE, outros como CONFIRMADO
+      const statusInicial = tipoTransacao === "SAQUE" ? "PENDENTE" : "CONFIRMADO";
+
       const transactionData: any = {
         user_id: userData.user.id,
         tipo_transacao: tipoTransacao,
@@ -876,7 +879,7 @@ export function CaixaTransacaoDialog({
         moeda: tipoMoeda === "FIAT" ? moeda : "USD",
         valor: parseFloat(valor),
         descricao,
-        status: "CONFIRMADO",
+        status: statusInicial,
         investidor_id: tipoTransacao === "APORTE_FINANCEIRO" ? investidorId : null,
         nome_investidor: tipoTransacao === "APORTE_FINANCEIRO" && investidor ? investidor.nome : null,
       };
@@ -938,7 +941,9 @@ export function CaixaTransacaoDialog({
 
       toast({
         title: "Sucesso",
-        description: "Transação registrada com sucesso",
+        description: tipoTransacao === "SAQUE" 
+          ? "Saque solicitado! Aguardando confirmação de recebimento."
+          : "Transação registrada com sucesso",
       });
 
       resetForm();
