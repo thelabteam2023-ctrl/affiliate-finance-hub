@@ -24,8 +24,14 @@ export type Database = {
           estrategia: string | null
           evento: string
           id: string
+          lay_comissao: number | null
+          lay_exchange: string | null
+          lay_liability: number | null
+          lay_odd: number | null
+          lay_stake: number | null
           lucro_prejuizo: number | null
           mercado: string | null
+          modo_entrada: string
           observacoes: string | null
           odd: number
           projeto_id: string
@@ -46,8 +52,14 @@ export type Database = {
           estrategia?: string | null
           evento: string
           id?: string
+          lay_comissao?: number | null
+          lay_exchange?: string | null
+          lay_liability?: number | null
+          lay_odd?: number | null
+          lay_stake?: number | null
           lucro_prejuizo?: number | null
           mercado?: string | null
+          modo_entrada?: string
           observacoes?: string | null
           odd: number
           projeto_id: string
@@ -68,8 +80,14 @@ export type Database = {
           estrategia?: string | null
           evento?: string
           id?: string
+          lay_comissao?: number | null
+          lay_exchange?: string | null
+          lay_liability?: number | null
+          lay_odd?: number | null
+          lay_stake?: number | null
           lucro_prejuizo?: number | null
           mercado?: string | null
+          modo_entrada?: string
           observacoes?: string | null
           odd?: number
           projeto_id?: string

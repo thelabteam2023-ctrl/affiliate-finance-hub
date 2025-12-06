@@ -297,7 +297,7 @@ export default function ProjetoDetalhe() {
           </TabsTrigger>
           <TabsTrigger value="apostas" className="flex items-center gap-2">
             <Target className="h-4 w-4" />
-            Apostas
+            Apostas Livres
           </TabsTrigger>
           <TabsTrigger value="matched-betting" className="flex items-center gap-2">
             <Gift className="h-4 w-4" />
