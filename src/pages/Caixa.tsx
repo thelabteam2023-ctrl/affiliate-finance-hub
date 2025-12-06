@@ -94,7 +94,7 @@ export default function Caixa() {
   const [contasBancarias, setContasBancarias] = useState<Array<{ id: string; banco: string; titular: string }>>([]);
   const [wallets, setWallets] = useState<{ [key: string]: string }>({});
   const [walletsDetalhes, setWalletsDetalhes] = useState<Array<{ id: string; exchange: string; endereco: string; network: string; parceiro_id: string }>>([]);
-  const [bookmakers, setBookmakers] = useState<{ [key: string]: string }>({});
+  const [bookmakers, setBookmakers] = useState<{ [key: string]: { nome: string; status: string } }>({});
 
   const fetchData = async () => {
     try {
@@ -125,7 +125,7 @@ export default function Caixa() {
       
       const { data: bookmakersData } = await supabase
         .from("bookmakers")
-        .select("id, nome");
+        .select("id, nome, status");
 
       // Create lookup maps
       const parceirosMap: { [key: string]: string } = {};
@@ -142,8 +142,8 @@ export default function Caixa() {
       setWallets(walletsMap);
       setWalletsDetalhes(walletsData || []);
 
-      const bookmakersMap: { [key: string]: string } = {};
-      bookmakersData?.forEach(b => bookmakersMap[b.id] = b.nome);
+      const bookmakersMap: { [key: string]: { nome: string; status: string } } = {};
+      bookmakersData?.forEach(b => bookmakersMap[b.id] = { nome: b.nome, status: b.status });
       setBookmakers(bookmakersMap);
 
       // Fetch FIAT balances
@@ -319,7 +319,7 @@ export default function Caixa() {
     }
     
     if (transacao.origem_tipo === "BOOKMAKER" && transacao.origem_bookmaker_id) {
-      return bookmakers[transacao.origem_bookmaker_id] || "Bookmaker";
+      return bookmakers[transacao.origem_bookmaker_id]?.nome || "Bookmaker";
     }
     
     return "Origem";
@@ -359,7 +359,7 @@ export default function Caixa() {
     }
     
     if (transacao.destino_tipo === "BOOKMAKER" && transacao.destino_bookmaker_id) {
-      return bookmakers[transacao.destino_bookmaker_id] || "Bookmaker";
+      return bookmakers[transacao.destino_bookmaker_id]?.nome || "Bookmaker";
     }
     
     return "Destino";

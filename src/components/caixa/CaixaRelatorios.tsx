@@ -8,7 +8,7 @@ interface CaixaRelatoriosProps {
   contasBancarias: Array<{ id: string; banco: string; titular: string }>;
   wallets: { [key: string]: string };
   walletsDetalhes: Array<{ id: string; exchange: string; endereco: string; network: string; parceiro_id: string }>;
-  bookmakers: { [key: string]: string };
+  bookmakers: { [key: string]: { nome: string; status: string } };
   loading: boolean;
   filtroTipo: string;
   setFiltroTipo: (tipo: string) => void;
