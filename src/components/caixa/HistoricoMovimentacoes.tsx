@@ -58,7 +58,7 @@ interface HistoricoMovimentacoesProps {
   contasBancarias: ContaBancaria[];
   wallets: { [key: string]: string };
   walletsDetalhes: WalletDetalhe[];
-  bookmakers: { [key: string]: string };
+  bookmakers: { [key: string]: { nome: string; status: string } };
   loading: boolean;
   filtroTipo: string;
   setFiltroTipo: (tipo: string) => void;
@@ -282,8 +282,17 @@ export function HistoricoMovimentacoes({
                         </div>
                       ) : transacao.origem_tipo === "BOOKMAKER" && transacao.origem_bookmaker_id ? (
                         <div className="flex flex-col">
-                          <span className="text-sm text-muted-foreground">
-                            {bookmakers[transacao.origem_bookmaker_id] || 'Bookmaker'}
+                          <span 
+                            className={`text-sm text-muted-foreground transition-colors cursor-default ${
+                              bookmakers[transacao.origem_bookmaker_id]?.status === "LIMITADA" 
+                                ? "hover:text-red-500" 
+                                : ""
+                            }`}
+                            title={bookmakers[transacao.origem_bookmaker_id]?.status === "LIMITADA" 
+                              ? "⚠️ Casa limitada - Saque necessário" 
+                              : undefined}
+                          >
+                            {bookmakers[transacao.origem_bookmaker_id]?.nome || 'Bookmaker'}
                           </span>
                           <span className="text-xs text-muted-foreground/70">
                             {parceiros[transacao.origem_parceiro_id!] || ''}
@@ -518,8 +527,17 @@ export function HistoricoMovimentacoes({
                           ) : transacao.destino_tipo === "BOOKMAKER" && transacao.destino_bookmaker_id ? (
                             <div className="flex items-center gap-2">
                               <div className="flex flex-col">
-                                <span className="text-sm text-muted-foreground">
-                                  {bookmakers[transacao.destino_bookmaker_id] || 'Bookmaker'}
+                                <span 
+                                  className={`text-sm text-muted-foreground transition-colors cursor-default ${
+                                    bookmakers[transacao.destino_bookmaker_id]?.status === "LIMITADA" 
+                                      ? "hover:text-red-500" 
+                                      : ""
+                                  }`}
+                                  title={bookmakers[transacao.destino_bookmaker_id]?.status === "LIMITADA" 
+                                    ? "⚠️ Casa limitada - Saque necessário" 
+                                    : undefined}
+                                >
+                                  {bookmakers[transacao.destino_bookmaker_id]?.nome || 'Bookmaker'}
                                 </span>
                                 <span className="text-xs text-muted-foreground/70">
                                   {parceiros[transacao.destino_parceiro_id!] || ''}
