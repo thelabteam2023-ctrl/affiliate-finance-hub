@@ -509,7 +509,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           parceiro:parceiros(nome)
         `)
         .eq("projeto_id", projetoId)
-        .in("status", ["ATIVO", "LIMITADA"])
+        .in("status", ["ATIVO", "LIMITADA", "ativo", "limitada"])
         .gt("saldo_atual", 0);
 
       if (error) throw error;
