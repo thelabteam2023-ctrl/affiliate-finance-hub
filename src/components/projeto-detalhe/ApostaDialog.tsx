@@ -304,14 +304,16 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
 
   // Opções de seleção baseadas no mercado e times
   const getSelecaoOptions = (): string[] => {
-    if (!mandante || !visitante) return [];
-    
     const mercadosMoneyline = ["Moneyline / 1X2", "Moneyline", "Dupla Chance", "Draw No Bet", "Vencedor do Jogo", "Vencedor"];
     const mercadosBTTS = ["Ambas Marcam (BTTS)", "Ambas Marcam"];
     
+    // Usa nomes genéricos se mandante/visitante não estiverem preenchidos
+    const timeCasa = mandante || "Time Casa";
+    const timeFora = visitante || "Time Fora";
+    
     // Moneyline - mostra mandante, empate, visitante
     if (mercadosMoneyline.includes(mercado)) {
-      return [mandante, "Empate", visitante];
+      return [timeCasa, "Empate", timeFora];
     }
     
     // Over - qualquer mercado que contenha "Over"
