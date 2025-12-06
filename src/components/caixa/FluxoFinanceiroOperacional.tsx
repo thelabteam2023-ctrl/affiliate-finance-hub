@@ -3,20 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   BarChart, 
   Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip, 
+  Tooltip as RechartsTooltip, 
   ResponsiveContainer, 
   Cell,
   Legend
 } from "recharts";
 import { format, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, DollarSign, AlertCircle, Building2, Users } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, DollarSign, AlertCircle, Building2, Users, HelpCircle } from "lucide-react";
 
 interface Transacao {
   id: string;
@@ -39,6 +40,22 @@ interface FluxoFinanceiroOperacionalProps {
 }
 
 type Periodo = "dia" | "semana" | "mes";
+
+// Componente de ajuda reutilizável
+function KpiHelp({ text }: { text: string }) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <HelpCircle className="h-3 w-3 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-[250px] text-xs">
+          {text}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 export function FluxoFinanceiroOperacional({
   transacoes,
@@ -364,6 +381,7 @@ export function FluxoFinanceiroOperacional({
                 <div className="flex items-center gap-2 text-emerald-500 mb-1">
                   <TrendingUp className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase">Aportes</span>
+                  <KpiHelp text="Total de capital recebido de investidores no período selecionado" />
                 </div>
                 <span className="text-lg font-bold text-emerald-400 font-mono">
                   {formatCurrency(dadosCapitalExterno.totalAportes)}
@@ -373,6 +391,7 @@ export function FluxoFinanceiroOperacional({
                 <div className="flex items-center gap-2 text-amber-500 mb-1">
                   <TrendingDown className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase">Liquidações</span>
+                  <KpiHelp text="Total de capital devolvido aos investidores (lucros ou resgates)" />
                 </div>
                 <span className="text-lg font-bold text-amber-400 font-mono">
                   {formatCurrency(dadosCapitalExterno.totalLiquidacoes)}
@@ -388,6 +407,7 @@ export function FluxoFinanceiroOperacional({
                 }`}>
                   <ArrowRightLeft className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase">Saldo Líquido</span>
+                  <KpiHelp text="Diferença entre aportes e liquidações. Positivo = mais capital entrando" />
                 </div>
                 <span className={`text-lg font-bold font-mono ${
                   dadosCapitalExterno.liquido >= 0 ? "text-emerald-400" : "text-destructive"
@@ -419,7 +439,7 @@ export function FluxoFinanceiroOperacional({
                       tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
                       tickLine={false}
                     />
-                    <Tooltip content={<CustomTooltipExterno />} cursor={{ fill: "rgba(255, 255, 255, 0.05)" }} />
+                    <RechartsTooltip content={<CustomTooltipExterno />} cursor={{ fill: "rgba(255, 255, 255, 0.05)" }} />
                     <Legend 
                       wrapperStyle={{ paddingTop: '16px' }}
                       formatter={(value) => value === 'aportes' ? 'Aportes' : 'Liquidações'}
@@ -448,6 +468,7 @@ export function FluxoFinanceiroOperacional({
                 <div className="flex items-center gap-2 text-blue-500 mb-1">
                   <TrendingUp className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase">Depósitos</span>
+                  <KpiHelp text="Total depositado em bookmakers para operações de apostas" />
                 </div>
                 <span className="text-lg font-bold text-blue-400 font-mono">
                   {formatCurrency(dadosCapitalOperacao.totalDepositos)}
@@ -457,6 +478,7 @@ export function FluxoFinanceiroOperacional({
                 <div className="flex items-center gap-2 text-purple-500 mb-1">
                   <TrendingDown className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase">Saques</span>
+                  <KpiHelp text="Total sacado dos bookmakers de volta para as contas" />
                 </div>
                 <span className="text-lg font-bold text-purple-400 font-mono">
                   {formatCurrency(dadosCapitalOperacao.totalSaques)}
@@ -472,6 +494,7 @@ export function FluxoFinanceiroOperacional({
                 }`}>
                   <ArrowRightLeft className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase">Alocação Líquida</span>
+                  <KpiHelp text="Depósitos - Saques. Positivo = mais capital alocado em bookmakers" />
                 </div>
                 <span className={`text-lg font-bold font-mono ${
                   dadosCapitalOperacao.alocacaoLiquida >= 0 ? "text-blue-400" : "text-purple-400"
@@ -503,7 +526,7 @@ export function FluxoFinanceiroOperacional({
                       tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
                       tickLine={false}
                     />
-                    <Tooltip content={<CustomTooltipOperacao />} cursor={{ fill: "rgba(255, 255, 255, 0.05)" }} />
+                    <RechartsTooltip content={<CustomTooltipOperacao />} cursor={{ fill: "rgba(255, 255, 255, 0.05)" }} />
                     <Legend 
                       wrapperStyle={{ paddingTop: '16px' }}
                       formatter={(value) => value === 'depositos' ? 'Depósitos' : 'Saques'}
@@ -528,19 +551,28 @@ export function FluxoFinanceiroOperacional({
           <TabsContent value="resultado" className="mt-4 space-y-4">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
-                <div className="text-xs text-muted-foreground mb-1">Total Depositado</div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                  Total Depositado
+                  <KpiHelp text="Soma de todos os depósitos feitos em bookmakers" />
+                </div>
                 <span className="text-xl font-bold text-blue-400 font-mono">
                   {formatCurrency(resultadoOperacional.totalDepositos)}
                 </span>
               </div>
               <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/20">
-                <div className="text-xs text-muted-foreground mb-1">Total Sacado</div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                  Total Sacado
+                  <KpiHelp text="Soma de todos os saques realizados dos bookmakers" />
+                </div>
                 <span className="text-xl font-bold text-purple-400 font-mono">
                   {formatCurrency(resultadoOperacional.totalSaques)}
                 </span>
               </div>
               <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
-                <div className="text-xs text-muted-foreground mb-1">Saldo em Bookmakers</div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                  Saldo em Bookmakers
+                  <KpiHelp text="Capital atualmente disponível dentro dos bookmakers" />
+                </div>
                 <span className="text-xl font-bold font-mono">
                   {formatCurrency(resultadoOperacional.saldoBookmakers)}
                 </span>
@@ -550,7 +582,10 @@ export function FluxoFinanceiroOperacional({
                   ? "bg-emerald-500/10 border-emerald-500/20" 
                   : "bg-destructive/10 border-destructive/20"
               }`}>
-                <div className="text-xs text-muted-foreground mb-1">Resultado Estimado</div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                  Resultado Estimado
+                  <KpiHelp text="Lucro/prejuízo = Saldo Bookmakers + Saques - Depósitos" />
+                </div>
                 <span className={`text-xl font-bold font-mono ${
                   resultadoOperacional.resultado >= 0 ? "text-emerald-400" : "text-destructive"
                 }`}>
