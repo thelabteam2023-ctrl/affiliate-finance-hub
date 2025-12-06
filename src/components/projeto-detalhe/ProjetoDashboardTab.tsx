@@ -9,11 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   TrendingUp, 
   Target, 
-  PieChart,
-  Building2
+  Building2,
+  BarChart3
 } from "lucide-react";
 import {
   AreaChart,
@@ -24,7 +25,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
+import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
@@ -43,6 +44,7 @@ interface Aposta {
   lucro_prejuizo: number | null;
   resultado: string | null;
   stake: number;
+  esporte: string;
   bookmaker_id: string;
   bookmaker_nome: string;
   parceiro_nome: string | null;
@@ -70,7 +72,7 @@ interface BookmakerMetrics {
 export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRange }: ProjetoDashboardTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedBookmaker, setSelectedBookmaker] = useState<string>("");
+  const [selectedEsporte, setSelectedEsporte] = useState<string>("");
 
   const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
     const today = new Date();
@@ -115,6 +117,7 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
           lucro_prejuizo, 
           resultado, 
           stake,
+          esporte,
           bookmaker_id,
           bookmakers!inner(nome, parceiro_id, parceiros(nome))
         `)
@@ -132,13 +135,13 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
 
       if (error) throw error;
       
-      // Transform data to include bookmaker name
       const transformedData: Aposta[] = (data || []).map((item: any) => ({
         id: item.id,
         data_aposta: item.data_aposta,
         lucro_prejuizo: item.lucro_prejuizo,
         resultado: item.resultado,
         stake: item.stake,
+        esporte: item.esporte,
         bookmaker_id: item.bookmaker_id,
         bookmaker_nome: item.bookmakers?.nome || 'Desconhecida',
         parceiro_nome: item.bookmakers?.parceiros?.nome || null,
@@ -152,7 +155,6 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     }
   };
 
-  // Parse date string as local time
   const parseLocalDateTime = (dateString: string): Date => {
     if (!dateString) return new Date();
     const cleanDate = dateString.replace(/\+00:00$/, '').replace(/Z$/, '').replace(/\+\d{2}:\d{2}$/, '');
@@ -161,7 +163,6 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     return new Date(year, month - 1, day);
   };
 
-  // Aggregate data by day
   const evolutionData: DailyData[] = (() => {
     const dailyMap = apostas.reduce((acc: Record<string, number>, aposta) => {
       const dateKey = aposta.data_aposta.split('T')[0];
@@ -185,19 +186,7 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     });
   })();
 
-  // Prepare results pie chart data with all outcome types
-  const resultadosData = [
-    { name: "GREEN", value: apostas.filter(a => a.resultado === "GREEN").length },
-    { name: "RED", value: apostas.filter(a => a.resultado === "RED").length },
-    { name: "MEIO_GREEN", value: apostas.filter(a => a.resultado === "MEIO_GREEN").length },
-    { name: "MEIO_RED", value: apostas.filter(a => a.resultado === "MEIO_RED").length },
-    { name: "VOID", value: apostas.filter(a => a.resultado === "VOID").length },
-    { name: "Pendente", value: apostas.filter(a => !a.resultado || a.resultado === "PENDENTE").length },
-  ].filter(d => d.value > 0);
-
-  const resultadosColors = ["#22C55E", "#EF4444", "#4ADE80", "#F87171", "#6B7280", "#3B82F6"];
-
-  // Aggregate data by bookmaker
+  // Aggregate by bookmaker
   const bookmakerMetrics = useMemo(() => {
     const metricsMap = apostas.reduce((acc: Record<string, BookmakerMetrics>, aposta) => {
       const key = aposta.bookmaker_id;
@@ -229,7 +218,6 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
       return acc;
     }, {});
 
-    // Calculate ROI and sort by total bets
     return Object.values(metricsMap)
       .map(m => ({
         ...m,
@@ -238,27 +226,59 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
       .sort((a, b) => b.totalApostas - a.totalApostas);
   }, [apostas]);
 
-  // Auto-select the bookmaker with most bets
-  useEffect(() => {
-    if (bookmakerMetrics.length > 0 && !selectedBookmaker) {
-      setSelectedBookmaker(bookmakerMetrics[0].bookmaker_id);
+  // Aggregate by sport
+  const esportesMap = apostas.reduce((acc: Record<string, { 
+    greens: number; 
+    reds: number; 
+    meioGreens: number;
+    meioReds: number;
+    lucro: number;
+  }>, aposta) => {
+    if (!acc[aposta.esporte]) {
+      acc[aposta.esporte] = { greens: 0, reds: 0, meioGreens: 0, meioReds: 0, lucro: 0 };
     }
-  }, [bookmakerMetrics, selectedBookmaker]);
+    if (aposta.resultado === "GREEN") acc[aposta.esporte].greens++;
+    if (aposta.resultado === "RED") acc[aposta.esporte].reds++;
+    if (aposta.resultado === "MEIO_GREEN") acc[aposta.esporte].meioGreens++;
+    if (aposta.resultado === "MEIO_RED") acc[aposta.esporte].meioReds++;
+    acc[aposta.esporte].lucro += aposta.lucro_prejuizo || 0;
+    return acc;
+  }, {});
 
-  // Reset selection when period changes and current selection is no longer available
+  const esportesData = useMemo(() => {
+    const data = Object.entries(esportesMap).map(([esporte, data]) => {
+      const totalApostas = data.greens + data.reds + data.meioGreens + data.meioReds;
+      return {
+        esporte,
+        greens: data.greens,
+        reds: data.reds,
+        meioGreens: data.meioGreens,
+        meioReds: data.meioReds,
+        lucro: data.lucro,
+        totalApostas,
+      };
+    });
+    return data.sort((a, b) => b.totalApostas - a.totalApostas);
+  }, [esportesMap]);
+
   useEffect(() => {
-    if (selectedBookmaker && bookmakerMetrics.length > 0) {
-      const stillExists = bookmakerMetrics.some(b => b.bookmaker_id === selectedBookmaker);
+    if (esportesData.length > 0 && !selectedEsporte) {
+      setSelectedEsporte(esportesData[0].esporte);
+    }
+  }, [esportesData, selectedEsporte]);
+
+  useEffect(() => {
+    if (selectedEsporte && esportesData.length > 0) {
+      const stillExists = esportesData.some(e => e.esporte === selectedEsporte);
       if (!stillExists) {
-        setSelectedBookmaker(bookmakerMetrics[0].bookmaker_id);
+        setSelectedEsporte(esportesData[0].esporte);
       }
     }
-  }, [bookmakerMetrics, selectedBookmaker]);
+  }, [esportesData, selectedEsporte]);
 
-  // Get selected bookmaker data
-  const selectedBookmakerData = useMemo(() => {
-    return bookmakerMetrics.find(b => b.bookmaker_id === selectedBookmaker);
-  }, [bookmakerMetrics, selectedBookmaker]);
+  const filteredEsportesData = useMemo(() => {
+    return esportesData.filter(e => e.esporte === selectedEsporte);
+  }, [esportesData, selectedEsporte]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -421,45 +441,80 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
         </CardContent>
       </Card>
 
-      {/* Distribuição de Resultados */}
+      {/* Performance por Casa - Lista */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <PieChart className="h-5 w-5" />
-            Distribuição de Resultados
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[250px]">
-            <ModernDonutChart
-              data={resultadosData}
-              height={250}
-              innerRadius={55}
-              outerRadius={85}
-              showLabels={true}
-              colors={resultadosColors}
-              formatValue={(value) => `${value} apostas`}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Performance por Casa */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
             Performance por Casa
           </CardTitle>
-          {bookmakerMetrics.length > 0 && (
-            <Select value={selectedBookmaker} onValueChange={setSelectedBookmaker}>
-              <SelectTrigger className="w-[200px] h-8 text-sm">
+        </CardHeader>
+        <CardContent className="px-0">
+          <ScrollArea className="h-[260px]">
+            {/* Header */}
+            <div className="grid grid-cols-5 gap-2 px-6 pb-2 text-xs text-muted-foreground font-medium border-b border-border/50">
+              <div className="col-span-1">Casa</div>
+              <div className="text-right">Apostas</div>
+              <div className="text-right">Volume</div>
+              <div className="text-right">Lucro</div>
+              <div className="text-right">ROI</div>
+            </div>
+            
+            {/* Rows */}
+            <div className="divide-y divide-border/30">
+              {bookmakerMetrics.map((bm) => (
+                <div 
+                  key={bm.bookmaker_id} 
+                  className="grid grid-cols-5 gap-2 px-6 py-3 hover:bg-muted/30 transition-colors"
+                >
+                  <div className="col-span-1">
+                    <p className="text-sm font-medium truncate">{bm.bookmaker_nome}</p>
+                    {bm.parceiro_nome && (
+                      <p className="text-xs text-muted-foreground truncate">{bm.parceiro_nome}</p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-mono">{bm.totalApostas}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {bm.greens}G / {bm.reds}R
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-mono">{formatCurrency(bm.totalStake)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-mono font-medium ${bm.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {formatCurrency(bm.lucro)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-mono font-medium ${bm.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {bm.roi.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {/* Performance por Esporte */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Performance por Esporte
+          </CardTitle>
+          {esportesData.length > 0 && (
+            <Select value={selectedEsporte} onValueChange={setSelectedEsporte}>
+              <SelectTrigger className="w-[180px] h-8 text-sm">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                {bookmakerMetrics.map(bm => (
-                  <SelectItem key={bm.bookmaker_id} value={bm.bookmaker_id}>
-                    {bm.bookmaker_nome} ({bm.totalApostas})
+                {esportesData.map(esporte => (
+                  <SelectItem key={esporte.esporte} value={esporte.esporte}>
+                    {esporte.esporte} ({esporte.totalApostas})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -467,88 +522,102 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
           )}
         </CardHeader>
         <CardContent>
-          {selectedBookmakerData ? (
-            <div className="space-y-4">
-              {/* Parceiro info */}
-              {selectedBookmakerData.parceiro_nome && (
-                <div className="text-sm text-muted-foreground">
-                  Parceiro: <span className="text-foreground font-medium">{selectedBookmakerData.parceiro_nome}</span>
-                </div>
-              )}
-              
-              {/* Main metrics grid */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-muted/30 rounded-lg p-4">
-                  <p className="text-xs text-muted-foreground mb-1">Total Apostado</p>
-                  <p className="text-lg font-bold font-mono">
-                    {formatCurrency(selectedBookmakerData.totalStake)}
-                  </p>
-                </div>
-                <div className="bg-muted/30 rounded-lg p-4">
-                  <p className="text-xs text-muted-foreground mb-1">Lucro/Prejuízo</p>
-                  <p className={`text-lg font-bold font-mono ${selectedBookmakerData.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {formatCurrency(selectedBookmakerData.lucro)}
-                  </p>
-                </div>
-                <div className="bg-muted/30 rounded-lg p-4">
-                  <p className="text-xs text-muted-foreground mb-1">Qtd. Apostas</p>
-                  <p className="text-lg font-bold font-mono">
-                    {selectedBookmakerData.totalApostas}
-                  </p>
-                </div>
-                <div className="bg-muted/30 rounded-lg p-4">
-                  <p className="text-xs text-muted-foreground mb-1">ROI</p>
-                  <p className={`text-lg font-bold font-mono ${selectedBookmakerData.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {selectedBookmakerData.roi.toFixed(2)}%
-                  </p>
-                </div>
-              </div>
-
-              {/* Win rate bar */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Taxa de Acerto</span>
-                  <span className="font-mono font-medium">
-                    {selectedBookmakerData.totalApostas > 0 
-                      ? ((selectedBookmakerData.greens / selectedBookmakerData.totalApostas) * 100).toFixed(1) 
-                      : 0}%
-                  </span>
-                </div>
-                <div className="h-2 bg-muted/50 rounded-full overflow-hidden flex">
-                  <div 
-                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-500"
-                    style={{ 
-                      width: `${selectedBookmakerData.totalApostas > 0 
-                        ? (selectedBookmakerData.greens / selectedBookmakerData.totalApostas) * 100 
-                        : 0}%` 
-                    }}
-                  />
-                  <div 
-                    className="h-full bg-gradient-to-r from-red-500 to-red-400 transition-all duration-500"
-                    style={{ 
-                      width: `${selectedBookmakerData.totalApostas > 0 
-                        ? (selectedBookmakerData.reds / selectedBookmakerData.totalApostas) * 100 
-                        : 0}%` 
-                    }}
-                  />
-                </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    Greens: {selectedBookmakerData.greens}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                    Reds: {selectedBookmakerData.reds}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-[200px] text-muted-foreground">
-              Selecione uma casa para ver os detalhes
-            </div>
-          )}
+          <ModernBarChart
+            data={filteredEsportesData}
+            categoryKey="esporte"
+            bars={[
+              { 
+                dataKey: "greens", 
+                label: "Greens", 
+                gradientStart: "#22C55E", 
+                gradientEnd: "#16A34A" 
+              },
+              { 
+                dataKey: "meioGreens", 
+                label: "Meio Green", 
+                gradientStart: "#4ADE80", 
+                gradientEnd: "#22C55E" 
+              },
+              { 
+                dataKey: "reds", 
+                label: "Reds", 
+                gradientStart: "#EF4444", 
+                gradientEnd: "#DC2626" 
+              },
+              { 
+                dataKey: "meioReds", 
+                label: "Meio Red", 
+                gradientStart: "#F87171", 
+                gradientEnd: "#EF4444" 
+              },
+            ]}
+            height={250}
+            barSize={16}
+            showLabels={false}
+            showLegend={true}
+            customTooltipContent={(payload, label) => {
+              const data = payload[0]?.payload;
+              if (!data) return null;
+              const totalApostas = data.greens + data.reds + data.meioGreens + data.meioReds;
+              const totalWins = data.greens + (data.meioGreens * 0.5);
+              const winRate = totalApostas > 0 ? ((totalWins / totalApostas) * 100).toFixed(1) : "0";
+              return (
+                <>
+                  <p className="font-medium text-sm mb-3 text-foreground">{label}</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#22C55E] to-[#16A34A]" />
+                        <span className="text-xs text-muted-foreground">Greens</span>
+                      </div>
+                      <span className="text-sm font-semibold font-mono">{data.greens}</span>
+                    </div>
+                    {data.meioGreens > 0 && (
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#4ADE80] to-[#22C55E]" />
+                          <span className="text-xs text-muted-foreground">Meio Green</span>
+                        </div>
+                        <span className="text-sm font-semibold font-mono">{data.meioGreens}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#EF4444] to-[#DC2626]" />
+                        <span className="text-xs text-muted-foreground">Reds</span>
+                      </div>
+                      <span className="text-sm font-semibold font-mono">{data.reds}</span>
+                    </div>
+                    {data.meioReds > 0 && (
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#F87171] to-[#EF4444]" />
+                          <span className="text-xs text-muted-foreground">Meio Red</span>
+                        </div>
+                        <span className="text-sm font-semibold font-mono">{data.meioReds}</span>
+                      </div>
+                    )}
+                    <div className="border-t border-border/50 pt-2 mt-2 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Total Apostas</span>
+                        <span className="text-sm font-mono">{totalApostas}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Lucro/Prejuízo</span>
+                        <span className={`text-sm font-mono font-semibold ${data.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                          {formatCurrency(data.lucro)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Win Rate</span>
+                        <span className="text-sm font-mono">{winRate}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            }}
+          />
         </CardContent>
       </Card>
     </div>
