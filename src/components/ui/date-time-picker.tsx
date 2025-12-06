@@ -109,6 +109,36 @@ export function DateTimePicker({
     updateDateTime(date, hour, padded);
   };
 
+  const focusNextFormElement = () => {
+    requestAnimationFrame(() => {
+      const trigger = document.querySelector('[data-datetime-trigger="true"]');
+      if (trigger) {
+        const focusableElements = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        const parent = trigger.closest('form') || trigger.closest('[role="dialog"]') || document.body;
+        const focusables = Array.from(parent.querySelectorAll(focusableElements));
+        const currentIndex = focusables.indexOf(trigger as Element);
+        const nextElement = focusables[currentIndex + 1] as HTMLElement;
+        if (nextElement) nextElement.focus();
+      }
+    });
+  };
+
+  const handleHourKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      setOpen(false);
+      focusNextFormElement();
+    }
+  };
+
+  const handleMinuteKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      setOpen(false);
+      focusNextFormElement();
+    }
+  };
+
   const displayValue = date
     ? `${format(date, "dd/MM/yyyy", { locale: ptBR })} ${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`
     : null;
@@ -118,6 +148,7 @@ export function DateTimePicker({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
+          data-datetime-trigger="true"
           className={cn(
             "w-full justify-center text-center font-normal h-10 border border-input bg-background hover:bg-accent/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all",
             !date && "text-muted-foreground"
@@ -150,6 +181,7 @@ export function DateTimePicker({
                 value={hour}
                 onChange={handleHourChange}
                 onBlur={handleHourBlur}
+                onKeyDown={handleHourKeyDown}
                 className="w-12 h-8 text-center text-sm"
                 placeholder="HH"
                 maxLength={2}
@@ -162,6 +194,7 @@ export function DateTimePicker({
                 value={minute}
                 onChange={handleMinuteChange}
                 onBlur={handleMinuteBlur}
+                onKeyDown={handleMinuteKeyDown}
                 className="w-12 h-8 text-center text-sm"
                 placeholder="MM"
                 maxLength={2}
