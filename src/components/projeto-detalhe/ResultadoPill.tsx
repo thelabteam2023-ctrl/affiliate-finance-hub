@@ -235,11 +235,17 @@ export function ResultadoPill({
       {/* Pill de Resultado - sempre clicável para alterar resultado */}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Badge 
-            className={`${getResultadoColor(displayValue)} text-[10px] px-1.5 py-0 cursor-pointer hover:opacity-80 transition-opacity`}
+          <button
+            type="button"
+            className="focus:outline-none"
+            onClick={(e) => e.stopPropagation()}
           >
-            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : getDisplayLabel(displayValue)}
-          </Badge>
+            <Badge 
+              className={`${getResultadoColor(displayValue)} text-[10px] px-1.5 py-0 cursor-pointer hover:opacity-80 transition-opacity`}
+            >
+              {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : getDisplayLabel(displayValue)}
+            </Badge>
+          </button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-2" align="end">
           <div className="flex flex-col gap-1">
