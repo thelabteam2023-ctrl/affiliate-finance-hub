@@ -735,7 +735,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="PENDENTE">Pendente</SelectItem>
-                    <SelectItem value="REALIZADA">Realizada</SelectItem>
                     <SelectItem value="CONCLUIDA">Concluída</SelectItem>
                   </SelectContent>
                 </Select>
