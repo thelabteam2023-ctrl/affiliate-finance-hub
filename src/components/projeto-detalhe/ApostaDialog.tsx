@@ -307,22 +307,28 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     if (!mandante || !visitante) return [];
     
     const mercadosMoneyline = ["Moneyline / 1X2", "Moneyline", "Dupla Chance", "Draw No Bet", "Vencedor do Jogo", "Vencedor"];
-    const mercadosOver = ["Over (Gols)", "Over (Pontos)", "Over (Games)", "Over (Runs)", "Over (Rounds)", "Over (Mapas)", "Over"];
-    const mercadosUnder = ["Under (Gols)", "Under (Pontos)", "Under (Games)", "Under (Runs)", "Under (Rounds)", "Under (Mapas)", "Under"];
     const mercadosBTTS = ["Ambas Marcam (BTTS)", "Ambas Marcam"];
     
+    // Moneyline - mostra mandante, empate, visitante
     if (mercadosMoneyline.includes(mercado)) {
       return [mandante, "Empate", visitante];
     }
-    if (mercadosOver.some(m => mercado.includes("Over"))) {
+    
+    // Over - qualquer mercado que contenha "Over"
+    if (mercado.includes("Over")) {
       return ["Over 0.5", "Over 1.5", "Over 2.5", "Over 3.5", "Over 4.5", "Over 5.5"];
     }
-    if (mercadosUnder.some(m => mercado.includes("Under"))) {
+    
+    // Under - qualquer mercado que contenha "Under"
+    if (mercado.includes("Under")) {
       return ["Under 0.5", "Under 1.5", "Under 2.5", "Under 3.5", "Under 4.5", "Under 5.5"];
     }
+    
+    // BTTS
     if (mercadosBTTS.includes(mercado)) {
       return ["Sim", "Não"];
     }
+    
     // Handicap is handled separately with dedicated fields
     if (isHandicapMercado) {
       return [];
