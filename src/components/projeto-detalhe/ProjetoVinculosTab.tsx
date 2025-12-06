@@ -340,42 +340,18 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   return (
     <div className="space-y-4">
       {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Contas</CardTitle>
+            <CardTitle className="text-sm font-medium">Contas no Projeto</CardTitle>
             <Link2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{vinculos.length}</div>
             <p className="text-xs text-muted-foreground">
-              Contas utilizadas no projeto
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Contas Ativas</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-400">{vinculosAtivos}</div>
-            <p className="text-xs text-muted-foreground">
-              Operando normalmente
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Contas Limitadas</CardTitle>
-            <ShieldAlert className="h-4 w-4 text-yellow-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-400">{vinculosLimitados}</div>
-            <p className="text-xs text-muted-foreground">
-              Com restrições operacionais
+              <span className="text-emerald-400">{vinculosAtivos} ativas</span>
+              {" · "}
+              <span className="text-yellow-400">{vinculosLimitados} limitadas</span>
             </p>
           </CardContent>
         </Card>
