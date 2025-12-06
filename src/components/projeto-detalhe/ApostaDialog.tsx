@@ -683,7 +683,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             {/* Campos comuns: Data/Hora, Esporte, Evento */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Data/Hora *</Label>
+                <Label className="block text-center uppercase text-xs tracking-wider">Data/Hora *</Label>
                 <Input
                   type="datetime-local"
                   value={dataAposta}
@@ -691,7 +691,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                 />
               </div>
               <div className="space-y-2">
-                <Label>Esporte *</Label>
+                <Label className="block text-center uppercase text-xs tracking-wider">Esporte *</Label>
                 <Select value={esporte} onValueChange={(val) => {
                   setEsporte(val);
                   incrementSportUsage(val);
@@ -711,7 +711,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             {/* Mandante e Visitante */}
             <div className="flex items-end gap-2">
               <div className="flex-1 space-y-2">
-                <Label className="block text-center">Mandante *</Label>
+                <Label className="block text-center uppercase text-xs tracking-wider">Mandante *</Label>
                 <Input
                   value={mandante}
                   onChange={(e) => setMandante(e.target.value.toUpperCase())}
@@ -723,7 +723,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                 <span className="text-xl font-bold text-muted-foreground">X</span>
               </div>
               <div className="flex-1 space-y-2">
-                <Label className="block text-center">Visitante *</Label>
+                <Label className="block text-center uppercase text-xs tracking-wider">Visitante *</Label>
                 <Input
                   value={visitante}
                   onChange={(e) => setVisitante(e.target.value.toUpperCase())}
@@ -736,7 +736,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             {/* Mercado e Seleção */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Mercado</Label>
+                <Label className="block text-center uppercase text-xs tracking-wider">Mercado</Label>
                 <Select value={mercado} onValueChange={(val) => {
                   setMercado(val);
                   setSelecao(""); // Reset seleção ao mudar mercado
@@ -754,7 +754,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               {/* Seleção - mostra campos de Handicap ou select normal */}
               {isHandicapMercado ? (
                 <div className="space-y-2">
-                  <Label>Seleção de Handicap *</Label>
+                  <Label className="block text-center uppercase text-xs tracking-wider">Seleção Handicap *</Label>
                   <div className="grid grid-cols-2 gap-3">
                     <Select value={handicapTime} onValueChange={(v) => setHandicapTime(v as "mandante" | "visitante")}>
                       <SelectTrigger>
@@ -784,7 +784,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Label>Seleção *</Label>
+                  <Label className="block text-center uppercase text-xs tracking-wider">Seleção *</Label>
                   {selecaoOptions.length > 0 ? (
                     <Select value={selecao} onValueChange={setSelecao}>
                       <SelectTrigger>
@@ -818,7 +818,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               <TabsContent value="bookmaker" className="space-y-4 mt-4">
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label>Bookmaker *</Label>
+                    <Label className="block text-center uppercase text-xs tracking-wider">Bookmaker *</Label>
                     <Select value={bookmakerId} onValueChange={setBookmakerId}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione" />
@@ -833,7 +833,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Odd *</Label>
+                    <Label className="block text-center uppercase text-xs tracking-wider">Odd *</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -843,7 +843,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Stake (R$) *</Label>
+                    <Label className="block text-center uppercase text-xs tracking-wider">Stake (R$) *</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -874,7 +874,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                     <Label className="text-sm font-medium text-purple-400">LAY (Exchange)</Label>
                     <div className="grid grid-cols-4 gap-4">
                       <div className="space-y-2">
-                        <Label>Exchange *</Label>
+                        <Label className="block text-center uppercase text-xs tracking-wider">Exchange *</Label>
                         <Select value={layExchange} onValueChange={setLayExchange}>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
@@ -887,7 +887,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>Odd Lay *</Label>
+                        <Label className="block text-center uppercase text-xs tracking-wider">Odd Lay *</Label>
                         <Input
                           type="number"
                           step="0.01"
@@ -897,7 +897,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Stake Lay</Label>
+                        <Label className="block text-center uppercase text-xs tracking-wider">Stake Lay</Label>
                         <Input
                           type="text"
                           value={layStake !== null ? formatCurrency(layStake) : "-"}
@@ -906,7 +906,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Liability</Label>
+                        <Label className="block text-center uppercase text-xs tracking-wider">Liability</Label>
                         <Input
                           type="text"
                           value={layLiability !== null ? formatCurrency(layLiability) : "-"}
@@ -939,7 +939,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="space-y-2">
-                      <Label>Exchange *</Label>
+                      <Label className="block text-center uppercase text-xs tracking-wider">Exchange *</Label>
                       <Select value={exchangeSelecionada} onValueChange={setExchangeSelecionada}>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione" />
@@ -970,7 +970,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                       <Label className="text-sm font-medium text-emerald-400 mb-3 block">BACK</Label>
                       <div className="space-y-3">
                         <div className="space-y-2">
-                          <Label>Odd Back *</Label>
+                          <Label className="block text-center uppercase text-xs tracking-wider">Odd Back *</Label>
                           <Input
                             type="number"
                             step="0.01"
@@ -980,7 +980,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>Stake (R$) *</Label>
+                          <Label className="block text-center uppercase text-xs tracking-wider">Stake (R$) *</Label>
                           <Input
                             type="number"
                             step="0.01"
@@ -997,7 +997,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                       <Label className="text-sm font-medium text-rose-400 mb-3 block">LAY</Label>
                       <div className="space-y-3">
                         <div className="space-y-2">
-                          <Label>Odd Lay *</Label>
+                          <Label className="block text-center uppercase text-xs tracking-wider">Odd Lay *</Label>
                           <Input
                             type="number"
                             step="0.01"
@@ -1008,7 +1008,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div className="space-y-2">
-                            <Label className="text-xs">Stake Lay</Label>
+                            <Label className="block text-center uppercase text-[10px] tracking-wider">Stake Lay</Label>
                             <Input
                               type="text"
                               value={layStake !== null ? formatCurrency(layStake) : "-"}
@@ -1017,7 +1017,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-xs">Liability</Label>
+                            <Label className="block text-center uppercase text-[10px] tracking-wider">Liability</Label>
                             <Input
                               type="text"
                               value={layLiability !== null ? formatCurrency(layLiability) : "-"}
@@ -1035,7 +1035,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
 
             {/* Status / Resultado */}
             <div className="space-y-2">
-              <Label>Status / Resultado</Label>
+              <Label className="block text-center uppercase text-xs tracking-wider">Status / Resultado</Label>
               <Select value={statusResultado} onValueChange={setStatusResultado}>
                 <SelectTrigger>
                   <SelectValue />
@@ -1053,7 +1053,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             {/* Valor Retorno */}
             {statusResultado && statusResultado !== "PENDENTE" && statusResultado !== "VOID" && (
               <div className="space-y-2">
-                <Label>Valor Retorno (R$)</Label>
+                <Label className="block text-center uppercase text-xs tracking-wider">Valor Retorno (R$)</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -1071,7 +1071,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
 
             {/* Observações */}
             <div className="space-y-2">
-              <Label>Observações</Label>
+              <Label className="block text-center uppercase text-xs tracking-wider">Observações</Label>
               <Textarea
                 value={observacoes}
                 onChange={(e) => setObservacoes(e.target.value)}
