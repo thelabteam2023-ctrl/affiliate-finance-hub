@@ -961,31 +961,56 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {aposta ? "Editar Aposta" : "Nova Aposta"}
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
+              {aposta ? "Editar Aposta" : "Registrar Aposta"}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            {/* Campos comuns: Data/Hora, Esporte, Evento */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="block text-center uppercase text-xs tracking-wider">Data e Hora do Evento *</Label>
+          <div className="grid gap-5 py-2">
+            {/* Linha 1: Mandante x Visitante + Data/Hora */}
+            <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-3 items-end">
+              <div className="space-y-1.5">
+                <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Mandante</Label>
+                <Input
+                  value={mandante}
+                  onChange={(e) => setMandante(e.target.value.toUpperCase())}
+                  placeholder="REAL MADRID"
+                  className="uppercase text-center h-10"
+                />
+              </div>
+              <div className="flex items-center justify-center pb-1">
+                <span className="text-lg font-bold text-muted-foreground/60">×</span>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Visitante</Label>
+                <Input
+                  value={visitante}
+                  onChange={(e) => setVisitante(e.target.value.toUpperCase())}
+                  placeholder="BARCELONA"
+                  className="uppercase text-center h-10"
+                />
+              </div>
+              <div className="space-y-1.5 min-w-[180px]">
+                <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Data/Hora</Label>
                 <DateTimePicker
                   value={dataAposta}
                   onChange={setDataAposta}
                   placeholder="Selecione"
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="block text-center uppercase text-xs tracking-wider">Esporte *</Label>
+            </div>
+
+            {/* Linha 2: Esporte, Mercado, Seleção */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Esporte</Label>
                 <Select value={esporte} onValueChange={(val) => {
                   setEsporte(val);
                   incrementSportUsage(val);
                 }}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-10">
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
@@ -995,43 +1020,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* Mandante e Visitante */}
-            <div className="flex items-end gap-2">
-              <div className="flex-1 space-y-2">
-                <Label className="block text-center uppercase text-xs tracking-wider">Mandante *</Label>
-                <Input
-                  value={mandante}
-                  onChange={(e) => setMandante(e.target.value.toUpperCase())}
-                  placeholder="EX: REAL MADRID"
-                  className="uppercase text-center"
-                />
-              </div>
-              <div className="flex items-center justify-center pb-2">
-                <span className="text-xl font-bold text-muted-foreground">X</span>
-              </div>
-              <div className="flex-1 space-y-2">
-                <Label className="block text-center uppercase text-xs tracking-wider">Visitante *</Label>
-                <Input
-                  value={visitante}
-                  onChange={(e) => setVisitante(e.target.value.toUpperCase())}
-                  placeholder="EX: BARCELONA"
-                  className="uppercase text-center"
-                />
-              </div>
-            </div>
-
-            {/* Mercado e Seleção */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="block text-center uppercase text-xs tracking-wider">Mercado</Label>
+              <div className="space-y-1.5">
+                <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Mercado</Label>
                 <Select value={mercado} onValueChange={(val) => {
                   setMercado(val);
-                  setSelecao(""); // Reset seleção ao mudar mercado
+                  setSelecao("");
                 }} disabled={!esporte}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={esporte ? "Selecione o mercado" : "Selecione o esporte primeiro"} />
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder={esporte ? "Selecione" : "Esporte primeiro"} />
                   </SelectTrigger>
                   <SelectContent>
                     {mercadosDisponiveis.map((m) => (
@@ -1042,12 +1038,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               </div>
               {/* Seleção - mostra campos de Handicap ou select normal */}
               {isHandicapMercado ? (
-                <div className="space-y-2">
-                  <Label className="block text-center uppercase text-xs tracking-wider">Seleção Handicap *</Label>
-                  <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Handicap</Label>
+                  <div className="grid grid-cols-2 gap-2">
                     <Select value={handicapTime} onValueChange={(v) => setHandicapTime(v as "mandante" | "visitante")}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o time" />
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Time" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="mandante">{mandante || "Mandante"}</SelectItem>
@@ -1055,8 +1051,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                       </SelectContent>
                     </Select>
                     <Select value={handicapLinha} onValueChange={setHandicapLinha} disabled={!handicapTime}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a linha" />
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Linha" />
                       </SelectTrigger>
                       <SelectContent>
                         {HANDICAP_LINHAS.map((linha) => (
@@ -1066,17 +1062,17 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                     </Select>
                   </div>
                   {effectiveSelecao && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Seleção: <span className="font-medium text-foreground">{effectiveSelecao}</span>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      → <span className="font-medium text-foreground">{effectiveSelecao}</span>
                     </p>
                   )}
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <Label className="block text-center uppercase text-xs tracking-wider">Seleção *</Label>
+                <div className="space-y-1.5">
+                  <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Seleção</Label>
                   {selecaoOptions.length > 0 ? (
                     <Select value={selecao} onValueChange={setSelecao}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-10">
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1089,7 +1085,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                     <Input
                       value={selecao}
                       onChange={(e) => setSelecao(e.target.value)}
-                      placeholder="Ex: Real Madrid, Over 2.5"
+                      placeholder="Ex: Real Madrid"
+                      className="h-10"
                     />
                   )}
                 </div>
