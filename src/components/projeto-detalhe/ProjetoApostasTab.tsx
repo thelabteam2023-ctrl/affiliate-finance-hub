@@ -277,10 +277,15 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
                   {aposta.lucro_prejuizo !== null && (
                     <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
                       <span className="text-muted-foreground">P/L:</span>
-                      <span className={`font-medium flex items-center gap-0.5 ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {aposta.lucro_prejuizo >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                        {formatCurrency(aposta.lucro_prejuizo)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-medium flex items-center gap-0.5 ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          {aposta.lucro_prejuizo >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                          {formatCurrency(aposta.lucro_prejuizo)}
+                        </span>
+                        <span className={`text-[10px] px-1 py-0.5 rounded ${aposta.lucro_prejuizo >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                          {((aposta.lucro_prejuizo / aposta.stake) * 100).toFixed(1)}%
+                        </span>
+                      </div>
                     </div>
                   )}
                   <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
@@ -324,9 +329,14 @@ export function ProjetoApostasTab({ projetoId }: ProjetoApostasTabProps) {
                     <div className="text-right">
                       <p className="text-sm font-medium">{formatCurrency(aposta.stake)}</p>
                       {aposta.lucro_prejuizo !== null && (
-                        <p className={`text-sm ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                          {formatCurrency(aposta.lucro_prejuizo)}
-                        </p>
+                        <div className="flex items-center justify-end gap-2">
+                          <p className={`text-sm ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {formatCurrency(aposta.lucro_prejuizo)}
+                          </p>
+                          <span className={`text-[10px] px-1 py-0.5 rounded ${aposta.lucro_prejuizo >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                            {((aposta.lucro_prejuizo / aposta.stake) * 100).toFixed(1)}%
+                          </span>
+                        </div>
                       )}
                     </div>
                     <ResultadoPill
