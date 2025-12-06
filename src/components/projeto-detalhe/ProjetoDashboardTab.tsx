@@ -11,11 +11,9 @@ import {
 } from "@/components/ui/select";
 import { 
   TrendingUp, 
-  TrendingDown, 
   Target, 
-  DollarSign,
   PieChart,
-  BarChart3
+  Building2
 } from "lucide-react";
 import {
   AreaChart,
@@ -27,7 +25,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
-import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
@@ -45,8 +42,10 @@ interface Aposta {
   data_aposta: string;
   lucro_prejuizo: number | null;
   resultado: string | null;
-  estrategia: string | null;
-  esporte: string;
+  stake: number;
+  bookmaker_id: string;
+  bookmaker_nome: string;
+  parceiro_nome: string | null;
 }
 
 interface DailyData {
@@ -56,10 +55,22 @@ interface DailyData {
   saldo: number;
 }
 
+interface BookmakerMetrics {
+  bookmaker_id: string;
+  bookmaker_nome: string;
+  parceiro_nome: string | null;
+  totalApostas: number;
+  totalStake: number;
+  lucro: number;
+  greens: number;
+  reds: number;
+  roi: number;
+}
+
 export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRange }: ProjetoDashboardTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedEsporte, setSelectedEsporte] = useState<string>("");
+  const [selectedBookmaker, setSelectedBookmaker] = useState<string>("");
 
   const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
     const today = new Date();
@@ -98,7 +109,15 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
       
       let query = supabase
         .from("apostas")
-        .select("id, data_aposta, lucro_prejuizo, resultado, estrategia, esporte")
+        .select(`
+          id, 
+          data_aposta, 
+          lucro_prejuizo, 
+          resultado, 
+          stake,
+          bookmaker_id,
+          bookmakers!inner(nome, parceiro_id, parceiros(nome))
+        `)
         .eq("projeto_id", projetoId)
         .order("data_aposta", { ascending: true });
 
@@ -112,7 +131,20 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
       const { data, error } = await query;
 
       if (error) throw error;
-      setApostas(data || []);
+      
+      // Transform data to include bookmaker name
+      const transformedData: Aposta[] = (data || []).map((item: any) => ({
+        id: item.id,
+        data_aposta: item.data_aposta,
+        lucro_prejuizo: item.lucro_prejuizo,
+        resultado: item.resultado,
+        stake: item.stake,
+        bookmaker_id: item.bookmaker_id,
+        bookmaker_nome: item.bookmakers?.nome || 'Desconhecida',
+        parceiro_nome: item.bookmakers?.parceiros?.nome || null,
+      }));
+      
+      setApostas(transformedData);
     } catch (error) {
       console.error("Erro ao carregar apostas:", error);
     } finally {
@@ -131,14 +163,12 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
 
   // Aggregate data by day
   const evolutionData: DailyData[] = (() => {
-    // Group apostas by day
     const dailyMap = apostas.reduce((acc: Record<string, number>, aposta) => {
-      const dateKey = aposta.data_aposta.split('T')[0]; // Extract YYYY-MM-DD
+      const dateKey = aposta.data_aposta.split('T')[0];
       acc[dateKey] = (acc[dateKey] || 0) + (aposta.lucro_prejuizo || 0);
       return acc;
     }, {});
 
-    // Sort dates and calculate cumulative balance
     const sortedDates = Object.keys(dailyMap).sort();
     let cumulativeBalance = 0;
 
@@ -165,66 +195,70 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     { name: "Pendente", value: apostas.filter(a => !a.resultado || a.resultado === "PENDENTE").length },
   ].filter(d => d.value > 0);
 
-  // Colors for resultados (green, red, light green, light red, gray, blue)
   const resultadosColors = ["#22C55E", "#EF4444", "#4ADE80", "#F87171", "#6B7280", "#3B82F6"];
 
-  // Prepare sports bar chart data with extended metrics including MEIO_GREEN and MEIO_RED
-  const esportesMap = apostas.reduce((acc: Record<string, { 
-    greens: number; 
-    reds: number; 
-    meioGreens: number;
-    meioReds: number;
-    lucro: number;
-  }>, aposta) => {
-    if (!acc[aposta.esporte]) {
-      acc[aposta.esporte] = { greens: 0, reds: 0, meioGreens: 0, meioReds: 0, lucro: 0 };
-    }
-    if (aposta.resultado === "GREEN") acc[aposta.esporte].greens++;
-    if (aposta.resultado === "RED") acc[aposta.esporte].reds++;
-    if (aposta.resultado === "MEIO_GREEN") acc[aposta.esporte].meioGreens++;
-    if (aposta.resultado === "MEIO_RED") acc[aposta.esporte].meioReds++;
-    acc[aposta.esporte].lucro += aposta.lucro_prejuizo || 0;
-    return acc;
-  }, {});
+  // Aggregate data by bookmaker
+  const bookmakerMetrics = useMemo(() => {
+    const metricsMap = apostas.reduce((acc: Record<string, BookmakerMetrics>, aposta) => {
+      const key = aposta.bookmaker_id;
+      if (!acc[key]) {
+        acc[key] = {
+          bookmaker_id: aposta.bookmaker_id,
+          bookmaker_nome: aposta.bookmaker_nome,
+          parceiro_nome: aposta.parceiro_nome,
+          totalApostas: 0,
+          totalStake: 0,
+          lucro: 0,
+          greens: 0,
+          reds: 0,
+          roi: 0,
+        };
+      }
+      
+      acc[key].totalApostas++;
+      acc[key].totalStake += aposta.stake || 0;
+      acc[key].lucro += aposta.lucro_prejuizo || 0;
+      
+      if (aposta.resultado === "GREEN" || aposta.resultado === "MEIO_GREEN") {
+        acc[key].greens++;
+      }
+      if (aposta.resultado === "RED" || aposta.resultado === "MEIO_RED") {
+        acc[key].reds++;
+      }
+      
+      return acc;
+    }, {});
 
-  const esportesData = useMemo(() => {
-    const data = Object.entries(esportesMap).map(([esporte, data]) => {
-      const totalApostas = data.greens + data.reds + data.meioGreens + data.meioReds;
-      return {
-        esporte,
-        greens: data.greens,
-        reds: data.reds,
-        meioGreens: data.meioGreens,
-        meioReds: data.meioReds,
-        lucro: data.lucro,
-        totalApostas,
-      };
-    });
-    // Sort by total bets (most bets first)
-    return data.sort((a, b) => b.totalApostas - a.totalApostas);
-  }, [esportesMap]);
+    // Calculate ROI and sort by total bets
+    return Object.values(metricsMap)
+      .map(m => ({
+        ...m,
+        roi: m.totalStake > 0 ? (m.lucro / m.totalStake) * 100 : 0
+      }))
+      .sort((a, b) => b.totalApostas - a.totalApostas);
+  }, [apostas]);
 
-  // Auto-select the sport with most bets
+  // Auto-select the bookmaker with most bets
   useEffect(() => {
-    if (esportesData.length > 0 && !selectedEsporte) {
-      setSelectedEsporte(esportesData[0].esporte);
+    if (bookmakerMetrics.length > 0 && !selectedBookmaker) {
+      setSelectedBookmaker(bookmakerMetrics[0].bookmaker_id);
     }
-  }, [esportesData, selectedEsporte]);
+  }, [bookmakerMetrics, selectedBookmaker]);
 
   // Reset selection when period changes and current selection is no longer available
   useEffect(() => {
-    if (selectedEsporte && esportesData.length > 0) {
-      const stillExists = esportesData.some(e => e.esporte === selectedEsporte);
+    if (selectedBookmaker && bookmakerMetrics.length > 0) {
+      const stillExists = bookmakerMetrics.some(b => b.bookmaker_id === selectedBookmaker);
       if (!stillExists) {
-        setSelectedEsporte(esportesData[0].esporte);
+        setSelectedBookmaker(bookmakerMetrics[0].bookmaker_id);
       }
     }
-  }, [esportesData, selectedEsporte]);
+  }, [bookmakerMetrics, selectedBookmaker]);
 
-  // Filtered data for the chart (single sport)
-  const filteredEsportesData = useMemo(() => {
-    return esportesData.filter(e => e.esporte === selectedEsporte);
-  }, [esportesData, selectedEsporte]);
+  // Get selected bookmaker data
+  const selectedBookmakerData = useMemo(() => {
+    return bookmakerMetrics.find(b => b.bookmaker_id === selectedBookmaker);
+  }, [bookmakerMetrics, selectedBookmaker]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -276,13 +310,11 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               {(() => {
-                // Calculate min/max for gradient positioning
                 const values = evolutionData.map(d => d.saldo);
                 const minValue = Math.min(...values, 0);
                 const maxValue = Math.max(...values, 0);
                 const range = maxValue - minValue;
                 
-                // Calculate zero position as percentage from top (0 = top, 1 = bottom)
                 const zeroPosition = range > 0 ? maxValue / range : 0.5;
                 const zeroPercent = Math.max(0, Math.min(100, zeroPosition * 100));
                 
@@ -412,22 +444,22 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
         </CardContent>
       </Card>
 
-      {/* Performance por Esporte */}
+      {/* Performance por Casa */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Performance por Esporte
+            <Building2 className="h-5 w-5" />
+            Performance por Casa
           </CardTitle>
-          {esportesData.length > 0 && (
-            <Select value={selectedEsporte} onValueChange={setSelectedEsporte}>
-              <SelectTrigger className="w-[180px] h-8 text-sm">
+          {bookmakerMetrics.length > 0 && (
+            <Select value={selectedBookmaker} onValueChange={setSelectedBookmaker}>
+              <SelectTrigger className="w-[200px] h-8 text-sm">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                {esportesData.map(esporte => (
-                  <SelectItem key={esporte.esporte} value={esporte.esporte}>
-                    {esporte.esporte} ({esporte.totalApostas})
+                {bookmakerMetrics.map(bm => (
+                  <SelectItem key={bm.bookmaker_id} value={bm.bookmaker_id}>
+                    {bm.bookmaker_nome} ({bm.totalApostas})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -435,102 +467,88 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
           )}
         </CardHeader>
         <CardContent>
-          <ModernBarChart
-            data={filteredEsportesData}
-            categoryKey="esporte"
-            bars={[
-              { 
-                dataKey: "greens", 
-                label: "Greens", 
-                gradientStart: "#22C55E", 
-                gradientEnd: "#16A34A" 
-              },
-              { 
-                dataKey: "meioGreens", 
-                label: "Meio Green", 
-                gradientStart: "#4ADE80", 
-                gradientEnd: "#22C55E" 
-              },
-              { 
-                dataKey: "reds", 
-                label: "Reds", 
-                gradientStart: "#EF4444", 
-                gradientEnd: "#DC2626" 
-              },
-              { 
-                dataKey: "meioReds", 
-                label: "Meio Red", 
-                gradientStart: "#F87171", 
-                gradientEnd: "#EF4444" 
-              },
-            ]}
-            height={250}
-            barSize={16}
-            showLabels={false}
-            showLegend={true}
-            customTooltipContent={(payload, label) => {
-              const data = payload[0]?.payload;
-              if (!data) return null;
-              const totalApostas = data.greens + data.reds + data.meioGreens + data.meioReds;
-              const totalWins = data.greens + (data.meioGreens * 0.5);
-              const winRate = totalApostas > 0 ? ((totalWins / totalApostas) * 100).toFixed(1) : "0";
-              return (
-                <>
-                  <p className="font-medium text-sm mb-3 text-foreground">{label}</p>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#22C55E] to-[#16A34A]" />
-                        <span className="text-xs text-muted-foreground">Greens</span>
-                      </div>
-                      <span className="text-sm font-semibold font-mono">{data.greens}</span>
-                    </div>
-                    {data.meioGreens > 0 && (
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#4ADE80] to-[#22C55E]" />
-                          <span className="text-xs text-muted-foreground">Meio Green</span>
-                        </div>
-                        <span className="text-sm font-semibold font-mono">{data.meioGreens}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#EF4444] to-[#DC2626]" />
-                        <span className="text-xs text-muted-foreground">Reds</span>
-                      </div>
-                      <span className="text-sm font-semibold font-mono">{data.reds}</span>
-                    </div>
-                    {data.meioReds > 0 && (
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#F87171] to-[#EF4444]" />
-                          <span className="text-xs text-muted-foreground">Meio Red</span>
-                        </div>
-                        <span className="text-sm font-semibold font-mono">{data.meioReds}</span>
-                      </div>
-                    )}
-                    <div className="border-t border-border/50 pt-2 mt-2 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Total Apostas</span>
-                        <span className="text-sm font-mono">{totalApostas}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Lucro/Prejuízo</span>
-                        <span className={`text-sm font-mono font-semibold ${data.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                          {formatCurrency(data.lucro)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Win Rate</span>
-                        <span className="text-sm font-mono">{winRate}%</span>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              );
-            }}
-          />
+          {selectedBookmakerData ? (
+            <div className="space-y-4">
+              {/* Parceiro info */}
+              {selectedBookmakerData.parceiro_nome && (
+                <div className="text-sm text-muted-foreground">
+                  Parceiro: <span className="text-foreground font-medium">{selectedBookmakerData.parceiro_nome}</span>
+                </div>
+              )}
+              
+              {/* Main metrics grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Total Apostado</p>
+                  <p className="text-lg font-bold font-mono">
+                    {formatCurrency(selectedBookmakerData.totalStake)}
+                  </p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Lucro/Prejuízo</p>
+                  <p className={`text-lg font-bold font-mono ${selectedBookmakerData.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {formatCurrency(selectedBookmakerData.lucro)}
+                  </p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Qtd. Apostas</p>
+                  <p className="text-lg font-bold font-mono">
+                    {selectedBookmakerData.totalApostas}
+                  </p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <p className="text-xs text-muted-foreground mb-1">ROI</p>
+                  <p className={`text-lg font-bold font-mono ${selectedBookmakerData.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {selectedBookmakerData.roi.toFixed(2)}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Win rate bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Taxa de Acerto</span>
+                  <span className="font-mono font-medium">
+                    {selectedBookmakerData.totalApostas > 0 
+                      ? ((selectedBookmakerData.greens / selectedBookmakerData.totalApostas) * 100).toFixed(1) 
+                      : 0}%
+                  </span>
+                </div>
+                <div className="h-2 bg-muted/50 rounded-full overflow-hidden flex">
+                  <div 
+                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-500"
+                    style={{ 
+                      width: `${selectedBookmakerData.totalApostas > 0 
+                        ? (selectedBookmakerData.greens / selectedBookmakerData.totalApostas) * 100 
+                        : 0}%` 
+                    }}
+                  />
+                  <div 
+                    className="h-full bg-gradient-to-r from-red-500 to-red-400 transition-all duration-500"
+                    style={{ 
+                      width: `${selectedBookmakerData.totalApostas > 0 
+                        ? (selectedBookmakerData.reds / selectedBookmakerData.totalApostas) * 100 
+                        : 0}%` 
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    Greens: {selectedBookmakerData.greens}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                    Reds: {selectedBookmakerData.reds}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+              Selecione uma casa para ver os detalhes
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
