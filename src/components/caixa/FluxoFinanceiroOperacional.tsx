@@ -42,13 +42,12 @@ interface FluxoFinanceiroOperacionalProps {
 type Periodo = "dia" | "semana" | "mes";
 
 const CATEGORIAS_ENTRADAS = [
-  { key: "depositos", label: "Depósitos", color: "hsl(142, 76%, 36%)" },
   { key: "aportes", label: "Aportes de Investidores", color: "hsl(142, 76%, 50%)" },
-  { key: "saques_bookmaker", label: "Saques de Bookmakers", color: "hsl(142, 76%, 65%)" },
+  { key: "saques_bookmaker", label: "Saques de Bookmakers", color: "hsl(142, 76%, 36%)" },
 ];
 
 const CATEGORIAS_SAIDAS = [
-  { key: "liquidacoes", label: "Liquidações", color: "hsl(0, 84%, 60%)" },
+  { key: "liquidacoes", label: "Liquidações a Investidores", color: "hsl(0, 84%, 60%)" },
   { key: "depositos_bookmaker", label: "Depósitos em Bookmakers", color: "hsl(0, 84%, 45%)" },
   { key: "transferencias", label: "Transferências", color: "hsl(25, 95%, 53%)" },
 ];
@@ -109,16 +108,17 @@ export function FluxoFinanceiroOperacional({
       const grupo = agrupamentos.get(chave)!;
       grupo.transacoes.push(t);
 
-      // Classificar como entrada ou saída
+      // Classificar como entrada ou saída baseado no fluxo real do caixa operacional
+      // ENTRADAS: Aportes de investidores (destino=CAIXA) + Saques de bookmakers
+      // SAÍDAS: Liquidações a investidores (origem=CAIXA) + Depósitos em bookmakers + Transferências
       const isEntrada = 
-        t.tipo_transacao === "APORTE" || 
-        t.destino_tipo === "CAIXA_OPERACIONAL" ||
-        (t.tipo_transacao === "SAQUE" && t.destino_tipo !== "CAIXA_OPERACIONAL");
+        (t.tipo_transacao === "APORTE_FINANCEIRO" && t.destino_tipo === "CAIXA_OPERACIONAL") ||
+        t.tipo_transacao === "SAQUE";
 
       const isSaida = 
-        t.tipo_transacao === "LIQUIDACAO" || 
-        t.origem_tipo === "CAIXA_OPERACIONAL" ||
-        (t.tipo_transacao === "DEPOSITO" && t.origem_tipo !== "CAIXA_OPERACIONAL");
+        (t.tipo_transacao === "APORTE_FINANCEIRO" && t.origem_tipo === "CAIXA_OPERACIONAL") ||
+        t.tipo_transacao === "DEPOSITO" ||
+        (t.tipo_transacao === "TRANSFERENCIA" && t.origem_tipo === "CAIXA_OPERACIONAL");
 
       const valor = t.tipo_moeda === "CRYPTO" ? (t.valor_usd || 0) : t.valor;
 
@@ -143,7 +143,6 @@ export function FluxoFinanceiroOperacional({
   // Calcular distribuição por categoria
   const dadosDistribuicao = useMemo(() => {
     const categorias = {
-      depositos: 0,
       aportes: 0,
       saques_bookmaker: 0,
       liquidacoes: 0,
@@ -152,7 +151,6 @@ export function FluxoFinanceiroOperacional({
     };
 
     const transacoesPorCategoria: Record<string, Transacao[]> = {
-      depositos: [],
       aportes: [],
       saques_bookmaker: [],
       liquidacoes: [],
@@ -163,19 +161,27 @@ export function FluxoFinanceiroOperacional({
     transacoesFiltradas.forEach((t) => {
       const valor = t.tipo_moeda === "CRYPTO" ? (t.valor_usd || 0) : t.valor;
 
-      if (t.tipo_transacao === "APORTE" || (t.tipo_transacao === "APORTE_FINANCEIRO" && t.destino_tipo === "CAIXA_OPERACIONAL")) {
+      // ENTRADAS
+      if (t.tipo_transacao === "APORTE_FINANCEIRO" && t.destino_tipo === "CAIXA_OPERACIONAL") {
+        // Aporte de investidor → Caixa Operacional
         categorias.aportes += valor;
         transacoesPorCategoria.aportes.push(t);
-      } else if (t.tipo_transacao === "LIQUIDACAO" || (t.tipo_transacao === "APORTE_FINANCEIRO" && t.origem_tipo === "CAIXA_OPERACIONAL")) {
+      } else if (t.tipo_transacao === "SAQUE") {
+        // Saque de bookmaker → conta bancária (capital recuperado)
+        categorias.saques_bookmaker += valor;
+        transacoesPorCategoria.saques_bookmaker.push(t);
+      }
+      // SAÍDAS
+      else if (t.tipo_transacao === "APORTE_FINANCEIRO" && t.origem_tipo === "CAIXA_OPERACIONAL") {
+        // Liquidação: Caixa Operacional → Investidor
         categorias.liquidacoes += valor;
         transacoesPorCategoria.liquidacoes.push(t);
       } else if (t.tipo_transacao === "DEPOSITO") {
+        // Depósito em bookmaker
         categorias.depositos_bookmaker += valor;
         transacoesPorCategoria.depositos_bookmaker.push(t);
-      } else if (t.tipo_transacao === "SAQUE") {
-        categorias.saques_bookmaker += valor;
-        transacoesPorCategoria.saques_bookmaker.push(t);
-      } else if (t.tipo_transacao === "TRANSFERENCIA") {
+      } else if (t.tipo_transacao === "TRANSFERENCIA" && t.origem_tipo === "CAIXA_OPERACIONAL") {
+        // Transferência saindo do caixa operacional
         categorias.transferencias += valor;
         transacoesPorCategoria.transferencias.push(t);
       }
@@ -183,11 +189,11 @@ export function FluxoFinanceiroOperacional({
 
     const entradas = [
       { name: "Aportes de Investidores", value: categorias.aportes, key: "aportes", color: "hsl(142, 76%, 50%)" },
-      { name: "Saques de Bookmakers", value: categorias.saques_bookmaker, key: "saques_bookmaker", color: "hsl(142, 76%, 65%)" },
+      { name: "Saques de Bookmakers", value: categorias.saques_bookmaker, key: "saques_bookmaker", color: "hsl(142, 76%, 36%)" },
     ].filter(item => item.value > 0);
 
     const saidas = [
-      { name: "Liquidações", value: categorias.liquidacoes, key: "liquidacoes", color: "hsl(0, 84%, 60%)" },
+      { name: "Liquidações a Investidores", value: categorias.liquidacoes, key: "liquidacoes", color: "hsl(0, 84%, 60%)" },
       { name: "Depósitos em Bookmakers", value: categorias.depositos_bookmaker, key: "depositos_bookmaker", color: "hsl(0, 84%, 45%)" },
       { name: "Transferências", value: categorias.transferencias, key: "transferencias", color: "hsl(25, 95%, 53%)" },
     ].filter(item => item.value > 0);
