@@ -81,6 +81,7 @@ interface BookmakerDisponivel {
 export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [vinculos, setVinculos] = useState<Vinculo[]>([]);
   const [disponiveis, setDisponiveis] = useState<BookmakerDisponivel[]>([]);
+  const [historicoCount, setHistoricoCount] = useState({ total: 0, devolvidas: 0 });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -94,6 +95,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
 
   useEffect(() => {
     fetchVinculos();
+    fetchHistoricoCount();
   }, [projetoId]);
 
   const fetchVinculos = async () => {
@@ -137,6 +139,23 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       toast.error("Erro ao carregar vínculos: " + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchHistoricoCount = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("projeto_bookmaker_historico")
+        .select("id, data_desvinculacao")
+        .eq("projeto_id", projetoId);
+
+      if (error) throw error;
+
+      const total = data?.length || 0;
+      const devolvidas = data?.filter(h => h.data_desvinculacao !== null).length || 0;
+      setHistoricoCount({ total, devolvidas });
+    } catch (error: any) {
+      console.error("Erro ao carregar histórico:", error.message);
     }
   };
 
@@ -190,6 +209,10 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     try {
       setSaving(true);
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      // Update bookmakers with projeto_id
       const { error } = await supabase
         .from("bookmakers")
         .update({ projeto_id: projetoId })
@@ -197,9 +220,28 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
 
       if (error) throw error;
 
+      // Get bookmaker details for history
+      const selectedBookmakers = disponiveis.filter(d => selectedIds.includes(d.id));
+      
+      // Insert history records
+      const historicoRecords = selectedBookmakers.map(bk => ({
+        user_id: user.id,
+        projeto_id: projetoId,
+        bookmaker_id: bk.id,
+        parceiro_id: bk.parceiro_id,
+        bookmaker_nome: bk.nome,
+        parceiro_nome: bk.parceiro_nome,
+        data_vinculacao: new Date().toISOString(),
+      }));
+
+      await supabase
+        .from("projeto_bookmaker_historico")
+        .upsert(historicoRecords, { onConflict: "projeto_id,bookmaker_id" });
+
       toast.success(`${selectedIds.length} vínculo(s) adicionado(s) ao projeto`);
       setAddDialogOpen(false);
       fetchVinculos();
+      fetchHistoricoCount();
     } catch (error: any) {
       toast.error("Erro ao adicionar vínculos: " + error.message);
     } finally {
@@ -212,6 +254,18 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
 
     try {
       setSaving(true);
+
+      const statusFinal = vinculoToRemove.saldo_atual > 0 ? "AGUARDANDO_SAQUE" : "DEVOLVIDA";
+
+      // Update history record with unlink date
+      await supabase
+        .from("projeto_bookmaker_historico")
+        .update({ 
+          data_desvinculacao: new Date().toISOString(),
+          status_final: statusFinal
+        })
+        .eq("projeto_id", projetoId)
+        .eq("bookmaker_id", vinculoToRemove.id);
 
       // Se tiver saldo, muda para AGUARDANDO_SAQUE ao invés de liberar diretamente
       if (vinculoToRemove.saldo_atual > 0) {
@@ -244,6 +298,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       setRemoveDialogOpen(false);
       setVinculoToRemove(null);
       fetchVinculos();
+      fetchHistoricoCount();
     } catch (error: any) {
       toast.error("Erro ao liberar vínculo: " + error.message);
     } finally {
@@ -347,11 +402,19 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             <Link2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{vinculos.length}</div>
+            <div className="text-2xl font-bold">
+              {historicoCount.total > 0 ? historicoCount.total : vinculos.length}
+            </div>
             <p className="text-xs text-muted-foreground">
               <span className="text-emerald-400">{vinculosAtivos} ativas</span>
               {" · "}
               <span className="text-yellow-400">{vinculosLimitados} limitadas</span>
+              {historicoCount.devolvidas > 0 && (
+                <>
+                  {" · "}
+                  <span className="text-muted-foreground">{historicoCount.devolvidas} devolvidas</span>
+                </>
+              )}
             </p>
           </CardContent>
         </Card>

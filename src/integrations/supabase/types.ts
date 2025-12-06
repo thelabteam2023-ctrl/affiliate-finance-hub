@@ -1866,6 +1866,112 @@ export type Database = {
         }
         Relationships: []
       }
+      projeto_bookmaker_historico: {
+        Row: {
+          bookmaker_id: string
+          bookmaker_nome: string
+          created_at: string
+          data_desvinculacao: string | null
+          data_vinculacao: string
+          id: string
+          parceiro_id: string | null
+          parceiro_nome: string | null
+          projeto_id: string
+          status_final: string | null
+          user_id: string
+        }
+        Insert: {
+          bookmaker_id: string
+          bookmaker_nome: string
+          created_at?: string
+          data_desvinculacao?: string | null
+          data_vinculacao?: string
+          id?: string
+          parceiro_id?: string | null
+          parceiro_nome?: string | null
+          projeto_id: string
+          status_final?: string | null
+          user_id: string
+        }
+        Update: {
+          bookmaker_id?: string
+          bookmaker_nome?: string
+          created_at?: string
+          data_desvinculacao?: string | null
+          data_vinculacao?: string
+          id?: string
+          parceiro_id?: string | null
+          parceiro_nome?: string | null
+          projeto_id?: string
+          status_final?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projeto_bookmaker_historico_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_bookmaker_historico_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_bookmaker_historico_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "projeto_bookmaker_historico_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_bookmaker_historico_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "projeto_bookmaker_historico_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "projeto_bookmaker_historico_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_bookmaker_historico_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "projeto_bookmaker_historico_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+        ]
+      }
       projeto_conciliacoes: {
         Row: {
           ajuste_crypto_usd: number
