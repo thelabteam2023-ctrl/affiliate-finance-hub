@@ -74,7 +74,14 @@ export default function Caixa() {
 
   // Hook centralizado de cotações
   const cryptoSymbols = useMemo(() => saldosCrypto.map(s => s.coin), [saldosCrypto]);
-  const { cotacaoUSD, cryptoPrices, getCryptoUSDValue } = useCotacoes(cryptoSymbols);
+  const { cotacaoUSD, cryptoPrices, getCryptoUSDValue, lastUpdate } = useCotacoes(cryptoSymbols);
+
+  // Auto-refresh dos dados quando cotações atualizam
+  useEffect(() => {
+    if (lastUpdate) {
+      fetchData();
+    }
+  }, [lastUpdate]);
   
   // Filters
   const [filtroTipo, setFiltroTipo] = useState<string>("TODOS");
