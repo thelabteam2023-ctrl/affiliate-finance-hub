@@ -250,8 +250,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   const [selecao, setSelecao] = useState("");
   const [odd, setOdd] = useState("");
   const [stake, setStake] = useState("");
-  const [status, setStatus] = useState("PENDENTE");
-  const [resultado, setResultado] = useState("");
+  const [statusResultado, setStatusResultado] = useState("PENDENTE"); // PENDENTE, GREEN, RED, VOID, HALF
   const [valorRetorno, setValorRetorno] = useState("");
   const [observacoes, setObservacoes] = useState("");
   
@@ -284,8 +283,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         setSelecao(aposta.selecao);
         setOdd(aposta.odd.toString());
         setStake(aposta.stake.toString());
-        setStatus(aposta.status);
-        setResultado(aposta.resultado || "");
+        // Unifica status e resultado
+        setStatusResultado(aposta.resultado || aposta.status);
         setValorRetorno(aposta.valor_retorno?.toString() || "");
         setObservacoes(aposta.observacoes || "");
         // LayBack fields
@@ -343,8 +342,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     setSelecao("");
     setOdd("");
     setStake("");
-    setStatus("PENDENTE");
-    setResultado("");
+    setStatusResultado("PENDENTE");
     setValorRetorno("");
     setObservacoes("");
     setModoLayBack(false);
@@ -385,7 +383,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     const oddNum = parseFloat(odd) || 0;
     const retornoNum = parseFloat(valorRetorno) || 0;
 
-    switch (resultado) {
+    switch (statusResultado) {
       case "GREEN":
         return retornoNum > 0 ? retornoNum - stakeNum : (stakeNum * oddNum) - stakeNum;
       case "RED":
@@ -432,8 +430,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         odd: parseFloat(odd),
         stake: parseFloat(stake),
         estrategia: modoLayBack ? "LAYBACK" : "VALOR",
-        status,
-        resultado: resultado || null,
+        status: statusResultado === "PENDENTE" ? "PENDENTE" : "CONCLUIDA",
+        resultado: statusResultado === "PENDENTE" ? null : statusResultado,
         valor_retorno: valorRetorno ? parseFloat(valorRetorno) : null,
         lucro_prejuizo: lucroPrejuizo,
         observacoes: observacoes || null,
@@ -725,38 +723,25 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               </div>
             )}
 
-            {/* Status e Resultado */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PENDENTE">Pendente</SelectItem>
-                    <SelectItem value="CONCLUIDA">Concluída</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Resultado</Label>
-                <Select value={resultado} onValueChange={setResultado}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="GREEN">GREEN</SelectItem>
-                    <SelectItem value="RED">RED</SelectItem>
-                    <SelectItem value="VOID">VOID</SelectItem>
-                    <SelectItem value="HALF">HALF</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Status / Resultado unificado */}
+            <div className="space-y-2">
+              <Label>Status / Resultado</Label>
+              <Select value={statusResultado} onValueChange={setStatusResultado}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PENDENTE">Pendente</SelectItem>
+                  <SelectItem value="GREEN">GREEN</SelectItem>
+                  <SelectItem value="RED">RED</SelectItem>
+                  <SelectItem value="VOID">VOID</SelectItem>
+                  <SelectItem value="HALF">HALF</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Valor Retorno */}
-            {resultado && resultado !== "VOID" && (
+            {statusResultado && statusResultado !== "PENDENTE" && statusResultado !== "VOID" && (
               <div className="space-y-2">
                 <Label>Valor Retorno (R$)</Label>
                 <Input
