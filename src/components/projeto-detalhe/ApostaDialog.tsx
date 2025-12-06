@@ -65,6 +65,7 @@ interface Bookmaker {
   nome: string;
   parceiro_id: string;
   saldo_atual: number;
+  moeda: string;
   parceiro?: {
     nome: string;
   };
@@ -507,6 +508,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           nome,
           parceiro_id,
           saldo_atual,
+          moeda,
           parceiro:parceiros(nome)
         `)
         .eq("projeto_id", projetoId)
@@ -520,6 +522,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         nome: bk.nome,
         parceiro_id: bk.parceiro_id,
         saldo_atual: bk.saldo_atual || 0,
+        moeda: bk.moeda || "BRL",
         parceiro: bk.parceiro
       }));
 
@@ -532,20 +535,52 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   const calculateLucroPrejuizo = () => {
     const stakeNum = parseFloat(stake) || 0;
     const oddNum = parseFloat(odd) || 0;
-    const retornoNum = parseFloat(valorRetorno) || 0;
 
     switch (statusResultado) {
       case "GREEN":
-        return retornoNum > 0 ? retornoNum - stakeNum : (stakeNum * oddNum) - stakeNum;
+        return (stakeNum * oddNum) - stakeNum;
       case "RED":
         return -stakeNum;
       case "VOID":
         return 0;
       case "HALF":
-        return retornoNum > 0 ? retornoNum - stakeNum : (stakeNum * ((oddNum - 1) / 2)) - (stakeNum / 2);
+        return (stakeNum * ((oddNum - 1) / 2)) - (stakeNum / 2);
       default:
         return null;
     }
+  };
+
+  const calculateValorRetorno = () => {
+    const stakeNum = parseFloat(stake) || 0;
+    const oddNum = parseFloat(odd) || 0;
+
+    switch (statusResultado) {
+      case "GREEN":
+        return stakeNum * oddNum;
+      case "RED":
+        return 0;
+      case "VOID":
+        return stakeNum;
+      case "HALF":
+        return stakeNum + (stakeNum * ((oddNum - 1) / 2));
+      default:
+        return null;
+    }
+  };
+
+  const getSelectedBookmakerMoeda = () => {
+    const selected = bookmakers.find(b => b.id === bookmakerId);
+    return selected?.moeda || "BRL";
+  };
+
+  const formatCurrencyWithSymbol = (value: number, moeda: string) => {
+    const symbols: Record<string, string> = {
+      BRL: "R$",
+      USD: "$",
+      EUR: "€",
+      GBP: "£"
+    };
+    return `${symbols[moeda] || moeda} ${value.toFixed(2)}`;
   };
 
   const handleSave = async () => {
@@ -590,6 +625,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       const lucroPrejuizo = calculateLucroPrejuizo();
 
       // Montar dados baseado no tipo de aposta
+      const valorRetornoCalculado = calculateValorRetorno();
+
       let apostaData: any = {
         user_id: userData.user.id,
         projeto_id: projetoId,
@@ -602,7 +639,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         stake: parseFloat(stake),
         status: statusResultado === "PENDENTE" ? "PENDENTE" : "CONCLUIDA",
         resultado: statusResultado === "PENDENTE" ? null : statusResultado,
-        valor_retorno: valorRetorno ? parseFloat(valorRetorno) : null,
+        valor_retorno: valorRetornoCalculado,
         lucro_prejuizo: lucroPrejuizo,
         observacoes: observacoes || null,
       };
@@ -638,18 +675,51 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         };
       }
 
+      // Armazenar o resultado anterior se estiver editando (para calcular diferença de saldo)
+      const resultadoAnterior = aposta?.resultado || null;
+      const stakeAnterior = aposta?.stake || 0;
+      const oddAnterior = aposta?.odd || 0;
+
       if (aposta) {
         const { error } = await supabase
           .from("apostas")
           .update(apostaData)
           .eq("id", aposta.id);
         if (error) throw error;
+
+        // Atualizar saldo do bookmaker se resultado mudou
+        if (tipoAposta === "bookmaker" && bookmakerId) {
+          await atualizarSaldoBookmaker(
+            bookmakerId,
+            resultadoAnterior,
+            statusResultado,
+            stakeAnterior,
+            oddAnterior,
+            parseFloat(stake),
+            parseFloat(odd)
+          );
+        }
+
         toast.success("Aposta atualizada com sucesso!");
       } else {
         const { error } = await supabase
           .from("apostas")
           .insert(apostaData);
         if (error) throw error;
+
+        // Atualizar saldo do bookmaker para nova aposta com resultado definido
+        if (tipoAposta === "bookmaker" && bookmakerId && statusResultado !== "PENDENTE") {
+          await atualizarSaldoBookmaker(
+            bookmakerId,
+            null,
+            statusResultado,
+            0,
+            0,
+            parseFloat(stake),
+            parseFloat(odd)
+          );
+        }
+
         toast.success("Aposta registrada com sucesso!");
       }
 
@@ -659,6 +729,76 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       toast.error("Erro ao salvar aposta: " + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const atualizarSaldoBookmaker = async (
+    bookmakerIdToUpdate: string,
+    resultadoAnterior: string | null,
+    resultadoNovo: string,
+    stakeAnterior: number,
+    oddAnterior: number,
+    stakeNovo: number,
+    oddNovo: number
+  ) => {
+    try {
+      // Primeiro, reverter o efeito do resultado anterior (se havia)
+      let saldoAjuste = 0;
+
+      // Calcular efeito do resultado anterior para reverter
+      if (resultadoAnterior) {
+        switch (resultadoAnterior) {
+          case "GREEN":
+            saldoAjuste -= (stakeAnterior * oddAnterior); // Reverter ganho
+            break;
+          case "RED":
+            saldoAjuste += stakeAnterior; // Reverter perda
+            break;
+          case "VOID":
+            // Nada a reverter
+            break;
+          case "HALF":
+            saldoAjuste -= stakeAnterior + (stakeAnterior * ((oddAnterior - 1) / 2));
+            break;
+        }
+      }
+
+      // Aplicar efeito do novo resultado
+      if (resultadoNovo && resultadoNovo !== "PENDENTE") {
+        switch (resultadoNovo) {
+          case "GREEN":
+            saldoAjuste += (stakeNovo * oddNovo); // Adicionar retorno
+            break;
+          case "RED":
+            saldoAjuste -= stakeNovo; // Subtrair stake perdida
+            break;
+          case "VOID":
+            // Nada a fazer, stake retorna
+            break;
+          case "HALF":
+            saldoAjuste += stakeNovo + (stakeNovo * ((oddNovo - 1) / 2));
+            break;
+        }
+      }
+
+      if (saldoAjuste !== 0) {
+        // Buscar saldo atual
+        const { data: bookmaker } = await supabase
+          .from("bookmakers")
+          .select("saldo_atual")
+          .eq("id", bookmakerIdToUpdate)
+          .single();
+
+        if (bookmaker) {
+          const novoSaldo = bookmaker.saldo_atual + saldoAjuste;
+          await supabase
+            .from("bookmakers")
+            .update({ saldo_atual: novoSaldo })
+            .eq("id", bookmakerIdToUpdate);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar saldo do bookmaker:", error);
     }
   };
 
@@ -853,7 +993,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                         ) : (
                           bookmakers.map((bk) => (
                             <SelectItem key={bk.id} value={bk.id}>
-                              {bk.nome} • {bk.parceiro?.nome} • R$ {bk.saldo_atual.toFixed(2)}
+                              {bk.nome} • {bk.parceiro?.nome} • {formatCurrencyWithSymbol(bk.saldo_atual, bk.moeda)}
                             </SelectItem>
                           ))
                         )}
@@ -872,7 +1012,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="block text-center uppercase text-xs tracking-wider">Stake (R$) *</Label>
+                    <Label className="block text-center uppercase text-xs tracking-wider">Stake ({getSelectedBookmakerMoeda()}) *</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -894,7 +1034,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                       if (selectedBk && !isNaN(stakeNum) && stakeNum > selectedBk.saldo_atual) {
                         return (
                           <p className="text-xs text-destructive mt-1">
-                            Máx: R$ {selectedBk.saldo_atual.toFixed(2)}
+                            Máx: {formatCurrencyWithSymbol(selectedBk.saldo_atual, selectedBk.moeda)}
                           </p>
                         );
                       }
@@ -907,11 +1047,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                       {(() => {
                         const oddNum = parseFloat(odd);
                         const stakeNum = parseFloat(stake);
+                        const moeda = getSelectedBookmakerMoeda();
                         if (!isNaN(oddNum) && !isNaN(stakeNum) && oddNum > 0 && stakeNum > 0) {
                           const retorno = oddNum * stakeNum;
-                          return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(retorno);
+                          return formatCurrencyWithSymbol(retorno, moeda);
                         }
-                        return "R$ 0,00";
+                        return formatCurrencyWithSymbol(0, moeda);
                       })()}
                     </div>
                   </div>
@@ -1113,21 +1254,22 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               </Select>
             </div>
 
-            {/* Valor Retorno */}
-            {statusResultado && statusResultado !== "PENDENTE" && statusResultado !== "VOID" && (
-              <div className="space-y-2">
-                <Label className="block text-center uppercase text-xs tracking-wider">Valor Retorno (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={valorRetorno}
-                  onChange={(e) => setValorRetorno(e.target.value)}
-                  placeholder="Valor total recebido"
-                />
+            {/* Lucro/Prejuízo calculado automaticamente */}
+            {statusResultado && statusResultado !== "PENDENTE" && (
+              <div className="p-3 rounded-lg bg-muted/50 border">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Retorno Calculado:</span>
+                  <span className="font-medium text-emerald-500">
+                    {formatCurrencyWithSymbol(calculateValorRetorno() || 0, getSelectedBookmakerMoeda())}
+                  </span>
+                </div>
                 {calculateLucroPrejuizo() !== null && (
-                  <p className={`text-sm ${calculateLucroPrejuizo()! >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                    Lucro/Prejuízo: {formatCurrency(calculateLucroPrejuizo()!)}
-                  </p>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-sm text-muted-foreground">Lucro/Prejuízo:</span>
+                    <span className={`font-medium ${calculateLucroPrejuizo()! >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {formatCurrencyWithSymbol(calculateLucroPrejuizo()!, getSelectedBookmakerMoeda())}
+                    </span>
+                  </div>
                 )}
               </div>
             )}
