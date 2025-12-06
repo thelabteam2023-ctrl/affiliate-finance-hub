@@ -76,7 +76,7 @@ interface ApostaDialogProps {
   onSuccess: () => void;
 }
 
-const ESPORTES = [
+const ESPORTES_BASE = [
   "Futebol",
   "Basquete",
   "Tênis",
@@ -85,8 +85,6 @@ const ESPORTES = [
   "Futebol Americano",
   "Vôlei",
   "MMA/UFC",
-  "Boxe",
-  "Golfe",
   "League of Legends",
   "Counter-Strike",
   "Dota 2",
@@ -94,10 +92,44 @@ const ESPORTES = [
   "Outro"
 ];
 
+const SPORT_USAGE_KEY = "apostas_sport_usage";
+
+const getSortedEsportes = (): string[] => {
+  try {
+    const stored = localStorage.getItem(SPORT_USAGE_KEY);
+    if (!stored) return ESPORTES_BASE;
+    
+    const usage: Record<string, number> = JSON.parse(stored);
+    
+    return [...ESPORTES_BASE].sort((a, b) => {
+      const countA = usage[a] || 0;
+      const countB = usage[b] || 0;
+      if (countA === countB) {
+        return ESPORTES_BASE.indexOf(a) - ESPORTES_BASE.indexOf(b);
+      }
+      return countB - countA;
+    });
+  } catch {
+    return ESPORTES_BASE;
+  }
+};
+
+const incrementSportUsage = (sport: string) => {
+  try {
+    const stored = localStorage.getItem(SPORT_USAGE_KEY);
+    const usage: Record<string, number> = stored ? JSON.parse(stored) : {};
+    usage[sport] = (usage[sport] || 0) + 1;
+    localStorage.setItem(SPORT_USAGE_KEY, JSON.stringify(usage));
+  } catch {
+    // Silently fail
+  }
+};
+
 const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
   "Futebol": [
     "Moneyline / 1X2",
-    "Over/Under (Gols)",
+    "Over (Gols)",
+    "Under (Gols)",
     "Handicap Asiático",
     "Handicap Europeu",
     "Ambas Marcam (BTTS)",
@@ -111,7 +143,8 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
   "Basquete": [
     "Moneyline",
     "Spread",
-    "Total de Pontos (Over/Under)",
+    "Over (Pontos)",
+    "Under (Pontos)",
     "Handicap",
     "1º/2º Tempo",
     "Margem de Vitória",
@@ -120,7 +153,8 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
   "Tênis": [
     "Vencedor do Jogo",
     "Handicap de Games",
-    "Total de Games (Over/Under)",
+    "Over (Games)",
+    "Under (Games)",
     "Vencedor do Set",
     "Resultado Exato (Sets)",
     "Outro"
@@ -128,7 +162,8 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
   "Baseball": [
     "Moneyline",
     "Run Line (+1.5 / -1.5)",
-    "Total de Runs (Over/Under)",
+    "Over (Runs)",
+    "Under (Runs)",
     "1ª Metade (1st 5 Innings)",
     "Handicap",
     "Outro"
@@ -136,7 +171,8 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
   "Hockey": [
     "Moneyline",
     "Puck Line (+1.5 / -1.5)",
-    "Total de Gols (Over/Under)",
+    "Over (Gols)",
+    "Under (Gols)",
     "1º/2º/3º Período",
     "Handicap",
     "Outro"
@@ -144,7 +180,8 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
   "Futebol Americano": [
     "Moneyline",
     "Spread",
-    "Total de Pontos (Over/Under)",
+    "Over (Pontos)",
+    "Under (Pontos)",
     "1º/2º Tempo",
     "Margem de Vitória",
     "Primeiro TD",
@@ -153,7 +190,8 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
   "Vôlei": [
     "Vencedor",
     "Handicap de Sets",
-    "Total de Pontos",
+    "Over (Pontos)",
+    "Under (Pontos)",
     "Resultado Exato (Sets)",
     "Outro"
   ],
@@ -162,28 +200,16 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
     "Método de Vitória",
     "Round de Finalização",
     "Vai para Decisão?",
-    "Over/Under Rounds",
-    "Outro"
-  ],
-  "Boxe": [
-    "Vencedor",
-    "Método de Vitória",
-    "Round de Finalização",
-    "Total de Rounds",
-    "Outro"
-  ],
-  "Golfe": [
-    "Vencedor do Torneio",
-    "Top 5/10/20",
-    "Head-to-Head",
-    "Fazer o Cut",
+    "Over (Rounds)",
+    "Under (Rounds)",
     "Outro"
   ],
   "League of Legends": [
     "Vencedor do Mapa",
     "Vencedor da Série",
     "Handicap de Mapas",
-    "Total de Mapas",
+    "Over (Mapas)",
+    "Under (Mapas)",
     "Primeiro Dragão",
     "Primeiro Barão",
     "Primeiro Torre",
@@ -194,7 +220,8 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
     "Vencedor do Mapa",
     "Vencedor da Série",
     "Handicap de Rounds",
-    "Total de Rounds",
+    "Over (Rounds)",
+    "Under (Rounds)",
     "Handicap de Mapas",
     "Pistol Round",
     "Outro"
@@ -203,7 +230,8 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
     "Vencedor do Mapa",
     "Vencedor da Série",
     "Handicap de Mapas",
-    "Total de Mapas",
+    "Over (Mapas)",
+    "Under (Mapas)",
     "Primeiro Roshan",
     "Primeiro Barracks",
     "First Blood",
@@ -211,7 +239,8 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
   ],
   "eFootball": [
     "Vencedor",
-    "Over/Under (Gols)",
+    "Over (Gols)",
+    "Under (Gols)",
     "Handicap",
     "Ambas Marcam",
     "Resultado Exato",
@@ -219,7 +248,8 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
   ],
   "Outro": [
     "Vencedor",
-    "Over/Under",
+    "Over",
+    "Under",
     "Handicap",
     "Outro"
   ]
@@ -588,12 +618,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               </div>
               <div className="space-y-2">
                 <Label>Esporte *</Label>
-                <Select value={esporte} onValueChange={setEsporte}>
+                <Select value={esporte} onValueChange={(val) => {
+                  setEsporte(val);
+                  incrementSportUsage(val);
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    {ESPORTES.map((esp) => (
+                    {getSortedEsportes().map((esp) => (
                       <SelectItem key={esp} value={esp}>{esp}</SelectItem>
                     ))}
                   </SelectContent>
