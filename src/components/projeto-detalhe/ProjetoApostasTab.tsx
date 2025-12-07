@@ -417,6 +417,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                         status={aposta.status}
                         stake={aposta.stake}
                         odd={aposta.odd}
+                        operationType={opType.type}
+                        layLiability={aposta.lay_liability || undefined}
+                        layOdd={aposta.lay_odd || undefined}
                         onResultadoUpdated={handleApostaUpdated}
                         onEditClick={() => handleOpenDialog(aposta)}
                       />
@@ -571,6 +574,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       status={aposta.status}
                       stake={aposta.stake}
                       odd={aposta.odd}
+                      operationType={getOperationType(aposta).type}
+                      layLiability={aposta.lay_liability || undefined}
+                      layOdd={aposta.lay_odd || undefined}
                       onResultadoUpdated={handleApostaUpdated}
                       onEditClick={() => handleOpenDialog(aposta)}
                     />
