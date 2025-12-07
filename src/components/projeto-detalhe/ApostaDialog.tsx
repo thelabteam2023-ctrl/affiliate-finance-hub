@@ -76,6 +76,7 @@ interface Bookmaker {
   saldo_atual: number;
   saldo_total: number;
   saldo_disponivel: number;
+  saldo_freebet: number;
   moeda: string;
   parceiro?: {
     nome: string;
@@ -388,11 +389,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   // Tipo de aposta Back (Normal, Freebet SNR, Freebet SR)
   const [tipoApostaBack, setTipoApostaBack] = useState<"normal" | "freebet_snr" | "freebet_sr">("normal");
   
-  // Saldos das casas selecionadas
-  const [bookmakerSaldo, setBookmakerSaldo] = useState<{ saldo: number; saldoDisponivel: number; moeda: string } | null>(null);
-  const [coberturaBackSaldo, setCoberturaBackSaldo] = useState<{ saldo: number; saldoDisponivel: number; moeda: string } | null>(null);
-  const [coberturaLaySaldo, setCoberturaLaySaldo] = useState<{ saldo: number; saldoDisponivel: number; moeda: string } | null>(null);
-  const [exchangeBookmakerSaldo, setExchangeBookmakerSaldo] = useState<{ saldo: number; saldoDisponivel: number; moeda: string } | null>(null);
+  // Saldos das casas selecionadas (incluindo saldo de freebet)
+  const [bookmakerSaldo, setBookmakerSaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; moeda: string } | null>(null);
+  const [coberturaBackSaldo, setCoberturaBackSaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; moeda: string } | null>(null);
+  const [coberturaLaySaldo, setCoberturaLaySaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; moeda: string } | null>(null);
+  const [exchangeBookmakerSaldo, setExchangeBookmakerSaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; moeda: string } | null>(null);
   
   // Valores calculados para Cobertura
   const [coberturaLayStake, setCoberturaLayStake] = useState<number | null>(null);
@@ -521,7 +522,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     if (bookmakerId && bookmakers.length > 0) {
       const selectedBk = bookmakers.find(b => b.id === bookmakerId);
       if (selectedBk) {
-        setBookmakerSaldo({ saldo: selectedBk.saldo_total, saldoDisponivel: selectedBk.saldo_disponivel, moeda: selectedBk.moeda });
+        setBookmakerSaldo({ saldo: selectedBk.saldo_total, saldoDisponivel: selectedBk.saldo_disponivel, saldoFreebet: selectedBk.saldo_freebet, moeda: selectedBk.moeda });
       }
     }
   }, [bookmakerId, bookmakers]);
@@ -531,7 +532,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     if (exchangeBookmakerId && bookmakers.length > 0) {
       const selectedBk = bookmakers.find(b => b.id === exchangeBookmakerId);
       if (selectedBk) {
-        setExchangeBookmakerSaldo({ saldo: selectedBk.saldo_total, saldoDisponivel: selectedBk.saldo_disponivel, moeda: selectedBk.moeda });
+        setExchangeBookmakerSaldo({ saldo: selectedBk.saldo_total, saldoDisponivel: selectedBk.saldo_disponivel, saldoFreebet: selectedBk.saldo_freebet, moeda: selectedBk.moeda });
       } else {
         setExchangeBookmakerSaldo(null);
       }
@@ -769,7 +770,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
 
   const fetchBookmakers = async () => {
     try {
-      // Fetch bookmakers com informação de saldo disponível
+      // Fetch bookmakers com informação de saldo disponível e saldo_freebet
       const { data: bookmakersData, error: bkError } = await supabase
         .from("bookmakers")
         .select(`
@@ -777,6 +778,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           nome,
           parceiro_id,
           saldo_atual,
+          saldo_freebet,
           moeda,
           parceiro:parceiros(nome)
         `)
@@ -813,10 +815,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           saldo_atual: saldoTotal,
           saldo_total: saldoTotal,
           saldo_disponivel: saldoDisponivel,
+          saldo_freebet: bk.saldo_freebet || 0,
           moeda: bk.moeda || "BRL",
           parceiro: bk.parceiro
         };
-      }).filter(bk => bk.saldo_disponivel > 0 || (aposta && aposta.bookmaker_id === bk.id));
+      }).filter(bk => bk.saldo_disponivel > 0 || bk.saldo_freebet > 0 || (aposta && aposta.bookmaker_id === bk.id));
 
       setBookmakers(formatted);
     } catch (error) {
@@ -1020,6 +1023,18 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               );
               return;
             }
+          }
+        }
+
+        // Validação para uso de Freebet: verificar saldo disponível
+        if (tipoApostaBack !== "normal" && coberturaBackBookmakerId) {
+          const backStakeNum = parseFloat(coberturaBackStake);
+          const selectedBk = bookmakers.find(b => b.id === coberturaBackBookmakerId);
+          if (selectedBk && backStakeNum > selectedBk.saldo_freebet) {
+            toast.error(
+              `Stake da Freebet (${formatCurrencyWithSymbol(backStakeNum, selectedBk.moeda)}) maior que o saldo de Freebet disponível (${formatCurrencyWithSymbol(selectedBk.saldo_freebet, selectedBk.moeda)})`
+            );
+            return;
           }
         }
       }
@@ -1294,6 +1309,22 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           );
         }
 
+        // Registrar freebet gerada (nova aposta)
+        if (gerouFreebet && valorFreebetGerada && parseFloat(valorFreebetGerada) > 0) {
+          const bookmakerParaFreebet = tipoAposta === "bookmaker" ? bookmakerId : coberturaBackBookmakerId;
+          if (bookmakerParaFreebet) {
+            await registrarFreebetGerada(bookmakerParaFreebet, parseFloat(valorFreebetGerada), userData.user.id);
+          }
+        }
+
+        // Debitar freebet se usar em cobertura SNR/SR
+        if (tipoAposta === "exchange" && tipoOperacaoExchange === "cobertura" && tipoApostaBack !== "normal") {
+          const backStakeNum = parseFloat(coberturaBackStake);
+          if (backStakeNum > 0 && coberturaBackBookmakerId) {
+            await debitarFreebetUsada(coberturaBackBookmakerId, backStakeNum);
+          }
+        }
+
         toast.success("Aposta registrada com sucesso!");
       }
 
@@ -1303,6 +1334,62 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       toast.error("Erro ao salvar aposta: " + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Função para registrar freebet gerada
+  const registrarFreebetGerada = async (bookmakerIdFreebet: string, valor: number, userId: string) => {
+    try {
+      // 1. Atualizar saldo_freebet do bookmaker
+      const { data: bookmaker } = await supabase
+        .from("bookmakers")
+        .select("saldo_freebet")
+        .eq("id", bookmakerIdFreebet)
+        .maybeSingle();
+
+      if (bookmaker) {
+        const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + valor;
+        await supabase
+          .from("bookmakers")
+          .update({ saldo_freebet: novoSaldoFreebet })
+          .eq("id", bookmakerIdFreebet);
+      }
+
+      // 2. Registrar na tabela freebets_recebidas
+      await supabase
+        .from("freebets_recebidas")
+        .insert({
+          user_id: userId,
+          projeto_id: projetoId,
+          bookmaker_id: bookmakerIdFreebet,
+          valor: valor,
+          motivo: "Aposta qualificadora",
+          data_recebida: new Date().toISOString(),
+          utilizada: false
+        });
+    } catch (error) {
+      console.error("Erro ao registrar freebet gerada:", error);
+    }
+  };
+
+  // Função para debitar freebet usada
+  const debitarFreebetUsada = async (bookmakerIdFreebet: string, valor: number) => {
+    try {
+      const { data: bookmaker } = await supabase
+        .from("bookmakers")
+        .select("saldo_freebet")
+        .eq("id", bookmakerIdFreebet)
+        .maybeSingle();
+
+      if (bookmaker) {
+        const novoSaldoFreebet = Math.max(0, (bookmaker.saldo_freebet || 0) - valor);
+        await supabase
+          .from("bookmakers")
+          .update({ saldo_freebet: novoSaldoFreebet })
+          .eq("id", bookmakerIdFreebet);
+      }
+    } catch (error) {
+      console.error("Erro ao debitar freebet usada:", error);
     }
   };
 
@@ -1649,7 +1736,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                         setBookmakerId(val);
                         const selectedBk = bookmakers.find(b => b.id === val);
                         if (selectedBk) {
-                          setBookmakerSaldo({ saldo: selectedBk.saldo_total, saldoDisponivel: selectedBk.saldo_disponivel, moeda: selectedBk.moeda });
+                          setBookmakerSaldo({ saldo: selectedBk.saldo_total, saldoDisponivel: selectedBk.saldo_disponivel, saldoFreebet: selectedBk.saldo_freebet, moeda: selectedBk.moeda });
                         } else {
                           setBookmakerSaldo(null);
                         }
@@ -1699,9 +1786,17 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                       </SelectContent>
                     </Select>
                     {bookmakerSaldo && (
-                      <p className="text-xs text-muted-foreground text-center">
-                        Saldo: <span className="text-emerald-500 font-medium">{formatCurrencyWithSymbol(bookmakerSaldo.saldo, bookmakerSaldo.moeda)}</span>
-                      </p>
+                      <div className="text-xs text-center space-y-0.5">
+                        <p className="text-muted-foreground">
+                          Saldo: <span className="text-emerald-500 font-medium">{formatCurrencyWithSymbol(bookmakerSaldo.saldo, bookmakerSaldo.moeda)}</span>
+                        </p>
+                        {bookmakerSaldo.saldoFreebet > 0 && (
+                          <p className="text-muted-foreground">
+                            <Gift className="h-3 w-3 inline mr-0.5 text-amber-400" />
+                            Freebet: <span className="text-amber-400 font-medium">{formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)}</span>
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -1907,14 +2002,22 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                           </SelectContent>
                         </Select>
                         {exchangeBookmakerSaldo && (
-                          <div className="text-center text-xs text-muted-foreground">
-                            Saldo: <span className={`font-medium ${tipoOperacaoExchange === "back" ? "text-emerald-400" : "text-rose-400"}`}>
-                              {exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </span>
-                            {exchangeBookmakerSaldo.saldoDisponivel !== exchangeBookmakerSaldo.saldo && (
-                              <span className="text-amber-400 ml-1">
-                                (Livre: {exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldoDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                          <div className="text-center text-xs text-muted-foreground space-y-0.5">
+                            <div>
+                              Saldo: <span className={`font-medium ${tipoOperacaoExchange === "back" ? "text-emerald-400" : "text-rose-400"}`}>
+                                {exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                               </span>
+                              {exchangeBookmakerSaldo.saldoDisponivel !== exchangeBookmakerSaldo.saldo && (
+                                <span className="text-amber-400 ml-1">
+                                  (Livre: {exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldoDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                                </span>
+                              )}
+                            </div>
+                            {exchangeBookmakerSaldo.saldoFreebet > 0 && (
+                              <div className="text-amber-400">
+                                <Gift className="h-3 w-3 inline mr-0.5" />
+                                Freebet: <span className="font-medium">{exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldoFreebet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                              </div>
                             )}
                           </div>
                         )}
@@ -2147,7 +2250,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                                 setCoberturaBackBookmakerId(val);
                                 const bk = bookmakers.find(b => b.id === val);
                                 if (bk) {
-                                  setCoberturaBackSaldo({ saldo: bk.saldo_total, saldoDisponivel: bk.saldo_disponivel, moeda: bk.moeda });
+                                  setCoberturaBackSaldo({ saldo: bk.saldo_total, saldoDisponivel: bk.saldo_disponivel, saldoFreebet: bk.saldo_freebet, moeda: bk.moeda });
                                 } else {
                                   setCoberturaBackSaldo(null);
                                 }
@@ -2170,14 +2273,22 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                               </SelectContent>
                             </Select>
                             {coberturaBackSaldo && (
-                              <div className="text-center text-xs text-muted-foreground">
-                                Saldo: <span className="font-medium text-emerald-400">
-                                  {coberturaBackSaldo.moeda} {coberturaBackSaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </span>
-                                {coberturaBackSaldo.saldoDisponivel !== coberturaBackSaldo.saldo && (
-                                  <span className="text-amber-400 ml-1">
-                                    (Livre: {coberturaBackSaldo.moeda} {coberturaBackSaldo.saldoDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                              <div className="text-center text-xs text-muted-foreground space-y-0.5">
+                                <div>
+                                  Saldo: <span className="font-medium text-emerald-400">
+                                    {coberturaBackSaldo.moeda} {coberturaBackSaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                   </span>
+                                  {coberturaBackSaldo.saldoDisponivel !== coberturaBackSaldo.saldo && (
+                                    <span className="text-amber-400 ml-1">
+                                      (Livre: {coberturaBackSaldo.moeda} {coberturaBackSaldo.saldoDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                                    </span>
+                                  )}
+                                </div>
+                                {coberturaBackSaldo.saldoFreebet > 0 && (
+                                  <div className="text-amber-400">
+                                    <Gift className="h-3 w-3 inline mr-0.5" />
+                                    Freebet: <span className="font-medium">{coberturaBackSaldo.moeda} {coberturaBackSaldo.saldoFreebet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                  </div>
                                 )}
                               </div>
                             )}
@@ -2196,7 +2307,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label className="block text-center uppercase text-[10px] tracking-wider">Stake *</Label>
+                              <Label className="block text-center uppercase text-[10px] tracking-wider">
+                                {tipoApostaBack !== "normal" ? (
+                                  <span className="flex items-center justify-center gap-1">
+                                    <Gift className="h-3 w-3 text-amber-400" />
+                                    Stake (Freebet)
+                                  </span>
+                                ) : "Stake *"}
+                              </Label>
                               <Input
                                 type="number"
                                 step="0.01"
@@ -2204,8 +2322,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                                 value={coberturaBackStake}
                                 onChange={(e) => setCoberturaBackStake(e.target.value)}
                                 placeholder="100.00"
-                                className="text-center h-9"
+                                className={`text-center h-9 ${tipoApostaBack !== "normal" ? "border-amber-500/50" : ""}`}
                               />
+                              {tipoApostaBack !== "normal" && coberturaBackSaldo && (
+                                <p className="text-[10px] text-amber-400 text-center">
+                                  Será debitado do saldo de Freebet
+                                </p>
+                              )}
                             </div>
                           </div>
                           <div className="pt-2 border-t border-emerald-500/20 space-y-1">
@@ -2253,7 +2376,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                                 setCoberturaLayBookmakerId(val);
                                 const bk = bookmakers.find(b => b.id === val);
                                 if (bk) {
-                                  setCoberturaLaySaldo({ saldo: bk.saldo_total, saldoDisponivel: bk.saldo_disponivel, moeda: bk.moeda });
+                                  setCoberturaLaySaldo({ saldo: bk.saldo_total, saldoDisponivel: bk.saldo_disponivel, saldoFreebet: bk.saldo_freebet, moeda: bk.moeda });
                                 } else {
                                   setCoberturaLaySaldo(null);
                                 }
