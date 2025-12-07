@@ -293,7 +293,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
     if (opType.type === "lay") {
       return {
         primaryLine: aposta.bookmaker?.nome || "Exchange",
-        secondaryLine: `Liability: ${formatCurrency(aposta.lay_liability || 0)}`,
+        secondaryLine: `Responsabilidade: ${formatCurrency(aposta.lay_liability || 0)}`,
         badgeType: opType
       };
     }
@@ -531,7 +531,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                         return (
                           <div className="space-y-0.5 pt-1 border-t border-border/50">
                             <div className="flex items-center justify-between text-xs text-rose-400">
-                              <span>Liability:</span>
+                              <span>Responsabilidade:</span>
                               <span className="font-medium">{formatCurrency(exchangeData.liability || 0)}</span>
                             </div>
                             <div className="flex items-center justify-between text-xs">
@@ -552,7 +552,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       return (
                         <div className="space-y-0.5 pt-1 border-t border-border/50">
                           <div className="flex items-center justify-between text-xs text-rose-400">
-                            <span>Liability:</span>
+                            <span>Responsabilidade:</span>
                             <span className="font-medium">{formatCurrency(exchangeData.liability || 0)}</span>
                           </div>
                           <div className="flex items-center justify-between text-xs text-emerald-400">
