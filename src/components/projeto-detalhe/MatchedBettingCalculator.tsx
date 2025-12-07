@@ -199,7 +199,7 @@ export function MatchedBettingCalculator({ open, onOpenChange }: MatchedBettingC
                     <span className="font-medium">{formatCurrency(qbResults.layStake)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Liability:</span>
+                    <span className="text-sm text-muted-foreground">Responsabilidade:</span>
                     <span className="font-medium">{formatCurrency(qbResults.liability)}</span>
                   </div>
                   <div className="border-t pt-2">
@@ -308,7 +308,7 @@ export function MatchedBettingCalculator({ open, onOpenChange }: MatchedBettingC
                     <span className="font-medium">{formatCurrency(fbResults.layStake)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Liability:</span>
+                    <span className="text-sm text-muted-foreground">Responsabilidade:</span>
                     <span className="font-medium">{formatCurrency(fbResults.liability)}</span>
                   </div>
                   <div className="border-t pt-2">

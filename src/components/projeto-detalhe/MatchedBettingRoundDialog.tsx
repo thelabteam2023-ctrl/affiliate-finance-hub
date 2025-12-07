@@ -539,7 +539,7 @@ export function MatchedBettingRoundDialog({
 
                     {perna.tipo_aposta === "LAY" && perna.liability && (
                       <div className="text-sm text-muted-foreground">
-                        Liability: {formatCurrency(perna.liability)}
+                        Responsabilidade: {formatCurrency(perna.liability)}
                       </div>
                     )}
 

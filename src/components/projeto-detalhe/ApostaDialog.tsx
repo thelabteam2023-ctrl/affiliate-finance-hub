@@ -1323,7 +1323,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="block text-center uppercase text-xs tracking-wider">Liability</Label>
+                        <Label className="block text-center uppercase text-xs tracking-wider">Responsabilidade</Label>
                         <Input
                           type="text"
                           value={layLiability !== null ? formatCurrency(layLiability) : "-"}
@@ -1484,7 +1484,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                     ) : (
                       <div className="space-y-2">
                         <div className="flex justify-between items-center text-sm">
-                          <span className="text-muted-foreground">⚠️ Liability (exposição):</span>
+                          <span className="text-muted-foreground">⚠️ Responsabilidade (exposição):</span>
                           <span className="font-medium text-amber-500">
                             {exchangeLiability !== null ? formatCurrency(exchangeLiability) : "-"}
                           </span>
@@ -1496,7 +1496,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                           </span>
                         </div>
                         <div className="flex justify-between items-center text-sm">
-                          <span className="text-muted-foreground">❌ Se PERDER (liability):</span>
+                          <span className="text-muted-foreground">❌ Se PERDER (responsabilidade):</span>
                           <span className="font-medium text-red-500">
                             {exchangePrejuizo !== null ? formatCurrency(exchangePrejuizo) : "-"}
                           </span>
