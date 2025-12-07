@@ -2354,41 +2354,44 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                               {coberturaLucroGarantido !== null ? formatCurrency(coberturaLucroGarantido) : "-"}
                             </span>
                           </div>
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-muted-foreground flex items-center gap-1.5">
-                                <Percent className="h-3.5 w-3.5 text-purple-400" />
-                                Taxa de Extração:
-                              </span>
-                              <span className={`font-medium ${
-                                (coberturaTaxaExtracao ?? 0) >= 70 ? 'text-emerald-400' : 
-                                (coberturaTaxaExtracao ?? 0) >= 60 ? 'text-amber-400' : 
-                                'text-red-400'
-                              }`}>
-                                {coberturaTaxaExtracao !== null ? `${coberturaTaxaExtracao.toFixed(2)}%` : "-"}
-                              </span>
-                            </div>
-                            {/* Barra de progresso visual para taxa de extração */}
-                            {coberturaTaxaExtracao !== null && (
-                              <div className="space-y-1">
-                                <Progress 
-                                  value={Math.min(Math.max(coberturaTaxaExtracao, 0), 100)} 
-                                  className={`h-2 ${
-                                    coberturaTaxaExtracao >= 80 ? '[&>div]:bg-emerald-500' :
-                                    coberturaTaxaExtracao >= 70 ? '[&>div]:bg-emerald-400' :
-                                    coberturaTaxaExtracao >= 60 ? '[&>div]:bg-amber-400' :
-                                    '[&>div]:bg-red-400'
-                                  }`}
-                                />
-                                <div className="flex justify-between text-[9px] text-muted-foreground/60">
-                                  <span>Ruim</span>
-                                  <span>60%</span>
-                                  <span>70%</span>
-                                  <span>Ótimo</span>
-                                </div>
+                          {/* Taxa de Extração - apenas para Freebet SNR ou SR, não para Normal */}
+                          {tipoApostaBack !== "normal" && (
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-muted-foreground flex items-center gap-1.5">
+                                  <Percent className="h-3.5 w-3.5 text-purple-400" />
+                                  Taxa de Extração:
+                                </span>
+                                <span className={`font-medium ${
+                                  (coberturaTaxaExtracao ?? 0) >= 70 ? 'text-emerald-400' : 
+                                  (coberturaTaxaExtracao ?? 0) >= 60 ? 'text-amber-400' : 
+                                  'text-red-400'
+                                }`}>
+                                  {coberturaTaxaExtracao !== null ? `${coberturaTaxaExtracao.toFixed(2)}%` : "-"}
+                                </span>
                               </div>
-                            )}
-                          </div>
+                              {/* Barra de progresso visual para taxa de extração */}
+                              {coberturaTaxaExtracao !== null && (
+                                <div className="space-y-1">
+                                  <Progress 
+                                    value={Math.min(Math.max(coberturaTaxaExtracao, 0), 100)} 
+                                    className={`h-2 ${
+                                      coberturaTaxaExtracao >= 80 ? '[&>div]:bg-emerald-500' :
+                                      coberturaTaxaExtracao >= 70 ? '[&>div]:bg-emerald-400' :
+                                      coberturaTaxaExtracao >= 60 ? '[&>div]:bg-amber-400' :
+                                      '[&>div]:bg-red-400'
+                                    }`}
+                                  />
+                                  <div className="flex justify-between text-[9px] text-muted-foreground/60">
+                                    <span>Ruim</span>
+                                    <span>60%</span>
+                                    <span>70%</span>
+                                    <span>Ótimo</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

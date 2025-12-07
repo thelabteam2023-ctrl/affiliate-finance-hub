@@ -279,37 +279,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
   };
 
   // Formata informação de exibição da aposta baseado no tipo
+  // SEMPRE inclui o nome do vínculo/parceiro para padronizar o rodapé
   const getApostaDisplayInfo = (aposta: Aposta) => {
     const opType = getOperationType(aposta);
+    const parceiroNome = aposta.bookmaker?.parceiro?.nome ? getFirstLastName(aposta.bookmaker.parceiro.nome) : null;
     
-    if (opType.type === "cobertura") {
-      return {
-        primaryLine: aposta.bookmaker?.nome || "Casa",
-        secondaryLine: aposta.lay_exchange ? `Lay @ ${aposta.lay_odd?.toFixed(2)} • Resp: ${formatCurrency(aposta.lay_liability || 0)}` : null,
-        badgeType: opType
-      };
-    }
-    
-    if (opType.type === "lay") {
-      return {
-        primaryLine: aposta.bookmaker?.nome || "Exchange",
-        secondaryLine: `Responsabilidade: ${formatCurrency(aposta.lay_liability || 0)}`,
-        badgeType: opType
-      };
-    }
-    
-    if (opType.type === "back") {
-      return {
-        primaryLine: aposta.bookmaker?.nome || "Exchange",
-        secondaryLine: null,
-        badgeType: opType
-      };
-    }
-    
-    // Bookmaker padrão
+    // Todos os tipos exibem o mesmo formato: Casa + Nome do Parceiro
     return {
-      primaryLine: aposta.bookmaker?.nome || "",
-      secondaryLine: aposta.bookmaker?.parceiro?.nome ? getFirstLastName(aposta.bookmaker.parceiro.nome) : null,
+      primaryLine: aposta.bookmaker?.nome || (opType.type === "bookmaker" ? "" : "Exchange"),
+      secondaryLine: parceiroNome,
       badgeType: opType
     };
   };
@@ -675,7 +653,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                           )}
                           <span className="truncate">
                             {displayInfo.primaryLine}
-                            {displayInfo.secondaryLine && opType.type === "bookmaker" && (
+                            {displayInfo.secondaryLine && (
                               <> - {displayInfo.secondaryLine}</>
                             )}
                           </span>
