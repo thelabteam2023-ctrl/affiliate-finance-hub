@@ -1252,6 +1252,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       const oddAnterior = aposta?.odd || 0;
 
       if (aposta) {
+        // Verificar se gerouFreebet mudou de false para true na edição
+        const gerouFreebetAnterior = aposta.gerou_freebet || false;
+        const valorFreebetAnterior = aposta.valor_freebet_gerada || 0;
+        
         const { error } = await supabase
           .from("apostas")
           .update(apostaData)
@@ -1278,6 +1282,61 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             apostaData.lay_liability,
             apostaData.lay_comissao
           );
+        }
+
+        // Registrar freebet na edição se foi marcada agora
+        const novoValorFreebet = parseFloat(valorFreebetGerada) || 0;
+        if (gerouFreebet && novoValorFreebet > 0) {
+          if (!gerouFreebetAnterior || valorFreebetAnterior !== novoValorFreebet) {
+            // Se era false e agora é true, ou se o valor mudou
+            const bookmakerParaFreebet = tipoAposta === "bookmaker" ? bookmakerId : coberturaBackBookmakerId;
+            if (bookmakerParaFreebet) {
+              // Se já existia valor anterior, precisamos ajustar a diferença
+              if (gerouFreebetAnterior && valorFreebetAnterior > 0) {
+                // Reverter valor anterior
+                const { data: bk } = await supabase
+                  .from("bookmakers")
+                  .select("saldo_freebet")
+                  .eq("id", bookmakerParaFreebet)
+                  .maybeSingle();
+                if (bk) {
+                  await supabase
+                    .from("bookmakers")
+                    .update({ saldo_freebet: Math.max(0, (bk.saldo_freebet || 0) - valorFreebetAnterior + novoValorFreebet) })
+                    .eq("id", bookmakerParaFreebet);
+                }
+                // Atualizar registro existente
+                await supabase
+                  .from("freebets_recebidas")
+                  .update({ valor: novoValorFreebet })
+                  .eq("aposta_id", aposta.id);
+              } else {
+                // Novo registro
+                await registrarFreebetGerada(bookmakerParaFreebet, novoValorFreebet, userData.user.id, aposta.id);
+              }
+            }
+          }
+        } else if (!gerouFreebet && gerouFreebetAnterior && valorFreebetAnterior > 0) {
+          // Foi removido: reverter saldo e marcar como não utilizada
+          const bookmakerParaFreebet = tipoAposta === "bookmaker" ? bookmakerId : (aposta.bookmaker_id || coberturaBackBookmakerId);
+          if (bookmakerParaFreebet) {
+            const { data: bk } = await supabase
+              .from("bookmakers")
+              .select("saldo_freebet")
+              .eq("id", bookmakerParaFreebet)
+              .maybeSingle();
+            if (bk) {
+              await supabase
+                .from("bookmakers")
+                .update({ saldo_freebet: Math.max(0, (bk.saldo_freebet || 0) - valorFreebetAnterior) })
+                .eq("id", bookmakerParaFreebet);
+            }
+            // Remover registro de freebet_recebida
+            await supabase
+              .from("freebets_recebidas")
+              .delete()
+              .eq("aposta_id", aposta.id);
+          }
         }
 
         toast.success("Aposta atualizada com sucesso!");
@@ -1337,8 +1396,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     }
   };
 
-  // Função para registrar freebet gerada
-  const registrarFreebetGerada = async (bookmakerIdFreebet: string, valor: number, userId: string) => {
+  // Função para registrar freebet gerada (com apostaId opcional para edição)
+  const registrarFreebetGerada = async (bookmakerIdFreebet: string, valor: number, userId: string, apostaId?: string) => {
     try {
       // 1. Atualizar saldo_freebet do bookmaker
       const { data: bookmaker } = await supabase
@@ -1365,7 +1424,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           valor: valor,
           motivo: "Aposta qualificadora",
           data_recebida: new Date().toISOString(),
-          utilizada: false
+          utilizada: false,
+          aposta_id: apostaId || null
         });
     } catch (error) {
       console.error("Erro ao registrar freebet gerada:", error);
@@ -1790,12 +1850,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                         <p className="text-muted-foreground">
                           Saldo: <span className="text-emerald-500 font-medium">{formatCurrencyWithSymbol(bookmakerSaldo.saldo, bookmakerSaldo.moeda)}</span>
                         </p>
-                        {bookmakerSaldo.saldoFreebet > 0 && (
-                          <p className="text-muted-foreground">
-                            <Gift className="h-3 w-3 inline mr-0.5 text-amber-400" />
-                            Freebet: <span className="text-amber-400 font-medium">{formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)}</span>
-                          </p>
-                        )}
+                        <p className="text-muted-foreground">
+                          <Gift className="h-3 w-3 inline mr-0.5 text-amber-400" />
+                          Freebet: <span className={`font-medium ${bookmakerSaldo.saldoFreebet > 0 ? 'text-amber-400' : 'text-muted-foreground'}`}>
+                            {formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)}
+                          </span>
+                        </p>
                       </div>
                     )}
                   </div>

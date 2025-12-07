@@ -52,6 +52,7 @@ import {
   ArrowRightLeft,
   Wallet,
   Clock,
+  Gift,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Toggle } from "@/components/ui/toggle";
@@ -70,6 +71,7 @@ interface Vinculo {
   saldo_atual: number;
   saldo_em_aposta: number;
   saldo_livre: number;
+  saldo_freebet: number;
   moeda: string;
   login_username: string;
   bookmaker_catalogo_id: string | null;
@@ -122,6 +124,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           projeto_id,
           status,
           saldo_atual,
+          saldo_freebet,
           moeda,
           login_username,
           bookmaker_catalogo_id,
@@ -168,6 +171,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           saldo_atual: v.saldo_atual,
           saldo_em_aposta: emAposta,
           saldo_livre: v.saldo_atual - emAposta,
+          saldo_freebet: v.saldo_freebet || 0,
           moeda: v.moeda || "BRL",
           login_username: v.login_username,
           bookmaker_catalogo_id: v.bookmaker_catalogo_id,
@@ -649,6 +653,15 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       </span>
                       <span className="text-sm font-medium text-emerald-400">{formatCurrency(vinculo.saldo_livre, vinculo.moeda)}</span>
                     </div>
+                    {vinculo.saldo_freebet > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Gift className="h-3 w-3 text-amber-400" />
+                          Freebet
+                        </span>
+                        <span className="text-sm font-medium text-amber-400">{formatCurrency(vinculo.saldo_freebet, vinculo.moeda)}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t">
@@ -749,6 +762,17 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                     <p className="text-xs text-muted-foreground">Livre</p>
                     <p className="font-medium text-emerald-400">{formatCurrency(vinculo.saldo_livre, vinculo.moeda)}</p>
                   </div>
+
+                  {/* Freebet (condicional) */}
+                  {vinculo.saldo_freebet > 0 && (
+                    <div className="text-right flex-shrink-0 min-w-[80px]">
+                      <p className="text-xs text-muted-foreground flex items-center justify-end gap-1">
+                        <Gift className="h-3 w-3 text-amber-400" />
+                        Freebet
+                      </p>
+                      <p className="font-medium text-amber-400">{formatCurrency(vinculo.saldo_freebet, vinculo.moeda)}</p>
+                    </div>
+                  )}
 
                   {/* Status Badge */}
                   <div className="flex-shrink-0">
