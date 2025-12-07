@@ -24,6 +24,7 @@ interface ResultadoPillProps {
   layOdd?: number;
   layStake?: number;
   layComissao?: number;
+  isFreebetExtraction?: boolean; // true quando é extração de freebet (SNR/SR)
   onResultadoUpdated: () => void;
   onEditClick: () => void;
 }
@@ -77,6 +78,7 @@ export function ResultadoPill({
   layOdd,
   layStake,
   layComissao = 5,
+  isFreebetExtraction = false,
   onResultadoUpdated,
   onEditClick,
 }: ResultadoPillProps) {
@@ -161,6 +163,25 @@ export function ResultadoPill({
       const stakeLay = layStake || (backStake * backOdd) / (layOddVal - comissao);
       const responsabilidade = layLiability || stakeLay * (layOddVal - 1);
       
+      // Para extração de freebet, o lucro é sempre o mesmo independente do resultado
+      // (o lucro garantido da cobertura)
+      if (isFreebetExtraction) {
+        const lucroSeBackGanhar = (backStake * (backOdd - 1)) - responsabilidade;
+        const lucroSeLayGanhar = (stakeLay * (1 - comissao)); // Não subtraímos stake pq é freebet
+        const lucroGarantido = Math.min(lucroSeBackGanhar, lucroSeLayGanhar);
+        
+        switch (novoResultado) {
+          case "GREEN_BOOKMAKER":
+          case "RED_BOOKMAKER":
+            return Math.max(lucroGarantido, lucroSeBackGanhar, lucroSeLayGanhar); // Sempre positivo
+          case "VOID":
+            return 0;
+          default:
+            return 0;
+        }
+      }
+      
+      // Cobertura normal (qualifying bet ou proteção)
       switch (novoResultado) {
         case "GREEN_BOOKMAKER": // Back ganhou
           return (backStake * (backOdd - 1)) - responsabilidade;
@@ -234,6 +255,24 @@ export function ResultadoPill({
       const layOddVal = layOdd || 2;
       const stakeLay = layStake || (backStake * backOdd) / (layOddVal - comissao);
       
+      // Para extração de freebet, retorno é o lucro garantido (sempre positivo)
+      if (isFreebetExtraction) {
+        const lucroSeBackGanhar = (backStake * (backOdd - 1)) - (layLiability || stakeLay * (layOddVal - 1));
+        const lucroSeLayGanhar = stakeLay * (1 - comissao);
+        const lucroGarantido = Math.min(lucroSeBackGanhar, lucroSeLayGanhar);
+        
+        switch (novoResultado) {
+          case "GREEN_BOOKMAKER":
+          case "RED_BOOKMAKER":
+            return Math.max(lucroGarantido, lucroSeBackGanhar, lucroSeLayGanhar);
+          case "VOID":
+            return 0;
+          default:
+            return 0;
+        }
+      }
+      
+      // Cobertura normal
       switch (novoResultado) {
         case "GREEN_BOOKMAKER":
           // Recebemos do back, pagamos lay
@@ -313,6 +352,24 @@ export function ResultadoPill({
       const stakeLay = layStake || (backStake * backOdd) / (layOddVal - comissao);
       const responsabilidade = layLiability || stakeLay * (layOddVal - 1);
       
+      // Para extração de freebet, o ajuste de saldo é sempre positivo
+      if (isFreebetExtraction) {
+        const lucroSeBackGanhar = (backStake * (backOdd - 1)) - responsabilidade;
+        const lucroSeLayGanhar = stakeLay * (1 - comissao);
+        const lucroGarantido = Math.min(lucroSeBackGanhar, lucroSeLayGanhar);
+        
+        switch (resultado) {
+          case "GREEN_BOOKMAKER":
+          case "RED_BOOKMAKER":
+            return Math.max(lucroGarantido, lucroSeBackGanhar, lucroSeLayGanhar);
+          case "VOID":
+            return 0;
+          default:
+            return 0;
+        }
+      }
+      
+      // Cobertura normal
       switch (resultado) {
         case "GREEN_BOOKMAKER": // Back ganhou - recebemos lucro do back
           return backStake * (backOdd - 1);

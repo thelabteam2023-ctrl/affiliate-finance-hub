@@ -20,7 +20,8 @@ import {
   ArrowUp,
   ArrowDown,
   Shield,
-  Coins
+  Coins,
+  Gift
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -70,6 +71,8 @@ interface Aposta {
   lay_comissao?: number | null;
   back_comissao?: number | null;
   back_em_exchange?: boolean;
+  gerou_freebet?: boolean;
+  valor_freebet_gerada?: number | null;
   bookmaker?: {
     nome: string;
     parceiro_id: string;
@@ -418,6 +421,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                         layOdd={aposta.lay_odd || undefined}
                         layStake={aposta.lay_stake || undefined}
                         layComissao={aposta.lay_comissao || undefined}
+                        isFreebetExtraction={aposta.estrategia === "COBERTURA_LAY" && aposta.back_em_exchange === true}
                         onResultadoUpdated={handleApostaUpdated}
                         onEditClick={() => handleOpenDialog(aposta)}
                       />
@@ -633,6 +637,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                         </div>
                       );
                     })()}
+                    
+                    {/* Tag de Freebet Gerada */}
+                    {aposta.gerou_freebet && aposta.valor_freebet_gerada && (
+                      <div className="flex items-center gap-1 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 mt-1">
+                        <Gift className="h-3 w-3 flex-shrink-0" />
+                        <span>Gerou Freebet: {formatCurrency(aposta.valor_freebet_gerada)}</span>
+                      </div>
+                    )}
+                    
                     <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-2.5 w-2.5" />
