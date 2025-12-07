@@ -773,100 +773,271 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
         <Card>
           <ScrollArea className="h-[600px]">
             <div className="divide-y">
-              {filteredApostas.map((aposta) => (
-                <div
-                  key={aposta.id}
-                  className="flex items-center justify-between p-4 hover:bg-muted/50"
-                >
-                  <div 
-                    className="flex items-center gap-4 flex-1"
+              {filteredApostas.map((aposta) => {
+                const opType = getOperationType(aposta);
+                const isPending = aposta.resultado === null || aposta.resultado === "PENDENTE";
+                const profit = getCalculatedProfit(aposta);
+                const isFreebetExtraction = aposta.estrategia === "COBERTURA_LAY" && aposta.back_em_exchange === true;
+                
+                // Determinar tipo de freebet baseado no campo tipo_freebet
+                const tipoFreebet = (aposta as any).tipo_freebet;
+                const freebetLabel = tipoFreebet === "freebet_snr" ? "SNR" : tipoFreebet === "freebet_sr" ? "SR" : null;
+                
+                // Calcular dados para cobertura
+                let coberturaData: { responsabilidade: number; lucroGarantido: number } | null = null;
+                if (opType.type === "cobertura") {
+                  const backOdd = aposta.odd;
+                  const backStake = aposta.stake;
+                  const layOdd = aposta.lay_odd || 2;
+                  const comissao = (aposta.lay_comissao || 5) / 100;
+                  const oddLayAjustada = layOdd - comissao;
+                  
+                  // Se for freebet SNR, usar (backOdd - 1) em vez de backOdd
+                  const multiplicador = tipoFreebet === "freebet_snr" ? (backOdd - 1) : backOdd;
+                  const stakeLay = (backStake * multiplicador) / oddLayAjustada;
+                  const responsabilidade = stakeLay * (layOdd - 1);
+                  
+                  let lucroSeBackGanhar: number;
+                  let lucroSeLayGanhar: number;
+                  
+                  if (tipoFreebet === "freebet_snr") {
+                    // SNR: stake não retorna
+                    lucroSeBackGanhar = (backStake * (backOdd - 1)) - responsabilidade;
+                    lucroSeLayGanhar = stakeLay * (1 - comissao);
+                  } else if (tipoFreebet === "freebet_sr") {
+                    // SR: stake retorna
+                    lucroSeBackGanhar = (backStake * backOdd) - backStake - responsabilidade;
+                    lucroSeLayGanhar = (stakeLay * (1 - comissao)) - backStake;
+                  } else {
+                    // Normal/Qualifying
+                    lucroSeBackGanhar = (backStake * (backOdd - 1)) - responsabilidade;
+                    lucroSeLayGanhar = (stakeLay * (1 - comissao)) - backStake;
+                  }
+                  
+                  const lucroGarantido = Math.min(lucroSeBackGanhar, lucroSeLayGanhar);
+                  coberturaData = { responsabilidade, lucroGarantido };
+                }
+                
+                return (
+                  <div
+                    key={aposta.id}
+                    className="flex items-center justify-between p-4 hover:bg-muted/50"
                   >
-                    {aposta.bookmaker?.bookmakers_catalogo?.logo_url ? (
-                      <img 
-                        src={aposta.bookmaker.bookmakers_catalogo.logo_url} 
-                        alt={aposta.bookmaker.nome}
-                        className="h-10 w-10 rounded-lg object-contain bg-muted/50 p-1"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Target className="h-5 w-5 text-primary" />
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-medium">
-                        {aposta.evento}
-                        {aposta.bookmaker && (
-                          <span className="text-muted-foreground font-normal text-sm ml-2">
-                            • {aposta.bookmaker.nome}
-                            {aposta.bookmaker.parceiro?.nome && (
-                              <> - {getFirstLastName(aposta.bookmaker.parceiro.nome)}</>
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      {/* Coluna de casas/logos */}
+                      <div className="flex flex-col gap-1 flex-shrink-0">
+                        {/* Casa Back */}
+                        {aposta.bookmaker?.bookmakers_catalogo?.logo_url ? (
+                          <img 
+                            src={aposta.bookmaker.bookmakers_catalogo.logo_url} 
+                            alt={aposta.bookmaker.nome}
+                            className="h-8 w-8 rounded-lg object-contain bg-muted/50 p-0.5"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            {opType.type === "cobertura" ? (
+                              <ArrowUp className="h-4 w-4 text-emerald-500" />
+                            ) : (
+                              <Target className="h-4 w-4 text-primary" />
                             )}
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {aposta.esporte} • {aposta.selecao} @ {aposta.odd.toFixed(2)} • {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{formatCurrency(aposta.stake)}</p>
-                      {(() => {
-                        const opType = getOperationType(aposta);
-                        
-                        // Para Exchange, mostrar dados específicos
-                        if (opType.type === "back" || opType.type === "lay") {
-                          const exchangeData = getExchangeDisplayData(aposta);
-                          if (exchangeData.isExchange) {
-                            return (
-                              <div className="flex items-center justify-end gap-2">
-                                <p className="text-sm text-sky-400">
-                                  {formatCurrency(exchangeData.lucroPotencial || 0)}
-                                </p>
-                                <span className="text-[10px] px-1 py-0.5 rounded bg-muted text-muted-foreground">
-                                  {exchangeData.comissao?.toFixed(1)}%
-                                </span>
-                              </div>
-                            );
-                          }
-                        }
-                        
-                        // Para Bookmaker/Cobertura, mostrar P/L
-                        const profit = getCalculatedProfit(aposta);
-                        if (profit === null) return null;
-                        return (
-                          <div className="flex items-center justify-end gap-2">
-                            <p className={`text-sm ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                              {formatCurrency(profit)}
-                            </p>
-                            <span className={`text-[10px] px-1 py-0.5 rounded ${profit >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                              {((profit / aposta.stake) * 100).toFixed(1)}%
-                            </span>
                           </div>
-                        );
-                      })()}
+                        )}
+                        
+                        {/* Casa Lay (apenas para cobertura) */}
+                        {opType.type === "cobertura" && (
+                          aposta.lay_bookmaker?.bookmakers_catalogo?.logo_url ? (
+                            <img 
+                              src={aposta.lay_bookmaker.bookmakers_catalogo.logo_url} 
+                              alt={aposta.lay_bookmaker.nome}
+                              className="h-8 w-8 rounded-lg object-contain bg-muted/50 p-0.5"
+                            />
+                          ) : (
+                            <div className="h-8 w-8 rounded-lg bg-rose-500/10 flex items-center justify-center">
+                              <ArrowDown className="h-4 w-4 text-rose-500" />
+                            </div>
+                          )
+                        )}
+                      </div>
+                      
+                      {/* Informações do evento e casas */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium truncate">{aposta.evento}</p>
+                          
+                          {/* Badges de tipo */}
+                          {opType.label && (
+                            <Badge className={`${opType.color} text-[10px] px-1.5 py-0 flex-shrink-0`}>
+                              {opType.type === "cobertura" && <Shield className="h-2.5 w-2.5 mr-0.5" />}
+                              {opType.type === "back" && <ArrowUp className="h-2.5 w-2.5 mr-0.5" />}
+                              {opType.type === "lay" && <ArrowDown className="h-2.5 w-2.5 mr-0.5" />}
+                              {opType.label}
+                            </Badge>
+                          )}
+                          
+                          {/* Badge resultado cobertura */}
+                          {opType.type === "cobertura" && aposta.resultado && aposta.resultado !== "PENDENTE" && (
+                            <Badge className={`text-[10px] px-1.5 py-0 flex-shrink-0 ${
+                              aposta.resultado === "GREEN_BOOKMAKER" 
+                                ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+                                : aposta.resultado === "RED_BOOKMAKER"
+                                  ? "bg-sky-500/20 text-sky-400 border-sky-500/30"
+                                  : "bg-gray-500/20 text-gray-400 border-gray-500/30"
+                            }`}>
+                              {aposta.resultado === "GREEN_BOOKMAKER" ? "Green Book" : aposta.resultado === "RED_BOOKMAKER" ? "Green Lay" : "Void"}
+                            </Badge>
+                          )}
+                          
+                          {/* Badge tipo freebet */}
+                          {freebetLabel && (
+                            <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0 flex-shrink-0">
+                              <Gift className="h-2.5 w-2.5 mr-0.5" />
+                              Freebet {freebetLabel}
+                            </Badge>
+                          )}
+                          
+                          {/* Badge freebet gerada */}
+                          {aposta.gerou_freebet && aposta.valor_freebet_gerada && (
+                            <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] px-1.5 py-0 flex-shrink-0">
+                              <Gift className="h-2.5 w-2.5 mr-0.5" />
+                              +{formatCurrency(aposta.valor_freebet_gerada)}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* Linha de detalhes */}
+                        <p className="text-sm text-muted-foreground truncate">
+                          {aposta.esporte} • {aposta.selecao} @ {aposta.odd.toFixed(2)} • {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
+                        </p>
+                        
+                        {/* Casas e vínculos */}
+                        <div className="mt-1 space-y-0.5">
+                          {/* Casa Back + Vínculo */}
+                          {aposta.bookmaker && (
+                            <div className="flex items-center gap-1 text-xs">
+                              <span className="font-medium text-foreground">{aposta.bookmaker.nome}</span>
+                              {aposta.bookmaker.parceiro?.nome && (
+                                <span className="text-[10px] text-muted-foreground">- {getFirstLastName(aposta.bookmaker.parceiro.nome)}</span>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Casa Lay + Vínculo (apenas para cobertura) */}
+                          {opType.type === "cobertura" && aposta.lay_bookmaker && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground/80">
+                              <span className="font-medium text-foreground/80">{aposta.lay_bookmaker.nome}</span>
+                              {aposta.lay_bookmaker.parceiro?.nome && (
+                                <span className="text-[10px]">- {getFirstLastName(aposta.lay_bookmaker.parceiro.nome)}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <ResultadoPill
-                      apostaId={aposta.id}
-                      bookmarkerId={aposta.bookmaker_id}
-                      layExchangeBookmakerId={getOperationType(aposta).type === "cobertura" ? aposta.lay_exchange : undefined}
-                      resultado={aposta.resultado}
-                      status={aposta.status}
-                      stake={aposta.stake}
-                      odd={aposta.odd}
-                      operationType={getOperationType(aposta).type}
-                      layLiability={aposta.lay_liability || undefined}
-                      layOdd={aposta.lay_odd || undefined}
-                      layStake={aposta.lay_stake || undefined}
-                      layComissao={aposta.lay_comissao || undefined}
-                      isFreebetExtraction={aposta.estrategia === "COBERTURA_LAY" && aposta.back_em_exchange === true}
-                      onResultadoUpdated={handleApostaUpdated}
-                      onEditClick={() => handleOpenDialog(aposta)}
-                    />
+                    
+                    {/* Coluna de valores */}
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      <div className="text-right space-y-0.5">
+                        {/* Stake */}
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-xs text-muted-foreground">Stake:</span>
+                          <p className="text-sm font-medium">{formatCurrency(aposta.stake)}</p>
+                        </div>
+                        
+                        {/* Responsabilidade (para cobertura/lay) */}
+                        {(opType.type === "cobertura" || opType.type === "lay") && coberturaData && (
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="text-xs text-muted-foreground">Resp.:</span>
+                            <p className="text-sm text-rose-400">{formatCurrency(coberturaData.responsabilidade)}</p>
+                          </div>
+                        )}
+                        
+                        {/* P/L ou Lucro Garantido */}
+                        {(() => {
+                          // Para Exchange Back/Lay, mostrar dados específicos
+                          if (opType.type === "back" || opType.type === "lay") {
+                            const exchangeData = getExchangeDisplayData(aposta);
+                            if (exchangeData.isExchange) {
+                              return (
+                                <div className="flex items-center justify-end gap-2">
+                                  <span className="text-xs text-muted-foreground">Lucro Pot.:</span>
+                                  <p className="text-sm text-sky-400">
+                                    {formatCurrency(exchangeData.lucroPotencial || 0)}
+                                  </p>
+                                  <span className="text-[10px] px-1 py-0.5 rounded bg-muted text-muted-foreground">
+                                    {exchangeData.comissao?.toFixed(1)}%
+                                  </span>
+                                </div>
+                              );
+                            }
+                          }
+                          
+                          // Para Cobertura
+                          if (opType.type === "cobertura" && coberturaData) {
+                            if (isPending) {
+                              // Mostrar lucro garantido esperado
+                              return (
+                                <div className="flex items-center justify-end gap-2">
+                                  <span className="text-xs text-muted-foreground">Lucro Gar.:</span>
+                                  <p className={`text-sm font-medium flex items-center gap-0.5 ${coberturaData.lucroGarantido >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                    {coberturaData.lucroGarantido >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                                    {formatCurrency(coberturaData.lucroGarantido)}
+                                  </p>
+                                </div>
+                              );
+                            } else if (profit !== null) {
+                              // Mostrar P/L real
+                              return (
+                                <div className="flex items-center justify-end gap-2">
+                                  <span className="text-xs text-muted-foreground">P/L:</span>
+                                  <p className={`text-sm font-medium ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                    {formatCurrency(profit)}
+                                  </p>
+                                  <span className={`text-[10px] px-1 py-0.5 rounded ${profit >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                                    {((profit / aposta.stake) * 100).toFixed(1)}%
+                                  </span>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }
+                          
+                          // Para Bookmaker normal, mostrar P/L
+                          if (profit === null) return null;
+                          return (
+                            <div className="flex items-center justify-end gap-2">
+                              <span className="text-xs text-muted-foreground">P/L:</span>
+                              <p className={`text-sm ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                {formatCurrency(profit)}
+                              </p>
+                              <span className={`text-[10px] px-1 py-0.5 rounded ${profit >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                                {((profit / aposta.stake) * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      
+                      <ResultadoPill
+                        apostaId={aposta.id}
+                        bookmarkerId={aposta.bookmaker_id}
+                        layExchangeBookmakerId={opType.type === "cobertura" ? aposta.lay_exchange : undefined}
+                        resultado={aposta.resultado}
+                        status={aposta.status}
+                        stake={aposta.stake}
+                        odd={aposta.odd}
+                        operationType={opType.type}
+                        layLiability={aposta.lay_liability || undefined}
+                        layOdd={aposta.lay_odd || undefined}
+                        layStake={aposta.lay_stake || undefined}
+                        layComissao={aposta.lay_comissao || undefined}
+                        isFreebetExtraction={isFreebetExtraction}
+                        onResultadoUpdated={handleApostaUpdated}
+                        onEditClick={() => handleOpenDialog(aposta)}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </ScrollArea>
         </Card>
