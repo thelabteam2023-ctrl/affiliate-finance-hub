@@ -12,7 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2 } from "lucide-react";
+import { Loader2, Save, Trash2, HelpCircle } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -355,18 +361,34 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   const [layOdd, setLayOdd] = useState("");
   const [layComissao, setLayComissao] = useState("5");
 
-  // Exchange mode - novo modelo com tipo de operação
-  const [tipoOperacaoExchange, setTipoOperacaoExchange] = useState<"back" | "lay">("back");
+  // Exchange mode - novo modelo com 3 tipos de operação
+  const [tipoOperacaoExchange, setTipoOperacaoExchange] = useState<"back" | "lay" | "cobertura">("back");
   const [exchangeBookmakerId, setExchangeBookmakerId] = useState("");
   const [exchangeOdd, setExchangeOdd] = useState("");
   const [exchangeStake, setExchangeStake] = useState("");
   const [exchangeComissao, setExchangeComissao] = useState("5");
   
-  // Valores calculados para Exchange
+  // Valores calculados para Exchange (Back/Lay simples)
   const [exchangeLucroPotencial, setExchangeLucroPotencial] = useState<number | null>(null);
   const [exchangeRetornoTotal, setExchangeRetornoTotal] = useState<number | null>(null);
   const [exchangeLiability, setExchangeLiability] = useState<number | null>(null);
   const [exchangePrejuizo, setExchangePrejuizo] = useState<number | null>(null);
+  
+  // Cobertura Lay (Back em bookmaker + Lay em exchange)
+  const [coberturaBackBookmakerId, setCoberturaBackBookmakerId] = useState("");
+  const [coberturaBackOdd, setCoberturaBackOdd] = useState("");
+  const [coberturaBackStake, setCoberturaBackStake] = useState("");
+  const [coberturaLayBookmakerId, setCoberturaLayBookmakerId] = useState("");
+  const [coberturaLayOdd, setCoberturaLayOdd] = useState("");
+  const [coberturaLayComissao, setCoberturaLayComissao] = useState("5");
+  
+  // Valores calculados para Cobertura
+  const [coberturaLayStake, setCoberturaLayStake] = useState<number | null>(null);
+  const [coberturaResponsabilidade, setCoberturaResponsabilidade] = useState<number | null>(null);
+  const [coberturaLucroBack, setCoberturaLucroBack] = useState<number | null>(null);
+  const [coberturaLucroLay, setCoberturaLucroLay] = useState<number | null>(null);
+  const [coberturaLucroGarantido, setCoberturaLucroGarantido] = useState<number | null>(null);
+  const [coberturaTaxaExtracao, setCoberturaTaxaExtracao] = useState<number | null>(null);
 
   // Calculated values
   const [layStake, setLayStake] = useState<number | null>(null);
@@ -420,27 +442,39 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         if (aposta.modo_entrada === "EXCHANGE" || aposta.back_em_exchange) {
           // Exchange mode
           setTipoAposta("exchange");
-          // Determinar se é Back ou Lay baseado na estratégia
-          if (aposta.estrategia === "EXCHANGE_LAY") {
+          // Determinar se é Back, Lay ou Cobertura baseado na estratégia
+          if (aposta.estrategia === "COBERTURA_LAY") {
+            setTipoOperacaoExchange("cobertura");
+            setCoberturaBackBookmakerId(aposta.bookmaker_id || "");
+            setCoberturaBackOdd(aposta.odd?.toString() || "");
+            setCoberturaBackStake(aposta.stake?.toString() || "");
+            setCoberturaLayBookmakerId(aposta.lay_exchange || "");
+            setCoberturaLayOdd(aposta.lay_odd?.toString() || "");
+            setCoberturaLayComissao(aposta.lay_comissao?.toString() || "5");
+          } else if (aposta.estrategia === "EXCHANGE_LAY") {
             setTipoOperacaoExchange("lay");
             setExchangeOdd(aposta.lay_odd?.toString() || "");
             setExchangeStake(aposta.lay_stake?.toString() || aposta.stake?.toString() || "");
             setExchangeLiability(aposta.lay_liability || null);
+            setExchangeBookmakerId(aposta.bookmaker_id || "");
+            setExchangeComissao(aposta.lay_comissao?.toString() || "5");
           } else {
             setTipoOperacaoExchange("back");
             setExchangeOdd(aposta.odd?.toString() || "");
             setExchangeStake(aposta.stake?.toString() || "");
+            setExchangeBookmakerId(aposta.bookmaker_id || "");
+            setExchangeComissao(aposta.back_comissao?.toString() || "5");
           }
-          setExchangeBookmakerId(aposta.bookmaker_id || "");
-          setExchangeComissao(aposta.back_comissao?.toString() || aposta.lay_comissao?.toString() || "5");
         } else if (aposta.modo_entrada === "LAYBACK") {
-          // Bookmaker + Lay em exchange
-          setTipoAposta("bookmaker");
-          setBookmakerId(aposta.bookmaker_id);
-          setModoBackLay(true);
-          setLayExchange(aposta.lay_exchange || "");
-          setLayOdd(aposta.lay_odd?.toString() || "");
-          setLayComissao(aposta.lay_comissao?.toString() || "5");
+          // Legado: Bookmaker + Lay em exchange -> migrar para Cobertura
+          setTipoAposta("exchange");
+          setTipoOperacaoExchange("cobertura");
+          setCoberturaBackBookmakerId(aposta.bookmaker_id);
+          setCoberturaBackOdd(aposta.odd?.toString() || "");
+          setCoberturaBackStake(aposta.stake?.toString() || "");
+          setCoberturaLayBookmakerId(aposta.lay_exchange || "");
+          setCoberturaLayOdd(aposta.lay_odd?.toString() || "");
+          setCoberturaLayComissao(aposta.lay_comissao?.toString() || "5");
         } else {
           // Bookmaker simples
           setTipoAposta("bookmaker");
@@ -538,6 +572,63 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     }
   }, [tipoAposta, tipoOperacaoExchange, exchangeOdd, exchangeStake, exchangeComissao]);
 
+  // Cálculos para Cobertura Lay
+  useEffect(() => {
+    if (tipoAposta !== "exchange" || tipoOperacaoExchange !== "cobertura") {
+      setCoberturaLayStake(null);
+      setCoberturaResponsabilidade(null);
+      setCoberturaLucroBack(null);
+      setCoberturaLucroLay(null);
+      setCoberturaLucroGarantido(null);
+      setCoberturaTaxaExtracao(null);
+      return;
+    }
+    
+    const backOdd = parseFloat(coberturaBackOdd);
+    const backStake = parseFloat(coberturaBackStake);
+    const layOdd = parseFloat(coberturaLayOdd);
+    const comissao = parseFloat(coberturaLayComissao) / 100;
+    
+    if (isNaN(backOdd) || isNaN(backStake) || isNaN(layOdd) || 
+        backOdd <= 1 || backStake <= 0 || layOdd <= 1) {
+      setCoberturaLayStake(null);
+      setCoberturaResponsabilidade(null);
+      setCoberturaLucroBack(null);
+      setCoberturaLucroLay(null);
+      setCoberturaLucroGarantido(null);
+      setCoberturaTaxaExtracao(null);
+      return;
+    }
+    
+    // Stake Lay = (Stake Back × Odd Back) ÷ (Odd Lay - Comissão em termos de ajuste)
+    // A fórmula correta considera: layStake = (backStake * backOdd) / (layOdd - comissão)
+    // Onde ajuste de comissão: layOdd - comissao (simplified for matched betting)
+    const oddLayAjustada = layOdd - comissao;
+    const stakeLay = (backStake * backOdd) / oddLayAjustada;
+    
+    // Responsabilidade = Stake Lay × (Odd Lay - 1)
+    const responsabilidade = stakeLay * (layOdd - 1);
+    
+    // Lucro se Back ganhar = (Stake Back × (Odd Back - 1)) - Responsabilidade
+    const lucroSeBackGanhar = (backStake * (backOdd - 1)) - responsabilidade;
+    
+    // Lucro se Lay ganhar = (Stake Lay × (1 - comissão)) - Stake Back
+    const lucroSeLayGanhar = (stakeLay * (1 - comissao)) - backStake;
+    
+    // Lucro garantido = mínimo dos dois (devem ser próximos se odds corretas)
+    const lucroGarantido = Math.min(lucroSeBackGanhar, lucroSeLayGanhar);
+    
+    // Taxa de extração = Lucro Garantido ÷ Stake Back × 100
+    const taxaExtracao = (lucroGarantido / backStake) * 100;
+    
+    setCoberturaLayStake(Math.round(stakeLay * 100) / 100);
+    setCoberturaResponsabilidade(Math.round(responsabilidade * 100) / 100);
+    setCoberturaLucroBack(Math.round(lucroSeBackGanhar * 100) / 100);
+    setCoberturaLucroLay(Math.round(lucroSeLayGanhar * 100) / 100);
+    setCoberturaLucroGarantido(Math.round(lucroGarantido * 100) / 100);
+    setCoberturaTaxaExtracao(Math.round(taxaExtracao * 100) / 100);
+  }, [tipoAposta, tipoOperacaoExchange, coberturaBackOdd, coberturaBackStake, coberturaLayOdd, coberturaLayComissao]);
+
   const getLocalDateTimeString = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -580,6 +671,19 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     setExchangePrejuizo(null);
     setLayStake(null);
     setLayLiability(null);
+    // Cobertura mode
+    setCoberturaBackBookmakerId("");
+    setCoberturaBackOdd("");
+    setCoberturaBackStake("");
+    setCoberturaLayBookmakerId("");
+    setCoberturaLayOdd("");
+    setCoberturaLayComissao("5");
+    setCoberturaLayStake(null);
+    setCoberturaResponsabilidade(null);
+    setCoberturaLucroBack(null);
+    setCoberturaLucroLay(null);
+    setCoberturaLucroGarantido(null);
+    setCoberturaTaxaExtracao(null);
   };
 
   const fetchBookmakers = async () => {
@@ -759,14 +863,21 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       }
     }
 
-    if (tipoAposta === "bookmaker" && modoBackLay && (!layExchange || !layOdd)) {
-      toast.error("Preencha os campos de Lay");
-      return;
+    // Validação para Exchange simples (Back ou Lay)
+    if (tipoAposta === "exchange" && (tipoOperacaoExchange === "back" || tipoOperacaoExchange === "lay")) {
+      if (!exchangeBookmakerId || !exchangeOdd || !exchangeStake) {
+        toast.error("Preencha todos os campos da Exchange");
+        return;
+      }
     }
 
-    if (tipoAposta === "exchange" && (!exchangeBookmakerId || !exchangeOdd || !exchangeStake)) {
-      toast.error("Preencha todos os campos da Exchange");
-      return;
+    // Validação para Cobertura Lay
+    if (tipoAposta === "exchange" && tipoOperacaoExchange === "cobertura") {
+      if (!coberturaBackBookmakerId || !coberturaBackOdd || !coberturaBackStake || 
+          !coberturaLayBookmakerId || !coberturaLayOdd) {
+        toast.error("Preencha todos os campos da Cobertura");
+        return;
+      }
     }
 
     try {
@@ -803,18 +914,35 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         apostaData = {
           ...apostaData,
           bookmaker_id: bookmakerId,
-          estrategia: modoBackLay ? "LAYBACK" : "VALOR",
-          modo_entrada: modoBackLay ? "LAYBACK" : "PADRAO",
-          lay_exchange: modoBackLay ? layExchange : null,
-          lay_odd: modoBackLay && layOdd ? parseFloat(layOdd) : null,
-          lay_stake: modoBackLay ? layStake : null,
-          lay_liability: modoBackLay ? layLiability : null,
-          lay_comissao: modoBackLay ? parseFloat(layComissao) : null,
+          estrategia: "VALOR",
+          modo_entrada: "PADRAO",
+          lay_exchange: null,
+          lay_odd: null,
+          lay_stake: null,
+          lay_liability: null,
+          lay_comissao: null,
           back_em_exchange: false,
           back_comissao: null,
         };
+      } else if (tipoOperacaoExchange === "cobertura") {
+        // Cobertura Lay: Back em bookmaker + Lay em exchange
+        apostaData = {
+          ...apostaData,
+          bookmaker_id: coberturaBackBookmakerId,
+          estrategia: "COBERTURA_LAY",
+          modo_entrada: "EXCHANGE",
+          odd: parseFloat(coberturaBackOdd),
+          stake: parseFloat(coberturaBackStake),
+          lay_exchange: coberturaLayBookmakerId,
+          lay_odd: parseFloat(coberturaLayOdd),
+          lay_stake: coberturaLayStake,
+          lay_liability: coberturaResponsabilidade,
+          lay_comissao: parseFloat(coberturaLayComissao),
+          back_em_exchange: true,
+          back_comissao: null,
+        };
       } else {
-        // Exchange mode - novo modelo com operação Back OU Lay
+        // Exchange mode - Back OU Lay simples
         const isLay = tipoOperacaoExchange === "lay";
         apostaData = {
           ...apostaData,
@@ -1276,235 +1404,415 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   </div>
                 </div>
 
-                {/* Toggle Back + Lay */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={modoBackLay}
-                      onCheckedChange={setModoBackLay}
-                      id="modo-back-lay"
-                    />
-                    <Label htmlFor="modo-back-lay" className="text-sm cursor-pointer">
-                      Back + Lay (hedge em Exchange)
-                    </Label>
-                  </div>
-                </div>
-
-                {/* Campos Lay quando ativado */}
-                {modoBackLay && (
-                  <div className="space-y-3 p-4 rounded-lg border border-purple-500/30 bg-purple-500/5">
-                    <Label className="text-sm font-medium text-purple-400">LAY (Exchange)</Label>
-                    <div className="grid grid-cols-4 gap-4">
-                      <div className="space-y-2">
-                        <Label className="block text-center uppercase text-xs tracking-wider">Exchange *</Label>
-                        <Input
-                          value={layExchange}
-                          onChange={(e) => setLayExchange(e.target.value)}
-                          placeholder="Ex: Betfair"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="block text-center uppercase text-xs tracking-wider">Odd Lay *</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={layOdd}
-                          onChange={(e) => setLayOdd(e.target.value)}
-                          placeholder="Ex: 1.90"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="block text-center uppercase text-xs tracking-wider">Stake Lay</Label>
-                        <Input
-                          type="text"
-                          value={layStake !== null ? formatCurrency(layStake) : "-"}
-                          disabled
-                          className="bg-muted"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="block text-center uppercase text-xs tracking-wider">Responsabilidade</Label>
-                        <Input
-                          type="text"
-                          value={layLiability !== null ? formatCurrency(layLiability) : "-"}
-                          disabled
-                          className="bg-muted"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Label className="text-xs text-muted-foreground">Comissão:</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={layComissao}
-                        onChange={(e) => setLayComissao(e.target.value)}
-                        className="w-20 h-8"
-                      />
-                      <span className="text-xs text-muted-foreground">%</span>
-                    </div>
-                  </div>
-                )}
               </TabsContent>
 
-              {/* Aba Exchange - Novo modelo: uma operação por vez */}
+              {/* Aba Exchange - 3 tipos de operação */}
               <TabsContent value="exchange" className="space-y-4 mt-4">
-                {/* Seletor de tipo de operação */}
+                {/* Seletor de tipo de operação com ícone de ajuda */}
                 <div className="space-y-2">
-                  <Label className="block text-center uppercase text-xs tracking-wider">Tipo de Operação</Label>
+                  <div className="flex items-center justify-center gap-2">
+                    <Label className="block text-center uppercase text-xs tracking-wider">Tipo de Operação</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                            <HelpCircle className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-[320px] p-4 space-y-3">
+                          <div>
+                            <p className="font-semibold text-emerald-400">📗 BACK (a favor)</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Aposta em um resultado acontecer diretamente em uma exchange. 
+                              O lucro vem se o resultado ocorrer.
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-rose-400">📕 LAY (contra)</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Aposta contra um resultado acontecer. Você assume o papel da 
+                              "casa" e paga se o resultado ocorrer.
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-purple-400">🛡️ COBERTURA LAY</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Protege uma aposta em bookmaker usando Lay na exchange. Ideal para:
+                            </p>
+                            <ul className="text-xs text-muted-foreground mt-1 list-disc list-inside">
+                              <li>Extrair valor de bônus de boas-vindas</li>
+                              <li>Matched Betting (lucro garantido)</li>
+                              <li>Garantir lucro em Free Bets</li>
+                            </ul>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <div className="flex justify-center gap-2">
                     <button
                       type="button"
                       onClick={() => setTipoOperacaoExchange("back")}
-                      className={`flex-1 max-w-[160px] px-4 py-3 rounded-lg border-2 transition-all ${
+                      className={`flex-1 max-w-[140px] px-3 py-2.5 rounded-lg border-2 transition-all ${
                         tipoOperacaoExchange === "back"
                           ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
                           : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
                       }`}
                     >
-                      <div className="font-semibold">BACK</div>
-                      <div className="text-xs opacity-70">(a favor)</div>
+                      <div className="font-semibold text-sm">BACK</div>
+                      <div className="text-[10px] opacity-70">(a favor)</div>
                     </button>
                     <button
                       type="button"
                       onClick={() => setTipoOperacaoExchange("lay")}
-                      className={`flex-1 max-w-[160px] px-4 py-3 rounded-lg border-2 transition-all ${
+                      className={`flex-1 max-w-[140px] px-3 py-2.5 rounded-lg border-2 transition-all ${
                         tipoOperacaoExchange === "lay"
                           ? "border-rose-500 bg-rose-500/10 text-rose-400"
                           : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
                       }`}
                     >
-                      <div className="font-semibold">LAY</div>
-                      <div className="text-xs opacity-70">(contra)</div>
+                      <div className="font-semibold text-sm">LAY</div>
+                      <div className="text-[10px] opacity-70">(contra)</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTipoOperacaoExchange("cobertura")}
+                      className={`flex-1 max-w-[180px] px-3 py-2.5 rounded-lg border-2 transition-all ${
+                        tipoOperacaoExchange === "cobertura"
+                          ? "border-purple-500 bg-purple-500/10 text-purple-400"
+                          : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                      }`}
+                    >
+                      <div className="font-semibold text-sm">COBERTURA</div>
+                      <div className="text-[10px] opacity-70">(Back + Lay)</div>
                     </button>
                   </div>
                 </div>
 
-                {/* Campos da operação */}
-                <div className={`p-4 rounded-lg border ${
-                  tipoOperacaoExchange === "back" 
-                    ? "border-emerald-500/30 bg-emerald-500/5" 
-                    : "border-rose-500/30 bg-rose-500/5"
-                }`}>
-                  <div className="grid grid-cols-4 gap-3">
-                    <div className="space-y-2">
-                      <Label className="block text-center uppercase text-xs tracking-wider">Casa *</Label>
-                      <Select value={exchangeBookmakerId} onValueChange={setExchangeBookmakerId}>
-                        <SelectTrigger className="w-full">
-                          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                            <span className="truncate">
-                              {exchangeBookmakerId ? (() => {
-                                const selectedBk = bookmakers.find(b => b.id === exchangeBookmakerId);
-                                return selectedBk ? selectedBk.nome : "Selecione";
-                              })() : "Selecione"}
+                {/* Campos para Back ou Lay simples */}
+                {(tipoOperacaoExchange === "back" || tipoOperacaoExchange === "lay") && (
+                  <div className={`p-4 rounded-lg border ${
+                    tipoOperacaoExchange === "back" 
+                      ? "border-emerald-500/30 bg-emerald-500/5" 
+                      : "border-rose-500/30 bg-rose-500/5"
+                  }`}>
+                    <div className="grid grid-cols-4 gap-3">
+                      <div className="space-y-2">
+                        <Label className="block text-center uppercase text-xs tracking-wider">Casa *</Label>
+                        <Select value={exchangeBookmakerId} onValueChange={setExchangeBookmakerId}>
+                          <SelectTrigger className="w-full">
+                            <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                              <span className="truncate">
+                                {exchangeBookmakerId ? (() => {
+                                  const selectedBk = bookmakers.find(b => b.id === exchangeBookmakerId);
+                                  return selectedBk ? selectedBk.nome : "Selecione";
+                                })() : "Selecione"}
+                              </span>
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent className="max-w-[400px]">
+                            {bookmakers.length === 0 ? (
+                              <div className="p-3 text-center text-sm text-muted-foreground">
+                                Nenhuma bookmaker disponível
+                              </div>
+                            ) : (
+                              bookmakers.map((bk) => (
+                                <SelectItem key={bk.id} value={bk.id}>
+                                  <div className="flex items-center justify-between w-full gap-2 min-w-0">
+                                    <span className="truncate min-w-0 flex-1">
+                                      {bk.nome} • {bk.parceiro?.nome || ""}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="block text-center uppercase text-xs tracking-wider">
+                          Odd {tipoOperacaoExchange === "back" ? "Back" : "Lay"} *
+                        </Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="1.01"
+                          value={exchangeOdd}
+                          onChange={(e) => setExchangeOdd(e.target.value)}
+                          placeholder="Ex: 2.10"
+                          className="text-center"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="block text-center uppercase text-xs tracking-wider">
+                          {tipoOperacaoExchange === "back" ? "Stake" : "Stake Lay"} *
+                        </Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          value={exchangeStake}
+                          onChange={(e) => setExchangeStake(e.target.value)}
+                          placeholder="Ex: 100.00"
+                          className="text-center"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="block text-center uppercase text-xs tracking-wider">Comissão %</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={exchangeComissao}
+                          onChange={(e) => setExchangeComissao(e.target.value)}
+                          placeholder="5"
+                          className="text-center"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Resultados calculados */}
+                    <div className={`mt-4 p-3 rounded-lg border ${
+                      tipoOperacaoExchange === "back"
+                        ? "border-emerald-500/20 bg-emerald-500/5"
+                        : "border-rose-500/20 bg-rose-500/5"
+                    }`}>
+                      {tipoOperacaoExchange === "back" ? (
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">💰 Lucro Potencial (líquido):</span>
+                            <span className="font-medium text-emerald-500">
+                              {exchangeLucroPotencial !== null ? formatCurrency(exchangeLucroPotencial) : "-"}
                             </span>
                           </div>
-                        </SelectTrigger>
-                        <SelectContent className="max-w-[400px]">
-                          {bookmakers.length === 0 ? (
-                            <div className="p-3 text-center text-sm text-muted-foreground">
-                              Nenhuma bookmaker disponível
-                            </div>
-                          ) : (
-                            bookmakers.map((bk) => (
-                              <SelectItem key={bk.id} value={bk.id}>
-                                <div className="flex items-center justify-between w-full gap-2 min-w-0">
-                                  <span className="truncate min-w-0 flex-1">
-                                    {bk.nome} • {bk.parceiro?.nome || ""}
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="block text-center uppercase text-xs tracking-wider">
-                        Odd {tipoOperacaoExchange === "back" ? "Back" : "Lay"} *
-                      </Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="1.01"
-                        value={exchangeOdd}
-                        onChange={(e) => setExchangeOdd(e.target.value)}
-                        placeholder="Ex: 2.10"
-                        className="text-center"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="block text-center uppercase text-xs tracking-wider">
-                        {tipoOperacaoExchange === "back" ? "Stake" : "Stake Lay"} *
-                      </Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        value={exchangeStake}
-                        onChange={(e) => setExchangeStake(e.target.value)}
-                        placeholder="Ex: 100.00"
-                        className="text-center"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="block text-center uppercase text-xs tracking-wider">Comissão %</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={exchangeComissao}
-                        onChange={(e) => setExchangeComissao(e.target.value)}
-                        placeholder="5"
-                        className="text-center"
-                      />
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">📈 Retorno Total (se ganhar):</span>
+                            <span className="font-medium text-emerald-500">
+                              {exchangeRetornoTotal !== null ? formatCurrency(exchangeRetornoTotal) : "-"}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">⚠️ Responsabilidade (exposição):</span>
+                            <span className="font-medium text-amber-500">
+                              {exchangeLiability !== null ? formatCurrency(exchangeLiability) : "-"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">✅ Se GANHAR (lucro líquido):</span>
+                            <span className="font-medium text-emerald-500">
+                              {exchangeLucroPotencial !== null ? `+${formatCurrency(exchangeLucroPotencial)}` : "-"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">❌ Se PERDER (responsabilidade):</span>
+                            <span className="font-medium text-red-500">
+                              {exchangePrejuizo !== null ? formatCurrency(exchangePrejuizo) : "-"}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
+                )}
 
-                  {/* Resultados calculados */}
-                  <div className={`mt-4 p-3 rounded-lg border ${
-                    tipoOperacaoExchange === "back"
-                      ? "border-emerald-500/20 bg-emerald-500/5"
-                      : "border-rose-500/20 bg-rose-500/5"
-                  }`}>
-                    {tipoOperacaoExchange === "back" ? (
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-muted-foreground">💰 Lucro Potencial (líquido):</span>
-                          <span className="font-medium text-emerald-500">
-                            {exchangeLucroPotencial !== null ? formatCurrency(exchangeLucroPotencial) : "-"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-muted-foreground">📈 Retorno Total (se ganhar):</span>
-                          <span className="font-medium text-emerald-500">
-                            {exchangeRetornoTotal !== null ? formatCurrency(exchangeRetornoTotal) : "-"}
-                          </span>
+                {/* Campos para Cobertura Lay */}
+                {tipoOperacaoExchange === "cobertura" && (
+                  <div className="space-y-4">
+                    {/* Card explicativo */}
+                    <div className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
+                      <div className="flex items-start gap-2">
+                        <span className="text-lg">🛡️</span>
+                        <div>
+                          <p className="text-sm font-medium text-purple-400">COBERTURA LAY</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Esta operação protege sua aposta em uma bookmaker usando uma aposta contrária (Lay) 
+                            em uma Exchange. Ideal para extrair valor de bônus ou garantir lucro independente do resultado.
+                          </p>
                         </div>
                       </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-muted-foreground">⚠️ Responsabilidade (exposição):</span>
-                          <span className="font-medium text-amber-500">
-                            {exchangeLiability !== null ? formatCurrency(exchangeLiability) : "-"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-muted-foreground">✅ Se GANHAR (lucro líquido):</span>
-                          <span className="font-medium text-emerald-500">
-                            {exchangeLucroPotencial !== null ? `+${formatCurrency(exchangeLucroPotencial)}` : "-"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-muted-foreground">❌ Se PERDER (responsabilidade):</span>
-                          <span className="font-medium text-red-500">
-                            {exchangePrejuizo !== null ? formatCurrency(exchangePrejuizo) : "-"}
-                          </span>
+                    </div>
+
+                    {/* Dois painéis lado a lado */}
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Painel BACK */}
+                      <div className="p-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5">
+                        <Label className="text-sm font-medium text-emerald-400 flex items-center gap-2 mb-3">
+                          📗 BACK (Aposta a Favor)
+                        </Label>
+                        <div className="space-y-3">
+                          <div className="space-y-2">
+                            <Label className="block text-center uppercase text-[10px] tracking-wider">Casa (Bookmaker) *</Label>
+                            <Select value={coberturaBackBookmakerId} onValueChange={setCoberturaBackBookmakerId}>
+                              <SelectTrigger className="w-full h-9 text-sm">
+                                <span className="truncate">
+                                  {coberturaBackBookmakerId ? (() => {
+                                    const selectedBk = bookmakers.find(b => b.id === coberturaBackBookmakerId);
+                                    return selectedBk ? selectedBk.nome : "Selecione";
+                                  })() : "Selecione"}
+                                </span>
+                              </SelectTrigger>
+                              <SelectContent className="max-w-[320px]">
+                                {bookmakers.map((bk) => (
+                                  <SelectItem key={bk.id} value={bk.id}>
+                                    <span className="truncate">{bk.nome} • {bk.parceiro?.nome || ""}</span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-2">
+                              <Label className="block text-center uppercase text-[10px] tracking-wider">Odd Back *</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="1.01"
+                                value={coberturaBackOdd}
+                                onChange={(e) => setCoberturaBackOdd(e.target.value)}
+                                placeholder="2.10"
+                                className="text-center h-9"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="block text-center uppercase text-[10px] tracking-wider">Stake *</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                value={coberturaBackStake}
+                                onChange={(e) => setCoberturaBackStake(e.target.value)}
+                                placeholder="100.00"
+                                className="text-center h-9"
+                              />
+                            </div>
+                          </div>
+                          <div className="pt-2 border-t border-emerald-500/20">
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-muted-foreground">Retorno Potencial:</span>
+                              <span className="font-medium text-emerald-400">
+                                {(() => {
+                                  const odd = parseFloat(coberturaBackOdd);
+                                  const stake = parseFloat(coberturaBackStake);
+                                  if (!isNaN(odd) && !isNaN(stake) && odd > 1 && stake > 0) {
+                                    return formatCurrency(odd * stake);
+                                  }
+                                  return "-";
+                                })()}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    )}
+
+                      {/* Painel LAY */}
+                      <div className="p-4 rounded-lg border border-rose-500/30 bg-rose-500/5">
+                        <Label className="text-sm font-medium text-rose-400 flex items-center gap-2 mb-3">
+                          📕 LAY (Aposta Contra)
+                        </Label>
+                        <div className="space-y-3">
+                          <div className="space-y-2">
+                            <Label className="block text-center uppercase text-[10px] tracking-wider">Casa (Exchange) *</Label>
+                            <Select value={coberturaLayBookmakerId} onValueChange={setCoberturaLayBookmakerId}>
+                              <SelectTrigger className="w-full h-9 text-sm">
+                                <span className="truncate">
+                                  {coberturaLayBookmakerId ? (() => {
+                                    const selectedBk = bookmakers.find(b => b.id === coberturaLayBookmakerId);
+                                    return selectedBk ? selectedBk.nome : "Selecione";
+                                  })() : "Selecione"}
+                                </span>
+                              </SelectTrigger>
+                              <SelectContent className="max-w-[320px]">
+                                {bookmakers.map((bk) => (
+                                  <SelectItem key={bk.id} value={bk.id}>
+                                    <span className="truncate">{bk.nome} • {bk.parceiro?.nome || ""}</span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-2">
+                              <Label className="block text-center uppercase text-[10px] tracking-wider">Odd Lay *</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="1.01"
+                                value={coberturaLayOdd}
+                                onChange={(e) => setCoberturaLayOdd(e.target.value)}
+                                placeholder="2.08"
+                                className="text-center h-9"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="block text-center uppercase text-[10px] tracking-wider">Comissão %</Label>
+                              <Input
+                                type="number"
+                                step="0.1"
+                                value={coberturaLayComissao}
+                                onChange={(e) => setCoberturaLayComissao(e.target.value)}
+                                placeholder="5"
+                                className="text-center h-9"
+                              />
+                            </div>
+                          </div>
+                          <div className="pt-2 border-t border-rose-500/20 space-y-1">
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-muted-foreground">Stake Lay (calculado):</span>
+                              <span className="font-medium text-rose-400">
+                                {coberturaLayStake !== null ? formatCurrency(coberturaLayStake) : "-"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-muted-foreground">Responsabilidade:</span>
+                              <span className="font-medium text-amber-400">
+                                {coberturaResponsabilidade !== null ? formatCurrency(coberturaResponsabilidade) : "-"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Resultado da Cobertura */}
+                    <div className="p-4 rounded-lg border border-purple-500/30 bg-purple-500/5">
+                      <Label className="text-sm font-medium text-purple-400 flex items-center gap-2 mb-3">
+                        📊 RESULTADO DA COBERTURA
+                      </Label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">✅ Se BACK vencer:</span>
+                            <span className={`font-medium ${(coberturaLucroBack ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {coberturaLucroBack !== null ? formatCurrency(coberturaLucroBack) : "-"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">✅ Se LAY vencer:</span>
+                            <span className={`font-medium ${(coberturaLucroLay ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {coberturaLucroLay !== null ? formatCurrency(coberturaLucroLay) : "-"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="space-y-2 pl-4 border-l border-purple-500/20">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">💰 Lucro Garantido:</span>
+                            <span className={`font-semibold text-lg ${(coberturaLucroGarantido ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {coberturaLucroGarantido !== null ? formatCurrency(coberturaLucroGarantido) : "-"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">📈 Taxa de Extração:</span>
+                            <span className={`font-medium ${(coberturaTaxaExtracao ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {coberturaTaxaExtracao !== null ? `${coberturaTaxaExtracao.toFixed(2)}%` : "-"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </TabsContent>
             </Tabs>
 
