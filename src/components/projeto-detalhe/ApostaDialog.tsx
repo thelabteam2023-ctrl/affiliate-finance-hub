@@ -863,38 +863,41 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   };
 
   const handleSave = async () => {
-    // Validações básicas
+    // Validações básicas comuns a todos os modos
     const finalSelecao = isHandicapMercado ? effectiveSelecao : selecao;
-    if (!esporte || !evento || !finalSelecao || !odd || !stake) {
-      toast.error("Preencha todos os campos obrigatórios");
+    if (!esporte || !evento || !finalSelecao) {
+      toast.error("Preencha todos os campos obrigatórios (Esporte, Evento, Seleção)");
       return;
     }
 
-    // Validação de Odd > 1
-    const oddNum = parseFloat(odd);
-    if (isNaN(oddNum) || oddNum <= 1) {
-      toast.error("Odd deve ser maior que 1.00");
-      return;
-    }
+    // Validação específica por modo de entrada
+    if (tipoAposta === "bookmaker") {
+      // Modo Bookmaker: exige odd, stake e bookmaker
+      if (!odd || !stake) {
+        toast.error("Preencha Odd e Stake");
+        return;
+      }
+      
+      const oddNum = parseFloat(odd);
+      if (isNaN(oddNum) || oddNum <= 1) {
+        toast.error("Odd deve ser maior que 1.00");
+        return;
+      }
 
-    // Validação de Stake > 0
-    const stakeNum = parseFloat(stake);
-    if (isNaN(stakeNum) || stakeNum <= 0) {
-      toast.error("Stake deve ser maior que 0");
-      return;
-    }
+      const stakeNum = parseFloat(stake);
+      if (isNaN(stakeNum) || stakeNum <= 0) {
+        toast.error("Stake deve ser maior que 0");
+        return;
+      }
 
-    if (tipoAposta === "bookmaker" && !bookmakerId) {
-      toast.error("Selecione a bookmaker");
-      return;
-    }
+      if (!bookmakerId) {
+        toast.error("Selecione a bookmaker");
+        return;
+      }
 
-    // Validar stake vs saldo disponível da bookmaker (considerando apostas pendentes)
-    if (tipoAposta === "bookmaker" && bookmakerId) {
+      // Validar stake vs saldo disponível da bookmaker
       const selectedBookmaker = bookmakers.find(b => b.id === bookmakerId);
       if (selectedBookmaker) {
-        // Para nova aposta, verificar contra saldo disponível
-        // Para edição de aposta pendente existente, considerar que a stake anterior já está bloqueada
         const stakeAnterior = aposta?.status === "PENDENTE" ? aposta.stake : 0;
         const saldoDisponivel = (selectedBookmaker as any).saldo_disponivel ?? selectedBookmaker.saldo_atual;
         const saldoParaValidar = saldoDisponivel + stakeAnterior;
@@ -905,22 +908,51 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           return;
         }
       }
-    }
+    } else if (tipoAposta === "exchange") {
+      // Modo Exchange
+      if (tipoOperacaoExchange === "back" || tipoOperacaoExchange === "lay") {
+        // Exchange simples (Back ou Lay)
+        if (!exchangeBookmakerId || !exchangeOdd || !exchangeStake) {
+          toast.error("Preencha todos os campos da Exchange (Exchange, Odd, Stake)");
+          return;
+        }
+        
+        const oddNum = parseFloat(exchangeOdd);
+        if (isNaN(oddNum) || oddNum <= 1) {
+          toast.error("Odd deve ser maior que 1.00");
+          return;
+        }
 
-    // Validação para Exchange simples (Back ou Lay)
-    if (tipoAposta === "exchange" && (tipoOperacaoExchange === "back" || tipoOperacaoExchange === "lay")) {
-      if (!exchangeBookmakerId || !exchangeOdd || !exchangeStake) {
-        toast.error("Preencha todos os campos da Exchange");
-        return;
-      }
-    }
+        const stakeNum = parseFloat(exchangeStake);
+        if (isNaN(stakeNum) || stakeNum <= 0) {
+          toast.error("Stake deve ser maior que 0");
+          return;
+        }
+      } else if (tipoOperacaoExchange === "cobertura") {
+        // Cobertura Lay
+        if (!coberturaBackBookmakerId || !coberturaBackOdd || !coberturaBackStake || 
+            !coberturaLayBookmakerId || !coberturaLayOdd) {
+          toast.error("Preencha todos os campos da Cobertura (Bookmaker, Odd Back, Stake Back, Exchange, Odd Lay)");
+          return;
+        }
 
-    // Validação para Cobertura Lay
-    if (tipoAposta === "exchange" && tipoOperacaoExchange === "cobertura") {
-      if (!coberturaBackBookmakerId || !coberturaBackOdd || !coberturaBackStake || 
-          !coberturaLayBookmakerId || !coberturaLayOdd) {
-        toast.error("Preencha todos os campos da Cobertura");
-        return;
+        const backOddNum = parseFloat(coberturaBackOdd);
+        if (isNaN(backOddNum) || backOddNum <= 1) {
+          toast.error("Odd Back deve ser maior que 1.00");
+          return;
+        }
+
+        const backStakeNum = parseFloat(coberturaBackStake);
+        if (isNaN(backStakeNum) || backStakeNum <= 0) {
+          toast.error("Stake Back deve ser maior que 0");
+          return;
+        }
+
+        const layOddNum = parseFloat(coberturaLayOdd);
+        if (isNaN(layOddNum) || layOddNum <= 1) {
+          toast.error("Odd Lay deve ser maior que 1.00");
+          return;
+        }
       }
     }
 

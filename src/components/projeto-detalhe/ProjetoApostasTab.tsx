@@ -16,7 +16,10 @@ import {
   TrendingDown,
   LayoutGrid,
   List,
-  ArrowLeftRight
+  ArrowLeftRight,
+  ArrowUp,
+  ArrowDown,
+  Shield
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -213,6 +216,56 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
     return `${parts[0]} ${parts[parts.length - 1]}`;
   };
 
+  // Determina o tipo de operação da aposta para exibição
+  const getOperationType = (aposta: Aposta): { type: "bookmaker" | "back" | "lay" | "cobertura"; label: string; color: string } => {
+    if (aposta.modo_entrada === "EXCHANGE" || aposta.estrategia?.includes("EXCHANGE") || aposta.estrategia === "COBERTURA_LAY") {
+      if (aposta.estrategia === "COBERTURA_LAY") {
+        return { type: "cobertura", label: "COB", color: "bg-purple-500/20 text-purple-400 border-purple-500/30" };
+      }
+      if (aposta.estrategia === "EXCHANGE_LAY" || aposta.lay_odd) {
+        return { type: "lay", label: "LAY", color: "bg-rose-500/20 text-rose-400 border-rose-500/30" };
+      }
+      return { type: "back", label: "BACK", color: "bg-sky-500/20 text-sky-400 border-sky-500/30" };
+    }
+    return { type: "bookmaker", label: "", color: "" };
+  };
+
+  // Formata informação de exibição da aposta baseado no tipo
+  const getApostaDisplayInfo = (aposta: Aposta) => {
+    const opType = getOperationType(aposta);
+    
+    if (opType.type === "cobertura") {
+      return {
+        primaryLine: aposta.bookmaker?.nome || "Casa",
+        secondaryLine: aposta.lay_exchange ? `Lay @ ${aposta.lay_odd?.toFixed(2)} • Resp: ${formatCurrency(aposta.lay_liability || 0)}` : null,
+        badgeType: opType
+      };
+    }
+    
+    if (opType.type === "lay") {
+      return {
+        primaryLine: aposta.bookmaker?.nome || "Exchange",
+        secondaryLine: `Liability: ${formatCurrency(aposta.lay_liability || 0)}`,
+        badgeType: opType
+      };
+    }
+    
+    if (opType.type === "back") {
+      return {
+        primaryLine: aposta.bookmaker?.nome || "Exchange",
+        secondaryLine: null,
+        badgeType: opType
+      };
+    }
+    
+    // Bookmaker padrão
+    return {
+      primaryLine: aposta.bookmaker?.nome || "",
+      secondaryLine: aposta.bookmaker?.parceiro?.nome ? getFirstLastName(aposta.bookmaker.parceiro.nome) : null,
+      badgeType: opType
+    };
+  };
+
   const handleOpenDialog = (aposta: Aposta | null) => {
     setSelectedAposta(aposta);
     setDialogOpen(true);
@@ -303,92 +356,118 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
         </Card>
       ) : viewMode === "cards" ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredApostas.map((aposta) => (
-            <Card 
-              key={aposta.id} 
-              className="hover:border-primary/50 transition-colors"
-            >
-              <CardHeader className="pb-1 pt-3 px-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <CardTitle className="text-sm truncate">{aposta.evento}</CardTitle>
-                    <p className="text-xs text-muted-foreground truncate">{aposta.esporte}</p>
-                  </div>
-                  <div className="flex gap-1 flex-shrink-0 items-center">
-                    {aposta.modo_entrada === "LAYBACK" && (
-                      <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px] px-1.5 py-0">
-                        <ArrowLeftRight className="h-2.5 w-2.5 mr-0.5" />
-                        LB
-                      </Badge>
-                    )}
-                    <ResultadoPill
-                      apostaId={aposta.id}
-                      bookmarkerId={aposta.bookmaker_id}
-                      resultado={aposta.resultado}
-                      status={aposta.status}
-                      stake={aposta.stake}
-                      odd={aposta.odd}
-                      onResultadoUpdated={handleApostaUpdated}
-                      onEditClick={() => handleOpenDialog(aposta)}
-                    />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-1 pb-3 px-3">
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground truncate flex-1">{aposta.selecao}</span>
-                    <span className="font-medium ml-2">@{aposta.odd.toFixed(2)}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Stake:</span>
-                    <span className="font-medium">{formatCurrency(aposta.stake)}</span>
-                  </div>
-                  {aposta.lucro_prejuizo !== null && (
-                    <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
-                      <span className="text-muted-foreground">P/L:</span>
-                      <div className="flex items-center gap-2">
-                        <span className={`font-medium flex items-center gap-0.5 ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                          {aposta.lucro_prejuizo >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                          {formatCurrency(aposta.lucro_prejuizo)}
-                        </span>
-                        <span className={`text-[10px] px-1 py-0.5 rounded ${aposta.lucro_prejuizo >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                          {((aposta.lucro_prejuizo / aposta.stake) * 100).toFixed(1)}%
-                        </span>
-                      </div>
+          {filteredApostas.map((aposta) => {
+            const displayInfo = getApostaDisplayInfo(aposta);
+            const opType = displayInfo.badgeType;
+            
+            return (
+              <Card 
+                key={aposta.id} 
+                className="hover:border-primary/50 transition-colors"
+              >
+                <CardHeader className="pb-1 pt-3 px-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="text-sm truncate">{aposta.evento}</CardTitle>
+                      <p className="text-xs text-muted-foreground truncate">{aposta.esporte}</p>
                     </div>
-                  )}
-                  <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-2.5 w-2.5" />
-                      {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
-                    </span>
-                    {aposta.bookmaker && (
-                      <span className="flex items-center gap-1.5 truncate ml-2">
-                        {aposta.bookmaker.bookmakers_catalogo?.logo_url ? (
-                          <img 
-                            src={aposta.bookmaker.bookmakers_catalogo.logo_url} 
-                            alt={aposta.bookmaker.nome}
-                            className="h-4 w-4 rounded-sm object-contain flex-shrink-0"
-                          />
-                        ) : (
-                          <div className="h-4 w-4 rounded-sm bg-muted flex items-center justify-center flex-shrink-0">
-                            <Target className="h-2.5 w-2.5 text-muted-foreground" />
-                          </div>
-                        )}
-                        <span className="truncate">
-                          {aposta.bookmaker.nome}
-                          {aposta.bookmaker.parceiro?.nome && (
-                            <> - {getFirstLastName(aposta.bookmaker.parceiro.nome)}</>
-                          )}
-                        </span>
-                      </span>
-                    )}
+                    <div className="flex gap-1 flex-shrink-0 items-center">
+                      {opType.label && (
+                        <Badge className={`${opType.color} text-[10px] px-1.5 py-0`}>
+                          {opType.type === "cobertura" && <Shield className="h-2.5 w-2.5 mr-0.5" />}
+                          {opType.type === "back" && <ArrowUp className="h-2.5 w-2.5 mr-0.5" />}
+                          {opType.type === "lay" && <ArrowDown className="h-2.5 w-2.5 mr-0.5" />}
+                          {opType.label}
+                        </Badge>
+                      )}
+                      <ResultadoPill
+                        apostaId={aposta.id}
+                        bookmarkerId={aposta.bookmaker_id}
+                        resultado={aposta.resultado}
+                        status={aposta.status}
+                        stake={aposta.stake}
+                        odd={aposta.odd}
+                        onResultadoUpdated={handleApostaUpdated}
+                        onEditClick={() => handleOpenDialog(aposta)}
+                      />
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent className="pt-1 pb-3 px-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground truncate flex-1">{aposta.selecao}</span>
+                      <span className="font-medium ml-2">@{aposta.odd.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Stake:</span>
+                      <span className="font-medium">{formatCurrency(aposta.stake)}</span>
+                    </div>
+                    
+                    {/* Informações específicas para Cobertura/Lay */}
+                    {opType.type === "cobertura" && aposta.lay_odd && (
+                      <div className="flex items-center justify-between text-xs text-purple-400">
+                        <span className="flex items-center gap-1">
+                          <ArrowDown className="h-3 w-3" />
+                          Lay @{aposta.lay_odd.toFixed(2)}
+                        </span>
+                        <span>Resp: {formatCurrency(aposta.lay_liability || 0)}</span>
+                      </div>
+                    )}
+                    
+                    {opType.type === "lay" && aposta.lay_liability && (
+                      <div className="flex items-center justify-between text-xs text-rose-400">
+                        <span>Liability:</span>
+                        <span className="font-medium">{formatCurrency(aposta.lay_liability)}</span>
+                      </div>
+                    )}
+                    
+                    {aposta.lucro_prejuizo !== null && (
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
+                        <span className="text-muted-foreground">P/L:</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-medium flex items-center gap-0.5 ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {aposta.lucro_prejuizo >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                            {formatCurrency(aposta.lucro_prejuizo)}
+                          </span>
+                          <span className={`text-[10px] px-1 py-0.5 rounded ${aposta.lucro_prejuizo >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                            {((aposta.lucro_prejuizo / aposta.stake) * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-2.5 w-2.5" />
+                        {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
+                      </span>
+                      {aposta.bookmaker && (
+                        <span className="flex items-center gap-1.5 truncate ml-2">
+                          {aposta.bookmaker.bookmakers_catalogo?.logo_url ? (
+                            <img 
+                              src={aposta.bookmaker.bookmakers_catalogo.logo_url} 
+                              alt={aposta.bookmaker.nome}
+                              className="h-4 w-4 rounded-sm object-contain flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="h-4 w-4 rounded-sm bg-muted flex items-center justify-center flex-shrink-0">
+                              <Target className="h-2.5 w-2.5 text-muted-foreground" />
+                            </div>
+                          )}
+                          <span className="truncate">
+                            {displayInfo.primaryLine}
+                            {displayInfo.secondaryLine && opType.type === "bookmaker" && (
+                              <> - {displayInfo.secondaryLine}</>
+                            )}
+                          </span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <Card>
