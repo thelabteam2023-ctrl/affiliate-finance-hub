@@ -198,6 +198,18 @@ export default function GestaoParceiros() {
 
       if (bookmakersError) throw bookmakersError;
 
+      // Fetch project profit from v_parceiro_lucro_total view
+      const { data: lucroProjetosData } = await supabase
+        .from("v_parceiro_lucro_total")
+        .select("*")
+        .eq("user_id", user.id);
+
+      // Create lookup map for project profit
+      const lucroProjetosMap = new Map<string, number>();
+      lucroProjetosData?.forEach((item: any) => {
+        lucroProjetosMap.set(item.parceiro_id, Number(item.lucro_projetos) || 0);
+      });
+
       // Calculate ROI per partner
       const roiMap = new Map<string, ParceiroROI>();
       
@@ -231,10 +243,13 @@ export default function GestaoParceiros() {
         parceiroBookmakers.set(bm.parceiro_id, current);
       });
 
-      // Combine all data
+      // Combine all data - NOW INCLUDES PROJECT PROFIT
       parceiroFinancials.forEach((financials, parceiroId) => {
         const bookmakerInfo = parceiroBookmakers.get(parceiroId) || { count: 0, countLimitadas: 0, saldo: 0 };
-        const lucro = financials.sacado - financials.depositado;
+        const lucroProjetos = lucroProjetosMap.get(parceiroId) || 0;
+        
+        // NOVO CÁLCULO: inclui lucro dos projetos
+        const lucro = financials.sacado - financials.depositado + lucroProjetos;
         const roi = financials.depositado > 0 ? (lucro / financials.depositado) * 100 : 0;
         
         roiMap.set(parceiroId, {
@@ -252,11 +267,12 @@ export default function GestaoParceiros() {
       // Add partners with bookmakers but no transactions
       parceiroBookmakers.forEach((bookmakerInfo, parceiroId) => {
         if (!roiMap.has(parceiroId)) {
+          const lucroProjetos = lucroProjetosMap.get(parceiroId) || 0;
           roiMap.set(parceiroId, {
             parceiro_id: parceiroId,
             total_depositado: 0,
             total_sacado: 0,
-            lucro_prejuizo: 0,
+            lucro_prejuizo: lucroProjetos,
             roi_percentual: 0,
             num_bookmakers: bookmakerInfo.count,
             num_bookmakers_limitadas: bookmakerInfo.countLimitadas,
@@ -265,9 +281,86 @@ export default function GestaoParceiros() {
         }
       });
 
+      // Add partners with only project profit
+      lucroProjetosMap.forEach((lucroProjetos, parceiroId) => {
+        if (!roiMap.has(parceiroId) && lucroProjetos !== 0) {
+          roiMap.set(parceiroId, {
+            parceiro_id: parceiroId,
+            total_depositado: 0,
+            total_sacado: 0,
+            lucro_prejuizo: lucroProjetos,
+            roi_percentual: 0,
+            num_bookmakers: 0,
+            num_bookmakers_limitadas: 0,
+            saldo_bookmakers: 0,
+          });
+        }
+      });
+
       setRoiData(roiMap);
+      
+      // Check for profit milestone alerts
+      await checkLucroMilestones(roiMap, user.id);
     } catch (error: any) {
       console.error("Erro ao carregar ROI:", error);
+    }
+  };
+
+  const checkLucroMilestones = async (roiMap: Map<string, ParceiroROI>, userId: string) => {
+    const MARCOS_LUCRO = [5000, 10000, 20000, 25000, 30000];
+    
+    try {
+      // Fetch existing alerts to avoid duplicates
+      const { data: existingAlerts } = await supabase
+        .from("parceiro_lucro_alertas")
+        .select("parceiro_id, marco_valor")
+        .eq("user_id", userId);
+
+      const existingSet = new Set(
+        (existingAlerts || []).map(a => `${a.parceiro_id}-${a.marco_valor}`)
+      );
+
+      const newAlerts: Array<{
+        parceiro_id: string;
+        marco_valor: number;
+        lucro_atual: number;
+        user_id: string;
+      }> = [];
+
+      roiMap.forEach((roi, parceiroId) => {
+        if (roi.lucro_prejuizo <= 0) return;
+
+        for (const marco of MARCOS_LUCRO) {
+          const alertKey = `${parceiroId}-${marco}`;
+          if (roi.lucro_prejuizo >= marco && !existingSet.has(alertKey)) {
+            newAlerts.push({
+              parceiro_id: parceiroId,
+              marco_valor: marco,
+              lucro_atual: roi.lucro_prejuizo,
+              user_id: userId,
+            });
+          }
+        }
+      });
+
+      if (newAlerts.length > 0) {
+        await supabase.from("parceiro_lucro_alertas").insert(newAlerts);
+        
+        // Show toast for new milestones
+        const parceirosNomes = parceiros.reduce((acc, p) => {
+          acc[p.id] = p.nome;
+          return acc;
+        }, {} as Record<string, string>);
+
+        newAlerts.forEach(alert => {
+          toast({
+            title: "🎉 Marco de Lucro Atingido!",
+            description: `${parceirosNomes[alert.parceiro_id] || "Parceiro"} atingiu R$ ${alert.marco_valor.toLocaleString("pt-BR")} de lucro!`,
+          });
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao verificar marcos de lucro:", error);
     }
   };
 

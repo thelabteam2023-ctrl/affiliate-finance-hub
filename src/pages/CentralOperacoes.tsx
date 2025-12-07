@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   XCircle,
   Landmark,
+  TrendingUp,
 } from "lucide-react";
 import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliacaoDialog";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
@@ -104,6 +105,15 @@ interface SaquePendenteConfirmacao {
   banco_nome?: string;
 }
 
+interface AlertaLucroParceiro {
+  id: string;
+  parceiro_id: string;
+  parceiro_nome: string;
+  marco_valor: number;
+  lucro_atual: number;
+  data_atingido: string;
+}
+
 export default function CentralOperacoes() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [entregasPendentes, setEntregasPendentes] = useState<EntregaPendente[]>([]);
@@ -111,6 +121,7 @@ export default function CentralOperacoes() {
   const [parceriasEncerramento, setParceriasEncerramento] = useState<ParceriaAlertaEncerramento[]>([]);
   const [parceirosSemParceria, setParceirosSemParceria] = useState<ParceiroSemParceria[]>([]);
   const [saquesPendentes, setSaquesPendentes] = useState<SaquePendenteConfirmacao[]>([]);
+  const [alertasLucro, setAlertasLucro] = useState<AlertaLucroParceiro[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
@@ -143,7 +154,8 @@ export default function CentralOperacoes() {
         encerResult,
         todosParceirosResult,
         todasParceriasResult,
-        saquesPendentesResult
+        saquesPendentesResult,
+        alertasLucroResult
       ] = await Promise.all([
         supabase.from("v_painel_operacional").select("*"),
         supabase.from("v_entregas_pendentes").select("*").in("status_conciliacao", ["PRONTA"]),
@@ -174,17 +186,14 @@ export default function CentralOperacoes() {
           `)
           .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
           .not("data_fim_prevista", "is", null),
-        // Buscar todos os parceiros ativos
         supabase
           .from("parceiros")
           .select("id, nome, cpf, created_at")
           .eq("status", "ativo"),
-        // Buscar todas as parcerias ativas ou em encerramento (para identificar parceiros com parceria)
         supabase
           .from("parcerias")
           .select("parceiro_id")
           .in("status", ["ATIVA", "EM_ENCERRAMENTO"]),
-        // Buscar saques pendentes de confirmação
         supabase
           .from("cash_ledger")
           .select(`
@@ -199,11 +208,40 @@ export default function CentralOperacoes() {
           `)
           .eq("tipo_transacao", "SAQUE")
           .eq("status", "PENDENTE")
-          .order("data_transacao", { ascending: false })
+          .order("data_transacao", { ascending: false }),
+        supabase
+          .from("parceiro_lucro_alertas")
+          .select(`
+            id,
+            parceiro_id,
+            marco_valor,
+            lucro_atual,
+            data_atingido,
+            parceiro:parceiros(nome)
+          `)
+          .eq("notificado", false)
+          .order("data_atingido", { ascending: false })
       ]);
 
       if (alertasResult.error) throw alertasResult.error;
       setAlertas(alertasResult.data || []);
+
+      if (entregasResult.error) throw entregasResult.error;
+      setEntregasPendentes(entregasResult.data || []);
+
+      // Alertas de lucro
+      if (!alertasLucroResult.error && alertasLucroResult.data) {
+        setAlertasLucro(
+          alertasLucroResult.data.map((a: any) => ({
+            id: a.id,
+            parceiro_id: a.parceiro_id,
+            parceiro_nome: a.parceiro?.nome || "Parceiro",
+            marco_valor: a.marco_valor,
+            lucro_atual: a.lucro_atual,
+            data_atingido: a.data_atingido,
+          }))
+        );
+      }
 
       if (entregasResult.error) throw entregasResult.error;
       setEntregasPendentes(entregasResult.data || []);
@@ -488,7 +526,7 @@ export default function CentralOperacoes() {
       </div>
 
       {/* Alertas List */}
-      {alertas.length === 0 && entregasPendentes.length === 0 && pagamentosParceiros.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 && saquesPendentes.length === 0 ? (
+      {alertas.length === 0 && entregasPendentes.length === 0 && pagamentosParceiros.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 && saquesPendentes.length === 0 && alertasLucro.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-10">
@@ -502,6 +540,56 @@ export default function CentralOperacoes() {
         </Card>
       ) : (
         <div className="space-y-6">
+          {/* Alertas de Marco de Lucro */}
+          {alertasLucro.length > 0 && (
+            <Card className="border-emerald-500/30 bg-emerald-500/5">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <TrendingUp className="h-5 w-5 text-emerald-400" />
+                  🎉 Marcos de Lucro Atingidos
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Parceiros que atingiram marcos de lucro importantes
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {alertasLucro.map((alerta) => (
+                    <div
+                      key={alerta.id}
+                      className="flex items-center justify-between p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/15 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="h-8 w-8 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
+                          <TrendingUp className="h-4 w-4 text-emerald-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{alerta.parceiro_nome}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Lucro atual: {formatCurrency(alerta.lucro_atual)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-sm font-bold text-emerald-400">
+                          R$ {alerta.marco_valor.toLocaleString("pt-BR")}
+                        </span>
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => navigate("/gestao-parceiros")}
+                          className="h-7 text-xs"
+                        >
+                          Ver Parceiro
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* GRID: Saques Agrupados (Aguardando Confirmação + Pendentes de Processamento) */}
           {(saquesPendentes.length > 0 || alertasSaques.length > 0) && (
             <div className="grid gap-4 lg:grid-cols-2">
