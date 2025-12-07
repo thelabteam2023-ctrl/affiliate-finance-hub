@@ -33,8 +33,8 @@ interface ResultadoPillProps {
 // MEIO_RED: Derrota parcial - perda = 50% da stake
 // VOID: Aposta cancelada - stake devolvida, sem lucro/prejuízo
 
-// Opções para Bookmaker/Exchange Back (seleção GANHOU)
-const RESULTADO_OPTIONS_BACK = [
+// Opções para Bookmaker (apostas tradicionais com meio resultados)
+const RESULTADO_OPTIONS_BOOKMAKER = [
   { value: "GREEN", label: "Green", sublabel: "Seleção ganhou", color: "bg-emerald-500 hover:bg-emerald-600" },
   { value: "RED", label: "Red", sublabel: "Seleção perdeu", color: "bg-red-500 hover:bg-red-600" },
   { value: "MEIO_GREEN", label: "Meio Green", sublabel: "Vitória parcial", color: "bg-teal-500 hover:bg-teal-600" },
@@ -42,20 +42,25 @@ const RESULTADO_OPTIONS_BACK = [
   { value: "VOID", label: "Void", sublabel: "Cancelada", color: "bg-gray-500 hover:bg-gray-600" },
 ];
 
-// Opções para Exchange Lay (seleção PERDEU = lucro para o layer)
-const RESULTADO_OPTIONS_LAY = [
-  { value: "GREEN", label: "Green", sublabel: "Seleção perdeu (Lay ganhou)", color: "bg-emerald-500 hover:bg-emerald-600" },
-  { value: "RED", label: "Red", sublabel: "Seleção ganhou (Lay perdeu)", color: "bg-red-500 hover:bg-red-600" },
-  { value: "MEIO_GREEN", label: "Meio Green", sublabel: "Vitória parcial Lay", color: "bg-teal-500 hover:bg-teal-600" },
-  { value: "MEIO_RED", label: "Meio Red", sublabel: "Derrota parcial Lay", color: "bg-orange-500 hover:bg-orange-600" },
-  { value: "VOID", label: "Void", sublabel: "Cancelada", color: "bg-gray-500 hover:bg-gray-600" },
+// Opções para Exchange Back (simplificado: Green, Red, Void)
+const RESULTADO_OPTIONS_EXCHANGE_BACK = [
+  { value: "GREEN", label: "Green", sublabel: "Seleção ganhou", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED", label: "Red", sublabel: "Seleção perdeu", color: "bg-red-500 hover:bg-red-600" },
+  { value: "VOID", label: "Void", sublabel: "Aposta devolvida", color: "bg-gray-500 hover:bg-gray-600" },
 ];
 
-// Opções para Cobertura (resultado baseado em qual lado bateu)
+// Opções para Exchange Lay (simplificado: Green, Red, Void)
+const RESULTADO_OPTIONS_EXCHANGE_LAY = [
+  { value: "GREEN", label: "Green", sublabel: "Lay ganhou (seleção perdeu)", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED", label: "Red", sublabel: "Lay perdeu (seleção ganhou)", color: "bg-red-500 hover:bg-red-600" },
+  { value: "VOID", label: "Void", sublabel: "Aposta devolvida", color: "bg-gray-500 hover:bg-gray-600" },
+];
+
+// Opções para Cobertura (qual lado da cobertura bateu)
 const RESULTADO_OPTIONS_COBERTURA = [
-  { value: "GREEN", label: "Green", sublabel: "Back ganhou (lucro garantido)", color: "bg-emerald-500 hover:bg-emerald-600" },
-  { value: "RED", label: "Red", sublabel: "Lay ganhou (lucro garantido)", color: "bg-red-500 hover:bg-red-600" },
-  { value: "VOID", label: "Void", sublabel: "Cancelada", color: "bg-gray-500 hover:bg-gray-600" },
+  { value: "GREEN_BOOKMAKER", label: "Green Bookmaker", sublabel: "Bookmaker ganhou", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED_BOOKMAKER", label: "Red Bookmaker", sublabel: "Bookmaker perdeu", color: "bg-red-500 hover:bg-red-600" },
+  { value: "VOID", label: "Void", sublabel: "Devolvida em ambas", color: "bg-gray-500 hover:bg-gray-600" },
 ];
 
 export function ResultadoPill({
@@ -82,13 +87,14 @@ export function ResultadoPill({
   const getResultadoOptions = () => {
     switch (operationType) {
       case "lay":
-        return RESULTADO_OPTIONS_LAY;
+        return RESULTADO_OPTIONS_EXCHANGE_LAY;
+      case "back":
+        return RESULTADO_OPTIONS_EXCHANGE_BACK;
       case "cobertura":
         return RESULTADO_OPTIONS_COBERTURA;
-      case "back":
       case "bookmaker":
       default:
-        return RESULTADO_OPTIONS_BACK;
+        return RESULTADO_OPTIONS_BOOKMAKER;
     }
   };
 
@@ -96,8 +102,12 @@ export function ResultadoPill({
 
   const getResultadoColor = (value: string | null) => {
     switch (value) {
-      case "GREEN": return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
-      case "RED": return "bg-red-500/20 text-red-400 border-red-500/30";
+      case "GREEN": 
+      case "GREEN_BOOKMAKER": 
+        return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+      case "RED": 
+      case "RED_BOOKMAKER": 
+        return "bg-red-500/20 text-red-400 border-red-500/30";
       case "MEIO_GREEN": return "bg-teal-500/20 text-teal-400 border-teal-500/30";
       case "MEIO_RED": return "bg-orange-500/20 text-orange-400 border-orange-500/30";
       case "VOID": return "bg-gray-500/20 text-gray-400 border-gray-500/30";
@@ -110,6 +120,8 @@ export function ResultadoPill({
     switch (value) {
       case "MEIO_GREEN": return "Meio Green";
       case "MEIO_RED": return "Meio Red";
+      case "GREEN_BOOKMAKER": return "Green Book";
+      case "RED_BOOKMAKER": return "Red Book";
       default: return value;
     }
   };
@@ -128,10 +140,6 @@ export function ResultadoPill({
           return layStake * (1 - 0.05); // Stake menos comissão típica de 5%
         case "RED": // Seleção ganhou, lay perdeu
           return -liability;
-        case "MEIO_GREEN":
-          return (layStake * (1 - 0.05)) / 2;
-        case "MEIO_RED":
-          return -liability / 2;
         case "VOID":
           return 0;
         default:
@@ -139,13 +147,12 @@ export function ResultadoPill({
       }
     }
     
-    // Para cobertura, lucro garantido independente do resultado
+    // Para cobertura, lucro garantido independente de qual lado bateu
     if (operationType === "cobertura") {
-      // O lucro já foi pré-calculado e armazenado, mas podemos usar stake como base
       switch (novoResultado) {
-        case "GREEN":
-        case "RED":
-          // Em cobertura, ambos resultados geram lucro (lucro garantido)
+        case "GREEN_BOOKMAKER": // Bookmaker ganhou (back venceu)
+        case "RED_BOOKMAKER": // Bookmaker perdeu (lay venceu)
+          // Em cobertura, ambos resultados geram lucro garantido
           return stake * (odd - 1) * 0.8; // Aproximação do lucro garantido
         case "VOID":
           return 0;
@@ -154,7 +161,21 @@ export function ResultadoPill({
       }
     }
     
-    // Para Back (bookmaker ou exchange back)
+    // Para Exchange Back (sem meio resultados)
+    if (operationType === "back") {
+      switch (novoResultado) {
+        case "GREEN":
+          return stake * (odd - 1);
+        case "RED":
+          return -stake;
+        case "VOID":
+          return 0;
+        default:
+          return 0;
+      }
+    }
+    
+    // Para Bookmaker (com meio resultados)
     switch (novoResultado) {
       case "GREEN":
         return stake * (odd - 1);
@@ -185,10 +206,6 @@ export function ResultadoPill({
           return layStake * (1 - 0.05);
         case "RED": // Lay perdeu - perde liability
           return 0;
-        case "MEIO_GREEN":
-          return layStake * (1 - 0.05) / 2;
-        case "MEIO_RED":
-          return liability / 2;
         case "VOID":
           return 0; // Liability liberada
         default:
@@ -196,7 +213,35 @@ export function ResultadoPill({
       }
     }
     
-    // Para Back (bookmaker ou exchange back)
+    // Para Cobertura
+    if (operationType === "cobertura") {
+      switch (novoResultado) {
+        case "GREEN_BOOKMAKER":
+        case "RED_BOOKMAKER":
+          // Retorno é o lucro garantido mais stake de volta
+          return stake + (stake * (odd - 1) * 0.8);
+        case "VOID":
+          return stake; // Stakes devolvidas
+        default:
+          return 0;
+      }
+    }
+    
+    // Para Exchange Back
+    if (operationType === "back") {
+      switch (novoResultado) {
+        case "GREEN":
+          return stake * odd;
+        case "RED":
+          return 0;
+        case "VOID":
+          return stake;
+        default:
+          return 0;
+      }
+    }
+    
+    // Para Bookmaker (com meio resultados)
     switch (novoResultado) {
       case "GREEN":
         return stake * odd;
@@ -228,9 +273,11 @@ export function ResultadoPill({
       if (resultadoAnterior && resultadoAnterior !== "PENDENTE") {
         switch (resultadoAnterior) {
           case "GREEN":
+          case "GREEN_BOOKMAKER":
             saldoAjuste -= stake * (odd - 1);
             break;
           case "RED":
+          case "RED_BOOKMAKER":
             saldoAjuste += stake;
             break;
           case "MEIO_GREEN":
@@ -248,9 +295,11 @@ export function ResultadoPill({
       // Aplicar efeito do novo resultado
       switch (resultadoNovo) {
         case "GREEN":
+        case "GREEN_BOOKMAKER":
           saldoAjuste += stake * (odd - 1);
           break;
         case "RED":
+        case "RED_BOOKMAKER":
           saldoAjuste -= stake;
           break;
         case "MEIO_GREEN":
