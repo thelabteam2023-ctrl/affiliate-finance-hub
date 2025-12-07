@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -22,12 +23,18 @@ import {
   CheckCircle,
   AlertCircle,
   Percent,
-  Target
+  Target,
+  Award,
+  ArrowUpRight,
+  ArrowDownRight,
+  Wallet,
+  BarChart3
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PagamentoOperadorDialog } from "./PagamentoOperadorDialog";
 import { toast } from "sonner";
+import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 
 interface ProjetoLucro {
   operador_projeto_id: string;
@@ -63,6 +70,21 @@ interface Pagamento {
   projeto_nome?: string | null;
 }
 
+interface Entrega {
+  id: string;
+  numero_entrega: number;
+  status: string;
+  meta_valor: number | null;
+  resultado_nominal: number;
+  valor_pagamento_operador: number;
+  pagamento_realizado: boolean;
+  data_inicio: string;
+  data_fim_prevista: string | null;
+  data_fim_real: string | null;
+  operador_projeto_id: string;
+  projeto_nome?: string;
+}
+
 interface OperadorFinanceiroTabProps {
   operadorId: string;
   operadorNome: string;
@@ -89,6 +111,7 @@ const TIPOS_PAGAMENTO_LABELS: Record<string, string> = {
 export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFinanceiroTabProps) {
   const [projetos, setProjetos] = useState<ProjetoLucro[]>([]);
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
+  const [entregas, setEntregas] = useState<Entrega[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -135,6 +158,29 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
           projeto_nome: p.projetos?.nome || null,
         }))
       );
+
+      // Fetch entregas do operador
+      if (projData && projData.length > 0) {
+        const opProjetoIds = projData.map(p => p.operador_projeto_id);
+        const { data: entregasData, error: entregasError } = await supabase
+          .from("entregas")
+          .select("*")
+          .in("operador_projeto_id", opProjetoIds)
+          .order("created_at", { ascending: false })
+          .limit(10);
+
+        if (!entregasError && entregasData) {
+          // Enrich with project names
+          const enrichedEntregas = entregasData.map(e => {
+            const proj = projData.find(p => p.operador_projeto_id === e.operador_projeto_id);
+            return {
+              ...e,
+              projeto_nome: proj?.projeto_nome || "N/A"
+            };
+          });
+          setEntregas(enrichedEntregas);
+        }
+      }
     } catch (error: any) {
       console.error("Erro ao carregar dados:", error);
       toast.error("Erro ao carregar dados financeiros");
@@ -209,12 +255,24 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
         progressoMeta = Math.min((lucro / proj.meta_valor) * 100, 100);
       }
 
+      // Calcular ROI do projeto
+      const roi = proj.total_depositado > 0 
+        ? (lucro / proj.total_depositado) * 100 
+        : 0;
+      
+      // Calcular win rate
+      const winRate = proj.total_apostas > 0 
+        ? (proj.apostas_ganhas / proj.total_apostas) * 100 
+        : 0;
+
       return {
         ...proj,
         valorCalculado,
         baseUtilizada,
         percentualAplicado,
         progressoMeta,
+        roi,
+        winRate,
       };
     });
   }, [projetos]);
@@ -236,6 +294,33 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
     return projetosCalculados.reduce((acc, p) => acc + p.valorCalculado, 0);
   }, [projetosCalculados]);
 
+  const lucroTotalGerado = useMemo(() => {
+    return projetosCalculados.reduce((acc, p) => acc + p.lucro_projeto, 0);
+  }, [projetosCalculados]);
+
+  const entregasPendentes = useMemo(() => {
+    return entregas.filter(e => e.status === "EM_ANDAMENTO" || e.status === "CONCLUIDA" && !e.pagamento_realizado);
+  }, [entregas]);
+
+  const entregasPagas = useMemo(() => {
+    return entregas.filter(e => e.pagamento_realizado);
+  }, [entregas]);
+
+  // Chart data for payments by month
+  const pagamentosPorMes = useMemo(() => {
+    const months: Record<string, number> = {};
+    pagamentos
+      .filter(p => p.status === "CONFIRMADO")
+      .forEach(p => {
+        const month = format(new Date(p.data_pagamento), "MMM/yy", { locale: ptBR });
+        months[month] = (months[month] || 0) + p.valor;
+      });
+    
+    return Object.entries(months)
+      .slice(-6)
+      .map(([mes, valor]) => ({ mes, valor }));
+  }, [pagamentos]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "CONFIRMADO": return "bg-emerald-500/20 text-emerald-400";
@@ -245,11 +330,21 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
     }
   };
 
+  const getEntregaStatusColor = (status: string, pago: boolean) => {
+    if (pago) return "bg-emerald-500/20 text-emerald-400";
+    switch (status) {
+      case "EM_ANDAMENTO": return "bg-blue-500/20 text-blue-400";
+      case "CONCLUIDA": return "bg-yellow-500/20 text-yellow-400";
+      case "CANCELADA": return "bg-red-500/20 text-red-400";
+      default: return "bg-gray-500/20 text-gray-400";
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-3">
-          {[1, 2, 3].map((i) => (
+        <div className="grid gap-4 md:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
             <Card key={i}>
               <CardContent className="pt-6">
                 <Skeleton className="h-20 w-full" />
@@ -264,7 +359,7 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
   return (
     <div className="space-y-6">
       {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -275,6 +370,9 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
           <CardContent>
             <p className="text-2xl font-bold text-emerald-500">
               {formatCurrency(totalPago)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {pagamentos.filter(p => p.status === "CONFIRMADO").length} pagamento(s)
             </p>
           </CardContent>
         </Card>
@@ -290,6 +388,9 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
             <p className="text-2xl font-bold text-yellow-500">
               {formatCurrency(totalPendente)}
             </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {pagamentos.filter(p => p.status === "PENDENTE").length} pagamento(s)
+            </p>
           </CardContent>
         </Card>
 
@@ -304,9 +405,118 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
             <p className="text-2xl font-bold text-primary">
               {formatCurrency(valorEstimadoMes)}
             </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {projetosCalculados.length} projeto(s) ativo(s)
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-blue-500" />
+              Lucro Gerado
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className={`text-2xl font-bold ${lucroTotalGerado >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {formatCurrency(lucroTotalGerado)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Acumulado dos projetos
+            </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Gráfico de Pagamentos */}
+      {pagamentosPorMes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Histórico de Pagamentos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[200px]">
+              <ModernBarChart
+                data={pagamentosPorMes}
+                categoryKey="mes"
+                bars={[
+                  {
+                    dataKey: "valor",
+                    label: "Valor Pago",
+                    gradientStart: "#22C55E",
+                    gradientEnd: "#16A34A",
+                  },
+                ]}
+                height={180}
+                showLabels={false}
+                showLegend={false}
+                formatValue={(value) => formatCurrency(value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Entregas Recentes */}
+      {entregas.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Entregas Recentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {entregas.slice(0, 5).map((entrega) => {
+                const progresso = entrega.meta_valor 
+                  ? Math.min((entrega.resultado_nominal / entrega.meta_valor) * 100, 100)
+                  : 0;
+                
+                return (
+                  <div 
+                    key={entrega.id}
+                    className="p-3 rounded-lg bg-muted/30 space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">#{entrega.numero_entrega}</Badge>
+                        <span className="text-sm font-medium">{entrega.projeto_nome}</span>
+                      </div>
+                      <Badge className={getEntregaStatusColor(entrega.status, entrega.pagamento_realizado)}>
+                        {entrega.pagamento_realizado ? "Pago" : entrega.status.replace("_", " ")}
+                      </Badge>
+                    </div>
+                    
+                    {entrega.meta_valor && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span>Resultado: {formatCurrency(entrega.resultado_nominal)}</span>
+                          <span>Meta: {formatCurrency(entrega.meta_valor)}</span>
+                        </div>
+                        <Progress value={progresso} className="h-1.5" />
+                      </div>
+                    )}
+                    
+                    {entrega.valor_pagamento_operador > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Valor Calculado:</span>
+                        <span className="font-medium text-primary">
+                          {formatCurrency(entrega.valor_pagamento_operador)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Resumo por Projeto */}
       <Card>
@@ -326,9 +536,14 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
                 <div className="flex items-start justify-between">
                   <div>
                     <h4 className="font-medium">{proj.projeto_nome}</h4>
-                    <Badge variant="outline" className="mt-1">
-                      {MODELOS_LABELS[proj.modelo_pagamento] || proj.modelo_pagamento}
-                    </Badge>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline">
+                        {MODELOS_LABELS[proj.modelo_pagamento] || proj.modelo_pagamento}
+                      </Badge>
+                      <Badge className={proj.status === "ATIVO" ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-500/20 text-gray-400"}>
+                        {proj.status}
+                      </Badge>
+                    </div>
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold text-primary">
@@ -338,11 +553,23 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                   <div>
-                    <span className="text-muted-foreground">Lucro Projeto:</span>
+                    <span className="text-muted-foreground">Lucro:</span>
                     <span className={`ml-2 font-medium ${proj.lucro_projeto >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                       {formatCurrency(proj.lucro_projeto)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">ROI:</span>
+                    <span className={`ml-2 font-medium ${proj.roi >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                      {formatPercent(proj.roi)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Win Rate:</span>
+                    <span className="ml-2 font-medium">
+                      {formatPercent(proj.winRate)}
                     </span>
                   </div>
                   {proj.modelo_pagamento !== "FIXO_MENSAL" && (
@@ -353,15 +580,7 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
                       </span>
                     </div>
                   )}
-                  {proj.modelo_pagamento === "FIXO_MENSAL" && (
-                    <div>
-                      <span className="text-muted-foreground">Valor Fixo:</span>
-                      <span className="ml-2 font-medium">
-                        {formatCurrency(proj.valor_fixo)}
-                      </span>
-                    </div>
-                  )}
-                  {proj.modelo_pagamento === "HIBRIDO" && (
+                  {(proj.modelo_pagamento === "FIXO_MENSAL" || proj.modelo_pagamento === "HIBRIDO") && (
                     <div>
                       <span className="text-muted-foreground">Fixo:</span>
                       <span className="ml-2 font-medium">
@@ -369,12 +588,6 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
                       </span>
                     </div>
                   )}
-                  <div>
-                    <span className="text-muted-foreground">Status:</span>
-                    <Badge className={`ml-2 ${proj.status === "ATIVO" ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-500/20 text-gray-400"}`}>
-                      {proj.status}
-                    </Badge>
-                  </div>
                 </div>
 
                 {/* Progress bar para meta */}
@@ -384,20 +597,19 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
                       <span>Meta: {formatCurrency(proj.meta_valor)}</span>
                       <span>{formatPercent(proj.progressoMeta)} concluído</span>
                     </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full transition-all ${proj.progressoMeta >= 100 ? "bg-emerald-500" : "bg-primary"}`}
-                        style={{ width: `${proj.progressoMeta}%` }}
-                      />
-                    </div>
+                    <Progress 
+                      value={proj.progressoMeta}
+                      className="h-2"
+                    />
                     {proj.progressoMeta < 100 && (
                       <p className="text-xs text-muted-foreground">
                         Faltam {formatCurrency(proj.meta_valor - proj.lucro_projeto)} para próxima entrega
                       </p>
                     )}
                     {proj.progressoMeta >= 100 && (
-                      <p className="text-xs text-emerald-500 font-medium">
-                        ✓ Meta atingida! Valor estimado: {formatCurrency(proj.valorCalculado)}
+                      <p className="text-xs text-emerald-500 font-medium flex items-center gap-1">
+                        <Award className="h-3 w-3" />
+                        Meta atingida! Valor estimado: {formatCurrency(proj.valorCalculado)}
                       </p>
                     )}
                   </div>
