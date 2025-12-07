@@ -48,6 +48,7 @@ interface Aposta {
   bookmaker_id: string;
   bookmaker_nome: string;
   parceiro_nome: string | null;
+  logo_url: string | null;
 }
 
 interface DailyData {
@@ -61,6 +62,7 @@ interface BookmakerMetrics {
   bookmaker_id: string;
   bookmaker_nome: string;
   parceiro_nome: string | null;
+  logo_url: string | null;
   totalApostas: number;
   totalStake: number;
   lucro: number;
@@ -126,7 +128,7 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
           stake,
           esporte,
           bookmaker_id,
-          bookmakers!inner(nome, parceiro_id, parceiros(nome))
+          bookmakers!inner(nome, parceiro_id, parceiros(nome), bookmakers_catalogo(logo_url))
         `)
         .eq("projeto_id", projetoId)
         .order("data_aposta", { ascending: true });
@@ -152,6 +154,7 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
         bookmaker_id: item.bookmaker_id,
         bookmaker_nome: item.bookmakers?.nome || 'Desconhecida',
         parceiro_nome: item.bookmakers?.parceiros?.nome || null,
+        logo_url: item.bookmakers?.bookmakers_catalogo?.logo_url || null,
       }));
       
       setApostas(transformedData);
@@ -202,6 +205,7 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
           bookmaker_id: aposta.bookmaker_id,
           bookmaker_nome: aposta.bookmaker_nome,
           parceiro_nome: aposta.parceiro_nome,
+          logo_url: aposta.logo_url,
           totalApostas: 0,
           totalStake: 0,
           lucro: 0,
@@ -567,11 +571,24 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
                     key={bm.bookmaker_id} 
                     className="grid grid-cols-5 gap-2 px-6 py-3 hover:bg-muted/30 transition-colors"
                   >
-                    <div className="col-span-1">
-                      <p className="text-sm font-medium truncate">{bm.bookmaker_nome}</p>
-                      {bm.parceiro_nome && (
-                        <p className="text-xs text-muted-foreground truncate">{bm.parceiro_nome}</p>
+                    <div className="col-span-1 flex items-center gap-2">
+                      {bm.logo_url ? (
+                        <img 
+                          src={bm.logo_url} 
+                          alt={bm.bookmaker_nome}
+                          className="w-6 h-6 rounded object-contain bg-muted/50 p-0.5 flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 rounded bg-muted/50 flex items-center justify-center flex-shrink-0">
+                          <Building2 className="h-3 w-3 text-muted-foreground" />
+                        </div>
                       )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{bm.bookmaker_nome}</p>
+                        {bm.parceiro_nome && (
+                          <p className="text-[10px] text-muted-foreground truncate">{bm.parceiro_nome}</p>
+                        )}
+                      </div>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-mono">{bm.totalApostas}</p>

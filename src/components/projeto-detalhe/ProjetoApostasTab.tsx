@@ -412,6 +412,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       <ResultadoPill
                         apostaId={aposta.id}
                         bookmarkerId={aposta.bookmaker_id}
+                        layExchangeBookmakerId={opType.type === "cobertura" ? aposta.lay_exchange : undefined}
                         resultado={aposta.resultado}
                         status={aposta.status}
                         stake={aposta.stake}
@@ -760,6 +761,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                     <ResultadoPill
                       apostaId={aposta.id}
                       bookmarkerId={aposta.bookmaker_id}
+                      layExchangeBookmakerId={getOperationType(aposta).type === "cobertura" ? aposta.lay_exchange : undefined}
                       resultado={aposta.resultado}
                       status={aposta.status}
                       stake={aposta.stake}
@@ -769,6 +771,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       layOdd={aposta.lay_odd || undefined}
                       layStake={aposta.lay_stake || undefined}
                       layComissao={aposta.lay_comissao || undefined}
+                      isFreebetExtraction={aposta.estrategia === "COBERTURA_LAY" && aposta.back_em_exchange === true}
                       onResultadoUpdated={handleApostaUpdated}
                       onEditClick={() => handleOpenDialog(aposta)}
                     />

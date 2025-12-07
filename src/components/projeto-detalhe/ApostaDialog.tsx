@@ -2442,8 +2442,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               </div>
             </div>
 
-            {/* Lucro/Prejuízo calculado automaticamente */}
-            {statusResultado && statusResultado !== "PENDENTE" && (
+            {/* Lucro/Prejuízo calculado automaticamente - só mostrar quando tem resultado e valores calculados válidos */}
+            {statusResultado && statusResultado !== "PENDENTE" && tipoAposta === "bookmaker" && stake && odd && parseFloat(stake) > 0 && parseFloat(odd) > 1 && (
               <div className="p-3 rounded-lg bg-muted/50 border">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Retorno Calculado:</span>

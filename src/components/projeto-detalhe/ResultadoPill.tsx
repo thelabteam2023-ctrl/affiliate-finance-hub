@@ -15,6 +15,7 @@ type OperationType = "bookmaker" | "back" | "lay" | "cobertura";
 interface ResultadoPillProps {
   apostaId: string;
   bookmarkerId: string;
+  layExchangeBookmakerId?: string | null; // ID da exchange usada no Lay para Cobertura
   resultado: string | null;
   status: string;
   stake: number;
@@ -69,6 +70,7 @@ const RESULTADO_OPTIONS_COBERTURA = [
 export function ResultadoPill({
   apostaId,
   bookmarkerId,
+  layExchangeBookmakerId,
   resultado,
   status,
   stake,
@@ -415,6 +417,30 @@ export function ResultadoPill({
   };
 
   /**
+   * Calcula o ajuste de saldo para a Exchange quando o Lay ganha na cobertura
+   */
+  const calcularAjusteSaldoExchange = (resultado: string): number => {
+    const comissao = (layComissao || 5) / 100;
+    
+    if (operationType !== "cobertura") return 0;
+    
+    const layOddVal = layOdd || 2;
+    const stakeLay = layStake || (stake * odd) / (layOddVal - comissao);
+    const responsabilidade = layLiability || stakeLay * (layOddVal - 1);
+    
+    switch (resultado) {
+      case "GREEN_BOOKMAKER": // Back ganhou - Exchange perde a liability (já foi reservada)
+        return -responsabilidade;
+      case "RED_BOOKMAKER": // Lay ganhou - Exchange ganha stake menos comissão
+        return stakeLay * (1 - comissao);
+      case "VOID":
+        return 0;
+      default:
+        return 0;
+    }
+  };
+
+  /**
    * Atualiza o saldo do bookmaker baseado na mudança de resultado
    * Esta função considera a reversão do resultado anterior e aplicação do novo
    */
@@ -446,6 +472,35 @@ export function ResultadoPill({
             .from("bookmakers")
             .update({ saldo_atual: novoSaldo })
             .eq("id", bookmarkerId);
+        }
+      }
+
+      // Para Cobertura, também atualizar o saldo da Exchange
+      if (operationType === "cobertura" && layExchangeBookmakerId) {
+        let saldoAjusteExchange = 0;
+
+        // Reverter efeito do resultado anterior na exchange
+        if (resultadoAnterior && resultadoAnterior !== "PENDENTE") {
+          saldoAjusteExchange -= calcularAjusteSaldoExchange(resultadoAnterior);
+        }
+
+        // Aplicar efeito do novo resultado na exchange
+        saldoAjusteExchange += calcularAjusteSaldoExchange(resultadoNovo);
+
+        if (saldoAjusteExchange !== 0) {
+          const { data: exchangeBookmaker } = await supabase
+            .from("bookmakers")
+            .select("saldo_atual")
+            .eq("id", layExchangeBookmakerId)
+            .maybeSingle();
+
+          if (exchangeBookmaker) {
+            const novoSaldoExchange = Math.max(0, exchangeBookmaker.saldo_atual + saldoAjusteExchange);
+            await supabase
+              .from("bookmakers")
+              .update({ saldo_atual: novoSaldoExchange })
+              .eq("id", layExchangeBookmakerId);
+          }
         }
       }
     } catch (error) {
