@@ -19,7 +19,8 @@ import {
   ArrowLeftRight,
   ArrowUp,
   ArrowDown,
-  Shield
+  Shield,
+  Coins
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -66,6 +67,9 @@ interface Aposta {
   lay_odd?: number | null;
   lay_stake?: number | null;
   lay_liability?: number | null;
+  lay_comissao?: number | null;
+  back_comissao?: number | null;
+  back_em_exchange?: boolean;
   bookmaker?: {
     nome: string;
     parceiro_id: string;
@@ -235,29 +239,43 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
     if (aposta.lucro_prejuizo === null || aposta.lucro_prejuizo === undefined) {
       return null;
     }
-    
-    const opType = getOperationType(aposta);
-    
-    // Para operações Exchange Lay, o cálculo é diferente
-    if (opType.type === "lay") {
-      // Se GREEN (o lay ganhou = seleção perdeu), lucro = stake do lay (menos comissão)
-      // Se RED (o lay perdeu = seleção ganhou), prejuízo = liability
-      // O valor já deve estar correto no banco, mas podemos recalcular se necessário
-      return aposta.lucro_prejuizo;
-    }
-    
-    // Para operações Exchange Back, similar ao bookmaker normal
-    if (opType.type === "back") {
-      return aposta.lucro_prejuizo;
-    }
-    
-    // Para cobertura, o lucro garantido já está calculado
-    if (opType.type === "cobertura") {
-      return aposta.lucro_prejuizo;
-    }
-    
-    // Bookmaker padrão
     return aposta.lucro_prejuizo;
+  };
+
+  // Calcula dados específicos para Exchange (Back/Lay)
+  const getExchangeDisplayData = (aposta: Aposta) => {
+    const opType = getOperationType(aposta);
+    const comissao = opType.type === "lay" 
+      ? (aposta.lay_comissao ?? 5) 
+      : (aposta.back_comissao ?? 2.8);
+    
+    if (opType.type === "back") {
+      // Exchange Back: lucro líquido = stake * (odd - 1) * (1 - comissao/100)
+      const lucroBruto = aposta.stake * (aposta.odd - 1);
+      const lucroLiquido = lucroBruto * (1 - comissao / 100);
+      const retornoTotal = aposta.stake + lucroLiquido;
+      return {
+        lucroPotencial: lucroLiquido,
+        retornoTotal: retornoTotal,
+        comissao: comissao,
+        isExchange: true
+      };
+    }
+    
+    if (opType.type === "lay") {
+      // Exchange Lay: lucro líquido = stake * (1 - comissao/100)
+      const lucroLiquido = aposta.stake * (1 - comissao / 100);
+      const liability = aposta.lay_liability || aposta.stake * (aposta.odd - 1);
+      return {
+        lucroPotencial: lucroLiquido,
+        retornoTotal: aposta.stake + lucroLiquido,
+        liability: liability,
+        comissao: comissao,
+        isExchange: true
+      };
+    }
+    
+    return { isExchange: false };
   };
 
   // Formata informação de exibição da aposta baseado no tipo
@@ -437,7 +455,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       <span className="font-medium">{formatCurrency(aposta.stake)}</span>
                     </div>
                     
-                    {/* Informações específicas para Cobertura/Lay */}
+                    {/* Informações específicas para Cobertura */}
                     {opType.type === "cobertura" && aposta.lay_odd && (
                       <div className="flex items-center justify-between text-xs text-purple-400">
                         <span className="flex items-center gap-1">
@@ -448,16 +466,59 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       </div>
                     )}
                     
-                    {opType.type === "lay" && aposta.lay_liability && (
-                      <div className="flex items-center justify-between text-xs text-rose-400">
-                        <span>Liability:</span>
-                        <span className="font-medium">{formatCurrency(aposta.lay_liability)}</span>
-                      </div>
-                    )}
+                    {/* Informações específicas para Exchange Back */}
+                    {opType.type === "back" && (() => {
+                      const exchangeData = getExchangeDisplayData(aposta);
+                      if (!exchangeData.isExchange) return null;
+                      return (
+                        <div className="space-y-0.5 pt-1 border-t border-border/50">
+                          <div className="flex items-center justify-between text-xs text-sky-400">
+                            <span className="flex items-center gap-1">
+                              <Coins className="h-3 w-3" />
+                              Lucro Potencial:
+                            </span>
+                            <span className="font-medium">{formatCurrency(exchangeData.lucroPotencial || 0)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Retorno (se ganhar):</span>
+                            <span>{formatCurrency(exchangeData.retornoTotal || 0)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-muted-foreground/70">
+                            <span>Comissão:</span>
+                            <span>{exchangeData.comissao?.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     
-                    {(() => {
+                    {/* Informações específicas para Exchange Lay */}
+                    {opType.type === "lay" && (() => {
+                      const exchangeData = getExchangeDisplayData(aposta);
+                      if (!exchangeData.isExchange) return null;
+                      return (
+                        <div className="space-y-0.5 pt-1 border-t border-border/50">
+                          <div className="flex items-center justify-between text-xs text-rose-400">
+                            <span>Liability:</span>
+                            <span className="font-medium">{formatCurrency(exchangeData.liability || 0)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-emerald-400">
+                            <span className="flex items-center gap-1">
+                              <Coins className="h-3 w-3" />
+                              Lucro Potencial:
+                            </span>
+                            <span className="font-medium">{formatCurrency(exchangeData.lucroPotencial || 0)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-muted-foreground/70">
+                            <span>Comissão:</span>
+                            <span>{exchangeData.comissao?.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    
+                    {/* P/L apenas para Bookmaker (não Exchange) */}
+                    {opType.type === "bookmaker" && (() => {
                       const profit = getCalculatedProfit(aposta);
-                      const baseValue = opType.type === "lay" ? (aposta.lay_liability || aposta.stake) : aposta.stake;
                       if (profit === null) return null;
                       return (
                         <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
@@ -468,9 +529,24 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                               {formatCurrency(profit)}
                             </span>
                             <span className={`text-[10px] px-1 py-0.5 rounded ${profit >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                              {((profit / baseValue) * 100).toFixed(1)}%
+                              {((profit / aposta.stake) * 100).toFixed(1)}%
                             </span>
                           </div>
+                        </div>
+                      );
+                    })()}
+                    
+                    {/* P/L para Cobertura */}
+                    {opType.type === "cobertura" && (() => {
+                      const profit = getCalculatedProfit(aposta);
+                      if (profit === null) return null;
+                      return (
+                        <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
+                          <span className="text-muted-foreground">Lucro Garantido:</span>
+                          <span className={`font-medium flex items-center gap-0.5 ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {profit >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                            {formatCurrency(profit)}
+                          </span>
                         </div>
                       );
                     })()}
@@ -552,8 +628,26 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       <p className="text-sm font-medium">{formatCurrency(aposta.stake)}</p>
                       {(() => {
                         const opType = getOperationType(aposta);
+                        
+                        // Para Exchange, mostrar dados específicos
+                        if (opType.type === "back" || opType.type === "lay") {
+                          const exchangeData = getExchangeDisplayData(aposta);
+                          if (exchangeData.isExchange) {
+                            return (
+                              <div className="flex items-center justify-end gap-2">
+                                <p className="text-sm text-sky-400">
+                                  {formatCurrency(exchangeData.lucroPotencial || 0)}
+                                </p>
+                                <span className="text-[10px] px-1 py-0.5 rounded bg-muted text-muted-foreground">
+                                  {exchangeData.comissao?.toFixed(1)}%
+                                </span>
+                              </div>
+                            );
+                          }
+                        }
+                        
+                        // Para Bookmaker/Cobertura, mostrar P/L
                         const profit = getCalculatedProfit(aposta);
-                        const baseValue = opType.type === "lay" ? (aposta.lay_liability || aposta.stake) : aposta.stake;
                         if (profit === null) return null;
                         return (
                           <div className="flex items-center justify-end gap-2">
@@ -561,7 +655,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                               {formatCurrency(profit)}
                             </p>
                             <span className={`text-[10px] px-1 py-0.5 rounded ${profit >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                              {((profit / baseValue) * 100).toFixed(1)}%
+                              {((profit / aposta.stake) * 100).toFixed(1)}%
                             </span>
                           </div>
                         );
