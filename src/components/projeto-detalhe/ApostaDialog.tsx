@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2, HelpCircle, Coins, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, XCircle, Shield, BarChart3, BookOpen, BookX } from "lucide-react";
+import { Loader2, Save, Trash2, HelpCircle, Coins, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, XCircle, Shield, BarChart3, BookOpen, BookX, Gift, Percent } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import {
   Tooltip,
   TooltipContent,
@@ -382,6 +383,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   const [coberturaLayOdd, setCoberturaLayOdd] = useState("");
   const [coberturaLayComissao, setCoberturaLayComissao] = useState("5");
   
+  // Tipo de aposta Back (Normal, Freebet SNR, Freebet SR)
+  const [tipoApostaBack, setTipoApostaBack] = useState<"normal" | "freebet_snr" | "freebet_sr">("normal");
+  
   // Saldos das casas selecionadas
   const [bookmakerSaldo, setBookmakerSaldo] = useState<{ saldo: number; moeda: string } | null>(null);
   const [coberturaBackSaldo, setCoberturaBackSaldo] = useState<{ saldo: number; moeda: string } | null>(null);
@@ -587,7 +591,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     }
   }, [tipoAposta, tipoOperacaoExchange, exchangeOdd, exchangeStake, exchangeComissao]);
 
-  // Cálculos para Cobertura Lay
+  // Cálculos para Cobertura Lay (com suporte a Freebet)
   useEffect(() => {
     if (tipoAposta !== "exchange" || tipoOperacaoExchange !== "cobertura") {
       setCoberturaLayStake(null);
@@ -615,34 +619,55 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       return;
     }
     
-    // Stake Lay = (Stake Back × Odd Back) ÷ (Odd Lay - Comissão em termos de ajuste)
-    // A fórmula correta considera: layStake = (backStake * backOdd) / (layOdd - comissão)
-    // Onde ajuste de comissão: layOdd - comissao (simplified for matched betting)
     const oddLayAjustada = layOdd - comissao;
-    const stakeLay = (backStake * backOdd) / oddLayAjustada;
+    let stakeLay: number;
+    let lucroSeBackGanhar: number;
+    let lucroSeLayGanhar: number;
     
-    // Responsabilidade = Stake Lay × (Odd Lay - 1)
-    const responsabilidade = stakeLay * (layOdd - 1);
-    
-    // Lucro se Back ganhar = (Stake Back × (Odd Back - 1)) - Responsabilidade
-    const lucroSeBackGanhar = (backStake * (backOdd - 1)) - responsabilidade;
-    
-    // Lucro se Lay ganhar = (Stake Lay × (1 - comissão)) - Stake Back
-    const lucroSeLayGanhar = (stakeLay * (1 - comissao)) - backStake;
+    if (tipoApostaBack === "freebet_snr") {
+      // Free Bet SNR (Stake Not Returned): usa (oddBack - 1) porque stake não volta
+      // A freebet só retorna o lucro, não a stake
+      stakeLay = (backStake * (backOdd - 1)) / oddLayAjustada;
+      
+      // Responsabilidade = Stake Lay × (Odd Lay - 1)
+      const responsabilidade = stakeLay * (layOdd - 1);
+      
+      // Lucro se Back ganhar = Lucro da Freebet - Responsabilidade (pagamos ao lay)
+      // Freebet retorna: backStake * (backOdd - 1) = lucro puro
+      lucroSeBackGanhar = (backStake * (backOdd - 1)) - responsabilidade;
+      
+      // Lucro se Lay ganhar = Stake Lay líquido (ganhamos) - 0 (não perdemos a stake pois era free)
+      lucroSeLayGanhar = stakeLay * (1 - comissao);
+      
+      setCoberturaResponsabilidade(Math.round(responsabilidade * 100) / 100);
+    } else if (tipoApostaBack === "freebet_sr") {
+      // Free Bet SR (Stake Returned): comportamento igual aposta normal
+      stakeLay = (backStake * backOdd) / oddLayAjustada;
+      const responsabilidade = stakeLay * (layOdd - 1);
+      lucroSeBackGanhar = (backStake * (backOdd - 1)) - responsabilidade;
+      lucroSeLayGanhar = (stakeLay * (1 - comissao)) - backStake;
+      setCoberturaResponsabilidade(Math.round(responsabilidade * 100) / 100);
+    } else {
+      // Normal (Qualifying Bet)
+      stakeLay = (backStake * backOdd) / oddLayAjustada;
+      const responsabilidade = stakeLay * (layOdd - 1);
+      lucroSeBackGanhar = (backStake * (backOdd - 1)) - responsabilidade;
+      lucroSeLayGanhar = (stakeLay * (1 - comissao)) - backStake;
+      setCoberturaResponsabilidade(Math.round(responsabilidade * 100) / 100);
+    }
     
     // Lucro garantido = mínimo dos dois (devem ser próximos se odds corretas)
     const lucroGarantido = Math.min(lucroSeBackGanhar, lucroSeLayGanhar);
     
-    // Taxa de extração = Lucro Garantido ÷ Stake Back × 100
+    // Taxa de extração = Lucro Garantido ÷ Valor da Freebet × 100
     const taxaExtracao = (lucroGarantido / backStake) * 100;
     
     setCoberturaLayStake(Math.round(stakeLay * 100) / 100);
-    setCoberturaResponsabilidade(Math.round(responsabilidade * 100) / 100);
     setCoberturaLucroBack(Math.round(lucroSeBackGanhar * 100) / 100);
     setCoberturaLucroLay(Math.round(lucroSeLayGanhar * 100) / 100);
     setCoberturaLucroGarantido(Math.round(lucroGarantido * 100) / 100);
     setCoberturaTaxaExtracao(Math.round(taxaExtracao * 100) / 100);
-  }, [tipoAposta, tipoOperacaoExchange, coberturaBackOdd, coberturaBackStake, coberturaLayOdd, coberturaLayComissao]);
+  }, [tipoAposta, tipoOperacaoExchange, coberturaBackOdd, coberturaBackStake, coberturaLayOdd, coberturaLayComissao, tipoApostaBack]);
 
   const getLocalDateTimeString = () => {
     const now = new Date();
@@ -702,6 +727,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     setCoberturaLucroLay(null);
     setCoberturaLucroGarantido(null);
     setCoberturaTaxaExtracao(null);
+    setTipoApostaBack("normal");
   };
 
   const fetchBookmakers = async () => {
@@ -1669,15 +1695,93 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                 {/* Campos para Cobertura Lay */}
                 {tipoOperacaoExchange === "cobertura" && (
                   <div className="space-y-4">
-                    {/* Card explicativo */}
-                    <div className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
+                    {/* Seletor de Tipo de Aposta (Normal/Freebet) */}
+                    <div className="flex justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setTipoApostaBack("normal")}
+                        className={`flex flex-col items-center px-4 py-2.5 rounded-lg border-2 transition-all ${
+                          tipoApostaBack === "normal"
+                            ? "border-blue-500 bg-blue-500/10 text-blue-400"
+                            : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                        }`}
+                      >
+                        <Coins className="h-4 w-4 mb-1" />
+                        <div className="font-semibold text-xs">NORMAL</div>
+                        <div className="text-[9px] opacity-70">(Qualifying Bet)</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTipoApostaBack("freebet_snr")}
+                        className={`flex flex-col items-center px-4 py-2.5 rounded-lg border-2 transition-all ${
+                          tipoApostaBack === "freebet_snr"
+                            ? "border-amber-500 bg-amber-500/10 text-amber-400"
+                            : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                        }`}
+                      >
+                        <Gift className="h-4 w-4 mb-1" />
+                        <div className="font-semibold text-xs">FREEBET SNR</div>
+                        <div className="text-[9px] opacity-70">(Stake Não Volta)</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTipoApostaBack("freebet_sr")}
+                        className={`flex flex-col items-center px-4 py-2.5 rounded-lg border-2 transition-all ${
+                          tipoApostaBack === "freebet_sr"
+                            ? "border-cyan-500 bg-cyan-500/10 text-cyan-400"
+                            : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                        }`}
+                      >
+                        <Gift className="h-4 w-4 mb-1" />
+                        <div className="font-semibold text-xs">FREEBET SR</div>
+                        <div className="text-[9px] opacity-70">(Stake Volta)</div>
+                      </button>
+                    </div>
+
+                    {/* Card explicativo - dinâmico baseado no tipo */}
+                    <div className={`p-3 rounded-lg border ${
+                      tipoApostaBack === "normal" 
+                        ? "bg-purple-500/5 border-purple-500/20" 
+                        : tipoApostaBack === "freebet_snr"
+                          ? "bg-amber-500/5 border-amber-500/20"
+                          : "bg-cyan-500/5 border-cyan-500/20"
+                    }`}>
                       <div className="flex items-start gap-2">
-                        <Shield className="h-5 w-5 text-purple-400 mt-0.5 flex-shrink-0" />
+                        {tipoApostaBack === "normal" ? (
+                          <Shield className="h-5 w-5 text-purple-400 mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <Gift className={`h-5 w-5 mt-0.5 flex-shrink-0 ${tipoApostaBack === "freebet_snr" ? "text-amber-400" : "text-cyan-400"}`} />
+                        )}
                         <div>
-                          <p className="text-sm font-medium text-purple-400">COBERTURA LAY</p>
+                          <p className={`text-sm font-medium ${
+                            tipoApostaBack === "normal" 
+                              ? "text-purple-400" 
+                              : tipoApostaBack === "freebet_snr" 
+                                ? "text-amber-400" 
+                                : "text-cyan-400"
+                          }`}>
+                            {tipoApostaBack === "normal" && "COBERTURA LAY - QUALIFYING BET"}
+                            {tipoApostaBack === "freebet_snr" && "EXTRAÇÃO DE FREEBET (SNR)"}
+                            {tipoApostaBack === "freebet_sr" && "EXTRAÇÃO DE FREEBET (SR)"}
+                          </p>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            Esta operação protege sua aposta em uma bookmaker usando uma aposta contrária (Lay) 
-                            em uma Exchange. Ideal para extrair valor de bônus ou garantir lucro independente do resultado.
+                            {tipoApostaBack === "normal" && (
+                              "Aposta de qualificação onde você investe dinheiro real. A stake volta se você ganhar. Usado para desbloquear freebets ou cumprir rollover."
+                            )}
+                            {tipoApostaBack === "freebet_snr" && (
+                              <>
+                                <span className="font-medium text-amber-400">Stake Not Returned:</span> A freebet mais comum (~95% dos casos). Se ganhar, você recebe apenas o lucro - a stake não volta.
+                                <br />
+                                <span className="text-[10px] opacity-80 mt-1 block">💡 Dica: Odds maiores (4.0+) resultam em taxas de extração melhores.</span>
+                              </>
+                            )}
+                            {tipoApostaBack === "freebet_sr" && (
+                              <>
+                                <span className="font-medium text-cyan-400">Stake Returned:</span> Raro, mas algumas casas oferecem. Se ganhar, você recebe o lucro + valor da freebet.
+                                <br />
+                                <span className="text-[10px] opacity-80 mt-1 block">💡 Comportamento idêntico a uma aposta normal.</span>
+                              </>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -1754,20 +1858,32 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                               />
                             </div>
                           </div>
-                          <div className="pt-2 border-t border-emerald-500/20">
+                          <div className="pt-2 border-t border-emerald-500/20 space-y-1">
                             <div className="flex justify-between items-center text-xs">
-                              <span className="text-muted-foreground">Retorno Potencial:</span>
+                              <span className="text-muted-foreground">
+                                {tipoApostaBack === "freebet_snr" ? "Retorno (somente lucro):" : "Retorno Potencial:"}
+                              </span>
                               <span className="font-medium text-emerald-400">
                                 {(() => {
                                   const odd = parseFloat(coberturaBackOdd);
                                   const stake = parseFloat(coberturaBackStake);
                                   if (!isNaN(odd) && !isNaN(stake) && odd > 1 && stake > 0) {
+                                    if (tipoApostaBack === "freebet_snr") {
+                                      // SNR: retorna apenas lucro
+                                      return formatCurrency(stake * (odd - 1));
+                                    }
+                                    // Normal ou SR: retorna stake + lucro
                                     return formatCurrency(odd * stake);
                                   }
                                   return "-";
                                 })()}
                               </span>
                             </div>
+                            {tipoApostaBack === "freebet_snr" && (
+                              <p className="text-[10px] text-amber-400/70 italic">
+                                * Stake da freebet não volta
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1895,14 +2011,40 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                               {coberturaLucroGarantido !== null ? formatCurrency(coberturaLucroGarantido) : "-"}
                             </span>
                           </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground flex items-center gap-1.5">
-                              <TrendingUp className="h-3.5 w-3.5 text-purple-400" />
-                              Taxa de Extração:
-                            </span>
-                            <span className={`font-medium ${(coberturaTaxaExtracao ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {coberturaTaxaExtracao !== null ? `${coberturaTaxaExtracao.toFixed(2)}%` : "-"}
-                            </span>
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-muted-foreground flex items-center gap-1.5">
+                                <Percent className="h-3.5 w-3.5 text-purple-400" />
+                                Taxa de Extração:
+                              </span>
+                              <span className={`font-medium ${
+                                (coberturaTaxaExtracao ?? 0) >= 70 ? 'text-emerald-400' : 
+                                (coberturaTaxaExtracao ?? 0) >= 60 ? 'text-amber-400' : 
+                                'text-red-400'
+                              }`}>
+                                {coberturaTaxaExtracao !== null ? `${coberturaTaxaExtracao.toFixed(2)}%` : "-"}
+                              </span>
+                            </div>
+                            {/* Barra de progresso visual para taxa de extração */}
+                            {coberturaTaxaExtracao !== null && (
+                              <div className="space-y-1">
+                                <Progress 
+                                  value={Math.min(Math.max(coberturaTaxaExtracao, 0), 100)} 
+                                  className={`h-2 ${
+                                    coberturaTaxaExtracao >= 80 ? '[&>div]:bg-emerald-500' :
+                                    coberturaTaxaExtracao >= 70 ? '[&>div]:bg-emerald-400' :
+                                    coberturaTaxaExtracao >= 60 ? '[&>div]:bg-amber-400' :
+                                    '[&>div]:bg-red-400'
+                                  }`}
+                                />
+                                <div className="flex justify-between text-[9px] text-muted-foreground/60">
+                                  <span>Ruim</span>
+                                  <span>60%</span>
+                                  <span>70%</span>
+                                  <span>Ótimo</span>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
