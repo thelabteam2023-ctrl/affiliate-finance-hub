@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Pencil } from "lucide-react";
 
+type OperationType = "bookmaker" | "back" | "lay" | "cobertura";
+
 interface ResultadoPillProps {
   apostaId: string;
   bookmarkerId: string;
@@ -17,6 +19,9 @@ interface ResultadoPillProps {
   status: string;
   stake: number;
   odd: number;
+  operationType?: OperationType;
+  layLiability?: number;
+  layOdd?: number;
   onResultadoUpdated: () => void;
   onEditClick: () => void;
 }
@@ -27,12 +32,30 @@ interface ResultadoPillProps {
 // MEIO_GREEN: Vitória parcial - lucro = 50% do lucro potencial = stake * (odd - 1) / 2
 // MEIO_RED: Derrota parcial - perda = 50% da stake
 // VOID: Aposta cancelada - stake devolvida, sem lucro/prejuízo
-const RESULTADO_OPTIONS = [
-  { value: "GREEN", label: "Green", color: "bg-emerald-500 hover:bg-emerald-600" },
-  { value: "RED", label: "Red", color: "bg-red-500 hover:bg-red-600" },
-  { value: "MEIO_GREEN", label: "Meio Green", color: "bg-teal-500 hover:bg-teal-600" },
-  { value: "MEIO_RED", label: "Meio Red", color: "bg-orange-500 hover:bg-orange-600" },
-  { value: "VOID", label: "Void", color: "bg-gray-500 hover:bg-gray-600" },
+
+// Opções para Bookmaker/Exchange Back (seleção GANHOU)
+const RESULTADO_OPTIONS_BACK = [
+  { value: "GREEN", label: "Green", sublabel: "Seleção ganhou", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED", label: "Red", sublabel: "Seleção perdeu", color: "bg-red-500 hover:bg-red-600" },
+  { value: "MEIO_GREEN", label: "Meio Green", sublabel: "Vitória parcial", color: "bg-teal-500 hover:bg-teal-600" },
+  { value: "MEIO_RED", label: "Meio Red", sublabel: "Derrota parcial", color: "bg-orange-500 hover:bg-orange-600" },
+  { value: "VOID", label: "Void", sublabel: "Cancelada", color: "bg-gray-500 hover:bg-gray-600" },
+];
+
+// Opções para Exchange Lay (seleção PERDEU = lucro para o layer)
+const RESULTADO_OPTIONS_LAY = [
+  { value: "GREEN", label: "Green", sublabel: "Seleção perdeu (Lay ganhou)", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED", label: "Red", sublabel: "Seleção ganhou (Lay perdeu)", color: "bg-red-500 hover:bg-red-600" },
+  { value: "MEIO_GREEN", label: "Meio Green", sublabel: "Vitória parcial Lay", color: "bg-teal-500 hover:bg-teal-600" },
+  { value: "MEIO_RED", label: "Meio Red", sublabel: "Derrota parcial Lay", color: "bg-orange-500 hover:bg-orange-600" },
+  { value: "VOID", label: "Void", sublabel: "Cancelada", color: "bg-gray-500 hover:bg-gray-600" },
+];
+
+// Opções para Cobertura (resultado baseado em qual lado bateu)
+const RESULTADO_OPTIONS_COBERTURA = [
+  { value: "GREEN", label: "Green", sublabel: "Back ganhou (lucro garantido)", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED", label: "Red", sublabel: "Lay ganhou (lucro garantido)", color: "bg-red-500 hover:bg-red-600" },
+  { value: "VOID", label: "Void", sublabel: "Cancelada", color: "bg-gray-500 hover:bg-gray-600" },
 ];
 
 export function ResultadoPill({
@@ -42,6 +65,9 @@ export function ResultadoPill({
   status,
   stake,
   odd,
+  operationType = "bookmaker",
+  layLiability,
+  layOdd,
   onResultadoUpdated,
   onEditClick,
 }: ResultadoPillProps) {
@@ -51,6 +77,22 @@ export function ResultadoPill({
   // Determina o valor a exibir na pill (resultado ou status se pendente)
   const displayValue = resultado || status;
   const isPending = status === "PENDENTE" && !resultado;
+
+  // Seleciona as opções corretas baseado no tipo de operação
+  const getResultadoOptions = () => {
+    switch (operationType) {
+      case "lay":
+        return RESULTADO_OPTIONS_LAY;
+      case "cobertura":
+        return RESULTADO_OPTIONS_COBERTURA;
+      case "back":
+      case "bookmaker":
+      default:
+        return RESULTADO_OPTIONS_BACK;
+    }
+  };
+
+  const resultadoOptions = getResultadoOptions();
 
   const getResultadoColor = (value: string | null) => {
     switch (value) {
@@ -73,24 +115,54 @@ export function ResultadoPill({
   };
 
   /**
-   * Calcula o lucro/prejuízo baseado no resultado
-   * - GREEN: lucro = stake * (odd - 1)
-   * - RED: prejuízo = -stake
-   * - MEIO_GREEN: lucro parcial = stake * (odd - 1) / 2
-   * - MEIO_RED: prejuízo parcial = -stake / 2
-   * - VOID: 0 (stake devolvida)
+   * Calcula o lucro/prejuízo baseado no resultado e tipo de operação
    */
   const calcularLucroPrejuizo = (novoResultado: string): number => {
+    // Para operações Lay, a lógica é invertida
+    if (operationType === "lay") {
+      const liability = layLiability || stake * ((layOdd || odd) - 1);
+      const layStake = stake;
+      
+      switch (novoResultado) {
+        case "GREEN": // Seleção perdeu, lay ganhou
+          return layStake * (1 - 0.05); // Stake menos comissão típica de 5%
+        case "RED": // Seleção ganhou, lay perdeu
+          return -liability;
+        case "MEIO_GREEN":
+          return (layStake * (1 - 0.05)) / 2;
+        case "MEIO_RED":
+          return -liability / 2;
+        case "VOID":
+          return 0;
+        default:
+          return 0;
+      }
+    }
+    
+    // Para cobertura, lucro garantido independente do resultado
+    if (operationType === "cobertura") {
+      // O lucro já foi pré-calculado e armazenado, mas podemos usar stake como base
+      switch (novoResultado) {
+        case "GREEN":
+        case "RED":
+          // Em cobertura, ambos resultados geram lucro (lucro garantido)
+          return stake * (odd - 1) * 0.8; // Aproximação do lucro garantido
+        case "VOID":
+          return 0;
+        default:
+          return 0;
+      }
+    }
+    
+    // Para Back (bookmaker ou exchange back)
     switch (novoResultado) {
       case "GREEN":
         return stake * (odd - 1);
       case "RED":
         return -stake;
       case "MEIO_GREEN":
-        // 50% do lucro potencial
         return stake * (odd - 1) / 2;
       case "MEIO_RED":
-        // Perde 50% da stake
         return -stake / 2;
       case "VOID":
         return 0;
@@ -100,14 +172,31 @@ export function ResultadoPill({
   };
 
   /**
-   * Calcula o valor de retorno baseado no resultado
-   * - GREEN: stake * odd (stake + lucro completo)
-   * - RED: 0
-   * - MEIO_GREEN: stake + (stake * (odd - 1) / 2) = stake * (1 + (odd - 1) / 2)
-   * - MEIO_RED: stake / 2 (metade da stake devolvida)
-   * - VOID: stake (stake devolvida)
+   * Calcula o valor de retorno baseado no resultado e tipo de operação
    */
   const calcularValorRetorno = (novoResultado: string): number => {
+    // Para operações Lay
+    if (operationType === "lay") {
+      const liability = layLiability || stake * ((layOdd || odd) - 1);
+      const layStake = stake;
+      
+      switch (novoResultado) {
+        case "GREEN": // Lay ganhou - recebe stake menos comissão
+          return layStake * (1 - 0.05);
+        case "RED": // Lay perdeu - perde liability
+          return 0;
+        case "MEIO_GREEN":
+          return layStake * (1 - 0.05) / 2;
+        case "MEIO_RED":
+          return liability / 2;
+        case "VOID":
+          return 0; // Liability liberada
+        default:
+          return 0;
+      }
+    }
+    
+    // Para Back (bookmaker ou exchange back)
     switch (novoResultado) {
       case "GREEN":
         return stake * odd;
@@ -249,20 +338,25 @@ export function ResultadoPill({
         </PopoverTrigger>
         <PopoverContent className="w-auto p-2" align="end">
           <div className="flex flex-col gap-1">
-            <p className="text-xs text-muted-foreground mb-1 font-medium">Alterar Resultado</p>
-            {RESULTADO_OPTIONS.map((option) => (
+            <p className="text-xs text-muted-foreground mb-1 font-medium">
+              {operationType === "lay" ? "Resultado do Lay" : 
+               operationType === "cobertura" ? "Resultado da Cobertura" :
+               operationType === "back" ? "Resultado na Exchange" : "Alterar Resultado"}
+            </p>
+            {resultadoOptions.map((option) => (
               <Button
                 key={option.value}
                 size="sm"
                 variant={resultado === option.value ? "default" : "outline"}
                 className={resultado === option.value 
-                  ? `${option.color} text-white justify-start text-xs h-7`
-                  : "justify-start text-xs h-7 hover:bg-accent"
+                  ? `${option.color} text-white justify-start text-xs h-auto py-1.5 flex-col items-start`
+                  : "justify-start text-xs h-auto py-1.5 hover:bg-accent flex-col items-start"
                 }
                 onClick={() => handleResultadoSelect(option.value)}
                 disabled={loading}
               >
-                {option.label}
+                <span className="font-medium">{option.label}</span>
+                <span className="text-[10px] opacity-70 font-normal">{option.sublabel}</span>
               </Button>
             ))}
           </div>
