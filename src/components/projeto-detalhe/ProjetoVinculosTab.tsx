@@ -478,7 +478,23 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center gap-4">
+        <Button onClick={handleOpenAddDialog}>
+          <Plus className="mr-2 h-4 w-4" />
+          Adicionar Vínculos
+        </Button>
+        <Toggle
+          pressed={viewMode === "list"}
+          onPressedChange={(pressed) => setViewMode(pressed ? "list" : "cards")}
+          aria-label="Alternar modo de visualização"
+          className="data-[state=on]:bg-primary/20"
+        >
+          {viewMode === "cards" ? (
+            <List className="h-4 w-4" />
+          ) : (
+            <LayoutGrid className="h-4 w-4" />
+          )}
+        </Toggle>
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -487,24 +503,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
           />
-        </div>
-        <div className="flex items-center gap-2">
-          <Toggle
-            pressed={viewMode === "list"}
-            onPressedChange={(pressed) => setViewMode(pressed ? "list" : "cards")}
-            aria-label="Alternar modo de visualização"
-            className="data-[state=on]:bg-primary/20"
-          >
-            {viewMode === "cards" ? (
-              <List className="h-4 w-4" />
-            ) : (
-              <LayoutGrid className="h-4 w-4" />
-            )}
-          </Toggle>
-          <Button onClick={handleOpenAddDialog}>
-            <Plus className="mr-2 h-4 w-4" />
-            Adicionar Vínculos
-          </Button>
         </div>
       </div>
 
