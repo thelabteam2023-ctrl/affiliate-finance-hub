@@ -41,6 +41,7 @@ const MODELOS_PAGAMENTO = [
   { value: "HIBRIDO", label: "Híbrido (Fixo + %)" },
   { value: "POR_ENTREGA", label: "Por Entrega" },
   { value: "COMISSAO_ESCALONADA", label: "Comissão Escalonada" },
+  { value: "PROPORCIONAL_LUCRO", label: "Proporcional ao Lucro" },
 ];
 
 const BASES_CALCULO = [
@@ -243,9 +244,9 @@ export function VincularOperadorDialog({
   );
 
   const showValorFixo = ["FIXO_MENSAL", "HIBRIDO"].includes(formData.modelo_pagamento);
-  const showPercentual = ["PORCENTAGEM", "HIBRIDO"].includes(formData.modelo_pagamento);
+  const showPercentual = ["PORCENTAGEM", "HIBRIDO", "PROPORCIONAL_LUCRO"].includes(formData.modelo_pagamento);
   const showBaseCalculo = showPercentual || formData.modelo_pagamento === "POR_ENTREGA";
-  const showFrequencia = ["FIXO_MENSAL", "PORCENTAGEM", "HIBRIDO", "COMISSAO_ESCALONADA"].includes(formData.modelo_pagamento);
+  const showFrequencia = ["FIXO_MENSAL", "PORCENTAGEM", "HIBRIDO", "COMISSAO_ESCALONADA", "PROPORCIONAL_LUCRO"].includes(formData.modelo_pagamento);
   const showFaixas = formData.modelo_pagamento === "COMISSAO_ESCALONADA";
   const showMetaPorEntrega = formData.modelo_pagamento === "POR_ENTREGA";
 
