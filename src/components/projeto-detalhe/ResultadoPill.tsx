@@ -281,6 +281,83 @@ export function ResultadoPill({
   };
 
   /**
+   * Calcula o ajuste de saldo para um determinado resultado
+   * Considera o tipo de operação para calcular corretamente
+   */
+  const calcularAjusteSaldo = (resultado: string): number => {
+    const comissao = (layComissao || 5) / 100;
+    
+    // Para operações Lay
+    if (operationType === "lay") {
+      const liability = layLiability || stake * ((layOdd || odd) - 1);
+      const layStakeVal = layStake || stake;
+      
+      switch (resultado) {
+        case "GREEN": // Lay ganhou - recebemos stake menos comissão
+          return layStakeVal * (1 - comissao);
+        case "RED": // Lay perdeu - perdemos liability
+          return -liability;
+        case "VOID":
+          return 0;
+        default:
+          return 0;
+      }
+    }
+    
+    // Para Cobertura - consideramos apenas o bookmaker principal
+    // O lay exchange é tratado separadamente se necessário
+    if (operationType === "cobertura") {
+      const backOdd = odd;
+      const backStake = stake;
+      const layOddVal = layOdd || 2;
+      const stakeLay = layStake || (backStake * backOdd) / (layOddVal - comissao);
+      const responsabilidade = layLiability || stakeLay * (layOddVal - 1);
+      
+      switch (resultado) {
+        case "GREEN_BOOKMAKER": // Back ganhou - recebemos lucro do back
+          return backStake * (backOdd - 1);
+        case "RED_BOOKMAKER": // Back perdeu - perdemos stake do back
+          return -backStake;
+        case "VOID":
+          return 0;
+        default:
+          return 0;
+      }
+    }
+    
+    // Para Exchange Back
+    if (operationType === "back") {
+      const lucroBruto = stake * (odd - 1);
+      switch (resultado) {
+        case "GREEN":
+          return lucroBruto * (1 - comissao);
+        case "RED":
+          return -stake;
+        case "VOID":
+          return 0;
+        default:
+          return 0;
+      }
+    }
+    
+    // Para Bookmaker (com meio resultados)
+    switch (resultado) {
+      case "GREEN":
+        return stake * (odd - 1);
+      case "RED":
+        return -stake;
+      case "MEIO_GREEN":
+        return stake * (odd - 1) / 2;
+      case "MEIO_RED":
+        return -stake / 2;
+      case "VOID":
+        return 0;
+      default:
+        return 0;
+    }
+  };
+
+  /**
    * Atualiza o saldo do bookmaker baseado na mudança de resultado
    * Esta função considera a reversão do resultado anterior e aplicação do novo
    */
@@ -293,47 +370,11 @@ export function ResultadoPill({
 
       // Reverter efeito do resultado anterior (se havia um resultado definido)
       if (resultadoAnterior && resultadoAnterior !== "PENDENTE") {
-        switch (resultadoAnterior) {
-          case "GREEN":
-          case "GREEN_BOOKMAKER":
-            saldoAjuste -= stake * (odd - 1);
-            break;
-          case "RED":
-          case "RED_BOOKMAKER":
-            saldoAjuste += stake;
-            break;
-          case "MEIO_GREEN":
-            saldoAjuste -= stake * (odd - 1) / 2;
-            break;
-          case "MEIO_RED":
-            saldoAjuste += stake / 2;
-            break;
-          case "VOID":
-            // Nada a reverter
-            break;
-        }
+        saldoAjuste -= calcularAjusteSaldo(resultadoAnterior);
       }
 
       // Aplicar efeito do novo resultado
-      switch (resultadoNovo) {
-        case "GREEN":
-        case "GREEN_BOOKMAKER":
-          saldoAjuste += stake * (odd - 1);
-          break;
-        case "RED":
-        case "RED_BOOKMAKER":
-          saldoAjuste -= stake;
-          break;
-        case "MEIO_GREEN":
-          saldoAjuste += stake * (odd - 1) / 2;
-          break;
-        case "MEIO_RED":
-          saldoAjuste -= stake / 2;
-          break;
-        case "VOID":
-          // Stake desbloqueia, saldo não muda
-          break;
-      }
+      saldoAjuste += calcularAjusteSaldo(resultadoNovo);
 
       if (saldoAjuste !== 0) {
         const { data: bookmaker } = await supabase
