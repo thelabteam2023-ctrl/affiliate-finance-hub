@@ -49,7 +49,11 @@ import {
   List,
   AlertTriangle,
   Target,
+  ArrowRightLeft,
+  Wallet,
+  Clock,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Toggle } from "@/components/ui/toggle";
 
 interface ProjetoVinculosTabProps {
@@ -64,6 +68,8 @@ interface Vinculo {
   projeto_id: string | null;
   bookmaker_status: string;
   saldo_atual: number;
+  saldo_em_aposta: number;
+  saldo_livre: number;
   moeda: string;
   login_username: string;
   bookmaker_catalogo_id: string | null;
@@ -82,6 +88,7 @@ interface BookmakerDisponivel {
 }
 
 export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
+  const navigate = useNavigate();
   const [vinculos, setVinculos] = useState<Vinculo[]>([]);
   const [disponiveis, setDisponiveis] = useState<BookmakerDisponivel[]>([]);
   const [historicoCount, setHistoricoCount] = useState({ total: 0, devolvidas: 0 });
@@ -125,38 +132,49 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
 
       if (vinculosError) throw vinculosError;
 
-      // Fetch apostas count per bookmaker
+      // Fetch apostas count and pending stakes per bookmaker
       const bookmakerIds = (vinculosData || []).map((v: any) => v.id);
       
       let apostasCount: Record<string, number> = {};
+      let saldoEmAposta: Record<string, number> = {};
+      
       if (bookmakerIds.length > 0) {
         const { data: apostasData } = await supabase
           .from("apostas")
-          .select("bookmaker_id")
+          .select("bookmaker_id, stake, status")
           .eq("projeto_id", projetoId)
           .in("bookmaker_id", bookmakerIds);
 
         if (apostasData) {
           apostasData.forEach((a: any) => {
             apostasCount[a.bookmaker_id] = (apostasCount[a.bookmaker_id] || 0) + 1;
+            // Sum stakes for PENDENTE bets
+            if (a.status === "PENDENTE") {
+              saldoEmAposta[a.bookmaker_id] = (saldoEmAposta[a.bookmaker_id] || 0) + (a.stake || 0);
+            }
           });
         }
       }
 
-      const mappedVinculos: Vinculo[] = (vinculosData || []).map((v: any) => ({
-        id: v.id,
-        nome: v.nome,
-        parceiro_id: v.parceiro_id,
-        parceiro_nome: v.parceiros?.nome || null,
-        projeto_id: v.projeto_id,
-        bookmaker_status: v.status,
-        saldo_atual: v.saldo_atual,
-        moeda: v.moeda || "BRL",
-        login_username: v.login_username,
-        bookmaker_catalogo_id: v.bookmaker_catalogo_id,
-        logo_url: v.bookmakers_catalogo?.logo_url || null,
-        totalApostas: apostasCount[v.id] || 0,
-      }));
+      const mappedVinculos: Vinculo[] = (vinculosData || []).map((v: any) => {
+        const emAposta = saldoEmAposta[v.id] || 0;
+        return {
+          id: v.id,
+          nome: v.nome,
+          parceiro_id: v.parceiro_id,
+          parceiro_nome: v.parceiros?.nome || null,
+          projeto_id: v.projeto_id,
+          bookmaker_status: v.status,
+          saldo_atual: v.saldo_atual,
+          saldo_em_aposta: emAposta,
+          saldo_livre: v.saldo_atual - emAposta,
+          moeda: v.moeda || "BRL",
+          login_username: v.login_username,
+          bookmaker_catalogo_id: v.bookmaker_catalogo_id,
+          logo_url: v.bookmakers_catalogo?.logo_url || null,
+          totalApostas: apostasCount[v.id] || 0,
+        };
+      });
 
       setVinculos(mappedVinculos);
     } catch (error: any) {
@@ -607,31 +625,64 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       {vinculo.parceiro_nome || "Sem parceiro"}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                  
+                  {/* Saldos separados */}
+                  <div className="pt-2 border-t space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Saldo</span>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Wallet className="h-3 w-3" />
+                        Saldo Total
+                      </span>
                       <span className="text-sm font-semibold">{formatCurrency(vinculo.saldo_atual, vinculo.moeda)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Apostas</span>
-                      <span className="text-sm font-medium flex items-center gap-1">
-                        <Target className="h-3 w-3 text-primary" />
-                        {vinculo.totalApostas}
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Em Aposta
                       </span>
+                      <span className="text-sm font-medium text-yellow-400">{formatCurrency(vinculo.saldo_em_aposta, vinculo.moeda)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <DollarSign className="h-3 w-3" />
+                        Livre
+                      </span>
+                      <span className="text-sm font-medium text-emerald-400">{formatCurrency(vinculo.saldo_livre, vinculo.moeda)}</span>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full mt-2 text-destructive hover:text-destructive"
-                    onClick={() => {
-                      setVinculoToRemove(vinculo);
-                      setRemoveDialogOpen(true);
-                    }}
-                  >
-                    <Link2Off className="mr-2 h-4 w-4" />
-                    Liberar do Projeto
-                  </Button>
+
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <span className="text-xs text-muted-foreground">Apostas</span>
+                    <span className="text-sm font-medium flex items-center gap-1">
+                      <Target className="h-3 w-3 text-primary" />
+                      {vinculo.totalApostas}
+                    </span>
+                  </div>
+                  
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => navigate("/caixa")}
+                      title="Nova Transação"
+                    >
+                      <ArrowRightLeft className="mr-2 h-4 w-4" />
+                      Transação
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-destructive hover:text-destructive"
+                      onClick={() => {
+                        setVinculoToRemove(vinculo);
+                        setRemoveDialogOpen(true);
+                      }}
+                    >
+                      <Link2Off className="mr-2 h-4 w-4" />
+                      Liberar
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -681,10 +732,22 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                     </p>
                   </div>
 
-                  {/* Saldo */}
-                  <div className="text-right flex-shrink-0 min-w-[100px]">
-                    <p className="text-xs text-muted-foreground">Saldo</p>
+                  {/* Saldo Total */}
+                  <div className="text-right flex-shrink-0 min-w-[80px]">
+                    <p className="text-xs text-muted-foreground">Saldo Total</p>
                     <p className="font-semibold">{formatCurrency(vinculo.saldo_atual, vinculo.moeda)}</p>
+                  </div>
+
+                  {/* Em Aposta */}
+                  <div className="text-right flex-shrink-0 min-w-[80px]">
+                    <p className="text-xs text-muted-foreground">Em Aposta</p>
+                    <p className="font-medium text-yellow-400">{formatCurrency(vinculo.saldo_em_aposta, vinculo.moeda)}</p>
+                  </div>
+
+                  {/* Livre */}
+                  <div className="text-right flex-shrink-0 min-w-[80px]">
+                    <p className="text-xs text-muted-foreground">Livre</p>
+                    <p className="font-medium text-emerald-400">{formatCurrency(vinculo.saldo_livre, vinculo.moeda)}</p>
                   </div>
 
                   {/* Status Badge */}
@@ -694,6 +757,15 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      title="Nova Transação"
+                      onClick={() => navigate("/caixa")}
+                    >
+                      <ArrowRightLeft className="h-4 w-4" />
+                    </Button>
                     <Popover 
                       open={statusPopoverId === vinculo.id} 
                       onOpenChange={(open) => setStatusPopoverId(open ? vinculo.id : null)}
