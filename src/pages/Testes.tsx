@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, Shuffle, Users, Building2, Wallet, FolderKanban, TrendingUp, UserPlus, Loader2, AlertTriangle } from "lucide-react";
+import { Trash2, Shuffle, Users, Building2, Wallet, FolderKanban, TrendingUp, UserPlus, Loader2, AlertTriangle, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -524,6 +524,95 @@ export default function Testes() {
     }
   };
 
+  const handleResetSaldosBookmakers = async () => {
+    setLoading("reset_saldos");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+
+      // Buscar todas as bookmakers do usuário
+      const { data: bookmakers, error: bookmarkersError } = await supabase
+        .from("bookmakers")
+        .select("id, nome")
+        .eq("user_id", user.id);
+
+      if (bookmarkersError) throw bookmarkersError;
+
+      if (!bookmakers || bookmakers.length === 0) {
+        toast.info("Nenhuma bookmaker encontrada");
+        return;
+      }
+
+      const bookmakerIds = bookmakers.map(b => b.id);
+
+      // Buscar todos os depósitos (dinheiro que entrou nas bookmakers)
+      const { data: depositos } = await supabase
+        .from("cash_ledger")
+        .select("destino_bookmaker_id, valor")
+        .eq("user_id", user.id)
+        .eq("tipo_transacao", "DEPOSITO")
+        .eq("status", "CONFIRMADO")
+        .in("destino_bookmaker_id", bookmakerIds);
+
+      // Buscar todos os saques (dinheiro que saiu das bookmakers)
+      const { data: saques } = await supabase
+        .from("cash_ledger")
+        .select("origem_bookmaker_id, valor")
+        .eq("user_id", user.id)
+        .eq("tipo_transacao", "SAQUE")
+        .eq("status", "CONFIRMADO")
+        .in("origem_bookmaker_id", bookmakerIds);
+
+      // Calcular saldo original de cada bookmaker (depositos - saques)
+      const saldosOriginais: Record<string, number> = {};
+      
+      for (const bookmaker of bookmakers) {
+        saldosOriginais[bookmaker.id] = 0;
+      }
+
+      // Somar depósitos
+      if (depositos) {
+        for (const d of depositos) {
+          if (d.destino_bookmaker_id) {
+            saldosOriginais[d.destino_bookmaker_id] = (saldosOriginais[d.destino_bookmaker_id] || 0) + Number(d.valor);
+          }
+        }
+      }
+
+      // Subtrair saques
+      if (saques) {
+        for (const s of saques) {
+          if (s.origem_bookmaker_id) {
+            saldosOriginais[s.origem_bookmaker_id] = (saldosOriginais[s.origem_bookmaker_id] || 0) - Number(s.valor);
+          }
+        }
+      }
+
+      // Atualizar cada bookmaker com seu saldo original
+      let atualizados = 0;
+      for (const [bookmakerId, saldo] of Object.entries(saldosOriginais)) {
+        const { error: updateError } = await supabase
+          .from("bookmakers")
+          .update({ saldo_atual: saldo, saldo_freebet: 0 })
+          .eq("id", bookmakerId);
+
+        if (!updateError) {
+          atualizados++;
+        }
+      }
+
+      toast.success(`Saldos de ${atualizados} bookmakers resetados para o estado original (antes das apostas)!`);
+    } catch (error: any) {
+      console.error("Erro ao resetar saldos:", error);
+      toast.error(`Erro ao resetar saldos: ${error.message}`);
+    } finally {
+      setLoading(null);
+    }
+  };
+
   const deleteActions = [
     { key: "parceiros", label: "Parceiros", icon: Users, action: handleDeleteParceiros, description: "Apaga todos os parceiros, contas bancárias e wallets" },
     { key: "bookmakers", label: "Bookmakers (Vínculos)", icon: Building2, action: handleDeleteBookmakers, description: "Apaga todos os vínculos parceiro-bookmaker" },
@@ -659,6 +748,28 @@ export default function Testes() {
                 <Shuffle className="h-4 w-4 mr-2" />
               )}
               Gerar Vínculos
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between p-4 border border-amber-500/30 rounded-lg bg-amber-500/5">
+            <div>
+              <p className="font-medium">Resetar Saldos das Bookmakers</p>
+              <p className="text-sm text-muted-foreground">
+                Recalcula os saldos baseado apenas em depósitos e saques (ignora impacto das apostas)
+              </p>
+            </div>
+            <Button 
+              onClick={handleResetSaldosBookmakers}
+              disabled={loading === "reset_saldos"}
+              variant="outline"
+              className="border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+            >
+              {loading === "reset_saldos" ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <RotateCcw className="h-4 w-4 mr-2" />
+              )}
+              Resetar Saldos
             </Button>
           </div>
         </CardContent>
