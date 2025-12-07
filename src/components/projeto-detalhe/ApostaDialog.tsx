@@ -964,12 +964,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         return;
       }
 
-      const lucroPrejuizo = calculateLucroPrejuizo();
+      // Calcular P/L baseado no tipo de operação (separados completamente)
+      let lucroPrejuizo: number | null = null;
+      let valorRetornoCalculado: number | null = null;
+      let apostaData: any;
 
-      // Montar dados baseado no tipo de aposta
-      const valorRetornoCalculado = calculateValorRetorno();
-
-      let apostaData: any = {
+      // Dados comuns a todos os tipos
+      const commonData = {
         user_id: userData.user.id,
         projeto_id: projetoId,
         data_aposta: dataAposta,
@@ -977,21 +978,52 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         evento,
         mercado: mercado || null,
         selecao: effectiveSelecao,
-        odd: parseFloat(odd),
-        stake: parseFloat(stake),
         status: statusResultado === "PENDENTE" ? "PENDENTE" : "CONCLUIDA",
         resultado: statusResultado === "PENDENTE" ? null : statusResultado,
-        valor_retorno: valorRetornoCalculado,
-        lucro_prejuizo: lucroPrejuizo,
         observacoes: observacoes || null,
       };
 
       if (tipoAposta === "bookmaker") {
+        // ===== MODO BOOKMAKER =====
+        // Usa campos odd, stake, bookmakerId exclusivos desta aba
+        const bookmakerOdd = parseFloat(odd);
+        const bookmakerStake = parseFloat(stake);
+        
+        // Calcular P/L para Bookmaker
+        if (statusResultado !== "PENDENTE") {
+          switch (statusResultado) {
+            case "GREEN":
+              lucroPrejuizo = bookmakerStake * (bookmakerOdd - 1);
+              valorRetornoCalculado = bookmakerStake * bookmakerOdd;
+              break;
+            case "RED":
+              lucroPrejuizo = -bookmakerStake;
+              valorRetornoCalculado = 0;
+              break;
+            case "MEIO_GREEN":
+              lucroPrejuizo = bookmakerStake * (bookmakerOdd - 1) / 2;
+              valorRetornoCalculado = bookmakerStake + lucroPrejuizo;
+              break;
+            case "MEIO_RED":
+              lucroPrejuizo = -bookmakerStake / 2;
+              valorRetornoCalculado = bookmakerStake / 2;
+              break;
+            case "VOID":
+              lucroPrejuizo = 0;
+              valorRetornoCalculado = bookmakerStake;
+              break;
+          }
+        }
+
         apostaData = {
-          ...apostaData,
+          ...commonData,
           bookmaker_id: bookmakerId,
+          odd: bookmakerOdd,
+          stake: bookmakerStake,
           estrategia: "VALOR",
           modo_entrada: "PADRAO",
+          valor_retorno: valorRetornoCalculado,
+          lucro_prejuizo: lucroPrejuizo,
           lay_exchange: null,
           lay_odd: null,
           lay_stake: null,
@@ -1001,16 +1033,60 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           back_comissao: null,
         };
       } else if (tipoOperacaoExchange === "cobertura") {
-        // Cobertura Lay: Back em bookmaker + Lay em exchange
+        // ===== MODO COBERTURA LAY =====
+        // Usa campos coberturaBack* e coberturaLay* exclusivos
+        const backOdd = parseFloat(coberturaBackOdd);
+        const backStake = parseFloat(coberturaBackStake);
+        const layOdd = parseFloat(coberturaLayOdd);
+        const comissao = parseFloat(coberturaLayComissao) / 100;
+        
+        // Calcular P/L para Cobertura baseado no resultado
+        if (statusResultado !== "PENDENTE") {
+          const oddLayAjustada = layOdd - comissao;
+          let stakeLay: number;
+          
+          if (tipoApostaBack === "freebet_snr") {
+            stakeLay = (backStake * (backOdd - 1)) / oddLayAjustada;
+          } else {
+            stakeLay = (backStake * backOdd) / oddLayAjustada;
+          }
+          
+          const responsabilidade = stakeLay * (layOdd - 1);
+          
+          switch (statusResultado) {
+            case "GREEN_BOOKMAKER":
+              // Back ganhou: recebemos lucro do back, pagamos responsabilidade do lay
+              if (tipoApostaBack === "freebet_snr") {
+                lucroPrejuizo = (backStake * (backOdd - 1)) - responsabilidade;
+                valorRetornoCalculado = backStake * (backOdd - 1); // Só lucro, stake não volta
+              } else {
+                lucroPrejuizo = (backStake * (backOdd - 1)) - responsabilidade;
+                valorRetornoCalculado = backStake * backOdd - responsabilidade;
+              }
+              break;
+            case "RED_BOOKMAKER":
+              // Lay ganhou: ganhamos stake do lay menos comissão
+              lucroPrejuizo = (stakeLay * (1 - comissao)) - (tipoApostaBack === "freebet_snr" ? 0 : backStake);
+              valorRetornoCalculado = stakeLay * (1 - comissao);
+              break;
+            case "VOID":
+              lucroPrejuizo = 0;
+              valorRetornoCalculado = tipoApostaBack === "freebet_snr" ? 0 : backStake;
+              break;
+          }
+        }
+
         apostaData = {
-          ...apostaData,
+          ...commonData,
           bookmaker_id: coberturaBackBookmakerId,
+          odd: backOdd,
+          stake: backStake,
           estrategia: "COBERTURA_LAY",
           modo_entrada: "EXCHANGE",
-          odd: parseFloat(coberturaBackOdd),
-          stake: parseFloat(coberturaBackStake),
+          valor_retorno: valorRetornoCalculado,
+          lucro_prejuizo: lucroPrejuizo,
           lay_exchange: coberturaLayBookmakerId,
-          lay_odd: parseFloat(coberturaLayOdd),
+          lay_odd: layOdd,
           lay_stake: coberturaLayStake,
           lay_liability: coberturaResponsabilidade,
           lay_comissao: parseFloat(coberturaLayComissao),
@@ -1018,18 +1094,64 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           back_comissao: null,
         };
       } else {
-        // Exchange mode - Back OU Lay simples
+        // ===== MODO EXCHANGE (Back ou Lay simples) =====
+        // Usa campos exchange* exclusivos
         const isLay = tipoOperacaoExchange === "lay";
+        const exchOdd = parseFloat(exchangeOdd);
+        const exchStake = parseFloat(exchangeStake);
+        const exchComissao = parseFloat(exchangeComissao) / 100;
+        
+        // Calcular P/L para Exchange
+        if (statusResultado !== "PENDENTE") {
+          if (isLay) {
+            // Lay: se ganhar = stake * (1 - comissão), se perder = -liability
+            const liability = exchStake * (exchOdd - 1);
+            switch (statusResultado) {
+              case "GREEN":
+                lucroPrejuizo = exchStake * (1 - exchComissao);
+                valorRetornoCalculado = exchStake + lucroPrejuizo;
+                break;
+              case "RED":
+                lucroPrejuizo = -liability;
+                valorRetornoCalculado = 0;
+                break;
+              case "VOID":
+                lucroPrejuizo = 0;
+                valorRetornoCalculado = 0; // Liability liberada
+                break;
+            }
+          } else {
+            // Back: se ganhar = stake * (odd - 1) * (1 - comissão), se perder = -stake
+            switch (statusResultado) {
+              case "GREEN":
+                const lucroBruto = exchStake * (exchOdd - 1);
+                lucroPrejuizo = lucroBruto * (1 - exchComissao);
+                valorRetornoCalculado = exchStake + lucroPrejuizo;
+                break;
+              case "RED":
+                lucroPrejuizo = -exchStake;
+                valorRetornoCalculado = 0;
+                break;
+              case "VOID":
+                lucroPrejuizo = 0;
+                valorRetornoCalculado = exchStake;
+                break;
+            }
+          }
+        }
+
         apostaData = {
-          ...apostaData,
+          ...commonData,
           bookmaker_id: exchangeBookmakerId,
+          odd: exchOdd,
+          stake: exchStake,
           estrategia: isLay ? "EXCHANGE_LAY" : "EXCHANGE_BACK",
           modo_entrada: "EXCHANGE",
-          odd: parseFloat(exchangeOdd),
-          stake: parseFloat(exchangeStake),
+          valor_retorno: valorRetornoCalculado,
+          lucro_prejuizo: lucroPrejuizo,
           lay_exchange: null,
-          lay_odd: isLay ? parseFloat(exchangeOdd) : null,
-          lay_stake: isLay ? parseFloat(exchangeStake) : null,
+          lay_odd: isLay ? exchOdd : null,
+          lay_stake: isLay ? exchStake : null,
           lay_liability: isLay ? exchangeLiability : null,
           lay_comissao: parseFloat(exchangeComissao),
           back_em_exchange: true,

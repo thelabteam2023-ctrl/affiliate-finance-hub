@@ -22,6 +22,8 @@ interface ResultadoPillProps {
   operationType?: OperationType;
   layLiability?: number;
   layOdd?: number;
+  layStake?: number;
+  layComissao?: number;
   onResultadoUpdated: () => void;
   onEditClick: () => void;
 }
@@ -73,6 +75,8 @@ export function ResultadoPill({
   operationType = "bookmaker",
   layLiability,
   layOdd,
+  layStake,
+  layComissao = 5,
   onResultadoUpdated,
   onEditClick,
 }: ResultadoPillProps) {
@@ -130,14 +134,16 @@ export function ResultadoPill({
    * Calcula o lucro/prejuízo baseado no resultado e tipo de operação
    */
   const calcularLucroPrejuizo = (novoResultado: string): number => {
+    const comissao = (layComissao || 5) / 100;
+    
     // Para operações Lay, a lógica é invertida
     if (operationType === "lay") {
       const liability = layLiability || stake * ((layOdd || odd) - 1);
-      const layStake = stake;
+      const layStakeVal = stake;
       
       switch (novoResultado) {
         case "GREEN": // Seleção perdeu, lay ganhou
-          return layStake * (1 - 0.05); // Stake menos comissão típica de 5%
+          return layStakeVal * (1 - comissao);
         case "RED": // Seleção ganhou, lay perdeu
           return -liability;
         case "VOID":
@@ -147,13 +153,19 @@ export function ResultadoPill({
       }
     }
     
-    // Para cobertura, lucro garantido independente de qual lado bateu
+    // Para cobertura, calcular baseado nos dados reais
     if (operationType === "cobertura") {
+      const backOdd = odd;
+      const backStake = stake;
+      const layOddVal = layOdd || 2;
+      const stakeLay = layStake || (backStake * backOdd) / (layOddVal - comissao);
+      const responsabilidade = layLiability || stakeLay * (layOddVal - 1);
+      
       switch (novoResultado) {
-        case "GREEN_BOOKMAKER": // Bookmaker ganhou (back venceu)
-        case "RED_BOOKMAKER": // Bookmaker perdeu (lay venceu)
-          // Em cobertura, ambos resultados geram lucro garantido
-          return stake * (odd - 1) * 0.8; // Aproximação do lucro garantido
+        case "GREEN_BOOKMAKER": // Back ganhou
+          return (backStake * (backOdd - 1)) - responsabilidade;
+        case "RED_BOOKMAKER": // Lay ganhou
+          return (stakeLay * (1 - comissao)) - backStake;
         case "VOID":
           return 0;
         default:
@@ -161,11 +173,12 @@ export function ResultadoPill({
       }
     }
     
-    // Para Exchange Back (sem meio resultados)
+    // Para Exchange Back
     if (operationType === "back") {
+      const lucroBruto = stake * (odd - 1);
       switch (novoResultado) {
         case "GREEN":
-          return stake * (odd - 1);
+          return lucroBruto * (1 - comissao);
         case "RED":
           return -stake;
         case "VOID":
@@ -196,14 +209,15 @@ export function ResultadoPill({
    * Calcula o valor de retorno baseado no resultado e tipo de operação
    */
   const calcularValorRetorno = (novoResultado: string): number => {
+    const comissao = (layComissao || 5) / 100;
+    
     // Para operações Lay
     if (operationType === "lay") {
-      const liability = layLiability || stake * ((layOdd || odd) - 1);
-      const layStake = stake;
+      const layStakeVal = stake;
       
       switch (novoResultado) {
         case "GREEN": // Lay ganhou - recebe stake menos comissão
-          return layStake * (1 - 0.05);
+          return layStakeVal * (1 - comissao);
         case "RED": // Lay perdeu - perde liability
           return 0;
         case "VOID":
@@ -215,13 +229,20 @@ export function ResultadoPill({
     
     // Para Cobertura
     if (operationType === "cobertura") {
+      const backOdd = odd;
+      const backStake = stake;
+      const layOddVal = layOdd || 2;
+      const stakeLay = layStake || (backStake * backOdd) / (layOddVal - comissao);
+      
       switch (novoResultado) {
         case "GREEN_BOOKMAKER":
+          // Recebemos do back, pagamos lay
+          return backStake * backOdd - (layLiability || stakeLay * (layOddVal - 1));
         case "RED_BOOKMAKER":
-          // Retorno é o lucro garantido mais stake de volta
-          return stake + (stake * (odd - 1) * 0.8);
+          // Recebemos do lay
+          return stakeLay * (1 - comissao);
         case "VOID":
-          return stake; // Stakes devolvidas
+          return backStake; // Stakes devolvidas
         default:
           return 0;
       }
@@ -229,9 +250,10 @@ export function ResultadoPill({
     
     // Para Exchange Back
     if (operationType === "back") {
+      const lucroBruto = stake * (odd - 1);
       switch (novoResultado) {
         case "GREEN":
-          return stake * odd;
+          return stake + lucroBruto * (1 - comissao);
         case "RED":
           return 0;
         case "VOID":
