@@ -472,6 +472,32 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                     {opType.type === "back" && (() => {
                       const exchangeData = getExchangeDisplayData(aposta);
                       if (!exchangeData.isExchange) return null;
+                      const isPending = aposta.resultado === null || aposta.resultado === "PENDENTE";
+                      const profit = getCalculatedProfit(aposta);
+                      
+                      // Se tem resultado definido, mostrar P/L real
+                      if (!isPending && profit !== null) {
+                        return (
+                          <div className="space-y-0.5 pt-1 border-t border-border/50">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground flex items-center gap-1">
+                                <Coins className="h-3 w-3" />
+                                P/L da Operação:
+                              </span>
+                              <span className={`font-medium ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                {profit >= 0 ? <TrendingUp className="h-3 w-3 inline mr-0.5" /> : <TrendingDown className="h-3 w-3 inline mr-0.5" />}
+                                {formatCurrency(profit)}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] text-muted-foreground/70">
+                              <span>Comissão:</span>
+                              <span>{exchangeData.comissao?.toFixed(1)}%</span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      
+                      // Se ainda pendente, mostrar lucro potencial
                       return (
                         <div className="space-y-0.5 pt-1 border-t border-border/50">
                           <div className="flex items-center justify-between text-xs text-sky-400">
@@ -497,6 +523,32 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                     {opType.type === "lay" && (() => {
                       const exchangeData = getExchangeDisplayData(aposta);
                       if (!exchangeData.isExchange) return null;
+                      const isPending = aposta.resultado === null || aposta.resultado === "PENDENTE";
+                      const profit = getCalculatedProfit(aposta);
+                      
+                      // Se tem resultado definido, mostrar P/L real
+                      if (!isPending && profit !== null) {
+                        return (
+                          <div className="space-y-0.5 pt-1 border-t border-border/50">
+                            <div className="flex items-center justify-between text-xs text-rose-400">
+                              <span>Liability:</span>
+                              <span className="font-medium">{formatCurrency(exchangeData.liability || 0)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground flex items-center gap-1">
+                                <Coins className="h-3 w-3" />
+                                P/L da Operação:
+                              </span>
+                              <span className={`font-medium ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                {profit >= 0 ? <TrendingUp className="h-3 w-3 inline mr-0.5" /> : <TrendingDown className="h-3 w-3 inline mr-0.5" />}
+                                {formatCurrency(profit)}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      
+                      // Se ainda pendente, mostrar lucro potencial
                       return (
                         <div className="space-y-0.5 pt-1 border-t border-border/50">
                           <div className="flex items-center justify-between text-xs text-rose-400">
@@ -518,13 +570,36 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       );
                     })()}
                     
-                    {/* P/L apenas para Bookmaker (não Exchange) */}
+                    {/* P/L para Bookmaker */}
                     {opType.type === "bookmaker" && (() => {
+                      const isPending = aposta.resultado === null || aposta.resultado === "PENDENTE";
                       const profit = getCalculatedProfit(aposta);
+                      
+                      // Se pendente, mostrar lucro potencial
+                      if (isPending) {
+                        const lucroPotencial = aposta.stake * (aposta.odd - 1);
+                        return (
+                          <div className="space-y-0.5 pt-1 border-t border-border/50">
+                            <div className="flex items-center justify-between text-xs text-emerald-400">
+                              <span className="flex items-center gap-1">
+                                <Coins className="h-3 w-3" />
+                                Lucro Potencial:
+                              </span>
+                              <span className="font-medium">{formatCurrency(lucroPotencial)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>Retorno (se ganhar):</span>
+                              <span>{formatCurrency(aposta.stake * aposta.odd)}</span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      
+                      // Se tem resultado, mostrar P/L real
                       if (profit === null) return null;
                       return (
                         <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
-                          <span className="text-muted-foreground">P/L:</span>
+                          <span className="text-muted-foreground">P/L da Operação:</span>
                           <div className="flex items-center gap-2">
                             <span className={`font-medium flex items-center gap-0.5 ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                               {profit >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
@@ -540,11 +615,39 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                     
                     {/* P/L para Cobertura */}
                     {opType.type === "cobertura" && (() => {
+                      const isPending = aposta.resultado === null || aposta.resultado === "PENDENTE";
                       const profit = getCalculatedProfit(aposta);
+                      
+                      // Se pendente, mostrar lucro esperado da cobertura
+                      if (isPending) {
+                        // Calcular lucro garantido esperado
+                        const backOdd = aposta.odd;
+                        const backStake = aposta.stake;
+                        const layOdd = aposta.lay_odd || 2;
+                        const comissao = (aposta.lay_comissao || 5) / 100;
+                        const oddLayAjustada = layOdd - comissao;
+                        const stakeLay = (backStake * backOdd) / oddLayAjustada;
+                        const responsabilidade = stakeLay * (layOdd - 1);
+                        const lucroSeBackGanhar = (backStake * (backOdd - 1)) - responsabilidade;
+                        const lucroSeLayGanhar = (stakeLay * (1 - comissao)) - backStake;
+                        const lucroGarantido = Math.min(lucroSeBackGanhar, lucroSeLayGanhar);
+                        
+                        return (
+                          <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
+                            <span className="text-muted-foreground">Lucro Esperado:</span>
+                            <span className={`font-medium flex items-center gap-0.5 ${lucroGarantido >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                              {lucroGarantido >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                              {formatCurrency(lucroGarantido)}
+                            </span>
+                          </div>
+                        );
+                      }
+                      
+                      // Se tem resultado, mostrar P/L real
                       if (profit === null) return null;
                       return (
                         <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
-                          <span className="text-muted-foreground">Resultado:</span>
+                          <span className="text-muted-foreground">P/L da Operação:</span>
                           <span className={`font-medium flex items-center gap-0.5 ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                             {profit >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                             {formatCurrency(profit)}

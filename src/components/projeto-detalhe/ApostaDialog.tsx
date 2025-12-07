@@ -1171,16 +1171,25 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           .eq("id", aposta.id);
         if (error) throw error;
 
-        // Atualizar saldo do bookmaker se resultado mudou
-        if (tipoAposta === "bookmaker" && bookmakerId) {
+        // Atualizar saldo do bookmaker se resultado mudou - para todos os tipos de operação
+        const bookmakerIdParaAtualizar = tipoAposta === "bookmaker" 
+          ? bookmakerId 
+          : tipoOperacaoExchange === "cobertura" 
+            ? coberturaBackBookmakerId 
+            : exchangeBookmakerId;
+            
+        if (bookmakerIdParaAtualizar) {
           await atualizarSaldoBookmaker(
-            bookmakerId,
+            bookmakerIdParaAtualizar,
             resultadoAnterior,
             statusResultado,
             stakeAnterior,
             oddAnterior,
-            parseFloat(stake),
-            parseFloat(odd)
+            apostaData.stake,
+            apostaData.odd,
+            tipoAposta === "exchange" ? tipoOperacaoExchange : "bookmaker",
+            apostaData.lay_liability,
+            apostaData.lay_comissao
           );
         }
 
@@ -1192,15 +1201,24 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         if (error) throw error;
 
         // Atualizar saldo do bookmaker para nova aposta com resultado definido
-        if (tipoAposta === "bookmaker" && bookmakerId && statusResultado !== "PENDENTE") {
+        const bookmakerIdParaAtualizar = tipoAposta === "bookmaker" 
+          ? bookmakerId 
+          : tipoOperacaoExchange === "cobertura" 
+            ? coberturaBackBookmakerId 
+            : exchangeBookmakerId;
+            
+        if (bookmakerIdParaAtualizar && statusResultado !== "PENDENTE") {
           await atualizarSaldoBookmaker(
-            bookmakerId,
+            bookmakerIdParaAtualizar,
             null,
             statusResultado,
             0,
             0,
-            parseFloat(stake),
-            parseFloat(odd)
+            apostaData.stake,
+            apostaData.odd,
+            tipoAposta === "exchange" ? tipoOperacaoExchange : "bookmaker",
+            apostaData.lay_liability,
+            apostaData.lay_comissao
           );
         }
 
@@ -1223,63 +1241,115 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     stakeAnterior: number,
     oddAnterior: number,
     stakeNovo: number,
-    oddNovo: number
+    oddNovo: number,
+    tipoOperacao: "bookmaker" | "back" | "lay" | "cobertura" = "bookmaker",
+    layLiability: number | null = null,
+    layComissao: number | null = null
   ) => {
     try {
       // Sistema de dois saldos:
       // - saldo_total (saldo_atual no banco) = dinheiro real na conta
       // - saldo_disponivel = saldo_total - stakes bloqueadas (apostas pendentes)
       //
-      // Tipos de resultado e seus cálculos:
-      // - GREEN: lucro completo = stake * (odd - 1)
-      // - RED: perda completa = -stake
-      // - MEIO_GREEN: 50% do lucro potencial = stake * (odd - 1) / 2
-      // - MEIO_RED: 50% da perda = -stake / 2
-      // - VOID: nenhuma alteração (stake devolvida)
-      // - HALF: (legado) tratado como MEIO_GREEN
+      // Tipos de resultado e seus cálculos variam por tipo de operação
 
-      let saldoAjuste = 0;
-
-      // Calcular efeito do resultado anterior para reverter
-      if (resultadoAnterior && resultadoAnterior !== "PENDENTE") {
-        switch (resultadoAnterior) {
+      const calcularAjusteSaldo = (
+        resultado: string, 
+        stakeVal: number, 
+        oddVal: number,
+        opType: string,
+        liability: number | null,
+        comissaoPercent: number
+      ): number => {
+        const comissao = comissaoPercent / 100;
+        
+        // Para operações Lay
+        if (opType === "lay") {
+          const liabilityVal = liability || stakeVal * (oddVal - 1);
+          switch (resultado) {
+            case "GREEN": // Lay ganhou
+              return stakeVal * (1 - comissao);
+            case "RED": // Lay perdeu
+              return -liabilityVal;
+            case "VOID":
+              return 0;
+            default:
+              return 0;
+          }
+        }
+        
+        // Para Cobertura
+        if (opType === "cobertura") {
+          switch (resultado) {
+            case "GREEN_BOOKMAKER": // Back ganhou
+              return stakeVal * (oddVal - 1);
+            case "RED_BOOKMAKER": // Back perdeu
+              return -stakeVal;
+            case "VOID":
+              return 0;
+            default:
+              return 0;
+          }
+        }
+        
+        // Para Exchange Back
+        if (opType === "back") {
+          const lucroBruto = stakeVal * (oddVal - 1);
+          switch (resultado) {
+            case "GREEN":
+              return lucroBruto * (1 - comissao);
+            case "RED":
+              return -stakeVal;
+            case "VOID":
+              return 0;
+            default:
+              return 0;
+          }
+        }
+        
+        // Para Bookmaker (com meio resultados)
+        switch (resultado) {
           case "GREEN":
-            saldoAjuste -= stakeAnterior * (oddAnterior - 1);
-            break;
+            return stakeVal * (oddVal - 1);
           case "RED":
-            saldoAjuste += stakeAnterior;
-            break;
+            return -stakeVal;
           case "MEIO_GREEN":
           case "HALF":
-            saldoAjuste -= stakeAnterior * ((oddAnterior - 1) / 2);
-            break;
+            return stakeVal * ((oddVal - 1) / 2);
           case "MEIO_RED":
-            saldoAjuste += stakeAnterior / 2;
-            break;
+            return -stakeVal / 2;
           case "VOID":
-            break;
+            return 0;
+          default:
+            return 0;
         }
+      };
+
+      let saldoAjuste = 0;
+      const comissaoVal = layComissao ?? 5;
+
+      // Reverter efeito do resultado anterior
+      if (resultadoAnterior && resultadoAnterior !== "PENDENTE") {
+        saldoAjuste -= calcularAjusteSaldo(
+          resultadoAnterior, 
+          stakeAnterior, 
+          oddAnterior, 
+          tipoOperacao,
+          layLiability,
+          comissaoVal
+        );
       }
 
       // Aplicar efeito do novo resultado
       if (resultadoNovo && resultadoNovo !== "PENDENTE") {
-        switch (resultadoNovo) {
-          case "GREEN":
-            saldoAjuste += stakeNovo * (oddNovo - 1);
-            break;
-          case "RED":
-            saldoAjuste -= stakeNovo;
-            break;
-          case "MEIO_GREEN":
-          case "HALF":
-            saldoAjuste += stakeNovo * ((oddNovo - 1) / 2);
-            break;
-          case "MEIO_RED":
-            saldoAjuste -= stakeNovo / 2;
-            break;
-          case "VOID":
-            break;
-        }
+        saldoAjuste += calcularAjusteSaldo(
+          resultadoNovo, 
+          stakeNovo, 
+          oddNovo, 
+          tipoOperacao,
+          layLiability,
+          comissaoVal
+        );
       }
 
       if (saldoAjuste !== 0) {
@@ -1308,6 +1378,28 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     
     try {
       setLoading(true);
+      
+      // Determinar tipo de operação e bookmaker
+      const tipoOperacao = aposta.modo_entrada === "EXCHANGE" || aposta.back_em_exchange
+        ? (aposta.estrategia === "COBERTURA_LAY" ? "cobertura" : (aposta.estrategia === "EXCHANGE_LAY" ? "lay" : "back"))
+        : "bookmaker";
+      
+      // Reverter o saldo se a aposta tinha resultado definido
+      if (aposta.resultado && aposta.resultado !== "PENDENTE") {
+        await atualizarSaldoBookmaker(
+          aposta.bookmaker_id,
+          aposta.resultado,
+          "PENDENTE", // Reverter para pendente = nenhum efeito
+          aposta.stake,
+          aposta.odd,
+          0,
+          0,
+          tipoOperacao as any,
+          aposta.lay_liability || null,
+          aposta.lay_comissao || null
+        );
+      }
+      
       const { error } = await supabase
         .from("apostas")
         .delete()
