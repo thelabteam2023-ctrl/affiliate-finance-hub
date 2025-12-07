@@ -15,7 +15,6 @@ import {
   FolderKanban, 
   LayoutDashboard,
   Target,
-  Users,
   Link2,
   CalendarIcon,
   DollarSign,
@@ -23,7 +22,6 @@ import {
   TrendingDown,
   Clock,
   Edit,
-  Gift,
   Coins,
   AlertTriangle,
   Percent
@@ -32,9 +30,7 @@ import { format, differenceInDays, startOfDay, endOfDay, subDays, startOfMonth, 
 import { ptBR } from "date-fns/locale";
 import { ProjetoDashboardTab } from "@/components/projeto-detalhe/ProjetoDashboardTab";
 import { ProjetoApostasTab } from "@/components/projeto-detalhe/ProjetoApostasTab";
-import { ProjetoOperadoresTab } from "@/components/projeto-detalhe/ProjetoOperadoresTab";
 import { ProjetoVinculosTab } from "@/components/projeto-detalhe/ProjetoVinculosTab";
-import { ProjetoMatchedBettingTab } from "@/components/projeto-detalhe/ProjetoMatchedBettingTab";
 import { ProjetoPerdasTab } from "@/components/projeto-detalhe/ProjetoPerdasTab";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { DateRange } from "react-day-picker";
@@ -474,7 +470,7 @@ export default function ProjetoDetalhe() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="dashboard" className="space-y-4">
+      <Tabs defaultValue="apostas" className="space-y-4">
         <TabsList>
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <LayoutDashboard className="h-4 w-4" />
@@ -483,14 +479,6 @@ export default function ProjetoDetalhe() {
           <TabsTrigger value="apostas" className="flex items-center gap-2">
             <Target className="h-4 w-4" />
             Apostas Livres
-          </TabsTrigger>
-          <TabsTrigger value="matched-betting" className="flex items-center gap-2">
-            <Gift className="h-4 w-4" />
-            Matched Betting
-          </TabsTrigger>
-          <TabsTrigger value="operadores" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Operadores
           </TabsTrigger>
           <TabsTrigger value="vinculos" className="flex items-center gap-2">
             <Link2 className="h-4 w-4" />
@@ -517,14 +505,6 @@ export default function ProjetoDetalhe() {
             periodFilter={periodFilter}
             dateRange={dateRange}
           />
-        </TabsContent>
-
-        <TabsContent value="matched-betting">
-          <ProjetoMatchedBettingTab projetoId={id!} />
-        </TabsContent>
-
-        <TabsContent value="operadores">
-          <ProjetoOperadoresTab projetoId={id!} />
         </TabsContent>
 
         <TabsContent value="vinculos">
