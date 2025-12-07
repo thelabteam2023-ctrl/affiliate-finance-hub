@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Gift, Search, Building2, User, Calendar, Target, CheckCircle2, Clock, RefreshCw } from "lucide-react";
+import { Gift, Search, Building2, User, Calendar, Target, CheckCircle2, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -53,7 +53,6 @@ interface BookmakerComFreebet {
 
 export function ProjetoFreebetsTab({ projetoId }: ProjetoFreebetsTabProps) {
   const [loading, setLoading] = useState(true);
-  const [migrando, setMigrando] = useState(false);
   const [freebets, setFreebets] = useState<FreebetRecebida[]>([]);
   const [bookmakersComFreebet, setBookmakersComFreebet] = useState<BookmakerComFreebet[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -148,92 +147,6 @@ export function ProjetoFreebetsTab({ projetoId }: ProjetoFreebetsTabProps) {
     }
   };
 
-  // Migrar dados existentes: apostas com gerou_freebet=true que não têm registro em freebets_recebidas
-  const migrarFreebetsExistentes = async () => {
-    try {
-      setMigrando(true);
-
-      // Buscar apostas com gerou_freebet=true deste projeto
-      const { data: apostas, error: apostasError } = await supabase
-        .from("apostas")
-        .select("id, bookmaker_id, valor_freebet_gerada, data_aposta, user_id")
-        .eq("projeto_id", projetoId)
-        .eq("gerou_freebet", true)
-        .gt("valor_freebet_gerada", 0);
-
-      if (apostasError) throw apostasError;
-
-      if (!apostas || apostas.length === 0) {
-        toast.info("Nenhuma aposta com freebet encontrada para migrar");
-        return;
-      }
-
-      // Buscar freebets já registradas
-      const { data: existentes } = await supabase
-        .from("freebets_recebidas")
-        .select("aposta_id")
-        .eq("projeto_id", projetoId);
-
-      const apostaIdsExistentes = new Set((existentes || []).map(e => e.aposta_id));
-
-      // Filtrar apostas que ainda não têm registro
-      const apostasParaMigrar = apostas.filter(a => !apostaIdsExistentes.has(a.id));
-
-      if (apostasParaMigrar.length === 0) {
-        toast.info("Todas as freebets já estão registradas");
-        await fetchData();
-        return;
-      }
-
-      // Criar registros em freebets_recebidas
-      const registros = apostasParaMigrar.map(aposta => ({
-        user_id: aposta.user_id,
-        projeto_id: projetoId,
-        bookmaker_id: aposta.bookmaker_id,
-        valor: aposta.valor_freebet_gerada,
-        motivo: "Aposta qualificadora (migrado)",
-        data_recebida: aposta.data_aposta,
-        utilizada: false,
-        aposta_id: aposta.id,
-      }));
-
-      const { error: insertError } = await supabase
-        .from("freebets_recebidas")
-        .insert(registros);
-
-      if (insertError) throw insertError;
-
-      // Atualizar saldo_freebet dos bookmakers
-      const saldoPorBookmaker: Record<string, number> = {};
-      for (const aposta of apostasParaMigrar) {
-        saldoPorBookmaker[aposta.bookmaker_id] = 
-          (saldoPorBookmaker[aposta.bookmaker_id] || 0) + (aposta.valor_freebet_gerada || 0);
-      }
-
-      for (const [bookmakerId, valorAdicional] of Object.entries(saldoPorBookmaker)) {
-        const { data: bk } = await supabase
-          .from("bookmakers")
-          .select("saldo_freebet")
-          .eq("id", bookmakerId)
-          .maybeSingle();
-
-        if (bk) {
-          await supabase
-            .from("bookmakers")
-            .update({ saldo_freebet: (bk.saldo_freebet || 0) + valorAdicional })
-            .eq("id", bookmakerId);
-        }
-      }
-
-      toast.success(`${apostasParaMigrar.length} freebet(s) migrada(s) com sucesso!`);
-      await fetchData();
-    } catch (error: any) {
-      toast.error("Erro ao migrar freebets: " + error.message);
-    } finally {
-      setMigrando(false);
-    }
-  };
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -274,8 +187,8 @@ export function ProjetoFreebetsTab({ projetoId }: ProjetoFreebetsTabProps) {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)}
+        <div className="grid gap-4 md:grid-cols-3">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-24" />)}
         </div>
         <Skeleton className="h-96" />
       </div>
@@ -285,7 +198,7 @@ export function ProjetoFreebetsTab({ projetoId }: ProjetoFreebetsTabProps) {
   return (
     <div className="space-y-4">
       {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Freebet Disponível</CardTitle>
@@ -323,37 +236,6 @@ export function ProjetoFreebetsTab({ projetoId }: ProjetoFreebetsTabProps) {
               <span className="text-emerald-400">{freebetsDisponiveis} disponíveis</span>
               {" · "}
               <span className="text-muted-foreground">{freebetsUtilizadas} utilizadas</span>
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ações</CardTitle>
-            <RefreshCw className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={migrarFreebetsExistentes}
-              disabled={migrando}
-              className="w-full"
-            >
-              {migrando ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Migrando...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Sincronizar Freebets
-                </>
-              )}
-            </Button>
-            <p className="text-xs text-muted-foreground mt-2">
-              Migra freebets de apostas antigas
             </p>
           </CardContent>
         </Card>
@@ -454,17 +336,6 @@ export function ProjetoFreebetsTab({ projetoId }: ProjetoFreebetsTabProps) {
                   : "Nenhuma freebet corresponde aos filtros"
                 }
               </p>
-              {freebets.length === 0 && (
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={migrarFreebetsExistentes}
-                  disabled={migrando}
-                >
-                  <RefreshCw className={`mr-2 h-4 w-4 ${migrando ? "animate-spin" : ""}`} />
-                  Sincronizar Freebets Existentes
-                </Button>
-              )}
             </div>
           ) : (
             <Table>
