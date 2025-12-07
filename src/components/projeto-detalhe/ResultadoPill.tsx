@@ -58,8 +58,8 @@ const RESULTADO_OPTIONS_EXCHANGE_LAY = [
 
 // Opções para Cobertura (qual lado da cobertura bateu)
 const RESULTADO_OPTIONS_COBERTURA = [
-  { value: "GREEN_BOOKMAKER", label: "Green Bookmaker", sublabel: "Bookmaker ganhou", color: "bg-emerald-500 hover:bg-emerald-600" },
-  { value: "RED_BOOKMAKER", label: "Red Bookmaker", sublabel: "Bookmaker perdeu", color: "bg-red-500 hover:bg-red-600" },
+  { value: "GREEN_BOOKMAKER", label: "Green Bookmaker", sublabel: "Seleção ganhou na Bookmaker", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED_BOOKMAKER", label: "Red Bookmaker", sublabel: "Seleção perdeu na Bookmaker", color: "bg-red-500 hover:bg-red-600" },
   { value: "VOID", label: "Void", sublabel: "Devolvida em ambas", color: "bg-gray-500 hover:bg-gray-600" },
 ];
 
