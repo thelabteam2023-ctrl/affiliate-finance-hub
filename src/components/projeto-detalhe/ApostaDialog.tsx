@@ -382,6 +382,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   const [coberturaLayOdd, setCoberturaLayOdd] = useState("");
   const [coberturaLayComissao, setCoberturaLayComissao] = useState("5");
   
+  // Saldos das casas selecionadas na Cobertura
+  const [coberturaBackSaldo, setCoberturaBackSaldo] = useState<{ saldo: number; moeda: string } | null>(null);
+  const [coberturaLaySaldo, setCoberturaLaySaldo] = useState<{ saldo: number; moeda: string } | null>(null);
+  
   // Valores calculados para Cobertura
   const [coberturaLayStake, setCoberturaLayStake] = useState<number | null>(null);
   const [coberturaResponsabilidade, setCoberturaResponsabilidade] = useState<number | null>(null);
@@ -678,6 +682,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     setCoberturaLayBookmakerId("");
     setCoberturaLayOdd("");
     setCoberturaLayComissao("5");
+    setCoberturaBackSaldo(null);
+    setCoberturaLaySaldo(null);
     setCoberturaLayStake(null);
     setCoberturaResponsabilidade(null);
     setCoberturaLucroBack(null);
@@ -1642,9 +1648,20 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                           📗 BACK (Aposta a Favor)
                         </Label>
                         <div className="space-y-3">
-                          <div className="space-y-2">
+                          <div className="space-y-1">
                             <Label className="block text-center uppercase text-[10px] tracking-wider">Casa (Bookmaker) *</Label>
-                            <Select value={coberturaBackBookmakerId} onValueChange={setCoberturaBackBookmakerId}>
+                            <Select 
+                              value={coberturaBackBookmakerId} 
+                              onValueChange={(val) => {
+                                setCoberturaBackBookmakerId(val);
+                                const bk = bookmakers.find(b => b.id === val);
+                                if (bk) {
+                                  setCoberturaBackSaldo({ saldo: bk.saldo_atual, moeda: bk.moeda });
+                                } else {
+                                  setCoberturaBackSaldo(null);
+                                }
+                              }}
+                            >
                               <SelectTrigger className="w-full h-9 text-sm">
                                 <span className="truncate">
                                   {coberturaBackBookmakerId ? (() => {
@@ -1661,6 +1678,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                                 ))}
                               </SelectContent>
                             </Select>
+                            {coberturaBackSaldo && (
+                              <div className="text-center text-xs text-muted-foreground">
+                                Saldo: <span className="font-medium text-emerald-400">{coberturaBackSaldo.moeda} {coberturaBackSaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                              </div>
+                            )}
                           </div>
                           <div className="grid grid-cols-2 gap-2">
                             <div className="space-y-2">
@@ -1712,9 +1734,20 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                           📕 LAY (Aposta Contra)
                         </Label>
                         <div className="space-y-3">
-                          <div className="space-y-2">
+                          <div className="space-y-1">
                             <Label className="block text-center uppercase text-[10px] tracking-wider">Casa (Exchange) *</Label>
-                            <Select value={coberturaLayBookmakerId} onValueChange={setCoberturaLayBookmakerId}>
+                            <Select 
+                              value={coberturaLayBookmakerId} 
+                              onValueChange={(val) => {
+                                setCoberturaLayBookmakerId(val);
+                                const bk = bookmakers.find(b => b.id === val);
+                                if (bk) {
+                                  setCoberturaLaySaldo({ saldo: bk.saldo_atual, moeda: bk.moeda });
+                                } else {
+                                  setCoberturaLaySaldo(null);
+                                }
+                              }}
+                            >
                               <SelectTrigger className="w-full h-9 text-sm">
                                 <span className="truncate">
                                   {coberturaLayBookmakerId ? (() => {
@@ -1731,6 +1764,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                                 ))}
                               </SelectContent>
                             </Select>
+                            {coberturaLaySaldo && (
+                              <div className="text-center text-xs text-muted-foreground">
+                                Saldo: <span className="font-medium text-rose-400">{coberturaLaySaldo.moeda} {coberturaLaySaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                              </div>
+                            )}
                           </div>
                           <div className="grid grid-cols-2 gap-2">
                             <div className="space-y-2">
