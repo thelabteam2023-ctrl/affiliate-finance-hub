@@ -24,7 +24,8 @@ import {
   Edit,
   Coins,
   AlertTriangle,
-  Percent
+  Percent,
+  Gift
 } from "lucide-react";
 import { format, differenceInDays, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -32,6 +33,7 @@ import { ProjetoDashboardTab } from "@/components/projeto-detalhe/ProjetoDashboa
 import { ProjetoApostasTab } from "@/components/projeto-detalhe/ProjetoApostasTab";
 import { ProjetoVinculosTab } from "@/components/projeto-detalhe/ProjetoVinculosTab";
 import { ProjetoPerdasTab } from "@/components/projeto-detalhe/ProjetoPerdasTab";
+import { ProjetoFreebetsTab } from "@/components/projeto-detalhe/ProjetoFreebetsTab";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { DateRange } from "react-day-picker";
 
@@ -484,6 +486,10 @@ export default function ProjetoDetalhe() {
             <Link2 className="h-4 w-4" />
             Vínculos
           </TabsTrigger>
+          <TabsTrigger value="freebets" className="flex items-center gap-2">
+            <Gift className="h-4 w-4" />
+            Freebets
+          </TabsTrigger>
           <TabsTrigger value="perdas" className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4" />
             Perdas
@@ -509,6 +515,10 @@ export default function ProjetoDetalhe() {
 
         <TabsContent value="vinculos">
           <ProjetoVinculosTab projetoId={id!} />
+        </TabsContent>
+
+        <TabsContent value="freebets">
+          <ProjetoFreebetsTab projetoId={id!} />
         </TabsContent>
 
         <TabsContent value="perdas">
