@@ -387,9 +387,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   const [tipoApostaBack, setTipoApostaBack] = useState<"normal" | "freebet_snr" | "freebet_sr">("normal");
   
   // Saldos das casas selecionadas
-  const [bookmakerSaldo, setBookmakerSaldo] = useState<{ saldo: number; moeda: string } | null>(null);
-  const [coberturaBackSaldo, setCoberturaBackSaldo] = useState<{ saldo: number; moeda: string } | null>(null);
-  const [coberturaLaySaldo, setCoberturaLaySaldo] = useState<{ saldo: number; moeda: string } | null>(null);
+  const [bookmakerSaldo, setBookmakerSaldo] = useState<{ saldo: number; saldoDisponivel: number; moeda: string } | null>(null);
+  const [coberturaBackSaldo, setCoberturaBackSaldo] = useState<{ saldo: number; saldoDisponivel: number; moeda: string } | null>(null);
+  const [coberturaLaySaldo, setCoberturaLaySaldo] = useState<{ saldo: number; saldoDisponivel: number; moeda: string } | null>(null);
+  const [exchangeBookmakerSaldo, setExchangeBookmakerSaldo] = useState<{ saldo: number; saldoDisponivel: number; moeda: string } | null>(null);
   
   // Valores calculados para Cobertura
   const [coberturaLayStake, setCoberturaLayStake] = useState<number | null>(null);
@@ -501,10 +502,24 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     if (bookmakerId && bookmakers.length > 0) {
       const selectedBk = bookmakers.find(b => b.id === bookmakerId);
       if (selectedBk) {
-        setBookmakerSaldo({ saldo: selectedBk.saldo_disponivel, moeda: selectedBk.moeda });
+        setBookmakerSaldo({ saldo: selectedBk.saldo_total, saldoDisponivel: selectedBk.saldo_disponivel, moeda: selectedBk.moeda });
       }
     }
   }, [bookmakerId, bookmakers]);
+
+  // Atualizar saldo da casa para Exchange (Back/Lay)
+  useEffect(() => {
+    if (exchangeBookmakerId && bookmakers.length > 0) {
+      const selectedBk = bookmakers.find(b => b.id === exchangeBookmakerId);
+      if (selectedBk) {
+        setExchangeBookmakerSaldo({ saldo: selectedBk.saldo_total, saldoDisponivel: selectedBk.saldo_disponivel, moeda: selectedBk.moeda });
+      } else {
+        setExchangeBookmakerSaldo(null);
+      }
+    } else {
+      setExchangeBookmakerSaldo(null);
+    }
+  }, [exchangeBookmakerId, bookmakers]);
 
   useEffect(() => {
     if (!aposta) {
@@ -696,6 +711,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     setObservacoes("");
     setBookmakerId("");
     setBookmakerSaldo(null);
+    setExchangeBookmakerSaldo(null);
     setModoBackLay(false);
     setLayExchange("");
     setLayOdd("");
@@ -928,6 +944,22 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           toast.error("Stake deve ser maior que 0");
           return;
         }
+
+        // Validação para Lay: responsabilidade não pode ser maior que saldo disponível
+        if (tipoOperacaoExchange === "lay" && exchangeLiability !== null) {
+          const selectedBk = bookmakers.find(b => b.id === exchangeBookmakerId);
+          if (selectedBk) {
+            const liabilityAnterior = aposta?.status === "PENDENTE" && aposta?.lay_liability ? aposta.lay_liability : 0;
+            const saldoDisponivel = selectedBk.saldo_disponivel + liabilityAnterior;
+            
+            if (exchangeLiability > saldoDisponivel) {
+              toast.error(
+                `Responsabilidade (${formatCurrencyWithSymbol(exchangeLiability, selectedBk.moeda)}) maior que o saldo disponível (${formatCurrencyWithSymbol(saldoDisponivel, selectedBk.moeda)}). Necessário: ${formatCurrencyWithSymbol(exchangeLiability - saldoDisponivel, selectedBk.moeda)} adicional.`
+              );
+              return;
+            }
+          }
+        }
       } else if (tipoOperacaoExchange === "cobertura") {
         // Cobertura Lay
         if (!coberturaBackBookmakerId || !coberturaBackOdd || !coberturaBackStake || 
@@ -952,6 +984,22 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         if (isNaN(layOddNum) || layOddNum <= 1) {
           toast.error("Odd Lay deve ser maior que 1.00");
           return;
+        }
+
+        // Validação para Cobertura Lay: responsabilidade não pode ser maior que saldo disponível
+        if (coberturaResponsabilidade !== null && coberturaLayBookmakerId) {
+          const selectedBk = bookmakers.find(b => b.id === coberturaLayBookmakerId);
+          if (selectedBk) {
+            const liabilityAnterior = aposta?.status === "PENDENTE" && aposta?.lay_liability ? aposta.lay_liability : 0;
+            const saldoDisponivel = selectedBk.saldo_disponivel + liabilityAnterior;
+            
+            if (coberturaResponsabilidade > saldoDisponivel) {
+              toast.error(
+                `Responsabilidade (${formatCurrencyWithSymbol(coberturaResponsabilidade, selectedBk.moeda)}) maior que o saldo disponível (${formatCurrencyWithSymbol(saldoDisponivel, selectedBk.moeda)}). Necessário: ${formatCurrencyWithSymbol(coberturaResponsabilidade - saldoDisponivel, selectedBk.moeda)} adicional.`
+              );
+              return;
+            }
+          }
         }
       }
     }
@@ -1577,7 +1625,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                         setBookmakerId(val);
                         const selectedBk = bookmakers.find(b => b.id === val);
                         if (selectedBk) {
-                          setBookmakerSaldo({ saldo: selectedBk.saldo_disponivel, moeda: selectedBk.moeda });
+                          setBookmakerSaldo({ saldo: selectedBk.saldo_total, saldoDisponivel: selectedBk.saldo_disponivel, moeda: selectedBk.moeda });
                         } else {
                           setBookmakerSaldo(null);
                         }
@@ -1803,7 +1851,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                       : "border-rose-500/30 bg-rose-500/5"
                   }`}>
                     <div className="grid grid-cols-4 gap-3">
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <Label className="block text-center uppercase text-xs tracking-wider">Casa *</Label>
                         <Select value={exchangeBookmakerId} onValueChange={setExchangeBookmakerId}>
                           <SelectTrigger className="w-full">
@@ -1834,6 +1882,18 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                             )}
                           </SelectContent>
                         </Select>
+                        {exchangeBookmakerSaldo && (
+                          <div className="text-center text-xs text-muted-foreground">
+                            Saldo: <span className={`font-medium ${tipoOperacaoExchange === "back" ? "text-emerald-400" : "text-rose-400"}`}>
+                              {exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                            {exchangeBookmakerSaldo.saldoDisponivel !== exchangeBookmakerSaldo.saldo && (
+                              <span className="text-amber-400 ml-1">
+                                (Livre: {exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldoDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label className="block text-center uppercase text-xs tracking-wider">
@@ -1910,10 +1970,23 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                               <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
                               Responsabilidade (exposição):
                             </span>
-                            <span className="font-medium text-amber-500">
+                            <span className={`font-medium ${
+                              exchangeLiability !== null && exchangeBookmakerSaldo && exchangeLiability > exchangeBookmakerSaldo.saldoDisponivel
+                                ? 'text-red-500'
+                                : 'text-amber-500'
+                            }`}>
                               {exchangeLiability !== null ? formatCurrency(exchangeLiability) : "-"}
                             </span>
                           </div>
+                          {exchangeLiability !== null && exchangeBookmakerSaldo && exchangeLiability > exchangeBookmakerSaldo.saldoDisponivel && (
+                            <div className="flex items-center gap-1 text-red-400 text-xs bg-red-500/10 p-2 rounded">
+                              <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+                              <span>
+                                Responsabilidade excede o saldo disponível ({formatCurrency(exchangeBookmakerSaldo.saldoDisponivel)}). 
+                                Necessário: {formatCurrency(exchangeLiability - exchangeBookmakerSaldo.saldoDisponivel)} adicional.
+                              </span>
+                            </div>
+                          )}
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-muted-foreground flex items-center gap-1.5">
                               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
@@ -2050,7 +2123,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                                 setCoberturaBackBookmakerId(val);
                                 const bk = bookmakers.find(b => b.id === val);
                                 if (bk) {
-                                  setCoberturaBackSaldo({ saldo: bk.saldo_atual, moeda: bk.moeda });
+                                  setCoberturaBackSaldo({ saldo: bk.saldo_total, saldoDisponivel: bk.saldo_disponivel, moeda: bk.moeda });
                                 } else {
                                   setCoberturaBackSaldo(null);
                                 }
@@ -2074,7 +2147,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                             </Select>
                             {coberturaBackSaldo && (
                               <div className="text-center text-xs text-muted-foreground">
-                                Saldo: <span className="font-medium text-emerald-400">{coberturaBackSaldo.moeda} {coberturaBackSaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                Saldo: <span className="font-medium text-emerald-400">
+                                  {coberturaBackSaldo.moeda} {coberturaBackSaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </span>
+                                {coberturaBackSaldo.saldoDisponivel !== coberturaBackSaldo.saldo && (
+                                  <span className="text-amber-400 ml-1">
+                                    (Livre: {coberturaBackSaldo.moeda} {coberturaBackSaldo.saldoDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                                  </span>
+                                )}
                               </div>
                             )}
                           </div>
@@ -2149,7 +2229,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                                 setCoberturaLayBookmakerId(val);
                                 const bk = bookmakers.find(b => b.id === val);
                                 if (bk) {
-                                  setCoberturaLaySaldo({ saldo: bk.saldo_atual, moeda: bk.moeda });
+                                  setCoberturaLaySaldo({ saldo: bk.saldo_total, saldoDisponivel: bk.saldo_disponivel, moeda: bk.moeda });
                                 } else {
                                   setCoberturaLaySaldo(null);
                                 }
@@ -2173,7 +2253,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                             </Select>
                             {coberturaLaySaldo && (
                               <div className="text-center text-xs text-muted-foreground">
-                                Saldo: <span className="font-medium text-rose-400">{coberturaLaySaldo.moeda} {coberturaLaySaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                Saldo: <span className="font-medium text-rose-400">
+                                  {coberturaLaySaldo.moeda} {coberturaLaySaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </span>
+                                {coberturaLaySaldo.saldoDisponivel !== coberturaLaySaldo.saldo && (
+                                  <span className="text-amber-400 ml-1">
+                                    (Livre: {coberturaLaySaldo.moeda} {coberturaLaySaldo.saldoDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                                  </span>
+                                )}
                               </div>
                             )}
                           </div>
@@ -2211,10 +2298,20 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                             </div>
                             <div className="flex justify-between items-center text-xs">
                               <span className="text-muted-foreground">Responsabilidade:</span>
-                              <span className="font-medium text-amber-400">
+                              <span className={`font-medium ${
+                                coberturaResponsabilidade !== null && coberturaLaySaldo && coberturaResponsabilidade > coberturaLaySaldo.saldoDisponivel
+                                  ? 'text-red-400'
+                                  : 'text-amber-400'
+                              }`}>
                                 {coberturaResponsabilidade !== null ? formatCurrency(coberturaResponsabilidade) : "-"}
                               </span>
                             </div>
+                            {coberturaResponsabilidade !== null && coberturaLaySaldo && coberturaResponsabilidade > coberturaLaySaldo.saldoDisponivel && (
+                              <div className="flex items-center gap-1 text-red-400 text-[10px] mt-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                <span>Responsabilidade excede o saldo disponível!</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
