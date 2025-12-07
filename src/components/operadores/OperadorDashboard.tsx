@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -26,20 +27,15 @@ import {
   Flame,
   Gem,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Clock,
+  Zap,
+  Award,
+  Calendar
 } from "lucide-react";
-import { format, subDays, startOfMonth, startOfYear } from "date-fns";
+import { format, subDays, startOfMonth, startOfYear, parseISO, isAfter, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
+import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 
 interface OperadorComparativo {
   operador_id: string;
@@ -80,6 +76,22 @@ interface ProjetoOperador {
   total_sacado: number;
 }
 
+interface Projeto {
+  id: string;
+  nome: string;
+}
+
+interface Entrega {
+  id: string;
+  numero_entrega: number;
+  status: string;
+  meta_valor: number | null;
+  resultado_nominal: number;
+  data_inicio: string;
+  data_fim_prevista: string | null;
+  operador_projeto_id: string;
+}
+
 const MODELOS_PAGAMENTO_LABELS: Record<string, string> = {
   FIXO_MENSAL: "Fixo Mensal",
   PORCENTAGEM: "Porcentagem",
@@ -100,9 +112,12 @@ const PERIODOS = [
 export function OperadorDashboard() {
   const [operadores, setOperadores] = useState<OperadorComparativo[]>([]);
   const [projetosOperadores, setProjetosOperadores] = useState<ProjetoOperador[]>([]);
+  const [projetos, setProjetos] = useState<Projeto[]>([]);
+  const [entregas, setEntregas] = useState<Entrega[]>([]);
   const [loading, setLoading] = useState(true);
   const [periodo, setPeriodo] = useState("30d");
   const [modeloFilter, setModeloFilter] = useState("todos");
+  const [projetoFilter, setProjetoFilter] = useState("todos");
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -128,6 +143,27 @@ export function OperadorDashboard() {
 
       if (projError) throw projError;
       setProjetosOperadores(projData || []);
+
+      // Fetch projetos para filtro
+      const { data: projListData, error: projListError } = await supabase
+        .from("projetos")
+        .select("id, nome")
+        .in("status", ["PLANEJADO", "EM_ANDAMENTO"])
+        .order("nome");
+
+      if (!projListError) {
+        setProjetos(projListData || []);
+      }
+
+      // Fetch entregas ativas
+      const { data: entregasData, error: entregasError } = await supabase
+        .from("entregas")
+        .select("*")
+        .eq("status", "EM_ANDAMENTO");
+
+      if (!entregasError) {
+        setEntregas(entregasData || []);
+      }
     } catch (error: any) {
       console.error("Erro ao carregar dados:", error);
     } finally {
@@ -160,11 +196,16 @@ export function OperadorDashboard() {
         : 0;
 
       // Buscar projetos deste operador
-      const projetos = projetosOperadores.filter(p => p.operador_id === op.operador_id);
+      const projetosOp = projetosOperadores.filter(p => p.operador_id === op.operador_id);
       
+      // Buscar entregas ativas deste operador
+      const entregasOp = entregas.filter(e => 
+        projetosOp.some(p => p.operador_projeto_id === e.operador_projeto_id)
+      );
+
       // Calcular pagamento estimado baseado no modelo
       let pagamentoEstimado = 0;
-      projetos.forEach((proj) => {
+      projetosOp.forEach((proj) => {
         const lucro = proj.lucro_projeto;
         switch (proj.modelo_pagamento) {
           case "FIXO_MENSAL":
@@ -183,7 +224,6 @@ export function OperadorDashboard() {
             }
             break;
           case "POR_ENTREGA":
-            // Calcular progresso da meta
             if (proj.meta_valor && lucro >= proj.meta_valor) {
               pagamentoEstimado += lucro * (proj.percentual / 100);
             }
@@ -202,24 +242,48 @@ export function OperadorDashboard() {
         }
       });
 
+      // Calcular progresso da entrega atual
+      let entregaAtual = null;
+      let progressoEntrega = 0;
+      if (entregasOp.length > 0) {
+        entregaAtual = entregasOp[0];
+        if (entregaAtual.meta_valor) {
+          progressoEntrega = Math.min((entregaAtual.resultado_nominal / entregaAtual.meta_valor) * 100, 100);
+        }
+      }
+
       return {
         ...op,
         winRate,
         roi,
         mediaPorAposta,
-        projetos,
+        projetos: projetosOp,
+        entregas: entregasOp,
+        entregaAtual,
+        progressoEntrega,
         pagamentoEstimado,
       };
     }).sort((a, b) => b.lucro_total_gerado - a.lucro_total_gerado);
-  }, [operadores, projetosOperadores]);
+  }, [operadores, projetosOperadores, entregas]);
 
-  // Filtrar por modelo
+  // Filtrar por modelo e projeto
   const operadoresFiltrados = useMemo(() => {
-    if (modeloFilter === "todos") return operadoresEnriquecidos;
-    return operadoresEnriquecidos.filter((op) =>
-      op.projetos.some((p) => p.modelo_pagamento === modeloFilter)
-    );
-  }, [operadoresEnriquecidos, modeloFilter]);
+    let filtered = operadoresEnriquecidos;
+    
+    if (modeloFilter !== "todos") {
+      filtered = filtered.filter((op) =>
+        op.projetos.some((p) => p.modelo_pagamento === modeloFilter)
+      );
+    }
+    
+    if (projetoFilter !== "todos") {
+      filtered = filtered.filter((op) =>
+        op.projetos.some((p) => p.projeto_id === projetoFilter)
+      );
+    }
+    
+    return filtered;
+  }, [operadoresEnriquecidos, modeloFilter, projetoFilter]);
 
   // Identificar destaques
   const melhorROI = useMemo(() => {
@@ -240,6 +304,26 @@ export function OperadorDashboard() {
     );
   }, [operadoresEnriquecidos]);
 
+  const melhorWinRate = useMemo(() => {
+    return operadoresEnriquecidos
+      .filter(op => op.total_apostas >= 10)
+      .reduce((best, op) => 
+        op.winRate > (best?.winRate || 0) ? op : best, 
+        null as typeof operadoresEnriquecidos[0] | null
+      );
+  }, [operadoresEnriquecidos]);
+
+  // Totais gerais
+  const totais = useMemo(() => {
+    return {
+      lucroTotal: operadoresEnriquecidos.reduce((acc, op) => acc + op.lucro_total_gerado, 0),
+      volumeTotal: operadoresEnriquecidos.reduce((acc, op) => acc + op.volume_total, 0),
+      apostasTotal: operadoresEnriquecidos.reduce((acc, op) => acc + op.total_apostas, 0),
+      operadoresAtivos: operadoresEnriquecidos.filter(op => op.projetos_ativos > 0).length,
+      pagamentoEstimadoTotal: operadoresEnriquecidos.reduce((acc, op) => acc + op.pagamentoEstimado, 0),
+    };
+  }, [operadoresEnriquecidos]);
+
   const toggleExpand = (id: string) => {
     setExpandedCards((prev) => {
       const newSet = new Set(prev);
@@ -253,30 +337,68 @@ export function OperadorDashboard() {
   };
 
   const getStatusBadge = (op: typeof operadoresEnriquecidos[0]) => {
-    if (op.operador_id === melhorROI?.operador_id) {
+    if (op.operador_id === melhorROI?.operador_id && op.roi > 0) {
       return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30"><Flame className="h-3 w-3 mr-1" /> Em alta</Badge>;
     }
     if (op.lucro_total_gerado < 0) {
       return <Badge className="bg-red-500/20 text-red-400 border-red-500/30"><AlertTriangle className="h-3 w-3 mr-1" /> Risco</Badge>;
     }
-    if (op.projetos.some(p => p.meta_valor && p.lucro_projeto >= p.meta_valor * 0.88)) {
+    if (op.progressoEntrega >= 88 && op.progressoEntrega < 100) {
       return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30"><Gem className="h-3 w-3 mr-1" /> Meta próxima</Badge>;
+    }
+    if (op.progressoEntrega >= 100) {
+      return <Badge className="bg-primary/20 text-primary border-primary/30"><Award className="h-3 w-3 mr-1" /> Meta atingida</Badge>;
     }
     return null;
   };
 
-  // Dados para gráfico
+  // Dados para gráfico comparativo usando ModernBarChart
   const chartData = operadoresFiltrados.slice(0, 10).map((op) => ({
     nome: op.nome.split(" ")[0],
     lucro: op.lucro_total_gerado,
-    roi: op.roi,
+    volume: op.volume_total,
   }));
+
+  // Insights automáticos
+  const insights = useMemo(() => {
+    const result: { type: "success" | "warning" | "info"; message: string }[] = [];
+
+    // Operadores próximos da meta
+    operadoresEnriquecidos.forEach(op => {
+      if (op.progressoEntrega >= 85 && op.progressoEntrega < 100 && op.entregaAtual?.meta_valor) {
+        const falta = op.entregaAtual.meta_valor - op.entregaAtual.resultado_nominal;
+        result.push({
+          type: "info",
+          message: `${op.nome.split(" ")[0]} está a ${formatCurrency(falta)} de atingir a meta`
+        });
+      }
+    });
+
+    // Operadores com ROI negativo
+    const comRoiNegativo = operadoresEnriquecidos.filter(op => op.roi < -5 && op.total_apostas >= 10);
+    if (comRoiNegativo.length > 0) {
+      result.push({
+        type: "warning",
+        message: `${comRoiNegativo.length} operador(es) com ROI negativo acima de -5%`
+      });
+    }
+
+    // Melhor performer
+    if (melhorWinRate && melhorWinRate.winRate >= 55) {
+      result.push({
+        type: "success",
+        message: `${melhorWinRate.nome.split(" ")[0]} lidera com ${formatPercent(melhorWinRate.winRate)} de win rate`
+      });
+    }
+
+    return result.slice(0, 3);
+  }, [operadoresEnriquecidos, melhorWinRate]);
 
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-3">
-          {[1, 2, 3].map((i) => (
+        <div className="grid gap-4 md:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
             <Card key={i}>
               <CardContent className="pt-6">
                 <Skeleton className="h-24 w-full" />
@@ -294,6 +416,7 @@ export function OperadorDashboard() {
       <div className="flex flex-wrap gap-4">
         <Select value={periodo} onValueChange={setPeriodo}>
           <SelectTrigger className="w-[180px]">
+            <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
             <SelectValue placeholder="Período" />
           </SelectTrigger>
           <SelectContent>
@@ -305,8 +428,24 @@ export function OperadorDashboard() {
           </SelectContent>
         </Select>
 
+        <Select value={projetoFilter} onValueChange={setProjetoFilter}>
+          <SelectTrigger className="w-[200px]">
+            <Target className="h-4 w-4 mr-2 text-muted-foreground" />
+            <SelectValue placeholder="Projeto" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos Projetos</SelectItem>
+            {projetos.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.nome}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <Select value={modeloFilter} onValueChange={setModeloFilter}>
           <SelectTrigger className="w-[200px]">
+            <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
             <SelectValue placeholder="Modelo de Pagamento" />
           </SelectTrigger>
           <SelectContent>
@@ -320,8 +459,29 @@ export function OperadorDashboard() {
         </Select>
       </div>
 
+      {/* Insights */}
+      {insights.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {insights.map((insight, idx) => (
+            <Badge 
+              key={idx} 
+              variant="outline"
+              className={`
+                py-1.5 px-3
+                ${insight.type === "success" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : ""}
+                ${insight.type === "warning" ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/30" : ""}
+                ${insight.type === "info" ? "bg-blue-500/10 text-blue-400 border-blue-500/30" : ""}
+              `}
+            >
+              <Zap className="h-3 w-3 mr-1.5" />
+              {insight.message}
+            </Badge>
+          ))}
+        </div>
+      )}
+
       {/* KPIs de Destaque */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -332,9 +492,12 @@ export function OperadorDashboard() {
           <CardContent>
             {melhorROI ? (
               <>
-                <p className="text-xl font-bold">{melhorROI.nome}</p>
+                <p className="text-lg font-bold truncate">{melhorROI.nome}</p>
                 <p className="text-2xl font-bold text-amber-500">
                   {formatPercent(melhorROI.roi)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {melhorROI.total_apostas} apostas
                 </p>
               </>
             ) : (
@@ -353,13 +516,40 @@ export function OperadorDashboard() {
           <CardContent>
             {maiorLucro ? (
               <>
-                <p className="text-xl font-bold">{maiorLucro.nome}</p>
+                <p className="text-lg font-bold truncate">{maiorLucro.nome}</p>
                 <p className="text-2xl font-bold text-emerald-500">
                   {formatCurrency(maiorLucro.lucro_total_gerado)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ROI: {formatPercent(maiorLucro.roi)}
                 </p>
               </>
             ) : (
               <p className="text-muted-foreground">Sem dados</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Activity className="h-4 w-4 text-blue-500" />
+              Melhor Win Rate
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {melhorWinRate ? (
+              <>
+                <p className="text-lg font-bold truncate">{melhorWinRate.nome}</p>
+                <p className="text-2xl font-bold text-blue-500">
+                  {formatPercent(melhorWinRate.winRate)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {melhorWinRate.apostas_ganhas}/{melhorWinRate.total_apostas} acertos
+                </p>
+              </>
+            ) : (
+              <p className="text-muted-foreground">Min. 10 apostas</p>
             )}
           </CardContent>
         </Card>
@@ -374,9 +564,12 @@ export function OperadorDashboard() {
           <CardContent>
             {piorDrawdown && piorDrawdown.lucro_total_gerado < 0 ? (
               <>
-                <p className="text-xl font-bold">{piorDrawdown.nome}</p>
+                <p className="text-lg font-bold truncate">{piorDrawdown.nome}</p>
                 <p className="text-2xl font-bold text-red-500">
                   {formatCurrency(piorDrawdown.lucro_total_gerado)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ROI: {formatPercent(piorDrawdown.roi)}
                 </p>
               </>
             ) : (
@@ -385,6 +578,39 @@ export function OperadorDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Resumo Geral */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Resumo Geral</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground">Lucro Total</p>
+              <p className={`text-xl font-bold ${totais.lucroTotal >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                {formatCurrency(totais.lucroTotal)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Volume Total</p>
+              <p className="text-xl font-bold">{formatCurrency(totais.volumeTotal)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Total Apostas</p>
+              <p className="text-xl font-bold">{totais.apostasTotal.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Operadores Ativos</p>
+              <p className="text-xl font-bold">{totais.operadoresAtivos}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Pagamentos Estimados</p>
+              <p className="text-xl font-bold text-primary">{formatCurrency(totais.pagamentoEstimadoTotal)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Gráfico Comparativo */}
       <Card>
@@ -396,42 +622,32 @@ export function OperadorDashboard() {
         </CardHeader>
         <CardContent>
           <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
-                <XAxis dataKey="nome" className="text-xs" />
-                <YAxis 
-                  tickFormatter={(value) => formatCurrency(value).replace("R$", "")}
-                  className="text-xs"
-                />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="bg-background/95 backdrop-blur border rounded-lg p-3 shadow-lg">
-                          <p className="font-medium">{payload[0].payload.nome}</p>
-                          <p className="text-emerald-500">
-                            Lucro: {formatCurrency(payload[0].value as number)}
-                          </p>
-                          <p className="text-muted-foreground">
-                            ROI: {formatPercent(payload[0].payload.roi)}
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="lucro" radius={[4, 4, 0, 0]}>
-                  {chartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.lucro >= 0 ? "hsl(var(--chart-2))" : "hsl(var(--destructive))"}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <ModernBarChart
+              data={chartData}
+              categoryKey="nome"
+              bars={[
+                {
+                  dataKey: "lucro",
+                  label: "Lucro",
+                  gradientStart: "#22C55E",
+                  gradientEnd: "#16A34A",
+                },
+              ]}
+              height={280}
+              showLabels={false}
+              showLegend={false}
+              formatValue={(value) => formatCurrency(value)}
+              customTooltipContent={(payload, label) => (
+                <div>
+                  <p className="font-medium text-sm mb-2">{label}</p>
+                  <div className="space-y-1">
+                    <p className="text-emerald-500 font-semibold">
+                      Lucro: {formatCurrency(payload[0]?.value || 0)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            />
           </div>
         </CardContent>
       </Card>
@@ -481,6 +697,11 @@ export function OperadorDashboard() {
                     </div>
                   </div>
                 ))}
+                {operadoresFiltrados.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhum operador encontrado
+                  </div>
+                )}
               </div>
             </ScrollArea>
           </CardContent>
@@ -542,32 +763,26 @@ export function OperadorDashboard() {
                       </div>
                     </div>
 
-                    {/* Meta progress if applicable */}
-                    {op.projetos.some(p => p.modelo_pagamento === "POR_ENTREGA" && p.meta_valor) && (
-                      <div className="space-y-1">
-                        {op.projetos
-                          .filter(p => p.modelo_pagamento === "POR_ENTREGA" && p.meta_valor)
-                          .map((proj) => {
-                            const progresso = Math.min((proj.lucro_projeto / (proj.meta_valor || 1)) * 100, 100);
-                            const falta = Math.max((proj.meta_valor || 0) - proj.lucro_projeto, 0);
-                            return (
-                              <div key={proj.operador_projeto_id}>
-                                <div className="flex justify-between text-xs">
-                                  <span>Meta: {formatCurrency(proj.meta_valor || 0)}</span>
-                                  <span>{formatPercent(progresso)} concluído</span>
-                                </div>
-                                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-primary transition-all" 
-                                    style={{ width: `${progresso}%` }}
-                                  />
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                  Faltam {formatCurrency(falta)} para próxima entrega
-                                </p>
-                              </div>
-                            );
-                          })}
+                    {/* Progresso da Entrega */}
+                    {op.entregaAtual && op.entregaAtual.meta_valor && (
+                      <div className="space-y-1.5 pt-2 border-t">
+                        <div className="flex justify-between text-xs">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Entrega #{op.entregaAtual.numero_entrega}
+                          </span>
+                          <span className={op.progressoEntrega >= 100 ? "text-emerald-500 font-medium" : ""}>
+                            {formatPercent(op.progressoEntrega)}
+                          </span>
+                        </div>
+                        <Progress 
+                          value={op.progressoEntrega} 
+                          className="h-2"
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>{formatCurrency(op.entregaAtual.resultado_nominal)}</span>
+                          <span>Meta: {formatCurrency(op.entregaAtual.meta_valor)}</span>
+                        </div>
                       </div>
                     )}
 
@@ -616,6 +831,11 @@ export function OperadorDashboard() {
                   </CardContent>
                 </Card>
               ))}
+              {operadoresFiltrados.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  Nenhum operador encontrado com os filtros selecionados
+                </div>
+              )}
             </div>
           </ScrollArea>
         </div>
