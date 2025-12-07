@@ -208,6 +208,7 @@ export type Database = {
           parceiro_id: string | null
           projeto_id: string | null
           saldo_atual: number
+          saldo_freebet: number
           saldo_irrecuperavel: number
           status: string
           updated_at: string
@@ -227,6 +228,7 @@ export type Database = {
           parceiro_id?: string | null
           projeto_id?: string | null
           saldo_atual?: number
+          saldo_freebet?: number
           saldo_irrecuperavel?: number
           status?: string
           updated_at?: string
@@ -246,6 +248,7 @@ export type Database = {
           parceiro_id?: string | null
           projeto_id?: string | null
           saldo_atual?: number
+          saldo_freebet?: number
           saldo_irrecuperavel?: number
           status?: string
           updated_at?: string
