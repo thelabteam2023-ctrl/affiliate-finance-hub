@@ -591,6 +591,16 @@ export default function Testes() {
         }
       }
 
+      // Apagar todas as apostas do usuário
+      const { error: apostasError } = await supabase
+        .from("apostas")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (apostasError) {
+        console.error("Erro ao apagar apostas:", apostasError);
+      }
+
       // Atualizar cada bookmaker com seu saldo original
       let atualizados = 0;
       for (const [bookmakerId, saldo] of Object.entries(saldosOriginais)) {
@@ -604,7 +614,7 @@ export default function Testes() {
         }
       }
 
-      toast.success(`Saldos de ${atualizados} bookmakers resetados para o estado original (antes das apostas)!`);
+      toast.success(`Saldos de ${atualizados} bookmakers resetados e todas as apostas apagadas!`);
     } catch (error: any) {
       console.error("Erro ao resetar saldos:", error);
       toast.error(`Erro ao resetar saldos: ${error.message}`);
