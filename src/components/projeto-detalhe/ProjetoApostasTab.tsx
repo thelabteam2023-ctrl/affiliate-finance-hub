@@ -230,6 +230,36 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
     return { type: "bookmaker", label: "", color: "" };
   };
 
+  // Calcula o lucro/prejuízo correto baseado no tipo de operação
+  const getCalculatedProfit = (aposta: Aposta): number | null => {
+    if (aposta.lucro_prejuizo === null || aposta.lucro_prejuizo === undefined) {
+      return null;
+    }
+    
+    const opType = getOperationType(aposta);
+    
+    // Para operações Exchange Lay, o cálculo é diferente
+    if (opType.type === "lay") {
+      // Se GREEN (o lay ganhou = seleção perdeu), lucro = stake do lay (menos comissão)
+      // Se RED (o lay perdeu = seleção ganhou), prejuízo = liability
+      // O valor já deve estar correto no banco, mas podemos recalcular se necessário
+      return aposta.lucro_prejuizo;
+    }
+    
+    // Para operações Exchange Back, similar ao bookmaker normal
+    if (opType.type === "back") {
+      return aposta.lucro_prejuizo;
+    }
+    
+    // Para cobertura, o lucro garantido já está calculado
+    if (opType.type === "cobertura") {
+      return aposta.lucro_prejuizo;
+    }
+    
+    // Bookmaker padrão
+    return aposta.lucro_prejuizo;
+  };
+
   // Formata informação de exibição da aposta baseado no tipo
   const getApostaDisplayInfo = (aposta: Aposta) => {
     const opType = getOperationType(aposta);
@@ -363,7 +393,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
             return (
               <Card 
                 key={aposta.id} 
-                className="hover:border-primary/50 transition-colors"
+                className="hover:border-primary/50 transition-colors cursor-default"
               >
                 <CardHeader className="pb-1 pt-3 px-3">
                   <div className="flex items-start justify-between gap-2">
@@ -422,20 +452,25 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       </div>
                     )}
                     
-                    {aposta.lucro_prejuizo !== null && (
-                      <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
-                        <span className="text-muted-foreground">P/L:</span>
-                        <div className="flex items-center gap-2">
-                          <span className={`font-medium flex items-center gap-0.5 ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {aposta.lucro_prejuizo >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                            {formatCurrency(aposta.lucro_prejuizo)}
-                          </span>
-                          <span className={`text-[10px] px-1 py-0.5 rounded ${aposta.lucro_prejuizo >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                            {((aposta.lucro_prejuizo / aposta.stake) * 100).toFixed(1)}%
-                          </span>
+                    {(() => {
+                      const profit = getCalculatedProfit(aposta);
+                      const baseValue = opType.type === "lay" ? (aposta.lay_liability || aposta.stake) : aposta.stake;
+                      if (profit === null) return null;
+                      return (
+                        <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
+                          <span className="text-muted-foreground">P/L:</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`font-medium flex items-center gap-0.5 ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                              {profit >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                              {formatCurrency(profit)}
+                            </span>
+                            <span className={`text-[10px] px-1 py-0.5 rounded ${profit >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                              {((profit / baseValue) * 100).toFixed(1)}%
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                     <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-2.5 w-2.5" />
@@ -479,8 +514,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                   className="flex items-center justify-between p-4 hover:bg-muted/50"
                 >
                   <div 
-                    className="flex items-center gap-4 flex-1 cursor-pointer"
-                    onClick={() => handleOpenDialog(aposta)}
+                    className="flex items-center gap-4 flex-1"
                   >
                     {aposta.bookmaker?.bookmakers_catalogo?.logo_url ? (
                       <img 
@@ -513,16 +547,22 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <p className="text-sm font-medium">{formatCurrency(aposta.stake)}</p>
-                      {aposta.lucro_prejuizo !== null && (
-                        <div className="flex items-center justify-end gap-2">
-                          <p className={`text-sm ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {formatCurrency(aposta.lucro_prejuizo)}
-                          </p>
-                          <span className={`text-[10px] px-1 py-0.5 rounded ${aposta.lucro_prejuizo >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                            {((aposta.lucro_prejuizo / aposta.stake) * 100).toFixed(1)}%
-                          </span>
-                        </div>
-                      )}
+                      {(() => {
+                        const opType = getOperationType(aposta);
+                        const profit = getCalculatedProfit(aposta);
+                        const baseValue = opType.type === "lay" ? (aposta.lay_liability || aposta.stake) : aposta.stake;
+                        if (profit === null) return null;
+                        return (
+                          <div className="flex items-center justify-end gap-2">
+                            <p className={`text-sm ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                              {formatCurrency(profit)}
+                            </p>
+                            <span className={`text-[10px] px-1 py-0.5 rounded ${profit >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                              {((profit / baseValue) * 100).toFixed(1)}%
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <ResultadoPill
                       apostaId={aposta.id}

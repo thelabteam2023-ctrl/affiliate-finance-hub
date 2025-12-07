@@ -20,6 +20,7 @@ export interface BookmakerData {
   nome: string;
   logo_url: string | null;
   saldo_atual?: number;
+  saldo_freebet?: number;
   moeda?: string;
   status?: string;
 }
@@ -39,6 +40,7 @@ interface BookmakerItem {
   nome: string;
   logo_url: string | null;
   saldo_atual?: number;
+  saldo_freebet?: number;
   moeda?: string;
   status?: string;
 }
@@ -74,6 +76,7 @@ export default function BookmakerSelect({
         nome: selectedItem.nome,
         logo_url: selectedItem.logo_url,
         saldo_atual: selectedItem.saldo_atual,
+        saldo_freebet: selectedItem.saldo_freebet,
         moeda: selectedItem.moeda,
         status: selectedItem.status,
       });
@@ -93,6 +96,7 @@ export default function BookmakerSelect({
               id,
               nome,
               saldo_atual,
+              saldo_freebet,
               moeda,
               status,
               bookmakers_catalogo:bookmaker_catalogo_id (
@@ -113,6 +117,7 @@ export default function BookmakerSelect({
             nome: b.nome,
             logo_url: b.bookmakers_catalogo?.logo_url || null,
             saldo_atual: b.saldo_atual,
+            saldo_freebet: b.saldo_freebet,
             moeda: b.moeda,
             status: b.status,
           }));
@@ -291,9 +296,16 @@ export default function BookmakerSelect({
                             {item.nome}
                           </span>
                           {item.saldo_atual !== undefined && (
-                            <span className="text-xs text-muted-foreground ml-auto flex-shrink-0">
-                              {item.moeda} {item.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </span>
+                            <div className="ml-auto flex-shrink-0 text-right">
+                              <span className="text-xs text-muted-foreground">
+                                {item.moeda} {item.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
+                              {(item.saldo_freebet ?? 0) > 0 && (
+                                <span className="text-xs text-amber-400 ml-1">
+                                  +FB {item.saldo_freebet?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </SelectItem>
