@@ -283,6 +283,13 @@ export type Database = {
             foreignKeyName: "bookmakers_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -522,6 +529,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_destino_parceiro_id_fkey"
             columns: ["destino_parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_parceiro_id_fkey"
+            columns: ["destino_parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -613,6 +627,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_origem_parceiro_id_fkey"
             columns: ["origem_parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -696,6 +717,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "parceiros"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contas_bancarias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
           },
           {
             foreignKeyName: "contas_bancarias_parceiro_id_fkey"
@@ -856,6 +884,13 @@ export type Database = {
             columns: ["operador_projeto_id"]
             isOneToOne: false
             referencedRelation: "v_operadores_sem_entrega"
+            referencedColumns: ["operador_projeto_id"]
+          },
+          {
+            foreignKeyName: "entregas_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_lucro_operador"
             referencedColumns: ["operador_projeto_id"]
           },
         ]
@@ -1059,6 +1094,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "parceiros"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
           },
           {
             foreignKeyName: "indicacoes_parceiro_id_fkey"
@@ -1670,6 +1712,13 @@ export type Database = {
             foreignKeyName: "operador_projetos_operador_id_fkey"
             columns: ["operador_id"]
             isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
             referencedRelation: "v_operador_performance"
             referencedColumns: ["operador_id"]
           },
@@ -1815,6 +1864,13 @@ export type Database = {
             foreignKeyName: "pagamentos_operador_operador_id_fkey"
             columns: ["operador_id"]
             isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "pagamentos_operador_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
             referencedRelation: "v_operador_performance"
             referencedColumns: ["operador_id"]
           },
@@ -1838,6 +1894,68 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
+          },
+        ]
+      }
+      parceiro_lucro_alertas: {
+        Row: {
+          created_at: string
+          data_atingido: string
+          id: string
+          lucro_atual: number
+          marco_valor: number
+          notificado: boolean | null
+          parceiro_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_atingido?: string
+          id?: string
+          lucro_atual: number
+          marco_valor: number
+          notificado?: boolean | null
+          parceiro_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_atingido?: string
+          id?: string
+          lucro_atual?: number
+          marco_valor?: number
+          notificado?: boolean | null
+          parceiro_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parceiro_lucro_alertas_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parceiro_lucro_alertas_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parceiro_lucro_alertas_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parceiro_lucro_alertas_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
           },
         ]
       }
@@ -1999,6 +2117,13 @@ export type Database = {
             foreignKeyName: "parcerias_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parcerias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -2110,6 +2235,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "parceiros"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_bookmaker_historico_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
           },
           {
             foreignKeyName: "projeto_bookmaker_historico_parceiro_id_fkey"
@@ -2641,6 +2773,13 @@ export type Database = {
             foreignKeyName: "wallets_crypto_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "wallets_crypto_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -2697,6 +2836,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "parceiros"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
           },
           {
             foreignKeyName: "bookmakers_parceiro_id_fkey"
@@ -2768,6 +2914,13 @@ export type Database = {
             foreignKeyName: "bookmakers_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -2829,6 +2982,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "parceiros"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
           },
           {
             foreignKeyName: "bookmakers_parceiro_id_fkey"
@@ -2933,6 +3093,13 @@ export type Database = {
             foreignKeyName: "parcerias_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parcerias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -2989,11 +3156,25 @@ export type Database = {
             referencedColumns: ["operador_projeto_id"]
           },
           {
+            foreignKeyName: "entregas_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_lucro_operador"
+            referencedColumns: ["operador_projeto_id"]
+          },
+          {
             foreignKeyName: "operador_projetos_operador_id_fkey"
             columns: ["operador_id"]
             isOneToOne: false
             referencedRelation: "operadores"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
           },
           {
             foreignKeyName: "operador_projetos_operador_id_fkey"
@@ -3078,6 +3259,54 @@ export type Database = {
           },
         ]
       }
+      v_operador_comparativo: {
+        Row: {
+          apostas_ganhas: number | null
+          cpf: string | null
+          lucro_total_gerado: number | null
+          nome: string | null
+          operador_id: string | null
+          projetos_ativos: number | null
+          status: string | null
+          tipo_contrato: string | null
+          total_apostas: number | null
+          total_pago: number | null
+          total_pendente: number | null
+          user_id: string | null
+          volume_total: number | null
+        }
+        Insert: {
+          apostas_ganhas?: never
+          cpf?: string | null
+          lucro_total_gerado?: never
+          nome?: string | null
+          operador_id?: string | null
+          projetos_ativos?: never
+          status?: string | null
+          tipo_contrato?: string | null
+          total_apostas?: never
+          total_pago?: never
+          total_pendente?: never
+          user_id?: string | null
+          volume_total?: never
+        }
+        Update: {
+          apostas_ganhas?: never
+          cpf?: string | null
+          lucro_total_gerado?: never
+          nome?: string | null
+          operador_id?: string | null
+          projetos_ativos?: never
+          status?: string | null
+          tipo_contrato?: string | null
+          total_apostas?: never
+          total_pago?: never
+          total_pendente?: never
+          user_id?: string | null
+          volume_total?: never
+        }
+        Relationships: []
+      }
       v_operador_performance: {
         Row: {
           cpf: string | null
@@ -3143,6 +3372,13 @@ export type Database = {
             foreignKeyName: "operador_projetos_operador_id_fkey"
             columns: ["operador_id"]
             isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
             referencedRelation: "v_operador_performance"
             referencedColumns: ["operador_id"]
           },
@@ -3191,6 +3427,53 @@ export type Database = {
         }
         Relationships: []
       }
+      v_parceiro_lucro_total: {
+        Row: {
+          cpf: string | null
+          lucro_fluxo_caixa: number | null
+          lucro_projetos: number | null
+          nome: string | null
+          parceiro_id: string | null
+          saldo_bookmakers: number | null
+          status: string | null
+          total_depositado: number | null
+          total_sacado: number | null
+          user_id: string | null
+        }
+        Insert: {
+          cpf?: string | null
+          lucro_fluxo_caixa?: never
+          lucro_projetos?: never
+          nome?: string | null
+          parceiro_id?: string | null
+          saldo_bookmakers?: never
+          status?: string | null
+          total_depositado?: never
+          total_sacado?: never
+          user_id?: string | null
+        }
+        Update: {
+          cpf?: string | null
+          lucro_fluxo_caixa?: never
+          lucro_projetos?: never
+          nome?: string | null
+          parceiro_id?: string | null
+          saldo_bookmakers?: never
+          status?: string | null
+          total_depositado?: never
+          total_sacado?: never
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parceiros_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_parcerias_alerta: {
         Row: {
           comissao_paga: boolean | null
@@ -3231,6 +3514,13 @@ export type Database = {
             foreignKeyName: "parcerias_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parcerias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -3258,6 +3548,76 @@ export type Database = {
           voids: number | null
         }
         Relationships: []
+      }
+      v_projeto_lucro_operador: {
+        Row: {
+          apostas_ganhas: number | null
+          base_calculo: string | null
+          faixas_escalonadas: Json | null
+          faturamento_projeto: number | null
+          frequencia_entrega: string | null
+          lucro_projeto: number | null
+          meta_percentual: number | null
+          meta_valor: number | null
+          modelo_pagamento: string | null
+          operador_id: string | null
+          operador_nome: string | null
+          operador_projeto_id: string | null
+          percentual: number | null
+          projeto_id: string | null
+          projeto_nome: string | null
+          status: string | null
+          tipo_meta: string | null
+          total_apostas: number | null
+          total_depositado: number | null
+          total_sacado: number | null
+          user_id: string | null
+          valor_fixo: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "operadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_performance"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+        ]
       }
       v_projeto_resumo: {
         Row: {
