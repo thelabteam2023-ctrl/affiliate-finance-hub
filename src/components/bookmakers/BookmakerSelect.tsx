@@ -15,9 +15,19 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+export interface BookmakerData {
+  id: string;
+  nome: string;
+  logo_url: string | null;
+  saldo_atual?: number;
+  moeda?: string;
+  status?: string;
+}
+
 interface BookmakerSelectProps {
   value: string;
   onValueChange: (value: string) => void;
+  onBookmakerData?: (data: BookmakerData | null) => void;
   disabled?: boolean;
   parceiroId?: string;
   somenteComSaldo?: boolean;
@@ -36,6 +46,7 @@ interface BookmakerItem {
 export default function BookmakerSelect({ 
   value, 
   onValueChange, 
+  onBookmakerData,
   disabled, 
   parceiroId, 
   somenteComSaldo,
@@ -49,6 +60,25 @@ export default function BookmakerSelect({
   // Ref para rastrear o último value que buscamos
   const lastFetchedValue = useRef<string>("");
   const isVinculoMode = !!parceiroId;
+  
+  // Notificar callback quando o item selecionado muda
+  useEffect(() => {
+    if (!value) {
+      onBookmakerData?.(null);
+      return;
+    }
+    const selectedItem = items.find(item => item.id === value);
+    if (selectedItem) {
+      onBookmakerData?.({
+        id: selectedItem.id,
+        nome: selectedItem.nome,
+        logo_url: selectedItem.logo_url,
+        saldo_atual: selectedItem.saldo_atual,
+        moeda: selectedItem.moeda,
+        status: selectedItem.status,
+      });
+    }
+  }, [value, items, onBookmakerData]);
 
   // Buscar lista de bookmakers para o dropdown
   useEffect(() => {
