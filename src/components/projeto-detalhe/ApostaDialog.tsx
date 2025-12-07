@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2, HelpCircle } from "lucide-react";
+import { Loader2, Save, Trash2, HelpCircle, Coins, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, XCircle, Shield, BarChart3, BookOpen, BookX } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -1613,13 +1613,19 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                       {tipoOperacaoExchange === "back" ? (
                         <div className="space-y-2">
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">💰 Lucro Potencial (líquido):</span>
+                            <span className="text-muted-foreground flex items-center gap-1.5">
+                              <Coins className="h-3.5 w-3.5 text-emerald-500" />
+                              Lucro Potencial (líquido):
+                            </span>
                             <span className="font-medium text-emerald-500">
                               {exchangeLucroPotencial !== null ? formatCurrency(exchangeLucroPotencial) : "-"}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">📈 Retorno Total (se ganhar):</span>
+                            <span className="text-muted-foreground flex items-center gap-1.5">
+                              <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                              Retorno Total (se ganhar):
+                            </span>
                             <span className="font-medium text-emerald-500">
                               {exchangeRetornoTotal !== null ? formatCurrency(exchangeRetornoTotal) : "-"}
                             </span>
@@ -1628,19 +1634,28 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                       ) : (
                         <div className="space-y-2">
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">⚠️ Responsabilidade (exposição):</span>
+                            <span className="text-muted-foreground flex items-center gap-1.5">
+                              <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                              Responsabilidade (exposição):
+                            </span>
                             <span className="font-medium text-amber-500">
                               {exchangeLiability !== null ? formatCurrency(exchangeLiability) : "-"}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">✅ Se GANHAR (lucro líquido):</span>
+                            <span className="text-muted-foreground flex items-center gap-1.5">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                              Se GANHAR (lucro líquido):
+                            </span>
                             <span className="font-medium text-emerald-500">
                               {exchangeLucroPotencial !== null ? `+${formatCurrency(exchangeLucroPotencial)}` : "-"}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">❌ Se PERDER (responsabilidade):</span>
+                            <span className="text-muted-foreground flex items-center gap-1.5">
+                              <XCircle className="h-3.5 w-3.5 text-red-500" />
+                              Se PERDER (responsabilidade):
+                            </span>
                             <span className="font-medium text-red-500">
                               {exchangePrejuizo !== null ? formatCurrency(exchangePrejuizo) : "-"}
                             </span>
@@ -1657,7 +1672,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                     {/* Card explicativo */}
                     <div className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
                       <div className="flex items-start gap-2">
-                        <span className="text-lg">🛡️</span>
+                        <Shield className="h-5 w-5 text-purple-400 mt-0.5 flex-shrink-0" />
                         <div>
                           <p className="text-sm font-medium text-purple-400">COBERTURA LAY</p>
                           <p className="text-xs text-muted-foreground mt-0.5">
@@ -1673,7 +1688,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                       {/* Painel BACK */}
                       <div className="p-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5">
                         <Label className="text-sm font-medium text-emerald-400 flex items-center gap-2 mb-3">
-                          📗 BACK (Aposta a Favor)
+                          <BookOpen className="h-4 w-4" />
+                          BACK (Aposta a Favor)
                         </Label>
                         <div className="space-y-3">
                           <div className="space-y-1">
@@ -1759,7 +1775,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                       {/* Painel LAY */}
                       <div className="p-4 rounded-lg border border-rose-500/30 bg-rose-500/5">
                         <Label className="text-sm font-medium text-rose-400 flex items-center gap-2 mb-3">
-                          📕 LAY (Aposta Contra)
+                          <BookX className="h-4 w-4" />
+                          LAY (Aposta Contra)
                         </Label>
                         <div className="space-y-3">
                           <div className="space-y-1">
@@ -1844,18 +1861,25 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                     {/* Resultado da Cobertura */}
                     <div className="p-4 rounded-lg border border-purple-500/30 bg-purple-500/5">
                       <Label className="text-sm font-medium text-purple-400 flex items-center gap-2 mb-3">
-                        📊 RESULTADO DA COBERTURA
+                        <BarChart3 className="h-4 w-4" />
+                        RESULTADO DA COBERTURA
                       </Label>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">✅ Se BACK vencer:</span>
+                            <span className="text-muted-foreground flex items-center gap-1.5">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                              Se BACK vencer:
+                            </span>
                             <span className={`font-medium ${(coberturaLucroBack ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                               {coberturaLucroBack !== null ? formatCurrency(coberturaLucroBack) : "-"}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">✅ Se LAY vencer:</span>
+                            <span className="text-muted-foreground flex items-center gap-1.5">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                              Se LAY vencer:
+                            </span>
                             <span className={`font-medium ${(coberturaLucroLay ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                               {coberturaLucroLay !== null ? formatCurrency(coberturaLucroLay) : "-"}
                             </span>
@@ -1863,13 +1887,19 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                         </div>
                         <div className="space-y-2 pl-4 border-l border-purple-500/20">
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">💰 Lucro Garantido:</span>
+                            <span className="text-muted-foreground flex items-center gap-1.5">
+                              <Coins className="h-3.5 w-3.5 text-purple-400" />
+                              Lucro Garantido:
+                            </span>
                             <span className={`font-semibold text-lg ${(coberturaLucroGarantido ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                               {coberturaLucroGarantido !== null ? formatCurrency(coberturaLucroGarantido) : "-"}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">📈 Taxa de Extração:</span>
+                            <span className="text-muted-foreground flex items-center gap-1.5">
+                              <TrendingUp className="h-3.5 w-3.5 text-purple-400" />
+                              Taxa de Extração:
+                            </span>
                             <span className={`font-medium ${(coberturaTaxaExtracao ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                               {coberturaTaxaExtracao !== null ? `${coberturaTaxaExtracao.toFixed(2)}%` : "-"}
                             </span>
