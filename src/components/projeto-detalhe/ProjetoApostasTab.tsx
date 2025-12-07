@@ -438,6 +438,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                         operationType={opType.type}
                         layLiability={aposta.lay_liability || undefined}
                         layOdd={aposta.lay_odd || undefined}
+                        layStake={aposta.lay_stake || undefined}
+                        layComissao={aposta.lay_comissao || undefined}
                         onResultadoUpdated={handleApostaUpdated}
                         onEditClick={() => handleOpenDialog(aposta)}
                       />
@@ -542,7 +544,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       if (profit === null) return null;
                       return (
                         <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
-                          <span className="text-muted-foreground">Lucro Garantido:</span>
+                          <span className="text-muted-foreground">Resultado:</span>
                           <span className={`font-medium flex items-center gap-0.5 ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                             {profit >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                             {formatCurrency(profit)}
@@ -671,6 +673,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       operationType={getOperationType(aposta).type}
                       layLiability={aposta.lay_liability || undefined}
                       layOdd={aposta.lay_odd || undefined}
+                      layStake={aposta.lay_stake || undefined}
+                      layComissao={aposta.lay_comissao || undefined}
                       onResultadoUpdated={handleApostaUpdated}
                       onEditClick={() => handleOpenDialog(aposta)}
                     />
