@@ -65,6 +65,8 @@ interface Aposta {
   lay_comissao?: number | null;
   back_em_exchange?: boolean;
   back_comissao?: number | null;
+  gerou_freebet?: boolean;
+  valor_freebet_gerada?: number | null;
 }
 
 interface Bookmaker {
@@ -400,6 +402,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   const [coberturaLucroGarantido, setCoberturaLucroGarantido] = useState<number | null>(null);
   const [coberturaTaxaExtracao, setCoberturaTaxaExtracao] = useState<number | null>(null);
 
+  // Freebet tracking
+  const [gerouFreebet, setGerouFreebet] = useState(false);
+  const [valorFreebetGerada, setValorFreebetGerada] = useState("");
+
   // Calculated values
   const [layStake, setLayStake] = useState<number | null>(null);
   const [layLiability, setLayLiability] = useState<number | null>(null);
@@ -491,6 +497,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           setBookmakerId(aposta.bookmaker_id);
           setModoBackLay(false);
         }
+
+        // Freebet tracking
+        setGerouFreebet(aposta.gerou_freebet || false);
+        setValorFreebetGerada(aposta.valor_freebet_gerada?.toString() || "");
       } else {
         resetForm();
       }
@@ -744,6 +754,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     setCoberturaLucroGarantido(null);
     setCoberturaTaxaExtracao(null);
     setTipoApostaBack("normal");
+    setGerouFreebet(false);
+    setValorFreebetGerada("");
   };
 
   const fetchBookmakers = async () => {
@@ -1029,6 +1041,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         status: statusResultado === "PENDENTE" ? "PENDENTE" : "CONCLUIDA",
         resultado: statusResultado === "PENDENTE" ? null : statusResultado,
         observacoes: observacoes || null,
+        gerou_freebet: gerouFreebet,
+        valor_freebet_gerada: gerouFreebet && valorFreebetGerada ? parseFloat(valorFreebetGerada) : null,
       };
 
       if (tipoAposta === "bookmaker") {
@@ -2443,6 +2457,36 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                     <span className={`font-medium ${calculateLucroPrejuizo()! >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                       {formatCurrencyWithSymbol(calculateLucroPrejuizo()!, getSelectedBookmakerMoeda())}
                     </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Freebet Gerada - apenas para Bookmaker ou operações qualificadoras */}
+            {tipoAposta === "bookmaker" && (
+              <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Gift className="h-4 w-4 text-amber-400" />
+                    <Label className="text-sm font-medium text-amber-400">Esta aposta gerou Freebet?</Label>
+                  </div>
+                  <Switch
+                    checked={gerouFreebet}
+                    onCheckedChange={setGerouFreebet}
+                  />
+                </div>
+                {gerouFreebet && (
+                  <div className="space-y-2">
+                    <Label className="block text-xs tracking-wider text-muted-foreground">Valor da Freebet Recebida</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={valorFreebetGerada}
+                      onChange={(e) => setValorFreebetGerada(e.target.value)}
+                      placeholder="Ex: 50.00"
+                      className="text-center"
+                    />
                   </div>
                 )}
               </div>
