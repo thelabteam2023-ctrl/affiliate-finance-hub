@@ -84,6 +84,18 @@ interface Aposta {
       logo_url: string | null;
     } | null;
   };
+  // Informações da casa Lay para coberturas
+  lay_bookmaker?: {
+    nome: string;
+    parceiro_id: string;
+    bookmaker_catalogo_id?: string | null;
+    parceiro?: {
+      nome: string;
+    };
+    bookmakers_catalogo?: {
+      logo_url: string | null;
+    } | null;
+  } | null;
 }
 
 export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "todo", dateRange }: ProjetoApostasTabProps) {
@@ -156,7 +168,31 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
       const { data, error } = await query;
 
       if (error) throw error;
-      setApostas(data || []);
+      
+      // Para apostas de cobertura, buscar informações da lay_exchange separadamente
+      const apostasComLayInfo = await Promise.all((data || []).map(async (aposta) => {
+        if (aposta.lay_exchange && aposta.estrategia === "COBERTURA_LAY") {
+          const { data: layBookmakerData } = await supabase
+            .from("bookmakers")
+            .select(`
+              nome,
+              parceiro_id,
+              bookmaker_catalogo_id,
+              parceiro:parceiros (nome),
+              bookmakers_catalogo (logo_url)
+            `)
+            .eq("id", aposta.lay_exchange)
+            .single();
+          
+          return {
+            ...aposta,
+            lay_bookmaker: layBookmakerData
+          };
+        }
+        return aposta;
+      }));
+      
+      setApostas(apostasComLayInfo || []);
     } catch (error: any) {
       toast.error("Erro ao carregar apostas: " + error.message);
     } finally {
@@ -647,13 +683,66 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       </div>
                     )}
                     
-                    <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
-                      <span className="flex items-center gap-1">
+                    {/* Rodapé: Data + Casas */}
+                    <div className="pt-1 space-y-1">
+                      {/* Data */}
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                         <Calendar className="h-2.5 w-2.5" />
                         {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
-                      </span>
-                      {aposta.bookmaker && (
-                        <span className="flex items-center gap-1.5 truncate ml-2">
+                      </div>
+                      
+                      {/* Para Cobertura: mostrar ambas as casas */}
+                      {opType.type === "cobertura" && aposta.bookmaker && (
+                        <div className="space-y-0.5">
+                          {/* Casa Back */}
+                          <div className="flex items-center gap-1.5 text-[10px]">
+                            {aposta.bookmaker.bookmakers_catalogo?.logo_url ? (
+                              <img 
+                                src={aposta.bookmaker.bookmakers_catalogo.logo_url} 
+                                alt={aposta.bookmaker.nome}
+                                className="h-3.5 w-3.5 rounded-sm object-contain flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="h-3.5 w-3.5 rounded-sm bg-muted flex items-center justify-center flex-shrink-0">
+                                <ArrowUp className="h-2 w-2 text-emerald-500" />
+                              </div>
+                            )}
+                            <span className="text-muted-foreground truncate">
+                              <span className="font-medium text-foreground">{aposta.bookmaker.nome}</span>
+                              {aposta.bookmaker.parceiro?.nome && (
+                                <span className="text-[9px] ml-1">- {getFirstLastName(aposta.bookmaker.parceiro.nome)}</span>
+                              )}
+                            </span>
+                          </div>
+                          
+                          {/* Casa Lay */}
+                          {aposta.lay_bookmaker && (
+                            <div className="flex items-center gap-1.5 text-[10px]">
+                              {aposta.lay_bookmaker.bookmakers_catalogo?.logo_url ? (
+                                <img 
+                                  src={aposta.lay_bookmaker.bookmakers_catalogo.logo_url} 
+                                  alt={aposta.lay_bookmaker.nome}
+                                  className="h-3.5 w-3.5 rounded-sm object-contain flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="h-3.5 w-3.5 rounded-sm bg-muted flex items-center justify-center flex-shrink-0">
+                                  <ArrowDown className="h-2 w-2 text-rose-500" />
+                                </div>
+                              )}
+                              <span className="text-muted-foreground truncate">
+                                <span className="font-medium text-foreground">{aposta.lay_bookmaker.nome}</span>
+                                {aposta.lay_bookmaker.parceiro?.nome && (
+                                  <span className="text-[9px] ml-1">- {getFirstLastName(aposta.lay_bookmaker.parceiro.nome)}</span>
+                                )}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Para outros tipos: mostrar apenas uma casa */}
+                      {opType.type !== "cobertura" && aposta.bookmaker && (
+                        <div className="flex items-center gap-1.5 text-[10px]">
                           {aposta.bookmaker.bookmakers_catalogo?.logo_url ? (
                             <img 
                               src={aposta.bookmaker.bookmakers_catalogo.logo_url} 
@@ -665,13 +754,13 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                               <Target className="h-2.5 w-2.5 text-muted-foreground" />
                             </div>
                           )}
-                          <span className="truncate">
-                            {displayInfo.primaryLine}
+                          <span className="truncate text-muted-foreground">
+                            <span className="font-medium text-foreground">{displayInfo.primaryLine}</span>
                             {displayInfo.secondaryLine && (
-                              <> - {displayInfo.secondaryLine}</>
+                              <span className="text-[9px] ml-1">- {displayInfo.secondaryLine}</span>
                             )}
                           </span>
-                        </span>
+                        </div>
                       )}
                     </div>
                   </div>

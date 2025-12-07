@@ -42,6 +42,7 @@ export type Database = {
           selecao: string
           stake: number
           status: string
+          tipo_freebet: string | null
           updated_at: string
           user_id: string
           valor_freebet_gerada: number | null
@@ -74,6 +75,7 @@ export type Database = {
           selecao: string
           stake: number
           status?: string
+          tipo_freebet?: string | null
           updated_at?: string
           user_id: string
           valor_freebet_gerada?: number | null
@@ -106,6 +108,7 @@ export type Database = {
           selecao?: string
           stake?: number
           status?: string
+          tipo_freebet?: string | null
           updated_at?: string
           user_id?: string
           valor_freebet_gerada?: number | null

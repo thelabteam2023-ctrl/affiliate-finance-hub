@@ -467,6 +467,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             setCoberturaLayBookmakerId(aposta.lay_exchange || "");
             setCoberturaLayOdd(aposta.lay_odd?.toString() || "");
             setCoberturaLayComissao(aposta.lay_comissao?.toString() || "5");
+            // Restaurar tipo de freebet da aposta salva
+            const tipoFreebet = (aposta as any).tipo_freebet as string | null;
+            if (tipoFreebet === "freebet_snr") {
+              setTipoApostaBack("freebet_snr");
+            } else if (tipoFreebet === "freebet_sr") {
+              setTipoApostaBack("freebet_sr");
+            } else {
+              setTipoApostaBack("normal");
+            }
           } else if (aposta.estrategia === "EXCHANGE_LAY") {
             setTipoOperacaoExchange("lay");
             setExchangeOdd(aposta.lay_odd?.toString() || "");
@@ -1152,8 +1161,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           lay_stake: coberturaLayStake,
           lay_liability: coberturaResponsabilidade,
           lay_comissao: parseFloat(coberturaLayComissao),
-          back_em_exchange: true,
+          back_em_exchange: tipoApostaBack !== "normal",
           back_comissao: null,
+          tipo_freebet: tipoApostaBack,
         };
       } else {
         // ===== MODO EXCHANGE (Back ou Lay simples) =====
