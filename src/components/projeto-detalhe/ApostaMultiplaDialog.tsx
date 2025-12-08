@@ -282,43 +282,94 @@ export function ApostaMultiplaDialog({
     return { oddFinal: oddNominal, oddFinalReal: oddReal };
   }, [selecoes]);
 
-  // Calcular resultado da múltipla baseado nos resultados individuais
-  const resultadoCalculadoAuto = useMemo(() => {
-    const resultados = selecoes.map(s => s.resultado || "PENDENTE");
-    
-    // Se alguma seleção é RED, múltipla = RED
-    if (resultados.some(r => r === "RED")) return "RED";
-    
-    // Se alguma seleção é MEIO_RED (e nenhuma RED), múltipla pode ser MEIO_RED ou RED dependendo do contexto
-    // Tratamos MEIO_RED como RED para múltiplas (qualquer falha = perda)
-    if (resultados.some(r => r === "MEIO_RED")) return "RED";
-    
-    // Se todas são PENDENTE
-    if (resultados.every(r => r === "PENDENTE")) return "PENDENTE";
-    
-    // Se todas são VOID
-    if (resultados.every(r => r === "VOID")) return "VOID";
-    
-    // Se não há RED/MEIO_RED e há pelo menos um GREEN ou MEIO_GREEN (outros podem ser VOID ou PENDENTE)
-    const temGreen = resultados.some(r => r === "GREEN" || r === "MEIO_GREEN");
-    const todosDefinidos = resultados.every(r => r !== "PENDENTE");
-    
-    // Se tem MEIO_GREEN (e nenhum RED/MEIO_RED), resultado depende de outros
-    const temMeioGreen = resultados.some(r => r === "MEIO_GREEN");
-    
-    if (todosDefinidos) {
-      if (temMeioGreen && !resultados.some(r => r === "GREEN")) {
-        // Todos são MEIO_GREEN ou VOID
-        return "MEIO_GREEN";
-      }
-      if (temGreen) return "GREEN";
+  // Calcular preview em tempo real com fatores corretos
+  const previewCalculo = useMemo(() => {
+    const stakeNum = parseFloat(stake) || 0;
+    const selecoesValidas = selecoes.filter((s) => {
+      const oddNum = parseFloat(s.odd);
+      return !isNaN(oddNum) && oddNum > 0;
+    });
+
+    if (stakeNum <= 0 || selecoesValidas.length === 0) {
+      return { resultado: "PENDENTE", retorno: 0, lucro: 0 };
     }
-    
-    return "PENDENTE";
-  }, [selecoes]);
-  
+
+    // Se qualquer seleção for RED → múltipla = RED total
+    if (selecoes.some((s) => s.resultado === "RED")) {
+      return {
+        resultado: "RED",
+        retorno: 0,
+        lucro: usarFreebet ? 0 : -stakeNum,
+      };
+    }
+
+    // Verificar se todas são PENDENTE
+    const todasPendente = selecoes.every((s) => (s.resultado || "PENDENTE") === "PENDENTE");
+
+    // Calcular fatores para cada seleção
+    // Fórmula: odd_efetiva = retorno_parcial / stake
+    // GREEN: odd_efetiva = odd
+    // RED: já tratado acima (múltipla = RED)
+    // VOID: odd_efetiva = 1 (não altera)
+    // MEIO_GREEN: odd_efetiva = (odd + 1) / 2
+    // MEIO_RED: odd_efetiva = 0.5
+    let fatorTotal = 1;
+    let oddTotal = 1; // Para calcular lucro_full (todas green)
+
+    for (const s of selecoesValidas) {
+      const odd = parseFloat(s.odd);
+      oddTotal *= odd;
+
+      const resultado = s.resultado || "PENDENTE";
+      switch (resultado) {
+        case "GREEN":
+          fatorTotal *= odd;
+          break;
+        case "VOID":
+          fatorTotal *= 1;
+          break;
+        case "MEIO_GREEN":
+          // odd_efetiva = (odd + 1) / 2
+          fatorTotal *= (odd + 1) / 2;
+          break;
+        case "MEIO_RED":
+          // odd_efetiva = 0.5
+          fatorTotal *= 0.5;
+          break;
+        case "PENDENTE":
+          fatorTotal *= odd; // Assume green para preview potencial
+          break;
+      }
+    }
+
+    const retorno = stakeNum * fatorTotal;
+    // Para freebet: RED/perda não perde stake, lucro só vem se ganhar
+    const lucro = usarFreebet
+      ? retorno > stakeNum
+        ? retorno - stakeNum
+        : 0
+      : retorno - stakeNum;
+    const lucroFull = stakeNum * (oddTotal - 1);
+
+    // Classificar resultado se não for tudo pendente
+    let resultado: string;
+    const EPSILON = 0.01;
+
+    if (todasPendente) {
+      resultado = "PENDENTE";
+    } else if (Math.abs(lucro) < EPSILON) {
+      resultado = "VOID";
+    } else if (lucro > 0) {
+      resultado = Math.abs(lucro - lucroFull) < EPSILON ? "GREEN" : "MEIO_GREEN";
+    } else {
+      resultado = Math.abs(lucro + stakeNum) < EPSILON ? "RED" : "MEIO_RED";
+    }
+
+    return { resultado, retorno, lucro };
+  }, [selecoes, stake, usarFreebet]);
+
   // Resultado final considerando override manual
-  const resultadoCalculado = resultadoManual || resultadoCalculadoAuto;
+  const resultadoCalculado = resultadoManual || previewCalculo.resultado;
 
   // Calcular retorno potencial
   const retornoPotencial = useMemo(() => {
@@ -424,49 +475,13 @@ export function ApostaMultiplaDialog({
       // Usar o resultado calculado baseado nos resultados individuais
       const resultadoFinal = resultadoCalculado;
       
-      // Calcular lucro/prejuízo baseado no resultado
+      // Usar valores do previewCalculo que já calcula corretamente com fatores
       let lucroPrejuizo: number | null = null;
       let valorRetorno: number | null = null;
 
-      // Usar oddFinalReal que considera VOIDs como odd 1.00
-      const oddParaCalculo = oddFinalReal;
-
       if (resultadoFinal !== "PENDENTE") {
-        switch (resultadoFinal) {
-          case "GREEN":
-            if (usarFreebet) {
-              // Freebet SNR: só lucro (odd - 1) * stake
-              lucroPrejuizo = stakeNum * (oddParaCalculo - 1);
-              valorRetorno = lucroPrejuizo;
-            } else {
-              lucroPrejuizo = stakeNum * (oddParaCalculo - 1);
-              valorRetorno = stakeNum * oddParaCalculo;
-            }
-            break;
-          case "MEIO_GREEN":
-            // Meio Green: 50% do lucro
-            if (usarFreebet) {
-              lucroPrejuizo = (stakeNum * (oddParaCalculo - 1)) / 2;
-              valorRetorno = lucroPrejuizo;
-            } else {
-              lucroPrejuizo = (stakeNum * (oddParaCalculo - 1)) / 2;
-              valorRetorno = stakeNum + lucroPrejuizo;
-            }
-            break;
-          case "RED":
-            lucroPrejuizo = usarFreebet ? 0 : -stakeNum;
-            valorRetorno = 0;
-            break;
-          case "MEIO_RED":
-            // Meio Red: 50% da perda
-            lucroPrejuizo = usarFreebet ? 0 : -stakeNum / 2;
-            valorRetorno = usarFreebet ? 0 : stakeNum / 2;
-            break;
-          case "VOID":
-            lucroPrejuizo = 0;
-            valorRetorno = usarFreebet ? 0 : stakeNum;
-            break;
-        }
+        lucroPrejuizo = previewCalculo.lucro;
+        valorRetorno = previewCalculo.retorno;
       }
 
       const selecoesFormatadas = selecoes
@@ -917,6 +932,42 @@ export function ApostaMultiplaDialog({
               ))}
             </div>
 
+            {/* Preview em Tempo Real da Múltipla */}
+            <Card className="border-blue-500/30 bg-blue-500/5">
+              <CardContent className="pt-3 pb-3">
+                <div className="text-xs text-muted-foreground mb-2">
+                  Preview da Múltipla
+                </div>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-xs text-muted-foreground block mb-1">Resultado:</span>
+                    <Badge className={`${
+                      previewCalculo.resultado === "GREEN" ? "bg-emerald-500/20 text-emerald-400" :
+                      previewCalculo.resultado === "MEIO_GREEN" ? "bg-emerald-500/10 text-emerald-300" :
+                      previewCalculo.resultado === "RED" ? "bg-red-500/20 text-red-400" :
+                      previewCalculo.resultado === "MEIO_RED" ? "bg-red-500/10 text-red-300" :
+                      previewCalculo.resultado === "VOID" ? "bg-gray-500/20 text-gray-400" :
+                      "bg-muted text-muted-foreground"
+                    }`}>
+                      {previewCalculo.resultado === "MEIO_GREEN" ? "MEIO GREEN" :
+                       previewCalculo.resultado === "MEIO_RED" ? "MEIO RED" :
+                       previewCalculo.resultado}
+                    </Badge>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground block mb-1">Retorno:</span>
+                    <span className="font-medium">{formatCurrency(previewCalculo.retorno)}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground block mb-1">P/L:</span>
+                    <span className={previewCalculo.lucro >= 0 ? "text-emerald-400 font-medium" : "text-red-400 font-medium"}>
+                      {previewCalculo.lucro >= 0 ? "+" : ""}{formatCurrency(previewCalculo.lucro)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Stake e Cálculos */}
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -1008,10 +1059,10 @@ export function ApostaMultiplaDialog({
             <div className="space-y-2">
               <Label>Resultado da Múltipla</Label>
               <Select 
-                value={resultadoManual || resultadoCalculadoAuto} 
+                value={resultadoManual || previewCalculo.resultado} 
                 onValueChange={(v) => {
                   // Se selecionar o mesmo que o automático, limpa o manual
-                  if (v === resultadoCalculadoAuto) {
+                  if (v === previewCalculo.resultado) {
                     setResultadoManual(null);
                   } else {
                     setResultadoManual(v);
@@ -1032,7 +1083,7 @@ export function ApostaMultiplaDialog({
               </Select>
               <p className="text-xs text-muted-foreground">
                 {resultadoManual 
-                  ? `Resultado manual selecionado (automático seria: ${resultadoCalculadoAuto})`
+                  ? `Resultado manual selecionado (automático seria: ${previewCalculo.resultado})`
                   : "Calculado automaticamente com base nos resultados individuais"
                 }
               </p>
