@@ -1349,6 +1349,16 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           );
         }
 
+        // Verificar se resultado mudou e atualizar status da freebet
+        if (gerouFreebetAnterior && resultadoAnterior === "PENDENTE" && statusResultado !== "PENDENTE") {
+          // Aposta tinha freebet pendente e agora foi liquidada
+          if (statusResultado === "GREEN") {
+            await liberarFreebetPendente(aposta.id);
+          } else {
+            await recusarFreebetPendente(aposta.id);
+          }
+        }
+
         // Registrar freebet na edição se foi marcada agora
         const novoValorFreebet = parseFloat(valorFreebetGerada) || 0;
         if (gerouFreebet && novoValorFreebet > 0) {
@@ -1358,17 +1368,26 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             if (bookmakerParaFreebet) {
               // Se já existia valor anterior, precisamos ajustar a diferença
               if (gerouFreebetAnterior && valorFreebetAnterior > 0) {
-                // Reverter valor anterior
-                const { data: bk } = await supabase
-                  .from("bookmakers")
-                  .select("saldo_freebet")
-                  .eq("id", bookmakerParaFreebet)
+                // Só ajustar saldo se status for LIBERADA (não ajustar PENDENTE)
+                const { data: freebetExistente } = await supabase
+                  .from("freebets_recebidas")
+                  .select("status")
+                  .eq("aposta_id", aposta.id)
                   .maybeSingle();
-                if (bk) {
-                  await supabase
+                
+                if (freebetExistente?.status === "LIBERADA") {
+                  // Reverter valor anterior
+                  const { data: bk } = await supabase
                     .from("bookmakers")
-                    .update({ saldo_freebet: Math.max(0, (bk.saldo_freebet || 0) - valorFreebetAnterior + novoValorFreebet) })
-                    .eq("id", bookmakerParaFreebet);
+                    .select("saldo_freebet")
+                    .eq("id", bookmakerParaFreebet)
+                    .maybeSingle();
+                  if (bk) {
+                    await supabase
+                      .from("bookmakers")
+                      .update({ saldo_freebet: Math.max(0, (bk.saldo_freebet || 0) - valorFreebetAnterior + novoValorFreebet) })
+                      .eq("id", bookmakerParaFreebet);
+                  }
                 }
                 // Atualizar registro existente
                 await supabase
@@ -1376,8 +1395,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   .update({ valor: novoValorFreebet })
                   .eq("aposta_id", aposta.id);
               } else {
-                // Novo registro
-                await registrarFreebetGerada(bookmakerParaFreebet, novoValorFreebet, userData.user.id, aposta.id);
+                // Novo registro - passar resultado para determinar status
+                await registrarFreebetGerada(bookmakerParaFreebet, novoValorFreebet, userData.user.id, aposta.id, statusResultado);
               }
             }
           }
@@ -1385,16 +1404,25 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           // Foi removido: reverter saldo e marcar como não utilizada
           const bookmakerParaFreebet = tipoAposta === "bookmaker" ? bookmakerId : (aposta.bookmaker_id || coberturaBackBookmakerId);
           if (bookmakerParaFreebet) {
-            const { data: bk } = await supabase
-              .from("bookmakers")
-              .select("saldo_freebet")
-              .eq("id", bookmakerParaFreebet)
+            // Só reverter saldo se a freebet estava LIBERADA
+            const { data: freebetExistente } = await supabase
+              .from("freebets_recebidas")
+              .select("status")
+              .eq("aposta_id", aposta.id)
               .maybeSingle();
-            if (bk) {
-              await supabase
+            
+            if (freebetExistente?.status === "LIBERADA") {
+              const { data: bk } = await supabase
                 .from("bookmakers")
-                .update({ saldo_freebet: Math.max(0, (bk.saldo_freebet || 0) - valorFreebetAnterior) })
-                .eq("id", bookmakerParaFreebet);
+                .select("saldo_freebet")
+                .eq("id", bookmakerParaFreebet)
+                .maybeSingle();
+              if (bk) {
+                await supabase
+                  .from("bookmakers")
+                  .update({ saldo_freebet: Math.max(0, (bk.saldo_freebet || 0) - valorFreebetAnterior) })
+                  .eq("id", bookmakerParaFreebet);
+              }
             }
             // Remover registro de freebet_recebida
             await supabase
@@ -1406,10 +1434,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
 
         toast.success("Aposta atualizada com sucesso!");
       } else {
-        const { error } = await supabase
+        // Insert - capturar o ID da aposta inserida
+        const { data: insertedData, error } = await supabase
           .from("apostas")
-          .insert(apostaData);
+          .insert(apostaData)
+          .select("id")
+          .single();
         if (error) throw error;
+
+        const novaApostaId = insertedData?.id;
 
         // Atualizar saldo do bookmaker para nova aposta com resultado definido
         const bookmakerIdParaAtualizar = tipoAposta === "bookmaker" 
@@ -1433,11 +1466,17 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           );
         }
 
-        // Registrar freebet gerada (nova aposta)
+        // Registrar freebet gerada (nova aposta) - passar resultado
         if (gerouFreebet && valorFreebetGerada && parseFloat(valorFreebetGerada) > 0) {
           const bookmakerParaFreebet = tipoAposta === "bookmaker" ? bookmakerId : coberturaBackBookmakerId;
-          if (bookmakerParaFreebet) {
-            await registrarFreebetGerada(bookmakerParaFreebet, parseFloat(valorFreebetGerada), userData.user.id);
+          if (bookmakerParaFreebet && novaApostaId) {
+            await registrarFreebetGerada(
+              bookmakerParaFreebet, 
+              parseFloat(valorFreebetGerada), 
+              userData.user.id, 
+              novaApostaId,
+              statusResultado // Passar resultado para determinar status
+            );
           }
         }
 
@@ -1479,24 +1518,42 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   };
 
   // Função para registrar freebet gerada (com apostaId opcional para edição)
-  const registrarFreebetGerada = async (bookmakerIdFreebet: string, valor: number, userId: string, apostaId?: string) => {
+  const registrarFreebetGerada = async (
+    bookmakerIdFreebet: string, 
+    valor: number, 
+    userId: string, 
+    apostaId?: string,
+    resultadoAposta?: string
+  ) => {
     try {
-      // 1. Atualizar saldo_freebet do bookmaker
-      const { data: bookmaker } = await supabase
-        .from("bookmakers")
-        .select("saldo_freebet")
-        .eq("id", bookmakerIdFreebet)
-        .maybeSingle();
-
-      if (bookmaker) {
-        const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + valor;
-        await supabase
-          .from("bookmakers")
-          .update({ saldo_freebet: novoSaldoFreebet })
-          .eq("id", bookmakerIdFreebet);
+      // Determinar o status da freebet baseado no resultado da aposta
+      // PENDENTE = aposta ainda não liquidada
+      // LIBERADA = aposta GREEN (freebet disponível)
+      // NAO_LIBERADA = aposta RED/VOID/etc (freebet não liberada)
+      let status: "PENDENTE" | "LIBERADA" | "NAO_LIBERADA" = "PENDENTE";
+      
+      if (resultadoAposta && resultadoAposta !== "PENDENTE") {
+        status = resultadoAposta === "GREEN" ? "LIBERADA" : "NAO_LIBERADA";
       }
 
-      // 2. Registrar na tabela freebets_recebidas
+      // Só incrementar saldo_freebet se a freebet for liberada (GREEN)
+      if (status === "LIBERADA") {
+        const { data: bookmaker } = await supabase
+          .from("bookmakers")
+          .select("saldo_freebet")
+          .eq("id", bookmakerIdFreebet)
+          .maybeSingle();
+
+        if (bookmaker) {
+          const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + valor;
+          await supabase
+            .from("bookmakers")
+            .update({ saldo_freebet: novoSaldoFreebet })
+            .eq("id", bookmakerIdFreebet);
+        }
+      }
+
+      // Registrar na tabela freebets_recebidas com status apropriado
       await supabase
         .from("freebets_recebidas")
         .insert({
@@ -1507,10 +1564,62 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           motivo: "Aposta qualificadora",
           data_recebida: new Date().toISOString(),
           utilizada: false,
-          aposta_id: apostaId || null
+          aposta_id: apostaId || null,
+          status: status,
         });
     } catch (error) {
       console.error("Erro ao registrar freebet gerada:", error);
+    }
+  };
+
+  // Função para liberar freebet pendente quando aposta muda para GREEN
+  const liberarFreebetPendente = async (apostaId: string) => {
+    try {
+      // Buscar freebet pendente associada a esta aposta
+      const { data: freebetPendente } = await supabase
+        .from("freebets_recebidas")
+        .select("id, bookmaker_id, valor")
+        .eq("aposta_id", apostaId)
+        .eq("status", "PENDENTE")
+        .maybeSingle();
+
+      if (freebetPendente) {
+        // Atualizar status para LIBERADA
+        await supabase
+          .from("freebets_recebidas")
+          .update({ status: "LIBERADA" })
+          .eq("id", freebetPendente.id);
+
+        // Incrementar saldo_freebet do bookmaker
+        const { data: bookmaker } = await supabase
+          .from("bookmakers")
+          .select("saldo_freebet")
+          .eq("id", freebetPendente.bookmaker_id)
+          .maybeSingle();
+
+        if (bookmaker) {
+          const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + freebetPendente.valor;
+          await supabase
+            .from("bookmakers")
+            .update({ saldo_freebet: novoSaldoFreebet })
+            .eq("id", freebetPendente.bookmaker_id);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao liberar freebet pendente:", error);
+    }
+  };
+
+  // Função para recusar freebet quando aposta muda para RED/VOID/etc
+  const recusarFreebetPendente = async (apostaId: string) => {
+    try {
+      await supabase
+        .from("freebets_recebidas")
+        .update({ status: "NAO_LIBERADA" })
+        .eq("aposta_id", apostaId)
+        .eq("status", "PENDENTE");
+    } catch (error) {
+      console.error("Erro ao recusar freebet pendente:", error);
     }
   };
 

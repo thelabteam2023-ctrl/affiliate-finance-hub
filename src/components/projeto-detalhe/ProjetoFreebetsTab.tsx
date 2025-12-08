@@ -41,6 +41,7 @@ interface FreebetRecebida {
   utilizada: boolean;
   data_utilizacao: string | null;
   aposta_id: string | null;
+  status: "PENDENTE" | "LIBERADA" | "NAO_LIBERADA";
 }
 
 interface BookmakerComFreebet {
@@ -121,6 +122,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
           utilizada,
           data_utilizacao,
           aposta_id,
+          status,
           bookmakers!freebets_recebidas_bookmaker_id_fkey (
             nome,
             parceiro_id,
@@ -145,6 +147,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
         utilizada: fb.utilizada || false,
         data_utilizacao: fb.data_utilizacao,
         aposta_id: fb.aposta_id,
+        status: fb.status || "LIBERADA", // Default para compatibilidade
       }));
 
       setFreebets(formatted);
@@ -206,7 +209,17 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
     }).format(value);
   };
 
-  // Filtrar freebets e apostas pelo período
+  // Filtrar freebets e apostas pelo período - APENAS LIBERADAS para métricas
+  const freebetsLiberadasNoPeriodo = useMemo(() => {
+    const liberadas = freebets.filter(fb => fb.status === "LIBERADA");
+    if (!dateRange) return liberadas;
+    return liberadas.filter(fb => {
+      const dataRecebida = new Date(fb.data_recebida);
+      return dataRecebida >= dateRange.start && dataRecebida <= dateRange.end;
+    });
+  }, [freebets, dateRange]);
+
+  // Todas freebets no período para listagem (inclui pendentes para visualização)
   const freebetsNoPeriodo = useMemo(() => {
     if (!dateRange) return freebets;
     return freebets.filter(fb => {
@@ -223,10 +236,10 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
     });
   }, [apostasComFreebet, dateRange]);
 
-  // Métricas de extração
+  // Métricas de extração - APENAS FREEBETS LIBERADAS
   const metricas = useMemo(() => {
-    // Total de freebets recebidas no período (face value)
-    const totalRecebido = freebetsNoPeriodo.reduce((acc, fb) => acc + fb.valor, 0);
+    // Total de freebets liberadas no período (face value)
+    const totalRecebido = freebetsLiberadasNoPeriodo.reduce((acc, fb) => acc + fb.valor, 0);
     
     // Total extraído: soma do lucro de apostas que usaram freebet
     // Considera apenas apostas GREEN/MEIO_GREEN (lucro positivo)
@@ -246,7 +259,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
       totalExtraido,
       taxaExtracao
     };
-  }, [freebetsNoPeriodo, apostasComFreebetNoPeriodo]);
+  }, [freebetsLiberadasNoPeriodo, apostasComFreebetNoPeriodo]);
 
   // Filtros de lista
   const casasDisponiveis = [...new Set(freebets.map(f => f.bookmaker_nome))];
