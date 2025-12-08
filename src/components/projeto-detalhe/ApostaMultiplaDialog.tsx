@@ -39,7 +39,7 @@ import { Card, CardContent } from "@/components/ui/card";
 interface Selecao {
   descricao: string;
   odd: string;
-  resultado?: "PENDENTE" | "GREEN" | "RED" | "VOID";
+  resultado?: "PENDENTE" | "GREEN" | "RED" | "MEIO_GREEN" | "MEIO_RED" | "VOID";
 }
 
 interface ApostaMultipla {
@@ -99,6 +99,7 @@ export function ApostaMultiplaDialog({
   const [bookmakerId, setBookmakerId] = useState("");
   const [tipoMultipla, setTipoMultipla] = useState<"DUPLA" | "TRIPLA">("DUPLA");
   const [stake, setStake] = useState("");
+  const [resultadoManual, setResultadoManual] = useState<string | null>(null);
   const [statusResultado, setStatusResultado] = useState("PENDENTE");
   const [dataAposta, setDataAposta] = useState("");
   const [observacoes, setObservacoes] = useState("");
@@ -162,6 +163,19 @@ export function ApostaMultiplaDialog({
       }
       setGerouFreebet(aposta.gerou_freebet || false);
       setValorFreebetGerada(aposta.valor_freebet_gerada?.toString() || "");
+      
+      // Verificar se o resultado salvo é diferente do calculado automaticamente
+      // Se for, significa que foi um resultado manual
+      const savedResultado = aposta.resultado || "PENDENTE";
+      // Vamos verificar depois que as seleções forem carregadas
+      setTimeout(() => {
+        // Se o resultado salvo for MEIO_GREEN ou MEIO_RED, é certamente manual
+        if (savedResultado === "MEIO_GREEN" || savedResultado === "MEIO_RED") {
+          setResultadoManual(savedResultado);
+        } else {
+          setResultadoManual(null);
+        }
+      }, 100);
     }
   }, [aposta, open]);
 
@@ -197,6 +211,7 @@ export function ApostaMultiplaDialog({
     setBookmakerId("");
     setTipoMultipla("DUPLA");
     setStake("");
+    setResultadoManual(null);
     setStatusResultado("PENDENTE");
     setDataAposta(getLocalDateTimeString());
     setObservacoes("");
@@ -268,11 +283,15 @@ export function ApostaMultiplaDialog({
   }, [selecoes]);
 
   // Calcular resultado da múltipla baseado nos resultados individuais
-  const resultadoCalculado = useMemo(() => {
+  const resultadoCalculadoAuto = useMemo(() => {
     const resultados = selecoes.map(s => s.resultado || "PENDENTE");
     
     // Se alguma seleção é RED, múltipla = RED
     if (resultados.some(r => r === "RED")) return "RED";
+    
+    // Se alguma seleção é MEIO_RED (e nenhuma RED), múltipla pode ser MEIO_RED ou RED dependendo do contexto
+    // Tratamos MEIO_RED como RED para múltiplas (qualquer falha = perda)
+    if (resultados.some(r => r === "MEIO_RED")) return "RED";
     
     // Se todas são PENDENTE
     if (resultados.every(r => r === "PENDENTE")) return "PENDENTE";
@@ -280,14 +299,26 @@ export function ApostaMultiplaDialog({
     // Se todas são VOID
     if (resultados.every(r => r === "VOID")) return "VOID";
     
-    // Se não há RED e há pelo menos um GREEN (outros podem ser VOID ou PENDENTE)
-    const temGreen = resultados.some(r => r === "GREEN");
+    // Se não há RED/MEIO_RED e há pelo menos um GREEN ou MEIO_GREEN (outros podem ser VOID ou PENDENTE)
+    const temGreen = resultados.some(r => r === "GREEN" || r === "MEIO_GREEN");
     const todosDefinidos = resultados.every(r => r !== "PENDENTE");
     
-    if (temGreen && todosDefinidos) return "GREEN";
+    // Se tem MEIO_GREEN (e nenhum RED/MEIO_RED), resultado depende de outros
+    const temMeioGreen = resultados.some(r => r === "MEIO_GREEN");
+    
+    if (todosDefinidos) {
+      if (temMeioGreen && !resultados.some(r => r === "GREEN")) {
+        // Todos são MEIO_GREEN ou VOID
+        return "MEIO_GREEN";
+      }
+      if (temGreen) return "GREEN";
+    }
     
     return "PENDENTE";
   }, [selecoes]);
+  
+  // Resultado final considerando override manual
+  const resultadoCalculado = resultadoManual || resultadoCalculadoAuto;
 
   // Calcular retorno potencial
   const retornoPotencial = useMemo(() => {
@@ -412,9 +443,24 @@ export function ApostaMultiplaDialog({
               valorRetorno = stakeNum * oddParaCalculo;
             }
             break;
+          case "MEIO_GREEN":
+            // Meio Green: 50% do lucro
+            if (usarFreebet) {
+              lucroPrejuizo = (stakeNum * (oddParaCalculo - 1)) / 2;
+              valorRetorno = lucroPrejuizo;
+            } else {
+              lucroPrejuizo = (stakeNum * (oddParaCalculo - 1)) / 2;
+              valorRetorno = stakeNum + lucroPrejuizo;
+            }
+            break;
           case "RED":
             lucroPrejuizo = usarFreebet ? 0 : -stakeNum;
             valorRetorno = 0;
+            break;
+          case "MEIO_RED":
+            // Meio Red: 50% da perda
+            lucroPrejuizo = usarFreebet ? 0 : -stakeNum / 2;
+            valorRetorno = usarFreebet ? 0 : stakeNum / 2;
             break;
           case "VOID":
             lucroPrejuizo = 0;
@@ -819,7 +865,9 @@ export function ApostaMultiplaDialog({
               {selecoes.map((selecao, index) => (
                 <Card key={index} className={`${
                   selecao.resultado === "GREEN" ? "bg-emerald-500/10 border-emerald-500/30" :
+                  selecao.resultado === "MEIO_GREEN" ? "bg-emerald-500/5 border-emerald-500/20" :
                   selecao.resultado === "RED" ? "bg-red-500/10 border-red-500/30" :
+                  selecao.resultado === "MEIO_RED" ? "bg-red-500/5 border-red-500/20" :
                   selecao.resultado === "VOID" ? "bg-gray-500/10 border-gray-500/30" :
                   "bg-muted/30"
                 }`}>
@@ -838,7 +886,9 @@ export function ApostaMultiplaDialog({
                         <SelectContent>
                           <SelectItem value="PENDENTE">Pendente</SelectItem>
                           <SelectItem value="GREEN">Green</SelectItem>
+                          <SelectItem value="MEIO_GREEN">Meio Green</SelectItem>
                           <SelectItem value="RED">Red</SelectItem>
+                          <SelectItem value="MEIO_RED">Meio Red</SelectItem>
                           <SelectItem value="VOID">Void</SelectItem>
                         </SelectContent>
                       </Select>
@@ -903,20 +953,26 @@ export function ApostaMultiplaDialog({
             {resultadoCalculado !== "PENDENTE" && (
               <div className={`p-3 rounded-lg border ${
                 resultadoCalculado === "GREEN" ? "bg-emerald-500/10 border-emerald-500/30" :
+                resultadoCalculado === "MEIO_GREEN" ? "bg-emerald-500/5 border-emerald-500/20" :
                 resultadoCalculado === "RED" ? "bg-red-500/10 border-red-500/30" :
+                resultadoCalculado === "MEIO_RED" ? "bg-red-500/5 border-red-500/20" :
                 "bg-gray-500/10 border-gray-500/30"
               }`}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground">Resultado:</span>
                   <Badge className={`${
                     resultadoCalculado === "GREEN" ? "bg-emerald-500/20 text-emerald-400" :
+                    resultadoCalculado === "MEIO_GREEN" ? "bg-emerald-500/10 text-emerald-300" :
                     resultadoCalculado === "RED" ? "bg-red-500/20 text-red-400" :
+                    resultadoCalculado === "MEIO_RED" ? "bg-red-500/10 text-red-300" :
                     "bg-gray-500/20 text-gray-400"
                   }`}>
-                    {resultadoCalculado}
+                    {resultadoCalculado === "MEIO_GREEN" ? "MEIO GREEN" : 
+                     resultadoCalculado === "MEIO_RED" ? "MEIO RED" : 
+                     resultadoCalculado}
                   </Badge>
                 </div>
-                {resultadoCalculado === "GREEN" && oddFinalReal !== oddFinal && (
+                {(resultadoCalculado === "GREEN" || resultadoCalculado === "MEIO_GREEN") && oddFinalReal !== oddFinal && (
                   <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
                     <span>Odd Ajustada (VOIDs = 1.00):</span>
                     <span className="font-medium text-foreground">{oddFinalReal.toFixed(3)}</span>
@@ -948,22 +1004,38 @@ export function ApostaMultiplaDialog({
               />
             </div>
 
-            {/* Resultado - Calculado automaticamente */}
+            {/* Resultado - Calculado automaticamente ou manual */}
             <div className="space-y-2">
               <Label>Resultado da Múltipla</Label>
-              <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
-                <Badge className={`${
-                  resultadoCalculado === "GREEN" ? "bg-emerald-500/20 text-emerald-400" :
-                  resultadoCalculado === "RED" ? "bg-red-500/20 text-red-400" :
-                  resultadoCalculado === "VOID" ? "bg-gray-500/20 text-gray-400" :
-                  "bg-blue-500/20 text-blue-400"
-                }`}>
-                  {resultadoCalculado}
-                </Badge>
-                <span className="text-xs text-muted-foreground">
-                  (calculado automaticamente com base nos resultados individuais)
-                </span>
-              </div>
+              <Select 
+                value={resultadoManual || resultadoCalculadoAuto} 
+                onValueChange={(v) => {
+                  // Se selecionar o mesmo que o automático, limpa o manual
+                  if (v === resultadoCalculadoAuto) {
+                    setResultadoManual(null);
+                  } else {
+                    setResultadoManual(v);
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PENDENTE">Pendente</SelectItem>
+                  <SelectItem value="GREEN">Green</SelectItem>
+                  <SelectItem value="MEIO_GREEN">Meio Green</SelectItem>
+                  <SelectItem value="RED">Red</SelectItem>
+                  <SelectItem value="MEIO_RED">Meio Red</SelectItem>
+                  <SelectItem value="VOID">Void</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {resultadoManual 
+                  ? `Resultado manual selecionado (automático seria: ${resultadoCalculadoAuto})`
+                  : "Calculado automaticamente com base nos resultados individuais"
+                }
+              </p>
             </div>
 
             {/* Gerou Freebet - mutuamente exclusivo com Usar Freebet */}
