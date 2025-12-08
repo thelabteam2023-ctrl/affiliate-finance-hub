@@ -851,7 +851,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                     
                     {/* Tag de Freebet Gerada - contextual baseado no resultado */}
                     {aposta.gerou_freebet && aposta.valor_freebet_gerada && (
-                      aposta.resultado === "PENDENTE" ? (
+                      (aposta.resultado === "PENDENTE" || aposta.resultado === null) ? (
                         <div className="flex items-center gap-1 text-[10px] text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded px-1.5 py-0.5 mt-1">
                           <Clock className="h-3 w-3 flex-shrink-0" />
                           <span>Freebet aguardando: {formatCurrency(aposta.valor_freebet_gerada)}</span>
@@ -1058,7 +1058,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                     
                     {/* Tag de Freebet Gerada - contextual baseado no resultado */}
                     {am.gerou_freebet && am.valor_freebet_gerada && (
-                      am.resultado === "PENDENTE" ? (
+                      (am.resultado === "PENDENTE" || am.resultado === null) ? (
                         <div className="flex items-center gap-1 text-[10px] text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded px-1.5 py-0.5 mt-1">
                           <Clock className="h-3 w-3 flex-shrink-0" />
                           <span>Freebet aguardando: {formatCurrency(am.valor_freebet_gerada)}</span>
