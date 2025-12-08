@@ -67,6 +67,7 @@ interface Aposta {
   back_comissao?: number | null;
   gerou_freebet?: boolean;
   valor_freebet_gerada?: number | null;
+  tipo_freebet?: string | null;
 }
 
 interface Bookmaker {
@@ -389,8 +390,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   // Tipo de aposta Back (Normal, Freebet SNR, Freebet SR) - para Cobertura
   const [tipoApostaBack, setTipoApostaBack] = useState<"normal" | "freebet_snr" | "freebet_sr">("normal");
   
-  // Tipo de aposta para Bookmaker simples (Normal, Freebet SNR, Freebet SR)
-  const [tipoApostaBookmaker, setTipoApostaBookmaker] = useState<"normal" | "freebet_snr" | "freebet_sr">("normal");
+  // Toggle simples: Usar Freebet nesta aposta? (Bookmaker simples)
+  const [usarFreebetBookmaker, setUsarFreebetBookmaker] = useState(false);
   
   // Tipo de aposta para Exchange Back (Normal, Freebet SNR, Freebet SR)
   const [tipoApostaExchangeBack, setTipoApostaExchangeBack] = useState<"normal" | "freebet_snr" | "freebet_sr">("normal");
@@ -517,6 +518,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         // Freebet tracking
         setGerouFreebet(aposta.gerou_freebet || false);
         setValorFreebetGerada(aposta.valor_freebet_gerada?.toString() || "");
+        
+        // Se a aposta usou freebet (bookmaker simples)
+        if (aposta.tipo_freebet && aposta.tipo_freebet !== "normal" && aposta.modo_entrada === "PADRAO") {
+          setUsarFreebetBookmaker(true);
+        }
       } else {
         resetForm();
       }
@@ -770,7 +776,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     setCoberturaLucroGarantido(null);
     setCoberturaTaxaExtracao(null);
     setTipoApostaBack("normal");
-    setTipoApostaBookmaker("normal");
+    setUsarFreebetBookmaker(false);
     setTipoApostaExchangeBack("normal");
     setGerouFreebet(false);
     setValorFreebetGerada("");
@@ -943,13 +949,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         return;
       }
 
-      // Validar stake vs saldo disponível da bookmaker (considerando tipo de aposta)
+      // Validar stake vs saldo disponível da bookmaker (considerando se usa freebet)
       const selectedBookmaker = bookmakers.find(b => b.id === bookmakerId);
       if (selectedBookmaker) {
         const stakeAnterior = aposta?.status === "PENDENTE" ? aposta.stake : 0;
         
-        // Se for freebet, validar contra saldo_freebet
-        if (tipoApostaBookmaker !== "normal") {
+        // Se for usar freebet, validar contra saldo_freebet
+        if (usarFreebetBookmaker) {
           if (stakeNum > selectedBookmaker.saldo_freebet) {
             toast.error(`Stake da Freebet (${formatCurrencyWithSymbol(stakeNum, selectedBookmaker.moeda)}) maior que o saldo de Freebet disponível (${formatCurrencyWithSymbol(selectedBookmaker.saldo_freebet, selectedBookmaker.moeda)})`);
             return;
@@ -1103,28 +1109,58 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         const bookmakerStake = parseFloat(stake);
         
         // Calcular P/L para Bookmaker
+        // IMPORTANTE: Se usa freebet, o tratamento é diferente:
+        // - GREEN: lucro = stake * (odd - 1), mas stake não volta
+        // - RED: prejuízo = 0 (freebet já foi consumida)
         if (statusResultado !== "PENDENTE") {
-          switch (statusResultado) {
-            case "GREEN":
-              lucroPrejuizo = bookmakerStake * (bookmakerOdd - 1);
-              valorRetornoCalculado = bookmakerStake * bookmakerOdd;
-              break;
-            case "RED":
-              lucroPrejuizo = -bookmakerStake;
-              valorRetornoCalculado = 0;
-              break;
-            case "MEIO_GREEN":
-              lucroPrejuizo = bookmakerStake * (bookmakerOdd - 1) / 2;
-              valorRetornoCalculado = bookmakerStake + lucroPrejuizo;
-              break;
-            case "MEIO_RED":
-              lucroPrejuizo = -bookmakerStake / 2;
-              valorRetornoCalculado = bookmakerStake / 2;
-              break;
-            case "VOID":
-              lucroPrejuizo = 0;
-              valorRetornoCalculado = bookmakerStake;
-              break;
+          if (usarFreebetBookmaker) {
+            // Aposta com Freebet (tratamento SNR)
+            switch (statusResultado) {
+              case "GREEN":
+                lucroPrejuizo = bookmakerStake * (bookmakerOdd - 1); // Só o lucro
+                valorRetornoCalculado = bookmakerStake * (bookmakerOdd - 1); // Stake não volta
+                break;
+              case "RED":
+                lucroPrejuizo = 0; // Freebet já consumida, não é prejuízo real
+                valorRetornoCalculado = 0;
+                break;
+              case "MEIO_GREEN":
+                lucroPrejuizo = bookmakerStake * (bookmakerOdd - 1) / 2;
+                valorRetornoCalculado = lucroPrejuizo; // Stake não volta
+                break;
+              case "MEIO_RED":
+                lucroPrejuizo = 0; // Freebet, sem prejuízo
+                valorRetornoCalculado = 0;
+                break;
+              case "VOID":
+                lucroPrejuizo = 0;
+                valorRetornoCalculado = 0; // Freebet devolvida? Depende da casa
+                break;
+            }
+          } else {
+            // Aposta normal
+            switch (statusResultado) {
+              case "GREEN":
+                lucroPrejuizo = bookmakerStake * (bookmakerOdd - 1);
+                valorRetornoCalculado = bookmakerStake * bookmakerOdd;
+                break;
+              case "RED":
+                lucroPrejuizo = -bookmakerStake;
+                valorRetornoCalculado = 0;
+                break;
+              case "MEIO_GREEN":
+                lucroPrejuizo = bookmakerStake * (bookmakerOdd - 1) / 2;
+                valorRetornoCalculado = bookmakerStake + lucroPrejuizo;
+                break;
+              case "MEIO_RED":
+                lucroPrejuizo = -bookmakerStake / 2;
+                valorRetornoCalculado = bookmakerStake / 2;
+                break;
+              case "VOID":
+                lucroPrejuizo = 0;
+                valorRetornoCalculado = bookmakerStake;
+                break;
+            }
           }
         }
 
@@ -1144,7 +1180,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           lay_comissao: null,
           back_em_exchange: false,
           back_comissao: null,
-          tipo_freebet: tipoApostaBookmaker !== "normal" ? tipoApostaBookmaker : null,
+          tipo_freebet: usarFreebetBookmaker ? "freebet_snr" : null,
         };
       } else if (tipoOperacaoExchange === "cobertura") {
         // ===== MODO COBERTURA LAY =====
@@ -1405,9 +1441,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           }
         }
 
-        // Debitar freebet se usar em qualquer modo SNR/SR
+        // Debitar freebet se usar em qualquer modo
         // 1. Bookmaker simples com freebet
-        if (tipoAposta === "bookmaker" && tipoApostaBookmaker !== "normal") {
+        if (tipoAposta === "bookmaker" && usarFreebetBookmaker) {
           const stakeNum = parseFloat(stake);
           if (stakeNum > 0 && bookmakerId) {
             await debitarFreebetUsada(bookmakerId, stakeNum);
@@ -2009,54 +2045,43 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   </div>
                 </div>
                 
-                {/* Seletor de tipo de aposta Freebet (apenas se bookmaker tem saldo_freebet > 0) */}
+                {/* Toggle "Usar Freebet nesta aposta?" (apenas se bookmaker tem saldo_freebet > 0) */}
                 {bookmakerSaldo && bookmakerSaldo.saldoFreebet > 0 && (
-                  <div className="space-y-2 mt-4">
-                    <Label className="block text-center uppercase text-xs tracking-wider text-muted-foreground">Tipo de Aposta</Label>
-                    <div className="flex justify-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setTipoApostaBookmaker("normal")}
-                        className={`flex flex-col items-center px-4 py-2 rounded-lg border-2 transition-all ${
-                          tipoApostaBookmaker === "normal"
-                            ? "border-blue-500 bg-blue-500/10 text-blue-400"
-                            : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
-                        }`}
-                      >
-                        <Coins className="h-4 w-4 mb-1" />
-                        <div className="font-semibold text-xs">NORMAL</div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTipoApostaBookmaker("freebet_snr")}
-                        className={`flex flex-col items-center px-4 py-2 rounded-lg border-2 transition-all ${
-                          tipoApostaBookmaker === "freebet_snr"
-                            ? "border-amber-500 bg-amber-500/10 text-amber-400"
-                            : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
-                        }`}
-                      >
-                        <Gift className="h-4 w-4 mb-1" />
-                        <div className="font-semibold text-xs">FREEBET SNR</div>
-                        <div className="text-[9px] opacity-70">(Stake Não Volta)</div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTipoApostaBookmaker("freebet_sr")}
-                        className={`flex flex-col items-center px-4 py-2 rounded-lg border-2 transition-all ${
-                          tipoApostaBookmaker === "freebet_sr"
-                            ? "border-cyan-500 bg-cyan-500/10 text-cyan-400"
-                            : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
-                        }`}
-                      >
-                        <Gift className="h-4 w-4 mb-1" />
-                        <div className="font-semibold text-xs">FREEBET SR</div>
-                        <div className="text-[9px] opacity-70">(Stake Volta)</div>
-                      </button>
+                  <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Gift className="h-4 w-4 text-amber-400" />
+                        <Label className="text-sm font-medium text-amber-400">Usar Freebet nesta aposta?</Label>
+                      </div>
+                      <Switch
+                        checked={usarFreebetBookmaker}
+                        onCheckedChange={(checked) => {
+                          setUsarFreebetBookmaker(checked);
+                          // Quando ativar, preencher stake com valor da freebet disponível
+                          if (checked && bookmakerSaldo.saldoFreebet > 0) {
+                            setStake(bookmakerSaldo.saldoFreebet.toString());
+                          }
+                        }}
+                        disabled={!!aposta?.tipo_freebet}
+                      />
                     </div>
-                    {tipoApostaBookmaker !== "normal" && (
-                      <p className="text-center text-xs text-amber-400">
-                        <Gift className="h-3 w-3 inline mr-1" />
-                        Stake será debitada do saldo de Freebet ({formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)} disponível)
+                    {usarFreebetBookmaker && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-amber-400">
+                          <Gift className="h-3 w-3 inline mr-1" />
+                          Stake será debitada do saldo de Freebet ({formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)} disponível)
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          • Se perder: não conta como prejuízo (freebet já foi consumida)
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          • Se ganhar: apenas o lucro entra como ganho real (stake não volta)
+                        </p>
+                      </div>
+                    )}
+                    {aposta?.tipo_freebet && (
+                      <p className="text-[10px] text-muted-foreground italic">
+                        Esta aposta foi feita com Freebet e não pode ser alterada.
                       </p>
                     )}
                   </div>
