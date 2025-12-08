@@ -601,6 +601,16 @@ export default function Testes() {
         console.error("Erro ao apagar freebets:", freebetsError);
       }
 
+      // Apagar todas as apostas múltiplas do usuário
+      const { error: apostasMultiplasError } = await supabase
+        .from("apostas_multiplas")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (apostasMultiplasError) {
+        console.error("Erro ao apagar apostas múltiplas:", apostasMultiplasError);
+      }
+
       // Apagar todas as apostas do usuário (campos gerou_freebet e tipo_freebet são limpos junto)
       const { error: apostasError } = await supabase
         .from("apostas")
