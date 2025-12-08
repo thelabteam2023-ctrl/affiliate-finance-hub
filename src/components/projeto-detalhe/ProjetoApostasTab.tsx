@@ -603,6 +603,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                         layStake={aposta.lay_stake || undefined}
                         layComissao={aposta.lay_comissao || undefined}
                         isFreebetExtraction={aposta.estrategia === "COBERTURA_LAY" && aposta.back_em_exchange === true}
+                        gerouFreebet={aposta.gerou_freebet || false}
                         onResultadoUpdated={handleApostaUpdated}
                         onEditClick={() => handleOpenDialog(aposta)}
                       />
@@ -1426,6 +1427,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                         layStake={aposta.lay_stake || undefined}
                         layComissao={aposta.lay_comissao || undefined}
                         isFreebetExtraction={isFreebetExtraction}
+                        gerouFreebet={aposta.gerou_freebet || false}
                         onResultadoUpdated={handleApostaUpdated}
                         onEditClick={() => handleOpenDialog(aposta)}
                       />
