@@ -1,4 +1,4 @@
-import { Bell, Users, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical } from "lucide-react";
+import { Bell, Users, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Calculator } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -36,6 +36,11 @@ const operacoesMenuItems = [
 // Menu de Captação
 const captacaoMenuItems = [
   { title: "Captação de Parceiros", url: "/programa-indicacao", icon: UserPlus },
+];
+
+// Menu de Ferramentas
+const ferramentasMenuItems = [
+  { title: "Arbitragem", url: "/arbitragem", icon: Calculator },
 ];
 
 // Menu de Desenvolvimento
@@ -139,6 +144,20 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {captacaoMenuItems.map(renderMenuItem)}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        {/* Menu de Ferramentas */}
+        <SidebarGroup>
+          <SidebarGroupLabel className={isCollapsed ? 'sr-only' : ''}>
+            Ferramentas
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {ferramentasMenuItems.map(renderMenuItem)}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
