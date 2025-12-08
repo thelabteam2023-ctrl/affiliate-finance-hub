@@ -115,7 +115,7 @@ interface ApostaMultipla {
   odd_final: number;
   retorno_potencial: number | null;
   lucro_prejuizo: number | null;
-  selecoes: { descricao: string; odd: number }[];
+  selecoes: { descricao: string; odd: string }[];
   status: string;
   resultado: string | null;
   bookmaker_id: string;
@@ -293,6 +293,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
     } catch (error: any) {
       console.error("Erro ao carregar apostas múltiplas:", error.message);
     }
+  };
 
   const handleApostaUpdated = () => {
     fetchAllApostas();
