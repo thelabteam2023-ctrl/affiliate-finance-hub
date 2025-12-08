@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -20,13 +19,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { toast } from "sonner";
-import { Gift, Search, Building2, User, Calendar, Target, CheckCircle2, Clock } from "lucide-react";
-import { format } from "date-fns";
+import { Gift, Search, Building2, User, Calendar, Target, CheckCircle2, Clock, TrendingUp, Percent } from "lucide-react";
+import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface ProjetoFreebetsTabProps {
   projetoId: string;
+  periodFilter?: string;
+  customDateRange?: { start: Date; end: Date } | null;
 }
 
 interface FreebetRecebida {
@@ -51,13 +51,49 @@ interface BookmakerComFreebet {
   saldo_freebet: number;
 }
 
-export function ProjetoFreebetsTab({ projetoId }: ProjetoFreebetsTabProps) {
+interface ApostaComFreebet {
+  id: string;
+  lucro_prejuizo: number | null;
+  tipo_freebet: string | null;
+  data_aposta: string;
+  resultado: string | null;
+}
+
+export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDateRange }: ProjetoFreebetsTabProps) {
   const [loading, setLoading] = useState(true);
   const [freebets, setFreebets] = useState<FreebetRecebida[]>([]);
   const [bookmakersComFreebet, setBookmakersComFreebet] = useState<BookmakerComFreebet[]>([]);
+  const [apostasComFreebet, setApostasComFreebet] = useState<ApostaComFreebet[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"todas" | "disponiveis" | "utilizadas">("todas");
   const [casaFilter, setCasaFilter] = useState<string>("todas");
+
+  // Calcular range de datas baseado no filtro
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    const today = startOfDay(now);
+    
+    switch (periodFilter) {
+      case "hoje":
+        return { start: today, end: endOfDay(now) };
+      case "ontem":
+        const yesterday = subDays(today, 1);
+        return { start: yesterday, end: endOfDay(yesterday) };
+      case "7dias":
+        return { start: subDays(today, 7), end: endOfDay(now) };
+      case "mes":
+        return { start: startOfMonth(now), end: endOfDay(now) };
+      case "ano":
+        return { start: startOfYear(now), end: endOfDay(now) };
+      case "periodo":
+        if (customDateRange) {
+          return { start: customDateRange.start, end: endOfDay(customDateRange.end) };
+        }
+        return null;
+      default:
+        return null; // "tudo"
+    }
+  }, [periodFilter, customDateRange]);
 
   useEffect(() => {
     fetchData();
@@ -66,7 +102,7 @@ export function ProjetoFreebetsTab({ projetoId }: ProjetoFreebetsTabProps) {
   const fetchData = async () => {
     try {
       setLoading(true);
-      await Promise.all([fetchFreebets(), fetchBookmakersComFreebet()]);
+      await Promise.all([fetchFreebets(), fetchBookmakersComFreebet(), fetchApostasComFreebet()]);
     } finally {
       setLoading(false);
     }
@@ -147,6 +183,22 @@ export function ProjetoFreebetsTab({ projetoId }: ProjetoFreebetsTabProps) {
     }
   };
 
+  const fetchApostasComFreebet = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("apostas")
+        .select("id, lucro_prejuizo, tipo_freebet, data_aposta, resultado")
+        .eq("projeto_id", projetoId)
+        .not("tipo_freebet", "is", null);
+
+      if (error) throw error;
+
+      setApostasComFreebet(data || []);
+    } catch (error: any) {
+      console.error("Erro ao buscar apostas com freebet:", error);
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -154,10 +206,52 @@ export function ProjetoFreebetsTab({ projetoId }: ProjetoFreebetsTabProps) {
     }).format(value);
   };
 
-  // Filtros
+  // Filtrar freebets e apostas pelo período
+  const freebetsNoPeriodo = useMemo(() => {
+    if (!dateRange) return freebets;
+    return freebets.filter(fb => {
+      const dataRecebida = new Date(fb.data_recebida);
+      return dataRecebida >= dateRange.start && dataRecebida <= dateRange.end;
+    });
+  }, [freebets, dateRange]);
+
+  const apostasComFreebetNoPeriodo = useMemo(() => {
+    if (!dateRange) return apostasComFreebet;
+    return apostasComFreebet.filter(ap => {
+      const dataAposta = new Date(ap.data_aposta);
+      return dataAposta >= dateRange.start && dataAposta <= dateRange.end;
+    });
+  }, [apostasComFreebet, dateRange]);
+
+  // Métricas de extração
+  const metricas = useMemo(() => {
+    // Total de freebets recebidas no período (face value)
+    const totalRecebido = freebetsNoPeriodo.reduce((acc, fb) => acc + fb.valor, 0);
+    
+    // Total extraído: soma do lucro de apostas que usaram freebet
+    // Considera apenas apostas GREEN/MEIO_GREEN (lucro positivo)
+    const totalExtraido = apostasComFreebetNoPeriodo
+      .filter(ap => ap.tipo_freebet && ap.tipo_freebet !== "normal")
+      .reduce((acc, ap) => {
+        // Só soma lucros positivos (GREEN/MEIO_GREEN)
+        const lucro = ap.lucro_prejuizo || 0;
+        return acc + Math.max(0, lucro);
+      }, 0);
+    
+    // Taxa de extração
+    const taxaExtracao = totalRecebido > 0 ? (totalExtraido / totalRecebido) * 100 : 0;
+
+    return {
+      totalRecebido,
+      totalExtraido,
+      taxaExtracao
+    };
+  }, [freebetsNoPeriodo, apostasComFreebetNoPeriodo]);
+
+  // Filtros de lista
   const casasDisponiveis = [...new Set(freebets.map(f => f.bookmaker_nome))];
   
-  const freebetsFiltradas = freebets.filter(fb => {
+  const freebetsFiltradas = freebetsNoPeriodo.filter(fb => {
     // Filtro de status
     if (statusFilter === "disponiveis" && fb.utilizada) return false;
     if (statusFilter === "utilizadas" && !fb.utilizada) return false;
@@ -178,17 +272,17 @@ export function ProjetoFreebetsTab({ projetoId }: ProjetoFreebetsTabProps) {
     return true;
   });
 
-  // KPIs
+  // KPIs de estoque atual
   const totalFreebetDisponivel = bookmakersComFreebet.reduce((acc, bk) => acc + bk.saldo_freebet, 0);
   const casasComFreebet = bookmakersComFreebet.length;
-  const freebetsUtilizadas = freebets.filter(f => f.utilizada).length;
-  const freebetsDisponiveis = freebets.filter(f => !f.utilizada).length;
+  const freebetsUtilizadas = freebetsNoPeriodo.filter(f => f.utilizada).length;
+  const freebetsDisponiveis = freebetsNoPeriodo.filter(f => !f.utilizada).length;
 
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-3">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-24" />)}
+        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+          {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-24" />)}
         </div>
         <Skeleton className="h-96" />
       </div>
@@ -197,7 +291,51 @@ export function ProjetoFreebetsTab({ projetoId }: ProjetoFreebetsTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* KPIs */}
+      {/* KPIs - Métricas de Período */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="border-amber-500/20 bg-amber-500/5">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Freebets Recebidas</CardTitle>
+            <Gift className="h-4 w-4 text-amber-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-400">{formatCurrency(metricas.totalRecebido)}</div>
+            <p className="text-xs text-muted-foreground">
+              {freebetsNoPeriodo.length} freebets no período
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-emerald-500/20 bg-emerald-500/5">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Lucro Extraído</CardTitle>
+            <TrendingUp className="h-4 w-4 text-emerald-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-400">{formatCurrency(metricas.totalExtraido)}</div>
+            <p className="text-xs text-muted-foreground">
+              Lucro de apostas com freebet
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className={`border-${metricas.taxaExtracao >= 70 ? 'emerald' : metricas.taxaExtracao >= 50 ? 'amber' : 'red'}-500/20 bg-${metricas.taxaExtracao >= 70 ? 'emerald' : metricas.taxaExtracao >= 50 ? 'amber' : 'red'}-500/5`}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Taxa de Extração</CardTitle>
+            <Percent className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${metricas.taxaExtracao >= 70 ? 'text-emerald-400' : metricas.taxaExtracao >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+              {metricas.taxaExtracao.toFixed(1)}%
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Extraído ÷ Recebido
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* KPIs - Estoque Atual */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -207,7 +345,7 @@ export function ProjetoFreebetsTab({ projetoId }: ProjetoFreebetsTabProps) {
           <CardContent>
             <div className="text-2xl font-bold text-amber-400">{formatCurrency(totalFreebetDisponivel)}</div>
             <p className="text-xs text-muted-foreground">
-              Total disponível para uso
+              Saldo atual para uso
             </p>
           </CardContent>
         </Card>
@@ -227,11 +365,11 @@ export function ProjetoFreebetsTab({ projetoId }: ProjetoFreebetsTabProps) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Freebets Recebidas</CardTitle>
+            <CardTitle className="text-sm font-medium">Freebets no Período</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{freebets.length}</div>
+            <div className="text-2xl font-bold">{freebetsNoPeriodo.length}</div>
             <p className="text-xs text-muted-foreground">
               <span className="text-emerald-400">{freebetsDisponiveis} disponíveis</span>
               {" · "}
