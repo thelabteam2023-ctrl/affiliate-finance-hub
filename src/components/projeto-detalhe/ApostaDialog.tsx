@@ -1351,8 +1351,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
 
         // Verificar se resultado mudou e atualizar status da freebet
         if (gerouFreebetAnterior) {
-          // Caso 1: PENDENTE → resultado final
-          if (resultadoAnterior === "PENDENTE" && statusResultado !== "PENDENTE") {
+          // resultadoAnterior pode ser null quando a aposta estava PENDENTE
+          const eraAnteriorPendente = resultadoAnterior === "PENDENTE" || resultadoAnterior === null;
+          const agoraEhPendente = statusResultado === "PENDENTE";
+          
+          // Caso 1: PENDENTE/null → resultado final (GREEN, RED, MEIO_GREEN, MEIO_RED, VOID)
+          if (eraAnteriorPendente && !agoraEhPendente) {
             // VOID = não libera, qualquer outro resultado (GREEN, RED, MEIO_GREEN, MEIO_RED) = libera
             if (statusResultado === "VOID") {
               await recusarFreebetPendente(aposta.id);
@@ -1361,11 +1365,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             }
           }
           // Caso 2: resultado final → PENDENTE (reversão)
-          else if (resultadoAnterior !== "PENDENTE" && resultadoAnterior !== null && statusResultado === "PENDENTE") {
+          else if (!eraAnteriorPendente && agoraEhPendente) {
             await reverterFreebetParaPendente(aposta.id);
           }
           // Caso 3: resultado final (não-VOID) → VOID
-          else if (resultadoAnterior !== "PENDENTE" && resultadoAnterior !== "VOID" && resultadoAnterior !== null && statusResultado === "VOID") {
+          else if (!eraAnteriorPendente && resultadoAnterior !== "VOID" && statusResultado === "VOID") {
             // Freebet já estava LIBERADA, precisa reverter para NAO_LIBERADA
             const { data: freebetLiberada } = await supabase
               .from("freebets_recebidas")
