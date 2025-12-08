@@ -21,11 +21,14 @@ import {
   ArrowDown,
   Shield,
   Coins,
-  Gift
+  Gift,
+  Layers,
+  ChevronDown
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
+import { ApostaMultiplaDialog } from "@/components/projeto-detalhe/ApostaMultiplaDialog";
 import { ResultadoPill } from "@/components/projeto-detalhe/ResultadoPill";
 import {
   Select,
@@ -34,6 +37,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { DateRange } from "react-day-picker";
 import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
@@ -99,15 +108,55 @@ interface Aposta {
   } | null;
 }
 
+interface ApostaMultipla {
+  id: string;
+  tipo_multipla: string;
+  stake: number;
+  odd_final: number;
+  retorno_potencial: number | null;
+  lucro_prejuizo: number | null;
+  selecoes: { descricao: string; odd: number }[];
+  status: string;
+  resultado: string | null;
+  bookmaker_id: string;
+  tipo_freebet: string | null;
+  gerou_freebet: boolean;
+  valor_freebet_gerada: number | null;
+  data_aposta: string;
+  observacoes: string | null;
+  bookmaker?: {
+    nome: string;
+    parceiro_id: string;
+    bookmaker_catalogo_id?: string | null;
+    parceiro?: {
+      nome: string;
+    };
+    bookmakers_catalogo?: {
+      logo_url: string | null;
+    } | null;
+  };
+}
+
+// Tipo unificado para exibição
+type ApostaUnificada = {
+  tipo: "simples" | "multipla";
+  data: Aposta | ApostaMultipla;
+  data_aposta: string;
+};
+
 export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "todo", dateRange }: ProjetoApostasTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
+  const [apostasMultiplas, setApostasMultiplas] = useState<ApostaMultipla[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
+  const [tipoFilter, setTipoFilter] = useState<"todas" | "simples" | "multiplas">("todas");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMultiplaOpen, setDialogMultiplaOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
+  const [selectedApostaMultipla, setSelectedApostaMultipla] = useState<ApostaMultipla | null>(null);
 
   const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
     const today = new Date();
@@ -136,12 +185,20 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
   };
 
   useEffect(() => {
-    fetchApostas();
+    fetchAllApostas();
   }, [projetoId, periodFilter, dateRange]);
+
+  const fetchAllApostas = async () => {
+    try {
+      setLoading(true);
+      await Promise.all([fetchApostas(), fetchApostasMultiplas()]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchApostas = async () => {
     try {
-      setLoading(true);
       const { start, end } = getDateRangeFromFilter();
       
       let query = supabase
@@ -195,14 +252,50 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
       
       setApostas(apostasComLayInfo || []);
     } catch (error: any) {
-      toast.error("Erro ao carregar apostas: " + error.message);
-    } finally {
-      setLoading(false);
+      toast.error("Erro ao carregar apostas simples: " + error.message);
     }
   };
-  
+
+  const fetchApostasMultiplas = async () => {
+    try {
+      const { start, end } = getDateRangeFromFilter();
+      
+      let query = supabase
+        .from("apostas_multiplas")
+        .select(`
+          *,
+          bookmaker:bookmakers (
+            nome,
+            parceiro_id,
+            bookmaker_catalogo_id,
+            parceiro:parceiros (nome),
+            bookmakers_catalogo (logo_url)
+          )
+        `)
+        .eq("projeto_id", projetoId)
+        .order("data_aposta", { ascending: false });
+      
+      if (start) {
+        query = query.gte("data_aposta", start.toISOString());
+      }
+      if (end) {
+        query = query.lte("data_aposta", end.toISOString());
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      
+      setApostasMultiplas((data || []).map((am: any) => ({
+        ...am,
+        selecoes: am.selecoes || []
+      })));
+    } catch (error: any) {
+      console.error("Erro ao carregar apostas múltiplas:", error.message);
+    }
+
   const handleApostaUpdated = () => {
-    fetchApostas();
+    fetchAllApostas();
     onDataChange?.();
   };
 
@@ -337,6 +430,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
     setDialogOpen(true);
   };
 
+  const handleOpenMultiplaDialog = (aposta: ApostaMultipla | null) => {
+    setSelectedApostaMultipla(aposta);
+    setDialogMultiplaOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -364,10 +462,25 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
             >
               {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
             </Button>
-            <Button onClick={() => handleOpenDialog(null)} size="sm" className="h-9">
-              <Plus className="mr-1 h-4 w-4" />
-              Nova Aposta
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" className="h-9">
+                  <Plus className="mr-1 h-4 w-4" />
+                  Nova Aposta
+                  <ChevronDown className="ml-1 h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => handleOpenDialog(null)}>
+                  <Target className="mr-2 h-4 w-4" />
+                  Aposta Simples
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleOpenMultiplaDialog(null)}>
+                  <Layers className="mr-2 h-4 w-4" />
+                  Aposta Múltipla
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -1056,14 +1169,26 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
         </Card>
       )}
 
-      {/* Dialog */}
+      {/* Dialog Aposta Simples */}
       <ApostaDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         aposta={selectedAposta}
         projetoId={projetoId}
         onSuccess={() => {
-          fetchApostas();
+          fetchAllApostas();
+          onDataChange?.();
+        }}
+      />
+
+      {/* Dialog Aposta Múltipla */}
+      <ApostaMultiplaDialog
+        open={dialogMultiplaOpen}
+        onOpenChange={setDialogMultiplaOpen}
+        aposta={selectedApostaMultipla}
+        projetoId={projetoId}
+        onSuccess={() => {
+          fetchAllApostas();
           onDataChange?.();
         }}
       />

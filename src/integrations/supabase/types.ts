@@ -173,6 +173,75 @@ export type Database = {
           },
         ]
       }
+      apostas_multiplas: {
+        Row: {
+          bookmaker_id: string
+          created_at: string
+          data_aposta: string
+          gerou_freebet: boolean | null
+          id: string
+          lucro_prejuizo: number | null
+          observacoes: string | null
+          odd_final: number
+          projeto_id: string
+          resultado: string | null
+          retorno_potencial: number | null
+          selecoes: Json
+          stake: number
+          status: string
+          tipo_freebet: string | null
+          tipo_multipla: string
+          updated_at: string
+          user_id: string
+          valor_freebet_gerada: number | null
+          valor_retorno: number | null
+        }
+        Insert: {
+          bookmaker_id: string
+          created_at?: string
+          data_aposta?: string
+          gerou_freebet?: boolean | null
+          id?: string
+          lucro_prejuizo?: number | null
+          observacoes?: string | null
+          odd_final: number
+          projeto_id: string
+          resultado?: string | null
+          retorno_potencial?: number | null
+          selecoes?: Json
+          stake: number
+          status?: string
+          tipo_freebet?: string | null
+          tipo_multipla?: string
+          updated_at?: string
+          user_id: string
+          valor_freebet_gerada?: number | null
+          valor_retorno?: number | null
+        }
+        Update: {
+          bookmaker_id?: string
+          created_at?: string
+          data_aposta?: string
+          gerou_freebet?: boolean | null
+          id?: string
+          lucro_prejuizo?: number | null
+          observacoes?: string | null
+          odd_final?: number
+          projeto_id?: string
+          resultado?: string | null
+          retorno_potencial?: number | null
+          selecoes?: Json
+          stake?: number
+          status?: string
+          tipo_freebet?: string | null
+          tipo_multipla?: string
+          updated_at?: string
+          user_id?: string
+          valor_freebet_gerada?: number | null
+          valor_retorno?: number | null
+        }
+        Relationships: []
+      }
       bancos: {
         Row: {
           codigo: string
