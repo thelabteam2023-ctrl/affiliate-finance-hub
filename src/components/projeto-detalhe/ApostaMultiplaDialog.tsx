@@ -541,10 +541,11 @@ export function ApostaMultiplaDialog({
         const resultadoAnterior = aposta.resultado;
         if (aposta.gerou_freebet && resultadoAnterior === "PENDENTE" && resultadoFinal !== "PENDENTE") {
           // Aposta tinha freebet pendente e agora foi liquidada
-          if (resultadoFinal === "GREEN") {
-            await liberarFreebetPendente(aposta.id);
-          } else {
+          // VOID = não libera, qualquer outro resultado (GREEN, RED) = libera
+          if (resultadoFinal === "VOID") {
             await recusarFreebetPendente(aposta.id);
+          } else {
+            await liberarFreebetPendente(aposta.id);
           }
         }
         // TODO: Se desfez o gerou_freebet, deveria reverter (não implementado)
@@ -644,12 +645,14 @@ export function ApostaMultiplaDialog({
     try {
       // Determinar o status da freebet baseado no resultado da aposta
       // PENDENTE = aposta ainda não liquidada
-      // LIBERADA = aposta GREEN (freebet disponível)
-      // NAO_LIBERADA = aposta RED/VOID/etc (freebet não liberada)
+      // LIBERADA = aposta GREEN ou RED (freebet disponível - algumas casas dão freebet mesmo em derrota)
+      // NAO_LIBERADA = aposta VOID (única circunstância que não libera)
       let status: "PENDENTE" | "LIBERADA" | "NAO_LIBERADA" = "PENDENTE";
       
       if (resultadoAposta && resultadoAposta !== "PENDENTE") {
-        status = resultadoAposta === "GREEN" ? "LIBERADA" : "NAO_LIBERADA";
+        // GREEN, RED, MEIO_GREEN, MEIO_RED = libera freebet
+        // VOID = não libera
+        status = resultadoAposta === "VOID" ? "NAO_LIBERADA" : "LIBERADA";
       }
 
       // Só incrementar saldo_freebet se a freebet for liberada (GREEN)
@@ -686,7 +689,7 @@ export function ApostaMultiplaDialog({
     }
   };
 
-  // Função para liberar freebet pendente quando aposta muda para GREEN
+  // Função para liberar freebet pendente quando aposta é liquidada (GREEN, RED)
   const liberarFreebetPendente = async (apostaMultiplaId: string) => {
     try {
       // Buscar freebet pendente associada a esta aposta
@@ -724,7 +727,7 @@ export function ApostaMultiplaDialog({
     }
   };
 
-  // Função para recusar freebet quando aposta muda para RED/VOID/etc
+  // Função para recusar freebet quando aposta muda para VOID (única circunstância que não libera)
   const recusarFreebetPendente = async (apostaMultiplaId: string) => {
     try {
       await supabase

@@ -23,7 +23,8 @@ import {
   Coins,
   Gift,
   Layers,
-  ChevronDown
+  ChevronDown,
+  Clock
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -848,12 +849,19 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       </div>
                     )}
                     
-                    {/* Tag de Freebet Gerada */}
+                    {/* Tag de Freebet Gerada - contextual baseado no resultado */}
                     {aposta.gerou_freebet && aposta.valor_freebet_gerada && (
-                      <div className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5 mt-1">
-                        <Gift className="h-3 w-3 flex-shrink-0" />
-                        <span>Gerou Freebet: {formatCurrency(aposta.valor_freebet_gerada)}</span>
-                      </div>
+                      aposta.resultado === "PENDENTE" ? (
+                        <div className="flex items-center gap-1 text-[10px] text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded px-1.5 py-0.5 mt-1">
+                          <Clock className="h-3 w-3 flex-shrink-0" />
+                          <span>Freebet aguardando: {formatCurrency(aposta.valor_freebet_gerada)}</span>
+                        </div>
+                      ) : aposta.resultado === "VOID" ? null : (
+                        <div className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5 mt-1">
+                          <Gift className="h-3 w-3 flex-shrink-0" />
+                          <span>Freebet liberada: {formatCurrency(aposta.valor_freebet_gerada)}</span>
+                        </div>
+                      )
                     )}
                     
                     {/* Rodapé: Data + Casas */}
@@ -1048,12 +1056,19 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       </div>
                     )}
                     
-                    {/* Tag de Freebet Gerada */}
+                    {/* Tag de Freebet Gerada - contextual baseado no resultado */}
                     {am.gerou_freebet && am.valor_freebet_gerada && (
-                      <div className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5 mt-1">
-                        <Gift className="h-3 w-3 flex-shrink-0" />
-                        <span>Gerou Freebet: {formatCurrency(am.valor_freebet_gerada)}</span>
-                      </div>
+                      am.resultado === "PENDENTE" ? (
+                        <div className="flex items-center gap-1 text-[10px] text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded px-1.5 py-0.5 mt-1">
+                          <Clock className="h-3 w-3 flex-shrink-0" />
+                          <span>Freebet aguardando: {formatCurrency(am.valor_freebet_gerada)}</span>
+                        </div>
+                      ) : am.resultado === "VOID" ? null : (
+                        <div className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5 mt-1">
+                          <Gift className="h-3 w-3 flex-shrink-0" />
+                          <span>Freebet liberada: {formatCurrency(am.valor_freebet_gerada)}</span>
+                        </div>
+                      )
                     )}
                     
                     {/* Rodapé: Data + Casa */}
