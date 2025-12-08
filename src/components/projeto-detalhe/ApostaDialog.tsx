@@ -386,8 +386,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   const [coberturaLayOdd, setCoberturaLayOdd] = useState("");
   const [coberturaLayComissao, setCoberturaLayComissao] = useState("5");
   
-  // Tipo de aposta Back (Normal, Freebet SNR, Freebet SR)
+  // Tipo de aposta Back (Normal, Freebet SNR, Freebet SR) - para Cobertura
   const [tipoApostaBack, setTipoApostaBack] = useState<"normal" | "freebet_snr" | "freebet_sr">("normal");
+  
+  // Tipo de aposta para Bookmaker simples (Normal, Freebet SNR, Freebet SR)
+  const [tipoApostaBookmaker, setTipoApostaBookmaker] = useState<"normal" | "freebet_snr" | "freebet_sr">("normal");
+  
+  // Tipo de aposta para Exchange Back (Normal, Freebet SNR, Freebet SR)
+  const [tipoApostaExchangeBack, setTipoApostaExchangeBack] = useState<"normal" | "freebet_snr" | "freebet_sr">("normal");
   
   // Saldos das casas selecionadas (incluindo saldo de freebet)
   const [bookmakerSaldo, setBookmakerSaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; moeda: string } | null>(null);
@@ -764,6 +770,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     setCoberturaLucroGarantido(null);
     setCoberturaTaxaExtracao(null);
     setTipoApostaBack("normal");
+    setTipoApostaBookmaker("normal");
+    setTipoApostaExchangeBack("normal");
     setGerouFreebet(false);
     setValorFreebetGerada("");
   };
@@ -935,17 +943,27 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         return;
       }
 
-      // Validar stake vs saldo disponível da bookmaker
+      // Validar stake vs saldo disponível da bookmaker (considerando tipo de aposta)
       const selectedBookmaker = bookmakers.find(b => b.id === bookmakerId);
       if (selectedBookmaker) {
         const stakeAnterior = aposta?.status === "PENDENTE" ? aposta.stake : 0;
-        const saldoDisponivel = (selectedBookmaker as any).saldo_disponivel ?? selectedBookmaker.saldo_atual;
-        const saldoParaValidar = saldoDisponivel + stakeAnterior;
         
-        if (stakeNum > saldoParaValidar) {
-          const moeda = selectedBookmaker.moeda;
-          toast.error(`Stake maior que o saldo disponível (${formatCurrencyWithSymbol(saldoParaValidar, moeda)})`);
-          return;
+        // Se for freebet, validar contra saldo_freebet
+        if (tipoApostaBookmaker !== "normal") {
+          if (stakeNum > selectedBookmaker.saldo_freebet) {
+            toast.error(`Stake da Freebet (${formatCurrencyWithSymbol(stakeNum, selectedBookmaker.moeda)}) maior que o saldo de Freebet disponível (${formatCurrencyWithSymbol(selectedBookmaker.saldo_freebet, selectedBookmaker.moeda)})`);
+            return;
+          }
+        } else {
+          // Aposta normal: validar contra saldo disponível
+          const saldoDisponivel = (selectedBookmaker as any).saldo_disponivel ?? selectedBookmaker.saldo_atual;
+          const saldoParaValidar = saldoDisponivel + stakeAnterior;
+          
+          if (stakeNum > saldoParaValidar) {
+            const moeda = selectedBookmaker.moeda;
+            toast.error(`Stake maior que o saldo disponível (${formatCurrencyWithSymbol(saldoParaValidar, moeda)})`);
+            return;
+          }
         }
       }
     } else if (tipoAposta === "exchange") {
@@ -967,6 +985,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         if (isNaN(stakeNum) || stakeNum <= 0) {
           toast.error("Stake deve ser maior que 0");
           return;
+        }
+
+        // Validação para Exchange Back com Freebet
+        if (tipoOperacaoExchange === "back" && tipoApostaExchangeBack !== "normal") {
+          const selectedBk = bookmakers.find(b => b.id === exchangeBookmakerId);
+          if (selectedBk && stakeNum > selectedBk.saldo_freebet) {
+            toast.error(`Stake da Freebet (${formatCurrencyWithSymbol(stakeNum, selectedBk.moeda)}) maior que o saldo de Freebet disponível (${formatCurrencyWithSymbol(selectedBk.saldo_freebet, selectedBk.moeda)})`);
+            return;
+          }
         }
 
         // Validação para Lay: responsabilidade não pode ser maior que saldo disponível
@@ -1117,6 +1144,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           lay_comissao: null,
           back_em_exchange: false,
           back_comissao: null,
+          tipo_freebet: tipoApostaBookmaker !== "normal" ? tipoApostaBookmaker : null,
         };
       } else if (tipoOperacaoExchange === "cobertura") {
         // ===== MODO COBERTURA LAY =====
@@ -1243,6 +1271,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           lay_comissao: parseFloat(exchangeComissao),
           back_em_exchange: true,
           back_comissao: parseFloat(exchangeComissao),
+          tipo_freebet: (!isLay && tipoApostaExchangeBack !== "normal") ? tipoApostaExchangeBack : null,
         };
       }
 
@@ -1376,7 +1405,24 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           }
         }
 
-        // Debitar freebet se usar em cobertura SNR/SR
+        // Debitar freebet se usar em qualquer modo SNR/SR
+        // 1. Bookmaker simples com freebet
+        if (tipoAposta === "bookmaker" && tipoApostaBookmaker !== "normal") {
+          const stakeNum = parseFloat(stake);
+          if (stakeNum > 0 && bookmakerId) {
+            await debitarFreebetUsada(bookmakerId, stakeNum);
+          }
+        }
+        
+        // 2. Exchange Back com freebet
+        if (tipoAposta === "exchange" && tipoOperacaoExchange === "back" && tipoApostaExchangeBack !== "normal") {
+          const stakeNum = parseFloat(exchangeStake);
+          if (stakeNum > 0 && exchangeBookmakerId) {
+            await debitarFreebetUsada(exchangeBookmakerId, stakeNum);
+          }
+        }
+        
+        // 3. Cobertura Lay com freebet
         if (tipoAposta === "exchange" && tipoOperacaoExchange === "cobertura" && tipoApostaBack !== "normal") {
           const backStakeNum = parseFloat(coberturaBackStake);
           if (backStakeNum > 0 && coberturaBackBookmakerId) {
@@ -1432,9 +1478,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     }
   };
 
-  // Função para debitar freebet usada
-  const debitarFreebetUsada = async (bookmakerIdFreebet: string, valor: number) => {
+  // Função para debitar freebet usada e marcar como utilizada na tabela freebets_recebidas
+  const debitarFreebetUsada = async (bookmakerIdFreebet: string, valor: number, apostaId?: string) => {
     try {
+      // 1. Debitar saldo_freebet do bookmaker
       const { data: bookmaker } = await supabase
         .from("bookmakers")
         .select("saldo_freebet")
@@ -1447,6 +1494,31 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           .from("bookmakers")
           .update({ saldo_freebet: novoSaldoFreebet })
           .eq("id", bookmakerIdFreebet);
+      }
+
+      // 2. Buscar freebet disponível para marcar como usada
+      const { data: freebetsDisponiveis } = await supabase
+        .from("freebets_recebidas")
+        .select("id, valor")
+        .eq("bookmaker_id", bookmakerIdFreebet)
+        .eq("utilizada", false)
+        .eq("projeto_id", projetoId)
+        .order("valor", { ascending: false });
+
+      if (freebetsDisponiveis && freebetsDisponiveis.length > 0) {
+        // Encontrar a freebet mais adequada (valor igual ou maior)
+        const freebetParaUsar = freebetsDisponiveis.find(fb => fb.valor >= valor) 
+          || freebetsDisponiveis[0];
+        
+        // 3. Marcar como utilizada
+        await supabase
+          .from("freebets_recebidas")
+          .update({
+            utilizada: true,
+            data_utilizacao: new Date().toISOString(),
+            aposta_id: apostaId || null
+          })
+          .eq("id", freebetParaUsar.id);
       }
     } catch (error) {
       console.error("Erro ao debitar freebet usada:", error);
@@ -1936,6 +2008,59 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                     </div>
                   </div>
                 </div>
+                
+                {/* Seletor de tipo de aposta Freebet (apenas se bookmaker tem saldo_freebet > 0) */}
+                {bookmakerSaldo && bookmakerSaldo.saldoFreebet > 0 && (
+                  <div className="space-y-2 mt-4">
+                    <Label className="block text-center uppercase text-xs tracking-wider text-muted-foreground">Tipo de Aposta</Label>
+                    <div className="flex justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setTipoApostaBookmaker("normal")}
+                        className={`flex flex-col items-center px-4 py-2 rounded-lg border-2 transition-all ${
+                          tipoApostaBookmaker === "normal"
+                            ? "border-blue-500 bg-blue-500/10 text-blue-400"
+                            : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                        }`}
+                      >
+                        <Coins className="h-4 w-4 mb-1" />
+                        <div className="font-semibold text-xs">NORMAL</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTipoApostaBookmaker("freebet_snr")}
+                        className={`flex flex-col items-center px-4 py-2 rounded-lg border-2 transition-all ${
+                          tipoApostaBookmaker === "freebet_snr"
+                            ? "border-amber-500 bg-amber-500/10 text-amber-400"
+                            : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                        }`}
+                      >
+                        <Gift className="h-4 w-4 mb-1" />
+                        <div className="font-semibold text-xs">FREEBET SNR</div>
+                        <div className="text-[9px] opacity-70">(Stake Não Volta)</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTipoApostaBookmaker("freebet_sr")}
+                        className={`flex flex-col items-center px-4 py-2 rounded-lg border-2 transition-all ${
+                          tipoApostaBookmaker === "freebet_sr"
+                            ? "border-cyan-500 bg-cyan-500/10 text-cyan-400"
+                            : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                        }`}
+                      >
+                        <Gift className="h-4 w-4 mb-1" />
+                        <div className="font-semibold text-xs">FREEBET SR</div>
+                        <div className="text-[9px] opacity-70">(Stake Volta)</div>
+                      </button>
+                    </div>
+                    {tipoApostaBookmaker !== "normal" && (
+                      <p className="text-center text-xs text-amber-400">
+                        <Gift className="h-3 w-3 inline mr-1" />
+                        Stake será debitada do saldo de Freebet ({formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)} disponível)
+                      </p>
+                    )}
+                  </div>
+                )}
 
               </TabsContent>
 
@@ -2195,6 +2320,56 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                         </div>
                       )}
                     </div>
+                    
+                    {/* Seletor de tipo de aposta Freebet para Exchange Back */}
+                    {tipoOperacaoExchange === "back" && exchangeBookmakerSaldo && exchangeBookmakerSaldo.saldoFreebet > 0 && (
+                      <div className="mt-4 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                        <Label className="block text-center uppercase text-xs tracking-wider text-amber-400 mb-2">Tipo de Aposta</Label>
+                        <div className="flex justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setTipoApostaExchangeBack("normal")}
+                            className={`flex flex-col items-center px-3 py-1.5 rounded-lg border-2 transition-all ${
+                              tipoApostaExchangeBack === "normal"
+                                ? "border-blue-500 bg-blue-500/10 text-blue-400"
+                                : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                            }`}
+                          >
+                            <Coins className="h-3 w-3 mb-0.5" />
+                            <div className="font-semibold text-[10px]">NORMAL</div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTipoApostaExchangeBack("freebet_snr")}
+                            className={`flex flex-col items-center px-3 py-1.5 rounded-lg border-2 transition-all ${
+                              tipoApostaExchangeBack === "freebet_snr"
+                                ? "border-amber-500 bg-amber-500/10 text-amber-400"
+                                : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                            }`}
+                          >
+                            <Gift className="h-3 w-3 mb-0.5" />
+                            <div className="font-semibold text-[10px]">FB SNR</div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTipoApostaExchangeBack("freebet_sr")}
+                            className={`flex flex-col items-center px-3 py-1.5 rounded-lg border-2 transition-all ${
+                              tipoApostaExchangeBack === "freebet_sr"
+                                ? "border-cyan-500 bg-cyan-500/10 text-cyan-400"
+                                : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                            }`}
+                          >
+                            <Gift className="h-3 w-3 mb-0.5" />
+                            <div className="font-semibold text-[10px]">FB SR</div>
+                          </button>
+                        </div>
+                        {tipoApostaExchangeBack !== "normal" && (
+                          <p className="text-center text-[10px] text-amber-400 mt-1">
+                            Stake será debitada do saldo de Freebet
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 

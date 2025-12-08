@@ -73,6 +73,7 @@ interface Aposta {
   back_em_exchange?: boolean;
   gerou_freebet?: boolean;
   valor_freebet_gerada?: number | null;
+  tipo_freebet?: string | null;
   bookmaker?: {
     nome: string;
     parceiro_id: string;
@@ -675,9 +676,21 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       );
                     })()}
                     
+                    {/* Tag de Freebet Usada (para qualquer tipo de aposta) */}
+                    {aposta.tipo_freebet && aposta.tipo_freebet !== "normal" && (
+                      <div className={`flex items-center gap-1 text-[10px] rounded px-1.5 py-0.5 mt-1 ${
+                        aposta.tipo_freebet === "freebet_snr" 
+                          ? "text-amber-400 bg-amber-500/10 border border-amber-500/20" 
+                          : "text-cyan-400 bg-cyan-500/10 border border-cyan-500/20"
+                      }`}>
+                        <Gift className="h-3 w-3 flex-shrink-0" />
+                        <span>{aposta.tipo_freebet === "freebet_snr" ? "Freebet SNR" : "Freebet SR"}</span>
+                      </div>
+                    )}
+                    
                     {/* Tag de Freebet Gerada */}
                     {aposta.gerou_freebet && aposta.valor_freebet_gerada && (
-                      <div className="flex items-center gap-1 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 mt-1">
+                      <div className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5 mt-1">
                         <Gift className="h-3 w-3 flex-shrink-0" />
                         <span>Gerou Freebet: {formatCurrency(aposta.valor_freebet_gerada)}</span>
                       </div>
