@@ -1312,7 +1312,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       }
 
       // Armazenar o resultado anterior se estiver editando (para calcular diferença de saldo)
-      const resultadoAnterior = aposta?.resultado || null;
+      // IMPORTANTE: resultado no banco é NULL para PENDENTE, então tratamos null como equivalente a PENDENTE
+      const resultadoAnteriorBruto = aposta?.resultado;
+      const resultadoAnterior = resultadoAnteriorBruto || null; // Mantém null se era PENDENTE
       const stakeAnterior = aposta?.stake || 0;
       const oddAnterior = aposta?.odd || 0;
 
@@ -1320,6 +1322,23 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         // Verificar se gerouFreebet mudou de false para true na edição
         const gerouFreebetAnterior = aposta.gerou_freebet || false;
         const valorFreebetAnterior = aposta.valor_freebet_gerada || 0;
+        
+        // O resultado que será salvo no banco
+        const novoResultado = statusResultado === "PENDENTE" ? null : statusResultado;
+        
+        // Para comparação: consideramos null e "PENDENTE" como equivalentes (ambos = pendente)
+        const eraPendente = resultadoAnterior === null || resultadoAnterior === "PENDENTE";
+        const agoraPendente = novoResultado === null || statusResultado === "PENDENTE";
+        
+        console.log("[FREEBET DEBUG] Editando aposta:", {
+          apostaId: aposta.id,
+          gerouFreebetAnterior,
+          resultadoAnterior,
+          novoResultado,
+          statusResultado,
+          eraPendente,
+          agoraPendente
+        });
         
         const { error } = await supabase
           .from("apostas")
@@ -1351,25 +1370,34 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
 
         // Verificar se resultado mudou e atualizar status da freebet
         if (gerouFreebetAnterior) {
-          // resultadoAnterior pode ser null quando a aposta estava PENDENTE
-          const eraAnteriorPendente = resultadoAnterior === "PENDENTE" || resultadoAnterior === null;
-          const agoraEhPendente = statusResultado === "PENDENTE";
+          console.log("[FREEBET DEBUG] Processando mudança de freebet:", {
+            eraPendente,
+            agoraPendente,
+            caso1: eraPendente && !agoraPendente,
+            caso2: !eraPendente && agoraPendente,
+            caso3_condicao: !eraPendente && resultadoAnterior !== "VOID" && statusResultado === "VOID"
+          });
           
-          // Caso 1: PENDENTE/null → resultado final (GREEN, RED, MEIO_GREEN, MEIO_RED, VOID)
-          if (eraAnteriorPendente && !agoraEhPendente) {
+          // Caso 1: PENDENTE → resultado final (GREEN, RED, MEIO_GREEN, MEIO_RED, VOID)
+          if (eraPendente && !agoraPendente) {
+            console.log("[FREEBET DEBUG] Caso 1: PENDENTE -> resultado final");
             // VOID = não libera, qualquer outro resultado (GREEN, RED, MEIO_GREEN, MEIO_RED) = libera
             if (statusResultado === "VOID") {
+              console.log("[FREEBET DEBUG] Resultado VOID - recusando freebet");
               await recusarFreebetPendente(aposta.id);
             } else {
+              console.log("[FREEBET DEBUG] Resultado não-VOID - liberando freebet");
               await liberarFreebetPendente(aposta.id);
             }
           }
           // Caso 2: resultado final → PENDENTE (reversão)
-          else if (!eraAnteriorPendente && agoraEhPendente) {
+          else if (!eraPendente && agoraPendente) {
+            console.log("[FREEBET DEBUG] Caso 2: resultado final -> PENDENTE");
             await reverterFreebetParaPendente(aposta.id);
           }
           // Caso 3: resultado final (não-VOID) → VOID
-          else if (!eraAnteriorPendente && resultadoAnterior !== "VOID" && statusResultado === "VOID") {
+          else if (!eraPendente && resultadoAnterior !== "VOID" && statusResultado === "VOID") {
+            console.log("[FREEBET DEBUG] Caso 3: resultado final (não-VOID) -> VOID");
             // Freebet já estava LIBERADA, precisa reverter para NAO_LIBERADA
             const { data: freebetLiberada } = await supabase
               .from("freebets_recebidas")
@@ -1621,20 +1649,26 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   // Função para liberar freebet pendente quando aposta é liquidada (GREEN, RED, MEIO_GREEN, MEIO_RED)
   const liberarFreebetPendente = async (apostaId: string) => {
     try {
+      console.log("[FREEBET DEBUG] liberarFreebetPendente chamada para apostaId:", apostaId);
+      
       // Buscar freebet pendente associada a esta aposta
-      const { data: freebetPendente } = await supabase
+      const { data: freebetPendente, error: fetchError } = await supabase
         .from("freebets_recebidas")
-        .select("id, bookmaker_id, valor")
+        .select("id, bookmaker_id, valor, status")
         .eq("aposta_id", apostaId)
         .eq("status", "PENDENTE")
         .maybeSingle();
 
+      console.log("[FREEBET DEBUG] Busca freebet pendente:", { freebetPendente, fetchError });
+
       if (freebetPendente) {
         // Atualizar status para LIBERADA
-        await supabase
+        const { error: updateError } = await supabase
           .from("freebets_recebidas")
           .update({ status: "LIBERADA" })
           .eq("id", freebetPendente.id);
+        
+        console.log("[FREEBET DEBUG] Update freebet para LIBERADA:", { updateError });
 
         // Incrementar saldo_freebet do bookmaker
         const { data: bookmaker } = await supabase
@@ -1649,7 +1683,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             .from("bookmakers")
             .update({ saldo_freebet: novoSaldoFreebet })
             .eq("id", freebetPendente.bookmaker_id);
+          console.log("[FREEBET DEBUG] Saldo_freebet atualizado:", { novoSaldoFreebet });
         }
+      } else {
+        console.log("[FREEBET DEBUG] Nenhuma freebet PENDENTE encontrada para esta aposta");
       }
     } catch (error) {
       console.error("Erro ao liberar freebet pendente:", error);
