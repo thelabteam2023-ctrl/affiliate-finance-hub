@@ -591,7 +591,17 @@ export default function Testes() {
         }
       }
 
-      // Apagar todas as apostas do usuário
+      // Apagar todas as freebets recebidas do usuário
+      const { error: freebetsError } = await supabase
+        .from("freebets_recebidas")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (freebetsError) {
+        console.error("Erro ao apagar freebets:", freebetsError);
+      }
+
+      // Apagar todas as apostas do usuário (campos gerou_freebet e tipo_freebet são limpos junto)
       const { error: apostasError } = await supabase
         .from("apostas")
         .delete()
@@ -601,12 +611,12 @@ export default function Testes() {
         console.error("Erro ao apagar apostas:", apostasError);
       }
 
-      // Atualizar cada bookmaker com seu saldo original
+      // Atualizar cada bookmaker com seu saldo original e zerar saldo_freebet
       let atualizados = 0;
       for (const [bookmakerId, saldo] of Object.entries(saldosOriginais)) {
         const { error: updateError } = await supabase
           .from("bookmakers")
-          .update({ saldo_atual: saldo, saldo_freebet: 0 })
+          .update({ saldo_atual: saldo, saldo_freebet: 0, saldo_irrecuperavel: 0 })
           .eq("id", bookmakerId);
 
         if (!updateError) {
@@ -614,7 +624,7 @@ export default function Testes() {
         }
       }
 
-      toast.success(`Saldos de ${atualizados} bookmakers resetados e todas as apostas apagadas!`);
+      toast.success(`Saldos de ${atualizados} bookmakers resetados, apostas e freebets apagadas!`);
     } catch (error: any) {
       console.error("Erro ao resetar saldos:", error);
       toast.error(`Erro ao resetar saldos: ${error.message}`);
@@ -765,7 +775,7 @@ export default function Testes() {
             <div>
               <p className="font-medium">Resetar Saldos das Bookmakers</p>
               <p className="text-sm text-muted-foreground">
-                Recalcula os saldos baseado apenas em depósitos e saques (ignora impacto das apostas)
+                Recalcula os saldos baseado apenas em depósitos e saques, apaga apostas e freebets
               </p>
             </div>
             <Button 
