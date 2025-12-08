@@ -639,6 +639,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       
                       // Se tem resultado definido, mostrar P/L real
                       if (!isPending && profit !== null) {
+                        const roi = (profit / aposta.stake) * 100;
                         return (
                           <div className="space-y-0.5 pt-1 border-t border-border/50">
                             <div className="flex items-center justify-between text-xs">
@@ -646,10 +647,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                                 <Coins className="h-3 w-3" />
                                 P/L da Operação:
                               </span>
-                              <span className={`font-medium ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                                {profit >= 0 ? <TrendingUp className="h-3 w-3 inline mr-0.5" /> : <TrendingDown className="h-3 w-3 inline mr-0.5" />}
-                                {formatCurrency(profit)}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className={`font-medium flex items-center gap-0.5 ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                  {profit >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                                  {formatCurrency(profit)}
+                                </span>
+                                <span className={`text-[10px] px-1 py-0.5 rounded ${profit >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                                  {roi.toFixed(1)}%
+                                </span>
+                              </div>
                             </div>
                             <div className="flex items-center justify-between text-[10px] text-muted-foreground/70">
                               <span>Comissão:</span>
@@ -690,6 +696,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       
                       // Se tem resultado definido, mostrar P/L real
                       if (!isPending && profit !== null) {
+                        const roi = (profit / aposta.stake) * 100;
                         return (
                           <div className="space-y-0.5 pt-1 border-t border-border/50">
                             <div className="flex items-center justify-between text-xs text-rose-400">
@@ -701,10 +708,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                                 <Coins className="h-3 w-3" />
                                 P/L da Operação:
                               </span>
-                              <span className={`font-medium ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                                {profit >= 0 ? <TrendingUp className="h-3 w-3 inline mr-0.5" /> : <TrendingDown className="h-3 w-3 inline mr-0.5" />}
-                                {formatCurrency(profit)}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className={`font-medium flex items-center gap-0.5 ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                  {profit >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                                  {formatCurrency(profit)}
+                                </span>
+                                <span className={`text-[10px] px-1 py-0.5 rounded ${profit >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                                  {roi.toFixed(1)}%
+                                </span>
+                              </div>
                             </div>
                           </div>
                         );
@@ -807,13 +819,19 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       
                       // Se tem resultado, mostrar P/L real
                       if (profit === null) return null;
+                      const roi = (profit / aposta.stake) * 100;
                       return (
                         <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
                           <span className="text-muted-foreground">P/L da Operação:</span>
-                          <span className={`font-medium flex items-center gap-0.5 ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {profit >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                            {formatCurrency(profit)}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`font-medium flex items-center gap-0.5 ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                              {profit >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                              {formatCurrency(profit)}
+                            </span>
+                            <span className={`text-[10px] px-1 py-0.5 rounded ${profit >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                              {roi.toFixed(1)}%
+                            </span>
+                          </div>
                         </div>
                       );
                     })()}
@@ -1004,10 +1022,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                     ) : (
                       <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
                         <span className="text-muted-foreground">P/L:</span>
-                        <span className={`font-medium flex items-center gap-0.5 ${(am.lucro_prejuizo || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                          {(am.lucro_prejuizo || 0) >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                          {formatCurrency(am.lucro_prejuizo || 0)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-medium flex items-center gap-0.5 ${(am.lucro_prejuizo || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {(am.lucro_prejuizo || 0) >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                            {formatCurrency(am.lucro_prejuizo || 0)}
+                          </span>
+                          <span className={`text-[10px] px-1 py-0.5 rounded ${(am.lucro_prejuizo || 0) >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                            {(((am.lucro_prejuizo || 0) / am.stake) * 100).toFixed(1)}%
+                          </span>
+                        </div>
                       </div>
                     )}
                     
@@ -1071,9 +1094,18 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       onClick={() => handleOpenMultiplaDialog(am)}
                     >
                       <div className="flex items-center gap-4 flex-1 min-w-0">
-                        <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                          <Layers className="h-4 w-4 text-purple-400" />
-                        </div>
+                        {/* Logo da casa */}
+                        {am.bookmaker?.bookmakers_catalogo?.logo_url ? (
+                          <img 
+                            src={am.bookmaker.bookmakers_catalogo.logo_url} 
+                            alt={am.bookmaker.nome}
+                            className="h-8 w-8 rounded-lg object-contain bg-muted/50 p-0.5 flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                            <Layers className="h-4 w-4 text-purple-400" />
+                          </div>
+                        )}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-medium truncate">Aposta Múltipla</p>
@@ -1103,6 +1135,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                             <p className={`text-sm ${(am.lucro_prejuizo || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                               {formatCurrency(am.lucro_prejuizo || 0)}
                             </p>
+                            <span className={`text-[10px] px-1 py-0.5 rounded ${(am.lucro_prejuizo || 0) >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                              {(((am.lucro_prejuizo || 0) / am.stake) * 100).toFixed(1)}%
+                            </span>
                           </div>
                         </div>
                         <Badge className={getResultadoColor(am.resultado)}>
