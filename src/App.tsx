@@ -19,6 +19,7 @@ import Caixa from "./pages/Caixa";
 import Financeiro from "./pages/Financeiro";
 import CentralOperacoes from "./pages/CentralOperacoes";
 import Testes from "./pages/Testes";
+import Arbitragem from "./pages/Arbitragem";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ const App = () => (
                   <Route path="/caixa" element={<Caixa />} />
                   <Route path="/financeiro" element={<Financeiro />} />
                   <Route path="/testes" element={<Testes />} />
+                  <Route path="/arbitragem" element={<Arbitragem />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
