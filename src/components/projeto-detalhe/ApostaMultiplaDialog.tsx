@@ -531,19 +531,24 @@ export function ApostaMultiplaDialog({
           await registrarFreebetGerada(
             bookmakerId,
             parseFloat(valorFreebetGerada),
-            user.id
+            user.id,
+            aposta.id // Passar o ID da aposta sendo editada
           );
         }
         // TODO: Se desfez o gerou_freebet, deveria reverter (não implementado)
 
         toast.success("Aposta múltipla atualizada!");
       } else {
-        // Insert
-        const { error } = await supabase
+        // Insert - capturar o ID da aposta inserida
+        const { data: insertedData, error } = await supabase
           .from("apostas_multiplas")
-          .insert(apostaData);
+          .insert(apostaData)
+          .select("id")
+          .single();
 
         if (error) throw error;
+
+        const novaApostaId = insertedData?.id;
 
         // Debitar saldo
         await debitarSaldo(bookmakerId, stakeNum, usarFreebet);
@@ -553,12 +558,13 @@ export function ApostaMultiplaDialog({
           await creditarRetorno(bookmakerId, valorRetorno);
         }
 
-        // Registrar freebet gerada
-        if (gerouFreebet && valorFreebetGerada) {
+        // Registrar freebet gerada com ID da aposta
+        if (gerouFreebet && valorFreebetGerada && novaApostaId) {
           await registrarFreebetGerada(
             bookmakerId,
             parseFloat(valorFreebetGerada),
-            user.id
+            user.id,
+            novaApostaId
           );
         }
 
@@ -618,30 +624,40 @@ export function ApostaMultiplaDialog({
   const registrarFreebetGerada = async (
     bkId: string,
     valor: number,
-    userId: string
+    userId: string,
+    apostaMultiplaId?: string
   ) => {
-    // Criar registro em freebets_recebidas
-    await supabase.from("freebets_recebidas").insert({
-      bookmaker_id: bkId,
-      projeto_id: projetoId,
-      user_id: userId,
-      valor: valor,
-      motivo: "Gerada por aposta múltipla",
-      utilizada: false,
-    });
-
-    // Incrementar saldo_freebet
-    const { data: bk } = await supabase
-      .from("bookmakers")
-      .select("saldo_freebet")
-      .eq("id", bkId)
-      .single();
-
-    if (bk) {
-      await supabase
+    try {
+      // 1. Atualizar saldo_freebet do bookmaker
+      const { data: bookmaker } = await supabase
         .from("bookmakers")
-        .update({ saldo_freebet: bk.saldo_freebet + valor })
-        .eq("id", bkId);
+        .select("saldo_freebet")
+        .eq("id", bkId)
+        .maybeSingle();
+
+      if (bookmaker) {
+        const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + valor;
+        await supabase
+          .from("bookmakers")
+          .update({ saldo_freebet: novoSaldoFreebet })
+          .eq("id", bkId);
+      }
+
+      // 2. Registrar na tabela freebets_recebidas
+      // Nota: A tabela freebets_recebidas usa aposta_id que referencia 'apostas' (simples)
+      // Para múltiplas, usamos o campo observacoes para registrar o ID
+      await supabase.from("freebets_recebidas").insert({
+        bookmaker_id: bkId,
+        projeto_id: projetoId,
+        user_id: userId,
+        valor: valor,
+        motivo: "Gerada por aposta múltipla",
+        data_recebida: new Date().toISOString(),
+        utilizada: false,
+        observacoes: apostaMultiplaId ? `aposta_multipla_id:${apostaMultiplaId}` : null,
+      });
+    } catch (error) {
+      console.error("Erro ao registrar freebet gerada:", error);
     }
   };
 
