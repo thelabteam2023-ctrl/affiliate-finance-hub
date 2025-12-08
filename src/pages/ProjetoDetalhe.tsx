@@ -85,6 +85,10 @@ export default function ProjetoDetalhe() {
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("todo");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("apostas");
+  
+  // KPIs should only show on performance tabs
+  const showKpis = ["dashboard", "apostas", "perdas"].includes(activeTab);
 
   useEffect(() => {
     if (id) {
@@ -421,7 +425,8 @@ export default function ProjetoDetalhe() {
         </div>
       </div>
 
-      {/* KPIs Resumo */}
+      {/* KPIs Resumo - Only show on performance tabs */}
+      {showKpis && (
       <div className="grid gap-4 md:grid-cols-4">
         {/* Apostas */}
         <Card>
@@ -493,9 +498,10 @@ export default function ProjetoDetalhe() {
           </CardContent>
         </Card>
       </div>
+      )}
 
       {/* Tabs */}
-      <Tabs defaultValue="apostas" className="space-y-4">
+      <Tabs defaultValue="apostas" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <LayoutDashboard className="h-4 w-4" />
