@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2, Save, Trash2, Gift, Plus, Minus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -38,6 +39,7 @@ import { Card, CardContent } from "@/components/ui/card";
 interface Selecao {
   descricao: string;
   odd: string;
+  resultado?: "PENDENTE" | "GREEN" | "RED" | "VOID";
 }
 
 interface ApostaMultipla {
@@ -47,7 +49,7 @@ interface ApostaMultipla {
   odd_final: number;
   retorno_potencial: number | null;
   lucro_prejuizo: number | null;
-  selecoes: Selecao[];
+  selecoes: { descricao: string; odd: string; resultado?: string }[];
   status: string;
   resultado: string | null;
   bookmaker_id: string;
@@ -102,8 +104,8 @@ export function ApostaMultiplaDialog({
 
   // Seleções
   const [selecoes, setSelecoes] = useState<Selecao[]>([
-    { descricao: "", odd: "" },
-    { descricao: "", odd: "" },
+    { descricao: "", odd: "", resultado: "PENDENTE" },
+    { descricao: "", odd: "", resultado: "PENDENTE" },
   ]);
 
   // Freebet state
@@ -146,6 +148,7 @@ export function ApostaMultiplaDialog({
           parsedSelecoes.map((s: any) => ({
             descricao: s.descricao || "",
             odd: s.odd?.toString() || "",
+            resultado: s.resultado || "PENDENTE",
           }))
         );
       }
@@ -167,7 +170,7 @@ export function ApostaMultiplaDialog({
     setSelecoes((prev) => {
       if (prev.length === numSelecoes) return prev;
       if (prev.length < numSelecoes) {
-        return [...prev, { descricao: "", odd: "" }];
+        return [...prev, { descricao: "", odd: "", resultado: "PENDENTE" }];
       }
       return prev.slice(0, numSelecoes);
     });
@@ -197,8 +200,8 @@ export function ApostaMultiplaDialog({
     setDataAposta(getLocalDateTimeString());
     setObservacoes("");
     setSelecoes([
-      { descricao: "", odd: "" },
-      { descricao: "", odd: "" },
+      { descricao: "", odd: "", resultado: "PENDENTE" },
+      { descricao: "", odd: "", resultado: "PENDENTE" },
     ]);
     setUsarFreebet(false);
     setGerouFreebet(false);
@@ -242,13 +245,47 @@ export function ApostaMultiplaDialog({
     }
   };
 
-  // Calcular odd final (produto das odds)
-  const oddFinal = useMemo(() => {
-    const odds = selecoes
-      .map((s) => parseFloat(s.odd))
-      .filter((o) => !isNaN(o) && o > 0);
-    if (odds.length === 0) return 0;
-    return odds.reduce((acc, odd) => acc * odd, 1);
+  // Calcular odd final (produto das odds) - considerando VOIDs como odd 1.00
+  const { oddFinal, oddFinalReal } = useMemo(() => {
+    const selecoesValidas = selecoes.filter((s) => {
+      const oddNum = parseFloat(s.odd);
+      return !isNaN(oddNum) && oddNum > 0;
+    });
+    
+    if (selecoesValidas.length === 0) return { oddFinal: 0, oddFinalReal: 0 };
+    
+    // Odd final nominal (todas as odds)
+    const oddNominal = selecoesValidas.reduce((acc, s) => acc * parseFloat(s.odd), 1);
+    
+    // Odd final real (excluindo VOIDs que são tratados como 1.00)
+    const oddReal = selecoesValidas.reduce((acc, s) => {
+      if (s.resultado === "VOID") return acc * 1; // VOID = odd 1.00
+      return acc * parseFloat(s.odd);
+    }, 1);
+    
+    return { oddFinal: oddNominal, oddFinalReal: oddReal };
+  }, [selecoes]);
+
+  // Calcular resultado da múltipla baseado nos resultados individuais
+  const resultadoCalculado = useMemo(() => {
+    const resultados = selecoes.map(s => s.resultado || "PENDENTE");
+    
+    // Se alguma seleção é RED, múltipla = RED
+    if (resultados.some(r => r === "RED")) return "RED";
+    
+    // Se todas são PENDENTE
+    if (resultados.every(r => r === "PENDENTE")) return "PENDENTE";
+    
+    // Se todas são VOID
+    if (resultados.every(r => r === "VOID")) return "VOID";
+    
+    // Se não há RED e há pelo menos um GREEN (outros podem ser VOID ou PENDENTE)
+    const temGreen = resultados.some(r => r === "GREEN");
+    const todosDefinidos = resultados.every(r => r !== "PENDENTE");
+    
+    if (temGreen && todosDefinidos) return "GREEN";
+    
+    return "PENDENTE";
   }, [selecoes]);
 
   // Calcular retorno potencial
@@ -281,7 +318,7 @@ export function ApostaMultiplaDialog({
 
   const handleSelecaoChange = (
     index: number,
-    field: "descricao" | "odd",
+    field: "descricao" | "odd" | "resultado",
     value: string
   ) => {
     setSelecoes((prev) => {
@@ -352,40 +389,31 @@ export function ApostaMultiplaDialog({
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      // Usar o resultado calculado baseado nos resultados individuais
+      const resultadoFinal = resultadoCalculado;
+      
       // Calcular lucro/prejuízo baseado no resultado
       let lucroPrejuizo: number | null = null;
       let valorRetorno: number | null = null;
 
-      if (statusResultado !== "PENDENTE") {
-        const stakeReal = usarFreebet ? 0 : stakeNum; // Freebet SNR = stake não volta
+      // Usar oddFinalReal que considera VOIDs como odd 1.00
+      const oddParaCalculo = oddFinalReal;
 
-        switch (statusResultado) {
+      if (resultadoFinal !== "PENDENTE") {
+        switch (resultadoFinal) {
           case "GREEN":
             if (usarFreebet) {
               // Freebet SNR: só lucro (odd - 1) * stake
-              lucroPrejuizo = stakeNum * (oddFinal - 1);
+              lucroPrejuizo = stakeNum * (oddParaCalculo - 1);
               valorRetorno = lucroPrejuizo;
             } else {
-              lucroPrejuizo = stakeNum * (oddFinal - 1);
-              valorRetorno = stakeNum * oddFinal;
+              lucroPrejuizo = stakeNum * (oddParaCalculo - 1);
+              valorRetorno = stakeNum * oddParaCalculo;
             }
             break;
           case "RED":
             lucroPrejuizo = usarFreebet ? 0 : -stakeNum;
             valorRetorno = 0;
-            break;
-          case "MEIO_GREEN":
-            if (usarFreebet) {
-              lucroPrejuizo = (stakeNum * (oddFinal - 1)) / 2;
-              valorRetorno = lucroPrejuizo;
-            } else {
-              lucroPrejuizo = (stakeNum * (oddFinal - 1)) / 2;
-              valorRetorno = stakeNum + lucroPrejuizo;
-            }
-            break;
-          case "MEIO_RED":
-            lucroPrejuizo = usarFreebet ? 0 : -stakeNum / 2;
-            valorRetorno = usarFreebet ? 0 : stakeNum / 2;
             break;
           case "VOID":
             lucroPrejuizo = 0;
@@ -399,6 +427,7 @@ export function ApostaMultiplaDialog({
         .map((s) => ({
           descricao: s.descricao.trim(),
           odd: parseFloat(s.odd),
+          resultado: s.resultado || "PENDENTE",
         }));
 
       const apostaData = {
@@ -412,8 +441,8 @@ export function ApostaMultiplaDialog({
         lucro_prejuizo: lucroPrejuizo,
         valor_retorno: valorRetorno,
         selecoes: selecoesFormatadas,
-        status: statusResultado === "PENDENTE" ? "PENDENTE" : "REALIZADA",
-        resultado: statusResultado,
+        status: resultadoFinal === "PENDENTE" ? "PENDENTE" : "REALIZADA",
+        resultado: resultadoFinal,
         tipo_freebet: usarFreebet ? "freebet_snr" : null,
         gerou_freebet: gerouFreebet,
         valor_freebet_gerada: gerouFreebet
@@ -691,12 +720,31 @@ export function ApostaMultiplaDialog({
             <div className="space-y-3">
               <Label>Seleções</Label>
               {selecoes.map((selecao, index) => (
-                <Card key={index} className="bg-muted/30">
+                <Card key={index} className={`${
+                  selecao.resultado === "GREEN" ? "bg-emerald-500/10 border-emerald-500/30" :
+                  selecao.resultado === "RED" ? "bg-red-500/10 border-red-500/30" :
+                  selecao.resultado === "VOID" ? "bg-gray-500/10 border-gray-500/30" :
+                  "bg-muted/30"
+                }`}>
                   <CardContent className="pt-3 pb-3">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center justify-between gap-2 mb-2">
                       <span className="text-xs font-medium text-muted-foreground">
                         SELEÇÃO {index + 1}
                       </span>
+                      <Select 
+                        value={selecao.resultado || "PENDENTE"} 
+                        onValueChange={(v) => handleSelecaoChange(index, "resultado", v)}
+                      >
+                        <SelectTrigger className="w-[110px] h-7 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="PENDENTE">Pendente</SelectItem>
+                          <SelectItem value="GREEN">Green</SelectItem>
+                          <SelectItem value="RED">Red</SelectItem>
+                          <SelectItem value="VOID">Void</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="grid grid-cols-[1fr,100px] gap-2">
                       <Input
@@ -736,7 +784,7 @@ export function ApostaMultiplaDialog({
               <div className="space-y-2">
                 <Label>Odd Final</Label>
                 <Input
-                  value={oddFinal > 0 ? oddFinal.toFixed(2) : "-"}
+                  value={oddFinal > 0 ? oddFinal.toFixed(3) : "-"}
                   disabled
                   className="bg-muted/50"
                 />
@@ -753,8 +801,34 @@ export function ApostaMultiplaDialog({
               </div>
             </div>
 
-            {/* Lucro Potencial */}
-            {lucroPotencial > 0 && (
+            {/* Resultado Calculado e Lucro */}
+            {resultadoCalculado !== "PENDENTE" && (
+              <div className={`p-3 rounded-lg border ${
+                resultadoCalculado === "GREEN" ? "bg-emerald-500/10 border-emerald-500/30" :
+                resultadoCalculado === "RED" ? "bg-red-500/10 border-red-500/30" :
+                "bg-gray-500/10 border-gray-500/30"
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-muted-foreground">Resultado:</span>
+                  <Badge className={`${
+                    resultadoCalculado === "GREEN" ? "bg-emerald-500/20 text-emerald-400" :
+                    resultadoCalculado === "RED" ? "bg-red-500/20 text-red-400" :
+                    "bg-gray-500/20 text-gray-400"
+                  }`}>
+                    {resultadoCalculado}
+                  </Badge>
+                </div>
+                {resultadoCalculado === "GREEN" && oddFinalReal !== oddFinal && (
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                    <span>Odd Ajustada (VOIDs = 1.00):</span>
+                    <span className="font-medium text-foreground">{oddFinalReal.toFixed(3)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Lucro Potencial (apenas se pendente) */}
+            {lucroPotencial > 0 && resultadoCalculado === "PENDENTE" && (
               <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
@@ -776,22 +850,22 @@ export function ApostaMultiplaDialog({
               />
             </div>
 
-            {/* Resultado */}
+            {/* Resultado - Calculado automaticamente */}
             <div className="space-y-2">
-              <Label>Resultado</Label>
-              <Select value={statusResultado} onValueChange={setStatusResultado}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PENDENTE">Pendente</SelectItem>
-                  <SelectItem value="GREEN">Green</SelectItem>
-                  <SelectItem value="RED">Red</SelectItem>
-                  <SelectItem value="MEIO_GREEN">Meio Green</SelectItem>
-                  <SelectItem value="MEIO_RED">Meio Red</SelectItem>
-                  <SelectItem value="VOID">Void</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Resultado da Múltipla</Label>
+              <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
+                <Badge className={`${
+                  resultadoCalculado === "GREEN" ? "bg-emerald-500/20 text-emerald-400" :
+                  resultadoCalculado === "RED" ? "bg-red-500/20 text-red-400" :
+                  resultadoCalculado === "VOID" ? "bg-gray-500/20 text-gray-400" :
+                  "bg-blue-500/20 text-blue-400"
+                }`}>
+                  {resultadoCalculado}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  (calculado automaticamente com base nos resultados individuais)
+                </span>
+              </div>
             </div>
 
             {/* Gerou Freebet - mutuamente exclusivo com Usar Freebet */}
