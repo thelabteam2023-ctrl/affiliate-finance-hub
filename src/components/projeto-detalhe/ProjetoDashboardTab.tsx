@@ -51,6 +51,33 @@ interface Aposta {
   logo_url: string | null;
 }
 
+interface ApostaMultipla {
+  id: string;
+  data_aposta: string;
+  lucro_prejuizo: number | null;
+  resultado: string | null;
+  stake: number;
+  selecoes: { descricao: string; odd: string; resultado?: string }[];
+  bookmaker_id: string;
+  bookmaker_nome: string;
+  parceiro_nome: string | null;
+  logo_url: string | null;
+}
+
+// Tipo unificado para agregação
+interface ApostaUnificada {
+  id: string;
+  data_aposta: string;
+  lucro_prejuizo: number | null;
+  resultado: string | null;
+  stake: number;
+  esporte: string;
+  bookmaker_id: string;
+  bookmaker_nome: string;
+  parceiro_nome: string | null;
+  logo_url: string | null;
+}
+
 interface DailyData {
   data: string;
   dataCompleta: string;
@@ -74,7 +101,7 @@ interface BookmakerMetrics {
 type BookmakerFilter = "all" | "bookmaker" | "parceiro";
 
 export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRange }: ProjetoDashboardTabProps) {
-  const [apostas, setApostas] = useState<Aposta[]>([]);
+  const [apostasUnificadas, setApostasUnificadas] = useState<ApostaUnificada[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEsporte, setSelectedEsporte] = useState<string>("");
   
@@ -110,15 +137,16 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
   };
 
   useEffect(() => {
-    fetchApostas();
+    fetchAllApostas();
   }, [projetoId, periodFilter, dateRange]);
 
-  const fetchApostas = async () => {
+  const fetchAllApostas = async () => {
     try {
       setLoading(true);
       const { start, end } = getDateRangeFromFilter();
       
-      let query = supabase
+      // Fetch apostas simples
+      let querySimples = supabase
         .from("apostas")
         .select(`
           id, 
@@ -134,17 +162,43 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
         .order("data_aposta", { ascending: true });
 
       if (start) {
-        query = query.gte("data_aposta", start.toISOString());
+        querySimples = querySimples.gte("data_aposta", start.toISOString());
       }
       if (end) {
-        query = query.lte("data_aposta", end.toISOString());
+        querySimples = querySimples.lte("data_aposta", end.toISOString());
       }
 
-      const { data, error } = await query;
+      // Fetch apostas múltiplas
+      let queryMultiplas = supabase
+        .from("apostas_multiplas")
+        .select(`
+          id,
+          data_aposta,
+          lucro_prejuizo,
+          resultado,
+          stake,
+          selecoes,
+          bookmaker_id,
+          bookmakers!inner(nome, parceiro_id, parceiros(nome), bookmakers_catalogo(logo_url))
+        `)
+        .eq("projeto_id", projetoId)
+        .order("data_aposta", { ascending: true });
 
-      if (error) throw error;
+      if (start) {
+        queryMultiplas = queryMultiplas.gte("data_aposta", start.toISOString());
+      }
+      if (end) {
+        queryMultiplas = queryMultiplas.lte("data_aposta", end.toISOString());
+      }
+
+      const [{ data: dataSimples, error: errorSimples }, { data: dataMultiplas, error: errorMultiplas }] = 
+        await Promise.all([querySimples, queryMultiplas]);
+
+      if (errorSimples) throw errorSimples;
+      if (errorMultiplas) throw errorMultiplas;
       
-      const transformedData: Aposta[] = (data || []).map((item: any) => ({
+      // Transform apostas simples
+      const apostasSimples: ApostaUnificada[] = (dataSimples || []).map((item: any) => ({
         id: item.id,
         data_aposta: item.data_aposta,
         lucro_prejuizo: item.lucro_prejuizo,
@@ -157,7 +211,59 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
         logo_url: item.bookmakers?.bookmakers_catalogo?.logo_url || null,
       }));
       
-      setApostas(transformedData);
+      // Transform apostas múltiplas - distribuir por seleção para esportes
+      // Cada múltipla gera N entradas (uma por seleção) para análise por esporte
+      // Mas mantém 1 entrada para análise por casa
+      const apostasMultiplas: ApostaUnificada[] = [];
+      
+      (dataMultiplas || []).forEach((item: any) => {
+        const selecoes = Array.isArray(item.selecoes) ? item.selecoes : [];
+        const numSelecoes = selecoes.length || 1;
+        
+        // Para cada seleção, criar uma entrada com lucro proporcional
+        // Assumimos que as seleções têm esportes embutidos ou usamos "Múltipla" como esporte genérico
+        if (selecoes.length > 0) {
+          selecoes.forEach((sel: any, index: number) => {
+            // Extrair esporte da descrição se possível, ou usar "Múltipla"
+            const esporteMatch = sel.descricao?.match(/^\[([^\]]+)\]/);
+            const esporte = esporteMatch ? esporteMatch[1] : "Múltipla";
+            
+            apostasMultiplas.push({
+              id: `${item.id}-${index}`,
+              data_aposta: item.data_aposta,
+              lucro_prejuizo: (item.lucro_prejuizo || 0) / numSelecoes,
+              resultado: item.resultado,
+              stake: item.stake / numSelecoes,
+              esporte: esporte,
+              bookmaker_id: item.bookmaker_id,
+              bookmaker_nome: item.bookmakers?.nome || 'Desconhecida',
+              parceiro_nome: item.bookmakers?.parceiros?.nome || null,
+              logo_url: item.bookmakers?.bookmakers_catalogo?.logo_url || null,
+            });
+          });
+        } else {
+          // Múltipla sem seleções detalhadas - usar como entrada única
+          apostasMultiplas.push({
+            id: item.id,
+            data_aposta: item.data_aposta,
+            lucro_prejuizo: item.lucro_prejuizo,
+            resultado: item.resultado,
+            stake: item.stake,
+            esporte: "Múltipla",
+            bookmaker_id: item.bookmaker_id,
+            bookmaker_nome: item.bookmakers?.nome || 'Desconhecida',
+            parceiro_nome: item.bookmakers?.parceiros?.nome || null,
+            logo_url: item.bookmakers?.bookmakers_catalogo?.logo_url || null,
+          });
+        }
+      });
+      
+      // Combinar todas as apostas
+      const todasApostas = [...apostasSimples, ...apostasMultiplas].sort(
+        (a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()
+      );
+      
+      setApostasUnificadas(todasApostas);
     } catch (error) {
       console.error("Erro ao carregar apostas:", error);
     } finally {
@@ -180,7 +286,7 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
   const evolutionData: DailyData[] = useMemo(() => {
     if (isIntradayView) {
       // Exibe cada aposta como um ponto individual
-      const sortedApostas = [...apostas].sort((a, b) => 
+      const sortedApostas = [...apostasUnificadas].sort((a, b) => 
         new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()
       );
       
@@ -198,7 +304,7 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     }
     
     // Agregação por dia para outros filtros
-    const dailyMap = apostas.reduce((acc: Record<string, number>, aposta) => {
+    const dailyMap = apostasUnificadas.reduce((acc: Record<string, number>, aposta) => {
       const dateKey = aposta.data_aposta.split('T')[0];
       acc[dateKey] = (acc[dateKey] || 0) + (aposta.lucro_prejuizo || 0);
       return acc;
@@ -218,11 +324,11 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
         saldo: cumulativeBalance
       };
     });
-  }, [apostas, isIntradayView]);
+  }, [apostasUnificadas, isIntradayView]);
 
   // Aggregate by bookmaker
   const bookmakerMetrics = useMemo(() => {
-    const metricsMap = apostas.reduce((acc: Record<string, BookmakerMetrics>, aposta) => {
+    const metricsMap = apostasUnificadas.reduce((acc: Record<string, BookmakerMetrics>, aposta) => {
       const key = aposta.bookmaker_id;
       if (!acc[key]) {
         acc[key] = {
@@ -254,31 +360,31 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     }, {});
 
     return Object.values(metricsMap)
-      .map(m => ({
+      .map((m: BookmakerMetrics) => ({
         ...m,
         roi: m.totalStake > 0 ? (m.lucro / m.totalStake) * 100 : 0
       }))
       .sort((a, b) => b.totalApostas - a.totalApostas);
-  }, [apostas]);
+  }, [apostasUnificadas]);
 
   // Listas únicas para filtros
   const uniqueBookmakers = useMemo(() => {
     const map = new Map<string, { id: string; nome: string }>();
-    apostas.forEach(a => {
+    apostasUnificadas.forEach(a => {
       if (!map.has(a.bookmaker_id)) {
         map.set(a.bookmaker_id, { id: a.bookmaker_id, nome: a.bookmaker_nome });
       }
     });
     return Array.from(map.values()).sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [apostas]);
+  }, [apostasUnificadas]);
 
   const uniqueParceiros = useMemo(() => {
     const set = new Set<string>();
-    apostas.forEach(a => {
+    apostasUnificadas.forEach(a => {
       if (a.parceiro_nome) set.add(a.parceiro_nome);
     });
     return Array.from(set).sort();
-  }, [apostas]);
+  }, [apostasUnificadas]);
 
   // Filtrar métricas por bookmaker
   const filteredBookmakerMetrics = useMemo(() => {
@@ -304,39 +410,39 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
   }, [bookmakerFilterType]);
 
   // Aggregate by sport
-  const esportesMap = apostas.reduce((acc: Record<string, { 
-    greens: number; 
-    reds: number; 
-    meioGreens: number;
-    meioReds: number;
-    lucro: number;
-  }>, aposta) => {
-    if (!acc[aposta.esporte]) {
-      acc[aposta.esporte] = { greens: 0, reds: 0, meioGreens: 0, meioReds: 0, lucro: 0 };
-    }
-    if (aposta.resultado === "GREEN") acc[aposta.esporte].greens++;
-    if (aposta.resultado === "RED") acc[aposta.esporte].reds++;
-    if (aposta.resultado === "MEIO_GREEN") acc[aposta.esporte].meioGreens++;
-    if (aposta.resultado === "MEIO_RED") acc[aposta.esporte].meioReds++;
-    acc[aposta.esporte].lucro += aposta.lucro_prejuizo || 0;
-    return acc;
-  }, {});
-
   const esportesData = useMemo(() => {
-    const data = Object.entries(esportesMap).map(([esporte, data]) => {
-      const totalApostas = data.greens + data.reds + data.meioGreens + data.meioReds;
+    const esportesMap = apostasUnificadas.reduce((acc: Record<string, { 
+      greens: number; 
+      reds: number; 
+      meioGreens: number;
+      meioReds: number;
+      lucro: number;
+    }>, aposta) => {
+      if (!acc[aposta.esporte]) {
+        acc[aposta.esporte] = { greens: 0, reds: 0, meioGreens: 0, meioReds: 0, lucro: 0 };
+      }
+      if (aposta.resultado === "GREEN") acc[aposta.esporte].greens++;
+      if (aposta.resultado === "RED") acc[aposta.esporte].reds++;
+      if (aposta.resultado === "MEIO_GREEN") acc[aposta.esporte].meioGreens++;
+      if (aposta.resultado === "MEIO_RED") acc[aposta.esporte].meioReds++;
+      acc[aposta.esporte].lucro += aposta.lucro_prejuizo || 0;
+      return acc;
+    }, {});
+
+    const data = Object.entries(esportesMap).map(([esporte, sportData]) => {
+      const totalApostas = sportData.greens + sportData.reds + sportData.meioGreens + sportData.meioReds;
       return {
         esporte,
-        greens: data.greens,
-        reds: data.reds,
-        meioGreens: data.meioGreens,
-        meioReds: data.meioReds,
-        lucro: data.lucro,
+        greens: sportData.greens,
+        reds: sportData.reds,
+        meioGreens: sportData.meioGreens,
+        meioReds: sportData.meioReds,
+        lucro: sportData.lucro,
         totalApostas,
       };
     });
     return data.sort((a, b) => b.totalApostas - a.totalApostas);
-  }, [esportesMap]);
+  }, [apostasUnificadas]);
 
   useEffect(() => {
     if (esportesData.length > 0 && !selectedEsporte) {
@@ -374,7 +480,7 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     );
   }
 
-  if (apostas.length === 0) {
+  if (apostasUnificadas.length === 0) {
     return (
       <Card>
         <CardContent className="pt-6">
