@@ -526,6 +526,16 @@ export function ApostaMultiplaDialog({
         // Atualizar saldos se necessário (simplificado - ajustar diferença)
         await atualizarSaldosBookmaker(aposta, apostaData, stakeNum);
 
+        // Registrar freebet gerada (se mudou de não-gerou para gerou)
+        if (gerouFreebet && valorFreebetGerada && !aposta.gerou_freebet) {
+          await registrarFreebetGerada(
+            bookmakerId,
+            parseFloat(valorFreebetGerada),
+            user.id
+          );
+        }
+        // TODO: Se desfez o gerou_freebet, deveria reverter (não implementado)
+
         toast.success("Aposta múltipla atualizada!");
       } else {
         // Insert
@@ -539,7 +549,7 @@ export function ApostaMultiplaDialog({
         await debitarSaldo(bookmakerId, stakeNum, usarFreebet);
 
         // Creditar resultado se não pendente
-        if (statusResultado !== "PENDENTE" && valorRetorno && valorRetorno > 0) {
+        if (resultadoFinal !== "PENDENTE" && valorRetorno && valorRetorno > 0) {
           await creditarRetorno(bookmakerId, valorRetorno);
         }
 

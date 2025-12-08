@@ -978,7 +978,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       {am.selecoes.map((sel, idx) => (
                         <div key={idx} className={`flex items-center justify-between text-xs p-1.5 rounded ${
                           sel.resultado === "GREEN" ? "bg-emerald-500/10" :
+                          sel.resultado === "MEIO_GREEN" ? "bg-teal-500/10" :
                           sel.resultado === "RED" ? "bg-red-500/10" :
+                          sel.resultado === "MEIO_RED" ? "bg-orange-500/10" :
                           sel.resultado === "VOID" ? "bg-gray-500/10" :
                           "bg-muted/30"
                         }`}>
@@ -990,10 +992,14 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                             {sel.resultado && sel.resultado !== "PENDENTE" && (
                               <span className={`text-[9px] px-1 rounded ${
                                 sel.resultado === "GREEN" ? "bg-emerald-500/20 text-emerald-400" :
+                                sel.resultado === "MEIO_GREEN" ? "bg-teal-500/20 text-teal-400" :
                                 sel.resultado === "RED" ? "bg-red-500/20 text-red-400" :
+                                sel.resultado === "MEIO_RED" ? "bg-orange-500/20 text-orange-400" :
                                 "bg-gray-500/20 text-gray-400"
                               }`}>
-                                {sel.resultado}
+                                {sel.resultado === "MEIO_GREEN" ? "½G" : 
+                                 sel.resultado === "MEIO_RED" ? "½R" : 
+                                 sel.resultado}
                               </span>
                             )}
                           </div>
@@ -1034,11 +1040,19 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                       </div>
                     )}
                     
-                    {/* Freebet */}
+                    {/* Freebet Usada */}
                     {am.tipo_freebet && am.tipo_freebet !== "normal" && (
                       <div className="flex items-center gap-1 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 mt-1">
                         <Gift className="h-3 w-3 flex-shrink-0" />
                         <span>Freebet SNR</span>
+                      </div>
+                    )}
+                    
+                    {/* Tag de Freebet Gerada */}
+                    {am.gerou_freebet && am.valor_freebet_gerada && (
+                      <div className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5 mt-1">
+                        <Gift className="h-3 w-3 flex-shrink-0" />
+                        <span>Gerou Freebet: {formatCurrency(am.valor_freebet_gerada)}</span>
                       </div>
                     )}
                     
