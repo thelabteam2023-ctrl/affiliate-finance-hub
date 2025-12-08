@@ -115,7 +115,7 @@ interface ApostaMultipla {
   odd_final: number;
   retorno_potencial: number | null;
   lucro_prejuizo: number | null;
-  selecoes: { descricao: string; odd: string }[];
+  selecoes: { descricao: string; odd: string; resultado?: string }[];
   status: string;
   resultado: string | null;
   bookmaker_id: string;
@@ -300,6 +300,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
     onDataChange?.();
   };
 
+  // Filtrar apostas simples
   const filteredApostas = apostas.filter((aposta) => {
     const matchesSearch = 
       aposta.evento.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -307,8 +308,26 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
       aposta.selecao.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || aposta.status === statusFilter;
     const matchesResultado = resultadoFilter === "all" || aposta.resultado === resultadoFilter;
-    return matchesSearch && matchesStatus && matchesResultado;
+    const matchesTipo = tipoFilter === "todas" || tipoFilter === "simples";
+    return matchesSearch && matchesStatus && matchesResultado && matchesTipo;
   });
+
+  // Filtrar apostas múltiplas
+  const filteredMultiplas = apostasMultiplas.filter((am) => {
+    const matchesSearch = am.selecoes.some(s => 
+      s.descricao.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    const matchesStatus = statusFilter === "all" || am.status === statusFilter;
+    const matchesResultado = resultadoFilter === "all" || am.resultado === resultadoFilter;
+    const matchesTipo = tipoFilter === "todas" || tipoFilter === "multiplas";
+    return (searchTerm === "" || matchesSearch) && matchesStatus && matchesResultado && matchesTipo;
+  });
+
+  // Unificar e ordenar por data
+  const apostasUnificadas: ApostaUnificada[] = [
+    ...filteredApostas.map(a => ({ tipo: "simples" as const, data: a, data_aposta: a.data_aposta })),
+    ...filteredMultiplas.map(am => ({ tipo: "multipla" as const, data: am, data_aposta: am.data_aposta })),
+  ].sort((a, b) => new Date(b.data_aposta).getTime() - new Date(a.data_aposta).getTime());
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -520,7 +539,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
       </Card>
 
       {/* Lista de Apostas */}
-      {filteredApostas.length === 0 ? (
+      {apostasUnificadas.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-10">
@@ -536,9 +555,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
         </Card>
       ) : viewMode === "cards" ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredApostas.map((aposta) => {
-            const displayInfo = getApostaDisplayInfo(aposta);
-            const opType = displayInfo.badgeType;
+          {apostasUnificadas.map((item) => {
+            if (item.tipo === "simples") {
+              const aposta = item.data as Aposta;
+              const displayInfo = getApostaDisplayInfo(aposta);
+              const opType = displayInfo.badgeType;
             
             return (
               <Card 
@@ -893,6 +914,136 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                   </div>
                 </CardContent>
               </Card>
+              );
+            }
+            
+            // Card de Aposta Múltipla
+            const am = item.data as ApostaMultipla;
+            const parceiroNome = am.bookmaker?.parceiro?.nome ? getFirstLastName(am.bookmaker.parceiro.nome) : null;
+            
+            return (
+              <Card 
+                key={am.id} 
+                className="hover:border-primary/50 transition-colors cursor-pointer border-l-2 border-l-purple-500"
+                onClick={() => handleOpenMultiplaDialog(am)}
+              >
+                <CardHeader className="pb-1 pt-3 px-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="text-sm truncate">Aposta Múltipla</CardTitle>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {am.selecoes.length} seleções
+                      </p>
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0 items-center">
+                      <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px] px-1.5 py-0">
+                        <Layers className="h-2.5 w-2.5 mr-0.5" />
+                        {am.tipo_multipla}
+                      </Badge>
+                      <Badge className={getResultadoColor(am.resultado)}>
+                        {getResultadoLabel(am.resultado) || "Pendente"}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-1 pb-3 px-3">
+                  <div className="space-y-1">
+                    {/* Seleções */}
+                    <div className="space-y-1 mb-2">
+                      {am.selecoes.map((sel, idx) => (
+                        <div key={idx} className={`flex items-center justify-between text-xs p-1.5 rounded ${
+                          sel.resultado === "GREEN" ? "bg-emerald-500/10" :
+                          sel.resultado === "RED" ? "bg-red-500/10" :
+                          sel.resultado === "VOID" ? "bg-gray-500/10" :
+                          "bg-muted/30"
+                        }`}>
+                          <span className="text-muted-foreground truncate flex-1 text-[11px]">
+                            {sel.descricao || `Seleção ${idx + 1}`}
+                          </span>
+                          <div className="flex items-center gap-1.5 ml-2">
+                            <span className="font-medium">@{parseFloat(sel.odd).toFixed(2)}</span>
+                            {sel.resultado && sel.resultado !== "PENDENTE" && (
+                              <span className={`text-[9px] px-1 rounded ${
+                                sel.resultado === "GREEN" ? "bg-emerald-500/20 text-emerald-400" :
+                                sel.resultado === "RED" ? "bg-red-500/20 text-red-400" :
+                                "bg-gray-500/20 text-gray-400"
+                              }`}>
+                                {sel.resultado}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Stake e Odd */}
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Stake:</span>
+                      <span className="font-medium">{formatCurrency(am.stake)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Odd Final:</span>
+                      <span className="font-medium">@{am.odd_final.toFixed(3)}</span>
+                    </div>
+                    
+                    {/* Retorno / Lucro */}
+                    {am.resultado === "PENDENTE" || !am.resultado ? (
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
+                        <span className="text-muted-foreground">Retorno Potencial:</span>
+                        <span className="font-medium text-emerald-400">
+                          {formatCurrency(am.retorno_potencial || am.stake * am.odd_final)}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
+                        <span className="text-muted-foreground">P/L:</span>
+                        <span className={`font-medium flex items-center gap-0.5 ${(am.lucro_prejuizo || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          {(am.lucro_prejuizo || 0) >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                          {formatCurrency(am.lucro_prejuizo || 0)}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Freebet */}
+                    {am.tipo_freebet && am.tipo_freebet !== "normal" && (
+                      <div className="flex items-center gap-1 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 mt-1">
+                        <Gift className="h-3 w-3 flex-shrink-0" />
+                        <span>Freebet SNR</span>
+                      </div>
+                    )}
+                    
+                    {/* Rodapé: Data + Casa */}
+                    <div className="pt-1 space-y-1">
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <Calendar className="h-2.5 w-2.5" />
+                        {format(parseLocalDateTime(am.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
+                      </div>
+                      
+                      {am.bookmaker && (
+                        <div className="flex items-center gap-1.5 text-[10px]">
+                          {am.bookmaker.bookmakers_catalogo?.logo_url ? (
+                            <img 
+                              src={am.bookmaker.bookmakers_catalogo.logo_url} 
+                              alt={am.bookmaker.nome}
+                              className="h-4 w-4 rounded-sm object-contain flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="h-4 w-4 rounded-sm bg-muted flex items-center justify-center flex-shrink-0">
+                              <Layers className="h-2.5 w-2.5 text-purple-400" />
+                            </div>
+                          )}
+                          <span className="truncate text-muted-foreground">
+                            <span className="font-medium text-foreground">{am.bookmaker.nome}</span>
+                            {parceiroNome && (
+                              <span className="text-[9px] ml-1">- {parceiroNome}</span>
+                            )}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
         </div>
@@ -900,17 +1051,71 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
         <Card>
           <ScrollArea className="h-[600px]">
             <div className="divide-y">
-              {filteredApostas.map((aposta) => {
+              {apostasUnificadas.map((item) => {
+                if (item.tipo === "multipla") {
+                  // Row para Aposta Múltipla
+                  const am = item.data as ApostaMultipla;
+                  const parceiroNome = am.bookmaker?.parceiro?.nome ? getFirstLastName(am.bookmaker.parceiro.nome) : null;
+                  
+                  return (
+                    <div
+                      key={am.id}
+                      className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer border-l-2 border-l-purple-500"
+                      onClick={() => handleOpenMultiplaDialog(am)}
+                    >
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                          <Layers className="h-4 w-4 text-purple-400" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium truncate">Aposta Múltipla</p>
+                            <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px] px-1.5 py-0">
+                              {am.tipo_multipla}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {am.selecoes.map(s => s.descricao).join(" • ")} @ {am.odd_final.toFixed(3)}
+                          </p>
+                          {am.bookmaker && (
+                            <div className="flex items-center gap-1 text-xs mt-1">
+                              <span className="font-medium text-foreground">{am.bookmaker.nome}</span>
+                              {parceiroNome && <span className="text-[10px] text-muted-foreground">- {parceiroNome}</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 flex-shrink-0">
+                        <div className="text-right space-y-0.5">
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="text-xs text-muted-foreground">Stake:</span>
+                            <p className="text-sm font-medium">{formatCurrency(am.stake)}</p>
+                          </div>
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="text-xs text-muted-foreground">P/L:</span>
+                            <p className={`text-sm ${(am.lucro_prejuizo || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                              {formatCurrency(am.lucro_prejuizo || 0)}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge className={getResultadoColor(am.resultado)}>
+                          {getResultadoLabel(am.resultado) || "Pendente"}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                // Row para Aposta Simples
+                const aposta = item.data as Aposta;
                 const opType = getOperationType(aposta);
                 const isPending = aposta.resultado === null || aposta.resultado === "PENDENTE";
                 const profit = getCalculatedProfit(aposta);
                 const isFreebetExtraction = aposta.estrategia === "COBERTURA_LAY" && aposta.back_em_exchange === true;
                 
-                // Determinar tipo de freebet baseado no campo tipo_freebet
                 const tipoFreebet = (aposta as any).tipo_freebet;
                 const freebetLabel = tipoFreebet === "freebet_snr" ? "SNR" : tipoFreebet === "freebet_sr" ? "SR" : null;
                 
-                // Calcular dados para cobertura
                 let coberturaData: { responsabilidade: number; lucroGarantido: number } | null = null;
                 if (opType.type === "cobertura") {
                   const backOdd = aposta.odd;
@@ -918,29 +1123,21 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                   const layOdd = aposta.lay_odd || 2;
                   const comissao = (aposta.lay_comissao || 5) / 100;
                   const oddLayAjustada = layOdd - comissao;
-                  
-                  // Se for freebet SNR, usar (backOdd - 1) em vez de backOdd
                   const multiplicador = tipoFreebet === "freebet_snr" ? (backOdd - 1) : backOdd;
                   const stakeLay = (backStake * multiplicador) / oddLayAjustada;
                   const responsabilidade = stakeLay * (layOdd - 1);
-                  
                   let lucroSeBackGanhar: number;
                   let lucroSeLayGanhar: number;
-                  
                   if (tipoFreebet === "freebet_snr") {
-                    // SNR: stake não retorna
                     lucroSeBackGanhar = (backStake * (backOdd - 1)) - responsabilidade;
                     lucroSeLayGanhar = stakeLay * (1 - comissao);
                   } else if (tipoFreebet === "freebet_sr") {
-                    // SR: stake retorna
                     lucroSeBackGanhar = (backStake * backOdd) - backStake - responsabilidade;
                     lucroSeLayGanhar = (stakeLay * (1 - comissao)) - backStake;
                   } else {
-                    // Normal/Qualifying
                     lucroSeBackGanhar = (backStake * (backOdd - 1)) - responsabilidade;
                     lucroSeLayGanhar = (stakeLay * (1 - comissao)) - backStake;
                   }
-                  
                   const lucroGarantido = Math.min(lucroSeBackGanhar, lucroSeLayGanhar);
                   coberturaData = { responsabilidade, lucroGarantido };
                 }
