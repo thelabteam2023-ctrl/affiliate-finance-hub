@@ -135,23 +135,41 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
 
       if (vinculosError) throw vinculosError;
 
-      // Fetch apostas count and pending stakes per bookmaker
+      // Fetch apostas count and pending stakes per bookmaker (simples + multiplas)
       const bookmakerIds = (vinculosData || []).map((v: any) => v.id);
       
       let apostasCount: Record<string, number> = {};
       let saldoEmAposta: Record<string, number> = {};
       
       if (bookmakerIds.length > 0) {
-        const { data: apostasData } = await supabase
+        // Fetch apostas simples
+        const { data: apostasSimples } = await supabase
           .from("apostas")
           .select("bookmaker_id, stake, status")
           .eq("projeto_id", projetoId)
           .in("bookmaker_id", bookmakerIds);
 
-        if (apostasData) {
-          apostasData.forEach((a: any) => {
+        // Fetch apostas multiplas
+        const { data: apostasMultiplas } = await supabase
+          .from("apostas_multiplas")
+          .select("bookmaker_id, stake, status")
+          .eq("projeto_id", projetoId)
+          .in("bookmaker_id", bookmakerIds);
+
+        // Process apostas simples
+        if (apostasSimples) {
+          apostasSimples.forEach((a: any) => {
             apostasCount[a.bookmaker_id] = (apostasCount[a.bookmaker_id] || 0) + 1;
-            // Sum stakes for PENDENTE bets
+            if (a.status === "PENDENTE") {
+              saldoEmAposta[a.bookmaker_id] = (saldoEmAposta[a.bookmaker_id] || 0) + (a.stake || 0);
+            }
+          });
+        }
+        
+        // Process apostas multiplas (1 multipla = 1 aposta)
+        if (apostasMultiplas) {
+          apostasMultiplas.forEach((a: any) => {
+            apostasCount[a.bookmaker_id] = (apostasCount[a.bookmaker_id] || 0) + 1;
             if (a.status === "PENDENTE") {
               saldoEmAposta[a.bookmaker_id] = (saldoEmAposta[a.bookmaker_id] || 0) + (a.stake || 0);
             }
