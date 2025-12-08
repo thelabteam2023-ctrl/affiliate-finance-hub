@@ -1330,15 +1330,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         const eraPendente = resultadoAnterior === null || resultadoAnterior === "PENDENTE";
         const agoraPendente = novoResultado === null || statusResultado === "PENDENTE";
         
-        console.log("[FREEBET DEBUG] Editando aposta:", {
-          apostaId: aposta.id,
-          gerouFreebetAnterior,
-          resultadoAnterior,
-          novoResultado,
-          statusResultado,
-          eraPendente,
-          agoraPendente
-        });
         
         const { error } = await supabase
           .from("apostas")
@@ -1370,34 +1361,21 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
 
         // Verificar se resultado mudou e atualizar status da freebet
         if (gerouFreebetAnterior) {
-          console.log("[FREEBET DEBUG] Processando mudança de freebet:", {
-            eraPendente,
-            agoraPendente,
-            caso1: eraPendente && !agoraPendente,
-            caso2: !eraPendente && agoraPendente,
-            caso3_condicao: !eraPendente && resultadoAnterior !== "VOID" && statusResultado === "VOID"
-          });
-          
           // Caso 1: PENDENTE → resultado final (GREEN, RED, MEIO_GREEN, MEIO_RED, VOID)
           if (eraPendente && !agoraPendente) {
-            console.log("[FREEBET DEBUG] Caso 1: PENDENTE -> resultado final");
             // VOID = não libera, qualquer outro resultado (GREEN, RED, MEIO_GREEN, MEIO_RED) = libera
             if (statusResultado === "VOID") {
-              console.log("[FREEBET DEBUG] Resultado VOID - recusando freebet");
               await recusarFreebetPendente(aposta.id);
             } else {
-              console.log("[FREEBET DEBUG] Resultado não-VOID - liberando freebet");
               await liberarFreebetPendente(aposta.id);
             }
           }
           // Caso 2: resultado final → PENDENTE (reversão)
           else if (!eraPendente && agoraPendente) {
-            console.log("[FREEBET DEBUG] Caso 2: resultado final -> PENDENTE");
             await reverterFreebetParaPendente(aposta.id);
           }
           // Caso 3: resultado final (não-VOID) → VOID
           else if (!eraPendente && resultadoAnterior !== "VOID" && statusResultado === "VOID") {
-            console.log("[FREEBET DEBUG] Caso 3: resultado final (não-VOID) -> VOID");
             // Freebet já estava LIBERADA, precisa reverter para NAO_LIBERADA
             const { data: freebetLiberada } = await supabase
               .from("freebets_recebidas")
@@ -1649,26 +1627,20 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   // Função para liberar freebet pendente quando aposta é liquidada (GREEN, RED, MEIO_GREEN, MEIO_RED)
   const liberarFreebetPendente = async (apostaId: string) => {
     try {
-      console.log("[FREEBET DEBUG] liberarFreebetPendente chamada para apostaId:", apostaId);
-      
       // Buscar freebet pendente associada a esta aposta
-      const { data: freebetPendente, error: fetchError } = await supabase
+      const { data: freebetPendente } = await supabase
         .from("freebets_recebidas")
-        .select("id, bookmaker_id, valor, status")
+        .select("id, bookmaker_id, valor")
         .eq("aposta_id", apostaId)
         .eq("status", "PENDENTE")
         .maybeSingle();
 
-      console.log("[FREEBET DEBUG] Busca freebet pendente:", { freebetPendente, fetchError });
-
       if (freebetPendente) {
         // Atualizar status para LIBERADA
-        const { error: updateError } = await supabase
+        await supabase
           .from("freebets_recebidas")
           .update({ status: "LIBERADA" })
           .eq("id", freebetPendente.id);
-        
-        console.log("[FREEBET DEBUG] Update freebet para LIBERADA:", { updateError });
 
         // Incrementar saldo_freebet do bookmaker
         const { data: bookmaker } = await supabase
@@ -1683,10 +1655,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             .from("bookmakers")
             .update({ saldo_freebet: novoSaldoFreebet })
             .eq("id", freebetPendente.bookmaker_id);
-          console.log("[FREEBET DEBUG] Saldo_freebet atualizado:", { novoSaldoFreebet });
         }
-      } else {
-        console.log("[FREEBET DEBUG] Nenhuma freebet PENDENTE encontrada para esta aposta");
       }
     } catch (error) {
       console.error("Erro ao liberar freebet pendente:", error);

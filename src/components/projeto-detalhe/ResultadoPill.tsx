@@ -26,6 +26,7 @@ interface ResultadoPillProps {
   layStake?: number;
   layComissao?: number;
   isFreebetExtraction?: boolean; // true quando é extração de freebet (SNR/SR)
+  gerouFreebet?: boolean; // true se a aposta gerou freebet
   onResultadoUpdated: () => void;
   onEditClick: () => void;
 }
@@ -81,6 +82,7 @@ export function ResultadoPill({
   layStake,
   layComissao = 5,
   isFreebetExtraction = false,
+  gerouFreebet = false,
   onResultadoUpdated,
   onEditClick,
 }: ResultadoPillProps) {
@@ -530,6 +532,120 @@ export function ResultadoPill({
 
       // Atualizar saldo do bookmaker
       await atualizarSaldoBookmaker(resultado, novoResultado);
+
+      // ====== LÓGICA DE FREEBET ======
+      // Se a aposta gerou freebet, precisamos atualizar o status da freebet
+      if (gerouFreebet) {
+        const eraPendente = resultado === null || resultado === "PENDENTE";
+        const agoraPendente = novoResultado === "PENDENTE";
+        
+        // Caso 1: PENDENTE → resultado final
+        if (eraPendente && !agoraPendente) {
+          if (novoResultado === "VOID") {
+            // VOID não libera freebet
+            await supabase
+              .from("freebets_recebidas")
+              .update({ status: "NAO_LIBERADA" })
+              .eq("aposta_id", apostaId)
+              .eq("status", "PENDENTE");
+          } else {
+            // GREEN, RED, MEIO_GREEN, MEIO_RED liberam a freebet
+            const { data: freebetPendente } = await supabase
+              .from("freebets_recebidas")
+              .select("id, bookmaker_id, valor")
+              .eq("aposta_id", apostaId)
+              .eq("status", "PENDENTE")
+              .maybeSingle();
+            
+            if (freebetPendente) {
+              // Atualizar status para LIBERADA
+              await supabase
+                .from("freebets_recebidas")
+                .update({ status: "LIBERADA" })
+                .eq("id", freebetPendente.id);
+              
+              // Incrementar saldo_freebet do bookmaker
+              const { data: bookmaker } = await supabase
+                .from("bookmakers")
+                .select("saldo_freebet")
+                .eq("id", freebetPendente.bookmaker_id)
+                .maybeSingle();
+              
+              if (bookmaker) {
+                const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + freebetPendente.valor;
+                await supabase
+                  .from("bookmakers")
+                  .update({ saldo_freebet: novoSaldoFreebet })
+                  .eq("id", freebetPendente.bookmaker_id);
+              }
+            }
+          }
+        }
+        // Caso 2: resultado final → PENDENTE (reversão - não aplicável via Pill, mas por segurança)
+        else if (!eraPendente && agoraPendente) {
+          const { data: freebetLiberada } = await supabase
+            .from("freebets_recebidas")
+            .select("id, bookmaker_id, valor")
+            .eq("aposta_id", apostaId)
+            .eq("status", "LIBERADA")
+            .maybeSingle();
+          
+          if (freebetLiberada) {
+            // Decrementar saldo_freebet
+            const { data: bookmaker } = await supabase
+              .from("bookmakers")
+              .select("saldo_freebet")
+              .eq("id", freebetLiberada.bookmaker_id)
+              .maybeSingle();
+            
+            if (bookmaker) {
+              const novoSaldoFreebet = Math.max(0, (bookmaker.saldo_freebet || 0) - freebetLiberada.valor);
+              await supabase
+                .from("bookmakers")
+                .update({ saldo_freebet: novoSaldoFreebet })
+                .eq("id", freebetLiberada.bookmaker_id);
+            }
+            
+            // Voltar para PENDENTE
+            await supabase
+              .from("freebets_recebidas")
+              .update({ status: "PENDENTE" })
+              .eq("id", freebetLiberada.id);
+          }
+        }
+        // Caso 3: resultado final (não-VOID) → VOID
+        else if (!eraPendente && resultado !== "VOID" && novoResultado === "VOID") {
+          const { data: freebetLiberada } = await supabase
+            .from("freebets_recebidas")
+            .select("id, bookmaker_id, valor")
+            .eq("aposta_id", apostaId)
+            .eq("status", "LIBERADA")
+            .maybeSingle();
+          
+          if (freebetLiberada) {
+            // Decrementar saldo_freebet
+            const { data: bookmaker } = await supabase
+              .from("bookmakers")
+              .select("saldo_freebet")
+              .eq("id", freebetLiberada.bookmaker_id)
+              .maybeSingle();
+            
+            if (bookmaker) {
+              const novoSaldoFreebet = Math.max(0, (bookmaker.saldo_freebet || 0) - freebetLiberada.valor);
+              await supabase
+                .from("bookmakers")
+                .update({ saldo_freebet: novoSaldoFreebet })
+                .eq("id", freebetLiberada.bookmaker_id);
+            }
+            
+            // Mudar para NAO_LIBERADA
+            await supabase
+              .from("freebets_recebidas")
+              .update({ status: "NAO_LIBERADA" })
+              .eq("id", freebetLiberada.id);
+          }
+        }
+      }
 
       toast.success(`Resultado atualizado para ${getDisplayLabel(novoResultado)}`);
       setOpen(false);
