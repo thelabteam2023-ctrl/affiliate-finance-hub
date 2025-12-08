@@ -168,12 +168,36 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
   const parseLocalDateTime = (dateString: string): Date => {
     if (!dateString) return new Date();
     const cleanDate = dateString.replace(/\+00:00$/, '').replace(/Z$/, '').replace(/\+\d{2}:\d{2}$/, '');
-    const [datePart] = cleanDate.split('T');
+    const [datePart, timePart] = cleanDate.split('T');
     const [year, month, day] = datePart.split('-').map(Number);
-    return new Date(year, month - 1, day);
+    const [hours, minutes] = (timePart || '00:00').split(':').map(Number);
+    return new Date(year, month - 1, day, hours || 0, minutes || 0);
   };
 
-  const evolutionData: DailyData[] = (() => {
+  // Determina se deve exibir por aposta individual (hoje/ontem) ou agregado por dia
+  const isIntradayView = periodFilter === "hoje" || periodFilter === "ontem";
+
+  const evolutionData: DailyData[] = useMemo(() => {
+    if (isIntradayView) {
+      // Exibe cada aposta como um ponto individual
+      const sortedApostas = [...apostas].sort((a, b) => 
+        new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()
+      );
+      
+      let cumulativeBalance = 0;
+      return sortedApostas.map((aposta, index) => {
+        cumulativeBalance += aposta.lucro_prejuizo || 0;
+        const date = parseLocalDateTime(aposta.data_aposta);
+        return {
+          data: format(date, "HH:mm", { locale: ptBR }),
+          dataCompleta: `Aposta #${index + 1} às ${format(date, "HH:mm", { locale: ptBR })}`,
+          lucro_dia: aposta.lucro_prejuizo || 0,
+          saldo: cumulativeBalance
+        };
+      });
+    }
+    
+    // Agregação por dia para outros filtros
     const dailyMap = apostas.reduce((acc: Record<string, number>, aposta) => {
       const dateKey = aposta.data_aposta.split('T')[0];
       acc[dateKey] = (acc[dateKey] || 0) + (aposta.lucro_prejuizo || 0);
@@ -194,7 +218,7 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
         saldo: cumulativeBalance
       };
     });
-  })();
+  }, [apostas, isIntradayView]);
 
   // Aggregate by bookmaker
   const bookmakerMetrics = useMemo(() => {
@@ -463,12 +487,19 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
                         if (active && payload && payload.length) {
                           const data = payload[0].payload as DailyData;
                           const isPositive = data.saldo >= 0;
+                          const lucroDiaPositive = data.lucro_dia >= 0;
                           return (
                             <div className="bg-background/90 backdrop-blur-xl border border-border/50 rounded-lg px-3 py-2 shadow-xl">
                               <p className="text-sm font-medium">{data.dataCompleta}</p>
+                              {isIntradayView && (
+                                <p className="text-sm text-muted-foreground">
+                                  <span className={`inline-block w-2 h-2 rounded-sm mr-2 ${lucroDiaPositive ? 'bg-teal-400' : 'bg-red-400'}`} />
+                                  P/L: {formatCurrency(data.lucro_dia)}
+                                </p>
+                              )}
                               <p className="text-sm text-muted-foreground">
                                 <span className={`inline-block w-2 h-2 rounded-sm mr-2 ${isPositive ? 'bg-teal-400' : 'bg-red-400'}`} />
-                                Lucro: {formatCurrency(data.saldo)}
+                                Acumulado: {formatCurrency(data.saldo)}
                               </p>
                             </div>
                           );
