@@ -720,7 +720,7 @@ export function ApostaMultiplaDialog({
             <div className="space-y-2">
               <Label>Casa / Vínculo *</Label>
               <Select value={bookmakerId} onValueChange={setBookmakerId}>
-                <SelectTrigger>
+                <SelectTrigger className="h-10 items-center">
                   <SelectValue placeholder="Selecione a casa..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -734,10 +734,8 @@ export function ApostaMultiplaDialog({
                             className="h-4 w-4 rounded object-contain"
                           />
                         )}
-                        <span>
-                          {bk.nome}
-                          {bk.parceiro?.nome &&
-                            ` - ${getFirstLastName(bk.parceiro.nome)}`}
+                        <span className="uppercase">
+                          {bk.nome} • {getFirstLastName(bk.parceiro?.nome || "")} – {formatCurrency(bk.saldo_atual)}
                         </span>
                       </div>
                     </SelectItem>
@@ -852,6 +850,7 @@ export function ApostaMultiplaDialog({
                         onChange={(e) =>
                           handleSelecaoChange(index, "descricao", e.target.value)
                         }
+                        className="uppercase"
                       />
                       <Input
                         type="number"
