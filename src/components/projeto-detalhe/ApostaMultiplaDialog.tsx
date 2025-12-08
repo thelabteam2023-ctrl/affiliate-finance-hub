@@ -49,6 +49,7 @@ interface ApostaMultipla {
   odd_final: number;
   retorno_potencial: number | null;
   lucro_prejuizo: number | null;
+  valor_retorno: number | null;
   selecoes: { descricao: string; odd: string; resultado?: string }[];
   status: string;
   resultado: string | null;
@@ -578,8 +579,61 @@ export function ApostaMultiplaDialog({
     apostaNovaData: any,
     novaStake: number
   ) => {
-    // Simplificado: reverter impacto antigo e aplicar novo
-    // Em produção, seria mais complexo considerando mudanças de bookmaker, etc.
+    const antigaStake = apostaAntiga.stake;
+    const antigaUsavaFreebet = apostaAntiga.tipo_freebet && apostaAntiga.tipo_freebet !== "normal";
+    const novaUsaFreebet = usarFreebet;
+    const antigoBkId = apostaAntiga.bookmaker_id;
+    const novoBkId = apostaNovaData.bookmaker_id;
+    
+    // Reverter débito antigo
+    if (antigaUsavaFreebet) {
+      const { data: bk } = await supabase
+        .from("bookmakers")
+        .select("saldo_freebet")
+        .eq("id", antigoBkId)
+        .single();
+      if (bk) {
+        await supabase
+          .from("bookmakers")
+          .update({ saldo_freebet: bk.saldo_freebet + antigaStake })
+          .eq("id", antigoBkId);
+      }
+    } else {
+      const { data: bk } = await supabase
+        .from("bookmakers")
+        .select("saldo_atual")
+        .eq("id", antigoBkId)
+        .single();
+      if (bk) {
+        await supabase
+          .from("bookmakers")
+          .update({ saldo_atual: bk.saldo_atual + antigaStake })
+          .eq("id", antigoBkId);
+      }
+    }
+    
+    // Reverter crédito de retorno antigo (se tinha resultado)
+    if (apostaAntiga.valor_retorno && apostaAntiga.valor_retorno > 0) {
+      const { data: bk } = await supabase
+        .from("bookmakers")
+        .select("saldo_atual")
+        .eq("id", antigoBkId)
+        .single();
+      if (bk) {
+        await supabase
+          .from("bookmakers")
+          .update({ saldo_atual: bk.saldo_atual - apostaAntiga.valor_retorno })
+          .eq("id", antigoBkId);
+      }
+    }
+    
+    // Aplicar novo débito
+    await debitarSaldo(novoBkId, novaStake, novaUsaFreebet);
+    
+    // Aplicar novo crédito se tiver resultado
+    if (apostaNovaData.valor_retorno && apostaNovaData.valor_retorno > 0) {
+      await creditarRetorno(novoBkId, apostaNovaData.valor_retorno);
+    }
   };
 
   const handleDelete = async () => {
@@ -587,6 +641,51 @@ export function ApostaMultiplaDialog({
 
     try {
       setLoading(true);
+
+      // Reverter saldo antes de deletar
+      const usavaFreebet = aposta.tipo_freebet && aposta.tipo_freebet !== "normal";
+      
+      // Reverter débito de stake
+      if (usavaFreebet) {
+        const { data: bk } = await supabase
+          .from("bookmakers")
+          .select("saldo_freebet")
+          .eq("id", aposta.bookmaker_id)
+          .single();
+        if (bk) {
+          await supabase
+            .from("bookmakers")
+            .update({ saldo_freebet: bk.saldo_freebet + aposta.stake })
+            .eq("id", aposta.bookmaker_id);
+        }
+      } else {
+        const { data: bk } = await supabase
+          .from("bookmakers")
+          .select("saldo_atual")
+          .eq("id", aposta.bookmaker_id)
+          .single();
+        if (bk) {
+          await supabase
+            .from("bookmakers")
+            .update({ saldo_atual: bk.saldo_atual + aposta.stake })
+            .eq("id", aposta.bookmaker_id);
+        }
+      }
+      
+      // Reverter crédito de retorno (se tinha resultado)
+      if (aposta.valor_retorno && aposta.valor_retorno > 0) {
+        const { data: bk } = await supabase
+          .from("bookmakers")
+          .select("saldo_atual")
+          .eq("id", aposta.bookmaker_id)
+          .single();
+        if (bk) {
+          await supabase
+            .from("bookmakers")
+            .update({ saldo_atual: bk.saldo_atual - aposta.valor_retorno })
+            .eq("id", aposta.bookmaker_id);
+        }
+      }
 
       const { error } = await supabase
         .from("apostas_multiplas")
