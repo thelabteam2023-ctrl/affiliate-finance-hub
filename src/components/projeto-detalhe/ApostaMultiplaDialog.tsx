@@ -532,8 +532,20 @@ export function ApostaMultiplaDialog({
             bookmakerId,
             parseFloat(valorFreebetGerada),
             user.id,
-            aposta.id // Passar o ID da aposta sendo editada
+            aposta.id, // Passar o ID da aposta sendo editada
+            resultadoFinal // Passar o resultado para determinar status
           );
+        }
+
+        // Verificar se resultado mudou e atualizar status da freebet
+        const resultadoAnterior = aposta.resultado;
+        if (aposta.gerou_freebet && resultadoAnterior === "PENDENTE" && resultadoFinal !== "PENDENTE") {
+          // Aposta tinha freebet pendente e agora foi liquidada
+          if (resultadoFinal === "GREEN") {
+            await liberarFreebetPendente(aposta.id);
+          } else {
+            await recusarFreebetPendente(aposta.id);
+          }
         }
         // TODO: Se desfez o gerou_freebet, deveria reverter (não implementado)
 
@@ -558,13 +570,14 @@ export function ApostaMultiplaDialog({
           await creditarRetorno(bookmakerId, valorRetorno);
         }
 
-        // Registrar freebet gerada com ID da aposta
+        // Registrar freebet gerada com ID da aposta e resultado
         if (gerouFreebet && valorFreebetGerada && novaApostaId) {
           await registrarFreebetGerada(
             bookmakerId,
             parseFloat(valorFreebetGerada),
             user.id,
-            novaApostaId
+            novaApostaId,
+            resultadoFinal // Passar resultado para determinar status (PENDENTE ou GREEN)
           );
         }
 
@@ -625,27 +638,38 @@ export function ApostaMultiplaDialog({
     bkId: string,
     valor: number,
     userId: string,
-    apostaMultiplaId?: string
+    apostaMultiplaId?: string,
+    resultadoAposta?: string
   ) => {
     try {
-      // 1. Atualizar saldo_freebet do bookmaker
-      const { data: bookmaker } = await supabase
-        .from("bookmakers")
-        .select("saldo_freebet")
-        .eq("id", bkId)
-        .maybeSingle();
-
-      if (bookmaker) {
-        const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + valor;
-        await supabase
-          .from("bookmakers")
-          .update({ saldo_freebet: novoSaldoFreebet })
-          .eq("id", bkId);
+      // Determinar o status da freebet baseado no resultado da aposta
+      // PENDENTE = aposta ainda não liquidada
+      // LIBERADA = aposta GREEN (freebet disponível)
+      // NAO_LIBERADA = aposta RED/VOID/etc (freebet não liberada)
+      let status: "PENDENTE" | "LIBERADA" | "NAO_LIBERADA" = "PENDENTE";
+      
+      if (resultadoAposta && resultadoAposta !== "PENDENTE") {
+        status = resultadoAposta === "GREEN" ? "LIBERADA" : "NAO_LIBERADA";
       }
 
-      // 2. Registrar na tabela freebets_recebidas
-      // Nota: A tabela freebets_recebidas usa aposta_id que referencia 'apostas' (simples)
-      // Para múltiplas, usamos o campo observacoes para registrar o ID
+      // Só incrementar saldo_freebet se a freebet for liberada (GREEN)
+      if (status === "LIBERADA") {
+        const { data: bookmaker } = await supabase
+          .from("bookmakers")
+          .select("saldo_freebet")
+          .eq("id", bkId)
+          .maybeSingle();
+
+        if (bookmaker) {
+          const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + valor;
+          await supabase
+            .from("bookmakers")
+            .update({ saldo_freebet: novoSaldoFreebet })
+            .eq("id", bkId);
+        }
+      }
+
+      // Registrar na tabela freebets_recebidas com status apropriado
       await supabase.from("freebets_recebidas").insert({
         bookmaker_id: bkId,
         projeto_id: projetoId,
@@ -654,10 +678,62 @@ export function ApostaMultiplaDialog({
         motivo: "Gerada por aposta múltipla",
         data_recebida: new Date().toISOString(),
         utilizada: false,
-        observacoes: apostaMultiplaId ? `aposta_multipla_id:${apostaMultiplaId}` : null,
+        aposta_multipla_id: apostaMultiplaId || null,
+        status: status,
       });
     } catch (error) {
       console.error("Erro ao registrar freebet gerada:", error);
+    }
+  };
+
+  // Função para liberar freebet pendente quando aposta muda para GREEN
+  const liberarFreebetPendente = async (apostaMultiplaId: string) => {
+    try {
+      // Buscar freebet pendente associada a esta aposta
+      const { data: freebetPendente } = await supabase
+        .from("freebets_recebidas")
+        .select("id, bookmaker_id, valor")
+        .eq("aposta_multipla_id", apostaMultiplaId)
+        .eq("status", "PENDENTE")
+        .maybeSingle();
+
+      if (freebetPendente) {
+        // Atualizar status para LIBERADA
+        await supabase
+          .from("freebets_recebidas")
+          .update({ status: "LIBERADA" })
+          .eq("id", freebetPendente.id);
+
+        // Incrementar saldo_freebet do bookmaker
+        const { data: bookmaker } = await supabase
+          .from("bookmakers")
+          .select("saldo_freebet")
+          .eq("id", freebetPendente.bookmaker_id)
+          .maybeSingle();
+
+        if (bookmaker) {
+          const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + freebetPendente.valor;
+          await supabase
+            .from("bookmakers")
+            .update({ saldo_freebet: novoSaldoFreebet })
+            .eq("id", freebetPendente.bookmaker_id);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao liberar freebet pendente:", error);
+    }
+  };
+
+  // Função para recusar freebet quando aposta muda para RED/VOID/etc
+  const recusarFreebetPendente = async (apostaMultiplaId: string) => {
+    try {
+      await supabase
+        .from("freebets_recebidas")
+        .update({ status: "NAO_LIBERADA" })
+        .eq("aposta_multipla_id", apostaMultiplaId)
+        .eq("status", "PENDENTE");
+    } catch (error) {
+      console.error("Erro ao recusar freebet pendente:", error);
     }
   };
 

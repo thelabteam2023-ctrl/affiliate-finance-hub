@@ -1059,6 +1059,7 @@ export type Database = {
       freebets_recebidas: {
         Row: {
           aposta_id: string | null
+          aposta_multipla_id: string | null
           bookmaker_id: string
           created_at: string
           data_recebida: string
@@ -1067,6 +1068,7 @@ export type Database = {
           motivo: string
           observacoes: string | null
           projeto_id: string
+          status: string
           updated_at: string
           user_id: string
           utilizada: boolean | null
@@ -1074,6 +1076,7 @@ export type Database = {
         }
         Insert: {
           aposta_id?: string | null
+          aposta_multipla_id?: string | null
           bookmaker_id: string
           created_at?: string
           data_recebida?: string
@@ -1082,6 +1085,7 @@ export type Database = {
           motivo: string
           observacoes?: string | null
           projeto_id: string
+          status?: string
           updated_at?: string
           user_id: string
           utilizada?: boolean | null
@@ -1089,6 +1093,7 @@ export type Database = {
         }
         Update: {
           aposta_id?: string | null
+          aposta_multipla_id?: string | null
           bookmaker_id?: string
           created_at?: string
           data_recebida?: string
@@ -1097,6 +1102,7 @@ export type Database = {
           motivo?: string
           observacoes?: string | null
           projeto_id?: string
+          status?: string
           updated_at?: string
           user_id?: string
           utilizada?: boolean | null
@@ -1108,6 +1114,13 @@ export type Database = {
             columns: ["aposta_id"]
             isOneToOne: false
             referencedRelation: "apostas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_aposta_multipla_id_fkey"
+            columns: ["aposta_multipla_id"]
+            isOneToOne: false
+            referencedRelation: "apostas_multiplas"
             referencedColumns: ["id"]
           },
           {
