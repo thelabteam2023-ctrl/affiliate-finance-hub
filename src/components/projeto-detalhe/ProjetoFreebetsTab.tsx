@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Gift, Search, Building2, User, Calendar, Target, CheckCircle2, Clock, TrendingUp, Percent } from "lucide-react";
+import { Gift, Search, Building2, User, Calendar, Target, CheckCircle2, Clock, TrendingUp, Percent, XCircle } from "lucide-react";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -539,7 +539,17 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
                       </div>
                     </TableCell>
                     <TableCell>
-                      {fb.utilizada ? (
+                      {fb.status === "PENDENTE" ? (
+                        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Aguardando
+                        </Badge>
+                      ) : fb.status === "NAO_LIBERADA" ? (
+                        <Badge variant="secondary" className="bg-red-500/10 text-red-400 border-red-500/20">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Não liberada
+                        </Badge>
+                      ) : fb.utilizada ? (
                         <Badge variant="secondary" className="bg-muted text-muted-foreground">
                           <CheckCircle2 className="h-3 w-3 mr-1" />
                           Utilizada
@@ -550,8 +560,8 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
                           )}
                         </Badge>
                       ) : (
-                        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">
-                          <Clock className="h-3 w-3 mr-1" />
+                        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
                           Disponível
                         </Badge>
                       )}
