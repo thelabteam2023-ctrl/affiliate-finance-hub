@@ -2045,8 +2045,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   </div>
                 </div>
                 
-                {/* Toggle "Usar Freebet nesta aposta?" (apenas se bookmaker tem saldo_freebet > 0) */}
-                {bookmakerSaldo && bookmakerSaldo.saldoFreebet > 0 && (
+                {/* Toggle "Usar Freebet nesta aposta?" (apenas se bookmaker tem saldo_freebet > 0 e NÃO for aposta que gerou freebet) */}
+                {bookmakerSaldo && bookmakerSaldo.saldoFreebet > 0 && !aposta?.gerou_freebet && (
                   <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -2060,6 +2060,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                           // Quando ativar, preencher stake com valor da freebet disponível
                           if (checked && bookmakerSaldo.saldoFreebet > 0) {
                             setStake(bookmakerSaldo.saldoFreebet.toString());
+                          }
+                          // Quando ativar usar freebet, desativar "gerou freebet"
+                          if (checked) {
+                            setGerouFreebet(false);
+                            setValorFreebetGerada("");
                           }
                         }}
                         disabled={!!aposta?.tipo_freebet}
@@ -2855,8 +2860,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               </div>
             )}
 
-            {/* Freebet Gerada - apenas para Bookmaker ou operações qualificadoras */}
-            {tipoAposta === "bookmaker" && (
+            {/* Freebet Gerada - apenas para Bookmaker e quando NÃO está usando freebet */}
+            {tipoAposta === "bookmaker" && !usarFreebetBookmaker && (
               <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
