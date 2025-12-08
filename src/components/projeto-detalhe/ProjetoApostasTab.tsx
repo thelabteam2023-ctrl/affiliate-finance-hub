@@ -115,6 +115,7 @@ interface ApostaMultipla {
   odd_final: number;
   retorno_potencial: number | null;
   lucro_prejuizo: number | null;
+  valor_retorno: number | null;
   selecoes: { descricao: string; odd: string; resultado?: string }[];
   status: string;
   resultado: string | null;
@@ -284,14 +285,20 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao carregar apostas múltiplas:", error);
+        throw error;
+      }
+      
+      console.log("Apostas múltiplas carregadas:", data?.length || 0);
       
       setApostasMultiplas((data || []).map((am: any) => ({
         ...am,
-        selecoes: am.selecoes || []
+        selecoes: Array.isArray(am.selecoes) ? am.selecoes : []
       })));
     } catch (error: any) {
       console.error("Erro ao carregar apostas múltiplas:", error.message);
+      toast.error("Erro ao carregar apostas múltiplas: " + error.message);
     }
   };
 
