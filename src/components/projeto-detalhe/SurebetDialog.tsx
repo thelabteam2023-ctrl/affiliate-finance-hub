@@ -558,7 +558,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-amber-500" />
@@ -625,7 +625,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                 </div>
                 
                 {/* Grid de Colunas para cada seleção (1, X, 2) ou (Sim, Não) */}
-                <div className={`grid gap-3 ${modelo === "1-X-2" ? "grid-cols-3" : "grid-cols-2"}`}>
+                <div className={`grid gap-4 ${modelo === "1-X-2" ? "grid-cols-3" : "grid-cols-2"}`}>
                   {odds.map((entry, index) => {
                     const saldo = getBookmakerSaldo(entry.bookmaker_id);
                     const stakeCalculada = analysis?.calculatedStakes?.[index] || 0;
@@ -635,18 +635,40 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                       Math.abs(stakeAtual - stakeCalculada) > 0.01 &&
                       !entry.isReference;
                     
+                    // Cores distintas por coluna
+                    const columnColors = modelo === "1-X-2" 
+                      ? [
+                          { bg: "bg-blue-500/10", border: "border-blue-500/40", badge: "bg-blue-500 text-white" },
+                          { bg: "bg-amber-500/10", border: "border-amber-500/40", badge: "bg-amber-500 text-black" },
+                          { bg: "bg-emerald-500/10", border: "border-emerald-500/40", badge: "bg-emerald-500 text-white" }
+                        ]
+                      : [
+                          { bg: "bg-blue-500/10", border: "border-blue-500/40", badge: "bg-blue-500 text-white" },
+                          { bg: "bg-emerald-500/10", border: "border-emerald-500/40", badge: "bg-emerald-500 text-white" }
+                        ];
+                    
+                    const colors = columnColors[index];
+                    
                     return (
                       <div 
                         key={index} 
-                        className={`rounded-lg border p-3 space-y-3 transition-all ${
+                        className={`rounded-xl border-2 p-4 space-y-4 transition-all ${colors.bg} ${
                           entry.isReference 
-                            ? "border-primary bg-primary/5 ring-1 ring-primary/30" 
-                            : "border-border bg-card/50"
+                            ? `${colors.border} ring-2 ring-primary/30` 
+                            : colors.border
                         }`}
                       >
-                        {/* Header da coluna com RadioButton e Nome da Seleção */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                        {/* Badge Grande Centralizado */}
+                        <div className="flex flex-col items-center gap-2">
+                          <div className={`text-2xl font-bold px-5 py-2 rounded-lg ${colors.badge}`}>
+                            {modelo === "1-X-2" 
+                              ? (index === 0 ? "1" : index === 1 ? "X" : "2") 
+                              : (index === 0 ? "1" : "2")
+                            }
+                          </div>
+                          
+                          {/* RadioButton Referência */}
+                          <label className="flex items-center gap-2 cursor-pointer">
                             <input
                               type="radio"
                               name="reference-selection"
@@ -654,87 +676,69 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               onChange={() => setReferenceIndex(index)}
                               className="h-4 w-4 cursor-pointer accent-primary"
                             />
-                            <span className="text-xs text-muted-foreground">Ref</span>
+                            <span className="text-xs text-muted-foreground">Referência</span>
+                          </label>
+                        </div>
+                        
+                        {/* Casa + Odd na mesma linha */}
+                        <div className="grid grid-cols-[1fr_80px] gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Casa</Label>
+                            <Select 
+                              value={entry.bookmaker_id}
+                              onValueChange={(v) => updateOdd(index, "bookmaker_id", v)}
+                            >
+                              <SelectTrigger className="h-9 text-sm">
+                                <SelectValue placeholder="Selecionar" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {bookmakers.map(bk => {
+                                  const parceiroNome = bk.parceiro?.nome?.split(" ");
+                                  const shortName = parceiroNome 
+                                    ? `${parceiroNome[0]} ${parceiroNome[parceiroNome.length - 1] || ""}`.trim()
+                                    : "";
+                                  return (
+                                    <SelectItem key={bk.id} value={bk.id}>
+                                      <div className="flex items-center gap-2">
+                                        <span>{bk.nome}</span>
+                                        {shortName && <span className="text-xs text-muted-foreground">({shortName})</span>}
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
                           </div>
-                          <Badge variant={entry.isReference ? "default" : "secondary"} className="text-xs">
-                            {modelo === "1-X-2" 
-                              ? (index === 0 ? "1" : index === 1 ? "X" : "2") 
-                              : (index === 0 ? "1" : "2")
-                            }
-                          </Badge>
+                          
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Odd</Label>
+                            <Input 
+                              type="number"
+                              step="0.01"
+                              placeholder="1.00"
+                              value={entry.odd}
+                              onChange={(e) => updateOdd(index, "odd", e.target.value)}
+                              className="h-9"
+                            />
+                          </div>
                         </div>
                         
-                        {/* Campo Seleção (editável) */}
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Resultado</Label>
-                          <Input 
-                            value={entry.selecao}
-                            onChange={(e) => updateOdd(index, "selecao", e.target.value)}
-                            className="text-sm h-9"
-                            placeholder={modelo === "1-X-2" 
-                              ? (index === 0 ? "Casa" : index === 1 ? "Empate" : "Fora")
-                              : (index === 0 ? "Sim" : "Não")
-                            }
-                          />
-                        </div>
-                        
-                        {/* Campo Casa/Bookmaker */}
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Casa</Label>
-                          <Select 
-                            value={entry.bookmaker_id}
-                            onValueChange={(v) => updateOdd(index, "bookmaker_id", v)}
-                          >
-                            <SelectTrigger className="h-9 text-sm">
-                              <SelectValue placeholder="Selecionar" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {bookmakers.map(bk => {
-                                const parceiroNome = bk.parceiro?.nome?.split(" ");
-                                const shortName = parceiroNome 
-                                  ? `${parceiroNome[0]} ${parceiroNome[parceiroNome.length - 1] || ""}`.trim()
-                                  : "";
-                                return (
-                                  <SelectItem key={bk.id} value={bk.id}>
-                                    <div className="flex items-center gap-2">
-                                      <span>{bk.nome}</span>
-                                      {shortName && <span className="text-xs text-muted-foreground">({shortName})</span>}
-                                    </div>
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectContent>
-                          </Select>
-                          {/* Saldo */}
-                          {entry.bookmaker_id && saldo !== null && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground pt-1">
-                              <Wallet className="h-3 w-3" />
-                              <span>{formatCurrency(saldo)}</span>
-                              {stakeAtual > 0 && stakeAtual > saldo && (
-                                <Badge variant="destructive" className="text-[10px] h-4 ml-1">
-                                  Insuficiente
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Campo Odd */}
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Odd</Label>
-                          <Input 
-                            type="number"
-                            step="0.01"
-                            placeholder="1.00"
-                            value={entry.odd}
-                            onChange={(e) => updateOdd(index, "odd", e.target.value)}
-                            className="h-9"
-                          />
-                        </div>
+                        {/* Saldo */}
+                        {entry.bookmaker_id && saldo !== null && (
+                          <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                            <Wallet className="h-3 w-3" />
+                            <span>{formatCurrency(saldo)}</span>
+                            {stakeAtual > 0 && stakeAtual > saldo && (
+                              <Badge variant="destructive" className="text-[10px] h-4 ml-1">
+                                Insuficiente
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                         
                         {/* Campo Stake */}
                         <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">
+                          <Label className="text-xs text-muted-foreground text-center block">
                             Aposta {entry.isReference && <span className="text-primary">(Ref)</span>}
                           </Label>
                           <div className="relative">
