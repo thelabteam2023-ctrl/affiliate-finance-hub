@@ -543,6 +543,46 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     };
   }, [odds, arredondarAtivado, arredondarValor]);
 
+  // Análise de resultado REAL (quando resolvida - posições marcadas como GREEN/RED/VOID)
+  const analysisReal = useMemo(() => {
+    // Verificar se todas as posições têm resultado
+    const todasResolvidas = odds.every(o => o.resultado && ["GREEN", "RED", "VOID"].includes(o.resultado));
+    
+    if (!todasResolvidas) {
+      return { isResolved: false, lucroReal: 0, roiReal: 0 };
+    }
+
+    // Calcular lucro real baseado nos resultados
+    let lucroReal = 0;
+    const stakeTotal = odds.reduce((acc, o) => acc + (parseFloat(o.stake) || 0), 0);
+
+    odds.forEach(o => {
+      const stake = parseFloat(o.stake) || 0;
+      const odd = parseFloat(o.odd) || 0;
+      
+      if (o.resultado === "GREEN") {
+        // GREEN = ganha (retorno - stakes de todas as pernas)
+        lucroReal += stake * odd;
+      } else if (o.resultado === "RED") {
+        // RED = perde a stake
+        // Não adiciona nada ao retorno
+      } else if (o.resultado === "VOID") {
+        // VOID = devolve a stake
+        lucroReal += stake;
+      }
+    });
+
+    // Lucro real = retorno total - stake total
+    lucroReal = lucroReal - stakeTotal;
+    const roiReal = stakeTotal > 0 ? (lucroReal / stakeTotal) * 100 : 0;
+
+    return {
+      isResolved: true,
+      lucroReal,
+      roiReal
+    };
+  }, [odds]);
+
   const handleSave = async () => {
     // Validação simplificada - apenas campos obrigatórios
     if (!evento.trim()) {
@@ -1023,37 +1063,59 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             )}
                           </div>
                           
-                          {/* Casa + Odd + Stake na mesma linha */}
-                          <div className="grid grid-cols-[1fr_70px_90px] gap-2 items-end">
-                            <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">Casa</Label>
-                              {isEditing ? (
-                                <div className="h-9 px-3 text-sm flex items-center bg-muted/50 rounded-md border">
-                                  {getBookmakerNome(entry.bookmaker_id) || "—"}
+                          {/* Casa */}
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Casa</Label>
+                            {isEditing ? (
+                              <div className="h-9 px-2 text-sm flex items-center bg-muted/50 rounded-md border truncate font-medium uppercase">
+                                {selectedBookmaker?.nome || "—"}
+                              </div>
+                            ) : (
+                              <Select 
+                                value={entry.bookmaker_id}
+                                onValueChange={(v) => updateOdd(index, "bookmaker_id", v)}
+                              >
+                                <SelectTrigger className="h-9 text-sm w-full">
+                                  <SelectValue placeholder="Casa">
+                                    {selectedBookmaker?.nome && (
+                                      <span className="truncate uppercase">{selectedBookmaker.nome}</span>
+                                    )}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {bookmakers.map(bk => (
+                                    <SelectItem key={bk.id} value={bk.id}>
+                                      <span className="uppercase">{bk.nome}</span>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                          
+                          {/* Parceiro + Saldo logo abaixo do select */}
+                          {entry.bookmaker_id && (
+                            <div className="flex items-center justify-between gap-1 px-1 text-[10px] text-muted-foreground">
+                              <span className="truncate max-w-[60%]">
+                                {parceiroShortName || "—"}
+                              </span>
+                              {saldo !== null && (
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <Wallet className="h-2.5 w-2.5" />
+                                  <span className={stakeAtual > saldo ? "text-destructive" : ""}>
+                                    {formatCurrency(saldo)}
+                                  </span>
                                 </div>
-                              ) : (
-                                <Select 
-                                  value={entry.bookmaker_id}
-                                  onValueChange={(v) => updateOdd(index, "bookmaker_id", v)}
-                                >
-                                  <SelectTrigger className="h-9 text-sm">
-                                    <SelectValue placeholder="Casa" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {bookmakers.map(bk => (
-                                      <SelectItem key={bk.id} value={bk.id}>
-                                        {bk.nome}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
                               )}
                             </div>
-                            
+                          )}
+                          
+                          {/* Odd + Stake na mesma linha */}
+                          <div className="grid grid-cols-2 gap-2">
                             <div className="space-y-1">
                               <Label className="text-xs text-muted-foreground">Odd</Label>
                               {isEditing ? (
-                                <div className="h-9 px-3 text-sm flex items-center justify-center bg-muted/50 rounded-md border font-medium">
+                                <div className="h-9 px-2 text-sm flex items-center justify-center bg-muted/50 rounded-md border font-medium">
                                   {parseFloat(entry.odd).toFixed(2)}
                                 </div>
                               ) : (
@@ -1072,10 +1134,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             
                             <div className="space-y-1">
                               <Label className="text-xs text-muted-foreground">
-                                Stake {!isEditing && entry.isReference && <span className="text-primary">(Ref)</span>}
+                                Stake {!isEditing && entry.isReference && <span className="text-primary text-[10px]">(Ref)</span>}
                               </Label>
                               {isEditing ? (
-                                <div className="h-9 px-3 text-sm flex items-center justify-center bg-muted/50 rounded-md border font-medium">
+                                <div className="h-9 px-2 text-sm flex items-center justify-center bg-muted/50 rounded-md border font-medium">
                                   {formatCurrency(parseFloat(entry.stake) || 0)}
                                 </div>
                               ) : (
@@ -1111,28 +1173,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             </div>
                           </div>
                           
-                          {/* Parceiro + Saldo abaixo */}
-                          {entry.bookmaker_id && (parceiroShortName || saldo !== null) && (
-                            <div className="flex items-center justify-center gap-2 py-1 px-2 rounded-lg bg-background/50 text-xs">
-                              {parceiroShortName && (
-                                <span className="font-medium text-muted-foreground">
-                                  ({parceiroShortName})
-                                </span>
-                              )}
-                              {saldo !== null && (
-                                <div className="flex items-center gap-1">
-                                  <Wallet className="h-3 w-3 text-muted-foreground" />
-                                  <span className={stakeAtual > saldo ? "text-destructive" : "text-muted-foreground"}>
-                                    {formatCurrency(saldo)}
-                                  </span>
-                                  {stakeAtual > 0 && stakeAtual > saldo && (
-                                    <Badge variant="destructive" className="text-[10px] h-4 px-1">
-                                      Insuf.
-                                    </Badge>
-                                  )}
-                                </div>
-                              )}
-                            </div>
+                          {/* Aviso de saldo insuficiente */}
+                          {stakeAtual > 0 && saldo !== null && stakeAtual > saldo && (
+                            <Badge variant="destructive" className="text-[10px] h-4 px-1 w-fit mx-auto">
+                              Saldo Insuficiente
+                            </Badge>
                           )}
                         </div>
                       </div>
@@ -1187,7 +1232,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               <CardHeader className="pb-2 pt-3 px-3">
                 <CardTitle className="text-xs flex items-center gap-1.5">
                   <Calculator className="h-3.5 w-3.5" />
-                  Análise
+                  {isEditing && analysisReal.isResolved ? "Resultado" : "Análise"}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 px-3 pb-3">
@@ -1199,112 +1244,155 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   </p>
                 </div>
 
-                {/* Métricas em coluna única (mais legíveis na sidebar estreita) */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
-                    <span className="text-xs text-muted-foreground">ROI Esperado</span>
-                    <span className={`text-sm font-bold ${
-                      analysis.stakeTotal <= 0 
-                        ? 'text-muted-foreground' 
-                        : analysis.roiEsperado >= 0 
-                          ? 'text-emerald-500' 
-                          : 'text-red-500'
-                    }`}>
-                      {analysis.stakeTotal > 0 
-                        ? `${analysis.roiEsperado >= 0 ? "+" : ""}${analysis.roiEsperado.toFixed(2)}%`
-                        : "—"
-                      }
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
-                    <span className="text-xs text-muted-foreground">
-                      {analysis.guaranteedProfit >= 0 ? "Lucro" : "Custo"}
-                    </span>
-                    <span className={`text-sm font-bold ${
-                      analysis.stakeTotal <= 0 
-                        ? 'text-muted-foreground' 
-                        : analysis.guaranteedProfit >= 0 
-                          ? 'text-emerald-500' 
-                          : 'text-amber-500'
-                    }`}>
-                      {analysis.stakeTotal > 0 
-                        ? `${analysis.guaranteedProfit >= 0 ? "+" : ""}${formatCurrency(analysis.guaranteedProfit)}`
-                        : "—"
-                      }
-                    </span>
-                  </div>
-                </div>
-
-                {/* Cenários de Resultado */}
-                {analysis.scenarios.length > 0 && (
+                {/* Modo Resultado Real (quando resolvida) */}
+                {isEditing && analysisReal.isResolved ? (
                   <>
-                    <Separator />
-                    <div>
-                      <p className="text-xs font-medium mb-2">Cenários</p>
-                      <div className="space-y-1.5">
-                        {analysis.scenarios.map((scenario, index) => (
-                          <div 
-                            key={index} 
-                            className={`p-2 rounded-lg border ${
-                              scenario.isPositive 
-                                ? "bg-emerald-500/5 border-emerald-500/20" 
-                                : "bg-red-500/5 border-red-500/20"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium">{scenario.selecao}</span>
-                              <span className={`text-xs font-bold ${scenario.isPositive ? "text-emerald-500" : "text-red-500"}`}>
-                                {scenario.lucro >= 0 ? "+" : ""}{formatCurrency(scenario.lucro)}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                    {/* Resultado Final */}
+                    <div className={`p-3 rounded-lg border ${
+                      analysisReal.lucroReal >= 0 
+                        ? "bg-emerald-500/10 border-emerald-500/30" 
+                        : "bg-red-500/10 border-red-500/30"
+                    }`}>
+                      <p className="text-[10px] text-muted-foreground mb-1">Resultado Final</p>
+                      <p className={`text-xl font-bold ${
+                        analysisReal.lucroReal >= 0 ? "text-emerald-500" : "text-red-500"
+                      }`}>
+                        {analysisReal.lucroReal >= 0 ? "+" : ""}{formatCurrency(analysisReal.lucroReal)}
+                      </p>
+                      <p className={`text-sm font-medium ${
+                        analysisReal.roiReal >= 0 ? "text-emerald-400" : "text-red-400"
+                      }`}>
+                        {analysisReal.roiReal >= 0 ? "+" : ""}{analysisReal.roiReal.toFixed(2)}% ROI
+                      </p>
+                    </div>
+
+                    {/* Status das pernas */}
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Posições</p>
+                      {odds.map((entry, index) => (
+                        <div key={index} className="flex items-center justify-between text-xs p-1.5 rounded bg-muted/30">
+                          <span>{entry.selecao}</span>
+                          <Badge className={`text-[10px] ${
+                            entry.resultado === "GREEN" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40" :
+                            entry.resultado === "RED" ? "bg-red-500/20 text-red-400 border-red-500/40" :
+                            "bg-gray-500/20 text-gray-400 border-gray-500/40"
+                          }`}>
+                            {entry.resultado || "—"}
+                          </Badge>
+                        </div>
+                      ))}
                     </div>
                   </>
-                )}
-
-                {/* Probabilidades - sempre visível quando há odds */}
-                {analysis.hasPartialData && (
+                ) : (
                   <>
-                    <Separator />
-                    <div>
-                      <p className="text-xs font-medium mb-2">Probabilidades Implícitas</p>
-                      <div className="space-y-1">
-                        {odds.map((entry, index) => {
-                          const impliedProb = analysis.impliedProbs[index];
-                          return (
-                            <div key={index} className="flex items-center justify-between text-[10px]">
-                              <span className="text-muted-foreground">{entry.selecao}</span>
-                              <span className={impliedProb > 0 ? "text-blue-400" : "text-muted-foreground"}>
-                                {impliedProb > 0 ? `${(impliedProb * 100).toFixed(1)}%` : "—"}
-                              </span>
-                            </div>
-                          );
-                        })}
-                        {analysis.validOddsCount >= 2 && (
-                          <div className="flex items-center justify-between text-[10px] pt-1 border-t mt-1">
-                            <span className="text-muted-foreground font-medium">Total</span>
-                            <span className={`font-medium ${
-                              analysis.impliedProbs.reduce((a, b) => a + b, 0) < 1 
-                                ? "text-emerald-400" 
-                                : "text-amber-400"
-                            }`}>
-                              {(analysis.impliedProbs.reduce((a, b) => a + b, 0) * 100).toFixed(1)}%
-                            </span>
-                          </div>
-                        )}
+                    {/* Métricas esperadas (modo projeção) */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                        <span className="text-xs text-muted-foreground">ROI Esperado</span>
+                        <span className={`text-sm font-bold ${
+                          analysis.stakeTotal <= 0 
+                            ? 'text-muted-foreground' 
+                            : analysis.roiEsperado >= 0 
+                              ? 'text-emerald-500' 
+                              : 'text-red-500'
+                        }`}>
+                          {analysis.stakeTotal > 0 
+                            ? `${analysis.roiEsperado >= 0 ? "+" : ""}${analysis.roiEsperado.toFixed(2)}%`
+                            : "—"
+                          }
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                        <span className="text-xs text-muted-foreground">
+                          {analysis.guaranteedProfit >= 0 ? "Lucro" : "Custo"}
+                        </span>
+                        <span className={`text-sm font-bold ${
+                          analysis.stakeTotal <= 0 
+                            ? 'text-muted-foreground' 
+                            : analysis.guaranteedProfit >= 0 
+                              ? 'text-emerald-500' 
+                              : 'text-amber-500'
+                        }`}>
+                          {analysis.stakeTotal > 0 
+                            ? `${analysis.guaranteedProfit >= 0 ? "+" : ""}${formatCurrency(analysis.guaranteedProfit)}`
+                            : "—"
+                          }
+                        </span>
                       </div>
                     </div>
-                  </>
-                )}
 
-                {/* Mensagem quando não há dados */}
-                {!analysis.hasPartialData && (
-                  <div className="text-center py-4 text-muted-foreground">
-                    <Calculator className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-xs">Preencha as odds para ver a análise</p>
-                  </div>
+                    {/* Cenários de Resultado */}
+                    {analysis.scenarios.length > 0 && (
+                      <>
+                        <Separator />
+                        <div>
+                          <p className="text-xs font-medium mb-2">Cenários</p>
+                          <div className="space-y-1.5">
+                            {analysis.scenarios.map((scenario, index) => (
+                              <div 
+                                key={index} 
+                                className={`p-2 rounded-lg border ${
+                                  scenario.isPositive 
+                                    ? "bg-emerald-500/5 border-emerald-500/20" 
+                                    : "bg-red-500/5 border-red-500/20"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-medium">{scenario.selecao}</span>
+                                  <span className={`text-xs font-bold ${scenario.isPositive ? "text-emerald-500" : "text-red-500"}`}>
+                                    {scenario.lucro >= 0 ? "+" : ""}{formatCurrency(scenario.lucro)}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Probabilidades - sempre visível quando há odds */}
+                    {analysis.hasPartialData && (
+                      <>
+                        <Separator />
+                        <div>
+                          <p className="text-xs font-medium mb-2">Probabilidades Implícitas</p>
+                          <div className="space-y-1">
+                            {odds.map((entry, index) => {
+                              const impliedProb = analysis.impliedProbs[index];
+                              return (
+                                <div key={index} className="flex items-center justify-between text-[10px]">
+                                  <span className="text-muted-foreground">{entry.selecao}</span>
+                                  <span className={impliedProb > 0 ? "text-blue-400" : "text-muted-foreground"}>
+                                    {impliedProb > 0 ? `${(impliedProb * 100).toFixed(1)}%` : "—"}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                            {analysis.validOddsCount >= 2 && (
+                              <div className="flex items-center justify-between text-[10px] pt-1 border-t mt-1">
+                                <span className="text-muted-foreground font-medium">Total</span>
+                                <span className={`font-medium ${
+                                  analysis.impliedProbs.reduce((a, b) => a + b, 0) < 1 
+                                    ? "text-emerald-400" 
+                                    : "text-amber-400"
+                                }`}>
+                                  {(analysis.impliedProbs.reduce((a, b) => a + b, 0) * 100).toFixed(1)}%
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Mensagem quando não há dados */}
+                    {!analysis.hasPartialData && (
+                      <div className="text-center py-4 text-muted-foreground">
+                        <Calculator className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-xs">Preencha as odds para ver a análise</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
