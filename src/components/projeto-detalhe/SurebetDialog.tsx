@@ -562,7 +562,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-amber-500" />
-            {isEditing ? "Editar Surebet" : "Nova Surebet / Arbitragem"}
+            {isEditing ? "Editar Arbitragem" : "Arbitragem"}
           </DialogTitle>
         </DialogHeader>
 
@@ -570,7 +570,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           {/* Formulário - Lado Esquerdo (mais largo) */}
           <div className="flex-1 space-y-4">
             {/* Cabeçalho */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Esporte</Label>
                 <Select value={esporte} onValueChange={setEsporte}>
@@ -584,21 +584,47 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   </SelectContent>
                 </Select>
               </div>
+              
+              {/* Abas de Modelo com linha animada */}
               <div className="space-y-2">
                 <Label>Modelo</Label>
-                <Select 
-                  value={modelo} 
-                  onValueChange={(v) => setModelo(v as "1-X-2" | "1-2")}
-                  disabled={isEditing}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1-2">1–2 (Binário: Sim/Não, Over/Under)</SelectItem>
-                    <SelectItem value="1-X-2">1–X–2 (Casa/Empate/Fora)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="relative flex p-1 bg-muted/50 rounded-lg">
+                  {/* Indicador animado */}
+                  <div 
+                    className="absolute h-[calc(100%-8px)] bg-primary rounded-md transition-all duration-300 ease-out"
+                    style={{
+                      width: 'calc(50% - 4px)',
+                      left: modelo === "1-X-2" ? 'calc(50% + 2px)' : '4px',
+                      top: '4px'
+                    }}
+                  />
+                  
+                  <button
+                    type="button"
+                    onClick={() => !isEditing && setModelo("1-2")}
+                    disabled={isEditing}
+                    className={`relative z-10 flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors duration-200 ${
+                      modelo === "1-2" 
+                        ? "text-primary-foreground" 
+                        : "text-muted-foreground hover:text-foreground"
+                    } ${isEditing ? "cursor-not-allowed opacity-50" : ""}`}
+                  >
+                    1–2
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => !isEditing && setModelo("1-X-2")}
+                    disabled={isEditing}
+                    className={`relative z-10 flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors duration-200 ${
+                      modelo === "1-X-2" 
+                        ? "text-primary-foreground" 
+                        : "text-muted-foreground hover:text-foreground"
+                    } ${isEditing ? "cursor-not-allowed opacity-50" : ""}`}
+                  >
+                    1–X–2
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -715,6 +741,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               value={entry.odd}
                               onChange={(e) => updateOdd(index, "odd", e.target.value)}
                               className="h-9 text-sm"
+                              tabIndex={index + 1}
+                              onWheel={(e) => e.currentTarget.blur()}
                             />
                           </div>
                         </div>
@@ -760,6 +788,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                   ? "border-amber-500 ring-1 ring-amber-500/50" 
                                   : ""
                               }`}
+                              tabIndex={odds.length + index + 1}
+                              onWheel={(e) => e.currentTarget.blur()}
                             />
                             {/* Botão reset para campos modificados */}
                             {isDifferentFromCalculated && stakeCalculada > 0 && (
@@ -1073,7 +1103,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               disabled={saving || !analysis || analysis.stakeTotal <= 0}
             >
               <Save className="h-4 w-4 mr-1" />
-              {isEditing ? "Salvar" : "Registrar Surebet"}
+              {isEditing ? "Salvar" : "Registrar"}
             </Button>
           </div>
         </DialogFooter>

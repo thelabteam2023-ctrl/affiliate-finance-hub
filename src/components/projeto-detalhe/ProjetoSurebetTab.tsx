@@ -62,6 +62,7 @@ interface Bookmaker {
   id: string;
   nome: string;
   saldo_atual: number;
+  saldo_freebet?: number;
   parceiro?: {
     nome: string;
   };
@@ -151,11 +152,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "tod
           id,
           nome,
           saldo_atual,
+          saldo_freebet,
           parceiro:parceiros (nome),
           bookmakers_catalogo (logo_url)
         `)
         .eq("projeto_id", projetoId)
-        .eq("status", "ativo");
+        .in("status", ["ativo", "ATIVO", "LIMITADA", "limitada"]);
 
       if (error) throw error;
       setBookmakers(data || []);
@@ -305,7 +307,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "tod
               }}
             >
               <Plus className="mr-1 h-4 w-4" />
-              Nova Surebet
+              Nova Arbitragem
             </Button>
           </div>
         </CardContent>
