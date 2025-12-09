@@ -216,6 +216,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
           )
         `)
         .eq("projeto_id", projetoId)
+        .is("surebet_id", null)  // Excluir pernas de Surebet
         .order("data_aposta", { ascending: false });
       
       if (start) {
