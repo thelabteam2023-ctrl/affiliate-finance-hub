@@ -203,7 +203,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   useEffect(() => {
     if (open) {
       fetchSaldosEmAposta();
-      if (surebet) {
+      if (surebet && surebet.id) {
+        // Modo edição: carregar dados da surebet existente
         setEvento(surebet.evento);
         setEsporte(surebet.esporte);
         setModelo(surebet.modelo as "1-X-2" | "1-2");
@@ -212,14 +213,24 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         // Buscar apostas vinculadas passando o modelo correto
         fetchLinkedApostas(surebet.id, surebet.modelo);
       } else {
-        // CRÍTICO: Sempre resetar o formulário completamente quando não há surebet para editar
+        // CRÍTICO: Modo criação - SEMPRE resetar o formulário completamente
         resetForm();
+        setLinkedApostas([]);
       }
-    } else {
-      // Quando o dialog fecha, limpar o estado para evitar que dados antigos persistam
-      resetForm();
     }
-  }, [open, surebet?.id]); // Usar surebet?.id para evitar loops com objeto completo
+  }, [open, surebet]); // Usar surebet diretamente para detectar mudanças de null<->objeto
+  
+  // Limpar estado quando dialog fecha
+  useEffect(() => {
+    if (!open) {
+      // Aguardar a animação de fechamento antes de resetar
+      const timer = setTimeout(() => {
+        resetForm();
+        setLinkedApostas([]);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
 
   // Atualizar array de odds quando modelo muda (mercado NÃO afeta modelo)
   useEffect(() => {
