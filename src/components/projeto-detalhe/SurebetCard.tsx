@@ -112,7 +112,9 @@ export function SurebetCard({ surebet, onEdit, defaultExpanded = false }: Surebe
             >
               {surebet.evento}
             </CardTitle>
-            <p className="text-[10px] text-muted-foreground">{surebet.esporte}</p>
+            <p className="text-[10px] text-muted-foreground">
+              {surebet.esporte} • {surebet.modelo}{surebet.mercado ? ` • ${surebet.mercado}` : ""}
+            </p>
           </div>
           {/* Botão expandir */}
           <Button
