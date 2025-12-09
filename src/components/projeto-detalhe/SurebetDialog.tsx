@@ -558,7 +558,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-amber-500" />
@@ -566,9 +566,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-6 lg:grid-cols-5">
-          {/* Formulário - Lado Esquerdo (3 colunas) */}
-          <div className="lg:col-span-3 space-y-4">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Formulário - Lado Esquerdo (mais largo) */}
+          <div className="flex-1 space-y-4">
             {/* Cabeçalho */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -618,14 +618,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             {!isEditing && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label>Posições da Operação</Label>
+                  <Label className="text-base font-medium">Posições da Operação</Label>
                   <span className="text-xs text-muted-foreground">
                     Selecione a referência e ajuste as stakes
                   </span>
                 </div>
                 
                 {/* Grid de Colunas para cada seleção (1, X, 2) ou (Sim, Não) */}
-                <div className={`grid gap-4 ${modelo === "1-X-2" ? "grid-cols-3" : "grid-cols-2"}`}>
+                <div className={`grid gap-5 ${modelo === "1-X-2" ? "grid-cols-3" : "grid-cols-2"}`}>
                   {odds.map((entry, index) => {
                     const saldo = getBookmakerSaldo(entry.bookmaker_id);
                     const stakeCalculada = analysis?.calculatedStakes?.[index] || 0;
@@ -652,15 +652,15 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     return (
                       <div 
                         key={index} 
-                        className={`rounded-xl border-2 p-4 space-y-4 transition-all ${colors.bg} ${
+                        className={`rounded-xl border-2 p-5 space-y-4 transition-all ${colors.bg} ${
                           entry.isReference 
                             ? `${colors.border} ring-2 ring-primary/30` 
                             : colors.border
                         }`}
                       >
                         {/* Badge Grande Centralizado */}
-                        <div className="flex flex-col items-center gap-2">
-                          <div className={`text-2xl font-bold px-5 py-2 rounded-lg ${colors.badge}`}>
+                        <div className="flex flex-col items-center gap-3">
+                          <div className={`text-3xl font-bold px-6 py-3 rounded-xl ${colors.badge}`}>
                             {modelo === "1-X-2" 
                               ? (index === 0 ? "1" : index === 1 ? "X" : "2") 
                               : (index === 0 ? "1" : "2")
@@ -676,19 +676,19 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               onChange={() => setReferenceIndex(index)}
                               className="h-4 w-4 cursor-pointer accent-primary"
                             />
-                            <span className="text-xs text-muted-foreground">Referência</span>
+                            <span className="text-sm text-muted-foreground">Referência</span>
                           </label>
                         </div>
                         
                         {/* Casa + Odd na mesma linha */}
-                        <div className="grid grid-cols-[1fr_80px] gap-2">
-                          <div className="space-y-1">
+                        <div className="flex gap-3 items-end">
+                          <div className="flex-1 space-y-1.5">
                             <Label className="text-xs text-muted-foreground">Casa</Label>
                             <Select 
                               value={entry.bookmaker_id}
                               onValueChange={(v) => updateOdd(index, "bookmaker_id", v)}
                             >
-                              <SelectTrigger className="h-9 text-sm">
+                              <SelectTrigger className="h-10">
                                 <SelectValue placeholder="Selecionar" />
                               </SelectTrigger>
                               <SelectContent>
@@ -710,7 +710,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             </Select>
                           </div>
                           
-                          <div className="space-y-1">
+                          <div className="w-24 space-y-1.5">
                             <Label className="text-xs text-muted-foreground">Odd</Label>
                             <Input 
                               type="number"
@@ -718,18 +718,18 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               placeholder="1.00"
                               value={entry.odd}
                               onChange={(e) => updateOdd(index, "odd", e.target.value)}
-                              className="h-9"
+                              className="h-10"
                             />
                           </div>
                         </div>
                         
                         {/* Saldo */}
                         {entry.bookmaker_id && saldo !== null && (
-                          <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-                            <Wallet className="h-3 w-3" />
+                          <div className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
+                            <Wallet className="h-4 w-4" />
                             <span>{formatCurrency(saldo)}</span>
                             {stakeAtual > 0 && stakeAtual > saldo && (
-                              <Badge variant="destructive" className="text-[10px] h-4 ml-1">
+                              <Badge variant="destructive" className="text-xs h-5 ml-1">
                                 Insuficiente
                               </Badge>
                             )}
@@ -737,9 +737,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                         )}
                         
                         {/* Campo Stake */}
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground text-center block">
-                            Aposta {entry.isReference && <span className="text-primary">(Ref)</span>}
+                        <div className="space-y-1.5">
+                          <Label className="text-sm text-muted-foreground text-center block">
+                            Aposta {entry.isReference && <span className="text-primary font-medium">(Ref)</span>}
                           </Label>
                           <div className="relative">
                             <Input 
@@ -748,7 +748,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               placeholder={entry.isReference ? "Stake ref." : (stakeCalculada > 0 ? stakeCalculada.toFixed(2) : "Stake")}
                               value={entry.stake}
                               onChange={(e) => updateOdd(index, "stake", e.target.value)}
-                              className={`h-9 pr-8 ${
+                              className={`h-10 pr-9 ${
                                 isDifferentFromCalculated 
                                   ? "border-amber-500 ring-1 ring-amber-500/50" 
                                   : ""
@@ -760,11 +760,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 text-muted-foreground hover:text-primary"
                                 onClick={() => resetStakeToCalculated(index, stakeCalculada)}
                                 title={`Resetar para ${stakeCalculada.toFixed(2)}`}
                               >
-                                <RotateCcw className="h-3 w-3" />
+                                <RotateCcw className="h-3.5 w-3.5" />
                               </Button>
                             )}
                           </div>
@@ -869,28 +869,28 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             </div>
           </div>
 
-          {/* Análise - Lado Direito (2 colunas) - Sempre visível */}
-          <div className="lg:col-span-2 space-y-4">
+          {/* Análise - Sidebar Direita (mais estreita) */}
+          <div className="w-full lg:w-72 xl:w-80 flex-shrink-0 space-y-4">
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
                   <Calculator className="h-4 w-4" />
                   Análise da Operação
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3">
                 {/* Recomendação */}
                 {analysis.recommendation && (
-                  <div className={`p-3 rounded-lg border ${
+                  <div className={`p-2.5 rounded-lg border ${
                     analysis.recommendation.icon === "check" ? "bg-emerald-500/10 border-emerald-500/30" :
                     analysis.recommendation.icon === "alert" ? "bg-amber-500/10 border-amber-500/30" :
                     "bg-red-500/10 border-red-500/30"
                   }`}>
                     <div className="flex items-start gap-2">
-                      {analysis.recommendation.icon === "check" && <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5" />}
-                      {analysis.recommendation.icon === "alert" && <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />}
-                      {analysis.recommendation.icon === "x" && <XCircle className="h-5 w-5 text-red-500 mt-0.5" />}
-                      <span className={`text-sm ${analysis.recommendation.color}`}>
+                      {analysis.recommendation.icon === "check" && <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 flex-shrink-0" />}
+                      {analysis.recommendation.icon === "alert" && <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />}
+                      {analysis.recommendation.icon === "x" && <XCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />}
+                      <span className={`text-xs ${analysis.recommendation.color}`}>
                         {analysis.recommendation.text}
                       </span>
                     </div>
@@ -899,17 +899,17 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
                 {/* Stake Total */}
                 <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
-                  <p className="text-xs text-muted-foreground">Stake Total da Operação</p>
-                  <p className="text-2xl font-bold text-primary">
+                  <p className="text-xs text-muted-foreground">Stake Total</p>
+                  <p className="text-xl font-bold text-primary">
                     {analysis.stakeTotal > 0 ? formatCurrency(analysis.stakeTotal) : "—"}
                   </p>
                 </div>
 
-                {/* Métricas Simplificadas (removida Margem Casa) */}
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="p-2 rounded-lg bg-muted/30">
-                    <p className="text-[10px] text-muted-foreground">Spread</p>
-                    <p className={`text-sm font-bold ${
+                {/* Métricas em coluna única (mais legíveis na sidebar estreita) */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                    <span className="text-xs text-muted-foreground">Spread</span>
+                    <span className={`text-sm font-bold ${
                       analysis.validOddsCount < 2 
                         ? 'text-muted-foreground' 
                         : analysis.spread >= 0 
@@ -920,11 +920,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                         ? `${analysis.spread >= 0 ? "+" : ""}${analysis.spread.toFixed(2)}%`
                         : "—"
                       }
-                    </p>
+                    </span>
                   </div>
-                  <div className="p-2 rounded-lg bg-muted/30">
-                    <p className="text-[10px] text-muted-foreground">ROI Esperado</p>
-                    <p className={`text-sm font-bold ${
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                    <span className="text-xs text-muted-foreground">ROI Esperado</span>
+                    <span className={`text-sm font-bold ${
                       analysis.stakeTotal <= 0 
                         ? 'text-muted-foreground' 
                         : analysis.roiEsperado >= 0 
@@ -935,13 +935,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                         ? `${analysis.roiEsperado >= 0 ? "+" : ""}${analysis.roiEsperado.toFixed(2)}%`
                         : "—"
                       }
-                    </p>
+                    </span>
                   </div>
-                  <div className="p-2 rounded-lg bg-muted/30">
-                    <p className="text-[10px] text-muted-foreground">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                    <span className="text-xs text-muted-foreground">
                       {analysis.guaranteedProfit >= 0 ? "Lucro" : "Custo"}
-                    </p>
-                    <p className={`text-sm font-bold ${
+                    </span>
+                    <span className={`text-sm font-bold ${
                       analysis.stakeTotal <= 0 
                         ? 'text-muted-foreground' 
                         : analysis.guaranteedProfit >= 0 
@@ -952,7 +952,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                         ? `${analysis.guaranteedProfit >= 0 ? "+" : ""}${formatCurrency(analysis.guaranteedProfit)}`
                         : "—"
                       }
-                    </p>
+                    </span>
                   </div>
                 </div>
 
@@ -961,8 +961,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   <>
                     <Separator />
                     <div>
-                      <p className="text-xs font-medium mb-2">Cenários de Resultado</p>
-                      <div className="space-y-2">
+                      <p className="text-xs font-medium mb-2">Cenários</p>
+                      <div className="space-y-1.5">
                         {analysis.scenarios.map((scenario, index) => (
                           <div 
                             key={index} 
@@ -974,14 +974,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                           >
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-medium">{scenario.selecao}</span>
-                              <div className="text-right">
-                                <p className="text-[10px] text-muted-foreground">
-                                  Retorno: {formatCurrency(scenario.retorno)}
-                                </p>
-                                <p className={`text-sm font-bold ${scenario.isPositive ? "text-emerald-500" : "text-red-500"}`}>
-                                  {scenario.lucro >= 0 ? "+" : ""}{formatCurrency(scenario.lucro)}
-                                </p>
-                              </div>
+                              <span className={`text-xs font-bold ${scenario.isPositive ? "text-emerald-500" : "text-red-500"}`}>
+                                {scenario.lucro >= 0 ? "+" : ""}{formatCurrency(scenario.lucro)}
+                              </span>
                             </div>
                           </div>
                         ))}
