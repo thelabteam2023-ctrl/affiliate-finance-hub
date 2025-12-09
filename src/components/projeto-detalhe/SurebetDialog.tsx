@@ -193,9 +193,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     const newOdds = odds.map((o, i) => ({
       ...o,
       isReference: i === index,
-      // Resetar stake não-manual quando muda referência
-      stake: i === index ? o.stake : (o.isManuallyEdited ? o.stake : ""),
-      isManuallyEdited: i === index ? o.isManuallyEdited : o.isManuallyEdited
+      // Ao mudar referência, resetar isManuallyEdited dos outros para permitir recálculo
+      isManuallyEdited: i === index ? o.isManuallyEdited : false
     }));
     setOdds(newOdds);
   };
