@@ -528,8 +528,10 @@ export default function Caixa() {
       <CaixaTransacaoDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        onSuccess={() => {
+        onSuccess={async () => {
           setDialogOpen(false);
+          // Delay para garantir que o trigger do banco tenha atualizado os saldos
+          await new Promise(resolve => setTimeout(resolve, 300));
           fetchData();
         }}
       />
@@ -541,7 +543,9 @@ export default function Caixa() {
           setConfirmSaqueDialogOpen(false);
           setSaqueParaConfirmar(null);
         }}
-        onSuccess={() => {
+        onSuccess={async () => {
+          // Delay para garantir que o trigger do banco tenha atualizado os saldos
+          await new Promise(resolve => setTimeout(resolve, 300));
           fetchData();
         }}
         saque={saqueParaConfirmar ? {

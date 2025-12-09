@@ -1010,8 +1010,10 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       <CaixaTransacaoDialog
         open={transacaoDialogOpen}
         onClose={() => setTransacaoDialogOpen(false)}
-        onSuccess={() => {
+        onSuccess={async () => {
           setTransacaoDialogOpen(false);
+          // Delay para garantir que o trigger do banco tenha atualizado os saldos
+          await new Promise(resolve => setTimeout(resolve, 300));
           fetchVinculos();
         }}
       />
