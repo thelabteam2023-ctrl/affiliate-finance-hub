@@ -77,7 +77,7 @@ const ESPORTES = [
   "League of Legends", "Counter-Strike", "Dota 2", "eFootball"
 ];
 const MERCADOS = [
-  "ML", "Over/Under", "Ambos Marcam", "Handicap Asiático", "Handicap Europeu", 
+  "Over/Under", "Ambos Marcam", "Handicap Asiático", "Handicap Europeu", 
   "Empate Anula", "Correct Score", "Dupla Chance", "Draw No Bet", 
   "Primeiro a Marcar", "Intervalo/Final", "Total de Gols", "Total de Cantos", 
   "Total de Cartões", "Spread", "Total de Pontos", "Outro"
