@@ -9,19 +9,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { 
   Calculator, 
   Save, 
-  TrendingUp, 
-  TrendingDown,
   AlertCircle,
   CheckCircle2,
   XCircle,
   Trash2,
-  Wallet
+  Wallet,
+  RotateCcw
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -70,6 +67,7 @@ interface OddEntry {
   stake: string;
   selecao: string;
   isReference: boolean;
+  isManuallyEdited: boolean;
 }
 
 const ESPORTES = [
@@ -91,17 +89,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   const [observacoes, setObservacoes] = useState("");
   const [saving, setSaving] = useState(false);
   
-  // Modo de entrada: 'reference' ou 'manual'
-  const [stakeMode, setStakeMode] = useState<"reference" | "manual">("reference");
-  
   // Arredondamento de stakes
   const [arredondarAtivado, setArredondarAtivado] = useState(false);
   const [arredondarValor, setArredondarValor] = useState("1");
   
   // Odds entries (2 for binary, 3 for 1X2)
   const [odds, setOdds] = useState<OddEntry[]>([
-    { bookmaker_id: "", odd: "", stake: "", selecao: "Sim", isReference: true },
-    { bookmaker_id: "", odd: "", stake: "", selecao: "Não", isReference: false }
+    { bookmaker_id: "", odd: "", stake: "", selecao: "Sim", isReference: true, isManuallyEdited: false },
+    { bookmaker_id: "", odd: "", stake: "", selecao: "Não", isReference: false, isManuallyEdited: false }
   ]);
   
   // Apostas vinculadas para edição
@@ -131,7 +126,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         odd: "",
         stake: "",
         selecao: sel,
-        isReference: i === 0
+        isReference: i === 0,
+        isManuallyEdited: false
       })));
     }
   }, [modelo, isEditing]);
@@ -141,12 +137,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     setEsporte("Futebol");
     setModelo("1-2");
     setObservacoes("");
-    setStakeMode("reference");
     setArredondarAtivado(false);
     setArredondarValor("1");
     setOdds([
-      { bookmaker_id: "", odd: "", stake: "", selecao: "Sim", isReference: true },
-      { bookmaker_id: "", odd: "", stake: "", selecao: "Não", isReference: false }
+      { bookmaker_id: "", odd: "", stake: "", selecao: "Sim", isReference: true, isManuallyEdited: false },
+      { bookmaker_id: "", odd: "", stake: "", selecao: "Não", isReference: false, isManuallyEdited: false }
     ]);
     setLinkedApostas([]);
   };
@@ -173,11 +168,22 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     const newOdds = [...odds];
     newOdds[index] = { ...newOdds[index], [field]: value };
     
-    // Se está definindo referência, remover das outras
+    // Se está definindo referência, remover das outras e resetar campos não-manuais
     if (field === "isReference" && value === true) {
       newOdds.forEach((o, i) => {
-        if (i !== index) o.isReference = false;
+        if (i !== index) {
+          o.isReference = false;
+          // Resetar stake se não foi editado manualmente
+          if (!o.isManuallyEdited) {
+            o.stake = "";
+          }
+        }
       });
+    }
+    
+    // Marcar como editado manualmente se for o campo stake
+    if (field === "stake") {
+      newOdds[index].isManuallyEdited = true;
     }
     
     setOdds(newOdds);
@@ -186,8 +192,21 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   const setReferenceIndex = (index: number) => {
     const newOdds = odds.map((o, i) => ({
       ...o,
-      isReference: i === index
+      isReference: i === index,
+      // Resetar stake não-manual quando muda referência
+      stake: i === index ? o.stake : (o.isManuallyEdited ? o.stake : ""),
+      isManuallyEdited: i === index ? o.isManuallyEdited : o.isManuallyEdited
     }));
+    setOdds(newOdds);
+  };
+
+  const resetStakeToCalculated = (index: number, calculatedValue: number) => {
+    const newOdds = [...odds];
+    newOdds[index] = { 
+      ...newOdds[index], 
+      stake: calculatedValue > 0 ? calculatedValue.toFixed(2) : "",
+      isManuallyEdited: false 
+    };
     setOdds(newOdds);
   };
 
@@ -214,119 +233,113 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     }).format(value);
   };
 
-  // Cálculos em tempo real
+  // Cálculos em tempo real - agora sempre tenta calcular com dados parciais
   const analysis = useMemo(() => {
     const parsedOdds = odds.map(o => parseFloat(o.odd) || 0);
+    const validOddsCount = parsedOdds.filter(o => o > 1).length;
     
-    // Verificar se todas as odds são válidas
-    if (parsedOdds.some(o => o <= 1)) {
-      return null;
-    }
-    
-    // Probabilidades implícitas
-    const impliedProbs = parsedOdds.map(odd => 1 / odd);
+    // Probabilidades implícitas (mesmo com dados parciais)
+    const impliedProbs = parsedOdds.map(odd => odd > 1 ? 1 / odd : 0);
     const totalImpliedProb = impliedProbs.reduce((a, b) => a + b, 0);
     
     // Margem/Juice do mercado (negativo = arbitragem)
-    const margin = (totalImpliedProb - 1) * 100;
-    const spread = -margin; // Spread positivo = lucro, negativo = custo
+    const margin = totalImpliedProb > 0 ? (totalImpliedProb - 1) * 100 : 0;
+    const spread = -margin;
     
     // Probabilidades reais (normalizadas)
-    const trueProbs = impliedProbs.map(p => p / totalImpliedProb);
+    const trueProbs = totalImpliedProb > 0 
+      ? impliedProbs.map(p => p / totalImpliedProb)
+      : impliedProbs.map(() => 0);
     
-    // Verificar arbitragem (soma das probabilidades implícitas < 100%)
-    const hasArbitrage = totalImpliedProb < 1;
+    // Verificar arbitragem
+    const hasArbitrage = validOddsCount >= 2 && totalImpliedProb < 1 && totalImpliedProb > 0;
     const arbitrageProfit = hasArbitrage ? (1 - totalImpliedProb) * 100 : 0;
     
-    // Calcular stakes baseado no modo
+    // Calcular stakes - modo híbrido
     let calculatedStakes: number[] = [];
     let stakeTotal = 0;
     
-    if (stakeMode === "reference") {
-      // Modo referência: calcular stakes a partir do lado referência
-      const refIndex = odds.findIndex(o => o.isReference);
-      const refStake = parseFloat(odds[refIndex]?.stake) || 0;
-      const refOdd = parsedOdds[refIndex] || 0;
+    // Encontrar referência
+    const refIndex = odds.findIndex(o => o.isReference);
+    const refStake = parseFloat(odds[refIndex]?.stake) || 0;
+    const refOdd = parsedOdds[refIndex] || 0;
+    
+    if (refStake > 0 && refOdd > 1 && validOddsCount >= 2) {
+      // Retorno alvo = stake de referência * odd de referência
+      const targetReturn = refStake * refOdd;
       
-      if (refStake > 0 && refOdd > 1) {
-        // Retorno alvo = stake de referência * odd de referência
-        const targetReturn = refStake * refOdd;
+      // Calcular stakes para cada lado
+      calculatedStakes = parsedOdds.map((odd, i) => {
+        if (i === refIndex) return refStake;
         
-        // Calcular stakes para cada lado para igualar o retorno
-        calculatedStakes = parsedOdds.map((odd, i) => {
-          if (i === refIndex) return refStake;
+        // Se foi editado manualmente, usar valor manual
+        const manualStake = parseFloat(odds[i].stake);
+        if (odds[i].isManuallyEdited && !isNaN(manualStake) && manualStake > 0) {
+          return manualStake;
+        }
+        
+        // Calcular automaticamente
+        if (odd > 1) {
           const rawStake = targetReturn / odd;
           return arredondarStake(rawStake);
-        });
-        
-        stakeTotal = calculatedStakes.reduce((a, b) => a + b, 0);
-      }
+        }
+        return 0;
+      });
+      
+      stakeTotal = calculatedStakes.reduce((a, b) => a + b, 0);
     } else {
-      // Modo manual: usar stakes inseridas
+      // Usar stakes manuais diretamente
       calculatedStakes = odds.map(o => parseFloat(o.stake) || 0);
       stakeTotal = calculatedStakes.reduce((a, b) => a + b, 0);
     }
     
-    if (stakeTotal <= 0) {
-      return {
-        impliedProbs,
-        trueProbs,
-        margin,
-        spread,
-        hasArbitrage,
-        arbitrageProfit,
-        calculatedStakes: [],
-        stakeTotal: 0,
-        scenarios: [],
-        guaranteedProfit: 0,
-        roiEsperado: 0,
-        recommendation: null
-      };
-    }
-    
     // Calcular cenários de retorno/lucro para cada resultado
-    const scenarios = parsedOdds.map((odd, i) => {
-      const stakeNesseLado = calculatedStakes[i];
-      const retorno = stakeNesseLado * odd;
-      const lucro = retorno - stakeTotal;
-      return {
-        selecao: odds[i].selecao,
-        stake: stakeNesseLado,
-        retorno,
-        lucro,
-        isPositive: lucro >= 0
-      };
-    });
+    const scenarios = stakeTotal > 0 && validOddsCount >= 2
+      ? parsedOdds.map((odd, i) => {
+          const stakeNesseLado = calculatedStakes[i];
+          const retorno = odd > 1 ? stakeNesseLado * odd : 0;
+          const lucro = retorno - stakeTotal;
+          return {
+            selecao: odds[i].selecao,
+            stake: stakeNesseLado,
+            retorno,
+            lucro,
+            isPositive: lucro >= 0
+          };
+        })
+      : [];
     
-    // Lucro garantido (mínimo entre cenários) - se todos positivos = arbitragem pura
-    const minLucro = Math.min(...scenarios.map(s => s.lucro));
-    const maxLucro = Math.max(...scenarios.map(s => s.lucro));
+    // Lucro garantido
+    const minLucro = scenarios.length > 0 ? Math.min(...scenarios.map(s => s.lucro)) : 0;
     const guaranteedProfit = minLucro;
     
-    // ROI esperado (baseado no spread)
+    // ROI esperado
     const roiEsperado = stakeTotal > 0 ? (guaranteedProfit / stakeTotal) * 100 : 0;
     
     // Recomendação
     let recommendation: { text: string; color: string; icon: "check" | "x" | "alert" } | null = null;
-    if (hasArbitrage && guaranteedProfit > 0) {
-      recommendation = { 
-        text: `Arbitragem! Lucro garantido: ${formatCurrency(guaranteedProfit)} (${roiEsperado.toFixed(2)}%)`, 
-        color: "text-emerald-500",
-        icon: "check"
-      };
-    } else if (guaranteedProfit >= 0) {
-      recommendation = { 
-        text: `Operação neutra ou positiva. Spread: ${spread.toFixed(2)}%`, 
-        color: "text-blue-400",
-        icon: "alert"
-      };
-    } else {
-      const custoPercent = Math.abs(roiEsperado);
-      recommendation = { 
-        text: `Custo operacional: ${formatCurrency(Math.abs(guaranteedProfit))} (-${custoPercent.toFixed(2)}%)`, 
-        color: "text-amber-400",
-        icon: "alert"
-      };
+    
+    if (stakeTotal > 0 && validOddsCount >= 2) {
+      if (hasArbitrage && guaranteedProfit > 0) {
+        recommendation = { 
+          text: `Arbitragem! Lucro garantido: ${formatCurrency(guaranteedProfit)} (${roiEsperado.toFixed(2)}%)`, 
+          color: "text-emerald-500",
+          icon: "check"
+        };
+      } else if (guaranteedProfit >= 0) {
+        recommendation = { 
+          text: `Operação neutra ou positiva. Spread: ${spread.toFixed(2)}%`, 
+          color: "text-blue-400",
+          icon: "alert"
+        };
+      } else {
+        const custoPercent = Math.abs(roiEsperado);
+        recommendation = { 
+          text: `Custo operacional: ${formatCurrency(Math.abs(guaranteedProfit))} (-${custoPercent.toFixed(2)}%)`, 
+          color: "text-amber-400",
+          icon: "alert"
+        };
+      }
     }
     
     return {
@@ -341,9 +354,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       scenarios,
       guaranteedProfit,
       roiEsperado,
-      recommendation
+      recommendation,
+      validOddsCount,
+      hasPartialData: validOddsCount > 0
     };
-  }, [odds, stakeMode, arredondarAtivado, arredondarValor]);
+  }, [odds, arredondarAtivado, arredondarValor]);
 
   const handleSave = async () => {
     if (!evento.trim()) {
@@ -597,74 +612,49 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               />
             </div>
 
-            {/* Toggle de Modo */}
-            {!isEditing && (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border">
-                <div>
-                  <p className="text-sm font-medium">Modo de Entrada</p>
-                  <p className="text-xs text-muted-foreground">
-                    {stakeMode === "reference" 
-                      ? "Defina stake no lado referência, o sistema calcula o resto" 
-                      : "Defina todas as stakes manualmente"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs ${stakeMode === "reference" ? "text-primary" : "text-muted-foreground"}`}>
-                    Referência
-                  </span>
-                  <Switch 
-                    checked={stakeMode === "manual"}
-                    onCheckedChange={(checked) => setStakeMode(checked ? "manual" : "reference")}
-                  />
-                  <span className={`text-xs ${stakeMode === "manual" ? "text-primary" : "text-muted-foreground"}`}>
-                    Manual
-                  </span>
-                </div>
-              </div>
-            )}
-
             <Separator />
 
-            {/* Tabela de Odds */}
+            {/* Tabela de Odds - Modo Híbrido */}
             {!isEditing && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label>Posições da Operação</Label>
-                  {stakeMode === "reference" && (
-                    <span className="text-xs text-muted-foreground">
-                      Selecione qual lado será a referência
-                    </span>
-                  )}
+                  <span className="text-xs text-muted-foreground">
+                    Selecione a referência e ajuste as stakes livremente
+                  </span>
                 </div>
                 
                 {/* Header */}
                 <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground px-1">
-                  {stakeMode === "reference" && <div className="col-span-1 text-center">C</div>}
+                  <div className="col-span-1 text-center">Ref</div>
                   <div className="col-span-2">Resultado</div>
                   <div className="col-span-4">Casa</div>
                   <div className="col-span-2">Odd</div>
-                  <div className={stakeMode === "reference" ? "col-span-3" : "col-span-4"}>Aposta</div>
+                  <div className="col-span-3">Aposta</div>
                 </div>
                 
                 {odds.map((entry, index) => {
                   const saldo = getBookmakerSaldo(entry.bookmaker_id);
                   const stakeCalculada = analysis?.calculatedStakes?.[index] || 0;
+                  const stakeAtual = parseFloat(entry.stake) || 0;
+                  const isDifferentFromCalculated = entry.isManuallyEdited && 
+                    stakeAtual > 0 && 
+                    Math.abs(stakeAtual - stakeCalculada) > 0.01 &&
+                    !entry.isReference;
                   
                   return (
                     <div key={index} className="space-y-1">
                       <div className="grid grid-cols-12 gap-2 items-center">
-                        {/* RadioButton de Referência */}
-                        {stakeMode === "reference" && (
-                          <div className="col-span-1 flex justify-center">
-                            <input
-                              type="radio"
-                              name="reference-selection"
-                              checked={entry.isReference}
-                              onChange={() => setReferenceIndex(index)}
-                              className="h-4 w-4 cursor-pointer accent-primary"
-                            />
-                          </div>
-                        )}
+                        {/* RadioButton de Referência - Sempre visível */}
+                        <div className="col-span-1 flex justify-center">
+                          <input
+                            type="radio"
+                            name="reference-selection"
+                            checked={entry.isReference}
+                            onChange={() => setReferenceIndex(index)}
+                            className="h-4 w-4 cursor-pointer accent-primary"
+                          />
+                        </div>
                         
                         {/* Seleção */}
                         <div className="col-span-2">
@@ -715,33 +705,37 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                           />
                         </div>
                         
-                        {/* Stake */}
-                        <div className={stakeMode === "reference" ? "col-span-3" : "col-span-4"}>
-                          {stakeMode === "reference" ? (
-                            entry.isReference ? (
-                              <Input 
-                                type="number"
-                                step="0.01"
-                                placeholder="Stake"
-                                value={entry.stake}
-                                onChange={(e) => updateOdd(index, "stake", e.target.value)}
-                                className="h-9 border-primary ring-1 ring-primary/50"
-                              />
-                            ) : (
-                              <div className="h-9 px-3 flex items-center rounded-md bg-muted/50 text-sm font-medium border">
-                                {stakeCalculada > 0 ? stakeCalculada.toFixed(2) : "—"}
-                              </div>
-                            )
-                          ) : (
+                        {/* Stake - Sempre editável */}
+                        <div className="col-span-3">
+                          <div className="relative">
                             <Input 
                               type="number"
                               step="0.01"
-                              placeholder="Stake"
+                              placeholder={entry.isReference ? "Stake ref." : (stakeCalculada > 0 ? stakeCalculada.toFixed(2) : "Stake")}
                               value={entry.stake}
                               onChange={(e) => updateOdd(index, "stake", e.target.value)}
-                              className="h-9"
+                              className={`h-9 pr-8 ${
+                                entry.isReference 
+                                  ? "border-primary ring-1 ring-primary/50" 
+                                  : isDifferentFromCalculated 
+                                    ? "border-amber-500 ring-1 ring-amber-500/50" 
+                                    : ""
+                              }`}
                             />
-                          )}
+                            {/* Botão reset para campos modificados */}
+                            {isDifferentFromCalculated && stakeCalculada > 0 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                                onClick={() => resetStakeToCalculated(index, stakeCalculada)}
+                                title={`Resetar para ${stakeCalculada.toFixed(2)}`}
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                       
@@ -750,7 +744,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                         <div className="flex items-center gap-1 text-xs text-muted-foreground pl-1">
                           <Wallet className="h-3 w-3" />
                           <span>Saldo: {formatCurrency(saldo)}</span>
-                          {stakeCalculada > saldo && (
+                          {stakeAtual > 0 && stakeAtual > saldo && (
                             <Badge variant="destructive" className="text-[10px] h-4 ml-1">
                               Insuficiente
                             </Badge>
@@ -762,31 +756,29 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                 })}
                 
                 {/* Opções de Arredondamento */}
-                {stakeMode === "reference" && (
-                  <div className="flex items-center gap-4 pt-2 border-t mt-3">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="arredondar-checkbox"
-                        checked={arredondarAtivado}
-                        onChange={(e) => setArredondarAtivado(e.target.checked)}
-                        className="h-4 w-4 cursor-pointer accent-primary rounded"
-                      />
-                      <Label htmlFor="arredondar-checkbox" className="text-sm cursor-pointer">
-                        Arredondar aposta até:
-                      </Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={arredondarValor}
-                        onChange={(e) => setArredondarValor(e.target.value)}
-                        disabled={!arredondarAtivado}
-                        className="h-8 w-20"
-                      />
-                    </div>
+                <div className="flex items-center gap-4 pt-2 border-t mt-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="arredondar-checkbox"
+                      checked={arredondarAtivado}
+                      onChange={(e) => setArredondarAtivado(e.target.checked)}
+                      className="h-4 w-4 cursor-pointer accent-primary rounded"
+                    />
+                    <Label htmlFor="arredondar-checkbox" className="text-sm cursor-pointer">
+                      Arredondar aposta até:
+                    </Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={arredondarValor}
+                      onChange={(e) => setArredondarValor(e.target.value)}
+                      disabled={!arredondarAtivado}
+                      className="h-8 w-20"
+                    />
                   </div>
-                )}
+                </div>
               </div>
             )}
 
@@ -858,7 +850,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             </div>
           </div>
 
-          {/* Análise - Lado Direito (2 colunas) */}
+          {/* Análise - Lado Direito (2 colunas) - Sempre visível */}
           <div className="lg:col-span-2 space-y-4">
             <Card>
               <CardHeader className="pb-2">
@@ -868,67 +860,87 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {analysis && analysis.stakeTotal > 0 ? (
+                {/* Recomendação */}
+                {analysis.recommendation && (
+                  <div className={`p-3 rounded-lg border ${
+                    analysis.recommendation.icon === "check" ? "bg-emerald-500/10 border-emerald-500/30" :
+                    analysis.recommendation.icon === "alert" ? "bg-amber-500/10 border-amber-500/30" :
+                    "bg-red-500/10 border-red-500/30"
+                  }`}>
+                    <div className="flex items-start gap-2">
+                      {analysis.recommendation.icon === "check" && <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5" />}
+                      {analysis.recommendation.icon === "alert" && <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />}
+                      {analysis.recommendation.icon === "x" && <XCircle className="h-5 w-5 text-red-500 mt-0.5" />}
+                      <span className={`text-sm ${analysis.recommendation.color}`}>
+                        {analysis.recommendation.text}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Stake Total */}
+                <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
+                  <p className="text-xs text-muted-foreground">Stake Total da Operação</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {analysis.stakeTotal > 0 ? formatCurrency(analysis.stakeTotal) : "—"}
+                  </p>
+                </div>
+
+                {/* Métricas Simplificadas (removida Margem Casa) */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="p-2 rounded-lg bg-muted/30">
+                    <p className="text-[10px] text-muted-foreground">Spread</p>
+                    <p className={`text-sm font-bold ${
+                      analysis.validOddsCount < 2 
+                        ? 'text-muted-foreground' 
+                        : analysis.spread >= 0 
+                          ? 'text-emerald-500' 
+                          : 'text-amber-500'
+                    }`}>
+                      {analysis.validOddsCount >= 2 
+                        ? `${analysis.spread >= 0 ? "+" : ""}${analysis.spread.toFixed(2)}%`
+                        : "—"
+                      }
+                    </p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-muted/30">
+                    <p className="text-[10px] text-muted-foreground">ROI Esperado</p>
+                    <p className={`text-sm font-bold ${
+                      analysis.stakeTotal <= 0 
+                        ? 'text-muted-foreground' 
+                        : analysis.roiEsperado >= 0 
+                          ? 'text-emerald-500' 
+                          : 'text-red-500'
+                    }`}>
+                      {analysis.stakeTotal > 0 
+                        ? `${analysis.roiEsperado >= 0 ? "+" : ""}${analysis.roiEsperado.toFixed(2)}%`
+                        : "—"
+                      }
+                    </p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-muted/30">
+                    <p className="text-[10px] text-muted-foreground">
+                      {analysis.guaranteedProfit >= 0 ? "Lucro" : "Custo"}
+                    </p>
+                    <p className={`text-sm font-bold ${
+                      analysis.stakeTotal <= 0 
+                        ? 'text-muted-foreground' 
+                        : analysis.guaranteedProfit >= 0 
+                          ? 'text-emerald-500' 
+                          : 'text-amber-500'
+                    }`}>
+                      {analysis.stakeTotal > 0 
+                        ? `${analysis.guaranteedProfit >= 0 ? "+" : ""}${formatCurrency(analysis.guaranteedProfit)}`
+                        : "—"
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                {/* Cenários de Resultado */}
+                {analysis.scenarios.length > 0 && (
                   <>
-                    {/* Recomendação */}
-                    {analysis.recommendation && (
-                      <div className={`p-3 rounded-lg border ${
-                        analysis.recommendation.icon === "check" ? "bg-emerald-500/10 border-emerald-500/30" :
-                        analysis.recommendation.icon === "alert" ? "bg-amber-500/10 border-amber-500/30" :
-                        "bg-red-500/10 border-red-500/30"
-                      }`}>
-                        <div className="flex items-start gap-2">
-                          {analysis.recommendation.icon === "check" && <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5" />}
-                          {analysis.recommendation.icon === "alert" && <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />}
-                          {analysis.recommendation.icon === "x" && <XCircle className="h-5 w-5 text-red-500 mt-0.5" />}
-                          <span className={`text-sm ${analysis.recommendation.color}`}>
-                            {analysis.recommendation.text}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Stake Total */}
-                    <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
-                      <p className="text-xs text-muted-foreground">Stake Total da Operação</p>
-                      <p className="text-2xl font-bold text-primary">
-                        {formatCurrency(analysis.stakeTotal)}
-                      </p>
-                    </div>
-
-                    {/* Métricas */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="p-2 rounded-lg bg-muted/30">
-                        <p className="text-[10px] text-muted-foreground">Spread</p>
-                        <p className={`text-sm font-bold ${analysis.spread >= 0 ? 'text-emerald-500' : 'text-amber-500'}`}>
-                          {analysis.spread >= 0 ? "+" : ""}{analysis.spread.toFixed(2)}%
-                        </p>
-                      </div>
-                      <div className="p-2 rounded-lg bg-muted/30">
-                        <p className="text-[10px] text-muted-foreground">Margem Casa</p>
-                        <p className={`text-sm font-bold ${analysis.margin > 5 ? 'text-red-500' : 'text-blue-400'}`}>
-                          {analysis.margin.toFixed(2)}%
-                        </p>
-                      </div>
-                      <div className="p-2 rounded-lg bg-muted/30">
-                        <p className="text-[10px] text-muted-foreground">ROI Esperado</p>
-                        <p className={`text-sm font-bold ${analysis.roiEsperado >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                          {analysis.roiEsperado >= 0 ? "+" : ""}{analysis.roiEsperado.toFixed(2)}%
-                        </p>
-                      </div>
-                      <div className="p-2 rounded-lg bg-muted/30">
-                        <p className="text-[10px] text-muted-foreground">
-                          {analysis.guaranteedProfit >= 0 ? "Lucro Garantido" : "Custo"}
-                        </p>
-                        <p className={`text-sm font-bold ${analysis.guaranteedProfit >= 0 ? 'text-emerald-500' : 'text-amber-500'}`}>
-                          {analysis.guaranteedProfit >= 0 ? "+" : ""}{formatCurrency(analysis.guaranteedProfit)}
-                        </p>
-                      </div>
-                    </div>
-
                     <Separator />
-
-                    {/* Cenários de Resultado */}
                     <div>
                       <p className="text-xs font-medium mb-2">Cenários de Resultado</p>
                       <div className="space-y-2">
@@ -956,38 +968,49 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                         ))}
                       </div>
                     </div>
+                  </>
+                )}
 
+                {/* Probabilidades - sempre visível quando há odds */}
+                {analysis.hasPartialData && (
+                  <>
                     <Separator />
-
-                    {/* Probabilidades */}
                     <div>
-                      <p className="text-xs font-medium mb-2">Probabilidades</p>
+                      <p className="text-xs font-medium mb-2">Probabilidades Implícitas</p>
                       <div className="space-y-1">
-                        {odds.map((entry, index) => (
-                          <div key={index} className="flex items-center justify-between text-[10px]">
-                            <span className="text-muted-foreground">{entry.selecao}</span>
-                            <div className="flex gap-3">
-                              <span className="text-muted-foreground">
-                                Impl: {(analysis.impliedProbs[index] * 100).toFixed(1)}%
-                              </span>
-                              <span className="text-blue-400">
-                                Real: {(analysis.trueProbs[index] * 100).toFixed(1)}%
+                        {odds.map((entry, index) => {
+                          const impliedProb = analysis.impliedProbs[index];
+                          return (
+                            <div key={index} className="flex items-center justify-between text-[10px]">
+                              <span className="text-muted-foreground">{entry.selecao}</span>
+                              <span className={impliedProb > 0 ? "text-blue-400" : "text-muted-foreground"}>
+                                {impliedProb > 0 ? `${(impliedProb * 100).toFixed(1)}%` : "—"}
                               </span>
                             </div>
+                          );
+                        })}
+                        {analysis.validOddsCount >= 2 && (
+                          <div className="flex items-center justify-between text-[10px] pt-1 border-t mt-1">
+                            <span className="text-muted-foreground font-medium">Total</span>
+                            <span className={`font-medium ${
+                              analysis.impliedProbs.reduce((a, b) => a + b, 0) < 1 
+                                ? "text-emerald-400" 
+                                : "text-amber-400"
+                            }`}>
+                              {(analysis.impliedProbs.reduce((a, b) => a + b, 0) * 100).toFixed(1)}%
+                            </span>
                           </div>
-                        ))}
+                        )}
                       </div>
                     </div>
                   </>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Calculator className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Preencha as odds e stakes para ver a análise</p>
-                    {stakeMode === "reference" && (
-                      <p className="text-xs mt-1">
-                        Defina a stake no lado marcado como referência
-                      </p>
-                    )}
+                )}
+
+                {/* Mensagem quando não há dados */}
+                {!analysis.hasPartialData && (
+                  <div className="text-center py-4 text-muted-foreground">
+                    <Calculator className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs">Preencha as odds para ver a análise</p>
                   </div>
                 )}
               </CardContent>
