@@ -26,6 +26,8 @@ import {
   ChevronDown,
   Clock
 } from "lucide-react";
+import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
+import { SurebetDialog } from "./SurebetDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
@@ -189,8 +191,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMultiplaOpen, setDialogMultiplaOpen] = useState(false);
+  const [dialogSurebetOpen, setDialogSurebetOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
   const [selectedApostaMultipla, setSelectedApostaMultipla] = useState<ApostaMultipla | null>(null);
+  const [selectedSurebet, setSelectedSurebet] = useState<SurebetData | null>(null);
+  const [bookmakers, setBookmakers] = useState<any[]>([]);
 
   const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
     const today = new Date();
@@ -225,9 +230,31 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
   const fetchAllApostas = async () => {
     try {
       setLoading(true);
-      await Promise.all([fetchApostas(), fetchApostasMultiplas(), fetchSurebets()]);
+      await Promise.all([fetchApostas(), fetchApostasMultiplas(), fetchSurebets(), fetchBookmakers()]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBookmakers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("bookmakers")
+        .select(`
+          id,
+          nome,
+          saldo_atual,
+          saldo_freebet,
+          parceiro:parceiros (nome),
+          bookmakers_catalogo (logo_url)
+        `)
+        .eq("projeto_id", projetoId)
+        .in("status", ["ativo", "ATIVO", "LIMITADA", "limitada"]);
+
+      if (error) throw error;
+      setBookmakers(data || []);
+    } catch (error: any) {
+      console.error("Erro ao carregar bookmakers:", error.message);
     }
   };
 
@@ -661,110 +688,32 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
       ) : viewMode === "cards" ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {apostasUnificadas.map((item) => {
-            // Card de Surebet
+            // Card de Surebet - usando componente unificado
             if (item.tipo === "surebet") {
               const sb = item.data as Surebet;
-              const isLiquidada = sb.status === "LIQUIDADA";
-              const lucro = isLiquidada ? (sb.lucro_real || 0) : (sb.lucro_esperado || 0);
-              const roi = isLiquidada ? (sb.roi_real || 0) : (sb.roi_esperado || 0);
+              
+              // Converter para formato SurebetData compatível com SurebetCard
+              const surebetData: SurebetData = {
+                ...sb,
+                pernas: sb.pernas?.map(p => ({
+                  id: p.id,
+                  selecao: p.selecao,
+                  odd: p.odd,
+                  stake: p.stake,
+                  resultado: p.resultado,
+                  bookmaker_nome: p.bookmaker?.nome || "—"
+                }))
+              };
               
               return (
-                <Card 
-                  key={sb.id} 
-                  className="hover:border-primary/50 transition-colors cursor-pointer border-l-2 border-l-amber-500"
-                >
-                  <CardHeader className="pb-1 pt-3 px-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <CardTitle className="text-sm truncate">{sb.evento}</CardTitle>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {sb.esporte} • {sb.modelo}
-                        </p>
-                      </div>
-                      <div className="flex gap-1 flex-shrink-0 items-center">
-                        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">
-                          <ArrowLeftRight className="h-2.5 w-2.5 mr-0.5" />
-                          SUREBET
-                        </Badge>
-                        <Badge className={isLiquidada 
-                          ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
-                          : "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                        }>
-                          {isLiquidada ? "Liquidada" : "Pendente"}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-1 pb-3 px-3">
-                    <div className="space-y-1">
-                      {/* Pernas */}
-                      {sb.pernas && sb.pernas.length > 0 && (
-                        <div className="space-y-1 mb-2">
-                          {sb.pernas.map((perna, idx) => (
-                            <div key={perna.id} className={`flex items-center justify-between text-xs p-1.5 rounded ${
-                              perna.resultado === "GREEN" ? "bg-emerald-500/10" :
-                              perna.resultado === "RED" ? "bg-red-500/10" :
-                              perna.resultado === "VOID" ? "bg-gray-500/10" :
-                              "bg-muted/30"
-                            }`}>
-                              <span className="text-muted-foreground truncate flex-1 text-[11px]">
-                                {perna.bookmaker?.nome || `Perna ${idx + 1}`} - {perna.selecao}
-                              </span>
-                              <div className="flex items-center gap-1.5 ml-2">
-                                <span className="font-medium">@{perna.odd.toFixed(2)}</span>
-                                <span className="text-muted-foreground">{formatCurrency(perna.stake)}</span>
-                                {perna.resultado && (
-                                  <span className={`text-[9px] px-1 rounded ${
-                                    perna.resultado === "GREEN" ? "bg-emerald-500/20 text-emerald-400" :
-                                    perna.resultado === "RED" ? "bg-red-500/20 text-red-400" :
-                                    "bg-gray-500/20 text-gray-400"
-                                  }`}>
-                                    {perna.resultado}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      
-                      {/* Stake Total */}
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Stake Total:</span>
-                        <span className="font-medium">{formatCurrency(sb.stake_total)}</span>
-                      </div>
-                      
-                      {/* ROI */}
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">ROI {isLiquidada ? "Real" : "Esperado"}:</span>
-                        <span className={`font-medium ${roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {roi.toFixed(2)}%
-                        </span>
-                      </div>
-                      
-                      {/* Lucro */}
-                      <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
-                        <span className="text-muted-foreground">
-                          {isLiquidada ? "Lucro Real:" : "Lucro Esperado:"}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className={`font-medium flex items-center gap-0.5 ${lucro >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {lucro >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                            {formatCurrency(lucro)}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {/* Rodapé: Data */}
-                      <div className="pt-1">
-                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                          <Calendar className="h-2.5 w-2.5" />
-                          {format(parseLocalDateTime(sb.data_operacao), "dd/MM HH:mm", { locale: ptBR })}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <SurebetCard
+                  key={sb.id}
+                  surebet={surebetData}
+                  onEdit={(surebet) => {
+                    setSelectedSurebet(surebet);
+                    setDialogSurebetOpen(true);
+                  }}
+                />
               );
             }
             
@@ -1316,7 +1265,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
           <ScrollArea className="h-[600px]">
             <div className="divide-y">
               {apostasUnificadas.map((item) => {
-                // Row para Surebet
+                // Row para Surebet - clicável para editar
                 if (item.tipo === "surebet") {
                   const sb = item.data as Surebet;
                   const isLiquidada = sb.status === "LIQUIDADA";
@@ -1327,6 +1276,21 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                     <div
                       key={sb.id}
                       className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer border-l-2 border-l-amber-500"
+                      onClick={() => {
+                        const surebetData: SurebetData = {
+                          ...sb,
+                          pernas: sb.pernas?.map(p => ({
+                            id: p.id,
+                            selecao: p.selecao,
+                            odd: p.odd,
+                            stake: p.stake,
+                            resultado: p.resultado,
+                            bookmaker_nome: p.bookmaker?.nome || "—"
+                          }))
+                        };
+                        setSelectedSurebet(surebetData);
+                        setDialogSurebetOpen(true);
+                      }}
                     >
                       <div className="flex items-center gap-4 flex-1 min-w-0">
                         <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
@@ -1723,6 +1687,19 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
         onOpenChange={setDialogMultiplaOpen}
         aposta={selectedApostaMultipla}
         projetoId={projetoId}
+        onSuccess={() => {
+          fetchAllApostas();
+          onDataChange?.();
+        }}
+      />
+
+      {/* Dialog Surebet */}
+      <SurebetDialog
+        open={dialogSurebetOpen}
+        onOpenChange={setDialogSurebetOpen}
+        projetoId={projetoId}
+        bookmakers={bookmakers}
+        surebet={selectedSurebet}
         onSuccess={() => {
           fetchAllApostas();
           onDataChange?.();
