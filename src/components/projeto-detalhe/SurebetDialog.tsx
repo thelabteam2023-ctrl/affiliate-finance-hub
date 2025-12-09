@@ -1062,8 +1062,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               
               {/* Abas de Modelo com linha animada */}
               <div className="space-y-2">
-                <Label>Modelo</Label>
-                <div className="relative flex p-1 bg-muted/50 rounded-lg">
+                <Label>Modelo {isEditing && <span className="text-xs text-muted-foreground">(travado)</span>}</Label>
+                <div className={`relative flex p-1 bg-muted/50 rounded-lg ${isEditing ? 'opacity-60 pointer-events-none' : ''}`}>
                   {/* Indicador animado */}
                   <div 
                     className="absolute h-[calc(100%-8px)] bg-primary rounded-md transition-all duration-300 ease-out"
@@ -1076,24 +1076,26 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   
                   <button
                     type="button"
-                    onClick={() => setModelo("1-2")}
+                    onClick={() => !isEditing && setModelo("1-2")}
+                    disabled={isEditing}
                     className={`relative z-10 flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors duration-200 ${
                       modelo === "1-2" 
                         ? "text-primary-foreground" 
                         : "text-muted-foreground hover:text-foreground"
-                    }`}
+                    } ${isEditing ? 'cursor-not-allowed' : ''}`}
                   >
                     1–2
                   </button>
                   
                   <button
                     type="button"
-                    onClick={() => setModelo("1-X-2")}
+                    onClick={() => !isEditing && setModelo("1-X-2")}
+                    disabled={isEditing}
                     className={`relative z-10 flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors duration-200 ${
                       modelo === "1-X-2" 
                         ? "text-primary-foreground" 
                         : "text-muted-foreground hover:text-foreground"
-                    }`}
+                    } ${isEditing ? 'cursor-not-allowed' : ''}`}
                   >
                     1–X–2
                   </button>

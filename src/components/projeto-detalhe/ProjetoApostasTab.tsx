@@ -631,7 +631,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                   <Layers className="mr-2 h-4 w-4" />
                   Aposta Múltipla
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setDialogSurebetOpen(true)}>
+                <DropdownMenuItem onClick={() => {
+                  setSelectedSurebet(null); // CRÍTICO: Limpar surebet selecionada antes de abrir "Nova Arbitragem"
+                  setDialogSurebetOpen(true);
+                }}>
                   <ArrowLeftRight className="mr-2 h-4 w-4" />
                   Surebet
                 </DropdownMenuItem>
@@ -1700,7 +1703,13 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
       {/* Dialog Surebet */}
       <SurebetDialog
         open={dialogSurebetOpen}
-        onOpenChange={setDialogSurebetOpen}
+        onOpenChange={(open) => {
+          setDialogSurebetOpen(open);
+          // CRÍTICO: Limpar surebet selecionada quando dialog fecha
+          if (!open) {
+            setSelectedSurebet(null);
+          }
+        }}
         projetoId={projetoId}
         bookmakers={bookmakers}
         surebet={selectedSurebet}
