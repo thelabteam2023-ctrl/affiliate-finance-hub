@@ -377,9 +377,11 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "tod
                   
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <span className="text-muted-foreground">Spread:</span>
-                      <p className={`font-medium ${(surebet.spread_calculado || 0) > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {formatPercent(surebet.spread_calculado)}
+                      <span className="text-muted-foreground">
+                        {surebet.status === "LIQUIDADA" ? "ROI Real:" : "ROI Esperado:"}
+                      </span>
+                      <p className={`font-medium ${(surebet.status === "LIQUIDADA" ? surebet.roi_real : surebet.roi_esperado) || 0 >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {formatPercent(surebet.status === "LIQUIDADA" ? surebet.roi_real : surebet.roi_esperado)}
                       </p>
                     </div>
                     <div>
