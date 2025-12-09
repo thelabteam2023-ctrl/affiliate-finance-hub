@@ -69,6 +69,8 @@ interface OddEntry {
   selecao: string;
   isReference: boolean;
   isManuallyEdited: boolean;
+  resultado?: string | null;
+  aposta_id?: string;
 }
 
 const ESPORTES = [
@@ -153,7 +155,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         setEsporte(surebet.esporte);
         setModelo(surebet.modelo as "1-X-2" | "1-2");
         setObservacoes(surebet.observacoes || "");
-        fetchLinkedApostas(surebet.id);
+        // Buscar apostas vinculadas passando o modelo correto
+        fetchLinkedApostas(surebet.id, surebet.modelo);
       } else {
         resetForm();
       }
@@ -236,15 +239,55 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     return Math.round(valor / fator) * fator;
   };
 
-  const fetchLinkedApostas = async (surebetId: string) => {
+  // Ordem fixa para cada modelo - nunca muda
+  const getOrdemFixa = (modelo: "1-X-2" | "1-2"): string[] => {
+    return modelo === "1-X-2" 
+      ? ["Casa", "Empate", "Fora"] 
+      : ["Sim", "Não"];
+  };
+
+  const fetchLinkedApostas = async (surebetId: string, surebetModelo: string) => {
     const { data } = await supabase
       .from("apostas")
       .select(`
         id, selecao, odd, stake, resultado, lucro_prejuizo,
+        bookmaker_id,
         bookmaker:bookmakers (nome, saldo_atual)
       `)
       .eq("surebet_id", surebetId);
-    setLinkedApostas(data || []);
+    
+    if (!data || data.length === 0) {
+      setLinkedApostas([]);
+      return;
+    }
+
+    // Ordenar pela ordem fixa do modelo (NUNCA por status ou resultado)
+    const ordemFixa = getOrdemFixa(surebetModelo as "1-X-2" | "1-2");
+    const sortedData = [...data].sort((a, b) => {
+      const indexA = ordemFixa.indexOf(a.selecao);
+      const indexB = ordemFixa.indexOf(b.selecao);
+      // Se não encontrar na ordem fixa, usar ordem de criação (id)
+      if (indexA === -1 && indexB === -1) return 0;
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
+    
+    setLinkedApostas(sortedData);
+    
+    // Popular o array de odds com os dados das apostas para cálculos
+    const newOdds: OddEntry[] = sortedData.map((aposta, index) => ({
+      bookmaker_id: aposta.bookmaker_id || "",
+      odd: aposta.odd?.toString() || "",
+      stake: aposta.stake?.toString() || "",
+      selecao: aposta.selecao,
+      isReference: index === 0,
+      isManuallyEdited: true, // Já foi salvo, não precisa recalcular automaticamente
+      resultado: aposta.resultado,
+      aposta_id: aposta.id
+    }));
+    
+    setOdds(newOdds);
   };
 
   const updateOdd = (index: number, field: keyof OddEntry, value: string | boolean) => {
@@ -652,16 +695,24 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     }
   };
 
-  const handleLiquidarAposta = async (apostaId: string, resultado: "GREEN" | "RED" | "VOID") => {
+  const handleLiquidarAposta = async (apostaId: string, resultado: "GREEN" | "RED" | "VOID" | null) => {
     try {
       const aposta = linkedApostas.find(a => a.id === apostaId);
       if (!aposta) return;
 
-      let lucro = 0;
-      if (resultado === "GREEN") {
+      let lucro: number | null = 0;
+      let status = "FINALIZADA";
+      
+      if (resultado === null) {
+        // Limpar resultado - voltar para pendente
+        lucro = null;
+        status = "PENDENTE";
+      } else if (resultado === "GREEN") {
         lucro = aposta.stake * (aposta.odd - 1);
       } else if (resultado === "RED") {
         lucro = -aposta.stake;
+      } else if (resultado === "VOID") {
+        lucro = 0;
       }
 
       const { error } = await supabase
@@ -669,38 +720,52 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         .update({ 
           resultado, 
           lucro_prejuizo: lucro,
-          status: "FINALIZADA"
+          status
         })
         .eq("id", apostaId);
 
       if (error) throw error;
 
-      // Verificar se todas as apostas foram liquidadas
-      await fetchLinkedApostas(surebet!.id);
+      // Recarregar apostas para atualizar estado local
+      await fetchLinkedApostas(surebet!.id, surebet!.modelo);
       
-      const updatedApostas = linkedApostas.map(a => 
-        a.id === apostaId ? { ...a, resultado, lucro_prejuizo: lucro } : a
-      );
+      // Recalcular status da surebet
+      const { data: apostasAtualizadas } = await supabase
+        .from("apostas")
+        .select("resultado, lucro_prejuizo, stake, odd")
+        .eq("surebet_id", surebet!.id);
       
-      const todasLiquidadas = updatedApostas.every(a => a.resultado && a.resultado !== "PENDENTE");
-      
-      if (todasLiquidadas) {
-        const lucroTotal = updatedApostas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
-        const resultadoFinal = lucroTotal > 0 ? "GREEN" : lucroTotal < 0 ? "RED" : "VOID";
+      if (apostasAtualizadas) {
+        const todasLiquidadas = apostasAtualizadas.every(a => a.resultado && a.resultado !== "PENDENTE" && a.resultado !== null);
         
-        await supabase
-          .from("surebets")
-          .update({
-            status: "LIQUIDADA",
-            resultado: resultadoFinal,
-            lucro_real: lucroTotal,
-            roi_real: surebet!.stake_total > 0 ? (lucroTotal / surebet!.stake_total) * 100 : 0
-          })
-          .eq("id", surebet!.id);
+        if (todasLiquidadas) {
+          const lucroTotal = apostasAtualizadas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+          const resultadoFinal = lucroTotal > 0 ? "GREEN" : lucroTotal < 0 ? "RED" : "VOID";
+          
+          await supabase
+            .from("surebets")
+            .update({
+              status: "LIQUIDADA",
+              resultado: resultadoFinal,
+              lucro_real: lucroTotal,
+              roi_real: surebet!.stake_total > 0 ? (lucroTotal / surebet!.stake_total) * 100 : 0
+            })
+            .eq("id", surebet!.id);
+        } else {
+          // Se nem todas estão liquidadas, voltar para PENDENTE
+          await supabase
+            .from("surebets")
+            .update({
+              status: "PENDENTE",
+              resultado: null,
+              lucro_real: null,
+              roi_real: null
+            })
+            .eq("id", surebet!.id);
+        }
       }
 
-      toast.success("Resultado registrado!");
-      fetchLinkedApostas(surebet!.id);
+      toast.success(resultado === null ? "Resultado limpo!" : "Resultado registrado!");
       onSuccess();
     } catch (error: any) {
       toast.error("Erro: " + error.message);
@@ -804,8 +869,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
             <Separator />
 
-            {/* Tabela de Odds - Layout em Colunas */}
-            {!isEditing && (
+            {/* Tabela de Odds - Layout em Colunas (usado tanto na criação quanto na edição) */}
+            {odds.length > 0 && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Label className="text-base font-medium">Posições da Operação</Label>
@@ -883,86 +948,166 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               {entry.selecao}
                             </span>
                             
-                            {/* RadioButton Referência */}
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="radio"
-                                name="reference-selection"
-                                checked={entry.isReference}
-                                onChange={() => setReferenceIndex(index)}
-                                className="h-4 w-4 cursor-pointer accent-primary"
-                              />
-                              <span className="text-xs text-muted-foreground">Referência</span>
-                            </label>
+                            {/* Resultado (apenas em modo edição) */}
+                            {isEditing && entry.aposta_id && (
+                              <div className="flex items-center gap-1">
+                                {entry.resultado ? (
+                                  <>
+                                    <Badge className={`text-xs ${
+                                      entry.resultado === "GREEN" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40" :
+                                      entry.resultado === "RED" ? "bg-red-500/20 text-red-400 border-red-500/40" :
+                                      "bg-gray-500/20 text-gray-400 border-gray-500/40"
+                                    }`}>
+                                      {entry.resultado}
+                                    </Badge>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground"
+                                      onClick={() => handleLiquidarAposta(entry.aposta_id!, null as any)}
+                                      title="Limpar resultado"
+                                    >
+                                      <RotateCcw className="h-3 w-3" />
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <div className="flex gap-1">
+                                    <Button 
+                                      type="button"
+                                      size="sm" 
+                                      variant="outline"
+                                      className="h-6 w-6 p-0 text-emerald-500 hover:bg-emerald-500/20"
+                                      onClick={() => handleLiquidarAposta(entry.aposta_id!, "GREEN")}
+                                      title="GREEN"
+                                    >
+                                      <CheckCircle2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button 
+                                      type="button"
+                                      size="sm" 
+                                      variant="outline"
+                                      className="h-6 w-6 p-0 text-red-500 hover:bg-red-500/20"
+                                      onClick={() => handleLiquidarAposta(entry.aposta_id!, "RED")}
+                                      title="RED"
+                                    >
+                                      <XCircle className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button 
+                                      type="button"
+                                      size="sm" 
+                                      variant="outline"
+                                      className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-500/20"
+                                      onClick={() => handleLiquidarAposta(entry.aposta_id!, "VOID")}
+                                      title="VOID"
+                                    >
+                                      <span className="text-[10px] font-bold">V</span>
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* RadioButton Referência - apenas em criação */}
+                            {!isEditing && (
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="reference-selection"
+                                  checked={entry.isReference}
+                                  onChange={() => setReferenceIndex(index)}
+                                  className="h-4 w-4 cursor-pointer accent-primary"
+                                />
+                                <span className="text-xs text-muted-foreground">Referência</span>
+                              </label>
+                            )}
                           </div>
                           
                           {/* Casa + Odd + Stake na mesma linha */}
                           <div className="grid grid-cols-[1fr_70px_90px] gap-2 items-end">
                             <div className="space-y-1">
                               <Label className="text-xs text-muted-foreground">Casa</Label>
-                              <Select 
-                                value={entry.bookmaker_id}
-                                onValueChange={(v) => updateOdd(index, "bookmaker_id", v)}
-                              >
-                                <SelectTrigger className="h-9 text-sm">
-                                  <SelectValue placeholder="Casa" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {bookmakers.map(bk => (
-                                    <SelectItem key={bk.id} value={bk.id}>
-                                      {bk.nome}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              {isEditing ? (
+                                <div className="h-9 px-3 text-sm flex items-center bg-muted/50 rounded-md border">
+                                  {getBookmakerNome(entry.bookmaker_id) || "—"}
+                                </div>
+                              ) : (
+                                <Select 
+                                  value={entry.bookmaker_id}
+                                  onValueChange={(v) => updateOdd(index, "bookmaker_id", v)}
+                                >
+                                  <SelectTrigger className="h-9 text-sm">
+                                    <SelectValue placeholder="Casa" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {bookmakers.map(bk => (
+                                      <SelectItem key={bk.id} value={bk.id}>
+                                        {bk.nome}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
                             </div>
                             
                             <div className="space-y-1">
                               <Label className="text-xs text-muted-foreground">Odd</Label>
-                              <Input 
-                                type="number"
-                                step="0.01"
-                                placeholder="1.00"
-                                value={entry.odd}
-                                onChange={(e) => updateOdd(index, "odd", e.target.value)}
-                                className="h-9 text-sm"
-                                tabIndex={index + 1}
-                                onWheel={(e) => e.currentTarget.blur()}
-                              />
+                              {isEditing ? (
+                                <div className="h-9 px-3 text-sm flex items-center justify-center bg-muted/50 rounded-md border font-medium">
+                                  {parseFloat(entry.odd).toFixed(2)}
+                                </div>
+                              ) : (
+                                <Input 
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="1.00"
+                                  value={entry.odd}
+                                  onChange={(e) => updateOdd(index, "odd", e.target.value)}
+                                  className="h-9 text-sm"
+                                  tabIndex={index + 1}
+                                  onWheel={(e) => e.currentTarget.blur()}
+                                />
+                              )}
                             </div>
                             
                             <div className="space-y-1">
                               <Label className="text-xs text-muted-foreground">
-                                Stake {entry.isReference && <span className="text-primary">(Ref)</span>}
+                                Stake {!isEditing && entry.isReference && <span className="text-primary">(Ref)</span>}
                               </Label>
-                              <div className="relative">
-                                <Input 
-                                  type="number"
-                                  step="0.01"
-                                  placeholder={entry.isReference ? "Ref." : (stakeCalculada > 0 ? stakeCalculada.toFixed(2) : "Stake")}
-                                  value={entry.stake}
-                                  onChange={(e) => updateOdd(index, "stake", e.target.value)}
-                                  className={`h-9 text-sm pr-7 ${
-                                    isDifferentFromCalculated 
-                                      ? "border-amber-500 ring-1 ring-amber-500/50" 
-                                      : ""
-                                  }`}
-                                  tabIndex={odds.length + index + 1}
-                                  onWheel={(e) => e.currentTarget.blur()}
-                                />
-                                {isDifferentFromCalculated && stakeCalculada > 0 && (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="absolute right-0.5 top-1/2 -translate-y-1/2 h-6 w-6 p-0 text-muted-foreground hover:text-primary"
-                                    onClick={() => resetStakeToCalculated(index, stakeCalculada)}
-                                    title={`Resetar para ${stakeCalculada.toFixed(2)}`}
-                                  >
-                                    <RotateCcw className="h-3 w-3" />
-                                  </Button>
-                                )}
-                              </div>
+                              {isEditing ? (
+                                <div className="h-9 px-3 text-sm flex items-center justify-center bg-muted/50 rounded-md border font-medium">
+                                  {formatCurrency(parseFloat(entry.stake) || 0)}
+                                </div>
+                              ) : (
+                                <div className="relative">
+                                  <Input 
+                                    type="number"
+                                    step="0.01"
+                                    placeholder={entry.isReference ? "Ref." : (stakeCalculada > 0 ? stakeCalculada.toFixed(2) : "Stake")}
+                                    value={entry.stake}
+                                    onChange={(e) => updateOdd(index, "stake", e.target.value)}
+                                    className={`h-9 text-sm pr-7 ${
+                                      isDifferentFromCalculated 
+                                        ? "border-amber-500 ring-1 ring-amber-500/50" 
+                                        : ""
+                                    }`}
+                                    tabIndex={odds.length + index + 1}
+                                    onWheel={(e) => e.currentTarget.blur()}
+                                  />
+                                  {isDifferentFromCalculated && stakeCalculada > 0 && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="absolute right-0.5 top-1/2 -translate-y-1/2 h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                                      onClick={() => resetStakeToCalculated(index, stakeCalculada)}
+                                      title={`Resetar para ${stakeCalculada.toFixed(2)}`}
+                                    >
+                                      <RotateCcw className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                           
@@ -995,89 +1140,35 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   })}
                 </div>
                 
-                {/* Opções de Arredondamento */}
-                <div className="flex items-center gap-4 pt-2 border-t">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="arredondar-checkbox"
-                      checked={arredondarAtivado}
-                      onChange={(e) => setArredondarAtivado(e.target.checked)}
-                      className="h-4 w-4 cursor-pointer accent-primary rounded"
-                    />
-                    <Label htmlFor="arredondar-checkbox" className="text-sm cursor-pointer">
-                      Arredondar até:
-                    </Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={arredondarValor}
-                      onChange={(e) => setArredondarValor(e.target.value)}
-                      disabled={!arredondarAtivado}
-                      className="h-8 w-16"
-                    />
+                {/* Opções de Arredondamento - apenas em criação */}
+                {!isEditing && (
+                  <div className="flex items-center gap-4 pt-2 border-t">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="arredondar-checkbox"
+                        checked={arredondarAtivado}
+                        onChange={(e) => setArredondarAtivado(e.target.checked)}
+                        className="h-4 w-4 cursor-pointer accent-primary rounded"
+                      />
+                      <Label htmlFor="arredondar-checkbox" className="text-sm cursor-pointer">
+                        Arredondar até:
+                      </Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={arredondarValor}
+                        onChange={(e) => setArredondarValor(e.target.value)}
+                        disabled={!arredondarAtivado}
+                        className="h-8 w-16"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
-            {/* Apostas Vinculadas (edição) */}
-            {isEditing && linkedApostas.length > 0 && (
-              <div className="space-y-3">
-                <Label>Posições da Surebet</Label>
-                {linkedApostas.map((aposta) => (
-                  <Card key={aposta.id} className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{aposta.selecao}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {aposta.bookmaker?.nome} • Odd {aposta.odd.toFixed(2)} • {formatCurrency(aposta.stake)}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {aposta.resultado ? (
-                          <Badge className={
-                            aposta.resultado === "GREEN" ? "bg-emerald-500/20 text-emerald-400" :
-                            aposta.resultado === "RED" ? "bg-red-500/20 text-red-400" :
-                            "bg-gray-500/20 text-gray-400"
-                          }>
-                            {aposta.resultado}
-                          </Badge>
-                        ) : (
-                          <div className="flex gap-1">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              className="h-7 w-7 p-0 text-emerald-500 hover:bg-emerald-500/20"
-                              onClick={() => handleLiquidarAposta(aposta.id, "GREEN")}
-                            >
-                              <CheckCircle2 className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              className="h-7 w-7 p-0 text-red-500 hover:bg-red-500/20"
-                              onClick={() => handleLiquidarAposta(aposta.id, "RED")}
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              className="h-7 w-7 p-0 text-gray-500 hover:bg-gray-500/20"
-                              onClick={() => handleLiquidarAposta(aposta.id, "VOID")}
-                            >
-                              V
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
 
             <div className="space-y-2">
               <Label>Observações</Label>
