@@ -207,6 +207,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     return shortName ? `${bk.nome} - ${shortName}` : bk.nome;
   };
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
+
   // Cálculos em tempo real
   const analysis = useMemo(() => {
     const parsedOdds = odds.map(o => parseFloat(o.odd) || 0);
@@ -337,13 +344,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       recommendation
     };
   }, [odds, stakeMode, arredondarAtivado, arredondarValor]);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   const handleSave = async () => {
     if (!evento.trim()) {
