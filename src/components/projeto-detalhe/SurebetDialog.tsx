@@ -84,6 +84,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   
   // Form state
   const [evento, setEvento] = useState("");
+  const [mercado, setMercado] = useState("");
   const [esporte, setEsporte] = useState("Futebol");
   const [modelo, setModelo] = useState<"1-X-2" | "1-2">("1-2");
   const [observacoes, setObservacoes] = useState("");
@@ -134,6 +135,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
   const resetForm = () => {
     setEvento("");
+    setMercado("");
     setEsporte("Futebol");
     setModelo("1-2");
     setObservacoes("");
@@ -687,14 +689,25 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Evento</Label>
-              <Input 
-                placeholder="Ex: Brasil x Argentina • Over 2.5 gols" 
-                value={evento}
-                onChange={(e) => setEvento(e.target.value)}
-                className="uppercase"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Evento</Label>
+                <Input 
+                  placeholder="Ex: Brasil x Argentina" 
+                  value={evento}
+                  onChange={(e) => setEvento(e.target.value)}
+                  className="uppercase"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Mercado</Label>
+                <Input 
+                  placeholder="Ex: Over 2.5 gols" 
+                  value={mercado}
+                  onChange={(e) => setMercado(e.target.value)}
+                  className="uppercase"
+                />
+              </div>
             </div>
 
             <Separator />
