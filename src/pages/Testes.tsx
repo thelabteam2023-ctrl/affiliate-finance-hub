@@ -623,13 +623,24 @@ export default function Testes() {
       }
 
       // Apagar todas as surebets do usuário
-      const { error: surebetsError } = await supabase
+      // Primeiro verificar quantas existem para debug
+      const { data: surebetsExistentes } = await supabase
+        .from("surebets")
+        .select("id")
+        .eq("user_id", user.id);
+      
+      console.log("Surebets a deletar:", surebetsExistentes?.length || 0);
+      
+      const { error: surebetsError, count: surebetsCount } = await supabase
         .from("surebets")
         .delete()
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .select();
 
+      console.log("Surebets deletadas:", surebetsCount);
       if (surebetsError) {
         console.error("Erro ao apagar surebets:", surebetsError);
+        toast.error(`Erro ao apagar surebets: ${surebetsError.message}`);
       }
 
       // Atualizar cada bookmaker com seu saldo original e zerar saldo_freebet
