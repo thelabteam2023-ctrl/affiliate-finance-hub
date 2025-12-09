@@ -199,7 +199,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     });
   }, [bookmakers, saldosEmAposta]);
 
-  // Inicializar formulário
+  // Inicializar formulário - SEMPRE resetar ao abrir sem surebet
   useEffect(() => {
     if (open) {
       fetchSaldosEmAposta();
@@ -212,10 +212,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         // Buscar apostas vinculadas passando o modelo correto
         fetchLinkedApostas(surebet.id, surebet.modelo);
       } else {
+        // CRÍTICO: Sempre resetar o formulário completamente quando não há surebet para editar
         resetForm();
       }
+    } else {
+      // Quando o dialog fecha, limpar o estado para evitar que dados antigos persistam
+      resetForm();
     }
-  }, [open, surebet]);
+  }, [open, surebet?.id]); // Usar surebet?.id para evitar loops com objeto completo
 
   // Atualizar array de odds quando modelo muda (mercado NÃO afeta modelo)
   useEffect(() => {
