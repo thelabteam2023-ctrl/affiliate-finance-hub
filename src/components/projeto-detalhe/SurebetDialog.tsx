@@ -76,20 +76,10 @@ const ESPORTES = [
   "League of Legends", "Counter-Strike", "Dota 2", "eFootball"
 ];
 const MERCADOS = [
-  "Resultado Final",
-  "Dupla Chance",
-  "Over/Under 0.5",
-  "Over/Under 1.5",
-  "Over/Under 2.5",
-  "Over/Under 3.5",
-  "Over/Under 4.5",
-  "Ambas Marcam",
-  "Handicap",
-  "Vencedor",
-  "Moneyline",
-  "Total de Pontos",
-  "Total de Sets",
-  "Total de Games"
+  "ML", "Over/Under", "Ambos Marcam", "Handicap Asiático", "Handicap Europeu", 
+  "Empate Anula", "Correct Score", "Dupla Chance", "Draw No Bet", 
+  "Primeiro a Marcar", "Intervalo/Final", "Total de Gols", "Total de Cantos", 
+  "Total de Cartões", "Spread", "Total de Pontos", "Vencedor", "Outro"
 ];
 
 const SELECOES_1X2 = ["Casa", "Empate", "Fora"];
