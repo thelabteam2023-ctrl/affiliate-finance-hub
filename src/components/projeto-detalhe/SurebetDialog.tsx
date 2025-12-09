@@ -1169,7 +1169,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                           </div>
                           
                           {/* Casa | Odd | Stake na mesma linha */}
-                          <div className="grid grid-cols-3 gap-1.5">
+                          <div className="grid gap-1.5" style={{ gridTemplateColumns: '1fr 60px 80px' }}>
                             {/* Casa */}
                             <div className="space-y-1">
                               <Label className="text-[10px] text-muted-foreground">Casa</Label>
