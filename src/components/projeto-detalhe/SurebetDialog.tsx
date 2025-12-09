@@ -42,6 +42,7 @@ interface Surebet {
   evento: string;
   esporte: string;
   modelo: string;
+  mercado?: string | null;
   stake_total: number;
   spread_calculado: number | null;
   roi_esperado: number | null;
@@ -206,6 +207,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         setEvento(surebet.evento);
         setEsporte(surebet.esporte);
         setModelo(surebet.modelo as "1-X-2" | "1-2");
+        setMercado(surebet.mercado || "");
         setObservacoes(surebet.observacoes || "");
         // Buscar apostas vinculadas passando o modelo correto
         fetchLinkedApostas(surebet.id, surebet.modelo);
@@ -730,6 +732,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           .update({
             evento,
             esporte,
+            mercado,
             observacoes,
             updated_at: new Date().toISOString()
           })
@@ -751,6 +754,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             evento,
             esporte,
             modelo,
+            mercado,
             stake_total: stakeTotal,
             spread_calculado: analysis?.spread || null,
             roi_esperado: analysis?.roiEsperado || null,
@@ -912,8 +916,19 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
       if (error) throw error;
 
-      // Recarregar apostas para atualizar estado local
-      await fetchLinkedApostas(surebet!.id, surebet!.modelo);
+      // Atualizar estado local das apostas (sem recarregar do banco)
+      setLinkedApostas(prev => prev.map(a => 
+        a.id === apostaId 
+          ? { ...a, resultado, lucro_prejuizo: lucro }
+          : a
+      ));
+      
+      // Atualizar o array de odds também para manter sincronizado
+      setOdds(prev => prev.map(o => 
+        o.aposta_id === apostaId
+          ? { ...o, resultado }
+          : o
+      ));
       
       // Recalcular status da surebet
       const { data: apostasAtualizadas } = await supabase
@@ -937,6 +952,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               roi_real: surebet!.stake_total > 0 ? (lucroTotal / surebet!.stake_total) * 100 : 0
             })
             .eq("id", surebet!.id);
+            
+          // Só chamar onSuccess quando a surebet for completamente liquidada
+          onSuccess();
         } else {
           // Se nem todas estão liquidadas, voltar para PENDENTE
           await supabase
@@ -952,7 +970,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       }
 
       toast.success(resultado === null ? "Resultado limpo!" : "Resultado registrado!");
-      onSuccess();
     } catch (error: any) {
       toast.error("Erro: " + error.message);
     }

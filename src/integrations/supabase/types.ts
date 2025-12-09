@@ -2786,6 +2786,7 @@ export type Database = {
           id: string
           lucro_esperado: number | null
           lucro_real: number | null
+          mercado: string | null
           modelo: string
           observacoes: string | null
           projeto_id: string
@@ -2806,6 +2807,7 @@ export type Database = {
           id?: string
           lucro_esperado?: number | null
           lucro_real?: number | null
+          mercado?: string | null
           modelo?: string
           observacoes?: string | null
           projeto_id: string
@@ -2826,6 +2828,7 @@ export type Database = {
           id?: string
           lucro_esperado?: number | null
           lucro_real?: number | null
+          mercado?: string | null
           modelo?: string
           observacoes?: string | null
           projeto_id?: string

@@ -1308,7 +1308,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground truncate">
-                            {sb.esporte} • {sb.modelo} • {sb.pernas?.length || 0} pernas
+                            {sb.esporte} • {sb.modelo}
                           </p>
                           <div className="flex items-center gap-1 text-xs mt-1">
                             <Calendar className="h-2.5 w-2.5 text-muted-foreground" />

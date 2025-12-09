@@ -32,6 +32,7 @@ interface Surebet {
   evento: string;
   esporte: string;
   modelo: string;
+  mercado?: string | null;
   stake_total: number;
   spread_calculado: number | null;
   roi_esperado: number | null;
