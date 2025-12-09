@@ -21,8 +21,7 @@ import {
   CheckCircle2,
   XCircle,
   Trash2,
-  Wallet,
-  CircleDot
+  Wallet
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -95,6 +94,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   // Modo de entrada: 'reference' ou 'manual'
   const [stakeMode, setStakeMode] = useState<"reference" | "manual">("reference");
   
+  // Arredondamento de stakes
+  const [arredondarAtivado, setArredondarAtivado] = useState(false);
+  const [arredondarValor, setArredondarValor] = useState("1");
+  
   // Odds entries (2 for binary, 3 for 1X2)
   const [odds, setOdds] = useState<OddEntry[]>([
     { bookmaker_id: "", odd: "", stake: "", selecao: "Sim", isReference: true },
@@ -139,11 +142,20 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     setModelo("1-2");
     setObservacoes("");
     setStakeMode("reference");
+    setArredondarAtivado(false);
+    setArredondarValor("1");
     setOdds([
       { bookmaker_id: "", odd: "", stake: "", selecao: "Sim", isReference: true },
       { bookmaker_id: "", odd: "", stake: "", selecao: "Não", isReference: false }
     ]);
     setLinkedApostas([]);
+  };
+  
+  // Função de arredondamento
+  const arredondarStake = (valor: number): number => {
+    if (!arredondarAtivado) return valor;
+    const fator = parseFloat(arredondarValor) || 1;
+    return Math.round(valor / fator) * fator;
   };
 
   const fetchLinkedApostas = async (surebetId: string) => {
@@ -236,7 +248,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         // Calcular stakes para cada lado para igualar o retorno
         calculatedStakes = parsedOdds.map((odd, i) => {
           if (i === refIndex) return refStake;
-          return targetReturn / odd;
+          const rawStake = targetReturn / odd;
+          return arredondarStake(rawStake);
         });
         
         stakeTotal = calculatedStakes.reduce((a, b) => a + b, 0);
@@ -323,7 +336,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       roiEsperado,
       recommendation
     };
-  }, [odds, stakeMode]);
+  }, [odds, stakeMode, arredondarAtivado, arredondarValor]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -619,20 +632,18 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   <Label>Posições da Operação</Label>
                   {stakeMode === "reference" && (
                     <span className="text-xs text-muted-foreground">
-                      Clique em <CircleDot className="h-3 w-3 inline" /> para definir referência
+                      Selecione qual lado será a referência
                     </span>
                   )}
                 </div>
                 
                 {/* Header */}
                 <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground px-1">
-                  {stakeMode === "reference" && <div className="col-span-1">Ref</div>}
-                  <div className={stakeMode === "reference" ? "col-span-2" : "col-span-2"}>Resultado</div>
+                  {stakeMode === "reference" && <div className="col-span-1 text-center">C</div>}
+                  <div className="col-span-2">Resultado</div>
                   <div className="col-span-4">Casa</div>
                   <div className="col-span-2">Odd</div>
-                  <div className={stakeMode === "reference" ? "col-span-3" : "col-span-4"}>
-                    {stakeMode === "reference" ? "Stake (ref)" : "Stake"}
-                  </div>
+                  <div className={stakeMode === "reference" ? "col-span-3" : "col-span-4"}>Aposta</div>
                 </div>
                 
                 {odds.map((entry, index) => {
@@ -642,25 +653,21 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   return (
                     <div key={index} className="space-y-1">
                       <div className="grid grid-cols-12 gap-2 items-center">
-                        {/* Referência */}
+                        {/* RadioButton de Referência */}
                         {stakeMode === "reference" && (
                           <div className="col-span-1 flex justify-center">
-                            <button
-                              type="button"
-                              onClick={() => setReferenceIndex(index)}
-                              className={`p-1 rounded-full transition-colors ${
-                                entry.isReference 
-                                  ? "text-primary bg-primary/20" 
-                                  : "text-muted-foreground hover:text-primary"
-                              }`}
-                            >
-                              <CircleDot className="h-4 w-4" />
-                            </button>
+                            <input
+                              type="radio"
+                              name="reference-selection"
+                              checked={entry.isReference}
+                              onChange={() => setReferenceIndex(index)}
+                              className="h-4 w-4 cursor-pointer accent-primary"
+                            />
                           </div>
                         )}
                         
                         {/* Seleção */}
-                        <div className={stakeMode === "reference" ? "col-span-2" : "col-span-2"}>
+                        <div className="col-span-2">
                           <Input 
                             value={entry.selecao}
                             onChange={(e) => updateOdd(index, "selecao", e.target.value)}
@@ -718,11 +725,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                 placeholder="Stake"
                                 value={entry.stake}
                                 onChange={(e) => updateOdd(index, "stake", e.target.value)}
-                                className="h-9 border-primary"
+                                className="h-9 border-primary ring-1 ring-primary/50"
                               />
                             ) : (
-                              <div className="h-9 px-3 flex items-center rounded-md bg-muted/50 text-sm font-medium">
-                                {stakeCalculada > 0 ? formatCurrency(stakeCalculada) : "—"}
+                              <div className="h-9 px-3 flex items-center rounded-md bg-muted/50 text-sm font-medium border">
+                                {stakeCalculada > 0 ? stakeCalculada.toFixed(2) : "—"}
                               </div>
                             )
                           ) : (
@@ -742,7 +749,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                       {entry.bookmaker_id && saldo !== null && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground pl-1">
                           <Wallet className="h-3 w-3" />
-                          <span>Saldo disponível: {formatCurrency(saldo)}</span>
+                          <span>Saldo: {formatCurrency(saldo)}</span>
                           {stakeCalculada > saldo && (
                             <Badge variant="destructive" className="text-[10px] h-4 ml-1">
                               Insuficiente
@@ -753,6 +760,33 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     </div>
                   );
                 })}
+                
+                {/* Opções de Arredondamento */}
+                {stakeMode === "reference" && (
+                  <div className="flex items-center gap-4 pt-2 border-t mt-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="arredondar-checkbox"
+                        checked={arredondarAtivado}
+                        onChange={(e) => setArredondarAtivado(e.target.checked)}
+                        className="h-4 w-4 cursor-pointer accent-primary rounded"
+                      />
+                      <Label htmlFor="arredondar-checkbox" className="text-sm cursor-pointer">
+                        Arredondar aposta até:
+                      </Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={arredondarValor}
+                        onChange={(e) => setArredondarValor(e.target.value)}
+                        disabled={!arredondarAtivado}
+                        className="h-8 w-20"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
