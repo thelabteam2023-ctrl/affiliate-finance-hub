@@ -42,6 +42,7 @@ export type Database = {
           selecao: string
           stake: number
           status: string
+          surebet_id: string | null
           tipo_freebet: string | null
           updated_at: string
           user_id: string
@@ -75,6 +76,7 @@ export type Database = {
           selecao: string
           stake: number
           status?: string
+          surebet_id?: string | null
           tipo_freebet?: string | null
           updated_at?: string
           user_id: string
@@ -108,6 +110,7 @@ export type Database = {
           selecao?: string
           stake?: number
           status?: string
+          surebet_id?: string | null
           tipo_freebet?: string | null
           updated_at?: string
           user_id?: string
@@ -170,6 +173,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "apostas_surebet_id_fkey"
+            columns: ["surebet_id"]
+            isOneToOne: false
+            referencedRelation: "surebets"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2766,6 +2776,91 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      surebets: {
+        Row: {
+          created_at: string
+          data_operacao: string
+          esporte: string
+          evento: string
+          id: string
+          lucro_esperado: number | null
+          lucro_real: number | null
+          modelo: string
+          observacoes: string | null
+          projeto_id: string
+          resultado: string | null
+          roi_esperado: number | null
+          roi_real: number | null
+          spread_calculado: number | null
+          stake_total: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_operacao?: string
+          esporte: string
+          evento: string
+          id?: string
+          lucro_esperado?: number | null
+          lucro_real?: number | null
+          modelo?: string
+          observacoes?: string | null
+          projeto_id: string
+          resultado?: string | null
+          roi_esperado?: number | null
+          roi_real?: number | null
+          spread_calculado?: number | null
+          stake_total?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_operacao?: string
+          esporte?: string
+          evento?: string
+          id?: string
+          lucro_esperado?: number | null
+          lucro_real?: number | null
+          modelo?: string
+          observacoes?: string | null
+          projeto_id?: string
+          resultado?: string | null
+          roi_esperado?: number | null
+          roi_real?: number | null
+          spread_calculado?: number | null
+          stake_total?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "surebets_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surebets_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "surebets_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+        ]
       }
       transacoes_bookmakers: {
         Row: {
