@@ -75,6 +75,22 @@ const ESPORTES = [
   "Futebol Americano", "Vôlei", "MMA/UFC", "Boxe", "Golfe",
   "League of Legends", "Counter-Strike", "Dota 2", "eFootball"
 ];
+const MERCADOS = [
+  "Resultado Final",
+  "Dupla Chance",
+  "Over/Under 0.5",
+  "Over/Under 1.5",
+  "Over/Under 2.5",
+  "Over/Under 3.5",
+  "Over/Under 4.5",
+  "Ambas Marcam",
+  "Handicap",
+  "Vencedor",
+  "Moneyline",
+  "Total de Pontos",
+  "Total de Sets",
+  "Total de Games"
+];
 
 const SELECOES_1X2 = ["Casa", "Empate", "Fora"];
 const SELECOES_BINARIO = ["Sim", "Não"];
@@ -701,12 +717,16 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               </div>
               <div className="space-y-2">
                 <Label>Mercado</Label>
-                <Input 
-                  placeholder="Ex: Over 2.5 gols" 
-                  value={mercado}
-                  onChange={(e) => setMercado(e.target.value)}
-                  className="uppercase"
-                />
+                <Select value={mercado} onValueChange={setMercado}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o mercado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MERCADOS.map(m => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
