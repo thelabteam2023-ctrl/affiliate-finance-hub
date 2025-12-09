@@ -1302,17 +1302,6 @@ export function ApostaMultiplaDialog({
                 </CardContent>
               </Card>
             )}
-
-            {/* Observações */}
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Textarea
-                placeholder="Anotações opcionais..."
-                value={observacoes}
-                onChange={(e) => setObservacoes(e.target.value)}
-                rows={2}
-              />
-            </div>
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">

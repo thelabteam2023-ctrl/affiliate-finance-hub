@@ -1338,17 +1338,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                 )}
               </div>
             )}
-
-
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Textarea 
-                placeholder="Notas sobre a operação..."
-                value={observacoes}
-                onChange={(e) => setObservacoes(e.target.value)}
-                rows={2}
-              />
-            </div>
           </div>
 
           {/* Análise - Sidebar Direita Compacta */}
