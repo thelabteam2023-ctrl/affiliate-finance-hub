@@ -139,21 +139,53 @@ interface ApostaMultipla {
   };
 }
 
+interface Surebet {
+  id: string;
+  evento: string;
+  esporte: string;
+  modelo: string;
+  stake_total: number;
+  spread_calculado: number | null;
+  roi_esperado: number | null;
+  roi_real: number | null;
+  lucro_esperado: number | null;
+  lucro_real: number | null;
+  status: string;
+  resultado: string | null;
+  data_operacao: string;
+  observacoes: string | null;
+  created_at: string;
+  // Pernas vinculadas
+  pernas?: {
+    id: string;
+    bookmaker_id: string;
+    selecao: string;
+    odd: number;
+    stake: number;
+    resultado: string | null;
+    bookmaker?: {
+      nome: string;
+      parceiro?: { nome: string };
+    };
+  }[];
+}
+
 // Tipo unificado para exibição
 type ApostaUnificada = {
-  tipo: "simples" | "multipla";
-  data: Aposta | ApostaMultipla;
+  tipo: "simples" | "multipla" | "surebet";
+  data: Aposta | ApostaMultipla | Surebet;
   data_aposta: string;
 };
 
 export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "todo", dateRange }: ProjetoApostasTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [apostasMultiplas, setApostasMultiplas] = useState<ApostaMultipla[]>([]);
+  const [surebets, setSurebets] = useState<Surebet[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
-  const [tipoFilter, setTipoFilter] = useState<"todas" | "simples" | "multiplas">("todas");
+  const [tipoFilter, setTipoFilter] = useState<"todas" | "simples" | "multiplas" | "surebets">("todas");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMultiplaOpen, setDialogMultiplaOpen] = useState(false);
@@ -193,7 +225,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
   const fetchAllApostas = async () => {
     try {
       setLoading(true);
-      await Promise.all([fetchApostas(), fetchApostasMultiplas()]);
+      await Promise.all([fetchApostas(), fetchApostasMultiplas(), fetchSurebets()]);
     } finally {
       setLoading(false);
     }
@@ -304,6 +336,57 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
     }
   };
 
+  const fetchSurebets = async () => {
+    try {
+      const { start, end } = getDateRangeFromFilter();
+      
+      let query = supabase
+        .from("surebets")
+        .select("*")
+        .eq("projeto_id", projetoId)
+        .order("data_operacao", { ascending: false });
+      
+      if (start) {
+        query = query.gte("data_operacao", start.toISOString());
+      }
+      if (end) {
+        query = query.lte("data_operacao", end.toISOString());
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      
+      // Buscar pernas de cada surebet
+      const surebetsComPernas = await Promise.all((data || []).map(async (surebet) => {
+        const { data: pernasData } = await supabase
+          .from("apostas")
+          .select(`
+            id,
+            bookmaker_id,
+            selecao,
+            odd,
+            stake,
+            resultado,
+            bookmaker:bookmakers (
+              nome,
+              parceiro:parceiros (nome)
+            )
+          `)
+          .eq("surebet_id", surebet.id);
+        
+        return {
+          ...surebet,
+          pernas: pernasData || []
+        };
+      }));
+      
+      setSurebets(surebetsComPernas);
+    } catch (error: any) {
+      console.error("Erro ao carregar surebets:", error.message);
+    }
+  };
+
   const handleApostaUpdated = () => {
     fetchAllApostas();
     onDataChange?.();
@@ -332,10 +415,23 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
     return (searchTerm === "" || matchesSearch) && matchesStatus && matchesResultado && matchesTipo;
   });
 
+  // Filtrar surebets
+  const filteredSurebets = surebets.filter((sb) => {
+    const matchesSearch = 
+      sb.evento.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sb.esporte.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sb.modelo.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || sb.status === statusFilter;
+    const matchesResultado = resultadoFilter === "all" || sb.resultado === resultadoFilter;
+    const matchesTipo = tipoFilter === "todas" || tipoFilter === "surebets";
+    return matchesSearch && matchesStatus && matchesResultado && matchesTipo;
+  });
+
   // Unificar e ordenar por data
   const apostasUnificadas: ApostaUnificada[] = [
     ...filteredApostas.map(a => ({ tipo: "simples" as const, data: a, data_aposta: a.data_aposta })),
     ...filteredMultiplas.map(am => ({ tipo: "multipla" as const, data: am, data_aposta: am.data_aposta })),
+    ...filteredSurebets.map(sb => ({ tipo: "surebet" as const, data: sb, data_aposta: sb.data_operacao })),
   ].sort((a, b) => new Date(b.data_aposta).getTime() - new Date(a.data_aposta).getTime());
 
   const formatCurrency = (value: number) => {
@@ -565,6 +661,113 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
       ) : viewMode === "cards" ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {apostasUnificadas.map((item) => {
+            // Card de Surebet
+            if (item.tipo === "surebet") {
+              const sb = item.data as Surebet;
+              const isLiquidada = sb.status === "LIQUIDADA";
+              const lucro = isLiquidada ? (sb.lucro_real || 0) : (sb.lucro_esperado || 0);
+              const roi = isLiquidada ? (sb.roi_real || 0) : (sb.roi_esperado || 0);
+              
+              return (
+                <Card 
+                  key={sb.id} 
+                  className="hover:border-primary/50 transition-colors cursor-pointer border-l-2 border-l-amber-500"
+                >
+                  <CardHeader className="pb-1 pt-3 px-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-sm truncate">{sb.evento}</CardTitle>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {sb.esporte} • {sb.modelo}
+                        </p>
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0 items-center">
+                        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">
+                          <ArrowLeftRight className="h-2.5 w-2.5 mr-0.5" />
+                          SUREBET
+                        </Badge>
+                        <Badge className={isLiquidada 
+                          ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+                          : "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                        }>
+                          {isLiquidada ? "Liquidada" : "Pendente"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-1 pb-3 px-3">
+                    <div className="space-y-1">
+                      {/* Pernas */}
+                      {sb.pernas && sb.pernas.length > 0 && (
+                        <div className="space-y-1 mb-2">
+                          {sb.pernas.map((perna, idx) => (
+                            <div key={perna.id} className={`flex items-center justify-between text-xs p-1.5 rounded ${
+                              perna.resultado === "GREEN" ? "bg-emerald-500/10" :
+                              perna.resultado === "RED" ? "bg-red-500/10" :
+                              perna.resultado === "VOID" ? "bg-gray-500/10" :
+                              "bg-muted/30"
+                            }`}>
+                              <span className="text-muted-foreground truncate flex-1 text-[11px]">
+                                {perna.bookmaker?.nome || `Perna ${idx + 1}`} - {perna.selecao}
+                              </span>
+                              <div className="flex items-center gap-1.5 ml-2">
+                                <span className="font-medium">@{perna.odd.toFixed(2)}</span>
+                                <span className="text-muted-foreground">{formatCurrency(perna.stake)}</span>
+                                {perna.resultado && (
+                                  <span className={`text-[9px] px-1 rounded ${
+                                    perna.resultado === "GREEN" ? "bg-emerald-500/20 text-emerald-400" :
+                                    perna.resultado === "RED" ? "bg-red-500/20 text-red-400" :
+                                    "bg-gray-500/20 text-gray-400"
+                                  }`}>
+                                    {perna.resultado}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Stake Total */}
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Stake Total:</span>
+                        <span className="font-medium">{formatCurrency(sb.stake_total)}</span>
+                      </div>
+                      
+                      {/* ROI */}
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">ROI {isLiquidada ? "Real" : "Esperado"}:</span>
+                        <span className={`font-medium ${roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {roi.toFixed(2)}%
+                        </span>
+                      </div>
+                      
+                      {/* Lucro */}
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
+                        <span className="text-muted-foreground">
+                          {isLiquidada ? "Lucro Real:" : "Lucro Esperado:"}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-medium flex items-center gap-0.5 ${lucro >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {lucro >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                            {formatCurrency(lucro)}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Rodapé: Data */}
+                      <div className="pt-1">
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Calendar className="h-2.5 w-2.5" />
+                          {format(parseLocalDateTime(sb.data_operacao), "dd/MM HH:mm", { locale: ptBR })}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            }
+            
             if (item.tipo === "simples") {
               const aposta = item.data as Aposta;
               const displayInfo = getApostaDisplayInfo(aposta);
@@ -1113,6 +1316,67 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
           <ScrollArea className="h-[600px]">
             <div className="divide-y">
               {apostasUnificadas.map((item) => {
+                // Row para Surebet
+                if (item.tipo === "surebet") {
+                  const sb = item.data as Surebet;
+                  const isLiquidada = sb.status === "LIQUIDADA";
+                  const lucro = isLiquidada ? (sb.lucro_real || 0) : (sb.lucro_esperado || 0);
+                  const roi = isLiquidada ? (sb.roi_real || 0) : (sb.roi_esperado || 0);
+                  
+                  return (
+                    <div
+                      key={sb.id}
+                      className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer border-l-2 border-l-amber-500"
+                    >
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                          <ArrowLeftRight className="h-4 w-4 text-amber-400" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium truncate">{sb.evento}</p>
+                            <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">
+                              SUREBET
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {sb.esporte} • {sb.modelo} • {sb.pernas?.length || 0} pernas
+                          </p>
+                          <div className="flex items-center gap-1 text-xs mt-1">
+                            <Calendar className="h-2.5 w-2.5 text-muted-foreground" />
+                            <span className="text-muted-foreground">
+                              {format(parseLocalDateTime(sb.data_operacao), "dd/MM HH:mm", { locale: ptBR })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 flex-shrink-0">
+                        <div className="text-right space-y-0.5">
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="text-xs text-muted-foreground">Stake:</span>
+                            <p className="text-sm font-medium">{formatCurrency(sb.stake_total)}</p>
+                          </div>
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="text-xs text-muted-foreground">{isLiquidada ? "Lucro:" : "Lucro Esp.:"}</span>
+                            <p className={`text-sm ${lucro >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                              {formatCurrency(lucro)}
+                            </p>
+                            <span className={`text-[10px] px-1 py-0.5 rounded ${roi >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                              {roi.toFixed(2)}%
+                            </span>
+                          </div>
+                        </div>
+                        <Badge className={isLiquidada 
+                          ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+                          : "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                        }>
+                          {isLiquidada ? "Liquidada" : "Pendente"}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                }
+                
                 if (item.tipo === "multipla") {
                   // Row para Aposta Múltipla
                   const am = item.data as ApostaMultipla;
