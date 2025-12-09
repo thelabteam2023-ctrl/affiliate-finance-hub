@@ -1777,25 +1777,29 @@ export function CaixaTransacaoDialog({
       };
     }
     
-    // DEPÓSITO (Parceiro → Bookmaker): moedas disponíveis nos parceiros (não no caixa)
+    // DEPÓSITO (Parceiro → Bookmaker): moedas disponíveis nos parceiros OU no caixa operacional
     if (tipoTransacao === "DEPOSITO") {
-      // Obter moedas FIAT únicas que existem nas contas dos parceiros com saldo
-      const moedasFiatParceiros = [...new Set(
-        saldosParceirosContas
-          .filter(s => s.saldo > 0)
-          .map(s => s.moeda)
-      )];
+      // Moedas FIAT: combinar caixa operacional + contas de parceiros
+      const moedasFiatCaixa = saldosCaixaFiat
+        .filter(s => s.saldo > 0)
+        .map(s => s.moeda);
+      const moedasFiatParceiros = saldosParceirosContas
+        .filter(s => s.saldo > 0)
+        .map(s => s.moeda);
+      const moedasFiatDisponiveis = [...new Set([...moedasFiatCaixa, ...moedasFiatParceiros])];
       
-      // Obter moedas CRYPTO únicas que existem nas wallets dos parceiros com saldo
-      const moedasCryptoParceiros = [...new Set(
-        saldosParceirosWallets
-          .filter(s => s.saldo_coin > 0)
-          .map(s => s.coin)
-      )];
+      // Moedas CRYPTO: combinar caixa operacional + wallets de parceiros
+      const moedasCryptoCaixa = saldosCaixaCrypto
+        .filter(s => s.saldo_coin > 0)
+        .map(s => s.coin);
+      const moedasCryptoParceiros = saldosParceirosWallets
+        .filter(s => s.saldo_coin > 0)
+        .map(s => s.coin);
+      const moedasCryptoDisponiveis = [...new Set([...moedasCryptoCaixa, ...moedasCryptoParceiros])];
       
       return {
-        fiat: MOEDAS_FIAT.filter(m => moedasFiatParceiros.includes(m.value)),
-        crypto: MOEDAS_CRYPTO.filter(m => moedasCryptoParceiros.includes(m.value))
+        fiat: MOEDAS_FIAT.filter(m => moedasFiatDisponiveis.includes(m.value)),
+        crypto: MOEDAS_CRYPTO.filter(m => moedasCryptoDisponiveis.includes(m.value))
       };
     }
     
