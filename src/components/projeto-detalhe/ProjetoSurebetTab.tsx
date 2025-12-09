@@ -355,7 +355,13 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "tod
       {/* Dialog */}
       <SurebetDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          // CRÍTICO: Limpar surebet selecionada quando dialog fecha
+          if (!open) {
+            setSelectedSurebet(null);
+          }
+        }}
         projetoId={projetoId}
         bookmakers={bookmakers}
         surebet={selectedSurebet}
