@@ -1168,46 +1168,120 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             )}
                           </div>
                           
-                          {/* Casa */}
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Casa</Label>
-                            {isEditing ? (
-                              <div className="h-9 px-2 text-sm flex items-center bg-muted/50 rounded-md border truncate font-medium uppercase">
-                                {selectedBookmaker?.nome || "—"}
-                              </div>
-                            ) : (
-                              <Select 
-                                value={entry.bookmaker_id}
-                                onValueChange={(v) => updateOdd(index, "bookmaker_id", v)}
-                              >
-                                <SelectTrigger className="h-9 text-sm w-full">
-                                  <SelectValue placeholder="Casa">
-                                    {selectedBookmaker?.nome && (
-                                      <span className="truncate uppercase">{selectedBookmaker.nome}</span>
-                                    )}
-                                  </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {bookmakersDisponiveis.map(bk => {
-                                    const saldoEmAposta = saldosEmAposta[bk.id] || 0;
-                                    const saldoLivre = Number(bk.saldo_atual) - saldoEmAposta;
-                                    return (
-                                      <SelectItem key={bk.id} value={bk.id}>
-                                        <div className="flex items-center justify-between w-full gap-2">
-                                          <span className="uppercase">{bk.nome}</span>
-                                          <span className="text-xs text-muted-foreground">
-                                            {formatCurrency(saldoLivre)}
-                                          </span>
-                                        </div>
-                                      </SelectItem>
-                                    );
-                                  })}
-                                </SelectContent>
-                              </Select>
-                            )}
+                          {/* Casa | Odd | Stake na mesma linha */}
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {/* Casa */}
+                            <div className="space-y-1">
+                              <Label className="text-[10px] text-muted-foreground">Casa</Label>
+                              {isEditing ? (
+                                <div className="h-8 px-1.5 text-[10px] flex items-center bg-muted/50 rounded-md border truncate font-medium uppercase">
+                                  {selectedBookmaker?.nome || "—"}
+                                </div>
+                              ) : (
+                                <Select 
+                                  value={entry.bookmaker_id}
+                                  onValueChange={(v) => updateOdd(index, "bookmaker_id", v)}
+                                >
+                                  <SelectTrigger className="h-8 text-[10px] w-full px-1.5">
+                                    <SelectValue placeholder="Casa">
+                                      {selectedBookmaker?.nome && (
+                                        <span className="truncate uppercase">{selectedBookmaker.nome}</span>
+                                      )}
+                                    </SelectValue>
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {bookmakersDisponiveis.map(bk => {
+                                      const saldoEmAposta = saldosEmAposta[bk.id] || 0;
+                                      const saldoLivre = Number(bk.saldo_atual) - saldoEmAposta;
+                                      const parceiroNomeBk = bk.parceiro?.nome?.split(" ");
+                                      const parceiroShortBk = parceiroNomeBk 
+                                        ? `${parceiroNomeBk[0]} ${parceiroNomeBk[parceiroNomeBk.length - 1] || ""}`.trim()
+                                        : "";
+                                      return (
+                                        <SelectItem key={bk.id} value={bk.id}>
+                                          <div className="flex items-center justify-between w-full gap-2">
+                                            <div className="flex flex-col">
+                                              <span className="uppercase text-xs">{bk.nome}</span>
+                                              {parceiroShortBk && (
+                                                <span className="text-[10px] text-muted-foreground">{parceiroShortBk}</span>
+                                              )}
+                                            </div>
+                                            <span className="text-[10px] text-muted-foreground">
+                                              {formatCurrency(saldoLivre)}
+                                            </span>
+                                          </div>
+                                        </SelectItem>
+                                      );
+                                    })}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </div>
+                            
+                            {/* Odd */}
+                            <div className="space-y-1">
+                              <Label className="text-[10px] text-muted-foreground">Odd</Label>
+                              {isEditing ? (
+                                <div className="h-8 px-1.5 text-[10px] flex items-center justify-center bg-muted/50 rounded-md border font-medium">
+                                  {parseFloat(entry.odd).toFixed(2)}
+                                </div>
+                              ) : (
+                                <Input 
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="1.00"
+                                  value={entry.odd}
+                                  onChange={(e) => updateOdd(index, "odd", e.target.value)}
+                                  className="h-8 text-[10px] px-1.5"
+                                  tabIndex={index + 1}
+                                  onWheel={(e) => e.currentTarget.blur()}
+                                />
+                              )}
+                            </div>
+                            
+                            {/* Stake */}
+                            <div className="space-y-1">
+                              <Label className="text-[10px] text-muted-foreground">
+                                Stake {!isEditing && entry.isReference && <span className="text-primary">(Ref)</span>}
+                              </Label>
+                              {isEditing ? (
+                                <div className="h-8 px-1.5 text-[10px] flex items-center justify-center bg-muted/50 rounded-md border font-medium">
+                                  {formatCurrency(parseFloat(entry.stake) || 0)}
+                                </div>
+                              ) : (
+                                <div className="relative">
+                                  <Input 
+                                    type="number"
+                                    step="0.01"
+                                    placeholder={entry.isReference ? "Ref." : (stakeCalculada > 0 ? stakeCalculada.toFixed(2) : "Stake")}
+                                    value={entry.stake}
+                                    onChange={(e) => updateOdd(index, "stake", e.target.value)}
+                                    className={`h-8 text-[10px] px-1.5 pr-6 ${
+                                      isDifferentFromCalculated 
+                                        ? "border-amber-500 ring-1 ring-amber-500/50" 
+                                        : ""
+                                    }`}
+                                    tabIndex={odds.length + index + 1}
+                                    onWheel={(e) => e.currentTarget.blur()}
+                                  />
+                                  {isDifferentFromCalculated && stakeCalculada > 0 && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                                      onClick={() => resetStakeToCalculated(index, stakeCalculada)}
+                                      title={`Resetar para ${stakeCalculada.toFixed(2)}`}
+                                    >
+                                      <RotateCcw className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                           
-                          {/* Parceiro + Saldo logo abaixo do select */}
+                          {/* Parceiro + Saldo abaixo dos campos */}
                           {entry.bookmaker_id && (
                             <div className="flex items-center justify-between gap-1 px-1 text-[10px] text-muted-foreground">
                               <span className="truncate max-w-[60%]">
@@ -1223,69 +1297,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               )}
                             </div>
                           )}
-                          
-                          {/* Odd + Stake na mesma linha */}
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">Odd</Label>
-                              {isEditing ? (
-                                <div className="h-9 px-2 text-sm flex items-center justify-center bg-muted/50 rounded-md border font-medium">
-                                  {parseFloat(entry.odd).toFixed(2)}
-                                </div>
-                              ) : (
-                                <Input 
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="1.00"
-                                  value={entry.odd}
-                                  onChange={(e) => updateOdd(index, "odd", e.target.value)}
-                                  className="h-9 text-sm"
-                                  tabIndex={index + 1}
-                                  onWheel={(e) => e.currentTarget.blur()}
-                                />
-                              )}
-                            </div>
-                            
-                            <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">
-                                Stake {!isEditing && entry.isReference && <span className="text-primary text-[10px]">(Ref)</span>}
-                              </Label>
-                              {isEditing ? (
-                                <div className="h-9 px-2 text-sm flex items-center justify-center bg-muted/50 rounded-md border font-medium">
-                                  {formatCurrency(parseFloat(entry.stake) || 0)}
-                                </div>
-                              ) : (
-                                <div className="relative">
-                                  <Input 
-                                    type="number"
-                                    step="0.01"
-                                    placeholder={entry.isReference ? "Ref." : (stakeCalculada > 0 ? stakeCalculada.toFixed(2) : "Stake")}
-                                    value={entry.stake}
-                                    onChange={(e) => updateOdd(index, "stake", e.target.value)}
-                                    className={`h-9 text-sm pr-7 ${
-                                      isDifferentFromCalculated 
-                                        ? "border-amber-500 ring-1 ring-amber-500/50" 
-                                        : ""
-                                    }`}
-                                    tabIndex={odds.length + index + 1}
-                                    onWheel={(e) => e.currentTarget.blur()}
-                                  />
-                                  {isDifferentFromCalculated && stakeCalculada > 0 && (
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      className="absolute right-0.5 top-1/2 -translate-y-1/2 h-6 w-6 p-0 text-muted-foreground hover:text-primary"
-                                      onClick={() => resetStakeToCalculated(index, stakeCalculada)}
-                                      title={`Resetar para ${stakeCalculada.toFixed(2)}`}
-                                    >
-                                      <RotateCcw className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
                           
                           {/* Aviso de saldo insuficiente */}
                           {stakeAtual > 0 && saldo !== null && stakeAtual > saldo && (
