@@ -41,6 +41,15 @@ interface ProjetoSurebetTabProps {
   dateRange?: DateRange;
 }
 
+interface SurebetPerna {
+  id: string;
+  selecao: string;
+  odd: number;
+  stake: number;
+  resultado: string | null;
+  bookmaker_nome: string;
+}
+
 interface Surebet {
   id: string;
   data_operacao: string;
@@ -56,6 +65,7 @@ interface Surebet {
   status: string;
   resultado: string | null;
   observacoes: string | null;
+  pernas?: SurebetPerna[];
 }
 
 interface Bookmaker {
@@ -135,10 +145,57 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "tod
         query = query.lte("data_operacao", end.toISOString());
       }
 
-      const { data, error } = await query;
+      const { data: surebetsData, error } = await query;
 
       if (error) throw error;
-      setSurebets(data || []);
+      
+      // Buscar pernas (apostas) de cada surebet
+      if (surebetsData && surebetsData.length > 0) {
+        const surebetIds = surebetsData.map(s => s.id);
+        
+        const { data: pernasData, error: pernasError } = await supabase
+          .from("apostas")
+          .select(`
+            id,
+            surebet_id,
+            selecao,
+            odd,
+            stake,
+            resultado,
+            bookmaker:bookmakers (nome)
+          `)
+          .in("surebet_id", surebetIds);
+        
+        if (pernasError) throw pernasError;
+        
+        // Mapear pernas para cada surebet
+        const surebetsComPernas = surebetsData.map(surebet => ({
+          ...surebet,
+          pernas: (pernasData || [])
+            .filter(p => p.surebet_id === surebet.id)
+            .map(p => ({
+              id: p.id,
+              selecao: p.selecao,
+              odd: p.odd,
+              stake: p.stake,
+              resultado: p.resultado,
+              bookmaker_nome: (p.bookmaker as any)?.nome || "—"
+            }))
+            .sort((a, b) => {
+              // Ordenar: Casa/1 primeiro, depois Empate/X, depois Fora/2
+              const order: Record<string, number> = { 
+                "Casa": 1, "1": 1,
+                "Empate": 2, "X": 2,
+                "Fora": 3, "2": 3
+              };
+              return (order[a.selecao] || 99) - (order[b.selecao] || 99);
+            })
+        }));
+        
+        setSurebets(surebetsComPernas);
+      } else {
+        setSurebets([]);
+      }
     } catch (error: any) {
       console.error("Erro ao carregar surebets:", error.message);
     }
@@ -330,82 +387,132 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "tod
             ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" 
             : "space-y-2"
           }>
-            {surebets.map((surebet) => (
-              <Card 
-                key={surebet.id} 
-                className="cursor-pointer hover:border-primary/50 transition-colors"
-                onClick={() => {
-                  setSelectedSurebet(surebet);
-                  setDialogOpen(true);
-                }}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30">
-                          SUREBET
-                        </Badge>
-                        <Badge variant="outline" className={getStatusColor(surebet.status)}>
-                          {surebet.status === "PENDENTE" ? <Clock className="h-3 w-3 mr-1" /> : null}
-                          {surebet.status}
-                        </Badge>
-                        {surebet.resultado && (
-                          <Badge variant="outline" className={getResultadoColor(surebet.resultado)}>
-                            {surebet.resultado}
+            {surebets.map((surebet) => {
+              // Função helper para obter label de seleção
+              const getSelecaoLabel = (selecao: string) => {
+                const labels: Record<string, string> = {
+                  "Casa": "1", "1": "1",
+                  "Empate": "X", "X": "X",
+                  "Fora": "2", "2": "2"
+                };
+                return labels[selecao] || selecao;
+              };
+
+              return (
+                <Card 
+                  key={surebet.id} 
+                  className="cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => {
+                    setSelectedSurebet(surebet);
+                    setDialogOpen(true);
+                  }}
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30">
+                            SUREBET
                           </Badge>
-                        )}
+                          <Badge variant="outline" className={getStatusColor(surebet.status)}>
+                            {surebet.status === "PENDENTE" ? <Clock className="h-3 w-3 mr-1" /> : null}
+                            {surebet.status}
+                          </Badge>
+                        </div>
+                        <CardTitle className="text-base uppercase">{surebet.evento}</CardTitle>
+                        <p className="text-xs text-muted-foreground">{surebet.esporte}</p>
                       </div>
-                      <CardTitle className="text-base uppercase">{surebet.evento}</CardTitle>
-                      <p className="text-xs text-muted-foreground">{surebet.esporte}</p>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Stake:</span>
-                      <p className="font-medium">{formatCurrency(surebet.stake_total)}</p>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {/* Posições/Pernas da Surebet */}
+                    {surebet.pernas && surebet.pernas.length > 0 && (
+                      <div className="space-y-1.5">
+                        {surebet.pernas.map((perna) => (
+                          <div 
+                            key={perna.id} 
+                            className="flex items-center justify-between gap-2 text-sm bg-muted/30 rounded-md px-2 py-1.5"
+                          >
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <span className="font-bold text-primary w-4 flex-shrink-0">
+                                {getSelecaoLabel(perna.selecao)}
+                              </span>
+                              <span className="text-muted-foreground">–</span>
+                              <span className="font-medium truncate uppercase">
+                                {perna.bookmaker_nome}
+                              </span>
+                              <span className="text-muted-foreground">•</span>
+                              <span className="text-xs">
+                                Odd {perna.odd.toFixed(2)}
+                              </span>
+                              <span className="text-muted-foreground">•</span>
+                              <span className="text-xs font-medium">
+                                {formatCurrency(perna.stake)}
+                              </span>
+                            </div>
+                            {/* Badge de Resultado */}
+                            {perna.resultado && (
+                              <Badge 
+                                variant="outline" 
+                                className={`text-[10px] px-1.5 py-0.5 flex-shrink-0 ${
+                                  perna.resultado === "GREEN" 
+                                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+                                    : perna.resultado === "RED"
+                                    ? "bg-red-500/20 text-red-400 border-red-500/30"
+                                    : "bg-gray-500/20 text-gray-400 border-gray-500/30"
+                                }`}
+                              >
+                                {perna.resultado}
+                              </Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <Separator />
+                    
+                    {/* Resumo */}
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground text-xs">Stake Total:</span>
+                        <p className="font-medium">{formatCurrency(surebet.stake_total)}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">
+                          {surebet.status === "LIQUIDADA" ? "ROI Real:" : "ROI Esp.:"}
+                        </span>
+                        <p className={`font-medium ${(surebet.status === "LIQUIDADA" ? surebet.roi_real : surebet.roi_esperado) || 0 >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          {formatPercent(surebet.status === "LIQUIDADA" ? surebet.roi_real : surebet.roi_esperado)}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Modelo:</span>
-                      <p className="font-medium">{surebet.modelo}</p>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground text-xs">
+                          {surebet.status === "LIQUIDADA" ? "Lucro Real:" : "Lucro Esp.:"}
+                        </span>
+                        <p className={`font-medium ${
+                          (surebet.status === "LIQUIDADA" ? surebet.lucro_real : surebet.lucro_esperado) || 0 >= 0 
+                            ? 'text-emerald-500' 
+                            : 'text-red-500'
+                        }`}>
+                          {formatCurrency(
+                            (surebet.status === "LIQUIDADA" ? surebet.lucro_real : surebet.lucro_esperado) || 0
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-end">
+                        <span className="text-xs text-muted-foreground">
+                          {format(parseLocalDateTime(surebet.data_operacao), "dd/MM HH:mm", { locale: ptBR })}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">
-                        {surebet.status === "LIQUIDADA" ? "ROI Real:" : "ROI Esperado:"}
-                      </span>
-                      <p className={`font-medium ${(surebet.status === "LIQUIDADA" ? surebet.roi_real : surebet.roi_esperado) || 0 >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {formatPercent(surebet.status === "LIQUIDADA" ? surebet.roi_real : surebet.roi_esperado)}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">
-                        {surebet.status === "LIQUIDADA" ? "Lucro Real:" : "Lucro Esperado:"}
-                      </span>
-                      <p className={`font-medium ${
-                        (surebet.status === "LIQUIDADA" ? surebet.lucro_real : surebet.lucro_esperado) || 0 >= 0 
-                          ? 'text-emerald-500' 
-                          : 'text-red-500'
-                      }`}>
-                        {formatCurrency(
-                          (surebet.status === "LIQUIDADA" ? surebet.lucro_real : surebet.lucro_esperado) || 0
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="text-xs text-muted-foreground">
-                    {format(parseLocalDateTime(surebet.data_operacao), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </ScrollArea>
       )}
