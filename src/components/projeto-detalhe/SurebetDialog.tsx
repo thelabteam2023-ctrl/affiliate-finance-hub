@@ -993,21 +993,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                 {/* Métricas em coluna única (mais legíveis na sidebar estreita) */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
-                    <span className="text-xs text-muted-foreground">Spread</span>
-                    <span className={`text-sm font-bold ${
-                      analysis.validOddsCount < 2 
-                        ? 'text-muted-foreground' 
-                        : analysis.spread >= 0 
-                          ? 'text-emerald-500' 
-                          : 'text-amber-500'
-                    }`}>
-                      {analysis.validOddsCount >= 2 
-                        ? `${analysis.spread >= 0 ? "+" : ""}${analysis.spread.toFixed(2)}%`
-                        : "—"
-                      }
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
                     <span className="text-xs text-muted-foreground">ROI Esperado</span>
                     <span className={`text-sm font-bold ${
                       analysis.stakeTotal <= 0 
