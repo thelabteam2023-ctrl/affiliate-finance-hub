@@ -18,7 +18,8 @@ import {
   XCircle,
   Trash2,
   Wallet,
-  RotateCcw
+  RotateCcw,
+  ArrowLeftRight
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -249,6 +250,15 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       stake: calculatedValue > 0 ? calculatedValue.toFixed(2) : "",
       isManuallyEdited: false 
     };
+    setOdds(newOdds);
+  };
+
+  // Função para trocar seleções entre duas posições
+  const swapSelecoes = (indexA: number, indexB: number) => {
+    const newOdds = [...odds];
+    const selecaoA = newOdds[indexA].selecao;
+    newOdds[indexA].selecao = newOdds[indexB].selecao;
+    newOdds[indexB].selecao = selecaoA;
     setOdds(newOdds);
   };
 
@@ -767,8 +777,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   </span>
                 </div>
                 
-                {/* Grid de Colunas para cada seleção (1, X, 2) ou (Sim, Não) */}
-                <div className={`grid gap-4 ${modelo === "1-X-2" ? "grid-cols-3" : "grid-cols-2"}`}>
+                {/* Grid de Colunas com botões de swap entre elas */}
+                <div className="flex items-stretch gap-1">
                   {odds.map((entry, index) => {
                     const saldo = getBookmakerSaldo(entry.bookmaker_id);
                     const selectedBookmaker = bookmakers.find(b => b.id === entry.bookmaker_id);
@@ -798,129 +808,151 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     const colors = columnColors[index] || columnColors[0];
                     
                     return (
-                      <div 
-                        key={index} 
-                        className={`rounded-xl border-2 p-4 space-y-3 transition-all ${colors.bg} ${
-                          entry.isReference 
-                            ? `${colors.border} ring-2 ring-primary/30` 
-                            : colors.border
-                        }`}
-                      >
-                        {/* Badge Grande Centralizado */}
-                        <div className="flex flex-col items-center gap-2">
-                          <div className={`text-2xl font-bold px-5 py-2 rounded-xl ${colors.badge}`}>
-                            {modelo === "1-X-2" 
-                              ? (index === 0 ? "1" : index === 1 ? "X" : "2") 
-                              : (index === 0 ? "1" : "2")
-                            }
-                          </div>
-                          
-                          {/* RadioButton Referência */}
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="reference-selection"
-                              checked={entry.isReference}
-                              onChange={() => setReferenceIndex(index)}
-                              className="h-4 w-4 cursor-pointer accent-primary"
-                            />
-                            <span className="text-xs text-muted-foreground">Referência</span>
-                          </label>
-                        </div>
-                        
-                        {/* Casa + Odd na mesma linha */}
-                        <div className="grid grid-cols-[1fr_70px] gap-2 items-end">
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Casa</Label>
-                            <Select 
-                              value={entry.bookmaker_id}
-                              onValueChange={(v) => updateOdd(index, "bookmaker_id", v)}
+                      <div key={index} className="contents">
+                        {/* Botão de swap entre colunas anteriores */}
+                        {index > 0 && (
+                          <div className="flex items-center justify-center px-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 rounded-full hover:bg-primary/20 text-muted-foreground hover:text-primary"
+                              onClick={() => swapSelecoes(index - 1, index)}
+                              title={`Trocar ${odds[index - 1].selecao} ↔ ${entry.selecao}`}
                             >
-                              <SelectTrigger className="h-9 text-sm">
-                                <SelectValue placeholder="Casa" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {bookmakers.map(bk => (
-                                  <SelectItem key={bk.id} value={bk.id}>
-                                    {bk.nome}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Odd</Label>
-                            <Input 
-                              type="number"
-                              step="0.01"
-                              placeholder="1.00"
-                              value={entry.odd}
-                              onChange={(e) => updateOdd(index, "odd", e.target.value)}
-                              className="h-9 text-sm"
-                              tabIndex={index + 1}
-                              onWheel={(e) => e.currentTarget.blur()}
-                            />
-                          </div>
-                        </div>
-                        
-                        {/* Parceiro + Saldo na mesma linha */}
-                        {entry.bookmaker_id && (parceiroShortName || saldo !== null) && (
-                          <div className="flex items-center justify-center gap-2 py-1 px-2 rounded-lg bg-background/50 text-xs">
-                            {parceiroShortName && (
-                              <span className="font-medium text-muted-foreground">
-                                ({parceiroShortName})
-                              </span>
-                            )}
-                            {saldo !== null && (
-                              <div className="flex items-center gap-1">
-                                <Wallet className="h-3 w-3 text-muted-foreground" />
-                                <span className={stakeAtual > saldo ? "text-destructive" : "text-muted-foreground"}>
-                                  {formatCurrency(saldo)}
-                                </span>
-                                {stakeAtual > 0 && stakeAtual > saldo && (
-                                  <Badge variant="destructive" className="text-[10px] h-4 px-1">
-                                    Insuf.
-                                  </Badge>
-                                )}
-                              </div>
-                            )}
+                              <ArrowLeftRight className="h-4 w-4" />
+                            </Button>
                           </div>
                         )}
                         
-                        {/* Campo Stake */}
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground text-center block">
-                            Aposta {entry.isReference && <span className="text-primary font-medium">(Ref)</span>}
-                          </Label>
-                          <div className="relative">
-                            <Input 
-                              type="number"
-                              step="0.01"
-                              placeholder={entry.isReference ? "Stake ref." : (stakeCalculada > 0 ? stakeCalculada.toFixed(2) : "Stake")}
-                              value={entry.stake}
-                              onChange={(e) => updateOdd(index, "stake", e.target.value)}
-                              className={`h-9 text-sm pr-8 ${
-                                isDifferentFromCalculated 
-                                  ? "border-amber-500 ring-1 ring-amber-500/50" 
-                                  : ""
-                              }`}
-                              tabIndex={odds.length + index + 1}
-                              onWheel={(e) => e.currentTarget.blur()}
-                            />
-                            {/* Botão reset para campos modificados */}
-                            {isDifferentFromCalculated && stakeCalculada > 0 && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="absolute right-0.5 top-1/2 -translate-y-1/2 h-6 w-6 p-0 text-muted-foreground hover:text-primary"
-                                onClick={() => resetStakeToCalculated(index, stakeCalculada)}
-                                title={`Resetar para ${stakeCalculada.toFixed(2)}`}
+                        <div 
+                          className={`flex-1 rounded-xl border-2 p-4 space-y-3 transition-all ${colors.bg} ${
+                            entry.isReference 
+                              ? `${colors.border} ring-2 ring-primary/30` 
+                              : colors.border
+                          }`}
+                        >
+                          {/* Badge + Seleção Centralizado */}
+                          <div className="flex flex-col items-center gap-2">
+                            <div className={`text-2xl font-bold px-5 py-2 rounded-xl ${colors.badge}`}>
+                              {modelo === "1-X-2" 
+                                ? (index === 0 ? "1" : index === 1 ? "X" : "2") 
+                                : (index === 0 ? "1" : "2")
+                              }
+                            </div>
+                            
+                            {/* Seleção dinâmica */}
+                            <span className="text-sm font-medium text-foreground">
+                              {entry.selecao}
+                            </span>
+                            
+                            {/* RadioButton Referência */}
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="reference-selection"
+                                checked={entry.isReference}
+                                onChange={() => setReferenceIndex(index)}
+                                className="h-4 w-4 cursor-pointer accent-primary"
+                              />
+                              <span className="text-xs text-muted-foreground">Referência</span>
+                            </label>
+                          </div>
+                          
+                          {/* Casa + Odd na mesma linha */}
+                          <div className="grid grid-cols-[1fr_70px] gap-2 items-end">
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">Casa</Label>
+                              <Select 
+                                value={entry.bookmaker_id}
+                                onValueChange={(v) => updateOdd(index, "bookmaker_id", v)}
                               >
-                                <RotateCcw className="h-3 w-3" />
-                              </Button>
-                            )}
+                                <SelectTrigger className="h-9 text-sm">
+                                  <SelectValue placeholder="Casa" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {bookmakers.map(bk => (
+                                    <SelectItem key={bk.id} value={bk.id}>
+                                      {bk.nome}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">Odd</Label>
+                              <Input 
+                                type="number"
+                                step="0.01"
+                                placeholder="1.00"
+                                value={entry.odd}
+                                onChange={(e) => updateOdd(index, "odd", e.target.value)}
+                                className="h-9 text-sm"
+                                tabIndex={index + 1}
+                                onWheel={(e) => e.currentTarget.blur()}
+                              />
+                            </div>
+                          </div>
+                          
+                          {/* Parceiro + Saldo na mesma linha */}
+                          {entry.bookmaker_id && (parceiroShortName || saldo !== null) && (
+                            <div className="flex items-center justify-center gap-2 py-1 px-2 rounded-lg bg-background/50 text-xs">
+                              {parceiroShortName && (
+                                <span className="font-medium text-muted-foreground">
+                                  ({parceiroShortName})
+                                </span>
+                              )}
+                              {saldo !== null && (
+                                <div className="flex items-center gap-1">
+                                  <Wallet className="h-3 w-3 text-muted-foreground" />
+                                  <span className={stakeAtual > saldo ? "text-destructive" : "text-muted-foreground"}>
+                                    {formatCurrency(saldo)}
+                                  </span>
+                                  {stakeAtual > 0 && stakeAtual > saldo && (
+                                    <Badge variant="destructive" className="text-[10px] h-4 px-1">
+                                      Insuf.
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Campo Stake */}
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground text-center block">
+                              Aposta {entry.isReference && <span className="text-primary font-medium">(Ref)</span>}
+                            </Label>
+                            <div className="relative">
+                              <Input 
+                                type="number"
+                                step="0.01"
+                                placeholder={entry.isReference ? "Stake ref." : (stakeCalculada > 0 ? stakeCalculada.toFixed(2) : "Stake")}
+                                value={entry.stake}
+                                onChange={(e) => updateOdd(index, "stake", e.target.value)}
+                                className={`h-9 text-sm pr-8 ${
+                                  isDifferentFromCalculated 
+                                    ? "border-amber-500 ring-1 ring-amber-500/50" 
+                                    : ""
+                                }`}
+                                tabIndex={odds.length + index + 1}
+                                onWheel={(e) => e.currentTarget.blur()}
+                              />
+                              {/* Botão reset para campos modificados */}
+                              {isDifferentFromCalculated && stakeCalculada > 0 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="absolute right-0.5 top-1/2 -translate-y-1/2 h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                                  onClick={() => resetStakeToCalculated(index, stakeCalculada)}
+                                  title={`Resetar para ${stakeCalculada.toFixed(2)}`}
+                                >
+                                  <RotateCcw className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
