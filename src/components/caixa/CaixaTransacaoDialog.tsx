@@ -1806,7 +1806,43 @@ export function CaixaTransacaoDialog({
       };
     }
     
-    // TRANSFERÊNCIA e outras: moedas disponíveis no caixa (origem)
+    // TRANSFERÊNCIA: depende do fluxo
+    if (tipoTransacao === "TRANSFERENCIA") {
+      if (fluxoTransferencia === "CAIXA_PARCEIRO") {
+        // Caixa → Parceiro: moedas disponíveis no caixa
+        return {
+          fiat: saldosCaixaFiat.filter(s => s.saldo > 0).map(s => {
+            const moedaInfo = MOEDAS_FIAT.find(m => m.value === s.moeda);
+            return { value: s.moeda, label: moedaInfo?.label || s.moeda, saldo: s.saldo };
+          }),
+          crypto: saldosCaixaCrypto.filter(s => s.saldo_coin > 0).map(s => ({
+            value: s.coin,
+            label: MOEDAS_CRYPTO.find(m => m.value === s.coin)?.label || s.coin,
+            saldo: s.saldo_usd
+          }))
+        };
+      } else {
+        // Parceiro → Parceiro: moedas disponíveis nos parceiros
+        const moedasFiatParceiros = [...new Set(
+          saldosParceirosContas
+            .filter(s => s.saldo > 0)
+            .map(s => s.moeda)
+        )];
+        
+        const moedasCryptoParceiros = [...new Set(
+          saldosParceirosWallets
+            .filter(s => s.saldo_coin > 0)
+            .map(s => s.coin)
+        )];
+        
+        return {
+          fiat: MOEDAS_FIAT.filter(m => moedasFiatParceiros.includes(m.value)),
+          crypto: MOEDAS_CRYPTO.filter(m => moedasCryptoParceiros.includes(m.value))
+        };
+      }
+    }
+    
+    // Fallback: moedas disponíveis no caixa (origem)
     return {
       fiat: saldosCaixaFiat.filter(s => s.saldo > 0).map(s => {
         const moedaInfo = MOEDAS_FIAT.find(m => m.value === s.moeda);
