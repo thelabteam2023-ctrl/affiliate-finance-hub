@@ -58,28 +58,10 @@ export default function BookmakerSelect({
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [displayData, setDisplayData] = useState<{ nome: string; logo_url: string | null } | null>(null);
-  const [isMaster, setIsMaster] = useState(false);
   
   // Ref para rastrear o último value que buscamos
   const lastFetchedValue = useRef<string>("");
   const isVinculoMode = !!parceiroId;
-
-  // Verificar se usuário é master
-  useEffect(() => {
-    const checkMasterRole = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data } = await supabase.rpc('is_master', { _user_id: user.id });
-        setIsMaster(data === true);
-      } catch (error) {
-        console.error("Erro ao verificar role:", error);
-        setIsMaster(false);
-      }
-    };
-    checkMasterRole();
-  }, []);
   
   // Notificar callback quando o item selecionado muda
   useEffect(() => {
@@ -142,17 +124,11 @@ export default function BookmakerSelect({
 
           setItems(mapped);
         } else {
-          // Modo catálogo
-          let query = supabase
+          // Modo catálogo - RLS já filtra para não-masters verem apenas REGULAMENTADA
+          const { data, error } = await supabase
             .from("bookmakers_catalogo")
-            .select("id, nome, logo_url, operacional");
-          
-          // Não-masters veem apenas bookmakers REGULAMENTADA
-          if (!isMaster) {
-            query = query.eq("operacional", "REGULAMENTADA");
-          }
-          
-          const { data, error } = await query.order("nome");
+            .select("id, nome, logo_url")
+            .order("nome");
 
           if (error) throw error;
           
@@ -185,7 +161,7 @@ export default function BookmakerSelect({
     };
 
     fetchBookmakers();
-  }, [parceiroId, somenteComSaldo, excludeVinculosDoParceiro, isMaster]);
+  }, [parceiroId, somenteComSaldo, excludeVinculosDoParceiro]);
 
   // Buscar dados de exibição quando value muda - INDEPENDENTE da lista
   useEffect(() => {
