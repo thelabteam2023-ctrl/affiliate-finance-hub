@@ -1,13 +1,21 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipContent,
@@ -32,7 +40,7 @@ interface BookmakerSelectProps {
   disabled?: boolean;
   parceiroId?: string;
   somenteComSaldo?: boolean;
-  excludeVinculosDoParceiro?: string; // ID do parceiro para excluir bookmakers já vinculadas
+  excludeVinculosDoParceiro?: string;
 }
 
 interface BookmakerItem {
@@ -54,12 +62,12 @@ export default function BookmakerSelect({
   somenteComSaldo,
   excludeVinculosDoParceiro
 }: BookmakerSelectProps) {
+  const [open, setOpen] = useState(false);
   const [items, setItems] = useState<BookmakerItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [displayData, setDisplayData] = useState<{ nome: string; logo_url: string | null } | null>(null);
   
-  // Ref para rastrear o último value que buscamos
   const lastFetchedValue = useRef<string>("");
   const isVinculoMode = !!parceiroId;
   
@@ -89,7 +97,6 @@ export default function BookmakerSelect({
       setLoading(true);
       try {
         if (parceiroId) {
-          // Modo vínculo: buscar bookmakers vinculadas ao parceiro
           let query = supabase
             .from("bookmakers")
             .select(`
@@ -124,7 +131,6 @@ export default function BookmakerSelect({
 
           setItems(mapped);
         } else {
-          // Modo catálogo - RLS já filtra para não-masters verem apenas REGULAMENTADA
           const { data, error } = await supabase
             .from("bookmakers_catalogo")
             .select("id, nome, logo_url")
@@ -134,7 +140,6 @@ export default function BookmakerSelect({
           
           let catalogoItems = data || [];
           
-          // Filtrar bookmakers já vinculadas ao parceiro (se especificado)
           if (excludeVinculosDoParceiro) {
             const { data: vinculosExistentes } = await supabase
               .from("bookmakers")
@@ -163,16 +168,14 @@ export default function BookmakerSelect({
     fetchBookmakers();
   }, [parceiroId, somenteComSaldo, excludeVinculosDoParceiro]);
 
-  // Buscar dados de exibição quando value muda - INDEPENDENTE da lista
+  // Buscar dados de exibição quando value muda
   useEffect(() => {
-    // Se value está vazio, limpar exibição
     if (!value) {
       setDisplayData(null);
       lastFetchedValue.current = "";
       return;
     }
 
-    // Se já buscamos esse value, não buscar novamente
     if (lastFetchedValue.current === value && displayData) {
       return;
     }
@@ -180,7 +183,6 @@ export default function BookmakerSelect({
     const fetchDisplayData = async () => {
       try {
         if (isVinculoMode) {
-          // Modo vínculo: buscar da tabela bookmakers
           const { data } = await supabase
             .from("bookmakers")
             .select(`
@@ -200,7 +202,6 @@ export default function BookmakerSelect({
             lastFetchedValue.current = value;
           }
         } else {
-          // Modo catálogo: buscar da tabela bookmakers_catalogo
           const { data } = await supabase
             .from("bookmakers_catalogo")
             .select("nome, logo_url")
@@ -218,33 +219,48 @@ export default function BookmakerSelect({
     };
 
     fetchDisplayData();
-  }, [value, isVinculoMode]); // NÃO depende de items - evita re-execuções
+  }, [value, isVinculoMode]);
 
   // Filtrar itens pela busca
   const filteredItems = items.filter((item) => 
     item.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleSelect = (itemId: string) => {
+    onValueChange(itemId);
+    setOpen(false);
+    setSearchTerm("");
+  };
+
   return (
     <TooltipProvider>
-      <Select value={value} onValueChange={onValueChange} disabled={disabled || loading}>
+      <Popover open={open} onOpenChange={setOpen}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <SelectTrigger className="w-full h-12">
-              <div className="flex items-center justify-center gap-2 w-full min-w-0 overflow-hidden">
-                {displayData?.logo_url && (
-                  <img
-                    src={displayData.logo_url}
-                    alt=""
-                    className="h-6 w-6 rounded object-contain flex-shrink-0"
-                    onError={(e) => { e.currentTarget.style.display = "none"; }}
-                  />
-                )}
-                <span className="uppercase truncate max-w-[calc(100%-40px)]">
-                  {displayData?.nome || (loading ? "Carregando..." : "Selecione...")}
-                </span>
-              </div>
-            </SelectTrigger>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={open}
+                disabled={disabled || loading}
+                className="w-full h-12 justify-between"
+              >
+                <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                  {displayData?.logo_url && (
+                    <img
+                      src={displayData.logo_url}
+                      alt=""
+                      className="h-6 w-6 rounded object-contain flex-shrink-0"
+                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                    />
+                  )}
+                  <span className="uppercase truncate">
+                    {displayData?.nome || (loading ? "Carregando..." : "Selecione...")}
+                  </span>
+                </div>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
           </TooltipTrigger>
           {displayData?.nome && displayData.nome.length > 20 && (
             <TooltipContent side="top" className="max-w-xs">
@@ -252,72 +268,82 @@ export default function BookmakerSelect({
             </TooltipContent>
           )}
         </Tooltip>
-        <SelectContent 
-          position="popper" 
-          side="bottom"
+        
+        <PopoverContent 
+          className="w-[--radix-popover-trigger-width] min-w-[300px] p-0 z-[9999]"
           align="start"
-          sideOffset={8}
-          className="max-h-[280px] w-[var(--radix-select-trigger-width)] min-w-[300px] z-[9999] bg-popover border border-border shadow-xl"
+          sideOffset={4}
         >
-          <div className="sticky top-0 z-20 bg-[hsl(222,30%,14%)] p-2 border-b border-border shadow-md">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar bookmaker..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 h-9"
-              />
-            </div>
-          </div>
-          {filteredItems.length === 0 ? (
-            <div className="py-6 text-center text-sm text-muted-foreground">
-              {parceiroId 
-                ? (somenteComSaldo 
-                    ? "Este parceiro não possui bookmakers com saldo disponível" 
-                    : "Este parceiro não possui bookmakers vinculadas")
-                : "Nenhuma bookmaker encontrada"}
-            </div>
-          ) : (
-            filteredItems.map((item) => {
-              const isLimitada = item.status === "LIMITADA";
-              return (
-                <SelectItem 
-                  key={item.id}
-                  value={item.id}
-                  className={`py-3 ${isLimitada ? "data-[highlighted]:bg-yellow-500/20" : "data-[highlighted]:bg-emerald-500/20"}`}
-                >
-                  <div className="flex items-center gap-3 w-full">
-                    {item.logo_url && (
-                      <img
-                        src={item.logo_url}
-                        alt=""
-                        className="h-6 w-6 rounded object-contain flex-shrink-0"
-                        onError={(e) => { e.currentTarget.style.display = "none"; }}
-                      />
-                    )}
-                    <span className={`uppercase text-sm font-medium ${isLimitada ? "text-yellow-400" : ""}`}>
-                      {item.nome}
-                    </span>
-                    {item.saldo_atual !== undefined && (
-                      <div className="ml-auto flex-shrink-0 text-right">
-                        <span className="text-xs text-muted-foreground">
-                          {item.moeda} {item.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </span>
-                        {(item.saldo_freebet ?? 0) > 0 && (
-                          <span className="text-xs text-amber-400 ml-1">
-                            +FB {item.saldo_freebet?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder="Buscar bookmaker..."
+              value={searchTerm}
+              onValueChange={setSearchTerm}
+            />
+            <CommandList className="max-h-[280px]">
+              <CommandEmpty>
+                {parceiroId 
+                  ? (somenteComSaldo 
+                      ? "Este parceiro não possui bookmakers com saldo disponível" 
+                      : "Este parceiro não possui bookmakers vinculadas")
+                  : "Nenhuma bookmaker encontrada"}
+              </CommandEmpty>
+              <CommandGroup>
+                {filteredItems.map((item) => {
+                  const isLimitada = item.status === "LIMITADA";
+                  const isSelected = value === item.id;
+                  
+                  return (
+                    <CommandItem
+                      key={item.id}
+                      value={item.id}
+                      onSelect={() => handleSelect(item.id)}
+                      className={cn(
+                        "py-3 cursor-pointer",
+                        isLimitada && "data-[selected=true]:bg-yellow-500/20",
+                        !isLimitada && "data-[selected=true]:bg-emerald-500/20"
+                      )}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4 flex-shrink-0",
+                          isSelected ? "opacity-100" : "opacity-0"
                         )}
-                      </div>
-                    )}
-                  </div>
-                </SelectItem>
-              );
-            })
-          )}
-        </SelectContent>
-      </Select>
+                      />
+                      {item.logo_url && (
+                        <img
+                          src={item.logo_url}
+                          alt=""
+                          className="h-6 w-6 rounded object-contain flex-shrink-0 mr-2"
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                        />
+                      )}
+                      <span className={cn(
+                        "uppercase text-sm font-medium",
+                        isLimitada && "text-yellow-400"
+                      )}>
+                        {item.nome}
+                      </span>
+                      {item.saldo_atual !== undefined && (
+                        <div className="ml-auto flex-shrink-0 text-right">
+                          <span className="text-xs text-muted-foreground">
+                            {item.moeda} {item.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                          {(item.saldo_freebet ?? 0) > 0 && (
+                            <span className="text-xs text-amber-400 ml-1">
+                              +FB {item.saldo_freebet?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
     </TooltipProvider>
   );
 }
