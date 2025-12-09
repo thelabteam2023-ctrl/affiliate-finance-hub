@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { 
   Calculator, 
@@ -24,7 +25,9 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -88,6 +91,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "tod
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedSurebet, setSelectedSurebet] = useState<Surebet | null>(null);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
     const today = new Date();
@@ -226,6 +230,18 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "tod
   const handleDataChange = () => {
     fetchSurebets();
     onDataChange?.();
+  };
+
+  const toggleCardExpanded = (id: string) => {
+    setExpandedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   };
 
   const formatCurrency = (value: number) => {
@@ -398,117 +414,142 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "tod
                 return labels[selecao] || selecao;
               };
 
+              const isExpanded = expandedCards.has(surebet.id);
+              const isLiquidada = surebet.status === "LIQUIDADA";
+              const lucroExibir = isLiquidada ? surebet.lucro_real : surebet.lucro_esperado;
+              const roiExibir = isLiquidada ? surebet.roi_real : surebet.roi_esperado;
+
               return (
                 <Card 
                   key={surebet.id} 
                   className="cursor-pointer hover:border-primary/50 transition-colors"
-                  onClick={() => {
-                    setSelectedSurebet(surebet);
-                    setDialogOpen(true);
-                  }}
                 >
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30">
+                  {/* Header compacto - sempre visível */}
+                  <CardHeader className="pb-2 pt-3 px-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                          <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">
                             SUREBET
                           </Badge>
-                          <Badge variant="outline" className={getStatusColor(surebet.status)}>
-                            {surebet.status === "PENDENTE" ? <Clock className="h-3 w-3 mr-1" /> : null}
+                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusColor(surebet.status)}`}>
+                            {surebet.status === "PENDENTE" && <Clock className="h-2.5 w-2.5 mr-0.5" />}
                             {surebet.status}
                           </Badge>
                         </div>
-                        <CardTitle className="text-base uppercase">{surebet.evento}</CardTitle>
-                        <p className="text-xs text-muted-foreground">{surebet.esporte}</p>
+                        <CardTitle 
+                          className="text-sm uppercase truncate cursor-pointer hover:text-primary"
+                          onClick={() => {
+                            setSelectedSurebet(surebet);
+                            setDialogOpen(true);
+                          }}
+                        >
+                          {surebet.evento}
+                        </CardTitle>
+                        <p className="text-[10px] text-muted-foreground">{surebet.esporte}</p>
                       </div>
+                      {/* Botão expandir */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 flex-shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleCardExpanded(surebet.id);
+                        }}
+                      >
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    {/* Posições/Pernas da Surebet */}
-                    {surebet.pernas && surebet.pernas.length > 0 && (
-                      <div className="space-y-1.5">
-                        {surebet.pernas.map((perna) => (
-                          <div 
-                            key={perna.id} 
-                            className="flex items-center justify-between gap-2 text-sm bg-muted/30 rounded-md px-2 py-1.5"
-                          >
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <span className="font-bold text-primary w-4 flex-shrink-0">
-                                {getSelecaoLabel(perna.selecao)}
-                              </span>
-                              <span className="text-muted-foreground">–</span>
-                              <span className="font-medium truncate uppercase">
-                                {perna.bookmaker_nome}
-                              </span>
-                              <span className="text-muted-foreground">•</span>
-                              <span className="text-xs">
-                                Odd {perna.odd.toFixed(2)}
-                              </span>
-                              <span className="text-muted-foreground">•</span>
-                              <span className="text-xs font-medium">
-                                {formatCurrency(perna.stake)}
-                              </span>
-                            </div>
-                            {/* Badge de Resultado */}
-                            {perna.resultado && (
-                              <Badge 
-                                variant="outline" 
-                                className={`text-[10px] px-1.5 py-0.5 flex-shrink-0 ${
-                                  perna.resultado === "GREEN" 
-                                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
-                                    : perna.resultado === "RED"
-                                    ? "bg-red-500/20 text-red-400 border-red-500/30"
-                                    : "bg-gray-500/20 text-gray-400 border-gray-500/30"
-                                }`}
-                              >
-                                {perna.resultado}
-                              </Badge>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    <Separator />
-                    
-                    {/* Resumo */}
-                    <div className="grid grid-cols-2 gap-2 text-sm">
+
+                  <CardContent className="px-3 pb-3 pt-0 space-y-2">
+                    {/* Resumo compacto - sempre visível */}
+                    <div className="grid grid-cols-3 gap-2 text-xs">
                       <div>
-                        <span className="text-muted-foreground text-xs">Stake Total:</span>
+                        <span className="text-muted-foreground text-[10px]">Stake</span>
                         <p className="font-medium">{formatCurrency(surebet.stake_total)}</p>
                       </div>
                       <div>
-                        <span className="text-muted-foreground text-xs">
-                          {surebet.status === "LIQUIDADA" ? "ROI Real:" : "ROI Esp.:"}
+                        <span className="text-muted-foreground text-[10px]">
+                          {isLiquidada ? "ROI Real" : "ROI Esp."}
                         </span>
-                        <p className={`font-medium ${(surebet.status === "LIQUIDADA" ? surebet.roi_real : surebet.roi_esperado) || 0 >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                          {formatPercent(surebet.status === "LIQUIDADA" ? surebet.roi_real : surebet.roi_esperado)}
+                        <p className={`font-medium ${(roiExibir || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          {formatPercent(roiExibir)}
                         </p>
                       </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
-                        <span className="text-muted-foreground text-xs">
-                          {surebet.status === "LIQUIDADA" ? "Lucro Real:" : "Lucro Esp.:"}
+                        <span className="text-muted-foreground text-[10px]">
+                          {isLiquidada ? "Lucro" : "Lucro Esp."}
                         </span>
-                        <p className={`font-medium ${
-                          (surebet.status === "LIQUIDADA" ? surebet.lucro_real : surebet.lucro_esperado) || 0 >= 0 
-                            ? 'text-emerald-500' 
-                            : 'text-red-500'
-                        }`}>
-                          {formatCurrency(
-                            (surebet.status === "LIQUIDADA" ? surebet.lucro_real : surebet.lucro_esperado) || 0
-                          )}
+                        <p className={`font-medium ${(lucroExibir || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          {formatCurrency(lucroExibir || 0)}
                         </p>
                       </div>
-                      <div className="flex items-end">
-                        <span className="text-xs text-muted-foreground">
-                          {format(parseLocalDateTime(surebet.data_operacao), "dd/MM HH:mm", { locale: ptBR })}
-                        </span>
-                      </div>
                     </div>
+
+                    {/* Posições/Pernas expandíveis */}
+                    <Collapsible open={isExpanded}>
+                      <CollapsibleContent className="space-y-1.5 pt-2">
+                        <Separator className="mb-2" />
+                        {surebet.pernas && surebet.pernas.length > 0 ? (
+                          surebet.pernas.map((perna) => (
+                            <div 
+                              key={perna.id} 
+                              className="flex items-center justify-between gap-2 text-xs bg-muted/30 rounded-md px-2 py-1.5"
+                            >
+                              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                <span className="font-bold text-primary w-3 flex-shrink-0 text-center">
+                                  {getSelecaoLabel(perna.selecao)}
+                                </span>
+                                <span className="text-muted-foreground">–</span>
+                                <span className="font-medium truncate uppercase text-[11px]">
+                                  {perna.bookmaker_nome}
+                                </span>
+                                <span className="text-muted-foreground text-[10px]">•</span>
+                                <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                                  {perna.odd.toFixed(2)}
+                                </span>
+                                <span className="text-muted-foreground text-[10px]">•</span>
+                                <span className="text-[10px] font-medium flex-shrink-0">
+                                  {formatCurrency(perna.stake)}
+                                </span>
+                              </div>
+                              {/* Badge de Resultado */}
+                              {perna.resultado && (
+                                <Badge 
+                                  variant="outline" 
+                                  className={`text-[9px] px-1 py-0 flex-shrink-0 ${
+                                    perna.resultado === "GREEN" 
+                                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+                                      : perna.resultado === "RED"
+                                      ? "bg-red-500/20 text-red-400 border-red-500/30"
+                                      : "bg-gray-500/20 text-gray-400 border-gray-500/30"
+                                  }`}
+                                >
+                                  {perna.resultado}
+                                </Badge>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-xs text-muted-foreground text-center py-2">
+                            Nenhuma posição registrada
+                          </p>
+                        )}
+                        
+                        {/* Data */}
+                        <div className="flex justify-end pt-1">
+                          <span className="text-[10px] text-muted-foreground">
+                            {format(parseLocalDateTime(surebet.data_operacao), "dd/MM HH:mm", { locale: ptBR })}
+                          </span>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
                   </CardContent>
                 </Card>
               );
