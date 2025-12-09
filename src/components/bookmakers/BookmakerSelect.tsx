@@ -259,7 +259,7 @@ export default function BookmakerSelect({
           sideOffset={8}
           className="max-h-[280px] w-[var(--radix-select-trigger-width)] min-w-[300px] z-[9999] bg-popover border border-border shadow-xl"
         >
-          <div className="sticky top-0 z-10 bg-popover p-2 border-b border-border">
+          <div className="sticky top-0 z-20 bg-[hsl(222,30%,14%)] p-2 border-b border-border shadow-md">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
