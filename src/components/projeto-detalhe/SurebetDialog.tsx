@@ -105,11 +105,18 @@ const SELECOES_POR_MERCADO: Record<string, string[]> = {
 };
 
 const getSelecoesPorMercado = (mercado: string, modelo: "1-X-2" | "1-2"): string[] => {
-  if (mercado && SELECOES_POR_MERCADO[mercado]) {
-    return SELECOES_POR_MERCADO[mercado];
+  // 1-X-2 sempre é Casa, Empate, Fora - fixo
+  if (modelo === "1-X-2") {
+    return ["Casa", "Empate", "Fora"];
   }
-  // Fallback baseado no modelo
-  return modelo === "1-X-2" ? ["Casa", "Empate", "Fora"] : ["Sim", "Não"];
+  // Para modelo binário, usar mapeamento do mercado
+  if (mercado && SELECOES_POR_MERCADO[mercado]) {
+    const selecoes = SELECOES_POR_MERCADO[mercado];
+    // Retornar apenas 2 seleções para modelo binário
+    return selecoes.slice(0, 2);
+  }
+  // Fallback para binário
+  return ["Sim", "Não"];
 };
 
 const SELECOES_1X2 = ["Casa", "Empate", "Fora"];
