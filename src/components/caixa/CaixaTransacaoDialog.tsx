@@ -1777,7 +1777,36 @@ export function CaixaTransacaoDialog({
       };
     }
     
-    // Outras transações: mantém comportamento atual (moedas disponíveis na origem)
+    // DEPÓSITO (Parceiro → Bookmaker): moedas disponíveis nos parceiros (não no caixa)
+    if (tipoTransacao === "DEPOSITO") {
+      // Obter moedas únicas que existem nas contas dos parceiros com saldo
+      const moedasComSaldoParceiros = [...new Set(
+        saldosParceirosContas
+          .filter(s => s.saldo > 0)
+          .map(s => s.moeda)
+      )];
+      
+      return {
+        fiat: MOEDAS_FIAT.filter(m => moedasComSaldoParceiros.includes(m.value)),
+        crypto: [] // DEPOSITO só suporta FIAT
+      };
+    }
+    
+    // SAQUE (Bookmaker → Parceiro): moedas das bookmakers com saldo
+    if (tipoTransacao === "SAQUE") {
+      const moedasBookmakers = [...new Set(
+        bookmakers
+          .filter(b => b.saldo_atual > 0)
+          .map(b => b.moeda)
+      )];
+      
+      return {
+        fiat: MOEDAS_FIAT.filter(m => moedasBookmakers.includes(m.value)),
+        crypto: [] // SAQUE só suporta FIAT
+      };
+    }
+    
+    // TRANSFERÊNCIA e outras: moedas disponíveis no caixa (origem)
     return {
       fiat: saldosCaixaFiat.filter(s => s.saldo > 0).map(s => {
         const moedaInfo = MOEDAS_FIAT.find(m => m.value === s.moeda);
