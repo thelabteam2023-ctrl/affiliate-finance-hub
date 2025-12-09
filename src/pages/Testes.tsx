@@ -612,6 +612,7 @@ export default function Testes() {
       }
 
       // Apagar todas as apostas do usuário (campos gerou_freebet e tipo_freebet são limpos junto)
+      // IMPORTANTE: Apagar apostas antes de surebets pois apostas têm FK para surebets
       const { error: apostasError } = await supabase
         .from("apostas")
         .delete()
@@ -619,6 +620,16 @@ export default function Testes() {
 
       if (apostasError) {
         console.error("Erro ao apagar apostas:", apostasError);
+      }
+
+      // Apagar todas as surebets do usuário
+      const { error: surebetsError } = await supabase
+        .from("surebets")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (surebetsError) {
+        console.error("Erro ao apagar surebets:", surebetsError);
       }
 
       // Atualizar cada bookmaker com seu saldo original e zerar saldo_freebet
@@ -634,7 +645,7 @@ export default function Testes() {
         }
       }
 
-      toast.success(`Saldos de ${atualizados} bookmakers resetados, apostas e freebets apagadas!`);
+      toast.success(`Saldos de ${atualizados} bookmakers resetados, apostas, surebets e freebets apagadas!`);
     } catch (error: any) {
       console.error("Erro ao resetar saldos:", error);
       toast.error(`Erro ao resetar saldos: ${error.message}`);
