@@ -601,12 +601,27 @@ export function ApostaMultiplaDialog({
 
         const novaApostaId = insertedData?.id;
 
-        // Debitar saldo
-        await debitarSaldo(bookmakerId, stakeNum, usarFreebet);
-
-        // Creditar resultado se não pendente
-        if (resultadoFinal !== "PENDENTE" && valorRetorno && valorRetorno > 0) {
-          await creditarRetorno(bookmakerId, valorRetorno);
+        // NOTA: Não debitar saldo_atual na criação de apostas PENDENTES!
+        // O modelo contábil correto é:
+        // - saldo_atual = saldo total real (só muda na liquidação)
+        // - "Em Aposta" = soma das stakes pendentes (calculado dinamicamente)
+        // - "Livre" = saldo_atual - Em Aposta
+        
+        // Só aplicar efeito no saldo se resultado NÃO for pendente
+        if (resultadoFinal !== "PENDENTE" && resultadoFinal !== null) {
+          if (resultadoFinal === "RED" || resultadoFinal === "MEIO_RED") {
+            // RED: debitar stake (perda confirmada)
+            await debitarSaldo(bookmakerId, stakeNum, usarFreebet);
+          } else if ((resultadoFinal === "GREEN" || resultadoFinal === "MEIO_GREEN") && valorRetorno && valorRetorno > 0) {
+            // GREEN: creditar lucro (retorno - stake)
+            const lucro = valorRetorno - stakeNum;
+            if (lucro > 0) {
+              await creditarRetorno(bookmakerId, lucro);
+            } else if (lucro < 0) {
+              await debitarSaldo(bookmakerId, Math.abs(lucro), usarFreebet);
+            }
+          }
+          // VOID: não altera saldo
         }
 
         // Registrar freebet gerada com ID da aposta e resultado
@@ -826,55 +841,73 @@ export function ApostaMultiplaDialog({
     const novaUsaFreebet = usarFreebet;
     const antigoBkId = apostaAntiga.bookmaker_id;
     const novoBkId = apostaNovaData.bookmaker_id;
+    const resultadoAntigo = apostaAntiga.resultado;
+    const resultadoNovo = apostaNovaData.resultado;
     
-    // Reverter débito antigo
-    if (antigaUsavaFreebet) {
-      const { data: bk } = await supabase
-        .from("bookmakers")
-        .select("saldo_freebet")
-        .eq("id", antigoBkId)
-        .single();
-      if (bk) {
-        await supabase
-          .from("bookmakers")
-          .update({ saldo_freebet: bk.saldo_freebet + antigaStake })
-          .eq("id", antigoBkId);
+    // REVERTER efeito do resultado ANTIGO (se existia e não era PENDENTE)
+    if (resultadoAntigo && resultadoAntigo !== "PENDENTE") {
+      if (resultadoAntigo === "RED" || resultadoAntigo === "MEIO_RED") {
+        // RED antiga: stake foi debitada, reverter (creditar)
+        if (antigaUsavaFreebet) {
+          const { data: bk } = await supabase
+            .from("bookmakers")
+            .select("saldo_freebet")
+            .eq("id", antigoBkId)
+            .single();
+          if (bk) {
+            await supabase
+              .from("bookmakers")
+              .update({ saldo_freebet: bk.saldo_freebet + antigaStake })
+              .eq("id", antigoBkId);
+          }
+        } else {
+          const { data: bk } = await supabase
+            .from("bookmakers")
+            .select("saldo_atual")
+            .eq("id", antigoBkId)
+            .single();
+          if (bk) {
+            await supabase
+              .from("bookmakers")
+              .update({ saldo_atual: bk.saldo_atual + antigaStake })
+              .eq("id", antigoBkId);
+          }
+        }
+      } else if ((resultadoAntigo === "GREEN" || resultadoAntigo === "MEIO_GREEN") && apostaAntiga.valor_retorno) {
+        // GREEN antiga: lucro foi creditado, reverter (debitar lucro)
+        const lucroAntigo = apostaAntiga.valor_retorno - antigaStake;
+        if (lucroAntigo !== 0) {
+          const { data: bk } = await supabase
+            .from("bookmakers")
+            .select("saldo_atual")
+            .eq("id", antigoBkId)
+            .single();
+          if (bk) {
+            await supabase
+              .from("bookmakers")
+              .update({ saldo_atual: bk.saldo_atual - lucroAntigo })
+              .eq("id", antigoBkId);
+          }
+        }
       }
-    } else {
-      const { data: bk } = await supabase
-        .from("bookmakers")
-        .select("saldo_atual")
-        .eq("id", antigoBkId)
-        .single();
-      if (bk) {
-        await supabase
-          .from("bookmakers")
-          .update({ saldo_atual: bk.saldo_atual + antigaStake })
-          .eq("id", antigoBkId);
-      }
+      // VOID antiga: não alterou saldo, não precisa reverter
     }
     
-    // Reverter crédito de retorno antigo (se tinha resultado)
-    if (apostaAntiga.valor_retorno && apostaAntiga.valor_retorno > 0) {
-      const { data: bk } = await supabase
-        .from("bookmakers")
-        .select("saldo_atual")
-        .eq("id", antigoBkId)
-        .single();
-      if (bk) {
-        await supabase
-          .from("bookmakers")
-          .update({ saldo_atual: bk.saldo_atual - apostaAntiga.valor_retorno })
-          .eq("id", antigoBkId);
+    // APLICAR efeito do resultado NOVO (se não for PENDENTE)
+    if (resultadoNovo && resultadoNovo !== "PENDENTE") {
+      if (resultadoNovo === "RED" || resultadoNovo === "MEIO_RED") {
+        // RED: debitar stake
+        await debitarSaldo(novoBkId, novaStake, novaUsaFreebet);
+      } else if ((resultadoNovo === "GREEN" || resultadoNovo === "MEIO_GREEN") && apostaNovaData.valor_retorno) {
+        // GREEN: creditar lucro
+        const lucroNovo = apostaNovaData.valor_retorno - novaStake;
+        if (lucroNovo > 0) {
+          await creditarRetorno(novoBkId, lucroNovo);
+        } else if (lucroNovo < 0) {
+          await debitarSaldo(novoBkId, Math.abs(lucroNovo), novaUsaFreebet);
+        }
       }
-    }
-    
-    // Aplicar novo débito
-    await debitarSaldo(novoBkId, novaStake, novaUsaFreebet);
-    
-    // Aplicar novo crédito se tiver resultado
-    if (apostaNovaData.valor_retorno && apostaNovaData.valor_retorno > 0) {
-      await creditarRetorno(novoBkId, apostaNovaData.valor_retorno);
+      // VOID: não altera saldo
     }
   };
 
@@ -884,50 +917,72 @@ export function ApostaMultiplaDialog({
     try {
       setLoading(true);
 
-      // Reverter saldo antes de deletar
+      // Reverter saldo baseado no resultado da aposta
+      // Modelo contábil: saldo só foi alterado se teve resultado (não PENDENTE)
+      const resultado = aposta.resultado;
       const usavaFreebet = aposta.tipo_freebet && aposta.tipo_freebet !== "normal";
       
-      // Reverter débito de stake
-      if (usavaFreebet) {
-        const { data: bk } = await supabase
-          .from("bookmakers")
-          .select("saldo_freebet")
-          .eq("id", aposta.bookmaker_id)
-          .single();
-        if (bk) {
-          await supabase
-            .from("bookmakers")
-            .update({ saldo_freebet: bk.saldo_freebet + aposta.stake })
-            .eq("id", aposta.bookmaker_id);
+      if (resultado && resultado !== "PENDENTE") {
+        if (resultado === "RED" || resultado === "MEIO_RED") {
+          // RED/MEIO_RED: stake foi debitada, reverter (creditar)
+          if (usavaFreebet) {
+            const { data: bk } = await supabase
+              .from("bookmakers")
+              .select("saldo_freebet")
+              .eq("id", aposta.bookmaker_id)
+              .single();
+            if (bk) {
+              await supabase
+                .from("bookmakers")
+                .update({ saldo_freebet: bk.saldo_freebet + aposta.stake })
+                .eq("id", aposta.bookmaker_id);
+            }
+          } else {
+            const { data: bk } = await supabase
+              .from("bookmakers")
+              .select("saldo_atual")
+              .eq("id", aposta.bookmaker_id)
+              .single();
+            if (bk) {
+              await supabase
+                .from("bookmakers")
+                .update({ saldo_atual: bk.saldo_atual + aposta.stake })
+                .eq("id", aposta.bookmaker_id);
+            }
+          }
+        } else if ((resultado === "GREEN" || resultado === "MEIO_GREEN") && aposta.valor_retorno) {
+          // GREEN/MEIO_GREEN: lucro foi creditado, reverter (debitar lucro)
+          const lucro = aposta.valor_retorno - aposta.stake;
+          if (lucro > 0) {
+            const { data: bk } = await supabase
+              .from("bookmakers")
+              .select("saldo_atual")
+              .eq("id", aposta.bookmaker_id)
+              .single();
+            if (bk) {
+              await supabase
+                .from("bookmakers")
+                .update({ saldo_atual: bk.saldo_atual - lucro })
+                .eq("id", aposta.bookmaker_id);
+            }
+          } else if (lucro < 0) {
+            // Caso raro: retorno menor que stake, creditar a diferença
+            const { data: bk } = await supabase
+              .from("bookmakers")
+              .select("saldo_atual")
+              .eq("id", aposta.bookmaker_id)
+              .single();
+            if (bk) {
+              await supabase
+                .from("bookmakers")
+                .update({ saldo_atual: bk.saldo_atual + Math.abs(lucro) })
+                .eq("id", aposta.bookmaker_id);
+            }
+          }
         }
-      } else {
-        const { data: bk } = await supabase
-          .from("bookmakers")
-          .select("saldo_atual")
-          .eq("id", aposta.bookmaker_id)
-          .single();
-        if (bk) {
-          await supabase
-            .from("bookmakers")
-            .update({ saldo_atual: bk.saldo_atual + aposta.stake })
-            .eq("id", aposta.bookmaker_id);
-        }
+        // VOID: não alterou saldo, não precisa reverter
       }
-      
-      // Reverter crédito de retorno (se tinha resultado)
-      if (aposta.valor_retorno && aposta.valor_retorno > 0) {
-        const { data: bk } = await supabase
-          .from("bookmakers")
-          .select("saldo_atual")
-          .eq("id", aposta.bookmaker_id)
-          .single();
-        if (bk) {
-          await supabase
-            .from("bookmakers")
-            .update({ saldo_atual: bk.saldo_atual - aposta.valor_retorno })
-            .eq("id", aposta.bookmaker_id);
-        }
-      }
+      // PENDENTE: não alterou saldo, não precisa reverter
 
       const { error } = await supabase
         .from("apostas_multiplas")
