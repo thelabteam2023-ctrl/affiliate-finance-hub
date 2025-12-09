@@ -451,6 +451,41 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     return Number(bk.saldo_atual) - saldoEmAposta;
   };
 
+  // Calcular saldo disponível para uma posição específica (considerando stakes usadas em outras posições da mesma operação)
+  const getSaldoDisponivelParaPosicao = (bookmakerId: string, currentIndex: number): number | null => {
+    if (!bookmakerId) return null;
+    
+    const saldoLivreBase = getBookmakerSaldoLivre(bookmakerId);
+    if (saldoLivreBase === null) return null;
+    
+    // Somar stakes usadas em OUTRAS posições da operação atual que usam a mesma casa
+    let stakesUsadasOutrasPosicoes = 0;
+    odds.forEach((entry, idx) => {
+      if (idx !== currentIndex && entry.bookmaker_id === bookmakerId) {
+        stakesUsadasOutrasPosicoes += parseFloat(entry.stake) || 0;
+      }
+    });
+    
+    return saldoLivreBase - stakesUsadasOutrasPosicoes;
+  };
+
+  // Verificar se há inconsistência de saldo em alguma posição
+  const hasBalanceInconsistency = useMemo(() => {
+    for (let i = 0; i < odds.length; i++) {
+      const entry = odds[i];
+      if (!entry.bookmaker_id) continue;
+      
+      const stake = parseFloat(entry.stake) || 0;
+      if (stake <= 0) continue;
+      
+      const saldoDisponivel = getSaldoDisponivelParaPosicao(entry.bookmaker_id, i);
+      if (saldoDisponivel !== null && stake > saldoDisponivel + 0.01) {
+        return true;
+      }
+    }
+    return false;
+  }, [odds, bookmakers, saldosEmAposta]);
+
   const getBookmakerNome = (bookmakerId: string): string => {
     const bk = bookmakers.find(b => b.id === bookmakerId);
     if (!bk) return "";
@@ -669,12 +704,18 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         return;
       }
       
-      // 4. Verificar saldo (aviso, não bloqueante se saldo unknown)
-      const saldo = getBookmakerSaldoLivre(entry.bookmaker_id);
-      if (saldo !== null && stake > saldo) {
-        toast.error(`Saldo insuficiente em ${getBookmakerNome(entry.bookmaker_id)}: ${formatCurrency(saldo)} disponível, ${formatCurrency(stake)} necessário`);
+      // 4. Verificar saldo considerando uso compartilhado na mesma operação
+      const saldoDisponivel = getSaldoDisponivelParaPosicao(entry.bookmaker_id, i);
+      if (saldoDisponivel !== null && stake > saldoDisponivel + 0.01) {
+        toast.error(`Saldo insuficiente em ${getBookmakerNome(entry.bookmaker_id)} para "${selecaoLabel}": ${formatCurrency(saldoDisponivel)} disponível nesta operação, ${formatCurrency(stake)} necessário`);
         return;
       }
+    }
+
+    // Validação extra: verificar se há inconsistência de saldo compartilhado
+    if (hasBalanceInconsistency) {
+      toast.error("Há inconsistência de saldo compartilhado entre as posições. Verifique as stakes.");
+      return;
     }
 
     try {
@@ -1027,7 +1068,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                 {/* Grid de Colunas com botões de swap entre elas */}
                 <div className="flex items-stretch gap-1">
                   {odds.map((entry, index) => {
-                    const saldo = getBookmakerSaldoLivre(entry.bookmaker_id);
+                    const saldoLivreBase = getBookmakerSaldoLivre(entry.bookmaker_id);
+                    const saldoDisponivelPosicao = getSaldoDisponivelParaPosicao(entry.bookmaker_id, index);
                     const selectedBookmaker = bookmakers.find(b => b.id === entry.bookmaker_id);
                     const parceiroNome = selectedBookmaker?.parceiro?.nome?.split(" ");
                     const parceiroShortName = parceiroNome 
@@ -1039,6 +1081,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                       stakeAtual > 0 && 
                       Math.abs(stakeAtual - stakeCalculada) > 0.01 &&
                       !entry.isReference;
+                    
+                    // Verificar se há saldo insuficiente nesta posição
+                    const saldoInsuficiente = stakeAtual > 0 && saldoDisponivelPosicao !== null && stakeAtual > saldoDisponivelPosicao + 0.01;
                     
                     // Cores distintas por coluna
                     const columnColors = modelo === "1-X-2" 
@@ -1191,14 +1236,33 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                   </SelectTrigger>
                                   <SelectContent>
                                     {bookmakersDisponiveis.map(bk => {
-                                      const saldoEmAposta = saldosEmAposta[bk.id] || 0;
-                                      const saldoLivre = Number(bk.saldo_atual) - saldoEmAposta;
+                                      // Calcular saldo disponível para esta posição específica
+                                      const saldoEmApostaGlobal = saldosEmAposta[bk.id] || 0;
+                                      const saldoLivreBase = Number(bk.saldo_atual) - saldoEmApostaGlobal;
+                                      
+                                      // Descontar stakes usadas em OUTRAS posições desta operação
+                                      let stakesOutrasPosicoes = 0;
+                                      odds.forEach((o, idx) => {
+                                        if (idx !== index && o.bookmaker_id === bk.id) {
+                                          stakesOutrasPosicoes += parseFloat(o.stake) || 0;
+                                        }
+                                      });
+                                      
+                                      const saldoDisponivelParaEssaPosicao = saldoLivreBase - stakesOutrasPosicoes;
+                                      const isIndisponivel = saldoDisponivelParaEssaPosicao < 0.50;
+                                      
                                       const parceiroNomeBk = bk.parceiro?.nome?.split(" ");
                                       const parceiroShortBk = parceiroNomeBk 
                                         ? `${parceiroNomeBk[0]} ${parceiroNomeBk[parceiroNomeBk.length - 1] || ""}`.trim()
                                         : "";
+                                      
                                       return (
-                                        <SelectItem key={bk.id} value={bk.id}>
+                                        <SelectItem 
+                                          key={bk.id} 
+                                          value={bk.id}
+                                          disabled={isIndisponivel}
+                                          className={isIndisponivel ? "opacity-50" : ""}
+                                        >
                                           <div className="flex items-center justify-between w-full gap-2">
                                             <div className="flex flex-col">
                                               <span className="uppercase text-xs">{bk.nome}</span>
@@ -1206,8 +1270,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                                 <span className="text-[10px] text-muted-foreground">{parceiroShortBk}</span>
                                               )}
                                             </div>
-                                            <span className="text-[10px] text-muted-foreground">
-                                              {formatCurrency(saldoLivre)}
+                                            <span className={`text-[10px] ${isIndisponivel ? "text-destructive" : "text-muted-foreground"}`}>
+                                              {isIndisponivel ? "Indisponível" : formatCurrency(saldoDisponivelParaEssaPosicao)}
                                             </span>
                                           </div>
                                         </SelectItem>
@@ -1287,11 +1351,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               <span className="truncate max-w-[60%]">
                                 {parceiroShortName || "—"}
                               </span>
-                              {saldo !== null && (
+                              {saldoDisponivelPosicao !== null && (
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                   <Wallet className="h-2.5 w-2.5" />
-                                  <span className={stakeAtual > saldo ? "text-destructive" : ""}>
-                                    {formatCurrency(saldo)}
+                                  <span className={saldoInsuficiente ? "text-destructive font-medium" : ""}>
+                                    {formatCurrency(saldoDisponivelPosicao)}
                                   </span>
                                 </div>
                               )}
@@ -1299,7 +1363,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                           )}
                           
                           {/* Aviso de saldo insuficiente */}
-                          {stakeAtual > 0 && saldo !== null && stakeAtual > saldo && (
+                          {saldoInsuficiente && (
                             <Badge variant="destructive" className="text-[10px] h-4 px-1 w-fit mx-auto">
                               Saldo Insuficiente
                             </Badge>
