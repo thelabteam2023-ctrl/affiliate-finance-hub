@@ -154,26 +154,59 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     }
   }, [open, surebet]);
 
-  // Atualizar array de odds quando mercado ou modelo muda
+  // Atualizar array de odds quando modelo muda (mercado NÃO afeta modelo)
   useEffect(() => {
     if (!isEditing) {
+      // Modelo é livre, mercado é apenas uma etiqueta
       const selecoes = getSelecoesPorMercado(mercado, modelo);
-      // Ajustar modelo automaticamente baseado no número de seleções do mercado
-      const novoModelo = selecoes.length > 2 ? "1-X-2" : "1-2";
-      if (mercado && novoModelo !== modelo) {
-        setModelo(novoModelo);
-        return; // O próximo render vai atualizar as odds
+      // Ajustar número de odds baseado APENAS no modelo escolhido
+      const numSlots = modelo === "1-X-2" ? 3 : 2;
+      const currentNumSlots = odds.length;
+      
+      // Só atualizar se o número de slots mudou
+      if (numSlots !== currentNumSlots) {
+        const newSelecoes = selecoes.slice(0, numSlots);
+        // Preencher com fallback se necessário
+        while (newSelecoes.length < numSlots) {
+          newSelecoes.push(modelo === "1-X-2" ? ["Casa", "Empate", "Fora"][newSelecoes.length] : ["Opção 1", "Opção 2"][newSelecoes.length]);
+        }
+        setOdds(newSelecoes.map((sel, i) => ({
+          bookmaker_id: "",
+          odd: "",
+          stake: "",
+          selecao: sel,
+          isReference: i === 0,
+          isManuallyEdited: false
+        })));
+      } else {
+        // Apenas atualizar as seleções mantendo dados existentes
+        const newSelecoes = selecoes.slice(0, numSlots);
+        while (newSelecoes.length < numSlots) {
+          newSelecoes.push(modelo === "1-X-2" ? ["Casa", "Empate", "Fora"][newSelecoes.length] : ["Opção 1", "Opção 2"][newSelecoes.length]);
+        }
+        setOdds(prev => prev.map((o, i) => ({
+          ...o,
+          selecao: newSelecoes[i] || o.selecao
+        })));
       }
-      setOdds(selecoes.map((sel, i) => ({
-        bookmaker_id: "",
-        odd: "",
-        stake: "",
-        selecao: sel,
-        isReference: i === 0,
-        isManuallyEdited: false
+    }
+  }, [modelo, isEditing]);
+  
+  // Atualizar seleções quando mercado muda (sem afetar modelo)
+  useEffect(() => {
+    if (!isEditing && mercado) {
+      const selecoes = getSelecoesPorMercado(mercado, modelo);
+      const numSlots = modelo === "1-X-2" ? 3 : 2;
+      const newSelecoes = selecoes.slice(0, numSlots);
+      while (newSelecoes.length < numSlots) {
+        newSelecoes.push(modelo === "1-X-2" ? ["Casa", "Empate", "Fora"][newSelecoes.length] : ["Opção 1", "Opção 2"][newSelecoes.length]);
+      }
+      setOdds(prev => prev.map((o, i) => ({
+        ...o,
+        selecao: newSelecoes[i] || o.selecao
       })));
     }
-  }, [mercado, modelo, isEditing]);
+  }, [mercado]);
 
   const resetForm = () => {
     setEvento("");
@@ -713,26 +746,24 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   
                   <button
                     type="button"
-                    onClick={() => !isEditing && setModelo("1-2")}
-                    disabled={isEditing}
+                    onClick={() => setModelo("1-2")}
                     className={`relative z-10 flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors duration-200 ${
                       modelo === "1-2" 
                         ? "text-primary-foreground" 
                         : "text-muted-foreground hover:text-foreground"
-                    } ${isEditing ? "cursor-not-allowed opacity-50" : ""}`}
+                    }`}
                   >
                     1–2
                   </button>
                   
                   <button
                     type="button"
-                    onClick={() => !isEditing && setModelo("1-X-2")}
-                    disabled={isEditing}
+                    onClick={() => setModelo("1-X-2")}
                     className={`relative z-10 flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors duration-200 ${
                       modelo === "1-X-2" 
                         ? "text-primary-foreground" 
                         : "text-muted-foreground hover:text-foreground"
-                    } ${isEditing ? "cursor-not-allowed opacity-50" : ""}`}
+                    }`}
                   >
                     1–X–2
                   </button>
@@ -859,8 +890,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             </label>
                           </div>
                           
-                          {/* Casa + Odd na mesma linha */}
-                          <div className="grid grid-cols-[1fr_70px] gap-2 items-end">
+                          {/* Casa + Odd + Stake na mesma linha */}
+                          <div className="grid grid-cols-[1fr_70px_90px] gap-2 items-end">
                             <div className="space-y-1">
                               <Label className="text-xs text-muted-foreground">Casa</Label>
                               <Select 
@@ -893,9 +924,43 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                 onWheel={(e) => e.currentTarget.blur()}
                               />
                             </div>
+                            
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">
+                                Stake {entry.isReference && <span className="text-primary">(Ref)</span>}
+                              </Label>
+                              <div className="relative">
+                                <Input 
+                                  type="number"
+                                  step="0.01"
+                                  placeholder={entry.isReference ? "Ref." : (stakeCalculada > 0 ? stakeCalculada.toFixed(2) : "Stake")}
+                                  value={entry.stake}
+                                  onChange={(e) => updateOdd(index, "stake", e.target.value)}
+                                  className={`h-9 text-sm pr-7 ${
+                                    isDifferentFromCalculated 
+                                      ? "border-amber-500 ring-1 ring-amber-500/50" 
+                                      : ""
+                                  }`}
+                                  tabIndex={odds.length + index + 1}
+                                  onWheel={(e) => e.currentTarget.blur()}
+                                />
+                                {isDifferentFromCalculated && stakeCalculada > 0 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="absolute right-0.5 top-1/2 -translate-y-1/2 h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                                    onClick={() => resetStakeToCalculated(index, stakeCalculada)}
+                                    title={`Resetar para ${stakeCalculada.toFixed(2)}`}
+                                  >
+                                    <RotateCcw className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
                           </div>
                           
-                          {/* Parceiro + Saldo na mesma linha */}
+                          {/* Parceiro + Saldo abaixo */}
                           {entry.bookmaker_id && (parceiroShortName || saldo !== null) && (
                             <div className="flex items-center justify-center gap-2 py-1 px-2 rounded-lg bg-background/50 text-xs">
                               {parceiroShortName && (
@@ -918,42 +983,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               )}
                             </div>
                           )}
-                          
-                          {/* Campo Stake */}
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground text-center block">
-                              Aposta {entry.isReference && <span className="text-primary font-medium">(Ref)</span>}
-                            </Label>
-                            <div className="relative">
-                              <Input 
-                                type="number"
-                                step="0.01"
-                                placeholder={entry.isReference ? "Stake ref." : (stakeCalculada > 0 ? stakeCalculada.toFixed(2) : "Stake")}
-                                value={entry.stake}
-                                onChange={(e) => updateOdd(index, "stake", e.target.value)}
-                                className={`h-9 text-sm pr-8 ${
-                                  isDifferentFromCalculated 
-                                    ? "border-amber-500 ring-1 ring-amber-500/50" 
-                                    : ""
-                                }`}
-                                tabIndex={odds.length + index + 1}
-                                onWheel={(e) => e.currentTarget.blur()}
-                              />
-                              {/* Botão reset para campos modificados */}
-                              {isDifferentFromCalculated && stakeCalculada > 0 && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="absolute right-0.5 top-1/2 -translate-y-1/2 h-6 w-6 p-0 text-muted-foreground hover:text-primary"
-                                  onClick={() => resetStakeToCalculated(index, stakeCalculada)}
-                                  title={`Resetar para ${stakeCalculada.toFixed(2)}`}
-                                >
-                                  <RotateCcw className="h-3 w-3" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
                         </div>
                       </div>
                     );
