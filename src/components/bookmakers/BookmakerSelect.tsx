@@ -280,7 +280,7 @@ export default function BookmakerSelect({
               value={searchTerm}
               onValueChange={setSearchTerm}
             />
-            <CommandList className="max-h-[280px]">
+            <CommandList className="max-h-[280px] overflow-y-auto">
               <CommandEmpty>
                 {parceiroId 
                   ? (somenteComSaldo 
@@ -299,43 +299,43 @@ export default function BookmakerSelect({
                       value={item.id}
                       onSelect={() => handleSelect(item.id)}
                       className={cn(
-                        "py-3 cursor-pointer",
+                        "py-3 cursor-pointer flex items-center justify-center",
                         isLimitada && "data-[selected=true]:bg-yellow-500/20",
                         !isLimitada && "data-[selected=true]:bg-emerald-500/20"
                       )}
                     >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4 flex-shrink-0",
-                          isSelected ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      {item.logo_url && (
-                        <img
-                          src={item.logo_url}
-                          alt=""
-                          className="h-6 w-6 rounded object-contain flex-shrink-0 mr-2"
-                          onError={(e) => { e.currentTarget.style.display = "none"; }}
-                        />
-                      )}
-                      <span className={cn(
-                        "uppercase text-sm font-medium",
-                        isLimitada && "text-yellow-400"
-                      )}>
-                        {item.nome}
-                      </span>
-                      {item.saldo_atual !== undefined && (
-                        <div className="ml-auto flex-shrink-0 text-right">
-                          <span className="text-xs text-muted-foreground">
-                            {item.moeda} {item.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
-                          {(item.saldo_freebet ?? 0) > 0 && (
-                            <span className="text-xs text-amber-400 ml-1">
-                              +FB {item.saldo_freebet?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </span>
+                      <div className="flex items-center justify-center gap-2 w-full">
+                        <Check
+                          className={cn(
+                            "h-4 w-4 flex-shrink-0",
+                            isSelected ? "opacity-100" : "opacity-0"
                           )}
-                        </div>
-                      )}
+                        />
+                        {item.logo_url && (
+                          <img
+                            src={item.logo_url}
+                            alt=""
+                            className="h-6 w-6 rounded object-contain flex-shrink-0"
+                            onError={(e) => { e.currentTarget.style.display = "none"; }}
+                          />
+                        )}
+                        <span className={cn(
+                          "uppercase text-sm font-medium text-center",
+                          isLimitada && "text-yellow-400"
+                        )}>
+                          {item.nome}
+                        </span>
+                        {item.saldo_atual !== undefined && (
+                          <span className="text-xs text-muted-foreground flex-shrink-0">
+                            {item.moeda} {item.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            {(item.saldo_freebet ?? 0) > 0 && (
+                              <span className="text-amber-400 ml-1">
+                                +FB {item.saldo_freebet?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </div>
                     </CommandItem>
                   );
                 })}
