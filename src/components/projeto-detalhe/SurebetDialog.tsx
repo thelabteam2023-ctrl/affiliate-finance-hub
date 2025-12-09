@@ -740,21 +740,72 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       const aposta = linkedApostas.find(a => a.id === apostaId);
       if (!aposta) return;
 
+      const stake = parseFloat(aposta.stake) || 0;
+      const odd = parseFloat(aposta.odd) || 0;
+      const resultadoAnterior = aposta.resultado;
+      const bookmakerId = aposta.bookmaker_id;
+
+      // Se o resultado não mudou, não fazer nada
+      if (resultadoAnterior === resultado) return;
+
       let lucro: number | null = 0;
       let status = "FINALIZADA";
       
       if (resultado === null) {
-        // Limpar resultado - voltar para pendente
         lucro = null;
         status = "PENDENTE";
       } else if (resultado === "GREEN") {
-        lucro = aposta.stake * (aposta.odd - 1);
+        lucro = stake * (odd - 1);
       } else if (resultado === "RED") {
-        lucro = -aposta.stake;
+        lucro = -stake;
       } else if (resultado === "VOID") {
         lucro = 0;
       }
 
+      // ATUALIZAÇÃO DE SALDO DA CASA
+      // Buscar saldo atual da casa
+      const { data: bookmakerData } = await supabase
+        .from("bookmakers")
+        .select("saldo_atual")
+        .eq("id", bookmakerId)
+        .single();
+      
+      if (!bookmakerData) throw new Error("Bookmaker não encontrado");
+      
+      let novoSaldo = bookmakerData.saldo_atual;
+
+      // 1. REVERTER efeito do resultado ANTERIOR (se existia)
+      if (resultadoAnterior) {
+        if (resultadoAnterior === "GREEN") {
+          // GREEN anterior creditou stake * odd, reverter (debitar)
+          novoSaldo -= stake * odd;
+        } else if (resultadoAnterior === "VOID") {
+          // VOID anterior creditou stake, reverter (debitar)
+          novoSaldo -= stake;
+        }
+        // RED não creditou nada, não precisa reverter
+      }
+
+      // 2. APLICAR efeito do resultado NOVO
+      if (resultado === "GREEN") {
+        // GREEN: creditar retorno total (stake × odd)
+        novoSaldo += stake * odd;
+      } else if (resultado === "VOID") {
+        // VOID: creditar stake (reembolso)
+        novoSaldo += stake;
+      }
+      // RED: não creditar nada (stake já foi debitada na criação)
+      // null: voltar para pendente, não alterar saldo (fica como estava antes do resultado anterior ser aplicado)
+
+      // Atualizar saldo da casa
+      const { error: saldoError } = await supabase
+        .from("bookmakers")
+        .update({ saldo_atual: novoSaldo })
+        .eq("id", bookmakerId);
+
+      if (saldoError) throw saldoError;
+
+      // Atualizar aposta
       const { error } = await supabase
         .from("apostas")
         .update({ 
