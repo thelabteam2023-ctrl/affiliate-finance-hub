@@ -321,7 +321,7 @@ export function CaixaTransacaoDialog({
     } else if (tipoTransacao === "DEPOSITO") {
       setOrigemTipo("PARCEIRO_CONTA");
       setDestinoTipo("BOOKMAKER");
-      setTipoMoeda("FIAT"); // DEPOSITO only supports FIAT
+      // Não força FIAT - permite FIAT ou CRYPTO baseado nas moedas disponíveis nos parceiros
     } else if (tipoTransacao === "SAQUE") {
       setOrigemTipo("BOOKMAKER");
       setDestinoTipo("PARCEIRO_CONTA");
@@ -1779,16 +1779,23 @@ export function CaixaTransacaoDialog({
     
     // DEPÓSITO (Parceiro → Bookmaker): moedas disponíveis nos parceiros (não no caixa)
     if (tipoTransacao === "DEPOSITO") {
-      // Obter moedas únicas que existem nas contas dos parceiros com saldo
-      const moedasComSaldoParceiros = [...new Set(
+      // Obter moedas FIAT únicas que existem nas contas dos parceiros com saldo
+      const moedasFiatParceiros = [...new Set(
         saldosParceirosContas
           .filter(s => s.saldo > 0)
           .map(s => s.moeda)
       )];
       
+      // Obter moedas CRYPTO únicas que existem nas wallets dos parceiros com saldo
+      const moedasCryptoParceiros = [...new Set(
+        saldosParceirosWallets
+          .filter(s => s.saldo_coin > 0)
+          .map(s => s.coin)
+      )];
+      
       return {
-        fiat: MOEDAS_FIAT.filter(m => moedasComSaldoParceiros.includes(m.value)),
-        crypto: [] // DEPOSITO só suporta FIAT
+        fiat: MOEDAS_FIAT.filter(m => moedasFiatParceiros.includes(m.value)),
+        crypto: MOEDAS_CRYPTO.filter(m => moedasCryptoParceiros.includes(m.value))
       };
     }
     
