@@ -210,6 +210,53 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     setOdds(newOdds);
   };
 
+  // Auto-preencher stakes não-manuais quando há referência válida
+  useEffect(() => {
+    const parsedOdds = odds.map(o => parseFloat(o.odd) || 0);
+    const validOddsCount = parsedOdds.filter(o => o > 1).length;
+    
+    const refIndex = odds.findIndex(o => o.isReference);
+    if (refIndex === -1) return;
+    
+    const refStakeValue = parseFloat(odds[refIndex]?.stake) || 0;
+    const refOdd = parsedOdds[refIndex] || 0;
+    
+    // Só calcular se temos stake de referência, odd válida e pelo menos 2 odds válidas
+    if (refStakeValue <= 0 || refOdd <= 1 || validOddsCount < 2) return;
+    
+    const targetReturn = refStakeValue * refOdd;
+    
+    // Verificar se há campos não-manuais que precisam ser preenchidos
+    let needsUpdate = false;
+    const newOdds = odds.map((o, i) => {
+      if (i === refIndex || o.isManuallyEdited) return o;
+      
+      const odd = parsedOdds[i];
+      if (odd > 1) {
+        const rawStake = targetReturn / odd;
+        const calculatedStake = arredondarStake(rawStake);
+        const currentStake = parseFloat(o.stake) || 0;
+        
+        // Só atualizar se o valor calculado for diferente do atual
+        if (Math.abs(calculatedStake - currentStake) > 0.01) {
+          needsUpdate = true;
+          return { ...o, stake: calculatedStake.toFixed(2) };
+        }
+      }
+      return o;
+    });
+    
+    if (needsUpdate) {
+      setOdds(newOdds);
+    }
+  }, [
+    odds.map(o => o.odd).join(','),
+    odds.map(o => o.isReference).join(','),
+    odds.find(o => o.isReference)?.stake,
+    arredondarAtivado,
+    arredondarValor
+  ]);
+
   // Obter saldo da casa selecionada
   const getBookmakerSaldo = (bookmakerId: string): number | null => {
     const bk = bookmakers.find(b => b.id === bookmakerId);
