@@ -146,10 +146,62 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   
   // Apostas vinculadas para edição
   const [linkedApostas, setLinkedApostas] = useState<any[]>([]);
+  
+  // Saldos em aposta por bookmaker (para calcular saldo livre)
+  const [saldosEmAposta, setSaldosEmAposta] = useState<Record<string, number>>({});
+
+  // Buscar saldos em aposta (apostas pendentes) para cada bookmaker
+  const fetchSaldosEmAposta = async () => {
+    try {
+      // Buscar apostas simples pendentes
+      const { data: apostasSimples } = await supabase
+        .from("apostas")
+        .select("bookmaker_id, stake")
+        .eq("projeto_id", projetoId)
+        .eq("status", "PENDENTE");
+
+      // Buscar apostas múltiplas pendentes
+      const { data: apostasMultiplas } = await supabase
+        .from("apostas_multiplas")
+        .select("bookmaker_id, stake")
+        .eq("projeto_id", projetoId)
+        .eq("status", "PENDENTE");
+
+      // Calcular saldo em aposta por bookmaker
+      const saldos: Record<string, number> = {};
+      
+      apostasSimples?.forEach((aposta) => {
+        if (aposta.bookmaker_id) {
+          saldos[aposta.bookmaker_id] = (saldos[aposta.bookmaker_id] || 0) + Number(aposta.stake);
+        }
+      });
+      
+      apostasMultiplas?.forEach((aposta) => {
+        if (aposta.bookmaker_id) {
+          saldos[aposta.bookmaker_id] = (saldos[aposta.bookmaker_id] || 0) + Number(aposta.stake);
+        }
+      });
+      
+      setSaldosEmAposta(saldos);
+    } catch (error) {
+      console.error("Erro ao buscar saldos em aposta:", error);
+    }
+  };
+
+  // Filtrar bookmakers com saldo real livre >= 0.50
+  const bookmakersDisponiveis = useMemo(() => {
+    return bookmakers.filter((bk) => {
+      const saldoAtual = Number(bk.saldo_atual) || 0;
+      const saldoEmAposta = saldosEmAposta[bk.id] || 0;
+      const saldoLivre = saldoAtual - saldoEmAposta;
+      return saldoLivre >= 0.50;
+    });
+  }, [bookmakers, saldosEmAposta]);
 
   // Inicializar formulário
   useEffect(() => {
     if (open) {
+      fetchSaldosEmAposta();
       if (surebet) {
         setEvento(surebet.evento);
         setEsporte(surebet.esporte);
@@ -391,10 +443,12 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     arredondarValor
   ]);
 
-  // Obter saldo da casa selecionada
-  const getBookmakerSaldo = (bookmakerId: string): number | null => {
+  // Obter saldo livre da casa selecionada (saldo_atual - saldo em aposta)
+  const getBookmakerSaldoLivre = (bookmakerId: string): number | null => {
     const bk = bookmakers.find(b => b.id === bookmakerId);
-    return bk ? bk.saldo_atual : null;
+    if (!bk) return null;
+    const saldoEmAposta = saldosEmAposta[bookmakerId] || 0;
+    return Number(bk.saldo_atual) - saldoEmAposta;
   };
 
   const getBookmakerNome = (bookmakerId: string): string => {
@@ -616,7 +670,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       }
       
       // 4. Verificar saldo (aviso, não bloqueante se saldo unknown)
-      const saldo = getBookmakerSaldo(entry.bookmaker_id);
+      const saldo = getBookmakerSaldoLivre(entry.bookmaker_id);
       if (saldo !== null && stake > saldo) {
         toast.error(`Saldo insuficiente em ${getBookmakerNome(entry.bookmaker_id)}: ${formatCurrency(saldo)} disponível, ${formatCurrency(stake)} necessário`);
         return;
@@ -973,7 +1027,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                 {/* Grid de Colunas com botões de swap entre elas */}
                 <div className="flex items-stretch gap-1">
                   {odds.map((entry, index) => {
-                    const saldo = getBookmakerSaldo(entry.bookmaker_id);
+                    const saldo = getBookmakerSaldoLivre(entry.bookmaker_id);
                     const selectedBookmaker = bookmakers.find(b => b.id === entry.bookmaker_id);
                     const parceiroNome = selectedBookmaker?.parceiro?.nome?.split(" ");
                     const parceiroShortName = parceiroNome 
@@ -1134,11 +1188,20 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                   </SelectValue>
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {bookmakers.map(bk => (
-                                    <SelectItem key={bk.id} value={bk.id}>
-                                      <span className="uppercase">{bk.nome}</span>
-                                    </SelectItem>
-                                  ))}
+                                  {bookmakersDisponiveis.map(bk => {
+                                    const saldoEmAposta = saldosEmAposta[bk.id] || 0;
+                                    const saldoLivre = Number(bk.saldo_atual) - saldoEmAposta;
+                                    return (
+                                      <SelectItem key={bk.id} value={bk.id}>
+                                        <div className="flex items-center justify-between w-full gap-2">
+                                          <span className="uppercase">{bk.nome}</span>
+                                          <span className="text-xs text-muted-foreground">
+                                            {formatCurrency(saldoLivre)}
+                                          </span>
+                                        </div>
+                                      </SelectItem>
+                                    );
+                                  })}
                                 </SelectContent>
                               </Select>
                             )}
