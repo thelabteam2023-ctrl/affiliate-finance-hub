@@ -1091,37 +1091,19 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           </div>
 
           {/* Análise - Sidebar Direita Compacta */}
-          <div className="w-full lg:w-56 xl:w-64 flex-shrink-0 space-y-3">
+          <div className="w-full lg:w-48 xl:w-52 flex-shrink-0 space-y-2">
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Calculator className="h-4 w-4" />
-                  Análise da Operação
+              <CardHeader className="pb-2 pt-3 px-3">
+                <CardTitle className="text-xs flex items-center gap-1.5">
+                  <Calculator className="h-3.5 w-3.5" />
+                  Análise
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {/* Recomendação */}
-                {analysis.recommendation && (
-                  <div className={`p-2.5 rounded-lg border ${
-                    analysis.recommendation.icon === "check" ? "bg-emerald-500/10 border-emerald-500/30" :
-                    analysis.recommendation.icon === "alert" ? "bg-amber-500/10 border-amber-500/30" :
-                    "bg-red-500/10 border-red-500/30"
-                  }`}>
-                    <div className="flex items-start gap-2">
-                      {analysis.recommendation.icon === "check" && <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 flex-shrink-0" />}
-                      {analysis.recommendation.icon === "alert" && <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />}
-                      {analysis.recommendation.icon === "x" && <XCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />}
-                      <span className={`text-xs ${analysis.recommendation.color}`}>
-                        {analysis.recommendation.text}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
+              <CardContent className="space-y-2 px-3 pb-3">
                 {/* Stake Total */}
-                <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
-                  <p className="text-xs text-muted-foreground">Stake Total</p>
-                  <p className="text-xl font-bold text-primary">
+                <div className="p-2 rounded-lg bg-primary/10 border border-primary/30">
+                  <p className="text-[10px] text-muted-foreground">Stake Total</p>
+                  <p className="text-lg font-bold text-primary">
                     {analysis.stakeTotal > 0 ? formatCurrency(analysis.stakeTotal) : "—"}
                   </p>
                 </div>
