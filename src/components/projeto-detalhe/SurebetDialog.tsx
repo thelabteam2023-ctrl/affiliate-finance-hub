@@ -795,16 +795,16 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                           </div>
                         </div>
                         
-                        {/* Parceiro + Saldo (fora do select) */}
-                        {entry.bookmaker_id && (
-                          <div className="text-center space-y-0.5 py-1 px-2 rounded-lg bg-background/50">
+                        {/* Parceiro + Saldo na mesma linha */}
+                        {entry.bookmaker_id && (parceiroShortName || saldo !== null) && (
+                          <div className="flex items-center justify-center gap-2 py-1 px-2 rounded-lg bg-background/50 text-xs">
                             {parceiroShortName && (
-                              <p className="text-xs font-medium text-muted-foreground">
+                              <span className="font-medium text-muted-foreground">
                                 ({parceiroShortName})
-                              </p>
+                              </span>
                             )}
                             {saldo !== null && (
-                              <div className="flex items-center justify-center gap-1 text-xs">
+                              <div className="flex items-center gap-1">
                                 <Wallet className="h-3 w-3 text-muted-foreground" />
                                 <span className={stakeAtual > saldo ? "text-destructive" : "text-muted-foreground"}>
                                   {formatCurrency(saldo)}
