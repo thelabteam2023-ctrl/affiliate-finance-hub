@@ -471,8 +471,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     return saldoLivreBase - stakesUsadasOutrasPosicoes;
   };
 
-  // Verificar se há inconsistência de saldo em alguma posição
+  // Verificar se há inconsistência de saldo em alguma posição (APENAS para criação, não edição)
   const hasBalanceInconsistency = useMemo(() => {
+    // No modo edição, não verificar inconsistências de saldo
+    if (isEditing) return false;
+    
     for (let i = 0; i < odds.length; i++) {
       const entry = odds[i];
       if (!entry.bookmaker_id) continue;
@@ -486,7 +489,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       }
     }
     return false;
-  }, [odds, bookmakers, saldosEmAposta]);
+  }, [odds, bookmakers, saldosEmAposta, isEditing]);
 
   const getBookmakerNome = (bookmakerId: string): string => {
     const bk = bookmakers.find(b => b.id === bookmakerId);
@@ -706,16 +709,18 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         return;
       }
       
-      // 4. Verificar saldo considerando uso compartilhado na mesma operação
-      const saldoDisponivel = getSaldoDisponivelParaPosicao(entry.bookmaker_id, i);
-      if (saldoDisponivel !== null && stake > saldoDisponivel + 0.01) {
-        toast.error(`Saldo insuficiente em ${getBookmakerNome(entry.bookmaker_id)} para "${selecaoLabel}": ${formatCurrency(saldoDisponivel)} disponível nesta operação, ${formatCurrency(stake)} necessário`);
-        return;
+      // 4. Verificar saldo considerando uso compartilhado (APENAS para criação, não edição)
+      if (!isEditing) {
+        const saldoDisponivel = getSaldoDisponivelParaPosicao(entry.bookmaker_id, i);
+        if (saldoDisponivel !== null && stake > saldoDisponivel + 0.01) {
+          toast.error(`Saldo insuficiente em ${getBookmakerNome(entry.bookmaker_id)} para "${selecaoLabel}": ${formatCurrency(saldoDisponivel)} disponível nesta operação, ${formatCurrency(stake)} necessário`);
+          return;
+        }
       }
     }
 
-    // Validação extra: verificar se há inconsistência de saldo compartilhado
-    if (hasBalanceInconsistency) {
+    // Validação extra: verificar se há inconsistência de saldo compartilhado (APENAS para criação)
+    if (!isEditing && hasBalanceInconsistency) {
       toast.error("Há inconsistência de saldo compartilhado entre as posições. Verifique as stakes.");
       return;
     }
@@ -1099,8 +1104,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                       Math.abs(stakeAtual - stakeCalculada) > 0.01 &&
                       !entry.isReference;
                     
-                    // Verificar se há saldo insuficiente nesta posição
-                    const saldoInsuficiente = stakeAtual > 0 && saldoDisponivelPosicao !== null && stakeAtual > saldoDisponivelPosicao + 0.01;
+                    // Verificar se há saldo insuficiente nesta posição (APENAS para criação)
+                    const saldoInsuficiente = !isEditing && stakeAtual > 0 && saldoDisponivelPosicao !== null && stakeAtual > saldoDisponivelPosicao + 0.01;
                     
                     // Cores distintas por coluna
                     const columnColors = modelo === "1-X-2" 
@@ -1362,13 +1367,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             </div>
                           </div>
                           
-                          {/* Parceiro + Saldo abaixo dos campos */}
+                          {/* Parceiro + Saldo abaixo dos campos (saldo apenas para criação) */}
                           {entry.bookmaker_id && (
                             <div className="flex items-center justify-between gap-1 px-1 text-[10px] text-muted-foreground">
                               <span className="truncate max-w-[60%]">
                                 {parceiroShortName || "—"}
                               </span>
-                              {saldoDisponivelPosicao !== null && (
+                              {!isEditing && saldoDisponivelPosicao !== null && (
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                   <Wallet className="h-2.5 w-2.5" />
                                   <span className={saldoInsuficiente ? "text-destructive font-medium" : ""}>
@@ -1379,8 +1384,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             </div>
                           )}
                           
-                          {/* Aviso de saldo insuficiente */}
-                          {saldoInsuficiente && (
+                          {/* Aviso de saldo insuficiente (apenas para criação) */}
+                          {!isEditing && saldoInsuficiente && (
                             <Badge variant="destructive" className="text-[10px] h-4 px-1 w-fit mx-auto">
                               Saldo Insuficiente
                             </Badge>
