@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronUp, Clock } from "lucide-react";
+import { ChevronDown, ChevronUp, Clock, CheckCircle2, ArrowLeftRight } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -56,14 +56,6 @@ export function SurebetCard({ surebet, onEdit, defaultExpanded = false }: Surebe
     return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "PENDENTE": return "bg-blue-500/20 text-blue-400 border-blue-500/30";
-      case "LIQUIDADA": return "bg-gray-500/20 text-gray-400 border-gray-500/30";
-      default: return "bg-gray-500/20 text-gray-400 border-gray-500/30";
-    }
-  };
-
   const getSelecaoLabel = (selecao: string) => {
     const labels: Record<string, string> = {
       "Casa": "1", "1": "1",
@@ -87,17 +79,32 @@ export function SurebetCard({ surebet, onEdit, defaultExpanded = false }: Surebe
   const roiExibir = isLiquidada ? surebet.roi_real : surebet.roi_esperado;
 
   return (
-    <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+    <Card className="cursor-pointer hover:border-primary/50 transition-colors relative overflow-hidden">
+      {/* Barra lateral amarela indicando Surebet */}
+      <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500" />
+      
       {/* Header compacto - sempre visível */}
-      <CardHeader className="pb-2 pt-3 px-3">
+      <CardHeader className="pb-2 pt-3 px-3 pl-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">
+              <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0 gap-1">
+                <ArrowLeftRight className="h-2.5 w-2.5" />
                 SUREBET
               </Badge>
-              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusColor(surebet.status)}`}>
-                {surebet.status === "PENDENTE" && <Clock className="h-2.5 w-2.5 mr-0.5" />}
+              <Badge 
+                variant="outline" 
+                className={`text-[10px] px-1.5 py-0 gap-0.5 ${
+                  isLiquidada 
+                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+                    : "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                }`}
+              >
+                {isLiquidada ? (
+                  <CheckCircle2 className="h-2.5 w-2.5" />
+                ) : (
+                  <Clock className="h-2.5 w-2.5" />
+                )}
                 {surebet.status}
               </Badge>
             </div>
@@ -128,7 +135,7 @@ export function SurebetCard({ surebet, onEdit, defaultExpanded = false }: Surebe
         </div>
       </CardHeader>
 
-      <CardContent className="px-3 pb-3 pt-0 space-y-2">
+      <CardContent className="px-3 pl-4 pb-3 pt-0 space-y-2">
         {/* Resumo compacto - sempre visível */}
         <div className="grid grid-cols-3 gap-2 text-xs">
           <div>
