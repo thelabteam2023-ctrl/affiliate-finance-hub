@@ -58,10 +58,28 @@ export default function BookmakerSelect({
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [displayData, setDisplayData] = useState<{ nome: string; logo_url: string | null } | null>(null);
+  const [isMaster, setIsMaster] = useState(false);
   
   // Ref para rastrear o último value que buscamos
   const lastFetchedValue = useRef<string>("");
   const isVinculoMode = !!parceiroId;
+
+  // Verificar se usuário é master
+  useEffect(() => {
+    const checkMasterRole = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data } = await supabase.rpc('is_master', { _user_id: user.id });
+        setIsMaster(data === true);
+      } catch (error) {
+        console.error("Erro ao verificar role:", error);
+        setIsMaster(false);
+      }
+    };
+    checkMasterRole();
+  }, []);
   
   // Notificar callback quando o item selecionado muda
   useEffect(() => {
@@ -125,10 +143,16 @@ export default function BookmakerSelect({
           setItems(mapped);
         } else {
           // Modo catálogo
-          const { data, error } = await supabase
+          let query = supabase
             .from("bookmakers_catalogo")
-            .select("id, nome, logo_url")
-            .order("nome");
+            .select("id, nome, logo_url, operacional");
+          
+          // Não-masters veem apenas bookmakers REGULAMENTADA
+          if (!isMaster) {
+            query = query.eq("operacional", "REGULAMENTADA");
+          }
+          
+          const { data, error } = await query.order("nome");
 
           if (error) throw error;
           
@@ -161,7 +185,7 @@ export default function BookmakerSelect({
     };
 
     fetchBookmakers();
-  }, [parceiroId, somenteComSaldo, excludeVinculosDoParceiro]);
+  }, [parceiroId, somenteComSaldo, excludeVinculosDoParceiro, isMaster]);
 
   // Buscar dados de exibição quando value muda - INDEPENDENTE da lista
   useEffect(() => {
@@ -252,7 +276,11 @@ export default function BookmakerSelect({
             </TooltipContent>
           )}
         </Tooltip>
-        <SelectContent className="max-h-[300px] max-w-[320px]">
+        <SelectContent 
+          position="popper" 
+          sideOffset={4}
+          className="max-h-[300px] max-w-[320px] z-[100] bg-popover"
+        >
           <div className="sticky top-0 z-10 bg-popover p-2 border-b">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
