@@ -233,7 +233,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     }).format(value);
   };
 
-  // Cálculos em tempo real - agora sempre tenta calcular com dados parciais
+  // Cálculos em tempo real - TOTALMENTE reativo aos inputs atuais
   const analysis = useMemo(() => {
     const parsedOdds = odds.map(o => parseFloat(o.odd) || 0);
     const validOddsCount = parsedOdds.filter(o => o > 1).length;
@@ -242,97 +242,99 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     const impliedProbs = parsedOdds.map(odd => odd > 1 ? 1 / odd : 0);
     const totalImpliedProb = impliedProbs.reduce((a, b) => a + b, 0);
     
-    // Margem/Juice do mercado (negativo = arbitragem)
-    const margin = totalImpliedProb > 0 ? (totalImpliedProb - 1) * 100 : 0;
-    const spread = -margin;
+    // Spread = (Overround - 1) * 100 (positivo = margem casa, negativo = arbitragem)
+    const overround = totalImpliedProb;
+    const spread = totalImpliedProb > 0 ? (totalImpliedProb - 1) * 100 : 0;
     
     // Probabilidades reais (normalizadas)
     const trueProbs = totalImpliedProb > 0 
       ? impliedProbs.map(p => p / totalImpliedProb)
       : impliedProbs.map(() => 0);
     
-    // Verificar arbitragem
+    // Verificar arbitragem teórica (overround < 1)
     const hasArbitrage = validOddsCount >= 2 && totalImpliedProb < 1 && totalImpliedProb > 0;
-    const arbitrageProfit = hasArbitrage ? (1 - totalImpliedProb) * 100 : 0;
     
-    // Calcular stakes - modo híbrido
-    let calculatedStakes: number[] = [];
-    let stakeTotal = 0;
-    
-    // Encontrar referência
+    // Stakes calculadas para sugestão (quando há referência)
     const refIndex = odds.findIndex(o => o.isReference);
-    const refStake = parseFloat(odds[refIndex]?.stake) || 0;
     const refOdd = parsedOdds[refIndex] || 0;
+    const refStakeValue = parseFloat(odds[refIndex]?.stake) || 0;
     
-    if (refStake > 0 && refOdd > 1 && validOddsCount >= 2) {
-      // Retorno alvo = stake de referência * odd de referência
-      const targetReturn = refStake * refOdd;
-      
-      // Calcular stakes para cada lado
-      calculatedStakes = parsedOdds.map((odd, i) => {
-        if (i === refIndex) return refStake;
-        
-        // Se foi editado manualmente, usar valor manual
-        const manualStake = parseFloat(odds[i].stake);
-        if (odds[i].isManuallyEdited && !isNaN(manualStake) && manualStake > 0) {
-          return manualStake;
-        }
-        
-        // Calcular automaticamente
+    // Calcular stakes sugeridas baseado na referência
+    let suggestedStakes: number[] = [];
+    if (refStakeValue > 0 && refOdd > 1 && validOddsCount >= 2) {
+      const targetReturn = refStakeValue * refOdd;
+      suggestedStakes = parsedOdds.map((odd, i) => {
+        if (i === refIndex) return refStakeValue;
         if (odd > 1) {
           const rawStake = targetReturn / odd;
           return arredondarStake(rawStake);
         }
         return 0;
       });
-      
-      stakeTotal = calculatedStakes.reduce((a, b) => a + b, 0);
-    } else {
-      // Usar stakes manuais diretamente
-      calculatedStakes = odds.map(o => parseFloat(o.stake) || 0);
-      stakeTotal = calculatedStakes.reduce((a, b) => a + b, 0);
     }
     
-    // Calcular cenários de retorno/lucro para cada resultado
-    const scenarios = stakeTotal > 0 && validOddsCount >= 2
-      ? parsedOdds.map((odd, i) => {
-          const stakeNesseLado = calculatedStakes[i];
-          const retorno = odd > 1 ? stakeNesseLado * odd : 0;
-          const lucro = retorno - stakeTotal;
-          return {
-            selecao: odds[i].selecao,
-            stake: stakeNesseLado,
-            retorno,
-            lucro,
-            isPositive: lucro >= 0
-          };
-        })
-      : [];
+    // SEMPRE usar os valores ATUAIS dos inputs de stake para análise
+    // Isso garante que qualquer edição manual (incluindo 0) seja refletida
+    const actualStakes = odds.map((o, i) => {
+      const inputValue = parseFloat(o.stake);
+      // Se o campo tem valor válido (incluindo 0), usar o valor do input
+      if (!isNaN(inputValue)) {
+        return inputValue;
+      }
+      // Se o campo está vazio, usar a sugestão se existir
+      if (suggestedStakes[i] !== undefined && !o.isManuallyEdited) {
+        return suggestedStakes[i];
+      }
+      return 0;
+    });
     
-    // Lucro garantido
+    // StakeTotal = soma de todas as stakes atuais (S1 + S2 + S3)
+    const stakeTotal = actualStakes.reduce((a, b) => a + b, 0);
+    
+    // Calcular cenários de retorno/lucro para CADA resultado possível
+    // Retorno_i = O_i * S_i
+    // Lucro_i = Retorno_i - StakeTotal
+    const scenarios = parsedOdds.map((odd, i) => {
+      const stakeNesseLado = actualStakes[i];
+      const retorno = odd > 1 ? stakeNesseLado * odd : 0;
+      const lucro = retorno - stakeTotal;
+      return {
+        selecao: odds[i].selecao,
+        stake: stakeNesseLado,
+        retorno,
+        lucro,
+        isPositive: lucro >= 0
+      };
+    });
+    
+    // Lucro mínimo entre todos os cenários (para arbitragem garantida)
     const minLucro = scenarios.length > 0 ? Math.min(...scenarios.map(s => s.lucro)) : 0;
     const guaranteedProfit = minLucro;
     
-    // ROI esperado
+    // ROI = (LucroMin / StakeTotal) * 100
     const roiEsperado = stakeTotal > 0 ? (guaranteedProfit / stakeTotal) * 100 : 0;
     
-    // Recomendação
+    // Todos os cenários com lucro positivo = arbitragem garantida
+    const allPositive = scenarios.length > 0 && scenarios.every(s => s.lucro >= 0);
+    const anyNegative = scenarios.some(s => s.lucro < 0);
+    
+    // Recomendação baseada nos cenários
     let recommendation: { text: string; color: string; icon: "check" | "x" | "alert" } | null = null;
     
     if (stakeTotal > 0 && validOddsCount >= 2) {
-      if (hasArbitrage && guaranteedProfit > 0) {
+      if (allPositive && guaranteedProfit > 0) {
         recommendation = { 
           text: `Arbitragem! Lucro garantido: ${formatCurrency(guaranteedProfit)} (${roiEsperado.toFixed(2)}%)`, 
           color: "text-emerald-500",
           icon: "check"
         };
-      } else if (guaranteedProfit >= 0) {
+      } else if (allPositive && guaranteedProfit === 0) {
         recommendation = { 
-          text: `Operação neutra ou positiva. Spread: ${spread.toFixed(2)}%`, 
+          text: `Operação neutra. Sem lucro ou perda garantidos.`, 
           color: "text-blue-400",
           icon: "alert"
         };
-      } else {
+      } else if (anyNegative) {
         const custoPercent = Math.abs(roiEsperado);
         recommendation = { 
           text: `Custo operacional: ${formatCurrency(Math.abs(guaranteedProfit))} (-${custoPercent.toFixed(2)}%)`, 
@@ -345,11 +347,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     return {
       impliedProbs,
       trueProbs,
-      margin,
+      overround,
       spread,
       hasArbitrage,
-      arbitrageProfit,
-      calculatedStakes,
+      suggestedStakes,
+      calculatedStakes: actualStakes,
       stakeTotal,
       scenarios,
       guaranteedProfit,
