@@ -77,10 +77,9 @@ const ESPORTES = [
   "League of Legends", "Counter-Strike", "Dota 2", "eFootball"
 ];
 const MERCADOS = [
-  "Over/Under", "Ambos Marcam", "Handicap Asiático", "Handicap Europeu", 
-  "Empate Anula", "Correct Score", "Dupla Chance", "Draw No Bet", 
-  "Primeiro a Marcar", "Intervalo/Final", "Total de Gols", "Total de Cantos", 
-  "Total de Cartões", "Spread", "Total de Pontos", "Outro"
+  "Money Line", "Total de Gols", "Ambos Marcam", "Total de Cantos", 
+  "Total de Cartões", "Handicap Asiático", "Handicap Europeu", 
+  "Empate Anula", "Correct Score"
 ];
 
 // Mapeamento de mercado → seleções dinâmicas
