@@ -678,7 +678,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                           { bg: "bg-emerald-500/10", border: "border-emerald-500/40", badge: "bg-emerald-500 text-white" }
                         ];
                     
-                    const colors = columnColors[index];
+                    const colors = columnColors[index] || columnColors[0];
                     
                     return (
                       <div 
