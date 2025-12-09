@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -98,6 +99,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [transacaoDialogOpen, setTransacaoDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [vinculoToRemove, setVinculoToRemove] = useState<Vinculo | null>(null);
@@ -695,7 +697,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => navigate("/caixa")}
+                      onClick={() => setTransacaoDialogOpen(true)}
                       title="Nova Transação"
                     >
                       <ArrowRightLeft className="mr-2 h-4 w-4" />
@@ -804,7 +806,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       size="icon"
                       className="h-8 w-8"
                       title="Nova Transação"
-                      onClick={() => navigate("/caixa")}
+                      onClick={() => setTransacaoDialogOpen(true)}
                     >
                       <ArrowRightLeft className="h-4 w-4" />
                     </Button>
@@ -1003,6 +1005,16 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog Nova Transação */}
+      <CaixaTransacaoDialog
+        open={transacaoDialogOpen}
+        onClose={() => setTransacaoDialogOpen(false)}
+        onSuccess={() => {
+          setTransacaoDialogOpen(false);
+          fetchVinculos();
+        }}
+      />
     </div>
   );
 }
