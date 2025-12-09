@@ -3088,17 +3088,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                 )}
               </div>
             )}
-
-            {/* Observações */}
-            <div className="space-y-2">
-              <Label className="block text-center uppercase text-xs tracking-wider">Observações</Label>
-              <Textarea
-                value={observacoes}
-                onChange={(e) => setObservacoes(e.target.value)}
-                placeholder="Notas sobre a aposta..."
-                rows={2}
-              />
-            </div>
           </div>
 
           <DialogFooter className="flex justify-between">
