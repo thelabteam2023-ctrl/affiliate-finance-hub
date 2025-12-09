@@ -409,34 +409,41 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   }, [odds, arredondarAtivado, arredondarValor]);
 
   const handleSave = async () => {
+    // Validação simplificada - apenas campos obrigatórios
     if (!evento.trim()) {
       toast.error("Informe o evento");
       return;
     }
     
-    if (!analysis || analysis.stakeTotal <= 0) {
-      toast.error("Defina as stakes da operação");
-      return;
-    }
-    
-    // Validar odds e casas
+    // Validar cada lado do modelo atual
     for (let i = 0; i < odds.length; i++) {
       const entry = odds[i];
-      if (!entry.bookmaker_id) {
-        toast.error(`Selecione a casa para "${entry.selecao}"`);
-        return;
-      }
-      const odd = parseFloat(entry.odd);
-      if (isNaN(odd) || odd <= 1) {
-        toast.error(`Odd inválida para "${entry.selecao}" (deve ser > 1.00)`);
+      const selecaoLabel = entry.selecao;
+      
+      // 1. Casa obrigatória
+      if (!entry.bookmaker_id || entry.bookmaker_id.trim() === "") {
+        toast.error(`Selecione a casa para "${selecaoLabel}"`);
         return;
       }
       
-      // Verificar saldo
+      // 2. Odd obrigatória e válida
+      const odd = parseFloat(entry.odd);
+      if (!entry.odd || isNaN(odd) || odd <= 1) {
+        toast.error(`Odd inválida para "${selecaoLabel}" (deve ser > 1.00)`);
+        return;
+      }
+      
+      // 3. Stake obrigatória
+      const stake = parseFloat(entry.stake);
+      if (!entry.stake || isNaN(stake) || stake <= 0) {
+        toast.error(`Stake obrigatória para "${selecaoLabel}"`);
+        return;
+      }
+      
+      // 4. Verificar saldo (aviso, não bloqueante se saldo unknown)
       const saldo = getBookmakerSaldo(entry.bookmaker_id);
-      const stakeNecessaria = analysis.calculatedStakes[i];
-      if (saldo !== null && stakeNecessaria > saldo) {
-        toast.error(`Saldo insuficiente em ${getBookmakerNome(entry.bookmaker_id)}: ${formatCurrency(saldo)} disponível, ${formatCurrency(stakeNecessaria)} necessário`);
+      if (saldo !== null && stake > saldo) {
+        toast.error(`Saldo insuficiente em ${getBookmakerNome(entry.bookmaker_id)}: ${formatCurrency(saldo)} disponível, ${formatCurrency(stake)} necessário`);
         return;
       }
     }
@@ -461,6 +468,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         if (error) throw error;
         toast.success("Surebet atualizada!");
       } else {
+        // Calcular stake total e valores das stakes diretamente dos campos
+        const stakes = odds.map(o => parseFloat(o.stake) || 0);
+        const stakeTotal = stakes.reduce((a, b) => a + b, 0);
+        
         // Create surebet
         const { data: newSurebet, error: surebetError } = await supabase
           .from("surebets")
@@ -470,10 +481,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             evento,
             esporte,
             modelo,
-            stake_total: analysis.stakeTotal,
-            spread_calculado: analysis.spread,
-            roi_esperado: analysis.roiEsperado,
-            lucro_esperado: analysis.guaranteedProfit,
+            stake_total: stakeTotal,
+            spread_calculado: analysis?.spread || null,
+            roi_esperado: analysis?.roiEsperado || null,
+            lucro_esperado: analysis?.guaranteedProfit || null,
             observacoes,
             status: "PENDENTE"
           })
@@ -482,7 +493,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
         if (surebetError) throw surebetError;
 
-        // Create linked apostas
+        // Create linked apostas usando valores diretamente dos campos
         const apostasToCreate = odds.map((entry, index) => ({
           user_id: user.id,
           projeto_id: projetoId,
@@ -494,7 +505,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           mercado: modelo,
           selecao: entry.selecao,
           odd: parseFloat(entry.odd),
-          stake: analysis.calculatedStakes[index],
+          stake: stakes[index],
           status: "PENDENTE",
           estrategia: "SUREBET",
           modo_entrada: "PADRAO"
@@ -510,7 +521,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         for (let i = 0; i < odds.length; i++) {
           const bk = bookmakers.find(b => b.id === odds[i].bookmaker_id);
           if (bk) {
-            const newSaldo = bk.saldo_atual - analysis.calculatedStakes[i];
+            const newSaldo = bk.saldo_atual - stakes[i];
             await supabase
               .from("bookmakers")
               .update({ saldo_atual: newSaldo })
