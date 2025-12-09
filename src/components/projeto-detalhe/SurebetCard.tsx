@@ -79,12 +79,9 @@ export function SurebetCard({ surebet, onEdit, defaultExpanded = false }: Surebe
   const roiExibir = isLiquidada ? surebet.roi_real : surebet.roi_esperado;
 
   return (
-    <Card className="cursor-pointer hover:border-primary/50 transition-colors relative overflow-hidden">
-      {/* Barra lateral amarela indicando Surebet */}
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500" />
-      
+    <Card className="cursor-pointer hover:border-primary/50 transition-colors border-l-2 border-l-amber-500">
       {/* Header compacto - sempre visível */}
-      <CardHeader className="pb-2 pt-3 px-3 pl-4">
+      <CardHeader className="pb-2 pt-3 px-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
@@ -135,7 +132,7 @@ export function SurebetCard({ surebet, onEdit, defaultExpanded = false }: Surebe
         </div>
       </CardHeader>
 
-      <CardContent className="px-3 pl-4 pb-3 pt-0 space-y-2">
+      <CardContent className="px-3 pb-3 pt-0 space-y-2">
         {/* Resumo compacto - sempre visível */}
         <div className="grid grid-cols-3 gap-2 text-xs">
           <div>
