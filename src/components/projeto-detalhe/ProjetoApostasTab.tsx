@@ -631,6 +631,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                   <Layers className="mr-2 h-4 w-4" />
                   Aposta Múltipla
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setDialogSurebetOpen(true)}>
+                  <ArrowLeftRight className="mr-2 h-4 w-4" />
+                  Surebet
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <div className="relative flex-1 min-w-[200px]">
