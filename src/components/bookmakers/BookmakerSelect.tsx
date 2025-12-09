@@ -254,12 +254,14 @@ export default function BookmakerSelect({
         </Tooltip>
         <SelectContent 
           position="popper" 
-          sideOffset={4}
-          className="max-h-[300px] max-w-[320px] z-[100] bg-popover"
+          side="bottom"
+          align="start"
+          sideOffset={8}
+          className="max-h-[280px] w-[var(--radix-select-trigger-width)] min-w-[300px] z-[9999] bg-popover border border-border shadow-xl"
         >
-          <div className="sticky top-0 z-10 bg-popover p-2 border-b">
+          <div className="sticky top-0 z-10 bg-popover p-2 border-b border-border">
             <div className="relative">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar bookmaker..."
                 value={searchTerm}
@@ -280,47 +282,37 @@ export default function BookmakerSelect({
             filteredItems.map((item) => {
               const isLimitada = item.status === "LIMITADA";
               return (
-                <Tooltip key={item.id}>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <SelectItem 
-                        value={item.id}
-                        className={`${isLimitada ? "data-[highlighted]:bg-yellow-500/20" : "data-[highlighted]:bg-emerald-500/20"}`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0 max-w-full overflow-hidden">
-                          {item.logo_url && (
-                            <img
-                              src={item.logo_url}
-                              alt=""
-                              className="h-6 w-6 rounded object-contain flex-shrink-0"
-                              onError={(e) => { e.currentTarget.style.display = "none"; }}
-                            />
-                          )}
-                          <span className={`uppercase truncate ${isLimitada ? "text-yellow-400" : ""}`}>
-                            {item.nome}
+                <SelectItem 
+                  key={item.id}
+                  value={item.id}
+                  className={`py-3 ${isLimitada ? "data-[highlighted]:bg-yellow-500/20" : "data-[highlighted]:bg-emerald-500/20"}`}
+                >
+                  <div className="flex items-center gap-3 w-full">
+                    {item.logo_url && (
+                      <img
+                        src={item.logo_url}
+                        alt=""
+                        className="h-6 w-6 rounded object-contain flex-shrink-0"
+                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      />
+                    )}
+                    <span className={`uppercase text-sm font-medium ${isLimitada ? "text-yellow-400" : ""}`}>
+                      {item.nome}
+                    </span>
+                    {item.saldo_atual !== undefined && (
+                      <div className="ml-auto flex-shrink-0 text-right">
+                        <span className="text-xs text-muted-foreground">
+                          {item.moeda} {item.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                        {(item.saldo_freebet ?? 0) > 0 && (
+                          <span className="text-xs text-amber-400 ml-1">
+                            +FB {item.saldo_freebet?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </span>
-                          {item.saldo_atual !== undefined && (
-                            <div className="ml-auto flex-shrink-0 text-right">
-                              <span className="text-xs text-muted-foreground">
-                                {item.moeda} {item.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </span>
-                              {(item.saldo_freebet ?? 0) > 0 && (
-                                <span className="text-xs text-amber-400 ml-1">
-                                  +FB {item.saldo_freebet?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </SelectItem>
-                    </div>
-                  </TooltipTrigger>
-                  {item.nome.length > 15 && (
-                    <TooltipContent side="left" className="max-w-xs">
-                      <p className="uppercase">{item.nome}</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </SelectItem>
               );
             })
           )}
