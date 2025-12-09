@@ -614,65 +614,79 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
             <Separator />
 
-            {/* Tabela de Odds - Modo Híbrido */}
+            {/* Tabela de Odds - Layout em Colunas */}
             {!isEditing && (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Label>Posições da Operação</Label>
                   <span className="text-xs text-muted-foreground">
-                    Selecione a referência e ajuste as stakes livremente
+                    Selecione a referência e ajuste as stakes
                   </span>
                 </div>
                 
-                {/* Header */}
-                <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground px-1">
-                  <div className="col-span-1 text-center">Ref</div>
-                  <div className="col-span-2">Resultado</div>
-                  <div className="col-span-4">Casa</div>
-                  <div className="col-span-2">Odd</div>
-                  <div className="col-span-3">Aposta</div>
-                </div>
-                
-                {odds.map((entry, index) => {
-                  const saldo = getBookmakerSaldo(entry.bookmaker_id);
-                  const stakeCalculada = analysis?.calculatedStakes?.[index] || 0;
-                  const stakeAtual = parseFloat(entry.stake) || 0;
-                  const isDifferentFromCalculated = entry.isManuallyEdited && 
-                    stakeAtual > 0 && 
-                    Math.abs(stakeAtual - stakeCalculada) > 0.01 &&
-                    !entry.isReference;
-                  
-                  return (
-                    <div key={index} className="space-y-1">
-                      <div className="grid grid-cols-12 gap-2 items-center">
-                        {/* RadioButton de Referência - Sempre visível */}
-                        <div className="col-span-1 flex justify-center">
-                          <input
-                            type="radio"
-                            name="reference-selection"
-                            checked={entry.isReference}
-                            onChange={() => setReferenceIndex(index)}
-                            className="h-4 w-4 cursor-pointer accent-primary"
-                          />
+                {/* Grid de Colunas para cada seleção (1, X, 2) ou (Sim, Não) */}
+                <div className={`grid gap-3 ${modelo === "1-X-2" ? "grid-cols-3" : "grid-cols-2"}`}>
+                  {odds.map((entry, index) => {
+                    const saldo = getBookmakerSaldo(entry.bookmaker_id);
+                    const stakeCalculada = analysis?.calculatedStakes?.[index] || 0;
+                    const stakeAtual = parseFloat(entry.stake) || 0;
+                    const isDifferentFromCalculated = entry.isManuallyEdited && 
+                      stakeAtual > 0 && 
+                      Math.abs(stakeAtual - stakeCalculada) > 0.01 &&
+                      !entry.isReference;
+                    
+                    return (
+                      <div 
+                        key={index} 
+                        className={`rounded-lg border p-3 space-y-3 transition-all ${
+                          entry.isReference 
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/30" 
+                            : "border-border bg-card/50"
+                        }`}
+                      >
+                        {/* Header da coluna com RadioButton e Nome da Seleção */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name="reference-selection"
+                              checked={entry.isReference}
+                              onChange={() => setReferenceIndex(index)}
+                              className="h-4 w-4 cursor-pointer accent-primary"
+                            />
+                            <span className="text-xs text-muted-foreground">Ref</span>
+                          </div>
+                          <Badge variant={entry.isReference ? "default" : "secondary"} className="text-xs">
+                            {modelo === "1-X-2" 
+                              ? (index === 0 ? "1" : index === 1 ? "X" : "2") 
+                              : (index === 0 ? "1" : "2")
+                            }
+                          </Badge>
                         </div>
                         
-                        {/* Seleção */}
-                        <div className="col-span-2">
+                        {/* Campo Seleção (editável) */}
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Resultado</Label>
                           <Input 
                             value={entry.selecao}
                             onChange={(e) => updateOdd(index, "selecao", e.target.value)}
                             className="text-sm h-9"
+                            placeholder={modelo === "1-X-2" 
+                              ? (index === 0 ? "Casa" : index === 1 ? "Empate" : "Fora")
+                              : (index === 0 ? "Sim" : "Não")
+                            }
                           />
                         </div>
                         
-                        {/* Casa */}
-                        <div className="col-span-4">
+                        {/* Campo Casa/Bookmaker */}
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Casa</Label>
                           <Select 
                             value={entry.bookmaker_id}
                             onValueChange={(v) => updateOdd(index, "bookmaker_id", v)}
                           >
-                            <SelectTrigger className="h-9">
-                              <SelectValue placeholder="Selecionar casa" />
+                            <SelectTrigger className="h-9 text-sm">
+                              <SelectValue placeholder="Selecionar" />
                             </SelectTrigger>
                             <SelectContent>
                               {bookmakers.map(bk => {
@@ -682,7 +696,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                   : "";
                                 return (
                                   <SelectItem key={bk.id} value={bk.id}>
-                                    <div className="flex items-center justify-between w-full gap-2">
+                                    <div className="flex items-center gap-2">
                                       <span>{bk.nome}</span>
                                       {shortName && <span className="text-xs text-muted-foreground">({shortName})</span>}
                                     </div>
@@ -691,10 +705,23 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               })}
                             </SelectContent>
                           </Select>
+                          {/* Saldo */}
+                          {entry.bookmaker_id && saldo !== null && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground pt-1">
+                              <Wallet className="h-3 w-3" />
+                              <span>{formatCurrency(saldo)}</span>
+                              {stakeAtual > 0 && stakeAtual > saldo && (
+                                <Badge variant="destructive" className="text-[10px] h-4 ml-1">
+                                  Insuficiente
+                                </Badge>
+                              )}
+                            </div>
+                          )}
                         </div>
                         
-                        {/* Odd */}
-                        <div className="col-span-2">
+                        {/* Campo Odd */}
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Odd</Label>
                           <Input 
                             type="number"
                             step="0.01"
@@ -705,8 +732,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                           />
                         </div>
                         
-                        {/* Stake - Sempre editável */}
-                        <div className="col-span-3">
+                        {/* Campo Stake */}
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">
+                            Aposta {entry.isReference && <span className="text-primary">(Ref)</span>}
+                          </Label>
                           <div className="relative">
                             <Input 
                               type="number"
@@ -715,11 +745,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               value={entry.stake}
                               onChange={(e) => updateOdd(index, "stake", e.target.value)}
                               className={`h-9 pr-8 ${
-                                entry.isReference 
-                                  ? "border-primary ring-1 ring-primary/50" 
-                                  : isDifferentFromCalculated 
-                                    ? "border-amber-500 ring-1 ring-amber-500/50" 
-                                    : ""
+                                isDifferentFromCalculated 
+                                  ? "border-amber-500 ring-1 ring-amber-500/50" 
+                                  : ""
                               }`}
                             />
                             {/* Botão reset para campos modificados */}
@@ -738,25 +766,12 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                           </div>
                         </div>
                       </div>
-                      
-                      {/* Saldo da casa */}
-                      {entry.bookmaker_id && saldo !== null && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground pl-1">
-                          <Wallet className="h-3 w-3" />
-                          <span>Saldo: {formatCurrency(saldo)}</span>
-                          {stakeAtual > 0 && stakeAtual > saldo && (
-                            <Badge variant="destructive" className="text-[10px] h-4 ml-1">
-                              Insuficiente
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
                 
                 {/* Opções de Arredondamento */}
-                <div className="flex items-center gap-4 pt-2 border-t mt-3">
+                <div className="flex items-center gap-4 pt-2 border-t">
                   <div className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -766,7 +781,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                       className="h-4 w-4 cursor-pointer accent-primary rounded"
                     />
                     <Label htmlFor="arredondar-checkbox" className="text-sm cursor-pointer">
-                      Arredondar aposta até:
+                      Arredondar até:
                     </Label>
                     <Input
                       type="number"
@@ -775,7 +790,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                       value={arredondarValor}
                       onChange={(e) => setArredondarValor(e.target.value)}
                       disabled={!arredondarAtivado}
-                      className="h-8 w-20"
+                      className="h-8 w-16"
                     />
                   </div>
                 </div>
