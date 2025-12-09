@@ -79,8 +79,37 @@ const MERCADOS = [
   "ML", "Over/Under", "Ambos Marcam", "Handicap Asiático", "Handicap Europeu", 
   "Empate Anula", "Correct Score", "Dupla Chance", "Draw No Bet", 
   "Primeiro a Marcar", "Intervalo/Final", "Total de Gols", "Total de Cantos", 
-  "Total de Cartões", "Spread", "Total de Pontos", "Vencedor", "Outro"
+  "Total de Cartões", "Spread", "Total de Pontos", "Outro"
 ];
+
+// Mapeamento de mercado → seleções dinâmicas
+const SELECOES_POR_MERCADO: Record<string, string[]> = {
+  "ML": ["Casa", "Fora"],
+  "Over/Under": ["Over", "Under"],
+  "Ambos Marcam": ["Sim", "Não"],
+  "Handicap Asiático": ["Casa", "Fora"],
+  "Handicap Europeu": ["Casa", "Empate", "Fora"],
+  "Empate Anula": ["Casa", "Fora"],
+  "Correct Score": ["Casa", "Fora"],
+  "Dupla Chance": ["Casa/Empate", "Casa/Fora", "Empate/Fora"],
+  "Draw No Bet": ["Casa", "Fora"],
+  "Primeiro a Marcar": ["Casa", "Fora", "Sem Gols"],
+  "Intervalo/Final": ["Casa/Casa", "Casa/Empate", "Casa/Fora", "Empate/Casa", "Empate/Empate", "Empate/Fora", "Fora/Casa", "Fora/Empate", "Fora/Fora"],
+  "Total de Gols": ["Over", "Under"],
+  "Total de Cantos": ["Over", "Under"],
+  "Total de Cartões": ["Over", "Under"],
+  "Spread": ["Casa", "Fora"],
+  "Total de Pontos": ["Over", "Under"],
+  "Outro": ["Opção 1", "Opção 2"]
+};
+
+const getSelecoesPorMercado = (mercado: string, modelo: "1-X-2" | "1-2"): string[] => {
+  if (mercado && SELECOES_POR_MERCADO[mercado]) {
+    return SELECOES_POR_MERCADO[mercado];
+  }
+  // Fallback baseado no modelo
+  return modelo === "1-X-2" ? ["Casa", "Empate", "Fora"] : ["Sim", "Não"];
+};
 
 const SELECOES_1X2 = ["Casa", "Empate", "Fora"];
 const SELECOES_BINARIO = ["Sim", "Não"];
@@ -124,10 +153,16 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     }
   }, [open, surebet]);
 
-  // Atualizar array de odds quando modelo muda
+  // Atualizar array de odds quando mercado ou modelo muda
   useEffect(() => {
     if (!isEditing) {
-      const selecoes = modelo === "1-X-2" ? SELECOES_1X2 : SELECOES_BINARIO;
+      const selecoes = getSelecoesPorMercado(mercado, modelo);
+      // Ajustar modelo automaticamente baseado no número de seleções do mercado
+      const novoModelo = selecoes.length > 2 ? "1-X-2" : "1-2";
+      if (mercado && novoModelo !== modelo) {
+        setModelo(novoModelo);
+        return; // O próximo render vai atualizar as odds
+      }
       setOdds(selecoes.map((sel, i) => ({
         bookmaker_id: "",
         odd: "",
@@ -137,7 +172,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         isManuallyEdited: false
       })));
     }
-  }, [modelo, isEditing]);
+  }, [mercado, modelo, isEditing]);
 
   const resetForm = () => {
     setEvento("");
@@ -147,10 +182,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     setObservacoes("");
     setArredondarAtivado(false);
     setArredondarValor("1");
-    setOdds([
-      { bookmaker_id: "", odd: "", stake: "", selecao: "Sim", isReference: true, isManuallyEdited: false },
-      { bookmaker_id: "", odd: "", stake: "", selecao: "Não", isReference: false, isManuallyEdited: false }
-    ]);
+    const defaultSelecoes = getSelecoesPorMercado("", "1-2");
+    setOdds(defaultSelecoes.map((sel, i) => ({
+      bookmaker_id: "", odd: "", stake: "", selecao: sel, isReference: i === 0, isManuallyEdited: false
+    })));
     setLinkedApostas([]);
   };
   
