@@ -1147,7 +1147,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   <Label htmlFor="cpf">CPF *</Label>
                   <div className="flex gap-2">
                     <Input
-                      id="cpf"
+                      id="parceiro-cpf-field"
+                      name="parceiro-cpf-field"
                       value={cpf}
                       onChange={(e) => {
                         setCpf(formatCPF(e.target.value));

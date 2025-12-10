@@ -241,9 +241,10 @@ export function IndicadorDialog({ open, onOpenChange, indicador, isViewMode }: I
         <div className="space-y-4">
           {/* Personal Info */}
           <div className="space-y-2">
-            <Label htmlFor="nome">Nome *</Label>
+            <Label htmlFor="indicador-nome-field">Nome *</Label>
             <Input
-              id="nome"
+              id="indicador-nome-field"
+              name="indicador-nome-field"
               value={formData.nome}
               onChange={(e) => setFormData({ ...formData, nome: e.target.value.toUpperCase() })}
               disabled={isViewMode}
@@ -253,9 +254,10 @@ export function IndicadorDialog({ open, onOpenChange, indicador, isViewMode }: I
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cpf">CPF *</Label>
+            <Label htmlFor="indicador-cpf-field">CPF *</Label>
             <Input
-              id="cpf"
+              id="indicador-cpf-field"
+              name="indicador-cpf-field"
               value={formData.cpf}
               onChange={(e) => handleCPFChange(e.target.value)}
               disabled={isViewMode}
