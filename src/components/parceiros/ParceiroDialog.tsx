@@ -1134,7 +1134,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 <div className="col-span-2">
                   <Label htmlFor="nome">Nome Completo *</Label>
                   <Input
-                    id="nome"
+                    id="parceiro-nome-field"
+                    name="parceiro-nome-field"
                     value={nome}
                     onChange={(e) => setNome(e.target.value.toUpperCase())}
                     required
