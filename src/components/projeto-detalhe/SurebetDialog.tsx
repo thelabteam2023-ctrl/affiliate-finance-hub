@@ -904,6 +904,16 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         }
       }
       
+      // CRÍTICO: Deletar PRIMEIRO as pernas (apostas vinculadas) antes de deletar a surebet
+      // Isso evita que as pernas fiquem órfãs e apareçam como apostas independentes
+      const { error: pernasError } = await supabase
+        .from("apostas")
+        .delete()
+        .eq("surebet_id", surebet.id);
+
+      if (pernasError) throw pernasError;
+
+      // Agora deletar a surebet principal
       const { error } = await supabase
         .from("surebets")
         .delete()
