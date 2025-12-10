@@ -291,7 +291,7 @@ export function FinanceiroTab() {
                   </button>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
-                  <p>Pagamentos realizados aos parceiros (CPF) e fornecedores como custo de captação de parcerias.</p>
+                  <p>Pagamentos realizados aos parceiros e fornecedores como custo de captação de parcerias.</p>
                 </TooltipContent>
               </Tooltip>
             </CardHeader>
