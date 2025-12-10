@@ -652,49 +652,120 @@ export default function CentralOperacoes() {
         <div className="space-y-6">
           {/* Alertas de Marco de Lucro */}
           {alertasLucro.length > 0 && (
-            <Card className="border-emerald-500/30 bg-emerald-500/5">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <TrendingUp className="h-5 w-5 text-emerald-400" />
-                  🎉 Marcos de Lucro Atingidos
+            <Card className="border-amber-500/30 max-w-2xl">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <TrendingUp className="h-4 w-4 text-amber-400" />
+                  Marcos de Lucro Atingidos
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Parceiros que atingiram marcos de lucro importantes
+                  Atenção: lucros altos podem gerar riscos fiscais
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {alertasLucro.map((alerta) => (
-                    <div
-                      key={alerta.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/15 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="h-8 w-8 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
-                          <TrendingUp className="h-4 w-4 text-emerald-400" />
+              <CardContent className="pt-0">
+                <div className="space-y-1.5">
+                  {alertasLucro.map((alerta) => {
+                    // Gradiente de cores baseado no lucro atual
+                    const lucro = alerta.lucro_atual;
+                    let colorClasses = {
+                      border: "border-emerald-500/30",
+                      bg: "bg-emerald-500/10 hover:bg-emerald-500/15",
+                      iconBg: "bg-emerald-500/20",
+                      iconText: "text-emerald-400",
+                      valueText: "text-emerald-400",
+                    };
+                    
+                    if (lucro >= 30000) {
+                      // CRÍTICO - estourou a cota
+                      colorClasses = {
+                        border: "border-rose-600/50",
+                        bg: "bg-rose-600/20 hover:bg-rose-600/25",
+                        iconBg: "bg-rose-600/30",
+                        iconText: "text-rose-400",
+                        valueText: "text-rose-400",
+                      };
+                    } else if (lucro >= 27000) {
+                      // MUITO ALTO - próximo de estourar
+                      colorClasses = {
+                        border: "border-red-500/40",
+                        bg: "bg-red-500/15 hover:bg-red-500/20",
+                        iconBg: "bg-red-500/25",
+                        iconText: "text-red-400",
+                        valueText: "text-red-400",
+                      };
+                    } else if (lucro >= 23000) {
+                      // ALTO - atenção redobrada
+                      colorClasses = {
+                        border: "border-orange-500/40",
+                        bg: "bg-orange-500/10 hover:bg-orange-500/15",
+                        iconBg: "bg-orange-500/20",
+                        iconText: "text-orange-400",
+                        valueText: "text-orange-400",
+                      };
+                    } else if (lucro >= 20000) {
+                      // MÉDIO - atenção
+                      colorClasses = {
+                        border: "border-yellow-500/30",
+                        bg: "bg-yellow-500/10 hover:bg-yellow-500/15",
+                        iconBg: "bg-yellow-500/20",
+                        iconText: "text-yellow-400",
+                        valueText: "text-yellow-400",
+                      };
+                    }
+                    // else: lucro < 20000 = verde (padrão definido acima)
+                    
+                    return (
+                      <div
+                        key={alerta.id}
+                        className={`flex items-center justify-between p-2.5 rounded-lg border ${colorClasses.border} ${colorClasses.bg} transition-colors`}
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className={`h-7 w-7 rounded-md ${colorClasses.iconBg} flex items-center justify-center shrink-0`}>
+                            <TrendingUp className={`h-3.5 w-3.5 ${colorClasses.iconText}`} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-xs truncate">{alerta.parceiro_nome}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              Lucro: {formatCurrency(alerta.lucro_atual)}
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm truncate">{alerta.parceiro_nome}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Lucro atual: {formatCurrency(alerta.lucro_atual)}
-                          </p>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className={`text-xs font-bold ${colorClasses.valueText}`}>
+                            R$ {alerta.marco_valor.toLocaleString("pt-BR")}
+                          </span>
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={() => navigate("/gestao-parceiros")}
+                            className="h-6 text-[10px] px-2"
+                          >
+                            Ver
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={async () => {
+                              try {
+                                await supabase
+                                  .from("parceiro_lucro_alertas")
+                                  .update({ notificado: true })
+                                  .eq("id", alerta.id);
+                                setAlertasLucro(prev => prev.filter(a => a.id !== alerta.id));
+                                toast.success("Marco verificado");
+                              } catch (error) {
+                                toast.error("Erro ao confirmar");
+                              }
+                            }}
+                            className="h-6 text-[10px] px-2 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                          >
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            OK
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-sm font-bold text-emerald-400">
-                          R$ {alerta.marco_valor.toLocaleString("pt-BR")}
-                        </span>
-                        <Button 
-                          size="sm" 
-                          variant="ghost"
-                          onClick={() => navigate("/gestao-parceiros")}
-                          className="h-7 text-xs"
-                        >
-                          Ver Parceiro
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
