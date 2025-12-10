@@ -97,10 +97,10 @@ export default function ParceiroSelect({ value, onValueChange, disabled, onlyPar
 
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled || loading}>
-      <SelectTrigger className="w-full">
+      <SelectTrigger className="w-full text-center">
         <div className="flex items-center justify-center gap-2 w-full">
           <User className="h-4 w-4 flex-shrink-0" />
-          <span className="truncate">
+          <span className="truncate text-center">
             {displayName || (loading ? "Carregando..." : "Selecione um parceiro ativo")}
           </span>
         </div>
