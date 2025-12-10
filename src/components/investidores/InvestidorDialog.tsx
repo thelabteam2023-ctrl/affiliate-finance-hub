@@ -398,7 +398,7 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="dados">Dados Pessoais</TabsTrigger>
-            <TabsTrigger value="acordo" disabled={mode === "create" && activeTab === "dados" && !validateDadosPessoais()}>
+            <TabsTrigger value="acordo">
               Acordo de Remuneração
             </TabsTrigger>
           </TabsList>
