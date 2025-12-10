@@ -363,23 +363,18 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     const newOdds = [...odds];
     newOdds[index] = { ...newOdds[index], [field]: value };
     
-    // Se está definindo referência, remover das outras e resetar campos não-manuais
+    // Se está definindo referência, remover das outras
     if (field === "isReference" && value === true) {
       newOdds.forEach((o, i) => {
         if (i !== index) {
           o.isReference = false;
-          // Resetar stake se não foi editado manualmente
-          if (!o.isManuallyEdited) {
-            o.stake = "";
-          }
         }
       });
     }
     
-    // Marcar como editado manualmente se for o campo stake
-    if (field === "stake") {
-      newOdds[index].isManuallyEdited = true;
-    }
+    // NOVO COMPORTAMENTO: Nunca marcar como editado manualmente
+    // A referência sempre é o driver dos cálculos
+    // Alterar stake NÃO desativa o cálculo automático
     
     setOdds(newOdds);
   };
@@ -413,8 +408,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     setOdds(newOdds);
   };
 
-  // Auto-preencher stakes não-manuais quando há referência válida
+  // Auto-preencher stakes baseado na posição de referência
+  // NOVO COMPORTAMENTO: A referência SEMPRE é o driver dos cálculos
+  // Alterar stake manualmente NÃO desativa o cálculo automático
   useEffect(() => {
+    // Não recalcular em modo edição
+    if (isEditing) return;
+    
     const parsedOdds = odds.map(o => parseFloat(o.odd) || 0);
     const validOddsCount = parsedOdds.filter(o => o > 1).length;
     
@@ -427,12 +427,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     // Só calcular se temos stake de referência, odd válida e pelo menos 2 odds válidas
     if (refStakeValue <= 0 || refOdd <= 1 || validOddsCount < 2) return;
     
+    // Fórmula: stakeOutro = (stakeRef * oddRef) / oddOutro
     const targetReturn = refStakeValue * refOdd;
     
-    // Verificar se há campos não-manuais que precisam ser preenchidos
+    // Recalcular TODAS as stakes não-referência sempre que referência ou odds mudam
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
-      if (i === refIndex || o.isManuallyEdited) return o;
+      // Nunca modificar a referência
+      if (i === refIndex) return o;
       
       const odd = parsedOdds[i];
       if (odd > 1) {
@@ -453,11 +455,17 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       setOdds(newOdds);
     }
   }, [
+    // Dependências: sempre recalcular quando qualquer odd mudar
     odds.map(o => o.odd).join(','),
+    // Quando a referência mudar
     odds.map(o => o.isReference).join(','),
+    // Quando a stake da referência mudar
     odds.find(o => o.isReference)?.stake,
+    // Configurações de arredondamento
     arredondarAtivado,
-    arredondarValor
+    arredondarValor,
+    // Modo edição
+    isEditing
   ]);
 
   // Obter saldo livre da casa selecionada (saldo_atual - saldo em aposta)
@@ -524,6 +532,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   };
 
   // Cálculos em tempo real - TOTALMENTE reativo aos inputs atuais
+  // NOVO COMPORTAMENTO: Calcular todos os cenários com ROI máximo/mínimo e risco
   const analysis = useMemo(() => {
     const parsedOdds = odds.map(o => parseFloat(o.odd) || 0);
     const validOddsCount = parsedOdds.filter(o => o > 1).length;
@@ -550,6 +559,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     const refStakeValue = parseFloat(odds[refIndex]?.stake) || 0;
     
     // Calcular stakes sugeridas baseado na referência
+    // Fórmula: stakeOutro = (stakeRef * oddRef) / oddOutro
     let suggestedStakes: number[] = [];
     if (refStakeValue > 0 && refOdd > 1 && validOddsCount >= 2) {
       const targetReturn = refStakeValue * refOdd;
@@ -564,49 +574,61 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     }
     
     // SEMPRE usar os valores ATUAIS dos inputs de stake para análise
-    // Isso garante que qualquer edição manual (incluindo 0) seja refletida
     const actualStakes = odds.map((o, i) => {
       const inputValue = parseFloat(o.stake);
-      // Se o campo tem valor válido (incluindo 0), usar o valor do input
       if (!isNaN(inputValue)) {
         return inputValue;
       }
-      // Se o campo está vazio, usar a sugestão se existir
-      if (suggestedStakes[i] !== undefined && !o.isManuallyEdited) {
+      if (suggestedStakes[i] !== undefined) {
         return suggestedStakes[i];
       }
       return 0;
     });
     
-    // StakeTotal = soma de todas as stakes atuais (S1 + S2 + S3)
+    // StakeTotal = soma de todas as stakes atuais
     const stakeTotal = actualStakes.reduce((a, b) => a + b, 0);
     
     // Calcular cenários de retorno/lucro para CADA resultado possível
-    // Retorno_i = O_i * S_i
-    // Lucro_i = Retorno_i - StakeTotal
+    // LucroCenário = stake * odd - stakeTotal
     const scenarios = parsedOdds.map((odd, i) => {
       const stakeNesseLado = actualStakes[i];
       const retorno = odd > 1 ? stakeNesseLado * odd : 0;
       const lucro = retorno - stakeTotal;
+      const roi = stakeTotal > 0 ? (lucro / stakeTotal) * 100 : 0;
       return {
         selecao: odds[i].selecao,
         stake: stakeNesseLado,
         retorno,
         lucro,
+        roi,
         isPositive: lucro >= 0
       };
     });
     
-    // Lucro mínimo entre todos os cenários (para arbitragem garantida)
-    const minLucro = scenarios.length > 0 ? Math.min(...scenarios.map(s => s.lucro)) : 0;
+    // Calcular métricas agregadas dos cenários
+    const lucros = scenarios.map(s => s.lucro);
+    const rois = scenarios.map(s => s.roi);
+    
+    const minLucro = lucros.length > 0 ? Math.min(...lucros) : 0;
+    const maxLucro = lucros.length > 0 ? Math.max(...lucros) : 0;
+    const minRoi = rois.length > 0 ? Math.min(...rois) : 0;
+    const maxRoi = rois.length > 0 ? Math.max(...rois) : 0;
+    
+    // Lucro garantido = menor lucro (se positivo = arbitragem garantida)
     const guaranteedProfit = minLucro;
     
-    // ROI = (LucroMin / StakeTotal) * 100
-    const roiEsperado = stakeTotal > 0 ? (guaranteedProfit / stakeTotal) * 100 : 0;
+    // ROI esperado = ROI mínimo (pior cenário)
+    const roiEsperado = minRoi;
+    
+    // Risco máximo = pior perda possível (valor mais negativo)
+    const riscoMaximo = minLucro < 0 ? Math.abs(minLucro) : 0;
     
     // Todos os cenários com lucro positivo = arbitragem garantida
     const allPositive = scenarios.length > 0 && scenarios.every(s => s.lucro >= 0);
     const anyNegative = scenarios.some(s => s.lucro < 0);
+    
+    // Hedge parcial: quando nem todos os cenários são cobertos igualmente
+    const isHedgeParcial = anyNegative && scenarios.some(s => s.lucro > 0);
     
     // Recomendação baseada nos cenários
     let recommendation: { text: string; color: string; icon: "check" | "x" | "alert" } | null = null;
@@ -614,7 +636,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     if (stakeTotal > 0 && validOddsCount >= 2) {
       if (allPositive && guaranteedProfit > 0) {
         recommendation = { 
-          text: `Arbitragem! Lucro garantido: ${formatCurrency(guaranteedProfit)} (${roiEsperado.toFixed(2)}%)`, 
+          text: `Arbitragem! Lucro garantido: ${formatCurrency(guaranteedProfit)}`, 
           color: "text-emerald-500",
           icon: "check"
         };
@@ -624,12 +646,17 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           color: "text-blue-400",
           icon: "alert"
         };
-      } else if (anyNegative) {
-        const custoPercent = Math.abs(roiEsperado);
+      } else if (isHedgeParcial) {
         recommendation = { 
-          text: `Custo operacional: ${formatCurrency(Math.abs(guaranteedProfit))} (-${custoPercent.toFixed(2)}%)`, 
+          text: `Hedge parcial - cenários mistos`, 
           color: "text-amber-400",
           icon: "alert"
+        };
+      } else if (anyNegative) {
+        recommendation = { 
+          text: `Risco: ${formatCurrency(riscoMaximo)} de perda máxima`, 
+          color: "text-red-400",
+          icon: "x"
         };
       }
     }
@@ -646,6 +673,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       scenarios,
       guaranteedProfit,
       roiEsperado,
+      // Novas métricas para hedge parcial
+      minLucro,
+      maxLucro,
+      minRoi,
+      maxRoi,
+      riscoMaximo,
+      isHedgeParcial,
       recommendation,
       validOddsCount,
       hasPartialData: validOddsCount > 0
@@ -1538,44 +1572,69 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   </>
                 ) : (
                   <>
-                    {/* Métricas esperadas (modo projeção) */}
+                    {/* NOVA ESTRUTURA: ROI Máximo, ROI Mínimo, Risco Máximo */}
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
-                        <span className="text-xs text-muted-foreground">ROI Esperado</span>
+                      {/* ROI Máximo */}
+                      <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                        <span className="text-xs text-emerald-400 font-medium">ROI Máximo</span>
                         <span className={`text-sm font-bold ${
                           analysis.stakeTotal <= 0 
                             ? 'text-muted-foreground' 
-                            : analysis.roiEsperado >= 0 
+                            : 'text-emerald-500'
+                        }`}>
+                          {analysis.stakeTotal > 0 
+                            ? `${analysis.maxRoi >= 0 ? "+" : ""}${analysis.maxRoi.toFixed(2)}%`
+                            : "—"
+                          }
+                        </span>
+                      </div>
+                      
+                      {/* ROI Mínimo */}
+                      <div className={`flex items-center justify-between p-2 rounded-lg border ${
+                        analysis.minRoi >= 0 
+                          ? "bg-emerald-500/10 border-emerald-500/20" 
+                          : "bg-red-500/10 border-red-500/20"
+                      }`}>
+                        <span className={`text-xs font-medium ${
+                          analysis.minRoi >= 0 ? "text-emerald-400" : "text-red-400"
+                        }`}>ROI Mínimo</span>
+                        <span className={`text-sm font-bold ${
+                          analysis.stakeTotal <= 0 
+                            ? 'text-muted-foreground' 
+                            : analysis.minRoi >= 0 
                               ? 'text-emerald-500' 
                               : 'text-red-500'
                         }`}>
                           {analysis.stakeTotal > 0 
-                            ? `${analysis.roiEsperado >= 0 ? "+" : ""}${analysis.roiEsperado.toFixed(2)}%`
+                            ? `${analysis.minRoi >= 0 ? "+" : ""}${analysis.minRoi.toFixed(2)}%`
                             : "—"
                           }
                         </span>
                       </div>
-                      <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
-                        <span className="text-xs text-muted-foreground">
-                          {analysis.guaranteedProfit >= 0 ? "Lucro" : "Custo"}
-                        </span>
-                        <span className={`text-sm font-bold ${
-                          analysis.stakeTotal <= 0 
-                            ? 'text-muted-foreground' 
-                            : analysis.guaranteedProfit >= 0 
-                              ? 'text-emerald-500' 
-                              : 'text-amber-500'
-                        }`}>
-                          {analysis.stakeTotal > 0 
-                            ? `${analysis.guaranteedProfit >= 0 ? "+" : ""}${formatCurrency(analysis.guaranteedProfit)}`
-                            : "—"
-                          }
-                        </span>
-                      </div>
+                      
+                      {/* Risco Máximo (Custo) - só mostra se há risco */}
+                      {analysis.riscoMaximo > 0 && (
+                        <div className="flex items-center justify-between p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                          <span className="text-xs text-red-400 font-medium">Risco Máximo</span>
+                          <span className="text-sm font-bold text-red-500">
+                            -{formatCurrency(analysis.riscoMaximo)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Lucro Máximo */}
+                      {analysis.maxLucro > 0 && (
+                        <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                          <span className="text-xs text-emerald-400 font-medium">Lucro Máximo</span>
+                          <span className="text-sm font-bold text-emerald-500">
+                            +{formatCurrency(analysis.maxLucro)}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Cenários de Resultado */}
-                    {analysis.scenarios.length > 0 && (
+                    {/* Cenários de Resultado - sempre mostrando lucro e ROI */}
+                    {analysis.scenarios.length > 0 && analysis.stakeTotal > 0 && (
                       <>
                         <Separator />
                         <div>
@@ -1592,9 +1651,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               >
                                 <div className="flex items-center justify-between">
                                   <span className="text-xs font-medium">{scenario.selecao}</span>
-                                  <span className={`text-xs font-bold ${scenario.isPositive ? "text-emerald-500" : "text-red-500"}`}>
-                                    {scenario.lucro >= 0 ? "+" : ""}{formatCurrency(scenario.lucro)}
-                                  </span>
+                                  <div className="text-right">
+                                    <span className={`text-xs font-bold ${scenario.isPositive ? "text-emerald-500" : "text-red-500"}`}>
+                                      {scenario.lucro >= 0 ? "+" : ""}{formatCurrency(scenario.lucro)}
+                                    </span>
+                                    <span className={`text-[10px] ml-1 ${scenario.isPositive ? "text-emerald-400" : "text-red-400"}`}>
+                                      ({scenario.roi >= 0 ? "+" : ""}{scenario.roi.toFixed(1)}%)
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             ))}
