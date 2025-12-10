@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { format, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, DollarSign, AlertCircle, Building2, Users, HelpCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, DollarSign, AlertCircle, Building2, Users, HelpCircle, BarChart3 } from "lucide-react";
 
 interface Transacao {
   id: string;
@@ -40,6 +40,22 @@ function KpiHelp({ text }: { text: string }) {
           <HelpCircle className="h-3 w-3 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-[250px] text-xs">
+          {text}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+// Componente de tooltip para abas
+function TabHelp({ text }: { text: string }) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <HelpCircle className="h-3 w-3 text-muted-foreground hover:text-foreground cursor-help transition-colors ml-1" />
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-[300px] text-xs">
           {text}
         </TooltipContent>
       </Tooltip>
@@ -184,23 +200,32 @@ export function FluxoFinanceiroOperacional({
     return { dados, totalDepositos, totalSaques, alocacaoLiquida: totalDepositos - totalSaques };
   }, [transacoesFiltradas, periodo]);
 
-  // 3. Resultado Operacional
-  const resultadoOperacional = useMemo(() => {
+  // 3. Performance Operacional - cálculos com saldo inicial e final
+  const performanceOperacional = useMemo(() => {
     const totalDepositos = dadosCapitalOperacao.totalDepositos;
     const totalSaques = dadosCapitalOperacao.totalSaques;
+    const saldoFinal = saldoBookmakers;
     
-    // Resultado = Saldo Atual em Bookmakers + Total Sacado - Total Depositado
-    const resultado = saldoBookmakers + totalSaques - totalDepositos;
-    const percentualRetorno = totalDepositos > 0 
-      ? ((resultado / totalDepositos) * 100) 
-      : 0;
+    // Saldo Inicial = Saldo Final + Saques - Depósitos (engenharia reversa)
+    const saldoInicial = saldoFinal + totalSaques - totalDepositos;
+    
+    // Lucro = (Saldo Final + Saques) - (Saldo Inicial + Depósitos)
+    const lucro = (saldoFinal + totalSaques) - (saldoInicial + totalDepositos);
+    
+    // Capital Médio para ROI
+    const capitalMedio = (saldoInicial + saldoFinal) / 2;
+    
+    // ROI = Lucro / Capital Médio * 100
+    const roi = capitalMedio > 0 ? (lucro / capitalMedio) * 100 : null;
 
     return { 
+      saldoInicial,
+      saldoFinal,
       totalDepositos, 
       totalSaques, 
-      saldoBookmakers,
-      resultado,
-      percentualRetorno 
+      lucro,
+      capitalMedio,
+      roi 
     };
   }, [dadosCapitalOperacao, saldoBookmakers]);
 
@@ -344,19 +369,21 @@ export function FluxoFinanceiroOperacional({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <Tabs defaultValue="operacao" className="w-full">
+        <Tabs defaultValue="fluxo" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="operacao" className="gap-2 text-xs sm:text-sm">
+            <TabsTrigger value="fluxo" className="gap-1 text-xs sm:text-sm">
               <Building2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Capital em Operação</span>
-              <span className="sm:hidden">Operação</span>
+              <span className="hidden sm:inline">Fluxo de Caixa</span>
+              <span className="sm:hidden">Fluxo</span>
+              <TabHelp text="Representa o fluxo financeiro efetivo da operação. Aqui são exibidos apenas movimentos de caixa: depósitos enviados às bookmakers e saques recebidos delas. Não considera variações internas de saldo." />
             </TabsTrigger>
-            <TabsTrigger value="resultado" className="gap-2 text-xs sm:text-sm">
-              <DollarSign className="h-4 w-4" />
-              <span className="hidden sm:inline">Resultado</span>
-              <span className="sm:hidden">Resultado</span>
+            <TabsTrigger value="performance" className="gap-1 text-xs sm:text-sm">
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Performance</span>
+              <span className="sm:hidden">Perform.</span>
+              <TabHelp text="Representa o cenário financeiro real dos projetos. Aqui é calculado o lucro ou prejuízo considerando a variação do saldo nas bookmakers, mesmo quando não há saques. Mostra o verdadeiro retorno do período." />
             </TabsTrigger>
-            <TabsTrigger value="externo" className="gap-2 text-xs sm:text-sm">
+            <TabsTrigger value="externo" className="gap-1 text-xs sm:text-sm">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Capital Externo</span>
               <span className="sm:hidden">Externo</span>
@@ -441,100 +468,30 @@ export function FluxoFinanceiroOperacional({
             </p>
           </TabsContent>
 
-          {/* Aba 2: Capital em Operação (Bookmakers) */}
-          <TabsContent value="operacao" className="mt-4 space-y-4">
-            {/* KPIs - 4 cards: Depósitos, Saques, Resultado, ROI */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
+          {/* Aba 2: Fluxo de Caixa (Capital em Operação - Bookmakers) */}
+          <TabsContent value="fluxo" className="mt-4 space-y-4">
+            {/* KPIs - apenas Depósitos e Saques */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
                 <div className="flex items-center gap-2 text-blue-500 mb-1">
                   <TrendingUp className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase">Depósitos</span>
-                  <KpiHelp text="Total depositado em bookmakers no período selecionado" />
+                  <KpiHelp text="Capital enviado às bookmakers no período selecionado" />
                 </div>
-                <span className="text-lg font-bold text-blue-400 font-mono">
+                <span className="text-xl font-bold text-blue-400 font-mono">
                   {formatCurrency(dadosCapitalOperacao.totalDepositos)}
                 </span>
               </div>
-              <div className="bg-purple-500/10 rounded-lg p-3 border border-purple-500/20">
+              <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/20">
                 <div className="flex items-center gap-2 text-purple-500 mb-1">
                   <TrendingDown className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase">Saques</span>
-                  <KpiHelp text="Total sacado das bookmakers para o caixa no período" />
+                  <KpiHelp text="Capital retornado das bookmakers para o caixa no período" />
                 </div>
-                <span className="text-lg font-bold text-purple-400 font-mono">
+                <span className="text-xl font-bold text-purple-400 font-mono">
                   {formatCurrency(dadosCapitalOperacao.totalSaques)}
                 </span>
               </div>
-              {/* Resultado = Saques - Depósitos */}
-              {(() => {
-                const resultadoBruto = dadosCapitalOperacao.totalSaques - dadosCapitalOperacao.totalDepositos;
-                const isPositivo = resultadoBruto > 0;
-                const isNegativo = resultadoBruto < 0;
-                return (
-                  <div className={`rounded-lg p-3 border ${
-                    isPositivo 
-                      ? "bg-emerald-500/10 border-emerald-500/20" 
-                      : isNegativo 
-                        ? "bg-destructive/10 border-destructive/20"
-                        : "bg-muted/30 border-border/50"
-                  }`}>
-                    <div className={`flex items-center gap-2 mb-1 ${
-                      isPositivo ? "text-emerald-500" : isNegativo ? "text-destructive" : "text-muted-foreground"
-                    }`}>
-                      <DollarSign className="h-4 w-4" />
-                      <span className="text-xs font-medium uppercase">Resultado</span>
-                      <KpiHelp text="Lucro ou prejuízo no período: Saques - Depósitos" />
-                    </div>
-                    <span className={`text-lg font-bold font-mono ${
-                      isPositivo ? "text-emerald-400" : isNegativo ? "text-destructive" : "text-foreground"
-                    }`}>
-                      {isPositivo ? "+" : ""}{formatCurrency(resultadoBruto)}
-                    </span>
-                    {resultadoBruto !== 0 && (
-                      <span className={`text-xs ml-1 ${isPositivo ? "text-emerald-500" : "text-destructive"}`}>
-                        ({isPositivo ? "Lucro" : "Prejuízo"})
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
-              {/* ROI = (Saques - Depósitos) / Depósitos * 100 */}
-              {(() => {
-                const resultadoBruto = dadosCapitalOperacao.totalSaques - dadosCapitalOperacao.totalDepositos;
-                const roi = dadosCapitalOperacao.totalDepositos > 0 
-                  ? (resultadoBruto / dadosCapitalOperacao.totalDepositos) * 100 
-                  : null;
-                const isPositivo = roi !== null && roi > 0;
-                const isNegativo = roi !== null && roi < 0;
-                return (
-                  <div className={`rounded-lg p-3 border ${
-                    isPositivo 
-                      ? "bg-emerald-500/10 border-emerald-500/20" 
-                      : isNegativo 
-                        ? "bg-destructive/10 border-destructive/20"
-                        : "bg-muted/30 border-border/50"
-                  }`}>
-                    <div className={`flex items-center gap-2 mb-1 ${
-                      isPositivo ? "text-emerald-500" : isNegativo ? "text-destructive" : "text-muted-foreground"
-                    }`}>
-                      <Wallet className="h-4 w-4" />
-                      <span className="text-xs font-medium uppercase">ROI</span>
-                      <KpiHelp text="Retorno sobre o capital movimentado em bookmakers no período. Mais relevante em análises semanais, mensais ou de longo prazo." />
-                    </div>
-                    <span className={`text-lg font-bold font-mono ${
-                      isPositivo ? "text-emerald-400" : isNegativo ? "text-destructive" : "text-foreground"
-                    }`}>
-                      {roi !== null ? (
-                        <>
-                          {isPositivo ? "+" : ""}{roi.toFixed(2)}%
-                        </>
-                      ) : (
-                        "—"
-                      )}
-                    </span>
-                  </div>
-                );
-              })()}
             </div>
 
             {/* Gráfico */}
@@ -567,97 +524,159 @@ export function FluxoFinanceiroOperacional({
             )}
 
             <p className="text-xs text-muted-foreground text-center">
-              Depósitos = capital enviado para bookmakers · Saques = capital retornado ao caixa · Resultado = lucro/prejuízo · ROI = retorno proporcional
+              Mostra somente o fluxo financeiro efetivo da operação. Não representa performance ou lucro — apenas movimentações reais.
             </p>
           </TabsContent>
 
-          {/* Aba 3: Resultado Operacional */}
-          <TabsContent value="resultado" className="mt-4 space-y-4">
+          {/* Aba 3: Performance Operacional (Resultado do Período) */}
+          <TabsContent value="performance" className="mt-4 space-y-4">
+            {/* KPIs - Saldo Inicial, Saldo Final, Depósitos, Saques */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
-                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                  Total Depositado
-                  <KpiHelp text="Soma de todos os depósitos feitos em bookmakers" />
+              <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <Wallet className="h-4 w-4" />
+                  <span className="text-xs font-medium uppercase">Saldo Inicial</span>
+                  <KpiHelp text="Capital nas bookmakers no início do período (calculado)" />
                 </div>
-                <span className="text-xl font-bold text-blue-400 font-mono">
-                  {formatCurrency(resultadoOperacional.totalDepositos)}
+                <span className="text-lg font-bold font-mono">
+                  {formatCurrency(performanceOperacional.saldoInicial)}
                 </span>
               </div>
-              <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/20">
-                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                  Total Sacado
-                  <KpiHelp text="Soma de todos os saques realizados dos bookmakers" />
+              <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <Wallet className="h-4 w-4" />
+                  <span className="text-xs font-medium uppercase">Saldo Final</span>
+                  <KpiHelp text="Capital nas bookmakers no final do período (atual)" />
                 </div>
-                <span className="text-xl font-bold text-purple-400 font-mono">
-                  {formatCurrency(resultadoOperacional.totalSaques)}
+                <span className="text-lg font-bold font-mono">
+                  {formatCurrency(performanceOperacional.saldoFinal)}
                 </span>
               </div>
-              <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
-                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                  Saldo em Bookmakers
-                  <KpiHelp text="Capital atualmente disponível dentro dos bookmakers" />
+              <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
+                <div className="flex items-center gap-2 text-blue-500 mb-1">
+                  <TrendingUp className="h-4 w-4" />
+                  <span className="text-xs font-medium uppercase">Depósitos</span>
+                  <KpiHelp text="Capital enviado às bookmakers no período" />
                 </div>
-                <span className="text-xl font-bold font-mono">
-                  {formatCurrency(resultadoOperacional.saldoBookmakers)}
+                <span className="text-lg font-bold text-blue-400 font-mono">
+                  {formatCurrency(performanceOperacional.totalDepositos)}
                 </span>
               </div>
-              <div className={`rounded-lg p-4 border ${
-                resultadoOperacional.resultado >= 0 
-                  ? "bg-emerald-500/10 border-emerald-500/20" 
-                  : "bg-destructive/10 border-destructive/20"
-              }`}>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                  Resultado Estimado
-                  <KpiHelp text="Lucro/prejuízo = Saldo Bookmakers + Saques - Depósitos" />
+              <div className="bg-purple-500/10 rounded-lg p-3 border border-purple-500/20">
+                <div className="flex items-center gap-2 text-purple-500 mb-1">
+                  <TrendingDown className="h-4 w-4" />
+                  <span className="text-xs font-medium uppercase">Saques</span>
+                  <KpiHelp text="Capital retornado das bookmakers no período" />
                 </div>
-                <span className={`text-xl font-bold font-mono ${
-                  resultadoOperacional.resultado >= 0 ? "text-emerald-400" : "text-destructive"
-                }`}>
-                  {resultadoOperacional.resultado >= 0 ? "+" : ""}{formatCurrency(resultadoOperacional.resultado)}
+                <span className="text-lg font-bold text-purple-400 font-mono">
+                  {formatCurrency(performanceOperacional.totalSaques)}
                 </span>
               </div>
             </div>
 
-            {/* Explicação visual */}
+            {/* KPIs de Lucro e ROI */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Lucro do Período */}
+              {(() => {
+                const isPositivo = performanceOperacional.lucro > 0;
+                const isNegativo = performanceOperacional.lucro < 0;
+                return (
+                  <div className={`rounded-lg p-4 border ${
+                    isPositivo 
+                      ? "bg-emerald-500/10 border-emerald-500/20" 
+                      : isNegativo 
+                        ? "bg-destructive/10 border-destructive/20"
+                        : "bg-muted/30 border-border/50"
+                  }`}>
+                    <div className={`flex items-center gap-2 mb-1 ${
+                      isPositivo ? "text-emerald-500" : isNegativo ? "text-destructive" : "text-muted-foreground"
+                    }`}>
+                      <DollarSign className="h-4 w-4" />
+                      <span className="text-xs font-medium uppercase">Lucro do Período</span>
+                      <KpiHelp text="Lucro = (Saldo Final + Saques) - (Saldo Inicial + Depósitos). Considera variação de saldo nas bookmakers." />
+                    </div>
+                    <span className={`text-xl font-bold font-mono ${
+                      isPositivo ? "text-emerald-400" : isNegativo ? "text-destructive" : "text-foreground"
+                    }`}>
+                      {isPositivo ? "+" : ""}{formatCurrency(performanceOperacional.lucro)}
+                    </span>
+                    {performanceOperacional.lucro !== 0 && (
+                      <span className={`text-xs ml-2 ${isPositivo ? "text-emerald-500" : "text-destructive"}`}>
+                        ({isPositivo ? "Lucro" : "Prejuízo"})
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* ROI */}
+              {(() => {
+                const roi = performanceOperacional.roi;
+                const isPositivo = roi !== null && roi > 0;
+                const isNegativo = roi !== null && roi < 0;
+                return (
+                  <div className={`rounded-lg p-4 border ${
+                    isPositivo 
+                      ? "bg-emerald-500/10 border-emerald-500/20" 
+                      : isNegativo 
+                        ? "bg-destructive/10 border-destructive/20"
+                        : "bg-muted/30 border-border/50"
+                  }`}>
+                    <div className={`flex items-center gap-2 mb-1 ${
+                      isPositivo ? "text-emerald-500" : isNegativo ? "text-destructive" : "text-muted-foreground"
+                    }`}>
+                      <BarChart3 className="h-4 w-4" />
+                      <span className="text-xs font-medium uppercase">ROI do Período</span>
+                      <KpiHelp text="ROI = Lucro ÷ Capital Médio. Mais relevante em análises semanais, mensais ou de longo prazo." />
+                    </div>
+                    <span className={`text-xl font-bold font-mono ${
+                      isPositivo ? "text-emerald-400" : isNegativo ? "text-destructive" : "text-foreground"
+                    }`}>
+                      {roi !== null ? (
+                        <>
+                          {isPositivo ? "+" : ""}{roi.toFixed(2)}%
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Fórmula explicativa */}
             <div className="bg-muted/20 rounded-lg p-4 border border-border/50">
               <h4 className="font-medium mb-3 text-sm">Como é calculado o resultado:</h4>
               <div className="flex items-center justify-center gap-2 text-sm flex-wrap">
-                <Badge variant="outline" className="text-blue-400 border-blue-500/30 bg-blue-500/10">
-                  Saldo Bookmakers
+                <Badge variant="outline" className="text-foreground border-border/50 bg-muted/30">
+                  Saldo Final
                 </Badge>
                 <span className="text-muted-foreground">+</span>
                 <Badge variant="outline" className="text-purple-400 border-purple-500/30 bg-purple-500/10">
-                  Total Sacado
+                  Saques
+                </Badge>
+                <span className="text-muted-foreground">-</span>
+                <Badge variant="outline" className="text-foreground border-border/50 bg-muted/30">
+                  Saldo Inicial
                 </Badge>
                 <span className="text-muted-foreground">-</span>
                 <Badge variant="outline" className="text-blue-400 border-blue-500/30 bg-blue-500/10">
-                  Total Depositado
+                  Depósitos
                 </Badge>
                 <span className="text-muted-foreground">=</span>
                 <Badge variant="outline" className={`${
-                  resultadoOperacional.resultado >= 0 
+                  performanceOperacional.lucro >= 0 
                     ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" 
                     : "text-destructive border-destructive/30 bg-destructive/10"
                 }`}>
-                  Resultado
+                  Lucro
                 </Badge>
               </div>
-              
-              {resultadoOperacional.totalDepositos > 0 && (
-                <div className="mt-4 text-center">
-                  <span className="text-sm text-muted-foreground">Retorno sobre capital investido: </span>
-                  <span className={`font-mono font-bold ${
-                    resultadoOperacional.percentualRetorno >= 0 ? "text-emerald-400" : "text-destructive"
-                  }`}>
-                    {resultadoOperacional.percentualRetorno >= 0 ? "+" : ""}
-                    {resultadoOperacional.percentualRetorno.toFixed(2)}%
-                  </span>
-                </div>
-              )}
             </div>
 
             <p className="text-xs text-muted-foreground text-center">
-              O resultado considera o capital atual em bookmakers mais os saques realizados, subtraindo os depósitos feitos
+              Mostra o retorno real da operação no período, considerando a variação de saldo dentro das bookmakers. Representa o lucro/performance dos projetos, mesmo quando o capital permanece alocado.
             </p>
           </TabsContent>
         </Tabs>
