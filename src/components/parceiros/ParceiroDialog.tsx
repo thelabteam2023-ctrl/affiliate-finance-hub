@@ -1194,8 +1194,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   <Label htmlFor="email">Email *</Label>
                   <div className="flex gap-2">
                     <Input
-                      id="email"
-                      type="email"
+                      id="parceiro-email-field"
+                      name="parceiro-email-field"
+                      type="text"
+                      inputMode="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
