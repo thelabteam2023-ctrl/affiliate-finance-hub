@@ -198,18 +198,6 @@ export default function GestaoParceiros() {
 
       if (bookmakersError) throw bookmakersError;
 
-      // Fetch project profit from v_parceiro_lucro_total view
-      const { data: lucroProjetosData } = await supabase
-        .from("v_parceiro_lucro_total")
-        .select("*")
-        .eq("user_id", user.id);
-
-      // Create lookup map for project profit
-      const lucroProjetosMap = new Map<string, number>();
-      lucroProjetosData?.forEach((item: any) => {
-        lucroProjetosMap.set(item.parceiro_id, Number(item.lucro_projetos) || 0);
-      });
-
       // Calculate ROI per partner
       const roiMap = new Map<string, ParceiroROI>();
       
@@ -243,13 +231,15 @@ export default function GestaoParceiros() {
         parceiroBookmakers.set(bm.parceiro_id, current);
       });
 
-      // Combine all data - NOW INCLUDES PROJECT PROFIT
+      // Combine all data
+      // Fórmula: Lucro = Sacado + Saldo_Bookmakers - Depositado
+      // O lucro das apostas já está refletido no saldo dos bookmakers ou nos saques realizados
       parceiroFinancials.forEach((financials, parceiroId) => {
         const bookmakerInfo = parceiroBookmakers.get(parceiroId) || { count: 0, countLimitadas: 0, saldo: 0 };
-        const lucroProjetos = lucroProjetosMap.get(parceiroId) || 0;
         
-        // NOVO CÁLCULO: inclui lucro dos projetos
-        const lucro = financials.sacado - financials.depositado + lucroProjetos;
+        // Lucro = (Sacado + Saldo em Bookmakers) - Depositado
+        // Não somamos lucro_projetos separadamente pois já está refletido nos saques/saldos
+        const lucro = financials.sacado + bookmakerInfo.saldo - financials.depositado;
         const roi = financials.depositado > 0 ? (lucro / financials.depositado) * 100 : 0;
         
         roiMap.set(parceiroId, {
@@ -267,32 +257,16 @@ export default function GestaoParceiros() {
       // Add partners with bookmakers but no transactions
       parceiroBookmakers.forEach((bookmakerInfo, parceiroId) => {
         if (!roiMap.has(parceiroId)) {
-          const lucroProjetos = lucroProjetosMap.get(parceiroId) || 0;
+          // Lucro = saldo em bookmakers (sem depósitos, já é lucro puro)
           roiMap.set(parceiroId, {
             parceiro_id: parceiroId,
             total_depositado: 0,
             total_sacado: 0,
-            lucro_prejuizo: lucroProjetos,
+            lucro_prejuizo: bookmakerInfo.saldo,
             roi_percentual: 0,
             num_bookmakers: bookmakerInfo.count,
             num_bookmakers_limitadas: bookmakerInfo.countLimitadas,
             saldo_bookmakers: bookmakerInfo.saldo,
-          });
-        }
-      });
-
-      // Add partners with only project profit
-      lucroProjetosMap.forEach((lucroProjetos, parceiroId) => {
-        if (!roiMap.has(parceiroId) && lucroProjetos !== 0) {
-          roiMap.set(parceiroId, {
-            parceiro_id: parceiroId,
-            total_depositado: 0,
-            total_sacado: 0,
-            lucro_prejuizo: lucroProjetos,
-            roi_percentual: 0,
-            num_bookmakers: 0,
-            num_bookmakers_limitadas: 0,
-            saldo_bookmakers: 0,
           });
         }
       });
