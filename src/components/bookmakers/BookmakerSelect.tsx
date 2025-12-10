@@ -243,9 +243,9 @@ export default function BookmakerSelect({
                 role="combobox"
                 aria-expanded={open}
                 disabled={disabled || loading}
-                className="w-full h-12 justify-between"
+                className="w-full h-12 justify-center"
               >
-                <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                <div className="flex items-center justify-center gap-2 w-full">
                   {displayData?.logo_url && (
                     <img
                       src={displayData.logo_url}
@@ -254,11 +254,11 @@ export default function BookmakerSelect({
                       onError={(e) => { e.currentTarget.style.display = "none"; }}
                     />
                   )}
-                  <span className="uppercase truncate">
+                  <span className="uppercase truncate text-center">
                     {displayData?.nome || (loading ? "Carregando..." : "Selecione...")}
                   </span>
+                  <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
                 </div>
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
           </TooltipTrigger>
