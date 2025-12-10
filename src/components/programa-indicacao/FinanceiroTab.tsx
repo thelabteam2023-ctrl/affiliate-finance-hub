@@ -16,7 +16,14 @@ import {
   AlertCircle,
   Loader2,
   User,
+  HelpCircle,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PagamentoBonusDialog } from "./PagamentoBonusDialog";
@@ -271,55 +278,89 @@ export function FinanceiroTab() {
   return (
     <div className="space-y-6">
       {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pago</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalPago)}</div>
-            <p className="text-xs text-muted-foreground">Em despesas do programa</p>
-          </CardContent>
-        </Card>
+      <TooltipProvider>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Pago</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className="text-muted-foreground hover:text-foreground transition-colors">
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>Soma de todos os pagamentos confirmados do programa de captação: comissões a indicadores, bônus por metas e pagamentos a parceiros.</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(totalPago)}</div>
+              <p className="text-xs text-muted-foreground">Em despesas do programa</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Comissões</CardTitle>
-            <Banknote className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalComissoes)}</div>
-            <p className="text-xs text-muted-foreground">Pagas a indicadores</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Comissões</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className="text-muted-foreground hover:text-foreground transition-colors">
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>Valor total pago em comissões recorrentes aos indicadores. Cada indicação pode gerar uma comissão mensal configurada na parceria.</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(totalComissoes)}</div>
+              <p className="text-xs text-muted-foreground">Pagas a indicadores</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bônus</CardTitle>
-            <Gift className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalBonus)}</div>
-            <p className="text-xs text-muted-foreground">Por metas atingidas</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Bônus</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className="text-muted-foreground hover:text-foreground transition-colors">
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>Total de bônus pagos por metas atingidas. Cada indicador tem uma meta configurada (ex: 1 bônus a cada 2 parceiros indicados) e recebe o valor quando atinge cada ciclo.</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(totalBonus)}</div>
+              <p className="text-xs text-muted-foreground">Por metas atingidas</p>
+            </CardContent>
+          </Card>
 
-        <Card className={totalPendencias > 0 ? "border-warning/50" : ""}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pendências</CardTitle>
-            {totalPendencias > 0 ? (
-              <AlertCircle className="h-4 w-4 text-warning" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4 text-success" />
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalPendencias}</div>
-            <p className="text-xs text-muted-foreground">Pagamentos a realizar</p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className={totalPendencias > 0 ? "border-warning/50" : ""}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pendências</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className="text-muted-foreground hover:text-foreground transition-colors">
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>Quantidade de pagamentos aguardando: inclui bônus por metas atingidas, comissões de indicação e pagamentos a parceiros (CPF) ainda não realizados.</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalPendencias}</div>
+              <p className="text-xs text-muted-foreground">Pagamentos a realizar</p>
+            </CardContent>
+          </Card>
+        </div>
+      </TooltipProvider>
 
       {/* Pendências */}
       {(bonusPendentes.length > 0 || comissoesPendentes.length > 0 || parceirosPendentes.length > 0) && (
