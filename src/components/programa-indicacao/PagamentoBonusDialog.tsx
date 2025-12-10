@@ -23,6 +23,8 @@ interface PagamentoBonusDialogProps {
     id: string;
     nome: string;
     valorBonus: number;
+    ciclosPendentes?: number;
+    totalBonusPendente?: number;
   } | null;
   parceriaId?: string;
   onSuccess: () => void;
@@ -38,12 +40,16 @@ export function PagamentoBonusDialog({
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [dataPagamento, setDataPagamento] = useState<string>(format(new Date(), "yyyy-MM-dd"));
-  const [valor, setValor] = useState<number>(indicador?.valorBonus || 0);
+  const [qtdBonusPagar, setQtdBonusPagar] = useState<number>(1);
   const [descricao, setDescricao] = useState("");
+
+  const ciclosPendentes = indicador?.ciclosPendentes || 1;
+  const valorUnitario = indicador?.valorBonus || 0;
+  const valorTotal = valorUnitario * qtdBonusPagar;
 
   useEffect(() => {
     if (indicador) {
-      setValor(indicador.valorBonus);
+      setQtdBonusPagar(indicador.ciclosPendentes || 1);
     }
   }, [indicador]);
 
@@ -86,24 +92,33 @@ export function PagamentoBonusDialog({
         }
       }
 
-      // Create bonus payment record
-      const { error } = await supabase.from("movimentacoes_indicacao").insert({
-        user_id: user.id,
-        indicador_id: indicador.id,
-        parceria_id: finalParceriaId,
-        tipo: "BONUS_INDICADOR",
-        valor: valor,
-        moeda: "BRL",
-        data_movimentacao: dataPagamento,
-        descricao: descricao || `Pagamento de bônus para ${indicador.nome}`,
-        status: "CONFIRMADO",
-      });
+      // Create one bonus payment record per bonus being paid
+      const insertPromises = [];
+      for (let i = 0; i < qtdBonusPagar; i++) {
+        insertPromises.push(
+          supabase.from("movimentacoes_indicacao").insert({
+            user_id: user.id,
+            indicador_id: indicador.id,
+            parceria_id: finalParceriaId,
+            tipo: "BONUS_INDICADOR",
+            valor: valorUnitario,
+            moeda: "BRL",
+            data_movimentacao: dataPagamento,
+            descricao: descricao || `Pagamento de bônus para ${indicador.nome}${qtdBonusPagar > 1 ? ` (${i + 1}/${qtdBonusPagar})` : ''}`,
+            status: "CONFIRMADO",
+          })
+        );
+      }
 
-      if (error) throw error;
+      const results = await Promise.all(insertPromises);
+      const errors = results.filter(r => r.error);
+      if (errors.length > 0) throw errors[0].error;
 
       toast({
         title: "Bônus registrado",
-        description: `Pagamento de R$ ${valor.toFixed(2)} registrado para ${indicador.nome}`,
+        description: qtdBonusPagar > 1 
+          ? `${qtdBonusPagar} bônus de ${formatCurrency(valorUnitario)} (Total: ${formatCurrency(valorTotal)}) registrados para ${indicador.nome}`
+          : `Pagamento de ${formatCurrency(valorTotal)} registrado para ${indicador.nome}`,
       });
 
       onSuccess();
@@ -122,7 +137,7 @@ export function PagamentoBonusDialog({
 
   const resetForm = () => {
     setDataPagamento(format(new Date(), "yyyy-MM-dd"));
-    setValor(indicador?.valorBonus || 0);
+    setQtdBonusPagar(indicador?.ciclosPendentes || 1);
     setDescricao("");
   };
 
@@ -151,19 +166,43 @@ export function PagamentoBonusDialog({
             </div>
 
             <div className="grid gap-4">
+              {ciclosPendentes > 1 && (
+                <div className="space-y-2">
+                  <Label>Quantidade de Bônus a Pagar</Label>
+                  <Input
+                    type="number"
+                    value={qtdBonusPagar}
+                    onChange={(e) => setQtdBonusPagar(Math.min(Math.max(1, parseInt(e.target.value) || 1), ciclosPendentes))}
+                    min={1}
+                    max={ciclosPendentes}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Ciclos disponíveis: {ciclosPendentes} (máximo que pode ser pago)
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2">
-                <Label>Valor do Bônus</Label>
+                <Label>Valor Unitário do Bônus</Label>
                 <Input
                   type="number"
-                  value={valor}
-                  onChange={(e) => setValor(parseFloat(e.target.value) || 0)}
-                  min={0}
-                  step={0.01}
+                  value={valorUnitario}
+                  disabled
+                  className="bg-muted"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Valor acordado: {formatCurrency(indicador.valorBonus)}
+                  Valor acordado por ciclo de meta
                 </p>
               </div>
+
+              {ciclosPendentes > 1 && (
+                <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                  <p className="text-sm text-muted-foreground">Total a Pagar</p>
+                  <p className="text-xl font-bold text-primary">
+                    {qtdBonusPagar}x {formatCurrency(valorUnitario)} = {formatCurrency(valorTotal)}
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Data do Pagamento</Label>

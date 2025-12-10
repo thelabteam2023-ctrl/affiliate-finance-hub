@@ -41,6 +41,8 @@ interface BonusPendente {
   valorBonus: number;
   qtdParceiros: number;
   meta: number;
+  ciclosPendentes: number;
+  totalBonusPendente: number;
 }
 
 interface ComissaoPendente {
@@ -135,27 +137,37 @@ export function FinanceiroTab() {
           }
         });
 
-        // Check which have met their goals and haven't been paid
-        const bonusPagos = (movResult.data || [])
-          .filter((m) => m.tipo === "BONUS_INDICADOR")
-          .map((m) => m.indicador_id);
+        // Check which have met their goals and count paid bonuses per indicator
+        const bonusPagosPorIndicador: Record<string, number> = {};
+        (movResult.data || [])
+          .filter((m) => m.tipo === "BONUS_INDICADOR" && m.status === "CONFIRMADO")
+          .forEach((m) => {
+            if (m.indicador_id) {
+              bonusPagosPorIndicador[m.indicador_id] = (bonusPagosPorIndicador[m.indicador_id] || 0) + 1;
+            }
+          });
 
         const pendentes: BonusPendente[] = [];
         acordosResult.data.forEach((acordo: any) => {
           const stats = indicadorStats[acordo.indicador_id];
-          if (
-            stats &&
-            acordo.meta_parceiros &&
-            stats.qtd >= acordo.meta_parceiros &&
-            !bonusPagos.includes(acordo.indicador_id)
-          ) {
-            pendentes.push({
-              indicadorId: acordo.indicador_id,
-              indicadorNome: stats.nome,
-              valorBonus: acordo.valor_bonus || 0,
-              qtdParceiros: stats.qtd,
-              meta: acordo.meta_parceiros,
-            });
+          if (stats && acordo.meta_parceiros && acordo.meta_parceiros > 0) {
+            // Calculate complete cycles: floor(qtdParceiros / meta)
+            const ciclosCompletos = Math.floor(stats.qtd / acordo.meta_parceiros);
+            const bonusJaPagos = bonusPagosPorIndicador[acordo.indicador_id] || 0;
+            const ciclosPendentes = ciclosCompletos - bonusJaPagos;
+            
+            if (ciclosPendentes > 0) {
+              const valorBonusUnitario = acordo.valor_bonus || 0;
+              pendentes.push({
+                indicadorId: acordo.indicador_id,
+                indicadorNome: stats.nome,
+                valorBonus: valorBonusUnitario,
+                qtdParceiros: stats.qtd,
+                meta: acordo.meta_parceiros,
+                ciclosPendentes: ciclosPendentes,
+                totalBonusPendente: valorBonusUnitario * ciclosPendentes,
+              });
+            }
           }
         });
         setBonusPendentes(pendentes);
@@ -245,7 +257,8 @@ export function FinanceiroTab() {
   const totalBonus = movimentacoes
     .filter((m) => m.tipo === "BONUS_INDICADOR" && m.status === "CONFIRMADO")
     .reduce((acc, m) => acc + m.valor, 0);
-  const totalPendencias = bonusPendentes.length + comissoesPendentes.length + parceirosPendentes.length;
+  const totalBonusCiclosPendentes = bonusPendentes.reduce((acc, b) => acc + b.ciclosPendentes, 0);
+  const totalPendencias = totalBonusCiclosPendentes + comissoesPendentes.length + parceirosPendentes.length;
 
   if (loading) {
     return (
@@ -375,14 +388,32 @@ export function FinanceiroTab() {
                       <div>
                         <p className="font-medium text-sm">{bonus.indicadorNome}</p>
                         <p className="text-xs text-muted-foreground">
-                          Meta: {bonus.qtdParceiros}/{bonus.meta} parceiros
+                          Meta: {bonus.qtdParceiros}/{bonus.meta} parceiros 
+                          {bonus.ciclosPendentes > 1 && (
+                            <span className="text-primary font-medium ml-1">
+                              ({bonus.ciclosPendentes} ciclos atingidos)
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-bold text-primary">
-                        {formatCurrency(bonus.valorBonus)}
-                      </span>
+                      <div className="text-right">
+                        {bonus.ciclosPendentes > 1 ? (
+                          <>
+                            <span className="font-bold text-primary">
+                              {bonus.ciclosPendentes}x {formatCurrency(bonus.valorBonus)}
+                            </span>
+                            <p className="text-xs text-muted-foreground">
+                              Total: {formatCurrency(bonus.totalBonusPendente)}
+                            </p>
+                          </>
+                        ) : (
+                          <span className="font-bold text-primary">
+                            {formatCurrency(bonus.valorBonus)}
+                          </span>
+                        )}
+                      </div>
                       <Button
                         size="sm"
                         onClick={() => {
@@ -506,6 +537,8 @@ export function FinanceiroTab() {
                 id: selectedBonus.indicadorId,
                 nome: selectedBonus.indicadorNome,
                 valorBonus: selectedBonus.valorBonus,
+                ciclosPendentes: selectedBonus.ciclosPendentes,
+                totalBonusPendente: selectedBonus.totalBonusPendente,
               }
             : null
         }
