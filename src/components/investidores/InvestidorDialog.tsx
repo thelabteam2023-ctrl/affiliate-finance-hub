@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, HelpCircle, Percent } from "lucide-react";
+import { Plus, Trash2, HelpCircle, Percent, ArrowRight, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -335,6 +335,55 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
     }
   };
 
+  // Validate personal data before advancing to agreement tab
+  const validateDadosPessoais = (): boolean => {
+    if (!nome.trim()) {
+      toast.error("Preencha o nome do investidor");
+      return false;
+    }
+    
+    if (!documento.trim()) {
+      toast.error(`Preencha o ${tipoDocumento}`);
+      return false;
+    }
+    
+    const cleanDoc = documento.replace(/\D/g, "");
+    if (tipoDocumento === "CPF" && cleanDoc.length !== 11) {
+      toast.error("CPF incompleto");
+      return false;
+    }
+    if (tipoDocumento === "CNPJ" && cleanDoc.length !== 14) {
+      toast.error("CNPJ incompleto");
+      return false;
+    }
+    
+    if (documentoValidation && !documentoValidation.valid) {
+      toast.error(documentoValidation.message);
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Handle advancing to next tab
+  const handleAvancar = () => {
+    if (validateDadosPessoais()) {
+      setActiveTab("acordo");
+    }
+  };
+
+  // Handle tab change with validation
+  const handleTabChange = (value: string) => {
+    if (value === "acordo" && activeTab === "dados") {
+      // Only allow going to agreement tab if personal data is valid
+      if (validateDadosPessoais()) {
+        setActiveTab(value);
+      }
+    } else {
+      setActiveTab(value);
+    }
+  };
+
   const isViewMode = mode === "view";
 
   return (
@@ -346,10 +395,12 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="dados">Dados Pessoais</TabsTrigger>
-            <TabsTrigger value="acordo">Acordo de Remuneração</TabsTrigger>
+            <TabsTrigger value="acordo" disabled={mode === "create" && activeTab === "dados" && !validateDadosPessoais()}>
+              Acordo de Remuneração
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dados" className="space-y-4 mt-4">
@@ -606,15 +657,31 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end gap-2 mt-6">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {isViewMode ? "Fechar" : "Cancelar"}
-          </Button>
-          {!isViewMode && (
-            <Button onClick={handleSubmit} disabled={loading}>
-              {loading ? "Salvando..." : mode === "create" ? "Criar Investidor" : "Salvar Alterações"}
+        <div className="flex justify-between gap-2 mt-6">
+          <div>
+            {activeTab === "acordo" && !isViewMode && (
+              <Button variant="outline" onClick={() => setActiveTab("dados")}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voltar
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              {isViewMode ? "Fechar" : "Cancelar"}
             </Button>
-          )}
+            {!isViewMode && activeTab === "dados" && mode === "create" && (
+              <Button onClick={handleAvancar}>
+                Avançar para Acordo
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            )}
+            {!isViewMode && (activeTab === "acordo" || mode === "edit") && (
+              <Button onClick={handleSubmit} disabled={loading}>
+                {loading ? "Salvando..." : mode === "create" ? "Criar Investidor" : "Salvar Alterações"}
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
