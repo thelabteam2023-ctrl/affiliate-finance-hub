@@ -1173,30 +1173,57 @@ export function CaixaTransacaoDialog({
               </AlertDescription>
             </Alert>
           )}
-          {origemParceiroId && tipoMoeda === "CRYPTO" && coin && walletsCrypto.filter((w) => {
-            if (w.parceiro_id !== origemParceiroId) return false;
-            const saldo = saldosParceirosWallets.find(
-              s => s.wallet_id === w.id && s.coin === coin
+          {origemParceiroId && tipoMoeda === "CRYPTO" && coin && (() => {
+            // Verificar se o parceiro tem wallet que suporta a moeda
+            const walletsDoParceiroComMoeda = walletsCrypto.filter(
+              (w) => w.parceiro_id === origemParceiroId && w.moeda?.includes(coin)
             );
-            return saldo && saldo.saldo_usd > 0;
-          }).length === 0 && (
-            <Alert variant="destructive" className="border-warning/50 bg-warning/10">
-              <AlertTriangle className="h-4 w-4 text-warning" />
-              <AlertDescription className="text-warning">
-                Este parceiro não possui wallets com saldo disponível em {coin}.{' '}
-                <button
-                  onClick={() => {
-                    setAlertParceiroId(origemParceiroId);
-                    setAlertTipo("CRYPTO");
-                    setShowNoWalletAlert(true);
-                  }}
-                  className="underline font-medium"
-                >
-                  Cadastrar agora
-                </button>
-              </AlertDescription>
-            </Alert>
-          )}
+            const temWalletComMoeda = walletsDoParceiroComMoeda.length > 0;
+            
+            // Verificar se alguma wallet tem saldo
+            const walletsComSaldo = walletsDoParceiroComMoeda.filter((w) => {
+              const saldo = saldosParceirosWallets.find(
+                s => s.wallet_id === w.id && s.coin === coin
+              );
+              return saldo && saldo.saldo_usd > 0;
+            });
+            const temSaldo = walletsComSaldo.length > 0;
+
+            if (temSaldo) return null;
+
+            if (!temWalletComMoeda) {
+              // Cenário 2: não existe wallet para essa moeda
+              return (
+                <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  <AlertDescription className="text-warning">
+                    Este parceiro não possui uma wallet {coin} cadastrada. Cadastre uma wallet para continuar.{' '}
+                    <button
+                      onClick={() => {
+                        setAlertParceiroId(origemParceiroId);
+                        setAlertTipo("CRYPTO");
+                        setShowNoWalletAlert(true);
+                      }}
+                      className="underline font-medium"
+                    >
+                      Cadastrar agora
+                    </button>
+                  </AlertDescription>
+                </Alert>
+              );
+            } else {
+              // Cenário 1: existe wallet, mas sem saldo
+              return (
+                <Alert className="border-blue-500/50 bg-blue-500/10">
+                  <Info className="h-4 w-4 text-blue-500" />
+                  <AlertDescription className="text-blue-500">
+                    Este parceiro possui uma wallet {coin}, porém sem saldo disponível. 
+                    Deposite ou transfira {coin} para esta carteira para realizar a transação.
+                  </AlertDescription>
+                </Alert>
+              );
+            }
+          })()}
         </>
       );
     }
@@ -1380,29 +1407,56 @@ export function CaixaTransacaoDialog({
                 </Select>
               </div>
             )}
-            {origemParceiroId && walletsCrypto.filter((w) => {
-              if (w.parceiro_id !== origemParceiroId || !w.moeda?.includes(coin)) return false;
-              const saldo = saldosParceirosWallets.find(
-                s => s.wallet_id === w.id && s.coin === coin
+            {origemParceiroId && coin && (() => {
+              // Verificar se o parceiro tem wallet que suporta a moeda
+              const walletsDoParceiroComMoeda = walletsCrypto.filter(
+                (w) => w.parceiro_id === origemParceiroId && w.moeda?.includes(coin)
               );
-              return saldo && saldo.saldo_usd > 0;
-            }).length === 0 && (
-              <Alert variant="destructive" className="border-warning/50 bg-warning/10">
-                <AlertTriangle className="h-4 w-4 text-warning" />
-                <AlertDescription className="text-warning">
-                  Este parceiro não possui wallets com saldo em {coin}.{' '}
-                  <button
-                    onClick={() => {
-                      setAlertParceiroId(origemParceiroId);
-                      setShowNoWalletAlert(true);
-                    }}
-                    className="underline font-medium"
-                  >
-                    Cadastrar agora
-                  </button>
-                </AlertDescription>
-              </Alert>
-            )}
+              const temWalletComMoeda = walletsDoParceiroComMoeda.length > 0;
+              
+              // Verificar se alguma wallet tem saldo
+              const walletsComSaldo = walletsDoParceiroComMoeda.filter((w) => {
+                const saldo = saldosParceirosWallets.find(
+                  s => s.wallet_id === w.id && s.coin === coin
+                );
+                return saldo && saldo.saldo_usd > 0;
+              });
+              const temSaldo = walletsComSaldo.length > 0;
+
+              if (temSaldo) return null;
+
+              if (!temWalletComMoeda) {
+                // Cenário 2: não existe wallet para essa moeda
+                return (
+                  <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+                    <AlertTriangle className="h-4 w-4 text-warning" />
+                    <AlertDescription className="text-warning">
+                      Este parceiro não possui uma wallet {coin} cadastrada. Cadastre uma wallet para continuar.{' '}
+                      <button
+                        onClick={() => {
+                          setAlertParceiroId(origemParceiroId);
+                          setShowNoWalletAlert(true);
+                        }}
+                        className="underline font-medium"
+                      >
+                        Cadastrar agora
+                      </button>
+                    </AlertDescription>
+                  </Alert>
+                );
+              } else {
+                // Cenário 1: existe wallet, mas sem saldo
+                return (
+                  <Alert className="border-blue-500/50 bg-blue-500/10">
+                    <Info className="h-4 w-4 text-blue-500" />
+                    <AlertDescription className="text-blue-500">
+                      Este parceiro possui uma wallet {coin}, porém sem saldo disponível. 
+                      Deposite ou transfira {coin} para esta carteira para realizar a transação.
+                    </AlertDescription>
+                  </Alert>
+                );
+              }
+            })()}
           </>
         );
       }
