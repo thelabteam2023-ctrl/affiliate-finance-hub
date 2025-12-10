@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Users, TrendingUp, UserPlus, Truck, ArrowRight, CalendarDays, Trophy, Award, Target, CheckCircle2, Gift } from "lucide-react";
+import { DollarSign, Users, TrendingUp, UserPlus, Truck, ArrowRight, CalendarDays, Trophy, Award, Target, Gift } from "lucide-react";
 import { ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
@@ -41,11 +41,17 @@ interface Acordo {
   ativo: boolean;
 }
 
+interface BonusPago {
+  indicador_id: string;
+  quantidade: number;
+}
+
 export function DashboardTab() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [custos, setCustos] = useState<CustoData[]>([]);
   const [acordos, setAcordos] = useState<Acordo[]>([]);
+  const [bonusPagos, setBonusPagos] = useState<BonusPago[]>([]);
   const [dateRange, setDateRange] = useState<DateRange>({
     from: startOfMonth(new Date()),
     to: new Date(),
@@ -60,17 +66,37 @@ export function DashboardTab() {
     try {
       setLoading(true);
       
-      // Fetch custos and acordos in parallel
-      const [custosResult, acordosResult] = await Promise.all([
+      // Fetch custos, acordos, and bonus pagos in parallel
+      const [custosResult, acordosResult, bonusResult] = await Promise.all([
         supabase.from("v_custos_aquisicao").select("*"),
-        supabase.from("indicador_acordos").select("indicador_id, meta_parceiros, valor_bonus, ativo").eq("ativo", true)
+        supabase.from("indicador_acordos").select("indicador_id, meta_parceiros, valor_bonus, ativo").eq("ativo", true),
+        // Count bonus already paid per indicador
+        supabase.from("movimentacoes_indicacao")
+          .select("indicador_id")
+          .eq("tipo", "BONUS_INDICADOR")
+          .eq("status", "CONFIRMADO")
       ]);
 
       if (custosResult.error) throw custosResult.error;
       if (acordosResult.error) throw acordosResult.error;
+      if (bonusResult.error) throw bonusResult.error;
+      
+      // Aggregate bonus count per indicador
+      const bonusCountMap = (bonusResult.data || []).reduce((acc, item) => {
+        if (item.indicador_id) {
+          acc[item.indicador_id] = (acc[item.indicador_id] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const bonusPagosList = Object.entries(bonusCountMap).map(([indicador_id, quantidade]) => ({
+        indicador_id,
+        quantidade
+      }));
       
       setCustos(custosResult.data || []);
       setAcordos(acordosResult.data || []);
+      setBonusPagos(bonusPagosList);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar dados",
@@ -135,7 +161,8 @@ export function DashboardTab() {
     fornecedores: filteredCustos.reduce((acc, c) => acc + (c.valor_fornecedor || 0), 0),
   };
 
-  // Ranking de Indicadores with meta progress
+  // Ranking de Indicadores - sorted by TOTAL indicacoes (not meta progress)
+  // Meta progress is separate and resets after bonus payment
   const indicadorRanking = Object.values(
     filteredCustos
       .filter((c) => c.indicador_id && c.indicador_nome)
@@ -143,25 +170,46 @@ export function DashboardTab() {
         const key = c.indicador_id!;
         if (!acc[key]) {
           const acordo = acordos.find(a => a.indicador_id === key);
+          const bonusPago = bonusPagos.find(b => b.indicador_id === key);
+          const ciclosPagos = bonusPago?.quantidade || 0;
+          const meta = acordo?.meta_parceiros || null;
+          
           acc[key] = {
             id: key,
             nome: c.indicador_nome!,
-            qtdParceiros: 0,
+            qtdParceiros: 0, // Total indicações (for ranking)
             valorTotal: 0,
-            meta: acordo?.meta_parceiros || null,
+            meta,
             valorBonus: acordo?.valor_bonus || null,
+            ciclosPagos, // Cycles already paid
           };
         }
         acc[key].qtdParceiros += 1;
         acc[key].valorTotal += c.valor_indicador || 0;
         return acc;
-      }, {} as Record<string, { id: string; nome: string; qtdParceiros: number; valorTotal: number; meta: number | null; valorBonus: number | null }>)
-  ).sort((a, b) => b.qtdParceiros - a.qtdParceiros).slice(0, 5);
+      }, {} as Record<string, { 
+        id: string; 
+        nome: string; 
+        qtdParceiros: number; 
+        valorTotal: number; 
+        meta: number | null; 
+        valorBonus: number | null;
+        ciclosPagos: number;
+      }>)
+  )
+  // Sort by TOTAL indicações (ranking criteria)
+  .sort((a, b) => b.qtdParceiros - a.qtdParceiros)
+  .slice(0, 5);
 
-  // Calculate bonus pendentes (meta atingida mas não pago)
-  const indicadoresComMetaAtingida = indicadorRanking.filter(
-    ind => ind.meta && ind.qtdParceiros >= ind.meta
-  );
+  // Calculate pending bonus for each indicador
+  const indicadoresComBonusPendente = indicadorRanking.filter(ind => {
+    if (!ind.meta) return false;
+    // Indicações disponíveis = total - (ciclos pagos × meta)
+    const indicacoesDisponiveis = ind.qtdParceiros - (ind.ciclosPagos * ind.meta);
+    // Ciclos pendentes = floor(indicações disponíveis / meta)
+    const ciclosPendentes = Math.floor(indicacoesDisponiveis / ind.meta);
+    return ciclosPendentes > 0;
+  });
 
   // Ranking de Fornecedores
   const fornecedorRanking = Object.values(
@@ -425,32 +473,51 @@ export function DashboardTab() {
             {indicadorRanking.length > 0 ? (
               <div className="space-y-3">
                 {indicadorRanking.map((ind, index) => {
-                  const metaAtingida = ind.meta && ind.qtdParceiros >= ind.meta;
-                  const proximoMeta = ind.meta && ind.qtdParceiros >= ind.meta * 0.8 && !metaAtingida;
-                  const progressPercent = ind.meta ? Math.min(100, (ind.qtdParceiros / ind.meta) * 100) : 0;
+                  // Calculate available indicações (after subtracting paid cycles)
+                  const indicacoesDisponiveis = ind.meta 
+                    ? ind.qtdParceiros - (ind.ciclosPagos * ind.meta) 
+                    : ind.qtdParceiros;
+                  
+                  // Calculate pending cycles (bonus not paid yet)
+                  const ciclosPendentes = ind.meta 
+                    ? Math.floor(indicacoesDisponiveis / ind.meta) 
+                    : 0;
+                  
+                  // Progress toward NEXT bonus (reset after each payment)
+                  const indicacoesNoCicloAtual = ind.meta 
+                    ? indicacoesDisponiveis % ind.meta 
+                    : 0;
+                  
+                  const progressPercent = ind.meta 
+                    ? (indicacoesNoCicloAtual / ind.meta) * 100 
+                    : 0;
+                  
+                  // Only show "META ATINGIDA" if there are pending (unpaid) cycles
+                  const temBonusPendente = ciclosPendentes > 0;
+                  const proximoMeta = ind.meta && indicacoesNoCicloAtual >= ind.meta * 0.8 && !temBonusPendente;
                   
                   return (
                     <div key={ind.id} className={`p-3 rounded-lg ${
-                      metaAtingida ? "bg-emerald-500/10 border border-emerald-500/30" :
+                      temBonusPendente ? "bg-emerald-500/10 border border-emerald-500/30" :
                       proximoMeta ? "bg-yellow-500/10 border border-yellow-500/30" :
                       "bg-muted/30"
                     }`}>
                       <div className="flex items-center gap-3">
+                        {/* Ranking position - always show position, not meta status */}
                         <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                          metaAtingida ? "bg-emerald-500/20 text-emerald-500" :
                           index === 0 ? "bg-yellow-500/20 text-yellow-500" :
                           index === 1 ? "bg-gray-400/20 text-gray-400" :
                           index === 2 ? "bg-orange-600/20 text-orange-600" :
                           "bg-muted text-muted-foreground"
                         }`}>
-                          {metaAtingida ? <CheckCircle2 className="h-4 w-4" /> : `${index + 1}º`}
+                          {index + 1}º
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="font-medium truncate">{ind.nome}</p>
-                            {metaAtingida && (
+                            {temBonusPendente && (
                               <Badge variant="default" className="bg-emerald-500 text-xs">
-                                META ATINGIDA
+                                {ciclosPendentes > 1 ? `${ciclosPendentes} BÔNUS PENDENTES` : "BÔNUS PENDENTE"}
                               </Badge>
                             )}
                             {proximoMeta && (
@@ -460,8 +527,10 @@ export function DashboardTab() {
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {ind.qtdParceiros} {ind.qtdParceiros === 1 ? "indicação" : "indicações"}
-                            {ind.meta && ` de ${ind.meta}`}
+                            {ind.qtdParceiros} {ind.qtdParceiros === 1 ? "indicação" : "indicações"} no total
+                            {ind.ciclosPagos > 0 && (
+                              <span className="text-emerald-500"> · {ind.ciclosPagos} {ind.ciclosPagos === 1 ? "bônus pago" : "bônus pagos"}</span>
+                            )}
                           </p>
                         </div>
                         <div className="text-right">
@@ -470,26 +539,31 @@ export function DashboardTab() {
                         </div>
                       </div>
                       
-                      {/* Progress bar for meta */}
+                      {/* Progress bar for meta - shows progress toward NEXT bonus */}
                       {ind.meta && (
                         <div className="mt-3 space-y-1">
                           <div className="flex justify-between text-xs">
                             <span className="text-muted-foreground flex items-center gap-1">
                               <Target className="h-3 w-3" />
-                              Progresso da meta
+                              Progresso próximo bônus
                             </span>
-                            <span className={metaAtingida ? "text-emerald-500 font-medium" : "text-muted-foreground"}>
-                              {ind.qtdParceiros}/{ind.meta} ({progressPercent.toFixed(0)}%)
+                            <span className={temBonusPendente ? "text-emerald-500 font-medium" : "text-muted-foreground"}>
+                              {indicacoesNoCicloAtual}/{ind.meta} ({progressPercent.toFixed(0)}%)
                             </span>
                           </div>
                           <Progress 
-                            value={progressPercent} 
-                            className={`h-2 ${metaAtingida ? "[&>div]:bg-emerald-500" : proximoMeta ? "[&>div]:bg-yellow-500" : ""}`}
+                            value={temBonusPendente ? 100 : progressPercent} 
+                            className={`h-2 ${temBonusPendente ? "[&>div]:bg-emerald-500" : proximoMeta ? "[&>div]:bg-yellow-500" : ""}`}
                           />
                           {ind.valorBonus && (
                             <p className="text-xs text-muted-foreground flex items-center gap-1">
                               <Gift className="h-3 w-3" />
-                              Bônus: {formatCurrency(ind.valorBonus)}
+                              Bônus por meta: {formatCurrency(ind.valorBonus)}
+                              {temBonusPendente && (
+                                <span className="text-emerald-500 ml-1">
+                                  ({formatCurrency(ind.valorBonus * ciclosPendentes)} a pagar)
+                                </span>
+                              )}
                             </p>
                           )}
                         </div>
