@@ -2,12 +2,15 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, Shuffle, Users, Building2, Wallet, FolderKanban, TrendingUp, UserPlus, Loader2, AlertTriangle, RotateCcw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Trash2, Shuffle, Users, Building2, Wallet, FolderKanban, TrendingUp, UserPlus, Loader2, AlertTriangle, RotateCcw, Banknote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export default function Testes() {
   const [loading, setLoading] = useState<string | null>(null);
+  const [valorAporte, setValorAporte] = useState<string>("5000");
 
   const handleDeleteAll = async (table: string, label: string) => {
     setLoading(table);
@@ -665,6 +668,234 @@ export default function Testes() {
     }
   };
 
+  // Função para gerar valor múltiplo de 10 dentro de um range
+  const gerarValorMultiplo10 = (min: number, max: number): number => {
+    const minMultiplo = Math.ceil(min / 10) * 10;
+    const maxMultiplo = Math.floor(max / 10) * 10;
+    if (minMultiplo > maxMultiplo) return 0;
+    const opcoes = Math.floor((maxMultiplo - minMultiplo) / 10) + 1;
+    return minMultiplo + Math.floor(Math.random() * opcoes) * 10;
+  };
+
+  const handleSimularFluxoFinanceiro = async () => {
+    setLoading("fluxo_financeiro");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+
+      const valorTotal = parseFloat(valorAporte);
+      if (isNaN(valorTotal) || valorTotal <= 0) {
+        toast.error("Valor de aporte inválido");
+        return;
+      }
+
+      // 1. Buscar investidor existente
+      const { data: investidores } = await supabase
+        .from("investidores")
+        .select("id, nome")
+        .eq("user_id", user.id)
+        .eq("status", "ativo")
+        .limit(1);
+
+      if (!investidores || investidores.length === 0) {
+        toast.error("Nenhum investidor ativo encontrado. Crie um investidor primeiro.");
+        return;
+      }
+
+      const investidor = investidores[0];
+
+      // 2. Buscar parceiros com contas bancárias e bookmakers
+      const { data: parceiros } = await supabase
+        .from("parceiros")
+        .select(`
+          id, 
+          nome,
+          contas_bancarias(id, banco, titular),
+          bookmakers(id, nome, saldo_atual, moeda)
+        `)
+        .eq("user_id", user.id)
+        .eq("status", "ativo");
+
+      if (!parceiros || parceiros.length === 0) {
+        toast.error("Nenhum parceiro ativo encontrado. Crie parceiros primeiro.");
+        return;
+      }
+
+      // Filtrar parceiros que têm conta bancária E bookmakers
+      const parceirosValidos = parceiros.filter(
+        p => p.contas_bancarias && 
+             p.contas_bancarias.length > 0 && 
+             p.bookmakers && 
+             p.bookmakers.length > 0
+      );
+
+      if (parceirosValidos.length === 0) {
+        toast.error("Nenhum parceiro com conta bancária e bookmakers vinculados encontrado.");
+        return;
+      }
+
+      // 3. ETAPA 1: Aporte financeiro do investidor para o caixa operacional
+      const { error: aporteError } = await supabase.from("cash_ledger").insert({
+        user_id: user.id,
+        tipo_transacao: "APORTE_FINANCEIRO",
+        tipo_moeda: "FIAT",
+        moeda: "BRL",
+        valor: valorTotal,
+        investidor_id: investidor.id,
+        nome_investidor: investidor.nome,
+        origem_tipo: "INVESTIDOR",
+        destino_tipo: "CAIXA_OPERACIONAL",
+        status: "CONFIRMADO",
+        descricao: `Aporte automático de teste - ${investidor.nome}`,
+      });
+
+      if (aporteError) throw aporteError;
+      console.log(`✅ Aporte de R$ ${valorTotal} criado do investidor ${investidor.nome}`);
+
+      // 4. ETAPA 2: Distribuir entre as contas bancárias dos parceiros
+      // Calcular quanto cada parceiro vai receber (distribuição aleatória)
+      let saldoCaixaOperacional = valorTotal;
+      const distribuicaoParceiros: Array<{
+        parceiroId: string;
+        parceiroNome: string;
+        contaId: string;
+        valorTransferido: number;
+      }> = [];
+
+      // Embaralhar parceiros
+      const parceirosEmbaralhados = [...parceirosValidos].sort(() => Math.random() - 0.5);
+      
+      // Distribuir saldo entre parceiros (não precisa ser todos nem todo o valor)
+      const qtdParceirosParaUsar = Math.min(
+        Math.ceil(Math.random() * parceirosEmbaralhados.length),
+        parceirosEmbaralhados.length
+      );
+
+      for (let i = 0; i < qtdParceirosParaUsar && saldoCaixaOperacional > 100; i++) {
+        const parceiro = parceirosEmbaralhados[i];
+        const conta = parceiro.contas_bancarias[0];
+        
+        // Definir quanto transferir (entre 30% e 80% do restante, ou tudo se for o último)
+        const percentual = i === qtdParceirosParaUsar - 1 
+          ? 1 
+          : 0.3 + Math.random() * 0.5;
+        
+        const valorMaximo = Math.floor(saldoCaixaOperacional * percentual);
+        const valorTransferir = gerarValorMultiplo10(100, valorMaximo);
+        
+        if (valorTransferir <= 0) continue;
+
+        // Criar transferência do caixa operacional para conta do parceiro
+        const { error: transferenciaError } = await supabase.from("cash_ledger").insert({
+          user_id: user.id,
+          tipo_transacao: "TRANSFERENCIA",
+          tipo_moeda: "FIAT",
+          moeda: "BRL",
+          valor: valorTransferir,
+          origem_tipo: "CAIXA_OPERACIONAL",
+          destino_tipo: "CONTA_PARCEIRO",
+          destino_parceiro_id: parceiro.id,
+          destino_conta_bancaria_id: conta.id,
+          status: "CONFIRMADO",
+          descricao: `Transferência para ${parceiro.nome} - ${conta.banco}`,
+        });
+
+        if (transferenciaError) {
+          console.error("Erro na transferência:", transferenciaError);
+          continue;
+        }
+
+        saldoCaixaOperacional -= valorTransferir;
+        distribuicaoParceiros.push({
+          parceiroId: parceiro.id,
+          parceiroNome: parceiro.nome,
+          contaId: conta.id,
+          valorTransferido: valorTransferir,
+        });
+
+        console.log(`✅ Transferência de R$ ${valorTransferir} para ${parceiro.nome}`);
+      }
+
+      if (distribuicaoParceiros.length === 0) {
+        toast.warning("Nenhuma transferência foi realizada (saldo insuficiente)");
+        return;
+      }
+
+      // 5. ETAPA 3: Depositar das contas bancárias para as bookmakers
+      let totalDepositadoBookmakers = 0;
+      let qtdDepositos = 0;
+
+      for (const distrib of distribuicaoParceiros) {
+        // Buscar bookmakers deste parceiro
+        const parceiro = parceirosValidos.find(p => p.id === distrib.parceiroId);
+        if (!parceiro) continue;
+
+        let saldoContaParceiro = distrib.valorTransferido;
+        const bookmakersEmbaralhados = [...parceiro.bookmakers].sort(() => Math.random() - 0.5);
+        
+        // Depositar em algumas bookmakers (não necessariamente todas)
+        const qtdBookmakers = Math.ceil(Math.random() * bookmakersEmbaralhados.length);
+
+        for (let i = 0; i < qtdBookmakers && saldoContaParceiro >= 100; i++) {
+          const bookmaker = bookmakersEmbaralhados[i];
+          
+          // Definir valor do depósito (múltiplo de 10)
+          const percentual = i === qtdBookmakers - 1 
+            ? 0.5 + Math.random() * 0.5 // Último: entre 50% e 100%
+            : 0.2 + Math.random() * 0.6; // Outros: entre 20% e 80%
+          
+          const valorMaximo = Math.floor(saldoContaParceiro * percentual);
+          const valorDeposito = gerarValorMultiplo10(100, valorMaximo);
+          
+          if (valorDeposito <= 0 || valorDeposito > saldoContaParceiro) continue;
+
+          // Criar depósito da conta bancária para bookmaker
+          const { error: depositoError } = await supabase.from("cash_ledger").insert({
+            user_id: user.id,
+            tipo_transacao: "DEPOSITO",
+            tipo_moeda: "FIAT",
+            moeda: "BRL",
+            valor: valorDeposito,
+            origem_tipo: "CONTA_PARCEIRO",
+            origem_parceiro_id: distrib.parceiroId,
+            origem_conta_bancaria_id: distrib.contaId,
+            destino_tipo: "BOOKMAKER",
+            destino_bookmaker_id: bookmaker.id,
+            status: "CONFIRMADO",
+            descricao: `Depósito em ${bookmaker.nome} via ${distrib.parceiroNome}`,
+          });
+
+          if (depositoError) {
+            console.error("Erro no depósito:", depositoError);
+            continue;
+          }
+
+          saldoContaParceiro -= valorDeposito;
+          totalDepositadoBookmakers += valorDeposito;
+          qtdDepositos++;
+
+          console.log(`✅ Depósito de R$ ${valorDeposito} em ${bookmaker.nome}`);
+        }
+      }
+
+      toast.success(
+        `Fluxo simulado com sucesso!\n` +
+        `• Aporte: R$ ${valorTotal.toLocaleString('pt-BR')}\n` +
+        `• ${distribuicaoParceiros.length} parceiros receberam transferências\n` +
+        `• ${qtdDepositos} depósitos em bookmakers (R$ ${totalDepositadoBookmakers.toLocaleString('pt-BR')})`
+      );
+
+    } catch (error: any) {
+      console.error("Erro ao simular fluxo financeiro:", error);
+      toast.error(`Erro ao simular fluxo: ${error.message}`);
+    } finally {
+      setLoading(null);
+    }
+  };
+
   const deleteActions = [
     { key: "parceiros", label: "Parceiros", icon: Users, action: handleDeleteParceiros, description: "Apaga todos os parceiros, contas bancárias e wallets" },
     { key: "bookmakers", label: "Bookmakers (Vínculos)", icon: Building2, action: handleDeleteBookmakers, description: "Apaga todos os vínculos parceiro-bookmaker" },
@@ -822,6 +1053,42 @@ export default function Testes() {
                 <RotateCcw className="h-4 w-4 mr-2" />
               )}
               Resetar Saldos
+            </Button>
+          </div>
+
+          {/* Simular Fluxo Financeiro Completo */}
+          <div className="flex items-center justify-between p-4 border border-primary/30 rounded-lg bg-primary/5">
+            <div className="flex-1">
+              <p className="font-medium">Simular Fluxo Financeiro Completo</p>
+              <p className="text-sm text-muted-foreground">
+                Aporte do investidor → Caixa → Contas de Parceiros → Bookmakers (múltiplos de 10)
+              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <Label htmlFor="valorAporte" className="text-xs text-muted-foreground">
+                  Valor do Aporte (R$):
+                </Label>
+                <Input
+                  id="valorAporte"
+                  type="number"
+                  value={valorAporte}
+                  onChange={(e) => setValorAporte(e.target.value)}
+                  className="w-32 h-8 text-sm"
+                  min="100"
+                  step="100"
+                />
+              </div>
+            </div>
+            <Button 
+              onClick={handleSimularFluxoFinanceiro}
+              disabled={loading === "fluxo_financeiro"}
+              className="ml-4"
+            >
+              {loading === "fluxo_financeiro" ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Banknote className="h-4 w-4 mr-2" />
+              )}
+              Simular Fluxo
             </Button>
           </div>
         </CardContent>
