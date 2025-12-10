@@ -1572,64 +1572,25 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   </>
                 ) : (
                   <>
-                    {/* NOVA ESTRUTURA: ROI Máximo, ROI Mínimo, Risco Máximo */}
-                    <div className="space-y-2">
-                      {/* ROI Máximo */}
-                      <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                        <span className="text-xs text-emerald-400 font-medium">ROI Máximo</span>
-                        <span className={`text-sm font-bold ${
-                          analysis.stakeTotal <= 0 
-                            ? 'text-muted-foreground' 
-                            : 'text-emerald-500'
-                        }`}>
-                          {analysis.stakeTotal > 0 
-                            ? `${analysis.maxRoi >= 0 ? "+" : ""}${analysis.maxRoi.toFixed(2)}%`
-                            : "—"
-                          }
-                        </span>
-                      </div>
-                      
-                      {/* ROI Mínimo */}
-                      <div className={`flex items-center justify-between p-2 rounded-lg border ${
-                        analysis.minRoi >= 0 
-                          ? "bg-emerald-500/10 border-emerald-500/20" 
-                          : "bg-red-500/10 border-red-500/20"
-                      }`}>
-                        <span className={`text-xs font-medium ${
-                          analysis.minRoi >= 0 ? "text-emerald-400" : "text-red-400"
-                        }`}>ROI Mínimo</span>
-                        <span className={`text-sm font-bold ${
-                          analysis.stakeTotal <= 0 
-                            ? 'text-muted-foreground' 
-                            : analysis.minRoi >= 0 
-                              ? 'text-emerald-500' 
-                              : 'text-red-500'
-                        }`}>
-                          {analysis.stakeTotal > 0 
-                            ? `${analysis.minRoi >= 0 ? "+" : ""}${analysis.minRoi.toFixed(2)}%`
-                            : "—"
-                          }
-                        </span>
-                      </div>
-                      
-                      {/* Risco Máximo (Custo) - só mostra se há risco */}
-                      {analysis.riscoMaximo > 0 && (
-                        <div className="flex items-center justify-between p-2 rounded-lg bg-red-500/10 border border-red-500/20">
-                          <span className="text-xs text-red-400 font-medium">Risco Máximo</span>
-                          <span className="text-sm font-bold text-red-500">
-                            -{formatCurrency(analysis.riscoMaximo)}
+                    {/* ROI Compacto: Min/Max em badge única */}
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border">
+                      <span className="text-xs text-muted-foreground font-medium">ROI</span>
+                      {analysis.stakeTotal > 0 ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-xs font-bold ${
+                            analysis.minRoi >= 0 ? 'text-emerald-500' : 'text-red-500'
+                          }`}>
+                            {analysis.minRoi >= 0 ? "+" : ""}{analysis.minRoi.toFixed(1)}%
+                          </span>
+                          <span className="text-muted-foreground text-[10px]">→</span>
+                          <span className={`text-xs font-bold ${
+                            analysis.maxRoi >= 0 ? 'text-emerald-500' : 'text-red-500'
+                          }`}>
+                            {analysis.maxRoi >= 0 ? "+" : ""}{analysis.maxRoi.toFixed(1)}%
                           </span>
                         </div>
-                      )}
-                      
-                      {/* Lucro Máximo */}
-                      {analysis.maxLucro > 0 && (
-                        <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                          <span className="text-xs text-emerald-400 font-medium">Lucro Máximo</span>
-                          <span className="text-sm font-bold text-emerald-500">
-                            +{formatCurrency(analysis.maxLucro)}
-                          </span>
-                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </div>
 
