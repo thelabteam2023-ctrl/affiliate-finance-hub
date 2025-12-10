@@ -1146,7 +1146,15 @@ export function CaixaTransacaoDialog({
               </Select>
             </div>
           )}
-          {origemParceiroId && tipoMoeda === "CRYPTO" && walletsCrypto.filter((w) => {
+          {origemParceiroId && tipoMoeda === "CRYPTO" && !coin && (
+            <Alert className="border-blue-500/50 bg-blue-500/10">
+              <Info className="h-4 w-4 text-blue-500" />
+              <AlertDescription className="text-blue-500">
+                Selecione primeiro a moeda.
+              </AlertDescription>
+            </Alert>
+          )}
+          {origemParceiroId && tipoMoeda === "CRYPTO" && coin && walletsCrypto.filter((w) => {
             if (w.parceiro_id !== origemParceiroId || !w.moeda?.includes(coin)) return false;
             const saldo = saldosParceirosWallets.find(
               s => s.wallet_id === w.id && s.coin === coin
