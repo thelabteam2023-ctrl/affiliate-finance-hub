@@ -26,6 +26,7 @@ import {
   XCircle,
   Landmark,
   TrendingUp,
+  Gift,
 } from "lucide-react";
 import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliacaoDialog";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
@@ -77,6 +78,24 @@ interface PagamentoParceiroPendente {
   diasRestantes: number;
 }
 
+interface BonusPendente {
+  indicadorId: string;
+  indicadorNome: string;
+  valorBonus: number;
+  qtdParceiros: number;
+  meta: number;
+  ciclosPendentes: number;
+  totalBonusPendente: number;
+}
+
+interface ComissaoPendente {
+  parceriaId: string;
+  parceiroNome: string;
+  indicadorId: string;
+  indicadorNome: string;
+  valorComissao: number;
+}
+
 interface ParceriaAlertaEncerramento {
   id: string;
   parceiroNome: string;
@@ -118,6 +137,8 @@ export default function CentralOperacoes() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [entregasPendentes, setEntregasPendentes] = useState<EntregaPendente[]>([]);
   const [pagamentosParceiros, setPagamentosParceiros] = useState<PagamentoParceiroPendente[]>([]);
+  const [bonusPendentes, setBonusPendentes] = useState<BonusPendente[]>([]);
+  const [comissoesPendentes, setComissoesPendentes] = useState<ComissaoPendente[]>([]);
   const [parceriasEncerramento, setParceriasEncerramento] = useState<ParceriaAlertaEncerramento[]>([]);
   const [parceirosSemParceria, setParceirosSemParceria] = useState<ParceiroSemParceria[]>([]);
   const [saquesPendentes, setSaquesPendentes] = useState<SaquePendenteConfirmacao[]>([]);
@@ -155,7 +176,10 @@ export default function CentralOperacoes() {
         todosParceirosResult,
         todasParceriasResult,
         saquesPendentesResult,
-        alertasLucroResult
+        alertasLucroResult,
+        custosResult,
+        acordosResult,
+        comissoesResult
       ] = await Promise.all([
         supabase.from("v_painel_operacional").select("*"),
         supabase.from("v_entregas_pendentes").select("*").in("status_conciliacao", ["PRONTA"]),
@@ -174,9 +198,7 @@ export default function CentralOperacoes() {
           .gt("valor_parceiro", 0),
         supabase
           .from("movimentacoes_indicacao")
-          .select("parceria_id, tipo, status")
-          .eq("tipo", "PAGTO_PARCEIRO")
-          .eq("status", "CONFIRMADO"),
+          .select("parceria_id, tipo, status, indicador_id"),
         supabase
           .from("parcerias")
           .select(`
@@ -220,7 +242,25 @@ export default function CentralOperacoes() {
             parceiro:parceiros(nome)
           `)
           .eq("notificado", false)
-          .order("data_atingido", { ascending: false })
+          .order("data_atingido", { ascending: false }),
+        // For bonus calculation
+        supabase.from("v_custos_aquisicao").select("*"),
+        supabase.from("indicador_acordos").select("*").eq("ativo", true),
+        // For comissões pendentes
+        supabase
+          .from("parcerias")
+          .select(`
+            id,
+            valor_comissao_indicador,
+            comissao_paga,
+            parceiro:parceiros(nome),
+            indicacao:indicacoes(
+              indicador:indicadores_referral(id, nome)
+            )
+          `)
+          .eq("comissao_paga", false)
+          .not("valor_comissao_indicador", "is", null)
+          .gt("valor_comissao_indicador", 0)
       ]);
 
       if (alertasResult.error) throw alertasResult.error;
@@ -248,7 +288,9 @@ export default function CentralOperacoes() {
 
       // Pagamentos pendentes a parceiros - excluir os já pagos
       if (!parceirosResult.error && !movimentacoesResult.error) {
-        const parceriasPagas = (movimentacoesResult.data || []).map((m: any) => m.parceria_id);
+        const parceriasPagas = (movimentacoesResult.data || [])
+          .filter((m: any) => m.tipo === "PAGTO_PARCEIRO" && m.status === "CONFIRMADO")
+          .map((m: any) => m.parceria_id);
         
         const pagamentosMap: PagamentoParceiroPendente[] = (parceirosResult.data || [])
           .filter((p: any) => !parceriasPagas.includes(p.id))
@@ -268,6 +310,68 @@ export default function CentralOperacoes() {
             };
           });
         setPagamentosParceiros(pagamentosMap);
+      }
+
+      // Calculate bonus pendentes (with multiple cycles support)
+      if (custosResult.data && acordosResult.data && movimentacoesResult.data) {
+        const indicadorStats: Record<string, { nome: string; qtd: number }> = {};
+        
+        custosResult.data.forEach((c: any) => {
+          if (c.indicador_id && c.indicador_nome) {
+            if (!indicadorStats[c.indicador_id]) {
+              indicadorStats[c.indicador_id] = { nome: c.indicador_nome, qtd: 0 };
+            }
+            indicadorStats[c.indicador_id].qtd += 1;
+          }
+        });
+
+        // Count paid bonuses per indicator
+        const bonusPagosPorIndicador: Record<string, number> = {};
+        (movimentacoesResult.data || [])
+          .filter((m: any) => m.tipo === "BONUS_INDICADOR" && m.status === "CONFIRMADO")
+          .forEach((m: any) => {
+            if (m.indicador_id) {
+              bonusPagosPorIndicador[m.indicador_id] = (bonusPagosPorIndicador[m.indicador_id] || 0) + 1;
+            }
+          });
+
+        const pendentes: BonusPendente[] = [];
+        acordosResult.data.forEach((acordo: any) => {
+          const stats = indicadorStats[acordo.indicador_id];
+          if (stats && acordo.meta_parceiros && acordo.meta_parceiros > 0) {
+            const ciclosCompletos = Math.floor(stats.qtd / acordo.meta_parceiros);
+            const bonusJaPagos = bonusPagosPorIndicador[acordo.indicador_id] || 0;
+            const ciclosPendentes = ciclosCompletos - bonusJaPagos;
+            
+            if (ciclosPendentes > 0) {
+              const valorBonusUnitario = acordo.valor_bonus || 0;
+              pendentes.push({
+                indicadorId: acordo.indicador_id,
+                indicadorNome: stats.nome,
+                valorBonus: valorBonusUnitario,
+                qtdParceiros: stats.qtd,
+                meta: acordo.meta_parceiros,
+                ciclosPendentes: ciclosPendentes,
+                totalBonusPendente: valorBonusUnitario * ciclosPendentes,
+              });
+            }
+          }
+        });
+        setBonusPendentes(pendentes);
+      }
+
+      // Calculate comissões pendentes
+      if (comissoesResult.data) {
+        const comissoes: ComissaoPendente[] = comissoesResult.data
+          .filter((p: any) => p.indicacao?.indicador)
+          .map((p: any) => ({
+            parceriaId: p.id,
+            parceiroNome: p.parceiro?.nome || "N/A",
+            indicadorId: p.indicacao.indicador.id,
+            indicadorNome: p.indicacao.indicador.nome,
+            valorComissao: p.valor_comissao_indicador || 0,
+          }));
+        setComissoesPendentes(comissoes);
       }
 
       // Parcerias próximas do encerramento (≤ 7 dias)
@@ -516,17 +620,23 @@ export default function CentralOperacoes() {
             <Users className="h-4 w-4 text-cyan-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-cyan-400">{pagamentosParceiros.length + parceriasEncerramento.length + parceirosSemParceria.length}</div>
+            <div className="text-2xl font-bold text-cyan-400">
+              {pagamentosParceiros.length + bonusPendentes.reduce((acc, b) => acc + b.ciclosPendentes, 0) + comissoesPendentes.length + parceriasEncerramento.length + parceirosSemParceria.length}
+            </div>
             <p className="text-xs text-muted-foreground">
               {parceirosSemParceria.length > 0 && `${parceirosSemParceria.length} sem parceria • `}
-              {formatCurrency(pagamentosParceiros.reduce((acc, p) => acc + p.valorParceiro, 0))} pendentes
+              {formatCurrency(
+                pagamentosParceiros.reduce((acc, p) => acc + p.valorParceiro, 0) +
+                bonusPendentes.reduce((acc, b) => acc + b.totalBonusPendente, 0) +
+                comissoesPendentes.reduce((acc, c) => acc + c.valorComissao, 0)
+              )} pendentes
             </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Alertas List */}
-      {alertas.length === 0 && entregasPendentes.length === 0 && pagamentosParceiros.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 && saquesPendentes.length === 0 && alertasLucro.length === 0 ? (
+      {alertas.length === 0 && entregasPendentes.length === 0 && pagamentosParceiros.length === 0 && bonusPendentes.length === 0 && comissoesPendentes.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 && saquesPendentes.length === 0 && alertasLucro.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-10">
@@ -706,7 +816,7 @@ export default function CentralOperacoes() {
           )}
 
           {/* GRID: Entregas + Captação de Parcerias */}
-          {(entregasPendentes.length > 0 || pagamentosParceiros.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0) && (
+          {(entregasPendentes.length > 0 || pagamentosParceiros.length > 0 || bonusPendentes.length > 0 || comissoesPendentes.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0) && (
             <div className="grid gap-4 lg:grid-cols-2">
               {/* Entregas Pendentes de Conciliação */}
               {entregasPendentes.length > 0 && (
@@ -772,7 +882,7 @@ export default function CentralOperacoes() {
               )}
 
               {/* Captação de Parcerias */}
-              {(pagamentosParceiros.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0) && (
+              {(pagamentosParceiros.length > 0 || bonusPendentes.length > 0 || comissoesPendentes.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0) && (
                 <Card className="border-cyan-500/30">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-base">
@@ -780,7 +890,7 @@ export default function CentralOperacoes() {
                       Captação de Parcerias
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Parceiros, pagamentos e alertas de encerramento
+                      Parceiros, pagamentos, bônus e comissões pendentes
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -820,12 +930,12 @@ export default function CentralOperacoes() {
                       </div>
                     )}
 
-                    {/* Pagamentos Pendentes */}
+                    {/* Pagamentos ao Parceiro */}
                     {pagamentosParceiros.length > 0 && (
                       <div>
                         <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                          <Banknote className="h-3 w-3" />
-                          Pagamentos ({pagamentosParceiros.length})
+                          <User className="h-3 w-3 text-emerald-400" />
+                          Pagamentos ao Parceiro ({pagamentosParceiros.length})
                         </h4>
                         <div className="space-y-1">
                           {pagamentosParceiros.slice(0, 3).map((pag) => (
@@ -834,11 +944,11 @@ export default function CentralOperacoes() {
                               className="flex items-center justify-between p-2 rounded-lg border bg-card"
                             >
                               <div className="flex items-center gap-2 min-w-0">
-                                <User className="h-3 w-3 text-cyan-400 shrink-0" />
+                                <User className="h-3 w-3 text-emerald-400 shrink-0" />
                                 <span className="text-xs font-medium truncate">{pag.parceiroNome}</span>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-cyan-400">
+                                <span className="text-xs font-bold text-emerald-400">
                                   {formatCurrency(pag.valorParceiro)}
                                 </span>
                                 <Button 
@@ -855,6 +965,101 @@ export default function CentralOperacoes() {
                           {pagamentosParceiros.length > 3 && (
                             <p className="text-xs text-muted-foreground text-center py-1">
                               +{pagamentosParceiros.length - 3} pagamentos
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bônus por Meta Atingida */}
+                    {bonusPendentes.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                          <Gift className="h-3 w-3 text-primary" />
+                          Bônus por Meta ({bonusPendentes.reduce((acc, b) => acc + b.ciclosPendentes, 0)})
+                        </h4>
+                        <div className="space-y-1">
+                          {bonusPendentes.slice(0, 3).map((bonus) => (
+                            <div
+                              key={bonus.indicadorId}
+                              className="flex items-center justify-between p-2 rounded-lg border border-primary/30 bg-primary/5"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Gift className="h-3 w-3 text-primary shrink-0" />
+                                <div className="min-w-0">
+                                  <span className="text-xs font-medium truncate block">{bonus.indicadorNome}</span>
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {bonus.qtdParceiros}/{bonus.meta} parceiros
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-primary">
+                                  {bonus.ciclosPendentes > 1 
+                                    ? `${bonus.ciclosPendentes}x ${formatCurrency(bonus.valorBonus)}`
+                                    : formatCurrency(bonus.valorBonus)
+                                  }
+                                </span>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost"
+                                  className="h-6 text-xs px-2"
+                                  onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })}
+                                >
+                                  Pagar
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                          {bonusPendentes.length > 3 && (
+                            <p className="text-xs text-muted-foreground text-center py-1">
+                              +{bonusPendentes.length - 3} indicadores
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Comissões por Indicação */}
+                    {comissoesPendentes.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                          <Banknote className="h-3 w-3 text-chart-2" />
+                          Comissões ({comissoesPendentes.length})
+                        </h4>
+                        <div className="space-y-1">
+                          {comissoesPendentes.slice(0, 3).map((comissao) => (
+                            <div
+                              key={comissao.parceriaId}
+                              className="flex items-center justify-between p-2 rounded-lg border bg-card"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Banknote className="h-3 w-3 text-chart-2 shrink-0" />
+                                <div className="min-w-0">
+                                  <span className="text-xs font-medium truncate block">{comissao.indicadorNome}</span>
+                                  <span className="text-[10px] text-muted-foreground">
+                                    → {comissao.parceiroNome}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-chart-2">
+                                  {formatCurrency(comissao.valorComissao)}
+                                </span>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost"
+                                  className="h-6 text-xs px-2"
+                                  onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })}
+                                >
+                                  Pagar
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                          {comissoesPendentes.length > 3 && (
+                            <p className="text-xs text-muted-foreground text-center py-1">
+                              +{comissoesPendentes.length - 3} comissões
                             </p>
                           )}
                         </div>
@@ -913,10 +1118,10 @@ export default function CentralOperacoes() {
               )}
 
               {/* Placeholders para manter grid equilibrado */}
-              {entregasPendentes.length > 0 && pagamentosParceiros.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 && (
+              {entregasPendentes.length > 0 && pagamentosParceiros.length === 0 && bonusPendentes.length === 0 && comissoesPendentes.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 && (
                 <div className="hidden lg:block" />
               )}
-              {entregasPendentes.length === 0 && (pagamentosParceiros.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0) && (
+              {entregasPendentes.length === 0 && (pagamentosParceiros.length > 0 || bonusPendentes.length > 0 || comissoesPendentes.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0) && (
                 <div className="hidden lg:block" />
               )}
             </div>
