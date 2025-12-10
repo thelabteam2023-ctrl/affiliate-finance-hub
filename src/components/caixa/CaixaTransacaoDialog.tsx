@@ -1068,6 +1068,12 @@ export function CaixaTransacaoDialog({
                 setOrigemContaId("");
                 setOrigemWalletId("");
               }}
+              showSaldo={true}
+              tipoMoeda={tipoMoeda as "FIAT" | "CRYPTO"}
+              moeda={moeda}
+              coin={coin}
+              saldosContas={saldosParceirosContas}
+              saldosWallets={saldosParceirosWallets}
             />
           </div>
           {origemParceiroId && tipoMoeda === "FIAT" && (
@@ -1284,6 +1290,10 @@ export function CaixaTransacaoDialog({
                   setOrigemContaId("");
                 }}
                 onlyParceiros={parceirosComSaldo}
+                showSaldo={true}
+                tipoMoeda="FIAT"
+                moeda={moeda}
+                saldosContas={saldosParceirosContas}
               />
             </div>
             {origemParceiroId && (
@@ -1365,6 +1375,10 @@ export function CaixaTransacaoDialog({
                   setOrigemWalletId("");
                 }}
                 onlyParceiros={parceirosComSaldo}
+                showSaldo={true}
+                tipoMoeda="CRYPTO"
+                coin={coin}
+                saldosWallets={saldosParceirosWallets}
               />
             </div>
             {origemParceiroId && (
@@ -1488,6 +1502,10 @@ export function CaixaTransacaoDialog({
                 setDestinoParceiroId(value);
                 setDestinoContaId("");
               }}
+              showSaldo={true}
+              tipoMoeda="FIAT"
+              moeda={moeda}
+              saldosContas={saldosParceirosContas}
             />
           </div>
           {destinoParceiroId && (
@@ -1580,6 +1598,10 @@ export function CaixaTransacaoDialog({
                     setDestinoParceiroId(value);
                     setDestinoContaId("");
                   }}
+                  showSaldo={true}
+                  tipoMoeda="FIAT"
+                  moeda={moeda}
+                  saldosContas={saldosParceirosContas}
                 />
               </div>
               {destinoParceiroId && (
@@ -1637,6 +1659,10 @@ export function CaixaTransacaoDialog({
                     setDestinoParceiroId(value);
                     setDestinoWalletId("");
                   }}
+                  showSaldo={true}
+                  tipoMoeda="CRYPTO"
+                  coin={coin}
+                  saldosWallets={saldosParceirosWallets}
                 />
               </div>
               {destinoParceiroId && (
@@ -1708,6 +1734,10 @@ export function CaixaTransacaoDialog({
                 }}
                 disabled={!origemEstaCompleta}
                 onlyParceiros={parceirosDisponiveis}
+                showSaldo={true}
+                tipoMoeda="FIAT"
+                moeda={moeda}
+                saldosContas={saldosParceirosContas}
               />
             </div>
             {destinoParceiroId && (
@@ -1773,6 +1803,10 @@ export function CaixaTransacaoDialog({
                 }}
                 disabled={!origemEstaCompleta}
                 onlyParceiros={parceirosDisponiveis}
+                showSaldo={true}
+                tipoMoeda="CRYPTO"
+                coin={coin}
+                saldosWallets={saldosParceirosWallets}
               />
             </div>
             {destinoParceiroId && (
