@@ -1149,6 +1149,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                     <Input
                       id="parceiro-cpf-field"
                       name="parceiro-cpf-field"
+                      autoComplete="off"
                       value={cpf}
                       onChange={(e) => {
                         setCpf(formatCPF(e.target.value));
@@ -1200,6 +1201,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                       name="parceiro-email-field"
                       type="text"
                       inputMode="email"
+                      autoComplete="off"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
