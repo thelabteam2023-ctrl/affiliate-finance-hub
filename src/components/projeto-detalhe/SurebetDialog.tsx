@@ -1572,26 +1572,26 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   </>
                 ) : (
                   <>
-                    {/* ROI Compacto: Min/Max em badge única */}
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border">
-                      <span className="text-xs text-muted-foreground font-medium">ROI</span>
-                      {analysis.stakeTotal > 0 ? (
-                        <div className="flex items-center gap-1.5">
-                          <span className={`text-xs font-bold ${
-                            analysis.minRoi >= 0 ? 'text-emerald-500' : 'text-red-500'
-                          }`}>
-                            {analysis.minRoi >= 0 ? "+" : ""}{analysis.minRoi.toFixed(1)}%
-                          </span>
-                          <span className="text-muted-foreground text-[10px]">→</span>
-                          <span className={`text-xs font-bold ${
-                            analysis.maxRoi >= 0 ? 'text-emerald-500' : 'text-red-500'
-                          }`}>
-                            {analysis.maxRoi >= 0 ? "+" : ""}{analysis.maxRoi.toFixed(1)}%
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
+                    {/* ROI Compacto: Max (verde) / Min (vermelho) */}
+                    <div className="p-2 rounded-lg bg-muted/50 border border-border space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-emerald-400">ROI Máx</span>
+                        <span className="text-xs font-bold text-emerald-500">
+                          {analysis.stakeTotal > 0 
+                            ? `${analysis.maxRoi >= 0 ? "+" : ""}${analysis.maxRoi.toFixed(2)}%`
+                            : "—"
+                          }
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-red-400">ROI Mín</span>
+                        <span className="text-xs font-bold text-red-500">
+                          {analysis.stakeTotal > 0 
+                            ? `${analysis.minRoi >= 0 ? "+" : ""}${analysis.minRoi.toFixed(2)}%`
+                            : "—"
+                          }
+                        </span>
+                      </div>
                     </div>
 
                     {/* Cenários de Resultado - sempre mostrando lucro e ROI */}
