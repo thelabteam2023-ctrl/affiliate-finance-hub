@@ -273,6 +273,7 @@ export default function BookmakerSelect({
           className="w-[--radix-popover-trigger-width] min-w-[300px] p-0 z-[9999]"
           align="start"
           sideOffset={4}
+          onWheel={(e) => e.stopPropagation()}
         >
           <Command shouldFilter={false}>
             <CommandInput
@@ -280,7 +281,21 @@ export default function BookmakerSelect({
               value={searchTerm}
               onValueChange={setSearchTerm}
             />
-            <CommandList className="max-h-[280px] overflow-y-auto">
+            <CommandList 
+              className="max-h-[280px] overflow-y-auto overscroll-contain"
+              onWheel={(e) => {
+                const target = e.currentTarget;
+                const { scrollTop, scrollHeight, clientHeight } = target;
+                const isScrollingDown = e.deltaY > 0;
+                const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+                const isAtTop = scrollTop <= 0;
+                
+                // Previne propagação do scroll quando não está no limite
+                if ((isScrollingDown && !isAtBottom) || (!isScrollingDown && !isAtTop)) {
+                  e.stopPropagation();
+                }
+              }}
+            >
               <CommandEmpty>
                 {parceiroId 
                   ? (somenteComSaldo 
