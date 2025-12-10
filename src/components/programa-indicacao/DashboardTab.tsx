@@ -46,12 +46,21 @@ interface BonusPago {
   quantidade: number;
 }
 
+interface Movimentacao {
+  id: string;
+  tipo: string;
+  valor: number;
+  status: string;
+  data_movimentacao: string;
+}
+
 export function DashboardTab() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [custos, setCustos] = useState<CustoData[]>([]);
   const [acordos, setAcordos] = useState<Acordo[]>([]);
   const [bonusPagos, setBonusPagos] = useState<BonusPago[]>([]);
+  const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
   const [dateRange, setDateRange] = useState<DateRange>({
     from: startOfMonth(new Date()),
     to: new Date(),
@@ -66,20 +75,24 @@ export function DashboardTab() {
     try {
       setLoading(true);
       
-      // Fetch custos, acordos, and bonus pagos in parallel
-      const [custosResult, acordosResult, bonusResult] = await Promise.all([
+      // Fetch custos, acordos, bonus pagos, and movimentacoes in parallel
+      const [custosResult, acordosResult, bonusResult, movResult] = await Promise.all([
         supabase.from("v_custos_aquisicao").select("*"),
         supabase.from("indicador_acordos").select("indicador_id, meta_parceiros, valor_bonus, ativo").eq("ativo", true),
         // Count bonus already paid per indicador
         supabase.from("movimentacoes_indicacao")
           .select("indicador_id")
           .eq("tipo", "BONUS_INDICADOR")
-          .eq("status", "CONFIRMADO")
+          .eq("status", "CONFIRMADO"),
+        // Fetch all movimentacoes for total investment calculation
+        supabase.from("movimentacoes_indicacao")
+          .select("id, tipo, valor, status, data_movimentacao")
       ]);
 
       if (custosResult.error) throw custosResult.error;
       if (acordosResult.error) throw acordosResult.error;
       if (bonusResult.error) throw bonusResult.error;
+      if (movResult.error) throw movResult.error;
       
       // Aggregate bonus count per indicador
       const bonusCountMap = (bonusResult.data || []).reduce((acc, item) => {
@@ -97,6 +110,7 @@ export function DashboardTab() {
       setCustos(custosResult.data || []);
       setAcordos(acordosResult.data || []);
       setBonusPagos(bonusPagosList);
+      setMovimentacoes(movResult.data || []);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar dados",
@@ -140,10 +154,35 @@ export function DashboardTab() {
     });
   };
 
-  const filteredCustos = filterByPeriod(custos);
+  // Filter movimentacoes by the same period
+  const filterMovByPeriod = (data: Movimentacao[]) => {
+    if (!dateRange.from && !dateRange.to) return data;
+    
+    return data.filter((item) => {
+      const dataMov = new Date(item.data_movimentacao);
+      if (dateRange.from && dataMov < dateRange.from) return false;
+      if (dateRange.to && dataMov > dateRange.to) return false;
+      return true;
+    });
+  };
 
-  // Calculate KPIs
-  const totalInvestimento = filteredCustos.reduce((acc, c) => acc + (c.custo_total || 0), 0);
+  const filteredCustos = filterByPeriod(custos);
+  const filteredMovimentacoes = filterMovByPeriod(movimentacoes);
+
+  // Calculate KPIs - using movimentacoes (same as Financeiro tab)
+  // Total Investment = all confirmed payments from movimentacoes_indicacao
+  const totalPagtoParceiros = filteredMovimentacoes
+    .filter((m) => (m.tipo === "PAGTO_PARCEIRO" || m.tipo === "PAGTO_FORNECEDOR") && m.status === "CONFIRMADO")
+    .reduce((acc, m) => acc + m.valor, 0);
+  const totalComissoes = filteredMovimentacoes
+    .filter((m) => m.tipo === "COMISSAO_INDICADOR" && m.status === "CONFIRMADO")
+    .reduce((acc, m) => acc + m.valor, 0);
+  const totalBonus = filteredMovimentacoes
+    .filter((m) => m.tipo === "BONUS_INDICADOR" && m.status === "CONFIRMADO")
+    .reduce((acc, m) => acc + m.valor, 0);
+  
+  // Total Investment = same as "Total Geral" in Financeiro tab
+  const totalInvestimento = totalPagtoParceiros + totalComissoes + totalBonus;
   const totalParceiros = filteredCustos.length;
   const custoMedio = totalParceiros > 0 ? totalInvestimento / totalParceiros : 0;
 
@@ -344,7 +383,7 @@ export function DashboardTab() {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalInvestimento)}</div>
             <p className="text-xs text-muted-foreground">
-              Em aquisição de parceiros
+              Custo operacional da captação
             </p>
           </CardContent>
         </Card>
@@ -370,7 +409,7 @@ export function DashboardTab() {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(custoMedio)}</div>
             <p className="text-xs text-muted-foreground">
-              Por parceiro
+              Por parceiro (CPF)
             </p>
           </CardContent>
         </Card>
