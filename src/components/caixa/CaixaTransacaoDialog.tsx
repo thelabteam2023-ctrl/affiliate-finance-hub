@@ -691,11 +691,20 @@ export function CaixaTransacaoDialog({
       return "Caixa Operacional";
     }
     if (tipoTransacao === "DEPOSITO") {
-      if (origemContaId) {
-        const conta = contasBancarias.find(c => c.id === origemContaId);
-        return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+      // CRYPTO usa wallet, FIAT usa conta bancária
+      if (tipoMoeda === "CRYPTO") {
+        if (origemWalletId) {
+          const wallet = walletsCrypto.find(w => w.id === origemWalletId);
+          return wallet ? `${wallet.exchange}` : "Wallet Crypto";
+        }
+        return "Wallet Crypto";
+      } else {
+        if (origemContaId) {
+          const conta = contasBancarias.find(c => c.id === origemContaId);
+          return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+        }
+        return "Conta Bancária";
       }
-      return "Conta Bancária";
     }
     if (tipoTransacao === "SAQUE" && origemBookmakerId) {
       const bm = bookmakers.find(b => b.id === origemBookmakerId);
@@ -724,11 +733,20 @@ export function CaixaTransacaoDialog({
       return investidor ? `Investidor: ${investidor.nome}` : "Investidor Externo";
     }
     if (tipoTransacao === "SAQUE") {
-      if (destinoContaId) {
-        const conta = contasBancarias.find(c => c.id === destinoContaId);
-        return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+      // CRYPTO usa wallet, FIAT usa conta bancária
+      if (tipoMoeda === "CRYPTO") {
+        if (destinoWalletId) {
+          const wallet = walletsCrypto.find(w => w.id === destinoWalletId);
+          return wallet ? `${wallet.exchange}` : "Wallet Crypto";
+        }
+        return "Wallet Crypto";
+      } else {
+        if (destinoContaId) {
+          const conta = contasBancarias.find(c => c.id === destinoContaId);
+          return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+        }
+        return "Conta Bancária";
       }
-      return "Conta Bancária";
     }
     if (tipoTransacao === "DEPOSITO" && destinoBookmakerId) {
       const bm = bookmakers.find(b => b.id === destinoBookmakerId);
@@ -1807,10 +1825,16 @@ export function CaixaTransacaoDialog({
       return saldoAtual < valorNumerico;
     }
 
-    // Check DEPOSITO
-    if (tipoTransacao === "DEPOSITO" && origemContaId) {
-      const saldoAtual = getSaldoAtual("PARCEIRO_CONTA", origemContaId);
-      return saldoAtual < valorNumerico;
+    // Check DEPOSITO - FIAT usa conta bancária, CRYPTO usa wallet
+    if (tipoTransacao === "DEPOSITO") {
+      if (tipoMoeda === "CRYPTO" && origemWalletId) {
+        const saldoAtual = getSaldoAtual("PARCEIRO_WALLET", origemWalletId);
+        return saldoAtual < valorNumerico;
+      }
+      if (tipoMoeda === "FIAT" && origemContaId) {
+        const saldoAtual = getSaldoAtual("PARCEIRO_CONTA", origemContaId);
+        return saldoAtual < valorNumerico;
+      }
     }
 
     // Check TRANSFERENCIA from CAIXA_OPERACIONAL
@@ -2340,7 +2364,8 @@ export function CaixaTransacaoDialog({
                                 )}
                               </div>
                             )}
-                            {tipoTransacao === "DEPOSITO" && origemContaId && (
+                            {/* DEPOSITO FIAT - Mostrar saldo da conta bancária */}
+                            {tipoTransacao === "DEPOSITO" && tipoMoeda === "FIAT" && origemContaId && (
                               <div className="mt-3 space-y-1">
                                 {parseFloat(String(valor)) > 0 ? (
                                   <>
@@ -2357,6 +2382,40 @@ export function CaixaTransacaoDialog({
                                 ) : (
                                   <div className="text-xs text-muted-foreground">
                                     Saldo atual: {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {/* DEPOSITO CRYPTO - Mostrar saldo da wallet crypto */}
+                            {tipoTransacao === "DEPOSITO" && tipoMoeda === "CRYPTO" && origemWalletId && (
+                              <div className="mt-3 space-y-1">
+                                {parseFloat(String(valor)) > 0 ? (
+                                  <>
+                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                      <TrendingDown className="h-4 w-4 text-destructive" />
+                                      <span className="line-through opacity-70">
+                                        {formatCryptoBalance(
+                                          getSaldoCoin("PARCEIRO_WALLET", origemWalletId),
+                                          getSaldoAtual("PARCEIRO_WALLET", origemWalletId),
+                                          coin
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div className="text-sm font-semibold text-foreground">
+                                      {formatCryptoBalance(
+                                        getSaldoCoin("PARCEIRO_WALLET", origemWalletId) - parseFloat(String(qtdCoin || 0)),
+                                        getSaldoAtual("PARCEIRO_WALLET", origemWalletId) - parseFloat(String(valor)),
+                                        coin
+                                      )}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-xs text-muted-foreground">
+                                    Saldo disponível: {formatCryptoBalance(
+                                      getSaldoCoin("PARCEIRO_WALLET", origemWalletId),
+                                      getSaldoAtual("PARCEIRO_WALLET", origemWalletId),
+                                      coin
+                                    )}
                                   </div>
                                 )}
                               </div>
