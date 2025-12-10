@@ -443,13 +443,13 @@ export function FluxoFinanceiroOperacional({
 
           {/* Aba 2: Capital em Operação (Bookmakers) */}
           <TabsContent value="operacao" className="mt-4 space-y-4">
-            {/* KPIs */}
-            <div className="grid grid-cols-3 gap-4">
+            {/* KPIs - 4 cards: Depósitos, Saques, Resultado, ROI */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
                 <div className="flex items-center gap-2 text-blue-500 mb-1">
                   <TrendingUp className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase">Depósitos</span>
-                  <KpiHelp text="Total depositado em bookmakers para operações de apostas" />
+                  <KpiHelp text="Total depositado em bookmakers no período selecionado" />
                 </div>
                 <span className="text-lg font-bold text-blue-400 font-mono">
                   {formatCurrency(dadosCapitalOperacao.totalDepositos)}
@@ -459,30 +459,82 @@ export function FluxoFinanceiroOperacional({
                 <div className="flex items-center gap-2 text-purple-500 mb-1">
                   <TrendingDown className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase">Saques</span>
-                  <KpiHelp text="Total sacado dos bookmakers de volta para as contas" />
+                  <KpiHelp text="Total sacado das bookmakers para o caixa no período" />
                 </div>
                 <span className="text-lg font-bold text-purple-400 font-mono">
                   {formatCurrency(dadosCapitalOperacao.totalSaques)}
                 </span>
               </div>
-              <div className={`rounded-lg p-3 border ${
-                dadosCapitalOperacao.alocacaoLiquida >= 0 
-                  ? "bg-blue-500/10 border-blue-500/20" 
-                  : "bg-purple-500/10 border-purple-500/20"
-              }`}>
-                <div className={`flex items-center gap-2 mb-1 ${
-                  dadosCapitalOperacao.alocacaoLiquida >= 0 ? "text-blue-500" : "text-purple-500"
-                }`}>
-                  <ArrowRightLeft className="h-4 w-4" />
-                  <span className="text-xs font-medium uppercase">Alocação Líquida</span>
-                  <KpiHelp text="Depósitos - Saques. Positivo = mais capital alocado em bookmakers" />
-                </div>
-                <span className={`text-lg font-bold font-mono ${
-                  dadosCapitalOperacao.alocacaoLiquida >= 0 ? "text-blue-400" : "text-purple-400"
-                }`}>
-                  {dadosCapitalOperacao.alocacaoLiquida >= 0 ? "+" : ""}{formatCurrency(dadosCapitalOperacao.alocacaoLiquida)}
-                </span>
-              </div>
+              {/* Resultado = Saques - Depósitos */}
+              {(() => {
+                const resultadoBruto = dadosCapitalOperacao.totalSaques - dadosCapitalOperacao.totalDepositos;
+                const isPositivo = resultadoBruto > 0;
+                const isNegativo = resultadoBruto < 0;
+                return (
+                  <div className={`rounded-lg p-3 border ${
+                    isPositivo 
+                      ? "bg-emerald-500/10 border-emerald-500/20" 
+                      : isNegativo 
+                        ? "bg-destructive/10 border-destructive/20"
+                        : "bg-muted/30 border-border/50"
+                  }`}>
+                    <div className={`flex items-center gap-2 mb-1 ${
+                      isPositivo ? "text-emerald-500" : isNegativo ? "text-destructive" : "text-muted-foreground"
+                    }`}>
+                      <DollarSign className="h-4 w-4" />
+                      <span className="text-xs font-medium uppercase">Resultado</span>
+                      <KpiHelp text="Lucro ou prejuízo no período: Saques - Depósitos" />
+                    </div>
+                    <span className={`text-lg font-bold font-mono ${
+                      isPositivo ? "text-emerald-400" : isNegativo ? "text-destructive" : "text-foreground"
+                    }`}>
+                      {isPositivo ? "+" : ""}{formatCurrency(resultadoBruto)}
+                    </span>
+                    {resultadoBruto !== 0 && (
+                      <span className={`text-xs ml-1 ${isPositivo ? "text-emerald-500" : "text-destructive"}`}>
+                        ({isPositivo ? "Lucro" : "Prejuízo"})
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+              {/* ROI = (Saques - Depósitos) / Depósitos * 100 */}
+              {(() => {
+                const resultadoBruto = dadosCapitalOperacao.totalSaques - dadosCapitalOperacao.totalDepositos;
+                const roi = dadosCapitalOperacao.totalDepositos > 0 
+                  ? (resultadoBruto / dadosCapitalOperacao.totalDepositos) * 100 
+                  : null;
+                const isPositivo = roi !== null && roi > 0;
+                const isNegativo = roi !== null && roi < 0;
+                return (
+                  <div className={`rounded-lg p-3 border ${
+                    isPositivo 
+                      ? "bg-emerald-500/10 border-emerald-500/20" 
+                      : isNegativo 
+                        ? "bg-destructive/10 border-destructive/20"
+                        : "bg-muted/30 border-border/50"
+                  }`}>
+                    <div className={`flex items-center gap-2 mb-1 ${
+                      isPositivo ? "text-emerald-500" : isNegativo ? "text-destructive" : "text-muted-foreground"
+                    }`}>
+                      <Wallet className="h-4 w-4" />
+                      <span className="text-xs font-medium uppercase">ROI</span>
+                      <KpiHelp text="Retorno sobre o capital movimentado em bookmakers no período. Mais relevante em análises semanais, mensais ou de longo prazo." />
+                    </div>
+                    <span className={`text-lg font-bold font-mono ${
+                      isPositivo ? "text-emerald-400" : isNegativo ? "text-destructive" : "text-foreground"
+                    }`}>
+                      {roi !== null ? (
+                        <>
+                          {isPositivo ? "+" : ""}{roi.toFixed(2)}%
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Gráfico */}
@@ -515,7 +567,7 @@ export function FluxoFinanceiroOperacional({
             )}
 
             <p className="text-xs text-muted-foreground text-center">
-              Quanto capital está sendo alocado (depósitos) ou recuperado (saques) das operações em bookmakers
+              Depósitos = capital enviado para bookmakers · Saques = capital retornado ao caixa · Resultado = lucro/prejuízo · ROI = retorno proporcional
             </p>
           </TabsContent>
 
