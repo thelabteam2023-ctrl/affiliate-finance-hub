@@ -1610,9 +1610,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                     : "bg-red-500/5 border-red-500/20"
                                 }`}
                               >
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs font-medium">{scenario.selecao}</span>
-                                  <div className="text-right">
+                                <div className="flex items-center justify-between gap-2 min-w-0">
+                                  <span className="text-xs font-medium truncate min-w-0 flex-shrink">{scenario.selecao}</span>
+                                  <div className="text-right flex-shrink-0 whitespace-nowrap">
                                     <span className={`text-xs font-bold ${scenario.isPositive ? "text-emerald-500" : "text-red-500"}`}>
                                       {scenario.lucro >= 0 ? "+" : ""}{formatCurrency(scenario.lucro)}
                                     </span>
