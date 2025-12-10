@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { validateCPF } from "@/lib/validators";
+import { validateCPF, validateCNPJ, formatCPF, formatCNPJ } from "@/lib/validators";
 
 interface FaixaProgressiva {
   limite: number;
@@ -40,11 +40,12 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
   
   // Dados pessoais
   const [nome, setNome] = useState("");
-  const [cpf, setCpf] = useState("");
+  const [documento, setDocumento] = useState("");
+  const [tipoDocumento, setTipoDocumento] = useState<"CPF" | "CNPJ">("CPF");
   const [status, setStatus] = useState("ativo");
   const [observacoes, setObservacoes] = useState("");
-  const [cpfValidation, setCpfValidation] = useState<{ valid: boolean; message: string } | null>(null);
-  const [cpfLoading, setCpfLoading] = useState(false);
+  const [documentoValidation, setDocumentoValidation] = useState<{ valid: boolean; message: string } | null>(null);
+  const [documentoLoading, setDocumentoLoading] = useState(false);
 
   // Deal
   const [dealId, setDealId] = useState<string | null>(null);
@@ -60,7 +61,10 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
   useEffect(() => {
     if (investidor) {
       setNome(investidor.nome || "");
-      setCpf(investidor.cpf || "");
+      const docValue = investidor.cpf || "";
+      const cleanDoc = docValue.replace(/\D/g, "");
+      setDocumento(docValue);
+      setTipoDocumento(cleanDoc.length === 14 ? "CNPJ" : "CPF");
       setStatus(investidor.status || "ativo");
       setObservacoes(investidor.observacoes || "");
       // Fetch deal if exists
@@ -69,7 +73,8 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
       }
     } else {
       setNome("");
-      setCpf("");
+      setDocumento("");
+      setTipoDocumento("CPF");
       setStatus("ativo");
       setObservacoes("");
       setDealId(null);
@@ -82,7 +87,7 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
         { limite: 100000, percentual: 40 },
       ]);
     }
-    setCpfValidation(null);
+    setDocumentoValidation(null);
     setActiveTab("dados");
   }, [investidor, open]);
 
@@ -122,21 +127,37 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
     }
   };
 
-  const validateCPFUnique = async (cpfValue: string) => {
+  const validateDocumentoUnique = async (docValue: string) => {
     if (mode === "view") return;
 
-    const cleanCPF = cpfValue.replace(/\D/g, "");
-    if (cleanCPF.length !== 11) {
-      setCpfValidation({ valid: false, message: "CPF inválido" });
+    const cleanDoc = docValue.replace(/\D/g, "");
+    
+    // Determine document type by length
+    if (cleanDoc.length === 11) {
+      // Validate as CPF
+      if (!validateCPF(cleanDoc)) {
+        setDocumentoValidation({ valid: false, message: "CPF inválido" });
+        return;
+      }
+    } else if (cleanDoc.length === 14) {
+      // Validate as CNPJ
+      if (!validateCNPJ(cleanDoc)) {
+        setDocumentoValidation({ valid: false, message: "CNPJ inválido" });
+        return;
+      }
+    } else {
+      // Invalid length
+      if (cleanDoc.length > 0 && cleanDoc.length < 11) {
+        setDocumentoValidation({ valid: false, message: "CPF incompleto" });
+      } else if (cleanDoc.length > 11 && cleanDoc.length < 14) {
+        setDocumentoValidation({ valid: false, message: "CNPJ incompleto" });
+      } else {
+        setDocumentoValidation(null);
+      }
       return;
     }
 
-    if (!validateCPF(cleanCPF)) {
-      setCpfValidation({ valid: false, message: "CPF inválido" });
-      return;
-    }
-
-    setCpfLoading(true);
+    setDocumentoLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -145,7 +166,7 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
         .from("investidores")
         .select("id")
         .eq("user_id", user.id)
-        .eq("cpf", cleanCPF);
+        .eq("cpf", cleanDoc);
 
       // Only exclude current investor when editing (not creating)
       if (mode === "edit" && investidor?.id) {
@@ -157,35 +178,57 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
       if (error) throw error;
 
       if (data && data.length > 0) {
-        setCpfValidation({ valid: false, message: "CPF já cadastrado" });
+        setDocumentoValidation({ valid: false, message: cleanDoc.length === 11 ? "CPF já cadastrado" : "CNPJ já cadastrado" });
       } else {
-        setCpfValidation({ valid: true, message: "" });
+        setDocumentoValidation({ valid: true, message: "" });
       }
     } catch (error) {
-      console.error("Erro ao validar CPF:", error);
+      console.error("Erro ao validar documento:", error);
     } finally {
-      setCpfLoading(false);
+      setDocumentoLoading(false);
     }
   };
 
   useEffect(() => {
-    if (mode !== "view" && cpf) {
+    if (mode !== "view" && documento) {
       const timer = setTimeout(() => {
-        validateCPFUnique(cpf);
+        validateDocumentoUnique(documento);
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [cpf, mode]);
+  }, [documento, mode]);
 
-  const formatCPFInput = (value: string) => {
+  const formatDocumentoInput = (value: string) => {
     const numbers = value.replace(/\D/g, "");
+    
     if (numbers.length <= 11) {
+      // Format as CPF
       return numbers
         .replace(/(\d{3})(\d)/, "$1.$2")
         .replace(/(\d{3})(\d)/, "$1.$2")
         .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    } else if (numbers.length <= 14) {
+      // Format as CNPJ
+      return numbers
+        .replace(/(\d{2})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1/$2")
+        .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
     }
     return value;
+  };
+
+  const handleDocumentoChange = (value: string) => {
+    const formatted = formatDocumentoInput(value);
+    setDocumento(formatted);
+    
+    // Auto-detect document type based on length
+    const cleanDoc = value.replace(/\D/g, "");
+    if (cleanDoc.length <= 11) {
+      setTipoDocumento("CPF");
+    } else {
+      setTipoDocumento("CNPJ");
+    }
   };
 
   const addFaixa = () => {
@@ -209,13 +252,13 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
   };
 
   const handleSubmit = async () => {
-    if (!nome.trim() || !cpf.trim()) {
+    if (!nome.trim() || !documento.trim()) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
-    if (cpfValidation && !cpfValidation.valid) {
-      toast.error("CPF inválido ou já cadastrado");
+    if (documentoValidation && !documentoValidation.valid) {
+      toast.error(tipoDocumento === "CPF" ? "CPF inválido ou já cadastrado" : "CNPJ inválido ou já cadastrado");
       return;
     }
 
@@ -224,11 +267,11 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      const cleanCPF = cpf.replace(/\D/g, "");
+      const cleanDoc = documento.replace(/\D/g, "");
       const investidorData = {
         user_id: user.id,
         nome: nome.trim(),
-        cpf: cleanCPF,
+        cpf: cleanDoc, // Field is named cpf but stores CPF or CNPJ
         status,
         observacoes: observacoes.trim() || null,
       };
@@ -323,20 +366,53 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cpf">CPF *</Label>
-              <Input
-                id="cpf"
-                value={cpf}
-                onChange={(e) => setCpf(formatCPFInput(e.target.value))}
-                disabled={isViewMode}
-                placeholder="000.000.000-00"
-                maxLength={14}
-              />
-              {!isViewMode && cpfLoading && (
-                <p className="text-xs text-muted-foreground">Validando CPF...</p>
+              <Label htmlFor="documento">CPF / CNPJ *</Label>
+              <div className="flex gap-2">
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    variant={tipoDocumento === "CPF" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setTipoDocumento("CPF");
+                      setDocumento("");
+                      setDocumentoValidation(null);
+                    }}
+                    disabled={isViewMode}
+                    className="text-xs px-3"
+                  >
+                    PF
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={tipoDocumento === "CNPJ" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setTipoDocumento("CNPJ");
+                      setDocumento("");
+                      setDocumentoValidation(null);
+                    }}
+                    disabled={isViewMode}
+                    className="text-xs px-3"
+                  >
+                    PJ
+                  </Button>
+                </div>
+                <Input
+                  id="documento"
+                  value={documento}
+                  onChange={(e) => handleDocumentoChange(e.target.value)}
+                  disabled={isViewMode}
+                  placeholder={tipoDocumento === "CPF" ? "000.000.000-00" : "00.000.000/0000-00"}
+                  maxLength={tipoDocumento === "CPF" ? 14 : 18}
+                  className="flex-1"
+                />
+              </div>
+              {!isViewMode && documentoLoading && (
+                <p className="text-xs text-muted-foreground">Validando {tipoDocumento}...</p>
               )}
-              {!isViewMode && cpfValidation && !cpfValidation.valid && (
-                <p className="text-xs text-destructive">{cpfValidation.message}</p>
+              {!isViewMode && documentoValidation && !documentoValidation.valid && (
+                <p className="text-xs text-destructive">{documentoValidation.message}</p>
               )}
             </div>
 
