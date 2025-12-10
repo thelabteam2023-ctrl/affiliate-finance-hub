@@ -1119,10 +1119,11 @@ export function CaixaTransacaoDialog({
                 <SelectContent>
                   {walletsCrypto
                     .filter((w) => {
-                      // Filtrar apenas wallets do parceiro selecionado que suportam a moeda
-                      if (w.parceiro_id !== origemParceiroId || !w.moeda?.includes(coin)) return false;
+                      // Filtrar apenas wallets do parceiro selecionado
+                      if (w.parceiro_id !== origemParceiroId) return false;
                       
-                      // Filtrar apenas wallets com saldo disponível
+                      // Filtrar apenas wallets com saldo disponível para a moeda selecionada
+                      // A existência do saldo na view indica que a wallet suporta a moeda
                       const saldo = saldosParceirosWallets.find(
                         s => s.wallet_id === w.id && s.coin === coin
                       );
@@ -1155,7 +1156,7 @@ export function CaixaTransacaoDialog({
             </Alert>
           )}
           {origemParceiroId && tipoMoeda === "CRYPTO" && coin && walletsCrypto.filter((w) => {
-            if (w.parceiro_id !== origemParceiroId || !w.moeda?.includes(coin)) return false;
+            if (w.parceiro_id !== origemParceiroId) return false;
             const saldo = saldosParceirosWallets.find(
               s => s.wallet_id === w.id && s.coin === coin
             );
