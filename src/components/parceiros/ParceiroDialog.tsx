@@ -1296,7 +1296,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                       value={cidade}
                       onChange={(e) => setCidade(e.target.value.toUpperCase())}
                       className="uppercase"
-                      placeholder="Virgem da Lapa - MG"
+                      placeholder="SÃO PAULO - SP"
                       disabled={loading || viewMode}
                     />
                     {viewMode && cidade && (
