@@ -1265,7 +1265,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   </Label>
                   <div className="flex gap-2">
                     <Input
-                      id="endereco"
+                      id="parceiro-endereco-field"
+                      name="parceiro-endereco-field"
                       value={endereco}
                       onChange={(e) => setEndereco(e.target.value.toUpperCase())}
                       className="uppercase"
@@ -1296,7 +1297,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   </Label>
                   <div className="flex gap-2">
                     <Input
-                      id="cidade"
+                      id="parceiro-cidade-field"
+                      name="parceiro-cidade-field"
                       value={cidade}
                       onChange={(e) => setCidade(e.target.value.toUpperCase())}
                       className="uppercase"
@@ -1327,7 +1329,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   </Label>
                   <div className="flex gap-2">
                     <Input
-                      id="cep"
+                      id="parceiro-cep-field"
+                      name="parceiro-cep-field"
                       value={cep}
                       onChange={(e) => setCep(formatCEP(e.target.value))}
                       placeholder="00000-000"
