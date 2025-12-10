@@ -355,6 +355,18 @@ export function CaixaTransacaoDialog({
         }
       }
     }
+    
+    // Update origem type for DEPOSITO based on currency type
+    if (tipoTransacao === "DEPOSITO") {
+      if (tipoMoeda === "FIAT") {
+        setOrigemTipo("PARCEIRO_CONTA");
+      } else {
+        setOrigemTipo("PARCEIRO_WALLET");
+      }
+      // Clear previous selection when type changes
+      setOrigemContaId("");
+      setOrigemWalletId("");
+    }
   }, [fluxoTransferencia, tipoTransacao, tipoMoeda]);
 
   // Limpar DESTINO quando ORIGEM mudar (para TRANSFERENCIA e DEPOSITO)
@@ -1026,7 +1038,7 @@ export function CaixaTransacaoDialog({
     }
 
     if (tipoTransacao === "DEPOSITO") {
-      // DEPOSITO: Always from Parceiro (bank account) → Bookmaker
+      // DEPOSITO: From Parceiro (bank account for FIAT, wallet for CRYPTO) → Bookmaker
       return (
         <>
           <div className="space-y-2">
@@ -1036,10 +1048,11 @@ export function CaixaTransacaoDialog({
               onValueChange={(value) => {
                 setOrigemParceiroId(value);
                 setOrigemContaId("");
+                setOrigemWalletId("");
               }}
             />
           </div>
-          {origemParceiroId && (
+          {origemParceiroId && tipoMoeda === "FIAT" && (
             <div className="space-y-2">
               <Label>Conta Bancária</Label>
               <Select 
@@ -1077,7 +1090,7 @@ export function CaixaTransacaoDialog({
               </Select>
             </div>
           )}
-          {origemParceiroId && contasBancarias.filter((c) => {
+          {origemParceiroId && tipoMoeda === "FIAT" && contasBancarias.filter((c) => {
             if (c.parceiro_id !== origemParceiroId) return false;
             const saldo = saldosParceirosContas.find(
               s => s.conta_id === c.id && s.moeda === moeda
@@ -1088,6 +1101,72 @@ export function CaixaTransacaoDialog({
               <AlertTriangle className="h-4 w-4 text-warning" />
               <AlertDescription className="text-warning">
                 Este parceiro não possui contas bancárias com saldo disponível em {moeda}.
+              </AlertDescription>
+            </Alert>
+          )}
+          {origemParceiroId && tipoMoeda === "CRYPTO" && (
+            <div className="space-y-2">
+              <Label>Wallet Crypto</Label>
+              <Select 
+                value={origemWalletId} 
+                onValueChange={(value) => {
+                  setOrigemWalletId(value);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {walletsCrypto
+                    .filter((w) => {
+                      // Filtrar apenas wallets do parceiro selecionado que suportam a moeda
+                      if (w.parceiro_id !== origemParceiroId || !w.moeda?.includes(coin)) return false;
+                      
+                      // Filtrar apenas wallets com saldo disponível
+                      const saldo = saldosParceirosWallets.find(
+                        s => s.wallet_id === w.id && s.coin === coin
+                      );
+                      return saldo && saldo.saldo_usd > 0;
+                    })
+                    .map((wallet) => {
+                      const saldo = saldosParceirosWallets.find(
+                        s => s.wallet_id === wallet.id && s.coin === coin
+                      );
+                      const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
+                      const shortenedAddress = wallet.endereco 
+                        ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
+                        : '';
+                      return (
+                        <SelectItem key={wallet.id} value={wallet.id}>
+                          <span className="font-mono">{walletName} - {shortenedAddress} - Saldo: {formatCurrency(saldo?.saldo_usd || 0)}</span>
+                        </SelectItem>
+                      );
+                    })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {origemParceiroId && tipoMoeda === "CRYPTO" && walletsCrypto.filter((w) => {
+            if (w.parceiro_id !== origemParceiroId || !w.moeda?.includes(coin)) return false;
+            const saldo = saldosParceirosWallets.find(
+              s => s.wallet_id === w.id && s.coin === coin
+            );
+            return saldo && saldo.saldo_usd > 0;
+          }).length === 0 && (
+            <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+              <AlertTriangle className="h-4 w-4 text-warning" />
+              <AlertDescription className="text-warning">
+                Este parceiro não possui wallets com saldo disponível em {coin}.{' '}
+                <button
+                  onClick={() => {
+                    setAlertParceiroId(origemParceiroId);
+                    setAlertTipo("CRYPTO");
+                    setShowNoWalletAlert(true);
+                  }}
+                  className="underline font-medium"
+                >
+                  Cadastrar agora
+                </button>
               </AlertDescription>
             </Alert>
           )}
@@ -1376,8 +1455,12 @@ export function CaixaTransacaoDialog({
     }
 
     if (tipoTransacao === "DEPOSITO") {
-      // Check if origem is complete
-      const isOrigemCompleta = origemParceiroId && origemContaId;
+      // Check if origem is complete - depends on currency type
+      const isOrigemCompleta = tipoMoeda === "CRYPTO" 
+        ? (origemParceiroId && origemWalletId)
+        : (origemParceiroId && origemContaId);
+      
+      const origemLabel = tipoMoeda === "CRYPTO" ? "wallet crypto" : "conta bancária";
       
       return (
         <>
@@ -1385,7 +1468,7 @@ export function CaixaTransacaoDialog({
             <Alert className="border-blue-500/50 bg-blue-500/10">
               <AlertTriangle className="h-4 w-4 text-blue-500" />
               <AlertDescription className="text-blue-500">
-                Selecione primeiro o parceiro e a conta bancária de origem
+                Selecione primeiro o parceiro e a {origemLabel} de origem
               </AlertDescription>
             </Alert>
           )}
