@@ -33,11 +33,11 @@ const DEFAULT_GRADIENT_COLORS = [
   ["#F97316", "#EA580C"], // Orange
 ];
 
-// Custom active shape with enhanced styling
+// Custom active shape with enhanced styling (clean, no internal stroke)
 const renderActiveShape = (props: any) => {
   const {
     cx, cy, innerRadius, outerRadius, startAngle, endAngle,
-    fill, payload, percent
+    fill
   } = props;
 
   return (
@@ -45,15 +45,15 @@ const renderActiveShape = (props: any) => {
       <Sector
         cx={cx}
         cy={cy}
-        innerRadius={innerRadius - 2}
-        outerRadius={outerRadius + 6}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius + 4}
         startAngle={startAngle}
         endAngle={endAngle}
         fill={fill}
-        cornerRadius={8}
+        cornerRadius={6}
         style={{
-          filter: "drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3))",
-          transition: "all 0.3s ease"
+          filter: "drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2))",
+          transition: "all 0.2s ease"
         }}
       />
     </g>
@@ -186,7 +186,7 @@ const renderCustomLabel = ({
 export function ModernDonutChart({
   data,
   height = 280,
-  innerRadius = 60,
+  innerRadius = 70,
   outerRadius = 95,
   showLabels = false,
   showLegend = false,
@@ -296,10 +296,10 @@ export function ModernDonutChart({
 
       {/* Center content with animated percentage */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="text-center">
+        <div className="text-center px-2">
           {centerValue !== undefined ? (
             <>
-              <div className="text-2xl font-bold font-mono">
+              <div className="text-lg font-bold font-mono leading-tight">
                 {typeof centerValue === 'number' ? (
                   <AnimatedPercentage value={centerValue} />
                 ) : (
@@ -307,15 +307,15 @@ export function ModernDonutChart({
                 )}
               </div>
               {centerLabel && (
-                <div className="text-xs text-muted-foreground mt-1">{centerLabel}</div>
+                <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{centerLabel}</div>
               )}
             </>
           ) : (
             <>
-              <div className="text-2xl font-bold font-mono">
+              <div className="text-lg font-bold font-mono leading-tight">
                 <AnimatedPercentage value={mainPercentage} />
               </div>
-              <div className="text-xs text-muted-foreground mt-1">
+              <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
                 {largestSegment.name}
               </div>
             </>
