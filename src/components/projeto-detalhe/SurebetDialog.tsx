@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -919,7 +919,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     }
   };
 
-  const handleLiquidarAposta = async (apostaId: string, resultado: "GREEN" | "RED" | "VOID" | null) => {
+  // Flag para rastrear se houve alterações durante a sessão do modal
+  const hasChangesRef = useRef(false);
+  const toastShownRef = useRef(false);
+
+  const handleLiquidarAposta = useCallback(async (apostaId: string, resultado: "GREEN" | "RED" | "VOID" | null) => {
     try {
       const aposta = linkedApostas.find(a => a.id === apostaId);
       if (!aposta) return;
@@ -1006,6 +1010,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
       if (error) throw error;
 
+      // Marcar que houve alterações (para chamar onSuccess ao fechar)
+      hasChangesRef.current = true;
+
       // Atualizar estado local das apostas (sem recarregar do banco)
       setLinkedApostas(prev => prev.map(a => 
         a.id === apostaId 
@@ -1043,8 +1050,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             })
             .eq("id", surebet!.id);
             
-          // Só chamar onSuccess quando a surebet for completamente liquidada
-          onSuccess();
+          // Toast único quando todas as posições forem liquidadas
+          if (!toastShownRef.current) {
+            toastShownRef.current = true;
+            toast.success("Operação liquidada com sucesso!");
+          }
         } else {
           // Se nem todas estão liquidadas, voltar para PENDENTE
           await supabase
@@ -1056,17 +1066,29 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               roi_real: null
             })
             .eq("id", surebet!.id);
+          
+          // Reset do toast flag para permitir novo toast quando completar
+          toastShownRef.current = false;
         }
       }
-
-      toast.success(resultado === null ? "Resultado limpo!" : "Resultado registrado!");
     } catch (error: any) {
       toast.error("Erro: " + error.message);
     }
-  };
+  }, [linkedApostas, surebet]);
+
+  // Handler para fechamento do modal - chama onSuccess apenas aqui
+  const handleDialogClose = useCallback((newOpen: boolean) => {
+    if (!newOpen && hasChangesRef.current) {
+      // Chamar onSuccess apenas quando o modal fechar E houve alterações
+      onSuccess();
+      hasChangesRef.current = false;
+      toastShownRef.current = false;
+    }
+    onOpenChange(newOpen);
+  }, [onSuccess, onOpenChange]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="max-w-[1400px] max-h-[90vh] overflow-y-auto p-8">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -1249,10 +1271,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             
                             {/* Resultado (apenas em modo edição) */}
                             {isEditing && entry.aposta_id && (
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 transition-all duration-200">
                                 {entry.resultado ? (
                                   <>
-                                    <Badge className={`text-xs ${
+                                    <Badge className={`text-xs transition-all duration-200 animate-scale-in ${
                                       entry.resultado === "GREEN" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40" :
                                       entry.resultado === "RED" ? "bg-red-500/20 text-red-400 border-red-500/40" :
                                       "bg-gray-500/20 text-gray-400 border-gray-500/40"
@@ -1263,7 +1285,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                       type="button"
                                       variant="ghost"
                                       size="sm"
-                                      className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground"
+                                      className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground transition-all duration-150"
                                       onClick={() => handleLiquidarAposta(entry.aposta_id!, null as any)}
                                       title="Limpar resultado"
                                     >
@@ -1276,7 +1298,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                       type="button"
                                       size="sm" 
                                       variant="outline"
-                                      className="h-6 w-6 p-0 text-emerald-500 hover:bg-emerald-500/20"
+                                      className="h-6 w-6 p-0 text-emerald-500 hover:bg-emerald-500/20 transition-all duration-150 hover:scale-110"
                                       onClick={() => handleLiquidarAposta(entry.aposta_id!, "GREEN")}
                                       title="GREEN"
                                     >
@@ -1286,7 +1308,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                       type="button"
                                       size="sm" 
                                       variant="outline"
-                                      className="h-6 w-6 p-0 text-red-500 hover:bg-red-500/20"
+                                      className="h-6 w-6 p-0 text-red-500 hover:bg-red-500/20 transition-all duration-150 hover:scale-110"
                                       onClick={() => handleLiquidarAposta(entry.aposta_id!, "RED")}
                                       title="RED"
                                     >
@@ -1296,7 +1318,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                       type="button"
                                       size="sm" 
                                       variant="outline"
-                                      className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-500/20"
+                                      className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-500/20 transition-all duration-150 hover:scale-110"
                                       onClick={() => handleLiquidarAposta(entry.aposta_id!, "VOID")}
                                       title="VOID"
                                     >
