@@ -418,10 +418,10 @@ export default function Financeiro() {
     OUTROS: "hsl(180 60% 50%)",
   };
 
-  // Bar chart - comparison
+  // Bar chart - comparison (usando cotacaoUSD em tempo real)
   const comparisonData = [
-    { name: "Caixa FIAT", valor: saldoBRL + saldoUSD * 5 },
-    { name: "Caixa Crypto", valor: totalCryptoUSD * 5 },
+    { name: "Caixa FIAT", valor: saldoBRL + (saldoUSD * cotacaoUSD) },
+    { name: "Caixa Crypto", valor: totalCryptoUSD * cotacaoUSD },
     { name: "Custos Operacionais", valor: totalCustosOperacionais },
     { name: "Despesas Admin.", valor: totalDespesasAdminCompleto },
   ];
