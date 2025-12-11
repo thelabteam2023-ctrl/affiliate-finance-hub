@@ -280,17 +280,20 @@ export function SaldosParceirosSheet() {
     </div>
   );
 
-  const BookmakerHoverContent = ({ saldos }: { saldos: ParceiroSaldoAgrupado["saldos_bookmakers"] }) => (
-    <div className="space-y-2">
-      <p className="text-xs font-semibold text-muted-foreground border-b border-border/50 pb-1.5">Saldo por Bookmaker</p>
-      {saldos.map((s, idx) => (
-        <div key={idx} className="flex justify-between items-center gap-3 text-sm">
-          <span className="text-foreground truncate max-w-[150px]">{s.nome}</span>
-          <span className="font-mono text-amber-400 whitespace-nowrap">{formatCurrency(s.saldo, s.moeda)}</span>
-        </div>
-      ))}
-    </div>
-  );
+  const BookmakerHoverContent = ({ saldos }: { saldos: ParceiroSaldoAgrupado["saldos_bookmakers"] }) => {
+    const saldosFiltrados = saldos.filter(s => s.saldo > 0.50);
+    return (
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground border-b border-border/50 pb-1.5">Saldo por Bookmaker</p>
+        {saldosFiltrados.map((s, idx) => (
+          <div key={idx} className="flex justify-between items-center gap-3 text-sm">
+            <span className="text-foreground truncate max-w-[150px]">{s.nome}</span>
+            <span className="font-mono text-amber-400 whitespace-nowrap">{formatCurrency(s.saldo, s.moeda)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
