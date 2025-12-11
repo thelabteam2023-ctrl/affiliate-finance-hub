@@ -46,6 +46,7 @@ const App = () => (
               <main className="flex-1">
                 <Routes>
                   <Route path="/" element={<CentralOperacoes />} />
+                  <Route path="/landing" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/parceiros" element={<GestaoParceiros />} />
                   <Route path="/bookmakers" element={<GestaoBookmakers />} />
