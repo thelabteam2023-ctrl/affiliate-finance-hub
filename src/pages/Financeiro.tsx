@@ -265,11 +265,18 @@ export default function Financeiro() {
     return acc + getCryptoUSDValue(c.coin, c.saldo_coin, c.saldo_usd);
   }, 0);
 
-  const totalDespesasIndicacao = filteredDespesas.reduce((acc, d) => acc + d.valor, 0);
+  // Custos de Captação - usando movimentacoes_indicacao como fonte única (pagamentos efetivos)
+  // Aquisição = PAGTO_PARCEIRO + PAGTO_FORNECEDOR
+  const totalCustosAquisicao = filteredDespesas
+    .filter(d => d.tipo === "PAGTO_PARCEIRO" || d.tipo === "PAGTO_FORNECEDOR")
+    .reduce((acc, d) => acc + d.valor, 0);
+  
+  // Indicação = COMISSAO_INDICADOR + BONUS_INDICADOR
   const totalComissoes = filteredDespesas.filter(d => d.tipo === "COMISSAO_INDICADOR").reduce((acc, d) => acc + d.valor, 0);
   const totalBonus = filteredDespesas.filter(d => d.tipo === "BONUS_INDICADOR").reduce((acc, d) => acc + d.valor, 0);
+  const totalDespesasIndicacao = totalComissoes + totalBonus;
 
-  const totalCustosAquisicao = filteredCustos.reduce((acc, c) => acc + (c.custo_total || 0), 0);
+  // Custos orçamentários (para análise de composição, não soma no total)
   const custoIndicadores = filteredCustos.reduce((acc, c) => acc + (c.valor_indicador || 0), 0);
   const custoParceiros = filteredCustos.reduce((acc, c) => acc + (c.valor_parceiro || 0), 0);
   const custoFornecedores = filteredCustos.reduce((acc, c) => acc + (c.valor_fornecedor || 0), 0);
@@ -280,7 +287,7 @@ export default function Financeiro() {
   // Pagamentos de operadores
   const totalPagamentosOperadores = filteredPagamentosOp.reduce((acc, p) => acc + p.valor, 0);
 
-  // Custos operacionais (aquisição + despesas de indicação - custos diretos de parcerias)
+  // Custos operacionais (Aquisição + Indicação) - usando apenas pagamentos efetivos
   const totalCustosOperacionais = totalCustosAquisicao + totalDespesasIndicacao;
   
   // Despesas administrativas totais (infraestrutura + operadores)
