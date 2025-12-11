@@ -480,7 +480,7 @@ export default function Caixa() {
       {/* Posição de Capital */}
       <PosicaoCapital
         saldoCaixaFiat={saldosFiat.reduce((sum, s) => s.moeda === 'BRL' ? sum + s.saldo : sum, 0)}
-        saldoCaixaCrypto={saldosCrypto.reduce((sum, s) => sum + s.saldo_usd, 0)}
+        saldoCaixaCrypto={getTotalCryptoUSD()}
         saldoBookmakers={saldoBookmakers}
         saldoContasParceiros={saldoContasParceiros}
         saldoWalletsParceiros={saldoWalletsParceiros}
