@@ -62,6 +62,7 @@ import { format, parseISO, subMonths, startOfMonth, endOfMonth, isWithinInterval
 import { ptBR } from "date-fns/locale";
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
 import { DespesaAdministrativaDialog } from "@/components/financeiro/DespesaAdministrativaDialog";
+import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 
 interface CaixaFiat {
   moeda: string;
@@ -719,45 +720,37 @@ export default function Financeiro() {
               </CardContent>
             </Card>
 
-            {/* Comparison Bar */}
+            {/* Comparison Bar - Modern */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Comparativo Geral</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={comparisonData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis 
-                      type="number"
-                      tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}
-                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                    />
-                    <YAxis 
-                      type="category" 
-                      dataKey="name" 
-                      width={120}
-                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                    />
-                    <Tooltip
-                      contentStyle={{ 
-                        backgroundColor: "rgba(0, 0, 0, 0.4)", 
-                        border: "1px solid rgba(255, 255, 255, 0.1)",
-                        backdropFilter: "blur(12px)",
-                        borderRadius: "12px",
-                        padding: "12px 16px"
-                      }}
-                      cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
-                      formatter={(value: number) => [formatCurrency(value), "Valor"]}
-                    />
-                    <Bar 
-                      dataKey="valor" 
-                      fill="hsl(var(--primary))" 
-                      radius={[0, 4, 4, 0]}
-                      background={{ fill: "transparent" }}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                <ModernBarChart
+                  data={comparisonData}
+                  categoryKey="name"
+                  bars={[
+                    {
+                      dataKey: "valor",
+                      label: "Valor",
+                      gradientStart: "hsl(var(--primary))",
+                      gradientEnd: "hsl(var(--primary)/0.6)",
+                    },
+                  ]}
+                  height={280}
+                  barSize={32}
+                  showLabels={false}
+                  showLegend={false}
+                  formatValue={(value) => formatCurrency(value)}
+                  customTooltipContent={(payload, label) => (
+                    <div>
+                      <p className="font-medium text-sm mb-1.5 text-foreground">{label}</p>
+                      <p className="text-lg font-bold font-mono text-primary">
+                        {formatCurrency(payload[0]?.value || 0)}
+                      </p>
+                    </div>
+                  )}
+                />
               </CardContent>
             </Card>
           </div>
