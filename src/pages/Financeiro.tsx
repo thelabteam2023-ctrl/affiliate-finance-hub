@@ -63,6 +63,10 @@ import { ptBR } from "date-fns/locale";
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
 import { DespesaAdministrativaDialog } from "@/components/financeiro/DespesaAdministrativaDialog";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
+import { SaudeFinanceiraCard } from "@/components/financeiro/SaudeFinanceiraCard";
+import { RentabilidadeCaptacaoCard } from "@/components/financeiro/RentabilidadeCaptacaoCard";
+import { FluxoCaixaProjetadoCard } from "@/components/financeiro/FluxoCaixaProjetadoCard";
+import { ComposicaoCustosCard } from "@/components/financeiro/ComposicaoCustosCard";
 
 interface CaixaFiat {
   moeda: string;
@@ -445,6 +449,84 @@ export default function Financeiro() {
 
   const historicoMensal = getHistoricoMensal();
 
+  // ==================== DADOS PARA NOVOS COMPONENTES ====================
+
+  // Compromissos pendentes (custos + despesas do período)
+  const compromissosPendentes = totalCustosOperacionais + totalDespesasAdminCompleto;
+
+  // Custos mensais médios (últimos 3 meses)
+  const custosMensaisMedia = monthlyData.slice(-3).reduce((acc, m) => 
+    acc + m.custos + m.despesas + m.despesasAdmin, 0) / 3;
+
+  // Dados para Fluxo de Caixa
+  const getFluxoCaixaData = () => {
+    return monthlyData.slice(-6).map(m => {
+      // Entradas = aportes + saques de bookmaker (dinheiro que entrou no caixa)
+      const entradasMes = filteredLedger
+        .filter(l => l.moeda === "BRL" && l.tipo_transacao === "SAQUE" && 
+          format(parseISO(l.data_transacao), "yyyy-MM") === m.mes)
+        .reduce((acc, l) => acc + l.valor, 0);
+      
+      // Saídas = depósitos em bookmaker + custos + despesas
+      const saidasMes = filteredLedger
+        .filter(l => l.moeda === "BRL" && l.tipo_transacao === "DEPOSITO" &&
+          format(parseISO(l.data_transacao), "yyyy-MM") === m.mes)
+        .reduce((acc, l) => acc + l.valor, 0) + m.custos + m.despesas + m.despesasAdmin;
+      
+      return {
+        label: m.label,
+        entradas: entradasMes,
+        saidas: saidasMes,
+        saldo: entradasMes - saidasMes,
+      };
+    });
+  };
+
+  const fluxoCaixaData = getFluxoCaixaData();
+  const totalEntradasPeriodo = fluxoCaixaData.reduce((acc, f) => acc + f.entradas, 0);
+  const totalSaidasPeriodo = fluxoCaixaData.reduce((acc, f) => acc + f.saidas, 0);
+  
+  // Projeção 30 dias baseada na média
+  const mediaEntradas = totalEntradasPeriodo / Math.max(fluxoCaixaData.length, 1);
+  const mediaSaidas = totalSaidasPeriodo / Math.max(fluxoCaixaData.length, 1);
+  const saldoProjetado30d = capitalOperacional + mediaEntradas - mediaSaidas;
+
+  // Composição de Custos por categoria
+  const composicaoCustos = [
+    { name: "Parceiros", value: totalCustosAquisicao, color: "#3B82F6" },
+    { name: "Comissões", value: totalComissoes, color: "#22C55E" },
+    { name: "Bônus", value: totalBonus, color: "#F59E0B" },
+    { name: "Infraestrutura", value: totalDespesasAdmin, color: "#8B5CF6" },
+    { name: "Operadores", value: totalPagamentosOperadores, color: "#06B6D4" },
+  ].filter(c => c.value > 0);
+
+  // Total período anterior (para comparativo)
+  const getMesAnteriorCustos = () => {
+    const mesAnterior = subMonths(new Date(), 1);
+    const keyAnterior = format(mesAnterior, "yyyy-MM");
+    
+    const custosAnt = despesas
+      .filter(d => d.data_movimentacao && format(parseISO(d.data_movimentacao), "yyyy-MM") === keyAnterior)
+      .reduce((acc, d) => acc + d.valor, 0);
+    
+    const despesasAdmAnt = despesasAdmin
+      .filter(d => d.data_despesa && format(parseISO(d.data_despesa), "yyyy-MM") === keyAnterior)
+      .reduce((acc, d) => acc + d.valor, 0);
+    
+    const opAnt = pagamentosOperador
+      .filter(p => p.data_pagamento && format(parseISO(p.data_pagamento), "yyyy-MM") === keyAnterior)
+      .reduce((acc, p) => acc + p.valor, 0);
+    
+    return custosAnt + despesasAdmAnt + opAnt;
+  };
+
+  const totalCustosAnterior = getMesAnteriorCustos();
+
+  // Rentabilidade - usando lucro parceiros do resultado operacional
+  const totalLucroParceiros = resultadoOperacional > 0 ? resultadoOperacional : 0;
+  const totalParceirosAtivos = 0; // Será buscado se necessário
+  const diasMedioAquisicao = 60; // Média padrão de parcerias
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -649,10 +731,10 @@ export default function Financeiro() {
         <TabsContent value="overview" className="space-y-6">
           {/* Filtros de Período */}
           <div className="flex flex-wrap items-center gap-3">
-          <Select value={periodoPreset} onValueChange={setPeriodoPreset}>
-            <SelectTrigger className="w-[190px] flex items-center">
-              <Calendar className="h-4 w-4 mr-2 shrink-0" />
-              <SelectValue placeholder="Período" />
+            <Select value={periodoPreset} onValueChange={setPeriodoPreset}>
+              <SelectTrigger className="w-[190px] flex items-center">
+                <Calendar className="h-4 w-4 mr-2 shrink-0" />
+                <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todo período</SelectItem>
@@ -678,91 +760,48 @@ export default function Financeiro() {
             </div>
           </div>
 
-          {/* Charts Row */}
+          {/* NOVOS COMPONENTES - Grid Principal */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Monthly Evolution */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Evolução Mensal</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <AreaChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="label" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                    <YAxis 
-                      tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}
-                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} 
-                    />
-                    <Tooltip
-                      contentStyle={{ 
-                        backgroundColor: "rgba(0, 0, 0, 0.4)", 
-                        border: "1px solid rgba(255, 255, 255, 0.1)",
-                        backdropFilter: "blur(12px)",
-                        borderRadius: "12px",
-                        padding: "12px 16px"
-                      }}
-                      cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
-                      formatter={(value: number) => [formatCurrency(value), ""]}
-                    />
-                    <Legend />
-                    <Area
-                      type="monotone"
-                      dataKey="custos"
-                      name="Custos Aquisição"
-                      stroke="hsl(var(--destructive))"
-                      fill="hsl(var(--destructive) / 0.2)"
-                      strokeWidth={2}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="despesas"
-                      name="Despesas Pagas"
-                      stroke="hsl(var(--chart-2))"
-                      fill="hsl(var(--chart-2) / 0.2)"
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+            {/* Saúde Financeira */}
+            <SaudeFinanceiraCard
+              caixaDisponivel={capitalOperacional}
+              compromissosPendentes={compromissosPendentes}
+              custosMensais={custosMensaisMedia}
+              formatCurrency={formatCurrency}
+            />
 
-            {/* Comparison Bar - Modern */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Comparativo Geral</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ModernBarChart
-                  data={comparisonData}
-                  categoryKey="name"
-                  bars={[
-                    {
-                      dataKey: "valor",
-                      label: "Valor",
-                      gradientStart: "hsl(var(--primary))",
-                      gradientEnd: "hsl(var(--primary)/0.6)",
-                    },
-                  ]}
-                  height={280}
-                  barSize={32}
-                  showLabels={false}
-                  showLegend={false}
-                  formatValue={(value) => formatCurrency(value)}
-                  customTooltipContent={(payload, label) => (
-                    <div>
-                      <p className="font-medium text-sm mb-1.5 text-foreground">{label}</p>
-                      <p className="text-lg font-bold font-mono text-primary">
-                        {formatCurrency(payload[0]?.value || 0)}
-                      </p>
-                    </div>
-                  )}
-                />
-              </CardContent>
-            </Card>
+            {/* Rentabilidade da Captação */}
+            <RentabilidadeCaptacaoCard
+              totalLucroParceiros={totalLucroParceiros}
+              totalCustosAquisicao={totalCustosOperacionais}
+              totalParceirosAtivos={totalParceirosAtivos}
+              diasMedioAquisicao={diasMedioAquisicao}
+              margemLiquida={margemLiquida}
+              capitalOperacional={capitalOperacional}
+              formatCurrency={formatCurrency}
+            />
           </div>
 
-          {/* Summary Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Fluxo de Caixa */}
+            <FluxoCaixaProjetadoCard
+              fluxoMensal={fluxoCaixaData}
+              totalEntradas={totalEntradasPeriodo}
+              totalSaidas={totalSaidasPeriodo}
+              saldoProjetado={saldoProjetado30d}
+              formatCurrency={formatCurrency}
+            />
+
+            {/* Composição de Custos */}
+            <ComposicaoCustosCard
+              categorias={composicaoCustos}
+              totalAtual={totalCustosOperacionais + totalDespesasAdminCompleto}
+              totalAnterior={totalCustosAnterior}
+              formatCurrency={formatCurrency}
+            />
+          </div>
+
+          {/* Summary Cards - Links Rápidos */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Caixa Operacional */}
             <Card>
