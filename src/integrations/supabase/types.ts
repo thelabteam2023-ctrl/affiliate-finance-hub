@@ -3451,6 +3451,34 @@ export type Database = {
           total_parceiros_indicados: number | null
           user_id: string | null
         }
+        Insert: {
+          cpf?: string | null
+          email?: string | null
+          indicador_id?: string | null
+          nome?: string | null
+          parcerias_ativas?: never
+          parcerias_encerradas?: never
+          status?: string | null
+          telefone?: string | null
+          total_bonus?: never
+          total_comissoes?: never
+          total_parceiros_indicados?: never
+          user_id?: string | null
+        }
+        Update: {
+          cpf?: string | null
+          email?: string | null
+          indicador_id?: string | null
+          nome?: string | null
+          parcerias_ativas?: never
+          parcerias_encerradas?: never
+          status?: string | null
+          telefone?: string | null
+          total_bonus?: never
+          total_comissoes?: never
+          total_parceiros_indicados?: never
+          user_id?: string | null
+        }
         Relationships: []
       }
       v_matched_betting_resumo: {
