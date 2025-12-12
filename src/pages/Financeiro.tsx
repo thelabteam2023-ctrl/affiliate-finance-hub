@@ -117,6 +117,29 @@ interface PagamentoOperador {
   status: string;
 }
 
+interface BookmakerSaldo {
+  saldo_atual: number;
+  saldo_freebet: number;
+  saldo_irrecuperavel: number;
+  status: string;
+}
+
+interface SaudeFinanceiraData {
+  liquidezImediata: number;
+  reservaEstrategica: number;
+  compromissosPendentes: {
+    despesasAdmin: number;
+    pagamentosOperador: number;
+    total: number;
+  };
+  compromissosQuitados: {
+    custosOperacionais: number;
+    despesasAdmin: number;
+    pagamentosOperador: number;
+    total: number;
+  };
+}
+
 export default function Financeiro() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -127,7 +150,10 @@ export default function Financeiro() {
   const [custos, setCustos] = useState<CustoAquisicao[]>([]);
   const [cashLedger, setCashLedger] = useState<CashLedgerEntry[]>([]);
   const [despesasAdmin, setDespesasAdmin] = useState<DespesaAdministrativa[]>([]);
+  const [despesasAdminPendentes, setDespesasAdminPendentes] = useState<DespesaAdministrativa[]>([]);
   const [pagamentosOperador, setPagamentosOperador] = useState<PagamentoOperador[]>([]);
+  const [pagamentosOperadorPendentes, setPagamentosOperadorPendentes] = useState<PagamentoOperador[]>([]);
+  const [bookmakersSaldos, setBookmakersSaldos] = useState<BookmakerSaldo[]>([]);
 
   // Hook centralizado de cotações
   const cryptoSymbols = useMemo(() => caixaCrypto.map(c => c.coin), [caixaCrypto]);
@@ -188,14 +214,28 @@ export default function Financeiro() {
     try {
       setLoading(true);
 
-      const [fiatResult, cryptoResult, despesasResult, custosResult, ledgerResult, despesasAdminResult, pagamentosOpResult] = await Promise.all([
+      const [
+        fiatResult, 
+        cryptoResult, 
+        despesasResult, 
+        custosResult, 
+        ledgerResult, 
+        despesasAdminResult, 
+        despesasAdminPendentesResult,
+        pagamentosOpResult, 
+        pagamentosOpPendentesResult,
+        bookmakersResult
+      ] = await Promise.all([
         supabase.from("v_saldo_caixa_fiat").select("*"),
         supabase.from("v_saldo_caixa_crypto").select("*"),
         supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao").eq("status", "CONFIRMADO"),
         supabase.from("v_custos_aquisicao").select("custo_total, valor_indicador, valor_parceiro, valor_fornecedor, data_inicio"),
         supabase.from("cash_ledger").select("tipo_transacao, valor, data_transacao, moeda").eq("status", "CONFIRMADO"),
         supabase.from("despesas_administrativas").select("*").eq("status", "CONFIRMADO"),
+        supabase.from("despesas_administrativas").select("*").eq("status", "PENDENTE"),
         supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status").eq("status", "CONFIRMADO"),
+        supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status").eq("status", "PENDENTE"),
+        supabase.from("bookmakers").select("saldo_atual, saldo_freebet, saldo_irrecuperavel, status").in("status", ["ativo", "ATIVO", "EM_USO", "AGUARDANDO_SAQUE"]),
       ]);
 
       if (fiatResult.error) throw fiatResult.error;
@@ -204,7 +244,10 @@ export default function Financeiro() {
       if (custosResult.error) throw custosResult.error;
       if (ledgerResult.error) throw ledgerResult.error;
       if (despesasAdminResult.error) throw despesasAdminResult.error;
+      if (despesasAdminPendentesResult.error) throw despesasAdminPendentesResult.error;
       if (pagamentosOpResult.error) throw pagamentosOpResult.error;
+      if (pagamentosOpPendentesResult.error) throw pagamentosOpPendentesResult.error;
+      if (bookmakersResult.error) throw bookmakersResult.error;
 
       setCaixaFiat(fiatResult.data || []);
       setCaixaCrypto(cryptoResult.data || []);
@@ -212,7 +255,10 @@ export default function Financeiro() {
       setCustos(custosResult.data || []);
       setCashLedger(ledgerResult.data || []);
       setDespesasAdmin(despesasAdminResult.data || []);
+      setDespesasAdminPendentes(despesasAdminPendentesResult.data || []);
       setPagamentosOperador(pagamentosOpResult.data || []);
+      setPagamentosOperadorPendentes(pagamentosOpPendentesResult.data || []);
+      setBookmakersSaldos(bookmakersResult.data || []);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar dados",
@@ -451,10 +497,37 @@ export default function Financeiro() {
 
   // ==================== DADOS PARA NOVOS COMPONENTES ====================
 
-  // Compromissos pendentes (custos + despesas do período)
-  const compromissosPendentes = totalCustosOperacionais + totalDespesasAdminCompleto;
+  // ===== SAÚDE FINANCEIRA - NOVO MODELO =====
+  // Saldo total em bookmakers (capital recuperável)
+  const saldoBookmakers = bookmakersSaldos.reduce((acc, b) => {
+    return acc + (b.saldo_atual || 0) - (b.saldo_irrecuperavel || 0);
+  }, 0);
 
-  // Custos mensais médios (últimos 3 meses)
+  // Compromissos PENDENTES (ainda não pagos - representam risco futuro)
+  const compromissosPendentesData = {
+    despesasAdmin: despesasAdminPendentes.reduce((acc, d) => acc + d.valor, 0),
+    pagamentosOperador: pagamentosOperadorPendentes.reduce((acc, p) => acc + p.valor, 0),
+    total: 0,
+  };
+  compromissosPendentesData.total = compromissosPendentesData.despesasAdmin + compromissosPendentesData.pagamentosOperador;
+
+  // Compromissos JÁ QUITADOS (histórico - não impactam saúde financeira)
+  const compromissosQuitadosData = {
+    custosOperacionais: totalCustosOperacionais,
+    despesasAdmin: totalDespesasAdmin,
+    pagamentosOperador: totalPagamentosOperadores,
+    total: totalCustosOperacionais + totalDespesasAdmin + totalPagamentosOperadores,
+  };
+
+  // Dados consolidados para o card de saúde financeira
+  const saudeFinanceiraData: SaudeFinanceiraData = {
+    liquidezImediata: capitalOperacional,
+    reservaEstrategica: saldoBookmakers,
+    compromissosPendentes: compromissosPendentesData,
+    compromissosQuitados: compromissosQuitadosData,
+  };
+
+  // Custos mensais médios (últimos 3 meses) - para referência histórica
   const custosMensaisMedia = monthlyData.slice(-3).reduce((acc, m) => 
     acc + m.custos + m.despesas + m.despesasAdmin, 0) / 3;
 
@@ -798,9 +871,7 @@ export default function Financeiro() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Saúde Financeira */}
             <SaudeFinanceiraCard
-              caixaDisponivel={capitalOperacional}
-              compromissosPendentes={compromissosPendentes}
-              custosMensais={custosMensaisMedia}
+              saudeData={saudeFinanceiraData}
               formatCurrency={formatCurrency}
             />
 
