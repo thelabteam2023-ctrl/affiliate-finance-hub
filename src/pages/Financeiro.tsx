@@ -58,14 +58,14 @@ import {
   ComposedChart,
   Line,
 } from "recharts";
-import { format, parseISO, subMonths, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { format, parseISO, subMonths, subWeeks, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
 import { DespesaAdministrativaDialog } from "@/components/financeiro/DespesaAdministrativaDialog";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { SaudeFinanceiraCard } from "@/components/financeiro/SaudeFinanceiraCard";
 import { RentabilidadeCaptacaoCard } from "@/components/financeiro/RentabilidadeCaptacaoCard";
-import { FluxoCaixaProjetadoCard } from "@/components/financeiro/FluxoCaixaProjetadoCard";
+import { FluxoCaixaCard } from "@/components/financeiro/FluxoCaixaCard";
 import { ComposicaoCustosCard } from "@/components/financeiro/ComposicaoCustosCard";
 
 interface CaixaFiat {
@@ -458,26 +458,65 @@ export default function Financeiro() {
   const custosMensaisMedia = monthlyData.slice(-3).reduce((acc, m) => 
     acc + m.custos + m.despesas + m.despesasAdmin, 0) / 3;
 
-  // Dados para Fluxo de Caixa
+  // Dados para Fluxo de Caixa - SEMANAL (últimas 8 semanas)
   const getFluxoCaixaData = () => {
-    return monthlyData.slice(-6).map(m => {
-      // Entradas = aportes + saques de bookmaker (dinheiro que entrou no caixa)
-      const entradasMes = filteredLedger
-        .filter(l => l.moeda === "BRL" && l.tipo_transacao === "SAQUE" && 
-          format(parseISO(l.data_transacao), "yyyy-MM") === m.mes)
+    const weeks: { label: string; weekStart: Date; weekEnd: Date }[] = [];
+    
+    // Gerar últimas 8 semanas
+    for (let i = 7; i >= 0; i--) {
+      const weekDate = subWeeks(new Date(), i);
+      const weekStart = startOfWeek(weekDate, { weekStartsOn: 1 }); // Segunda-feira
+      const weekEnd = endOfWeek(weekDate, { weekStartsOn: 1 }); // Domingo
+      weeks.push({
+        label: `Sem ${8 - i}`,
+        weekStart,
+        weekEnd,
+      });
+    }
+    
+    return weeks.map(w => {
+      // Entradas = Aportes de investidores + Saques de bookmaker
+      const entradasSemana = cashLedger
+        .filter(l => {
+          if (l.moeda !== "BRL") return false;
+          if (l.tipo_transacao !== "SAQUE" && l.tipo_transacao !== "APORTE_FINANCEIRO") return false;
+          const dataTransacao = parseISO(l.data_transacao);
+          return isWithinInterval(dataTransacao, { start: w.weekStart, end: w.weekEnd });
+        })
         .reduce((acc, l) => acc + l.valor, 0);
       
-      // Saídas = depósitos em bookmaker + custos + despesas
-      const saidasMes = filteredLedger
-        .filter(l => l.moeda === "BRL" && l.tipo_transacao === "DEPOSITO" &&
-          format(parseISO(l.data_transacao), "yyyy-MM") === m.mes)
-        .reduce((acc, l) => acc + l.valor, 0) + m.custos + m.despesas + m.despesasAdmin;
+      // Saídas = Depósitos em bookmaker + Custos + Despesas
+      const depositosSemana = cashLedger
+        .filter(l => {
+          if (l.moeda !== "BRL" || l.tipo_transacao !== "DEPOSITO") return false;
+          const dataTransacao = parseISO(l.data_transacao);
+          return isWithinInterval(dataTransacao, { start: w.weekStart, end: w.weekEnd });
+        })
+        .reduce((acc, l) => acc + l.valor, 0);
+      
+      const custosSemana = despesas
+        .filter(d => {
+          if (!d.data_movimentacao) return false;
+          const dataMovimentacao = parseISO(d.data_movimentacao);
+          return isWithinInterval(dataMovimentacao, { start: w.weekStart, end: w.weekEnd });
+        })
+        .reduce((acc, d) => acc + d.valor, 0);
+      
+      const despesasAdminSemana = despesasAdmin
+        .filter(d => {
+          if (!d.data_despesa) return false;
+          const dataDespesa = parseISO(d.data_despesa);
+          return isWithinInterval(dataDespesa, { start: w.weekStart, end: w.weekEnd });
+        })
+        .reduce((acc, d) => acc + d.valor, 0);
+      
+      const saidasSemana = depositosSemana + custosSemana + despesasAdminSemana;
       
       return {
-        label: m.label,
-        entradas: entradasMes,
-        saidas: saidasMes,
-        saldo: entradasMes - saidasMes,
+        label: w.label,
+        entradas: entradasSemana,
+        saidas: saidasSemana,
+        saldo: entradasSemana - saidasSemana,
       };
     });
   };
@@ -485,11 +524,6 @@ export default function Financeiro() {
   const fluxoCaixaData = getFluxoCaixaData();
   const totalEntradasPeriodo = fluxoCaixaData.reduce((acc, f) => acc + f.entradas, 0);
   const totalSaidasPeriodo = fluxoCaixaData.reduce((acc, f) => acc + f.saidas, 0);
-  
-  // Projeção 30 dias baseada na média
-  const mediaEntradas = totalEntradasPeriodo / Math.max(fluxoCaixaData.length, 1);
-  const mediaSaidas = totalSaidasPeriodo / Math.max(fluxoCaixaData.length, 1);
-  const saldoProjetado30d = capitalOperacional + mediaEntradas - mediaSaidas;
 
   // Composição de Custos por categoria
   const composicaoCustos = [
@@ -783,12 +817,11 @@ export default function Financeiro() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Fluxo de Caixa */}
-            <FluxoCaixaProjetadoCard
-              fluxoMensal={fluxoCaixaData}
+            {/* Fluxo de Caixa Semanal */}
+            <FluxoCaixaCard
+              fluxoSemanal={fluxoCaixaData}
               totalEntradas={totalEntradasPeriodo}
               totalSaidas={totalSaidasPeriodo}
-              saldoProjetado={saldoProjetado30d}
               formatCurrency={formatCurrency}
             />
 
