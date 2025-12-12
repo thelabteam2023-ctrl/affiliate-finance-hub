@@ -67,7 +67,6 @@ import { SaudeFinanceiraCard } from "@/components/financeiro/SaudeFinanceiraCard
 import { RentabilidadeCaptacaoCard } from "@/components/financeiro/RentabilidadeCaptacaoCard";
 import { FluxoCaixaCard } from "@/components/financeiro/FluxoCaixaCard";
 import { ComposicaoCustosCard } from "@/components/financeiro/ComposicaoCustosCard";
-import { DistribuicaoCustosCard } from "@/components/financeiro/DistribuicaoCustosCard";
 
 interface CaixaFiat {
   moeda: string;
@@ -822,10 +821,6 @@ export default function Financeiro() {
             <BarChart3 className="h-4 w-4" />
             Visão Geral
           </TabsTrigger>
-          <TabsTrigger value="custos" className="flex items-center gap-2">
-            <PieChart className="h-4 w-4" />
-            Custos Detalhados
-          </TabsTrigger>
           <TabsTrigger value="despesas" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             Despesas Administrativas
@@ -941,71 +936,6 @@ export default function Financeiro() {
           </div>
         </TabsContent>
 
-        <TabsContent value="custos" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Distribuição de Custos - Same design as ComposicaoCustosCard */}
-            <DistribuicaoCustosCard
-              categorias={pieData.map(p => ({ name: p.name, value: p.value, color: p.color }))}
-              totalAtual={custoIndicadores + custoParceiros + custoFornecedores}
-              totalAnterior={totalCustosAnterior * 0.7} // Aproximação: assume 70% como período anterior
-              formatCurrency={formatCurrency}
-            />
-
-            {/* Detailed Breakdown */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Detalhamento de Custos</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Pagamentos a Indicadores</span>
-                    <span className="font-medium">{formatCurrency(custoIndicadores)}</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-chart-1 rounded-full" 
-                      style={{ width: `${totalCustosAquisicao > 0 ? (custoIndicadores / totalCustosAquisicao) * 100 : 0}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Pagamentos a Parceiros</span>
-                    <span className="font-medium">{formatCurrency(custoParceiros)}</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-chart-2 rounded-full" 
-                      style={{ width: `${totalCustosAquisicao > 0 ? (custoParceiros / totalCustosAquisicao) * 100 : 0}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Pagamentos a Fornecedores</span>
-                    <span className="font-medium">{formatCurrency(custoFornecedores)}</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-chart-3 rounded-full" 
-                      style={{ width: `${totalCustosAquisicao > 0 ? (custoFornecedores / totalCustosAquisicao) * 100 : 0}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t">
-                  <div className="flex justify-between font-medium">
-                    <span>Total Custos de Aquisição</span>
-                    <span className="text-destructive">{formatCurrency(totalCustosAquisicao)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
 
         {/* Tab: Despesas Administrativas */}
         <TabsContent value="despesas" className="space-y-6">
