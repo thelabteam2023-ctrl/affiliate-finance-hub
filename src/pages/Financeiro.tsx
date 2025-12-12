@@ -154,7 +154,8 @@ export default function Financeiro() {
   const [pagamentosOperador, setPagamentosOperador] = useState<PagamentoOperador[]>([]);
   const [pagamentosOperadorPendentes, setPagamentosOperadorPendentes] = useState<PagamentoOperador[]>([]);
   const [bookmakersSaldos, setBookmakersSaldos] = useState<BookmakerSaldo[]>([]);
-
+  const [lucroOperacionalApostas, setLucroOperacionalApostas] = useState<number>(0);
+  const [totalParceirosAtivos, setTotalParceirosAtivos] = useState<number>(0);
   // Hook centralizado de cotações
   const cryptoSymbols = useMemo(() => caixaCrypto.map(c => c.coin), [caixaCrypto]);
   const { cotacaoUSD, cryptoPrices, getCryptoUSDValue, getCryptoPrice, refreshAll: refreshCotacoes, loading: loadingCotacoes, lastUpdate, source } = useCotacoes(cryptoSymbols);
@@ -224,7 +225,9 @@ export default function Financeiro() {
         despesasAdminPendentesResult,
         pagamentosOpResult, 
         pagamentosOpPendentesResult,
-        bookmakersResult
+        bookmakersResult,
+        apostasLucroResult,
+        parceirosAtivosResult
       ] = await Promise.all([
         supabase.from("v_saldo_caixa_fiat").select("*"),
         supabase.from("v_saldo_caixa_crypto").select("*"),
@@ -236,6 +239,8 @@ export default function Financeiro() {
         supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status").eq("status", "CONFIRMADO"),
         supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status").eq("status", "PENDENTE"),
         supabase.from("bookmakers").select("saldo_atual, saldo_freebet, saldo_irrecuperavel, status").in("status", ["ativo", "ATIVO", "EM_USO", "AGUARDANDO_SAQUE"]),
+        supabase.from("apostas").select("lucro_prejuizo").not("resultado", "is", null),
+        supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("status", "ativo"),
       ]);
 
       if (fiatResult.error) throw fiatResult.error;
@@ -259,6 +264,14 @@ export default function Financeiro() {
       setPagamentosOperador(pagamentosOpResult.data || []);
       setPagamentosOperadorPendentes(pagamentosOpPendentesResult.data || []);
       setBookmakersSaldos(bookmakersResult.data || []);
+      
+      // Calcular lucro operacional das apostas
+      const lucroTotal = (apostasLucroResult.data || []).reduce((acc: number, a: { lucro_prejuizo: number | null }) => 
+        acc + (a.lucro_prejuizo || 0), 0);
+      setLucroOperacionalApostas(lucroTotal);
+      
+      // Total de parceiros ativos
+      setTotalParceirosAtivos(parceirosAtivosResult.count || 0);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar dados",
@@ -631,7 +644,6 @@ export default function Financeiro() {
 
   // Rentabilidade - usando lucro parceiros do resultado operacional
   const totalLucroParceiros = resultadoOperacional > 0 ? resultadoOperacional : 0;
-  const totalParceirosAtivos = 0; // Será buscado se necessário
   const diasMedioAquisicao = 60; // Média padrão de parcerias
 
   if (loading) {
@@ -877,8 +889,7 @@ export default function Financeiro() {
               totalCustosAquisicao={totalCustosOperacionais}
               totalParceirosAtivos={totalParceirosAtivos}
               diasMedioAquisicao={diasMedioAquisicao}
-              margemLiquida={margemLiquida}
-              capitalOperacional={capitalOperacional}
+              lucroOperacional={lucroOperacionalApostas}
               formatCurrency={formatCurrency}
             />
           </div>
