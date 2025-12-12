@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { PerformanceMetrics, PeriodoAnalise } from '@/types/performance';
 
 interface UseProjetoPerformanceProps {
-  projetoId?: string; // Se undefined, busca todos os projetos
+  projetoId?: string;
   periodo: PeriodoAnalise;
 }
 
@@ -22,43 +22,55 @@ export function useProjetoPerformance({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchLucroApostas = useCallback(async (): Promise<number> => {
+  // Buscar TODOS os bookmakers que já estiveram no projeto (via histórico)
+  const fetchHistoricalBookmakerIds = useCallback(async (): Promise<Set<string>> => {
+    if (!projetoId) return new Set();
+    
+    const { data } = await supabase
+      .from('projeto_bookmaker_historico')
+      .select('bookmaker_id')
+      .eq('projeto_id', projetoId);
+    
+    return new Set(data?.map(h => h.bookmaker_id) || []);
+  }, [projetoId]);
+
+  const fetchLucroApostas = useCallback(async (historicalBookmakerIds?: Set<string>): Promise<number> => {
     const { dataInicio, dataFim } = periodo;
     let lucroTotal = 0;
 
-    // 1. Apostas simples (excluindo pernas de surebet)
+    // 1. Apostas simples (excluindo pernas de surebet) - usar LIQUIDADA/FINALIZADA/CONCLUIDA
     let querySimples = supabase
       .from('apostas')
       .select('lucro_prejuizo')
-      .eq('status', 'LIQUIDADO')
+      .in('status', ['LIQUIDADA', 'FINALIZADA', 'CONCLUIDA'])
       .is('surebet_id', null);
     if (projetoId) querySimples = querySimples.eq('projeto_id', projetoId);
     if (dataInicio) querySimples = querySimples.gte('data_aposta', dataInicio.toISOString());
     if (dataFim) querySimples = querySimples.lte('data_aposta', dataFim.toISOString());
 
-    // 2. Apostas múltiplas
+    // 2. Apostas múltiplas - usar status diferente de PENDENTE
     let queryMultiplas = supabase
       .from('apostas_multiplas')
       .select('lucro_prejuizo')
-      .eq('status', 'LIQUIDADO');
+      .neq('status', 'PENDENTE');
     if (projetoId) queryMultiplas = queryMultiplas.eq('projeto_id', projetoId);
     if (dataInicio) queryMultiplas = queryMultiplas.gte('data_aposta', dataInicio.toISOString());
     if (dataFim) queryMultiplas = queryMultiplas.lte('data_aposta', dataFim.toISOString());
 
-    // 3. Surebets
+    // 3. Surebets - usar LIQUIDADA e lucro_real (já consolidado, evita double-counting)
     let querySurebets = supabase
       .from('surebets')
       .select('lucro_real')
-      .eq('status', 'LIQUIDADO');
+      .eq('status', 'LIQUIDADA');
     if (projetoId) querySurebets = querySurebets.eq('projeto_id', projetoId);
     if (dataInicio) querySurebets = querySurebets.gte('data_operacao', dataInicio.toISOString());
     if (dataFim) querySurebets = querySurebets.lte('data_operacao', dataFim.toISOString());
 
-    // 4. Matched Betting Rounds
+    // 4. Matched Betting Rounds - usar LIQUIDADA
     let queryMB = supabase
       .from('matched_betting_rounds')
       .select('lucro_real')
-      .eq('status', 'LIQUIDADO');
+      .eq('status', 'LIQUIDADA');
     if (projetoId) queryMB = queryMB.eq('projeto_id', projetoId);
     if (dataInicio) queryMB = queryMB.gte('data_evento', dataInicio.toISOString());
     if (dataFim) queryMB = queryMB.lte('data_evento', dataFim.toISOString());
@@ -78,7 +90,7 @@ export function useProjetoPerformance({
     return lucroTotal;
   }, [projetoId, periodo]);
 
-  const fetchCashFlow = useCallback(async (): Promise<{ depositos: number; saques: number }> => {
+  const fetchCashFlow = useCallback(async (historicalBookmakerIds?: Set<string>): Promise<{ depositos: number; saques: number }> => {
     const { dataInicio, dataFim } = periodo;
 
     // Depósitos para bookmakers
@@ -103,21 +115,14 @@ export function useProjetoPerformance({
 
     const [depositosResult, saquesResult] = await Promise.all([queryDepositos, querySaques]);
 
-    // Se temos projetoId, precisamos filtrar por bookmakers do projeto
-    if (projetoId) {
-      const { data: bookmakersProjeto } = await supabase
-        .from('bookmakers')
-        .select('id')
-        .eq('projeto_id', projetoId);
-      
-      const bookmakerIds = new Set(bookmakersProjeto?.map(b => b.id) || []);
-      
+    // Se temos projetoId, usar histórico de bookmakers (inclui desvinculados)
+    if (projetoId && historicalBookmakerIds && historicalBookmakerIds.size > 0) {
       const depositos = depositosResult.data
-        ?.filter(d => bookmakerIds.has(d.destino_bookmaker_id))
+        ?.filter(d => historicalBookmakerIds.has(d.destino_bookmaker_id))
         .reduce((acc, d) => acc + Number(d.valor), 0) || 0;
       
       const saques = saquesResult.data
-        ?.filter(s => bookmakerIds.has(s.origem_bookmaker_id))
+        ?.filter(s => historicalBookmakerIds.has(s.origem_bookmaker_id))
         .reduce((acc, s) => acc + Number(s.valor), 0) || 0;
       
       return { depositos, saques };
@@ -130,6 +135,7 @@ export function useProjetoPerformance({
   }, [projetoId, periodo]);
 
   const fetchSaldoBookmakers = useCallback(async (): Promise<number> => {
+    // Buscar apenas bookmakers ATUALMENTE vinculados ao projeto
     let query = supabase.from('bookmakers').select('saldo_atual');
     if (projetoId) query = query.eq('projeto_id', projetoId);
 
@@ -142,9 +148,12 @@ export function useProjetoPerformance({
     setError(null);
 
     try {
+      // Primeiro buscar IDs históricos de bookmakers
+      const historicalBookmakerIds = await fetchHistoricalBookmakerIds();
+      
       const [lucroApostas, cashFlow, saldoFinal] = await Promise.all([
-        fetchLucroApostas(),
-        fetchCashFlow(),
+        fetchLucroApostas(historicalBookmakerIds),
+        fetchCashFlow(historicalBookmakerIds),
         fetchSaldoBookmakers(),
       ]);
 
@@ -174,7 +183,7 @@ export function useProjetoPerformance({
     } finally {
       setLoading(false);
     }
-  }, [fetchLucroApostas, fetchCashFlow, fetchSaldoBookmakers]);
+  }, [fetchHistoricalBookmakerIds, fetchLucroApostas, fetchCashFlow, fetchSaldoBookmakers]);
 
   useEffect(() => {
     calculateMetrics();
