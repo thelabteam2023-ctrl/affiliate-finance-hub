@@ -1,7 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { PieChart, TrendingUp, TrendingDown, Minus, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface CustoCategoria {
   name: string;
@@ -53,6 +59,24 @@ export function ComposicaoCustosCard({
           <CardTitle className="text-base flex items-center gap-2">
             <PieChart className="h-4 w-4 text-primary" />
             Composição de Custos
+            <TooltipProvider>
+              <Tooltip delayDuration={300}>
+                <TooltipTrigger asChild>
+                  <button className="text-muted-foreground hover:text-foreground transition-colors">
+                    <HelpCircle className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[280px] text-xs">
+                  <p className="font-medium mb-1">Composição de Custos</p>
+                  <p>Distribuição dos custos por categoria:</p>
+                  <p><strong>Aquisição:</strong> Pagamentos a parceiros e fornecedores</p>
+                  <p><strong>Comissões:</strong> Pagamentos recorrentes a indicadores</p>
+                  <p><strong>Bônus:</strong> Pagamentos por meta atingida</p>
+                  <p><strong>Infraestrutura:</strong> Despesas administrativas</p>
+                  <p><strong>Operadores:</strong> Pagamentos a operadores</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </CardTitle>
           <div className={cn(
             "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",

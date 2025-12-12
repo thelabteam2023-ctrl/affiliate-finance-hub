@@ -23,21 +23,6 @@ interface FluxoCaixaCardProps {
   formatCurrency: (value: number) => string;
 }
 
-const KpiTooltip = ({ children, content }: { children: React.ReactNode; content: string }) => (
-  <TooltipProvider>
-    <UITooltip delayDuration={300}>
-      <TooltipTrigger asChild>
-        <button className="text-muted-foreground hover:text-foreground transition-colors">
-          {children}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="top" className="max-w-[250px] text-xs">
-        <p>{content}</p>
-      </TooltipContent>
-    </UITooltip>
-  </TooltipProvider>
-);
-
 export function FluxoCaixaCard({
   fluxoSemanal,
   totalEntradas,
@@ -54,6 +39,21 @@ export function FluxoCaixaCard({
           <CardTitle className="text-base flex items-center gap-2">
             <Calendar className="h-4 w-4 text-primary" />
             Fluxo de Caixa Semanal
+            <TooltipProvider>
+              <UITooltip delayDuration={300}>
+                <TooltipTrigger asChild>
+                  <button className="text-muted-foreground hover:text-foreground transition-colors">
+                    <HelpCircle className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[280px] text-xs">
+                  <p className="font-medium mb-1">Fluxo de Caixa Semanal</p>
+                  <p><strong>Entradas:</strong> Aportes de investidores + Saques de bookmakers</p>
+                  <p><strong>Saídas:</strong> Depósitos em bookmakers + Custos + Despesas administrativas</p>
+                  <p><strong>Saldo:</strong> Diferença entre entradas e saídas das últimas 8 semanas</p>
+                </TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
           </CardTitle>
           <div className={cn(
             "flex items-center gap-1.5 text-xs font-medium",
@@ -68,22 +68,12 @@ export function FluxoCaixaCard({
         {/* Summary */}
         <div className="grid grid-cols-3 gap-3">
           <div className="p-3 bg-success/5 border border-success/20 rounded-lg text-center">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <ArrowUpCircle className="h-4 w-4 text-success" />
-              <KpiTooltip content="Aportes de investidores + Saques de bookmakers = dinheiro que entrou no caixa operacional">
-                <HelpCircle className="h-3 w-3" />
-              </KpiTooltip>
-            </div>
+            <ArrowUpCircle className="h-4 w-4 text-success mx-auto mb-1" />
             <p className="text-[10px] text-muted-foreground uppercase">Entradas</p>
             <p className="text-sm font-bold text-success">{formatCurrency(totalEntradas)}</p>
           </div>
           <div className="p-3 bg-destructive/5 border border-destructive/20 rounded-lg text-center">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <ArrowDownCircle className="h-4 w-4 text-destructive" />
-              <KpiTooltip content="Depósitos em bookmakers + Custos operacionais + Despesas administrativas = dinheiro que saiu do caixa">
-                <HelpCircle className="h-3 w-3" />
-              </KpiTooltip>
-            </div>
+            <ArrowDownCircle className="h-4 w-4 text-destructive mx-auto mb-1" />
             <p className="text-[10px] text-muted-foreground uppercase">Saídas</p>
             <p className="text-sm font-bold text-destructive">{formatCurrency(totalSaidas)}</p>
           </div>
@@ -91,12 +81,7 @@ export function FluxoCaixaCard({
             "p-3 border rounded-lg text-center",
             saldoLiquido >= 0 ? "bg-primary/5 border-primary/20" : "bg-destructive/5 border-destructive/20"
           )}>
-            <div className="flex items-center justify-center gap-1 mb-1">
-              {saldoLiquido >= 0 ? <TrendingUp className="h-4 w-4 text-primary" /> : <TrendingDown className="h-4 w-4 text-destructive" />}
-              <KpiTooltip content="Diferença entre entradas e saídas das últimas 8 semanas">
-                <HelpCircle className="h-3 w-3" />
-              </KpiTooltip>
-            </div>
+            {saldoLiquido >= 0 ? <TrendingUp className="h-4 w-4 text-primary mx-auto mb-1" /> : <TrendingDown className="h-4 w-4 text-destructive mx-auto mb-1" />}
             <p className="text-[10px] text-muted-foreground uppercase">Saldo</p>
             <p className={cn("text-sm font-bold", saldoLiquido >= 0 ? "text-primary" : "text-destructive")}>
               {formatCurrency(saldoLiquido)}

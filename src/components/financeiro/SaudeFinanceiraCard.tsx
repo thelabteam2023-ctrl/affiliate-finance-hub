@@ -1,7 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Activity, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle, Clock, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface SaudeFinanceiraCardProps {
   caixaDisponivel: number;
@@ -53,6 +59,20 @@ export function SaudeFinanceiraCard({
           <CardTitle className="text-base flex items-center gap-2">
             <Activity className="h-4 w-4 text-primary" />
             Saúde Financeira
+            <TooltipProvider>
+              <Tooltip delayDuration={300}>
+                <TooltipTrigger asChild>
+                  <button className="text-muted-foreground hover:text-foreground transition-colors">
+                    <HelpCircle className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[280px] text-xs">
+                  <p className="font-medium mb-1">Saúde Financeira</p>
+                  <p>Mede a capacidade de honrar compromissos com o caixa disponível.</p>
+                  <p className="mt-1"><strong>Burn Rate:</strong> Quantos meses o caixa atual sustenta a operação no ritmo de custos mensais.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </CardTitle>
           <div className={cn("flex items-center gap-1.5 text-xs font-medium", status.color)}>
             <StatusIcon className="h-3.5 w-3.5" />
