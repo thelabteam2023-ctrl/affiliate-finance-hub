@@ -5,12 +5,10 @@ import {
   CheckCircle, 
   HelpCircle, 
   Wallet,
-  PiggyBank,
+  Landmark,
   Clock,
-  Shield,
-  TrendingUp,
-  DollarSign,
 } from "lucide-react";
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -38,6 +36,156 @@ interface SaudeFinanceiraData {
 interface SaudeFinanceiraCardProps {
   saudeData: SaudeFinanceiraData;
   formatCurrency: (value: number) => string;
+}
+
+// Componente do gráfico de barras horizontal
+function HealthBarChart({
+  liquidez,
+  capitalResgatavel,
+  compromissos,
+  formatCurrency,
+}: {
+  liquidez: number;
+  capitalResgatavel: number;
+  compromissos: number;
+  formatCurrency: (value: number) => string;
+}) {
+  const data = useMemo(() => {
+    const capacidadeTotal = liquidez + capitalResgatavel;
+    const maxValue = Math.max(capacidadeTotal, compromissos, 1);
+    
+    // Porcentagens para o gráfico
+    const liquidezPercent = (liquidez / maxValue) * 100;
+    const resgatPercent = (capitalResgatavel / maxValue) * 100;
+    const compromissosPercent = (compromissos / maxValue) * 100;
+    
+    // Cobertura
+    const cobertura = compromissos > 0 ? capacidadeTotal / compromissos : Infinity;
+    
+    // Status baseado na cobertura
+    let statusColor = "bg-success";
+    let statusLabel = "Excelente";
+    if (cobertura < 1) {
+      statusColor = "bg-destructive";
+      statusLabel = "Crítico";
+    } else if (cobertura < 1.5) {
+      statusColor = "bg-yellow-500";
+      statusLabel = "Atenção";
+    } else if (cobertura < 3) {
+      statusColor = "bg-success";
+      statusLabel = "Saudável";
+    }
+    
+    return {
+      liquidezPercent,
+      resgatPercent,
+      compromissosPercent,
+      capacidadeTotal,
+      cobertura,
+      statusColor,
+      statusLabel,
+      maxValue,
+    };
+  }, [liquidez, capitalResgatavel, compromissos]);
+
+  if (compromissos === 0 && liquidez === 0 && capitalResgatavel === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-3 p-3 bg-muted/20 rounded-lg">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-medium text-muted-foreground">Capacidade vs Compromissos</span>
+        <span className="text-[10px] text-muted-foreground">
+          Cobertura: {data.cobertura === Infinity ? "∞" : `${data.cobertura.toFixed(1)}x`}
+        </span>
+      </div>
+      
+      {/* Barra de Capacidade (Liquidez + Resgatável) */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-[10px]">
+          <span className="text-muted-foreground">Capacidade Total</span>
+          <span className="font-medium text-foreground">{formatCurrency(data.capacidadeTotal)}</span>
+        </div>
+        <div className="relative h-6 bg-muted/50 rounded-md overflow-hidden">
+          {/* Liquidez */}
+          <div 
+            className="absolute h-full bg-primary/80 transition-all duration-500 flex items-center justify-end"
+            style={{ width: `${data.liquidezPercent}%`, left: 0 }}
+          >
+            {data.liquidezPercent > 15 && (
+              <span className="text-[9px] text-primary-foreground font-medium pr-1 truncate">
+                Liquidez
+              </span>
+            )}
+          </div>
+          {/* Capital Resgatável */}
+          <div 
+            className="absolute h-full bg-primary/40 transition-all duration-500 flex items-center justify-end"
+            style={{ 
+              width: `${data.resgatPercent}%`, 
+              left: `${data.liquidezPercent}%` 
+            }}
+          >
+            {data.resgatPercent > 15 && (
+              <span className="text-[9px] text-foreground font-medium pr-1 truncate">
+                Resgatável
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Barra de Compromissos */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-[10px]">
+          <span className="text-muted-foreground">Compromissos Pendentes</span>
+          <span className="font-medium text-destructive">{formatCurrency(compromissos)}</span>
+        </div>
+        <div className="relative h-6 bg-muted/50 rounded-md overflow-hidden">
+          <div 
+            className="absolute h-full bg-destructive/70 transition-all duration-500 flex items-center justify-end"
+            style={{ width: `${data.compromissosPercent}%`, left: 0 }}
+          >
+            {data.compromissosPercent > 15 && (
+              <span className="text-[9px] text-destructive-foreground font-medium pr-1 truncate">
+                Pendentes
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Legenda de Cobertura */}
+      <div className="flex items-center gap-4 pt-2 border-t border-border/30">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-primary/80" />
+          <span className="text-[10px] text-muted-foreground">Liquidez</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-primary/40" />
+          <span className="text-[10px] text-muted-foreground">Capital Resgatável</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-destructive/70" />
+          <span className="text-[10px] text-muted-foreground">Compromissos</span>
+        </div>
+      </div>
+      
+      {/* Indicadores de Referência */}
+      <div className="flex items-center justify-between text-[9px] text-muted-foreground pt-1">
+        <span className={data.cobertura >= 1 ? "text-success" : "text-destructive"}>
+          1x = Cobertura Mínima
+        </span>
+        <span className={data.cobertura >= 1.5 ? "text-success" : "text-muted-foreground"}>
+          1.5x = Saudável
+        </span>
+        <span className={data.cobertura >= 3 ? "text-success" : "text-muted-foreground"}>
+          3x = Excelente
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export function SaudeFinanceiraCard({
@@ -149,7 +297,7 @@ export function SaudeFinanceiraCard({
                   <p className="font-medium mb-2">Saúde Financeira do Caixa</p>
                   <div className="space-y-1.5 text-muted-foreground">
                     <p><strong>Liquidez Imediata:</strong> Dinheiro livre no caixa operacional</p>
-                    <p><strong>Reserva Estratégica:</strong> Capital em bookmakers que pode ser sacado se necessário</p>
+                    <p><strong>Capital Operacional Resgatável:</strong> Capital em bookmakers que pode ser sacado se necessário</p>
                     <p><strong>Compromissos Pendentes:</strong> Obrigações futuras não pagas (risco real)</p>
                     <p className="pt-1 border-t border-border/50">
                       <em>Custos já pagos não impactam a saúde financeira - são histórico.</em>
@@ -205,16 +353,24 @@ export function SaudeFinanceiraCard({
             <p className="text-[10px] text-muted-foreground">Caixa disponível agora</p>
           </div>
 
-          {/* Reserva Estratégica */}
+          {/* Capital Operacional Resgatável */}
           <div className="p-3 bg-muted/30 rounded-lg">
             <div className="flex items-center gap-1.5 mb-1">
-              <PiggyBank className="h-3.5 w-3.5 text-primary" />
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Reserva Estratégica</p>
+              <Landmark className="h-3.5 w-3.5 text-primary" />
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Capital Resgatável</p>
             </div>
             <p className="text-sm font-bold text-foreground">{formatCurrency(reservaEstrategica)}</p>
             <p className="text-[10px] text-muted-foreground">Capital em bookmakers</p>
           </div>
         </div>
+
+        {/* Gráfico de Barras - Visualização da Saúde */}
+        <HealthBarChart
+          liquidez={liquidezImediata}
+          capitalResgatavel={reservaEstrategica}
+          compromissos={compromissosPendentes.total}
+          formatCurrency={formatCurrency}
+        />
 
         {/* Compromissos Pendentes */}
         <div className="space-y-2">
@@ -271,7 +427,7 @@ export function SaudeFinanceiraCard({
               />
             </div>
             <p className="text-[10px] text-muted-foreground">
-              {percentualReservaUsada.toFixed(0)}% da reserva seria utilizada para cobrir compromissos
+              {percentualReservaUsada.toFixed(0)}% do capital resgatável seria utilizado para cobrir compromissos
             </p>
           </div>
         )}
