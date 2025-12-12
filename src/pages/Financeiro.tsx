@@ -493,7 +493,7 @@ export default function Financeiro() {
 
   // Composição de Custos por categoria
   const composicaoCustos = [
-    { name: "Parceiros", value: totalCustosAquisicao, color: "#3B82F6" },
+    { name: "Custos Aquisição", value: totalCustosAquisicao, color: "#3B82F6" },
     { name: "Comissões", value: totalComissoes, color: "#22C55E" },
     { name: "Bônus", value: totalBonus, color: "#F59E0B" },
     { name: "Infraestrutura", value: totalDespesasAdmin, color: "#8B5CF6" },
@@ -833,44 +833,6 @@ export default function Financeiro() {
               </CardContent>
             </Card>
 
-            {/* Despesas de Infraestrutura */}
-            <Card>
-              <CardHeader className="flex flex-row items-center gap-2">
-                <Banknote className="h-5 w-5 text-chart-2" />
-                <CardTitle className="text-base">Despesas de Infraestrutura</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Gift className="h-4 w-4 text-primary" />
-                    <span className="text-sm">Bônus Pagos</span>
-                  </div>
-                  <span className="font-bold">{formatCurrency(totalBonus)}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Banknote className="h-4 w-4 text-chart-2" />
-                    <span className="text-sm">Comissões Pagas</span>
-                  </div>
-                  <span className="font-bold">{formatCurrency(totalComissoes)}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-chart-3" />
-                    <span className="text-sm">Custos Aquisição</span>
-                  </div>
-                  <span className="font-bold">{formatCurrency(totalCustosAquisicao)}</span>
-                </div>
-                <Button
-                  variant="outline"
-                  className="w-full mt-2"
-                  onClick={() => navigate("/programa-indicacao")}
-                >
-                  <ArrowUpRight className="h-4 w-4 mr-2" />
-                  Ir para Captação
-                </Button>
-              </CardContent>
-            </Card>
           </div>
         </TabsContent>
 
