@@ -280,7 +280,7 @@ export default function GestaoProjetos() {
                             ) : (
                               <TrendingDown className="h-4 w-4 text-red-500" />
                             )}
-                            <span>Resultado Est.</span>
+                            <span>Resultado Patrimonial</span>
                           </div>
                           <span className={`font-medium ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
                             {isPositive ? '+' : ''}{formatCurrency(resultado)}
@@ -357,7 +357,7 @@ export default function GestaoProjetos() {
                       <p className="text-sm font-medium">{formatCurrency(projeto.saldo_bookmakers || 0)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Resultado Est.</p>
+                      <p className="text-xs text-muted-foreground">Resultado Patrimonial</p>
                       {(() => {
                         const saldoRecuperavel = (projeto.saldo_bookmakers || 0) - (projeto.saldo_irrecuperavel || 0);
                         const resultado = (projeto.total_sacado || 0) + saldoRecuperavel - (projeto.total_depositado || 0) - (projeto.perdas_confirmadas || 0);
