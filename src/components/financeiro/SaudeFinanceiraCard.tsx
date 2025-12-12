@@ -1,6 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Activity, AlertTriangle, CheckCircle, Clock, HelpCircle } from "lucide-react";
+import { 
+  Activity, 
+  AlertTriangle, 
+  CheckCircle, 
+  HelpCircle, 
+  Wallet,
+  PiggyBank,
+  Clock,
+  Shield,
+  TrendingUp,
+  DollarSign,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -9,52 +19,121 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+interface SaudeFinanceiraData {
+  liquidezImediata: number;
+  reservaEstrategica: number;
+  compromissosPendentes: {
+    despesasAdmin: number;
+    pagamentosOperador: number;
+    total: number;
+  };
+  compromissosQuitados: {
+    custosOperacionais: number;
+    despesasAdmin: number;
+    pagamentosOperador: number;
+    total: number;
+  };
+}
+
 interface SaudeFinanceiraCardProps {
-  caixaDisponivel: number;
-  compromissosPendentes: number;
-  custosMensais: number;
+  saudeData: SaudeFinanceiraData;
   formatCurrency: (value: number) => string;
 }
 
 export function SaudeFinanceiraCard({
-  caixaDisponivel,
-  compromissosPendentes,
-  custosMensais,
+  saudeData,
   formatCurrency,
 }: SaudeFinanceiraCardProps) {
-  // Saúde = (Caixa - Compromissos) / Caixa * 100
-  const saudePercent = caixaDisponivel > 0 
-    ? Math.max(0, Math.min(100, ((caixaDisponivel - compromissosPendentes) / caixaDisponivel) * 100))
-    : 0;
+  const { liquidezImediata, reservaEstrategica, compromissosPendentes, compromissosQuitados } = saudeData;
 
-  // Burn Rate = meses que o caixa sustenta a operação
-  const burnRateMeses = custosMensais > 0 
-    ? Math.floor(caixaDisponivel / custosMensais)
+  // Capacidade total = liquidez + reserva estratégica (capital recuperável)
+  const capacidadeTotal = liquidezImediata + reservaEstrategica;
+  
+  // Cobertura = Capacidade Total / Compromissos Pendentes
+  const cobertura = compromissosPendentes.total > 0 
+    ? capacidadeTotal / compromissosPendentes.total 
     : Infinity;
 
-  // Status baseado na saúde
+  // Saúde % = baseado na cobertura dos compromissos pendentes
+  // 100% = pode cobrir todos os compromissos só com liquidez
+  // >100% = sobra capital
+  // <100% = precisa usar reserva
+  const saudePercent = compromissosPendentes.total > 0 
+    ? Math.min(100, (liquidezImediata / compromissosPendentes.total) * 100)
+    : 100;
+
+  // Folga financeira = capital disponível após pagar todos os compromissos
+  const folgaFinanceira = capacidadeTotal - compromissosPendentes.total;
+
+  // Status baseado na capacidade de cobertura
   const getStatus = () => {
-    if (saudePercent >= 70) return { color: "text-success", bg: "bg-success", label: "Saudável", icon: CheckCircle };
-    if (saudePercent >= 40) return { color: "text-yellow-500", bg: "bg-yellow-500", label: "Atenção", icon: AlertTriangle };
-    return { color: "text-destructive", bg: "bg-destructive", label: "Crítico", icon: AlertTriangle };
+    if (compromissosPendentes.total === 0) {
+      return { 
+        color: "text-success", 
+        bg: "bg-success", 
+        bgLight: "bg-success/10",
+        borderColor: "border-success/30",
+        label: "Sem Pendências", 
+        icon: CheckCircle,
+        description: "Nenhum compromisso pendente"
+      };
+    }
+    if (cobertura >= 3) {
+      return { 
+        color: "text-success", 
+        bg: "bg-success", 
+        bgLight: "bg-success/10",
+        borderColor: "border-success/30",
+        label: "Excelente", 
+        icon: CheckCircle,
+        description: "Cobertura superior a 3x os compromissos"
+      };
+    }
+    if (cobertura >= 1.5) {
+      return { 
+        color: "text-success", 
+        bg: "bg-success", 
+        bgLight: "bg-success/10",
+        borderColor: "border-success/30",
+        label: "Saudável", 
+        icon: CheckCircle,
+        description: "Boa margem de segurança"
+      };
+    }
+    if (cobertura >= 1) {
+      return { 
+        color: "text-yellow-500", 
+        bg: "bg-yellow-500", 
+        bgLight: "bg-yellow-500/10",
+        borderColor: "border-yellow-500/30",
+        label: "Atenção", 
+        icon: AlertTriangle,
+        description: "Compromissos cobertos, mas sem folga"
+      };
+    }
+    return { 
+      color: "text-destructive", 
+      bg: "bg-destructive", 
+      bgLight: "bg-destructive/10",
+      borderColor: "border-destructive/30",
+      label: "Crítico", 
+      icon: AlertTriangle,
+      description: "Capital insuficiente para cobrir compromissos"
+    };
   };
 
   const status = getStatus();
   const StatusIcon = status.icon;
 
-  // Burn rate status
-  const getBurnStatus = () => {
-    if (burnRateMeses === Infinity) return { color: "text-muted-foreground", label: "N/A" };
-    if (burnRateMeses >= 6) return { color: "text-success", label: `${burnRateMeses} meses` };
-    if (burnRateMeses >= 3) return { color: "text-yellow-500", label: `${burnRateMeses} meses` };
-    return { color: "text-destructive", label: `${burnRateMeses} ${burnRateMeses === 1 ? "mês" : "meses"}` };
-  };
-
-  const burnStatus = getBurnStatus();
+  // Calcular quanto da reserva estratégica seria necessária
+  const usoReserva = Math.max(0, compromissosPendentes.total - liquidezImediata);
+  const percentualReservaUsada = reservaEstrategica > 0 
+    ? Math.min(100, (usoReserva / reservaEstrategica) * 100)
+    : 0;
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-2">
+    <Card className={cn("overflow-hidden", status.borderColor)}>
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
             <Activity className="h-4 w-4 text-primary" />
@@ -66,68 +145,160 @@ export function SaudeFinanceiraCard({
                     <HelpCircle className="h-3.5 w-3.5" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[280px] text-xs">
-                  <p className="font-medium mb-1">Saúde Financeira</p>
-                  <p>Mede a capacidade de honrar compromissos com o caixa disponível.</p>
-                  <p className="mt-1"><strong>Burn Rate:</strong> Quantos meses o caixa atual sustenta a operação no ritmo de custos mensais.</p>
+                <TooltipContent side="top" className="max-w-[320px] text-xs">
+                  <p className="font-medium mb-2">Saúde Financeira do Caixa</p>
+                  <div className="space-y-1.5 text-muted-foreground">
+                    <p><strong>Liquidez Imediata:</strong> Dinheiro livre no caixa operacional</p>
+                    <p><strong>Reserva Estratégica:</strong> Capital em bookmakers que pode ser sacado se necessário</p>
+                    <p><strong>Compromissos Pendentes:</strong> Obrigações futuras não pagas (risco real)</p>
+                    <p className="pt-1 border-t border-border/50">
+                      <em>Custos já pagos não impactam a saúde financeira - são histórico.</em>
+                    </p>
+                  </div>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </CardTitle>
-          <div className={cn("flex items-center gap-1.5 text-xs font-medium", status.color)}>
+          <div className={cn("flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full", status.bgLight, status.color)}>
             <StatusIcon className="h-3.5 w-3.5" />
             {status.label}
           </div>
         </div>
+        <p className="text-xs text-muted-foreground mt-1">{status.description}</p>
       </CardHeader>
+      
       <CardContent className="space-y-4">
-        {/* Gauge visual */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Caixa vs Compromissos</span>
-            <span className={cn("font-bold", status.color)}>{saudePercent.toFixed(0)}%</span>
+        {/* Indicador Principal - Folga Financeira */}
+        <div className={cn("p-4 rounded-lg", status.bgLight)}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Folga Financeira</span>
+            <TooltipProvider>
+              <Tooltip delayDuration={300}>
+                <TooltipTrigger>
+                  <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">Capital restante após quitar todos os compromissos pendentes</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-          <div className="relative h-3 bg-muted rounded-full overflow-hidden">
-            <div 
-              className={cn("h-full rounded-full transition-all duration-700 ease-out", status.bg)}
-              style={{ width: `${saudePercent}%` }}
-            />
-            {/* Markers */}
-            <div className="absolute inset-0 flex justify-between px-[1px]">
-              <div className="w-[1px] h-full bg-background/50" style={{ marginLeft: '40%' }} />
-              <div className="w-[1px] h-full bg-background/50" style={{ marginLeft: '30%' }} />
-            </div>
+          <div className={cn("text-2xl font-bold", folgaFinanceira >= 0 ? "text-success" : "text-destructive")}>
+            {folgaFinanceira >= 0 ? "+" : ""}{formatCurrency(folgaFinanceira)}
           </div>
-          <div className="flex justify-between text-[10px] text-muted-foreground">
-            <span>Crítico</span>
-            <span>Atenção</span>
-            <span>Saudável</span>
-          </div>
+          {cobertura !== Infinity && cobertura > 0 && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Cobertura de {cobertura.toFixed(1)}x os compromissos
+            </p>
+          )}
         </div>
 
-        {/* Values */}
+        {/* Grid de Métricas */}
         <div className="grid grid-cols-2 gap-3">
+          {/* Liquidez Imediata */}
           <div className="p-3 bg-muted/30 rounded-lg">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Disponível</p>
-            <p className="text-sm font-bold text-success">{formatCurrency(caixaDisponivel)}</p>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Wallet className="h-3.5 w-3.5 text-primary" />
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Liquidez Imediata</p>
+            </div>
+            <p className="text-sm font-bold text-foreground">{formatCurrency(liquidezImediata)}</p>
+            <p className="text-[10px] text-muted-foreground">Caixa disponível agora</p>
           </div>
+
+          {/* Reserva Estratégica */}
           <div className="p-3 bg-muted/30 rounded-lg">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Compromissos</p>
-            <p className="text-sm font-bold text-destructive">{formatCurrency(compromissosPendentes)}</p>
+            <div className="flex items-center gap-1.5 mb-1">
+              <PiggyBank className="h-3.5 w-3.5 text-primary" />
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Reserva Estratégica</p>
+            </div>
+            <p className="text-sm font-bold text-foreground">{formatCurrency(reservaEstrategica)}</p>
+            <p className="text-[10px] text-muted-foreground">Capital em bookmakers</p>
           </div>
         </div>
 
-        {/* Burn Rate */}
-        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border border-primary/20">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">Burn Rate</span>
+        {/* Compromissos Pendentes */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-destructive" />
+              <span className="text-xs font-medium">Compromissos Pendentes</span>
+            </div>
+            <span className="text-sm font-bold text-destructive">
+              {formatCurrency(compromissosPendentes.total)}
+            </span>
           </div>
-          <span className={cn("font-bold", burnStatus.color)}>{burnStatus.label}</span>
+          
+          {compromissosPendentes.total > 0 && (
+            <div className="pl-5 space-y-1 text-xs text-muted-foreground">
+              {compromissosPendentes.despesasAdmin > 0 && (
+                <div className="flex justify-between">
+                  <span>Despesas Admin.</span>
+                  <span>{formatCurrency(compromissosPendentes.despesasAdmin)}</span>
+                </div>
+              )}
+              {compromissosPendentes.pagamentosOperador > 0 && (
+                <div className="flex justify-between">
+                  <span>Pagamentos Operador</span>
+                  <span>{formatCurrency(compromissosPendentes.pagamentosOperador)}</span>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {compromissosPendentes.total === 0 && (
+            <div className="pl-5 flex items-center gap-1.5 text-xs text-success">
+              <CheckCircle className="h-3 w-3" />
+              <span>Nenhum compromisso pendente</span>
+            </div>
+          )}
         </div>
-        <p className="text-[10px] text-muted-foreground text-center">
-          Tempo que o caixa atual sustenta a operação no ritmo atual
-        </p>
+
+        {/* Barra de Uso da Reserva (se necessário) */}
+        {usoReserva > 0 && reservaEstrategica > 0 && (
+          <div className="space-y-2 p-3 bg-yellow-500/5 rounded-lg border border-yellow-500/20">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-yellow-600 dark:text-yellow-400 font-medium">
+                Uso necessário da reserva
+              </span>
+              <span className="text-yellow-600 dark:text-yellow-400 font-bold">
+                {formatCurrency(usoReserva)}
+              </span>
+            </div>
+            <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-yellow-500 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, percentualReservaUsada)}%` }}
+              />
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              {percentualReservaUsada.toFixed(0)}% da reserva seria utilizada para cobrir compromissos
+            </p>
+          </div>
+        )}
+
+        {/* Histórico de Custos Quitados (Referência) */}
+        <div className="pt-3 border-t border-border/50">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Já Quitados (Histórico)</span>
+            </div>
+            <TooltipProvider>
+              <Tooltip delayDuration={300}>
+                <TooltipTrigger>
+                  <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">Valores já pagos - não impactam a saúde financeira atual</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Total do período</span>
+            <span className="font-medium">{formatCurrency(compromissosQuitados.total)}</span>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
