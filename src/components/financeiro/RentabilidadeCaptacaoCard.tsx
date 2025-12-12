@@ -1,6 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Target, Clock, Percent } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, Clock, Percent, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface RentabilidadeCaptacaoCardProps {
   totalLucroParceiros: number;
@@ -56,6 +62,21 @@ export function RentabilidadeCaptacaoCard({
         <CardTitle className="text-base flex items-center gap-2">
           <Target className="h-4 w-4 text-primary" />
           Rentabilidade da Captação
+          <TooltipProvider>
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <button className="text-muted-foreground hover:text-foreground transition-colors">
+                  <HelpCircle className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[280px] text-xs">
+                <p className="font-medium mb-1">Rentabilidade da Captação</p>
+                <p><strong>ROI:</strong> (Lucro dos Parceiros - Custos de Aquisição) / Custos × 100</p>
+                <p><strong>Payback:</strong> Estimativa em dias para recuperar o investimento em captação</p>
+                <p><strong>Margem:</strong> Capital disponível após deduzir todos os custos</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
