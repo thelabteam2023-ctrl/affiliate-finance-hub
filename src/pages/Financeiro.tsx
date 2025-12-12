@@ -67,6 +67,7 @@ import { SaudeFinanceiraCard } from "@/components/financeiro/SaudeFinanceiraCard
 import { RentabilidadeCaptacaoCard } from "@/components/financeiro/RentabilidadeCaptacaoCard";
 import { FluxoCaixaCard } from "@/components/financeiro/FluxoCaixaCard";
 import { ComposicaoCustosCard } from "@/components/financeiro/ComposicaoCustosCard";
+import { DistribuicaoCustosCard } from "@/components/financeiro/DistribuicaoCustosCard";
 
 interface CaixaFiat {
   moeda: string;
@@ -942,51 +943,13 @@ export default function Financeiro() {
 
         <TabsContent value="custos" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Pie Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Distribuição de Custos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {pieData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <RechartsPie>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={70}
-                        outerRadius={110}
-                        paddingAngle={3}
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        labelLine={false}
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value: number) => [formatCurrency(value), "Valor"]}
-                        contentStyle={{ 
-                          backgroundColor: "rgba(0, 0, 0, 0.4)", 
-                          border: "1px solid rgba(255, 255, 255, 0.1)",
-                          backdropFilter: "blur(12px)",
-                          borderRadius: "12px",
-                          padding: "12px 16px"
-                        }}
-                        cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
-                      />
-                      <Legend />
-                    </RechartsPie>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                    Sem dados de custos
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* Distribuição de Custos - Same design as ComposicaoCustosCard */}
+            <DistribuicaoCustosCard
+              categorias={pieData.map(p => ({ name: p.name, value: p.value, color: p.color }))}
+              totalAtual={custoIndicadores + custoParceiros + custoFornecedores}
+              totalAnterior={totalCustosAnterior * 0.7} // Aproximação: assume 70% como período anterior
+              formatCurrency={formatCurrency}
+            />
 
             {/* Detailed Breakdown */}
             <Card>
