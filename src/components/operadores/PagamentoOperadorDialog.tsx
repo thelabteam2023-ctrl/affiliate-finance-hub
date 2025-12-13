@@ -184,24 +184,39 @@ export function PagamentoOperadorDialog({
 
       // Se status for CONFIRMADO, criar registro no cash_ledger para debitar a origem
       if (formData.status === "CONFIRMADO") {
+        // 🔒 REGRA DE CONVERSÃO CRYPTO:
+        // A dívida é sempre em BRL (valor base). Se pagando com crypto:
+        // - Converter BRL → USD usando cotação atual
+        // - Debitar quantidade equivalente em coins (não o valor numérico da dívida)
+        const cotacao = origemData.cotacao || 1;
+        const isCrypto = origemData.tipoMoeda === "CRYPTO";
+        
+        // Calcular valor em USD e quantidade de coins (se crypto)
+        const valorUSD = isCrypto ? formData.valor / cotacao : null;
+        const qtdCoin = isCrypto ? formData.valor / cotacao : null; // Para stablecoins, 1 USD ≈ 1 USDT
+
         const ledgerPayload: any = {
           user_id: userId,
           tipo_transacao: "PAGTO_OPERADOR",
-          valor: formData.valor,
-          moeda: origemData.tipoMoeda === "CRYPTO" ? "USD" : "BRL",
+          valor: formData.valor, // Sempre o valor da dívida em BRL
+          moeda: "BRL", // A dívida é sempre em BRL
           tipo_moeda: origemData.tipoMoeda,
           data_transacao: formData.data_pagamento,
           descricao: `Pagamento operador: ${formData.tipo_pagamento}${formData.descricao ? ` - ${formData.descricao}` : ""}`,
           status: "CONFIRMADO",
         };
 
+        // Se pagando com crypto, registrar os dados de conversão
+        if (isCrypto) {
+          ledgerPayload.valor_usd = valorUSD;
+          ledgerPayload.qtd_coin = qtdCoin;
+          ledgerPayload.coin = origemData.coin;
+          ledgerPayload.cotacao = cotacao;
+        }
+
         // Configurar origem baseado no tipo selecionado
         if (origemData.origemTipo === "CAIXA_OPERACIONAL") {
           ledgerPayload.origem_tipo = "CAIXA_OPERACIONAL";
-          if (origemData.tipoMoeda === "CRYPTO") {
-            ledgerPayload.coin = origemData.coin;
-            ledgerPayload.cotacao = origemData.cotacao;
-          }
         } else if (origemData.origemTipo === "PARCEIRO_CONTA") {
           ledgerPayload.origem_tipo = "PARCEIRO_CONTA";
           ledgerPayload.origem_parceiro_id = origemData.origemParceiroId;
@@ -211,7 +226,9 @@ export function PagamentoOperadorDialog({
           ledgerPayload.origem_parceiro_id = origemData.origemParceiroId;
           ledgerPayload.origem_wallet_id = origemData.origemWalletId;
           ledgerPayload.coin = origemData.coin;
-          ledgerPayload.cotacao = origemData.cotacao;
+          ledgerPayload.cotacao = cotacao;
+          ledgerPayload.valor_usd = valorUSD;
+          ledgerPayload.qtd_coin = qtdCoin;
         }
 
         const { data: ledgerData, error: ledgerError } = await supabase
