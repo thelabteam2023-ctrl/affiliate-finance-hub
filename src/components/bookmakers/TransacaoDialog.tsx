@@ -5,13 +5,22 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2, AlertTriangle } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 
 interface TransacaoDialogProps {
   open: boolean;
@@ -30,74 +39,141 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
   const [tipo, setTipo] = useState(defaultTipo);
   const [valor, setValor] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [referenciaExterna, setReferenciaExterna] = useState("");
-  const { toast } = useToast();
+  const [origemData, setOrigemData] = useState<OrigemPagamentoData>({
+    origemTipo: "CAIXA_OPERACIONAL",
+    tipoMoeda: "FIAT",
+    moeda: "BRL",
+    saldoDisponivel: 0,
+    saldoInsuficiente: false,
+  });
 
-  // Reset tipo when dialog opens with a new defaultTipo
+  const valorNum = parseFloat(valor) || 0;
+  const isDebitoOrigem = tipo === "deposito"; // Depósito debita da origem e credita no bookmaker
+  const isSaldoInsuficiente = isDebitoOrigem && valorNum > 0 && (origemData.saldoInsuficiente || origemData.saldoDisponivel < valorNum);
+
+  // Reset form when dialog opens
   useEffect(() => {
     if (open) {
       setTipo(defaultTipo);
+      setValor("");
+      setDescricao("");
+      setOrigemData({
+        origemTipo: "CAIXA_OPERACIONAL",
+        tipoMoeda: "FIAT",
+        moeda: "BRL",
+        saldoDisponivel: 0,
+        saldoInsuficiente: false,
+      });
     }
   }, [open, defaultTipo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (valorNum <= 0) {
+      toast.error("Valor deve ser maior que zero");
+      return;
+    }
+
+    // Validar saldo para depósitos
+    if (isDebitoOrigem && isSaldoInsuficiente) {
+      toast.error("Saldo insuficiente na origem selecionada");
+      return;
+    }
+
+    // Validar saldo do bookmaker para retiradas
+    if (tipo === "retirada" && valorNum > bookmaker.saldo_atual) {
+      toast.error("Saldo insuficiente no bookmaker para esta operação");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const valorNum = parseFloat(valor);
-      if (isNaN(valorNum) || valorNum <= 0) {
-        throw new Error("Valor deve ser maior que zero");
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        toast.error("Usuário não autenticado");
+        return;
       }
 
-      const saldoAnterior = Number(bookmaker.saldo_atual);
-      let saldoNovo = saldoAnterior;
+      const userId = session.session.user.id;
 
-      // Calculate new balance based on transaction type
-      if (tipo === "deposito" || tipo === "ganho" || tipo === "bonus") {
-        saldoNovo = saldoAnterior + valorNum;
-      } else if (tipo === "retirada" || tipo === "aposta") {
-        saldoNovo = saldoAnterior - valorNum;
-        if (saldoNovo < 0) {
-          throw new Error("Saldo insuficiente para esta operação");
+      // Criar registro no cash_ledger (tabela principal)
+      const ledgerPayload: any = {
+        user_id: userId,
+        valor: valorNum,
+        moeda: origemData.tipoMoeda === "CRYPTO" ? "USD" : "BRL",
+        tipo_moeda: origemData.tipoMoeda,
+        data_transacao: new Date().toISOString(),
+        descricao: descricao || `${getTipoLabel(tipo)} - ${bookmaker.nome}`,
+        status: "CONFIRMADO",
+      };
+
+      if (tipo === "deposito") {
+        // DEPÓSITO: debita da origem, credita no bookmaker
+        ledgerPayload.tipo_transacao = "DEPOSITO";
+        ledgerPayload.destino_tipo = "BOOKMAKER";
+        ledgerPayload.destino_bookmaker_id = bookmaker.id;
+
+        // Configurar origem
+        if (origemData.origemTipo === "CAIXA_OPERACIONAL") {
+          ledgerPayload.origem_tipo = "CAIXA_OPERACIONAL";
+          if (origemData.tipoMoeda === "CRYPTO") {
+            ledgerPayload.coin = origemData.coin;
+            ledgerPayload.cotacao = origemData.cotacao;
+          }
+        } else if (origemData.origemTipo === "PARCEIRO_CONTA") {
+          ledgerPayload.origem_tipo = "PARCEIRO_CONTA";
+          ledgerPayload.origem_parceiro_id = origemData.origemParceiroId;
+          ledgerPayload.origem_conta_bancaria_id = origemData.origemContaBancariaId;
+        } else if (origemData.origemTipo === "PARCEIRO_WALLET") {
+          ledgerPayload.origem_tipo = "PARCEIRO_WALLET";
+          ledgerPayload.origem_parceiro_id = origemData.origemParceiroId;
+          ledgerPayload.origem_wallet_id = origemData.origemWalletId;
+          ledgerPayload.coin = origemData.coin;
+          ledgerPayload.cotacao = origemData.cotacao;
+        }
+      } else if (tipo === "retirada") {
+        // RETIRADA/SAQUE: debita do bookmaker, credita na origem
+        ledgerPayload.tipo_transacao = "SAQUE";
+        ledgerPayload.origem_tipo = "BOOKMAKER";
+        ledgerPayload.origem_bookmaker_id = bookmaker.id;
+
+        // Configurar destino
+        if (origemData.origemTipo === "CAIXA_OPERACIONAL") {
+          ledgerPayload.destino_tipo = "CAIXA_OPERACIONAL";
+        } else if (origemData.origemTipo === "PARCEIRO_CONTA") {
+          ledgerPayload.destino_tipo = "PARCEIRO_CONTA";
+          ledgerPayload.destino_parceiro_id = origemData.origemParceiroId;
+          ledgerPayload.destino_conta_bancaria_id = origemData.origemContaBancariaId;
+        } else if (origemData.origemTipo === "PARCEIRO_WALLET") {
+          ledgerPayload.destino_tipo = "PARCEIRO_WALLET";
+          ledgerPayload.destino_parceiro_id = origemData.origemParceiroId;
+          ledgerPayload.destino_wallet_id = origemData.origemWalletId;
+          ledgerPayload.coin = origemData.coin;
+          ledgerPayload.cotacao = origemData.cotacao;
         }
       } else if (tipo === "ajuste") {
-        // Ajuste manual pode ser positivo ou negativo
-        saldoNovo = saldoAnterior + valorNum;
+        // AJUSTE: apenas atualiza o saldo do bookmaker (pode ser positivo ou negativo)
+        ledgerPayload.tipo_transacao = "AJUSTE_BOOKMAKER";
+        ledgerPayload.origem_tipo = "BOOKMAKER";
+        ledgerPayload.origem_bookmaker_id = bookmaker.id;
       }
 
-      const { error } = await supabase
-        .from("transacoes_bookmakers")
-        .insert({
-          bookmaker_id: bookmaker.id,
-          tipo,
-          valor: valorNum,
-          saldo_anterior: saldoAnterior,
-          saldo_novo: saldoNovo,
-          descricao: descricao || null,
-          referencia_externa: referenciaExterna || null,
-        });
+      const { error: ledgerError } = await supabase
+        .from("cash_ledger")
+        .insert(ledgerPayload);
 
-      if (error) throw error;
+      if (ledgerError) throw ledgerError;
 
-      toast({
-        title: "Transação registrada",
-        description: `${getTipoLabel(tipo)} de ${formatCurrency(valorNum, bookmaker.moeda)} realizada com sucesso.`,
-      });
-
-      // Reset form
+      toast.success(`${getTipoLabel(tipo)} registrad${tipo === "retirada" ? "a" : "o"} com sucesso`);
+      
+      // Reset form and close
       setValor("");
       setDescricao("");
-      setReferenciaExterna("");
-      setTipo("deposito");
-      
       onClose();
     } catch (error: any) {
-      toast({
-        title: "Erro ao registrar transação",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Erro ao registrar transação: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -106,11 +182,8 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
   const getTipoLabel = (tipo: string): string => {
     const labels: Record<string, string> = {
       deposito: "Depósito",
-      retirada: "Retirada",
-      aposta: "Aposta",
-      ganho: "Ganho",
+      retirada: "Saque",
       ajuste: "Ajuste",
-      bonus: "Bônus",
     };
     return labels[tipo] || tipo;
   };
@@ -129,37 +202,32 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nova Transação - {bookmaker.nome}</DialogTitle>
-          <p className="text-sm text-muted-foreground">
+          <DialogDescription>
             Saldo atual: {formatCurrency(Number(bookmaker.saldo_atual), bookmaker.moeda)}
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="tipo">Tipo de Transação *</Label>
-            <select
-              id="tipo"
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md bg-background"
-              disabled={loading}
-            >
-              <option value="deposito">Depósito</option>
-              <option value="retirada">Retirada</option>
-              <option value="aposta">Aposta</option>
-              <option value="ganho">Ganho</option>
-              <option value="bonus">Bônus</option>
-              <option value="ajuste">Ajuste Manual</option>
-            </select>
+          <div className="space-y-2">
+            <Label>Tipo de Transação *</Label>
+            <Select value={tipo} onValueChange={setTipo} disabled={loading}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="deposito">Depósito</SelectItem>
+                <SelectItem value="retirada">Saque</SelectItem>
+                <SelectItem value="ajuste">Ajuste Manual</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <div>
-            <Label htmlFor="valor">Valor ({bookmaker.moeda}) *</Label>
+          <div className="space-y-2">
+            <Label>Valor ({bookmaker.moeda}) *</Label>
             <Input
-              id="valor"
               type="number"
               step="0.01"
               value={valor}
@@ -170,25 +238,34 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
             />
           </div>
 
-          <div>
-            <Label htmlFor="descricao">Descrição</Label>
+          {/* Origem/Destino para Depósito e Saque */}
+          {(tipo === "deposito" || tipo === "retirada") && (
+            <div className="space-y-2 p-4 border rounded-lg bg-muted/30">
+              <Label className="text-sm font-medium">
+                {tipo === "deposito" ? "Origem do Depósito" : "Destino do Saque"}
+              </Label>
+              <OrigemPagamentoSelect
+                value={origemData}
+                onChange={setOrigemData}
+                valorPagamento={valorNum}
+              />
+              
+              {isDebitoOrigem && isSaldoInsuficiente && (
+                <div className="flex items-center gap-2 text-destructive text-sm mt-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span>Saldo insuficiente na origem selecionada</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label>Descrição</Label>
             <Textarea
-              id="descricao"
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
               placeholder="Detalhes sobre esta transação..."
-              rows={3}
-              disabled={loading}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="referenciaExterna">Referência Externa</Label>
-            <Input
-              id="referenciaExterna"
-              value={referenciaExterna}
-              onChange={(e) => setReferenciaExterna(e.target.value)}
-              placeholder="ID da transação, comprovante, etc"
+              rows={2}
               disabled={loading}
             />
           </div>
@@ -197,7 +274,11 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
             <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading} className="flex-1">
+            <Button 
+              type="submit" 
+              disabled={loading || (isDebitoOrigem && isSaldoInsuficiente)} 
+              className="flex-1"
+            >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Registrar
             </Button>

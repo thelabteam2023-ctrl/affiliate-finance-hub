@@ -19,8 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, CheckCircle2, TrendingDown, TrendingUp } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { AlertTriangle, CheckCircle2, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 
 interface Entrega {
   id: string;
@@ -32,6 +33,7 @@ interface Entrega {
   tipo_gatilho: string;
   data_inicio: string;
   data_fim_prevista: string | null;
+  operador_projeto_id?: string;
 }
 
 interface EntregaConciliacaoDialogProps {
@@ -39,6 +41,8 @@ interface EntregaConciliacaoDialogProps {
   onOpenChange: (open: boolean) => void;
   entrega: Entrega | null;
   operadorNome?: string;
+  operadorId?: string;
+  projetoId?: string;
   modeloPagamento: string;
   valorFixo?: number;
   percentual?: number;
@@ -56,6 +60,8 @@ export function EntregaConciliacaoDialog({
   onOpenChange,
   entrega,
   operadorNome,
+  operadorId,
+  projetoId,
   modeloPagamento,
   valorFixo = 0,
   percentual = 0,
@@ -68,6 +74,17 @@ export function EntregaConciliacaoDialog({
     observacoes_conciliacao: "",
     valor_pagamento_operador: "",
   });
+  const [registrarPagamento, setRegistrarPagamento] = useState(true);
+  const [origemData, setOrigemData] = useState<OrigemPagamentoData>({
+    origemTipo: "CAIXA_OPERACIONAL",
+    tipoMoeda: "FIAT",
+    moeda: "BRL",
+    saldoDisponivel: 0,
+    saldoInsuficiente: false,
+  });
+
+  const valorPagamento = parseFloat(formData.valor_pagamento_operador || "0");
+  const isSaldoInsuficiente = registrarPagamento && valorPagamento > 0 && (origemData.saldoInsuficiente || origemData.saldoDisponivel < valorPagamento);
 
   useEffect(() => {
     if (open && entrega) {
@@ -77,6 +94,14 @@ export function EntregaConciliacaoDialog({
         tipo_ajuste: "PERDA_FRICCIONAL",
         observacoes_conciliacao: "",
         valor_pagamento_operador: valorSugerido.toString(),
+      });
+      setRegistrarPagamento(true);
+      setOrigemData({
+        origemTipo: "CAIXA_OPERACIONAL",
+        tipoMoeda: "FIAT",
+        moeda: "BRL",
+        saldoDisponivel: 0,
+        saldoInsuficiente: false,
       });
     }
   }, [open, entrega]);
@@ -119,8 +144,102 @@ export function EntregaConciliacaoDialog({
       return;
     }
 
+    // Validar saldo se vai registrar pagamento
+    if (registrarPagamento && valorPagamento > 0 && isSaldoInsuficiente) {
+      toast.error("Saldo insuficiente para realizar o pagamento ao operador");
+      return;
+    }
+
     setLoading(true);
     try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+
+      const userId = session.session.user.id;
+      let cashLedgerId: string | null = null;
+
+      // Determinar operadorId se não foi passado
+      let opId = operadorId;
+      let projId = projetoId;
+      
+      if (!opId && entrega.operador_projeto_id) {
+        const { data: opProjeto } = await supabase
+          .from("operador_projetos")
+          .select("operador_id, projeto_id")
+          .eq("id", entrega.operador_projeto_id)
+          .single();
+        
+        if (opProjeto) {
+          opId = opProjeto.operador_id;
+          projId = opProjeto.projeto_id;
+        }
+      }
+
+      // Se vai registrar pagamento, criar registros no cash_ledger e pagamentos_operador
+      if (registrarPagamento && valorPagamento > 0 && opId) {
+        // 1. Criar registro no cash_ledger para debitar a origem
+        const ledgerPayload: any = {
+          user_id: userId,
+          tipo_transacao: "PAGTO_OPERADOR",
+          valor: valorPagamento,
+          moeda: origemData.tipoMoeda === "CRYPTO" ? "USD" : "BRL",
+          tipo_moeda: origemData.tipoMoeda,
+          data_transacao: new Date().toISOString(),
+          descricao: `Pagamento conciliação entrega #${entrega.numero_entrega}${operadorNome ? ` - ${operadorNome}` : ""}`,
+          status: "CONFIRMADO",
+        };
+
+        // Configurar origem baseado no tipo selecionado
+        if (origemData.origemTipo === "CAIXA_OPERACIONAL") {
+          ledgerPayload.origem_tipo = "CAIXA_OPERACIONAL";
+          if (origemData.tipoMoeda === "CRYPTO") {
+            ledgerPayload.coin = origemData.coin;
+            ledgerPayload.cotacao = origemData.cotacao;
+          }
+        } else if (origemData.origemTipo === "PARCEIRO_CONTA") {
+          ledgerPayload.origem_tipo = "PARCEIRO_CONTA";
+          ledgerPayload.origem_parceiro_id = origemData.origemParceiroId;
+          ledgerPayload.origem_conta_bancaria_id = origemData.origemContaBancariaId;
+        } else if (origemData.origemTipo === "PARCEIRO_WALLET") {
+          ledgerPayload.origem_tipo = "PARCEIRO_WALLET";
+          ledgerPayload.origem_parceiro_id = origemData.origemParceiroId;
+          ledgerPayload.origem_wallet_id = origemData.origemWalletId;
+          ledgerPayload.coin = origemData.coin;
+          ledgerPayload.cotacao = origemData.cotacao;
+        }
+
+        const { data: ledgerData, error: ledgerError } = await supabase
+          .from("cash_ledger")
+          .insert(ledgerPayload)
+          .select("id")
+          .single();
+
+        if (ledgerError) throw ledgerError;
+        cashLedgerId = ledgerData.id;
+
+        // 2. Criar registro em pagamentos_operador
+        const { error: pagtoError } = await supabase
+          .from("pagamentos_operador")
+          .insert({
+            user_id: userId,
+            operador_id: opId,
+            projeto_id: projId || null,
+            tipo_pagamento: "COMISSAO",
+            valor: valorPagamento,
+            moeda: "BRL",
+            data_pagamento: new Date().toISOString().split("T")[0],
+            descricao: `Pagamento referente à entrega #${entrega.numero_entrega}`,
+            status: "CONFIRMADO",
+            cash_ledger_id: cashLedgerId,
+          });
+
+        if (pagtoError) throw pagtoError;
+      }
+
+      // 3. Atualizar a entrega
       const { error } = await supabase
         .from("entregas")
         .update({
@@ -128,9 +247,10 @@ export function EntregaConciliacaoDialog({
           ajuste: ajuste,
           tipo_ajuste: ajuste !== 0 ? formData.tipo_ajuste : null,
           observacoes_conciliacao: formData.observacoes_conciliacao || null,
-          valor_pagamento_operador: parseFloat(formData.valor_pagamento_operador || "0"),
+          valor_pagamento_operador: valorPagamento,
           excedente_proximo: excedente,
           conciliado: true,
+          pagamento_realizado: registrarPagamento && valorPagamento > 0,
           data_conciliacao: new Date().toISOString(),
           data_fim_real: new Date().toISOString().split("T")[0],
           status: "CONCLUIDA",
@@ -153,7 +273,7 @@ export function EntregaConciliacaoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Conciliar Entrega #{entrega.numero_entrega}</DialogTitle>
           <DialogDescription>
@@ -253,6 +373,39 @@ export function EntregaConciliacaoDialog({
             </p>
           </div>
 
+          {/* Toggle para registrar pagamento automaticamente */}
+          {valorPagamento > 0 && (
+            <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-muted-foreground" />
+                  <Label className="font-medium">Registrar pagamento no financeiro</Label>
+                </div>
+                <Switch
+                  checked={registrarPagamento}
+                  onCheckedChange={setRegistrarPagamento}
+                />
+              </div>
+
+              {registrarPagamento && (
+                <div className="space-y-2">
+                  <OrigemPagamentoSelect
+                    value={origemData}
+                    onChange={setOrigemData}
+                    valorPagamento={valorPagamento}
+                  />
+                  
+                  {isSaldoInsuficiente && (
+                    <div className="flex items-center gap-2 text-destructive text-sm mt-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      <span>Saldo insuficiente na origem selecionada</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Observações */}
           <div className="space-y-2">
             <Label>Observações da Conciliação</Label>
@@ -269,7 +422,10 @@ export function EntregaConciliacaoDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={loading}>
+          <Button 
+            onClick={handleSave} 
+            disabled={loading || (registrarPagamento && isSaldoInsuficiente)}
+          >
             {loading ? "Conciliando..." : "Conciliar Entrega"}
           </Button>
         </div>

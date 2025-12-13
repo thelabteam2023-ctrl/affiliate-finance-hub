@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
+import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 
 interface Operador {
   id: string;
@@ -83,6 +84,15 @@ export function PagamentoOperadorDialog({
     descricao: null,
     status: "PENDENTE",
   });
+  const [origemData, setOrigemData] = useState<OrigemPagamentoData>({
+    origemTipo: "CAIXA_OPERACIONAL",
+    tipoMoeda: "FIAT",
+    moeda: "BRL",
+    saldoDisponivel: 0,
+    saldoInsuficiente: false,
+  });
+
+  const isSaldoInsuficiente = formData.status === "CONFIRMADO" && formData.valor > 0 && (origemData.saldoInsuficiente || origemData.saldoDisponivel < formData.valor);
 
   useEffect(() => {
     if (open) {
@@ -105,6 +115,13 @@ export function PagamentoOperadorDialog({
           data_competencia: null,
           descricao: null,
           status: "PENDENTE",
+        });
+        setOrigemData({
+          origemTipo: "CAIXA_OPERACIONAL",
+          tipoMoeda: "FIAT",
+          moeda: "BRL",
+          saldoDisponivel: 0,
+          saldoInsuficiente: false,
         });
       }
     }
@@ -148,12 +165,63 @@ export function PagamentoOperadorDialog({
       return;
     }
 
+    // Validar saldo se status for CONFIRMADO
+    if (formData.status === "CONFIRMADO" && isSaldoInsuficiente) {
+      toast.error("Saldo insuficiente para realizar este pagamento");
+      return;
+    }
+
     setLoading(true);
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
         toast.error("Usuário não autenticado");
         return;
+      }
+
+      const userId = session.session.user.id;
+      let cashLedgerId: string | null = null;
+
+      // Se status for CONFIRMADO, criar registro no cash_ledger para debitar a origem
+      if (formData.status === "CONFIRMADO") {
+        const ledgerPayload: any = {
+          user_id: userId,
+          tipo_transacao: "PAGTO_OPERADOR",
+          valor: formData.valor,
+          moeda: origemData.tipoMoeda === "CRYPTO" ? "USD" : "BRL",
+          tipo_moeda: origemData.tipoMoeda,
+          data_transacao: formData.data_pagamento,
+          descricao: `Pagamento operador: ${formData.tipo_pagamento}${formData.descricao ? ` - ${formData.descricao}` : ""}`,
+          status: "CONFIRMADO",
+        };
+
+        // Configurar origem baseado no tipo selecionado
+        if (origemData.origemTipo === "CAIXA_OPERACIONAL") {
+          ledgerPayload.origem_tipo = "CAIXA_OPERACIONAL";
+          if (origemData.tipoMoeda === "CRYPTO") {
+            ledgerPayload.coin = origemData.coin;
+            ledgerPayload.cotacao = origemData.cotacao;
+          }
+        } else if (origemData.origemTipo === "PARCEIRO_CONTA") {
+          ledgerPayload.origem_tipo = "PARCEIRO_CONTA";
+          ledgerPayload.origem_parceiro_id = origemData.origemParceiroId;
+          ledgerPayload.origem_conta_bancaria_id = origemData.origemContaBancariaId;
+        } else if (origemData.origemTipo === "PARCEIRO_WALLET") {
+          ledgerPayload.origem_tipo = "PARCEIRO_WALLET";
+          ledgerPayload.origem_parceiro_id = origemData.origemParceiroId;
+          ledgerPayload.origem_wallet_id = origemData.origemWalletId;
+          ledgerPayload.coin = origemData.coin;
+          ledgerPayload.cotacao = origemData.cotacao;
+        }
+
+        const { data: ledgerData, error: ledgerError } = await supabase
+          .from("cash_ledger")
+          .insert(ledgerPayload)
+          .select("id")
+          .single();
+
+        if (ledgerError) throw ledgerError;
+        cashLedgerId = ledgerData.id;
       }
 
       const payload = {
@@ -166,7 +234,8 @@ export function PagamentoOperadorDialog({
         data_competencia: formData.data_competencia || null,
         descricao: formData.descricao || null,
         status: formData.status,
-        user_id: session.session.user.id,
+        user_id: userId,
+        cash_ledger_id: cashLedgerId,
       };
 
       if (pagamento?.id) {
@@ -195,7 +264,7 @@ export function PagamentoOperadorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {pagamento?.id ? "Editar Pagamento" : "Novo Pagamento de Operador"}
@@ -312,6 +381,24 @@ export function PagamentoOperadorDialog({
             </Select>
           </div>
 
+          {/* Origem de Pagamento - apenas quando status é CONFIRMADO */}
+          {formData.status === "CONFIRMADO" && (
+            <div className="space-y-2 p-4 border rounded-lg bg-muted/30">
+              <OrigemPagamentoSelect
+                value={origemData}
+                onChange={setOrigemData}
+                valorPagamento={formData.valor}
+              />
+              
+              {isSaldoInsuficiente && (
+                <div className="flex items-center gap-2 text-destructive text-sm mt-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span>Saldo insuficiente na origem selecionada</span>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label>Descrição</Label>
             <Textarea
@@ -327,7 +414,10 @@ export function PagamentoOperadorDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={loading || (formData.status === "CONFIRMADO" && isSaldoInsuficiente)}
+          >
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {pagamento?.id ? "Salvar" : "Registrar"}
           </Button>
