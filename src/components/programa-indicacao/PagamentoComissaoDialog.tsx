@@ -103,7 +103,7 @@ export function PagamentoComissaoDialog({
           origem_parceiro_id: origemData.origemParceiroId || null,
           origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
           origem_wallet_id: origemData.origemWalletId || null,
-          destino_tipo: "COMISSAO_INDICADOR",
+          destino_tipo: "INDICADOR",
           data_transacao: dataPagamento,
           descricao: `Comissão por indicação - ${parceria.parceiroNome} (Indicador: ${parceria.indicadorNome})`,
           status: "CONFIRMADO",

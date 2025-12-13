@@ -207,6 +207,7 @@ export function PagamentoOperadorDialog({
           data_transacao: formData.data_pagamento,
           descricao: `Pagamento operador: ${formData.tipo_pagamento}${formData.descricao ? ` - ${formData.descricao}` : ""}`,
           status: "CONFIRMADO",
+          destino_tipo: "OPERADOR",
         };
 
         // Se pagando com crypto, registrar os dados de conversão
