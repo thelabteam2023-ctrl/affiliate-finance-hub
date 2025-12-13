@@ -543,21 +543,50 @@ export function OrigemPagamentoSelect({
           )}
 
           {value.tipoMoeda === "CRYPTO" && value.coin && (
-            <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
-              getSaldoCaixaCryptoByCoin(value.coin).saldoBRL < valorPagamento && valorPagamento > 0
-                ? "bg-destructive/10 border border-destructive/30 text-destructive" 
-                : "bg-muted/50 text-muted-foreground"
-            }`}>
-              {getSaldoCaixaCryptoByCoin(value.coin).saldoBRL < valorPagamento && valorPagamento > 0 && (
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-              )}
-              <span>
-                Saldo disponível: {formatCoin(getSaldoCaixaCryptoByCoin(value.coin).saldoCoin, value.coin)} 
-                {" "}≈ {formatCurrency(getSaldoCaixaCryptoByCoin(value.coin).saldoBRL)}
+            <div className="space-y-2">
+              {/* Saldo disponível */}
+              <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
+                getSaldoCaixaCryptoByCoin(value.coin).saldoBRL < valorPagamento && valorPagamento > 0
+                  ? "bg-destructive/10 border border-destructive/30 text-destructive" 
+                  : "bg-muted/50 text-muted-foreground"
+              }`}>
                 {getSaldoCaixaCryptoByCoin(value.coin).saldoBRL < valorPagamento && valorPagamento > 0 && (
-                  <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
                 )}
-              </span>
+                <span>
+                  Saldo disponível: {formatCoin(getSaldoCaixaCryptoByCoin(value.coin).saldoCoin, value.coin)} 
+                  {" "}≈ {formatCurrency(getSaldoCaixaCryptoByCoin(value.coin).saldoBRL)}
+                  {getSaldoCaixaCryptoByCoin(value.coin).saldoBRL < valorPagamento && valorPagamento > 0 && (
+                    <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
+                  )}
+                </span>
+              </div>
+              
+              {/* Preview de conversão - mostra exatamente quanto será debitado */}
+              {valorPagamento > 0 && cotacaoUSD > 0 && (
+                <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-sm">
+                  <div className="font-medium text-primary mb-2">📋 Resumo da Conversão</div>
+                  <div className="space-y-1 text-foreground">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Valor devido:</span>
+                      <span className="font-semibold">{formatCurrency(valorPagamento)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Cotação USD/BRL:</span>
+                      <span>{cotacaoUSD.toFixed(4)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Equivalente USD:</span>
+                      <span>{formatUSD(valorPagamento / cotacaoUSD)}</span>
+                    </div>
+                    <div className="border-t border-primary/30 my-2" />
+                    <div className="flex justify-between font-semibold text-primary">
+                      <span>Será debitado:</span>
+                      <span>{(valorPagamento / cotacaoUSD).toFixed(4)} {value.coin}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
