@@ -85,30 +85,31 @@ export function PagamentoComissaoDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // PASSO 1: Debitar do Caixa Operacional via cash_ledger
-      if (origemData.origemTipo === "CAIXA_OPERACIONAL") {
-        const { error: ledgerError } = await supabase
-          .from("cash_ledger")
-          .insert({
-            user_id: user.id,
-            tipo_transacao: "COMISSAO_INDICADOR",
-            tipo_moeda: origemData.tipoMoeda,
-            moeda: origemData.moeda,
-            valor: valor,
-            coin: origemData.coin || null,
-            qtd_coin: origemData.tipoMoeda === "CRYPTO" && origemData.cotacao 
-              ? valor / origemData.cotacao 
-              : null,
-            cotacao: origemData.cotacao || null,
-            origem_tipo: "CAIXA_OPERACIONAL",
-            destino_tipo: "COMISSAO_INDICADOR",
-            data_transacao: dataPagamento,
-            descricao: `Comissão por indicação - ${parceria.parceiroNome} (Indicador: ${parceria.indicadorNome})`,
-            status: "CONFIRMADO",
-          });
-        
-        if (ledgerError) throw ledgerError;
-      }
+      // PASSO 1: Debitar da origem selecionada via cash_ledger
+      const { error: ledgerError } = await supabase
+        .from("cash_ledger")
+        .insert({
+          user_id: user.id,
+          tipo_transacao: "COMISSAO_INDICADOR",
+          tipo_moeda: origemData.tipoMoeda,
+          moeda: origemData.moeda,
+          valor: valor,
+          coin: origemData.coin || null,
+          qtd_coin: origemData.tipoMoeda === "CRYPTO" && origemData.cotacao 
+            ? valor / origemData.cotacao 
+            : null,
+          cotacao: origemData.cotacao || null,
+          origem_tipo: origemData.origemTipo,
+          origem_parceiro_id: origemData.origemParceiroId || null,
+          origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
+          origem_wallet_id: origemData.origemWalletId || null,
+          destino_tipo: "COMISSAO_INDICADOR",
+          data_transacao: dataPagamento,
+          descricao: `Comissão por indicação - ${parceria.parceiroNome} (Indicador: ${parceria.indicadorNome})`,
+          status: "CONFIRMADO",
+        });
+      
+      if (ledgerError) throw ledgerError;
 
       // PASSO 2: Registrar em movimentacoes_indicacao (histórico do módulo)
       const { error: movError } = await supabase.from("movimentacoes_indicacao").insert({

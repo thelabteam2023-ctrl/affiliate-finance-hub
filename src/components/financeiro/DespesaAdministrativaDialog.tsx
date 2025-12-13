@@ -208,8 +208,8 @@ export function DespesaAdministrativaDialog({
         if (error) throw error;
         toast({ title: "Despesa atualizada com sucesso!" });
       } else {
-        // PASSO 1: Debitar do Caixa Operacional via cash_ledger (apenas para CONFIRMADO)
-        if (formData.status === "CONFIRMADO" && origemData.origemTipo === "CAIXA_OPERACIONAL") {
+        // PASSO 1: Debitar da origem selecionada via cash_ledger (apenas para CONFIRMADO)
+        if (formData.status === "CONFIRMADO") {
           const { error: ledgerError } = await supabase
             .from("cash_ledger")
             .insert({
@@ -223,7 +223,10 @@ export function DespesaAdministrativaDialog({
                 ? formData.valor / origemData.cotacao 
                 : null,
               cotacao: origemData.cotacao || null,
-              origem_tipo: "CAIXA_OPERACIONAL",
+              origem_tipo: origemData.origemTipo,
+              origem_parceiro_id: origemData.origemParceiroId || null,
+              origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
+              origem_wallet_id: origemData.origemWalletId || null,
               destino_tipo: "DESPESA_ADMINISTRATIVA",
               data_transacao: formData.data_despesa,
               descricao: `Despesa administrativa - ${formData.categoria}${formData.descricao ? `: ${formData.descricao}` : ''}`,
