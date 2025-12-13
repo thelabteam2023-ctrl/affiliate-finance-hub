@@ -133,6 +133,22 @@ export function ProjetoDialog({
     return data;
   };
 
+  // Buscar acordo ativo existente para o projeto
+  const fetchAcordoAtivo = async (projetoId: string) => {
+    const { data, error } = await supabase
+      .from("projeto_acordos")
+      .select("*")
+      .eq("projeto_id", projetoId)
+      .eq("ativo", true)
+      .single();
+    
+    if (error && error.code !== "PGRST116") { // PGRST116 = no rows returned
+      console.error("Erro ao buscar acordo:", error);
+      return null;
+    }
+    return data;
+  };
+
   useEffect(() => {
     if (open) {
       if (projeto && mode !== "create") {
@@ -152,6 +168,23 @@ export function ProjetoDialog({
               tipo_projeto: (projetoCompleto.tipo_projeto as TipoProjeto) || "INTERNO",
               investidor_id: projetoCompleto.investidor_id || null,
             });
+
+            // Se for projeto exclusivo, carregar acordo existente
+            if (projetoCompleto.tipo_projeto === "EXCLUSIVO_INVESTIDOR") {
+              fetchAcordoAtivo(projeto.id!).then((acordo) => {
+                if (acordo) {
+                  setAcordoData({
+                    id: acordo.id,
+                    base_calculo: acordo.base_calculo as "LUCRO_BRUTO" | "LUCRO_LIQUIDO",
+                    percentual_investidor: acordo.percentual_investidor,
+                    percentual_empresa: acordo.percentual_empresa,
+                    deduzir_custos_operador: acordo.deduzir_custos_operador,
+                    percentual_prejuizo_investidor: acordo.percentual_prejuizo_investidor,
+                    observacoes: acordo.observacoes,
+                  });
+                }
+              });
+            }
           } else {
             // Fallback se não conseguir buscar
             setFormData({
@@ -191,6 +224,7 @@ export function ProjetoDialog({
         });
         setOperadores([]);
         setTemConciliacao(false);
+        setAcordoData(null); // Limpar acordo em modo criação
       }
       setActiveTab("dados");
     }
@@ -318,11 +352,12 @@ export function ProjetoDialog({
           .eq("id", projeto!.id);
         if (error) throw error;
         
-        // Update or create projeto_acordos if it's an exclusive investor project
-        if (payload.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && acordoData) {
+        // Update projeto_acordos APENAS se o usuário passou pela aba acordo e fez alterações
+        // Se acordoData.id existe, já temos um acordo ativo carregado - apenas atualizar
+        // Se não existe acordoData, não fazer nada (não tentar criar novo acordo)
+        if (payload.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && acordoData && acordoData.id) {
+          // Apenas atualizar acordo existente
           const acordoPayload = {
-            user_id: session.session.user.id,
-            projeto_id: projeto!.id,
             investidor_id: payload.investidor_id,
             base_calculo: acordoData.base_calculo,
             percentual_investidor: acordoData.percentual_investidor,
@@ -330,22 +365,17 @@ export function ProjetoDialog({
             deduzir_custos_operador: acordoData.deduzir_custos_operador,
             percentual_prejuizo_investidor: acordoData.percentual_prejuizo_investidor,
             observacoes: acordoData.observacoes,
-            ativo: true,
           };
           
-          if (acordoData.id) {
-            // Update existing
-            const { error: acordoError } = await supabase
-              .from("projeto_acordos")
-              .update(acordoPayload)
-              .eq("id", acordoData.id);
-            if (acordoError) throw acordoError;
-          } else {
-            // Create new
-            const { error: acordoError } = await supabase.from("projeto_acordos").insert(acordoPayload);
-            if (acordoError) throw acordoError;
-          }
+          const { error: acordoError } = await supabase
+            .from("projeto_acordos")
+            .update(acordoPayload)
+            .eq("id", acordoData.id);
+          if (acordoError) throw acordoError;
         }
+        // NOTA: Se acordoData não tem id, significa que o projeto exclusivo foi criado
+        // sem acordo configurado - isso não deveria acontecer no fluxo normal,
+        // mas não tentamos criar um novo acordo aqui para evitar duplicação
         
         toast.success("Projeto atualizado com sucesso");
       }
