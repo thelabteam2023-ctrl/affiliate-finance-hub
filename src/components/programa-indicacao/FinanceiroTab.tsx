@@ -91,7 +91,7 @@ export function FinanceiroTab() {
       setLoading(true);
 
       // Fetch all data in parallel
-      const [movResult, custosResult, acordosResult, parceriasResult, indicacoesResult, parceirosResult] = await Promise.all([
+      const [movResult, custosResult, acordosResult, parceriasResult, indicacoesResult, indicadoresResult, parceirosResult] = await Promise.all([
         supabase
           .from("movimentacoes_indicacao")
           .select("*")
@@ -115,11 +115,11 @@ export function FinanceiroTab() {
         // Fetch all indicacoes to map parceiro -> indicador
         supabase
           .from("indicacoes")
-          .select(`
-            id,
-            parceiro_id,
-            indicador:indicadores_referral(id, nome)
-          `),
+          .select("id, parceiro_id, indicador_id"),
+        // Fetch all indicadores for mapping
+        supabase
+          .from("indicadores_referral")
+          .select("id, nome"),
         // Fetch parcerias with valor_parceiro that haven't been paid (exclude exempt)
         supabase
           .from("parcerias")
@@ -188,15 +188,22 @@ export function FinanceiroTab() {
         setBonusPendentes(pendentes);
       }
 
+      // Build map of indicador_id -> indicador info
+      const indicadoresMap: Record<string, { id: string; nome: string }> = {};
+      if (indicadoresResult.data) {
+        indicadoresResult.data.forEach((ind: any) => {
+          if (ind.id) {
+            indicadoresMap[ind.id] = { id: ind.id, nome: ind.nome };
+          }
+        });
+      }
+
       // Build map of parceiro_id -> indicador from indicacoes table
       const parceiroIndicadorMap: Record<string, { id: string; nome: string }> = {};
       if (indicacoesResult.data) {
         indicacoesResult.data.forEach((ind: any) => {
-          if (ind.parceiro_id && ind.indicador) {
-            parceiroIndicadorMap[ind.parceiro_id] = {
-              id: ind.indicador.id,
-              nome: ind.indicador.nome,
-            };
+          if (ind.parceiro_id && ind.indicador_id && indicadoresMap[ind.indicador_id]) {
+            parceiroIndicadorMap[ind.parceiro_id] = indicadoresMap[ind.indicador_id];
           }
         });
       }
