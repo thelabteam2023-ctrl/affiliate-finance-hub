@@ -157,10 +157,16 @@ export default function Financeiro() {
   const [despesasAdminPendentes, setDespesasAdminPendentes] = useState<DespesaAdministrativa[]>([]);
   const [pagamentosOperador, setPagamentosOperador] = useState<PagamentoOperador[]>([]);
   const [pagamentosOperadorPendentes, setPagamentosOperadorPendentes] = useState<PagamentoOperador[]>([]);
-  const [movimentacoesIndicacaoPendentes, setMovimentacoesIndicacaoPendentes] = useState<DespesaIndicacao[]>([]);
+  const [movimentacoesIndicacao, setMovimentacoesIndicacao] = useState<DespesaIndicacao[]>([]);
   const [bookmakersSaldos, setBookmakersSaldos] = useState<BookmakerSaldo[]>([]);
   const [lucroOperacionalApostas, setLucroOperacionalApostas] = useState<number>(0);
   const [totalParceirosAtivos, setTotalParceirosAtivos] = useState<number>(0);
+  
+  // Estados para compromissos pendentes de parcerias
+  const [parceirosPendentes, setParceirosPendentes] = useState<{ valorTotal: number; count: number }>({ valorTotal: 0, count: 0 });
+  const [comissoesPendentes, setComissoesPendentes] = useState<{ valorTotal: number; count: number }>({ valorTotal: 0, count: 0 });
+  const [bonusPendentes, setBonusPendentes] = useState<{ valorTotal: number; count: number }>({ valorTotal: 0, count: 0 });
+  
   // Hook centralizado de cotações
   const cryptoSymbols = useMemo(() => caixaCrypto.map(c => c.coin), [caixaCrypto]);
   const { cotacaoUSD, cryptoPrices, getCryptoUSDValue, getCryptoPrice, refreshAll: refreshCotacoes, loading: loadingCotacoes, lastUpdate, source } = useCotacoes(cryptoSymbols);
@@ -230,24 +236,47 @@ export default function Financeiro() {
         despesasAdminPendentesResult,
         pagamentosOpResult, 
         pagamentosOpPendentesResult,
-        movIndicacaoPendentesResult,
+        movIndicacaoResult,
         bookmakersResult,
         apostasLucroResult,
-        parceirosAtivosResult
+        parceirosAtivosResult,
+        // Dados para cálculo de compromissos pendentes de parcerias
+        parceriasParceiroResult,
+        parceriasComissaoResult,
+        acordosIndicadorResult,
       ] = await Promise.all([
         supabase.from("v_saldo_caixa_fiat").select("*"),
         supabase.from("v_saldo_caixa_crypto").select("*"),
-        supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao").eq("status", "CONFIRMADO"),
-        supabase.from("v_custos_aquisicao").select("custo_total, valor_indicador, valor_parceiro, valor_fornecedor, data_inicio"),
+        supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id").eq("status", "CONFIRMADO"),
+        supabase.from("v_custos_aquisicao").select("custo_total, valor_indicador, valor_parceiro, valor_fornecedor, data_inicio, indicador_id, indicador_nome"),
         supabase.from("cash_ledger").select("tipo_transacao, valor, data_transacao, moeda").eq("status", "CONFIRMADO"),
         supabase.from("despesas_administrativas").select("*").eq("status", "CONFIRMADO"),
         supabase.from("despesas_administrativas").select("*").eq("status", "PENDENTE"),
         supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status").eq("status", "CONFIRMADO"),
         supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status").eq("status", "PENDENTE"),
-        supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao").eq("status", "PENDENTE"),
+        supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id"),
         supabase.from("bookmakers").select("saldo_atual, saldo_freebet, saldo_irrecuperavel, status").in("status", ["ativo", "ATIVO", "EM_USO", "AGUARDANDO_SAQUE"]),
         supabase.from("apostas").select("lucro_prejuizo").not("resultado", "is", null),
         supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("status", "ativo"),
+        // Parcerias ativas com valor_parceiro > 0 e não isentas
+        supabase
+          .from("parcerias")
+          .select("id, valor_parceiro, origem_tipo, status, custo_aquisicao_isento")
+          .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+          .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
+          .gt("valor_parceiro", 0),
+        // Parcerias com comissão pendente
+        supabase
+          .from("parcerias")
+          .select("id, valor_comissao_indicador, comissao_paga")
+          .eq("comissao_paga", false)
+          .not("valor_comissao_indicador", "is", null)
+          .gt("valor_comissao_indicador", 0),
+        // Acordos de indicadores ativos
+        supabase
+          .from("indicador_acordos")
+          .select("indicador_id, meta_parceiros, valor_bonus")
+          .eq("ativo", true),
       ]);
 
       if (fiatResult.error) throw fiatResult.error;
@@ -259,7 +288,7 @@ export default function Financeiro() {
       if (despesasAdminPendentesResult.error) throw despesasAdminPendentesResult.error;
       if (pagamentosOpResult.error) throw pagamentosOpResult.error;
       if (pagamentosOpPendentesResult.error) throw pagamentosOpPendentesResult.error;
-      if (movIndicacaoPendentesResult.error) throw movIndicacaoPendentesResult.error;
+      if (movIndicacaoResult.error) throw movIndicacaoResult.error;
       if (bookmakersResult.error) throw bookmakersResult.error;
 
       setCaixaFiat(fiatResult.data || []);
@@ -271,7 +300,7 @@ export default function Financeiro() {
       setDespesasAdminPendentes(despesasAdminPendentesResult.data || []);
       setPagamentosOperador(pagamentosOpResult.data || []);
       setPagamentosOperadorPendentes(pagamentosOpPendentesResult.data || []);
-      setMovimentacoesIndicacaoPendentes(movIndicacaoPendentesResult.data || []);
+      setMovimentacoesIndicacao(movIndicacaoResult.data || []);
       setBookmakersSaldos(bookmakersResult.data || []);
       
       // Calcular lucro operacional das apostas
@@ -281,6 +310,60 @@ export default function Financeiro() {
       
       // Total de parceiros ativos
       setTotalParceirosAtivos(parceirosAtivosResult.count || 0);
+      
+      // ========== CÁLCULO DE COMPROMISSOS PENDENTES DE PARCERIAS ==========
+      const allMovimentacoes = movIndicacaoResult.data || [];
+      
+      // 1. Parceiros pendentes: parcerias que não receberam PAGTO_PARCEIRO confirmado
+      const parceriasPagas = allMovimentacoes
+        .filter((m: any) => m.tipo === "PAGTO_PARCEIRO" && m.parceria_id)
+        .map((m: any) => m.parceria_id);
+      const parceirosPendentesCalc = (parceriasParceiroResult.data || [])
+        .filter((p: any) => !parceriasPagas.includes(p.id));
+      const valorParceirosPendentes = parceirosPendentesCalc.reduce((acc: number, p: any) => acc + (p.valor_parceiro || 0), 0);
+      setParceirosPendentes({ valorTotal: valorParceirosPendentes, count: parceirosPendentesCalc.length });
+      
+      // 2. Comissões pendentes: parcerias com comissao_paga = false
+      const comissoesPendentesCalc = parceriasComissaoResult.data || [];
+      const valorComissoesPendentes = comissoesPendentesCalc.reduce((acc: number, p: any) => acc + (p.valor_comissao_indicador || 0), 0);
+      setComissoesPendentes({ valorTotal: valorComissoesPendentes, count: comissoesPendentesCalc.length });
+      
+      // 3. Bônus pendentes: indicadores que atingiram meta mas não receberam bônus
+      const custosData = custosResult.data || [];
+      const acordosData = acordosIndicadorResult.data || [];
+      
+      // Contar parceiros por indicador
+      const indicadorStats: Record<string, number> = {};
+      custosData.forEach((c: any) => {
+        if (c.indicador_id) {
+          indicadorStats[c.indicador_id] = (indicadorStats[c.indicador_id] || 0) + 1;
+        }
+      });
+      
+      // Contar bônus já pagos por indicador
+      const bonusPagosPorIndicador: Record<string, number> = {};
+      allMovimentacoes
+        .filter((m: any) => m.tipo === "BONUS_INDICADOR" && m.indicador_id)
+        .forEach((m: any) => {
+          bonusPagosPorIndicador[m.indicador_id] = (bonusPagosPorIndicador[m.indicador_id] || 0) + 1;
+        });
+      
+      // Calcular bônus pendentes
+      let totalBonusPendente = 0;
+      let countBonusPendente = 0;
+      acordosData.forEach((acordo: any) => {
+        const qtdParceiros = indicadorStats[acordo.indicador_id] || 0;
+        if (acordo.meta_parceiros && acordo.meta_parceiros > 0) {
+          const ciclosCompletos = Math.floor(qtdParceiros / acordo.meta_parceiros);
+          const bonusJaPagos = bonusPagosPorIndicador[acordo.indicador_id] || 0;
+          const ciclosPendentes = ciclosCompletos - bonusJaPagos;
+          if (ciclosPendentes > 0) {
+            totalBonusPendente += (acordo.valor_bonus || 0) * ciclosPendentes;
+            countBonusPendente += ciclosPendentes;
+          }
+        }
+      });
+      setBonusPendentes({ valorTotal: totalBonusPendente, count: countBonusPendente });
     } catch (error: any) {
       toast({
         title: "Erro ao carregar dados",
@@ -526,22 +609,13 @@ export default function Financeiro() {
   }, 0);
 
   // Compromissos PENDENTES (ainda não pagos - representam risco futuro)
-  const pagamentosParceirasPendentes = movimentacoesIndicacaoPendentes
-    .filter(m => m.tipo === "PAGTO_PARCEIRO" || m.tipo === "PAGTO_FORNECEDOR")
-    .reduce((acc, m) => acc + m.valor, 0);
-  const comissoesIndicadorPendentes = movimentacoesIndicacaoPendentes
-    .filter(m => m.tipo === "COMISSAO_INDICADOR")
-    .reduce((acc, m) => acc + m.valor, 0);
-  const bonusIndicadorPendentes = movimentacoesIndicacaoPendentes
-    .filter(m => m.tipo === "BONUS_INDICADOR")
-    .reduce((acc, m) => acc + m.valor, 0);
-
+  // Usando os valores calculados durante o fetchData (parceirosPendentes, comissoesPendentes, bonusPendentes)
   const compromissosPendentesData = {
     despesasAdmin: despesasAdminPendentes.reduce((acc, d) => acc + d.valor, 0),
     pagamentosOperador: pagamentosOperadorPendentes.reduce((acc, p) => acc + p.valor, 0),
-    pagamentosParcerias: pagamentosParceirasPendentes,
-    comissoesIndicador: comissoesIndicadorPendentes,
-    bonusIndicador: bonusIndicadorPendentes,
+    pagamentosParcerias: parceirosPendentes.valorTotal,
+    comissoesIndicador: comissoesPendentes.valorTotal,
+    bonusIndicador: bonusPendentes.valorTotal,
     total: 0,
   };
   compromissosPendentesData.total = 
