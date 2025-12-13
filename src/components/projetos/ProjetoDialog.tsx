@@ -258,8 +258,7 @@ export function ProjetoDialog({
             percentual_investidor: acordoData.percentual_investidor,
             percentual_empresa: acordoData.percentual_empresa,
             deduzir_custos_operador: acordoData.deduzir_custos_operador,
-            absorcao_prejuizo: acordoData.absorcao_prejuizo,
-            limite_prejuizo_investidor: acordoData.limite_prejuizo_investidor,
+            percentual_prejuizo_investidor: acordoData.percentual_prejuizo_investidor,
             observacoes: acordoData.observacoes,
             ativo: true,
           };
@@ -286,8 +285,7 @@ export function ProjetoDialog({
             percentual_investidor: acordoData.percentual_investidor,
             percentual_empresa: acordoData.percentual_empresa,
             deduzir_custos_operador: acordoData.deduzir_custos_operador,
-            absorcao_prejuizo: acordoData.absorcao_prejuizo,
-            limite_prejuizo_investidor: acordoData.limite_prejuizo_investidor,
+            percentual_prejuizo_investidor: acordoData.percentual_prejuizo_investidor,
             observacoes: acordoData.observacoes,
             ativo: true,
           };

@@ -1,7 +1,5 @@
 // Utility functions for calculating project tripartite profit-sharing agreements
 
-export type AbsorcaoPrejuizo = 'PROPORCIONAL' | 'INVESTIDOR_100' | 'EMPRESA_100' | 'LIMITE_INVESTIDOR';
-
 export interface ProjetoAcordo {
   id: string;
   projeto_id: string;
@@ -10,8 +8,7 @@ export interface ProjetoAcordo {
   percentual_investidor: number;
   percentual_empresa: number;
   deduzir_custos_operador: boolean;
-  absorcao_prejuizo: AbsorcaoPrejuizo;
-  limite_prejuizo_investidor: number | null;
+  percentual_prejuizo_investidor: number;
   observacoes: string | null;
   ativo: boolean;
 }
@@ -40,42 +37,27 @@ export interface DivisaoResult {
   percentualEmpresa: number;
   baseCalculo: 'LUCRO_LIQUIDO' | 'LUCRO_BRUTO';
   deduzirCustosOperador: boolean;
-  absorcaoPrejuizo: AbsorcaoPrejuizo;
+  percentualPrejuizoInvestidor: number;
 }
 
 /**
  * Calculates the profit/loss division between Investor and Company for a project
  * based on the configured agreement (projeto_acordos).
  * 
- * Profit Scenarios:
- * A) deduzir_custos_operador = TRUE (Default - Líquido)
- *    1. Start with Lucro Bruto
- *    2. Subtract Custo Operador
- *    3. Divide remainder between Investidor and Empresa by percentages
- * 
- * B) deduzir_custos_operador = FALSE (Bruto - Empresa absorve operador)
- *    1. Start with Lucro Bruto
- *    2. Divide directly between Investidor and Empresa
- *    3. Empresa pays operator from their share
- * 
- * Loss Scenarios:
- * - PROPORCIONAL: Divide loss by same percentages as profit
- * - INVESTIDOR_100: Investor absorbs 100% of loss
- * - EMPRESA_100: Company absorbs 100% of loss
- * - LIMITE_INVESTIDOR: Investor absorbs up to X%, company absorbs the rest
+ * Profit: Divides by percentual_investidor / percentual_empresa
+ * Loss: Divides by percentual_prejuizo_investidor / (100 - percentual_prejuizo_investidor)
  */
 export function calcularDivisaoProjeto(
   lucroBruto: number,
   custoOperador: number,
-  acordo: Pick<ProjetoAcordo, 'base_calculo' | 'percentual_investidor' | 'percentual_empresa' | 'deduzir_custos_operador' | 'absorcao_prejuizo' | 'limite_prejuizo_investidor'>
+  acordo: Pick<ProjetoAcordo, 'base_calculo' | 'percentual_investidor' | 'percentual_empresa' | 'deduzir_custos_operador' | 'percentual_prejuizo_investidor'>
 ): DivisaoResult {
   const { 
     base_calculo, 
     percentual_investidor, 
     percentual_empresa, 
     deduzir_custos_operador,
-    absorcao_prejuizo,
-    limite_prejuizo_investidor
+    percentual_prejuizo_investidor
   } = acordo;
 
   // Determine the base for division
@@ -98,30 +80,9 @@ export function calcularDivisaoProjeto(
 
   if (isPrejuizo) {
     const prejuizoTotal = Math.abs(lucroBase);
-
-    switch (absorcao_prejuizo) {
-      case 'PROPORCIONAL':
-        prejuizoInvestidor = prejuizoTotal * (percentual_investidor / 100);
-        prejuizoEmpresa = prejuizoTotal * (percentual_empresa / 100);
-        break;
-      
-      case 'INVESTIDOR_100':
-        prejuizoInvestidor = prejuizoTotal;
-        prejuizoEmpresa = 0;
-        break;
-      
-      case 'EMPRESA_100':
-        prejuizoInvestidor = 0;
-        prejuizoEmpresa = prejuizoTotal;
-        break;
-      
-      case 'LIMITE_INVESTIDOR':
-        const limitePercentual = limite_prejuizo_investidor ?? 50;
-        const limiteValor = prejuizoTotal * (limitePercentual / 100);
-        prejuizoInvestidor = Math.min(prejuizoTotal, limiteValor);
-        prejuizoEmpresa = prejuizoTotal - prejuizoInvestidor;
-        break;
-    }
+    // Use the loss percentage slider value
+    prejuizoInvestidor = prejuizoTotal * (percentual_prejuizo_investidor / 100);
+    prejuizoEmpresa = prejuizoTotal * ((100 - percentual_prejuizo_investidor) / 100);
   } else {
     // Calculate profit shares
     lucroInvestidor = lucroBase * (percentual_investidor / 100);
@@ -141,7 +102,7 @@ export function calcularDivisaoProjeto(
     percentualEmpresa: percentual_empresa,
     baseCalculo: base_calculo,
     deduzirCustosOperador: deduzir_custos_operador,
-    absorcaoPrejuizo: absorcao_prejuizo,
+    percentualPrejuizoInvestidor: percentual_prejuizo_investidor,
   };
 }
 
@@ -208,21 +169,15 @@ export function formatAcordoLabel(acordo: Pick<ProjetoAcordo, 'base_calculo' | '
  * Formats the loss absorption description
  */
 export function formatAbsorcaoPrejuizoLabel(
-  absorcao: AbsorcaoPrejuizo,
-  limite?: number | null
+  percentualPrejuizoInvestidor: number
 ): string {
-  switch (absorcao) {
-    case 'PROPORCIONAL':
-      return 'Proporcional à divisão de lucros';
-    case 'INVESTIDOR_100':
-      return 'Investidor assume 100%';
-    case 'EMPRESA_100':
-      return 'Empresa assume 100%';
-    case 'LIMITE_INVESTIDOR':
-      return `Investidor até ${limite ?? 50}%, resto empresa`;
-    default:
-      return 'Proporcional';
+  if (percentualPrejuizoInvestidor === 0) {
+    return 'Empresa assume 100%';
   }
+  if (percentualPrejuizoInvestidor === 100) {
+    return 'Investidor assume 100%';
+  }
+  return `Investidor ${percentualPrejuizoInvestidor}% / Empresa ${100 - percentualPrejuizoInvestidor}%`;
 }
 
 /**
