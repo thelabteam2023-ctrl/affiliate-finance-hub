@@ -715,12 +715,22 @@ export function ProjetoDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
-              <Button 
-                onClick={handleSave} 
-                disabled={loading || (formData.status === "FINALIZADO" && precisaConciliacao)}
-              >
-                {loading ? "Salvando..." : mode === "create" ? "Criar Projeto" : "Salvar Alterações"}
-              </Button>
+              {/* Em modo criação com investidor exclusivo, na aba dados, botão avança para acordo */}
+              {mode === "create" && formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && activeTab === "dados" ? (
+                <Button 
+                  onClick={() => setActiveTab("acordo")}
+                  disabled={!formData.nome.trim() || !formData.investidor_id}
+                >
+                  Próximo: Acordo
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleSave} 
+                  disabled={loading || (formData.status === "FINALIZADO" && precisaConciliacao)}
+                >
+                  {loading ? "Salvando..." : mode === "create" ? "Criar Projeto" : "Salvar Alterações"}
+                </Button>
+              )}
             </div>
           )}
 
