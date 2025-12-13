@@ -7,10 +7,15 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { HelpCircle, Handshake, Calculator, ArrowRight } from "lucide-react";
-import { toast } from "sonner";
-import { formatCurrency } from "@/lib/projetoAcordoUtils";
+import { HelpCircle, Handshake, Calculator, ArrowRight, Users, TrendingDown, AlertTriangle } from "lucide-react";
+import { 
+  formatCurrency, 
+  calcularCustoOperadorProjetado,
+  type AbsorcaoPrejuizo,
+  type OperadorVinculado
+} from "@/lib/projetoAcordoUtils";
 
 interface ProjetoAcordoSectionProps {
   projetoId: string;
@@ -19,12 +24,14 @@ interface ProjetoAcordoSectionProps {
   onAcordoChange?: (acordo: AcordoData | null) => void;
 }
 
-interface AcordoData {
+export interface AcordoData {
   id?: string;
   base_calculo: 'LUCRO_LIQUIDO' | 'LUCRO_BRUTO';
   percentual_investidor: number;
   percentual_empresa: number;
   deduzir_custos_operador: boolean;
+  absorcao_prejuizo: AbsorcaoPrejuizo;
+  limite_prejuizo_investidor: number | null;
   observacoes: string | null;
 }
 
@@ -40,12 +47,17 @@ export function ProjetoAcordoSection({
     percentual_investidor: 40,
     percentual_empresa: 60,
     deduzir_custos_operador: true,
+    absorcao_prejuizo: 'PROPORCIONAL',
+    limite_prejuizo_investidor: null,
     observacoes: null,
   });
+  
+  const [operadores, setOperadores] = useState<OperadorVinculado[]>([]);
+  const [lucroBrutoProjeto, setLucroBrutoProjeto] = useState(0);
 
   useEffect(() => {
     if (projetoId) {
-      fetchAcordo();
+      fetchData();
     }
   }, [projetoId]);
 
@@ -53,30 +65,83 @@ export function ProjetoAcordoSection({
     onAcordoChange?.(acordo);
   }, [acordo, onAcordoChange]);
 
-  const fetchAcordo = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Fetch acordo
+      const { data: acordoData, error: acordoError } = await supabase
         .from("projeto_acordos")
         .select("*")
         .eq("projeto_id", projetoId)
         .eq("ativo", true)
         .maybeSingle();
 
-      if (error) throw error;
+      if (acordoError) throw acordoError;
 
-      if (data) {
+      if (acordoData) {
         setAcordo({
-          id: data.id,
-          base_calculo: data.base_calculo as 'LUCRO_LIQUIDO' | 'LUCRO_BRUTO',
-          percentual_investidor: data.percentual_investidor,
-          percentual_empresa: data.percentual_empresa,
-          deduzir_custos_operador: data.deduzir_custos_operador,
-          observacoes: data.observacoes,
+          id: acordoData.id,
+          base_calculo: acordoData.base_calculo as 'LUCRO_LIQUIDO' | 'LUCRO_BRUTO',
+          percentual_investidor: acordoData.percentual_investidor,
+          percentual_empresa: acordoData.percentual_empresa,
+          deduzir_custos_operador: acordoData.deduzir_custos_operador,
+          absorcao_prejuizo: (acordoData.absorcao_prejuizo as AbsorcaoPrejuizo) || 'PROPORCIONAL',
+          limite_prejuizo_investidor: acordoData.limite_prejuizo_investidor,
+          observacoes: acordoData.observacoes,
         });
       }
+
+      // Fetch operadores vinculados
+      const { data: opData, error: opError } = await supabase
+        .from("operador_projetos")
+        .select(`
+          id,
+          operador_id,
+          modelo_pagamento,
+          percentual,
+          valor_fixo,
+          base_calculo,
+          faixas_escalonadas,
+          operadores!inner(nome)
+        `)
+        .eq("projeto_id", projetoId)
+        .eq("status", "ATIVO");
+
+      if (opError) throw opError;
+
+      if (opData) {
+        setOperadores(opData.map(op => ({
+          id: op.id,
+          operador_id: op.operador_id,
+          nome: (op.operadores as any)?.nome || "Operador",
+          modelo_pagamento: op.modelo_pagamento,
+          percentual: op.percentual,
+          valor_fixo: op.valor_fixo,
+          base_calculo: op.base_calculo,
+          faixas_escalonadas: op.faixas_escalonadas,
+        })));
+      }
+
+      // Fetch lucro bruto do projeto (apostas + surebets)
+      const { data: apostasData } = await supabase
+        .from("apostas")
+        .select("lucro_prejuizo")
+        .eq("projeto_id", projetoId)
+        .not("lucro_prejuizo", "is", null);
+
+      const { data: surebetsData } = await supabase
+        .from("surebets")
+        .select("lucro_real")
+        .eq("projeto_id", projetoId)
+        .not("lucro_real", "is", null);
+
+      const lucroApostas = apostasData?.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) || 0;
+      const lucroSurebets = surebetsData?.reduce((acc, s) => acc + (s.lucro_real || 0), 0) || 0;
+      
+      setLucroBrutoProjeto(lucroApostas + lucroSurebets);
+
     } catch (error) {
-      console.error("Erro ao carregar acordo:", error);
+      console.error("Erro ao carregar dados do acordo:", error);
     } finally {
       setLoading(false);
     }
@@ -99,6 +164,44 @@ export function ProjetoAcordoSection({
     }));
   };
 
+  const handleAbsorcaoChange = (value: AbsorcaoPrejuizo) => {
+    setAcordo(prev => ({
+      ...prev,
+      absorcao_prejuizo: value,
+      limite_prejuizo_investidor: value === 'LIMITE_INVESTIDOR' ? (prev.limite_prejuizo_investidor ?? 50) : null,
+    }));
+  };
+
+  const getModeloPagamentoLabel = (modelo: string) => {
+    const labels: Record<string, string> = {
+      'FIXO_MENSAL': 'Fixo Mensal',
+      'PORCENTAGEM': '% do Lucro',
+      'HIBRIDO': 'Híbrido',
+      'POR_ENTREGA': 'Por Entrega',
+      'COMISSAO_ESCALONADA': 'Escalonado',
+      'PROPORCIONAL_LUCRO': 'Proporcional',
+    };
+    return labels[modelo] || modelo;
+  };
+
+  const getOperadorCustoDisplay = (op: OperadorVinculado) => {
+    switch (op.modelo_pagamento) {
+      case 'FIXO_MENSAL':
+        return formatCurrency(op.valor_fixo || 0);
+      case 'PORCENTAGEM':
+      case 'PROPORCIONAL_LUCRO':
+        return `${op.percentual || 0}% do lucro`;
+      case 'HIBRIDO':
+        return `${formatCurrency(op.valor_fixo || 0)} + ${op.percentual || 0}%`;
+      case 'POR_ENTREGA':
+        return 'Por meta';
+      case 'COMISSAO_ESCALONADA':
+        return 'Escalonado';
+      default:
+        return '-';
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -111,14 +214,41 @@ export function ProjetoAcordoSection({
     );
   }
 
-  // Example calculation for visualization
-  const exemploLucroBruto = 10000;
-  const exemploCustoOperador = 2000;
-  const exemploLucroBase = acordo.deduzir_custos_operador 
-    ? exemploLucroBruto - exemploCustoOperador 
-    : exemploLucroBruto;
-  const exemploInvestidor = exemploLucroBase * (acordo.percentual_investidor / 100);
-  const exemploEmpresa = exemploLucroBase * (acordo.percentual_empresa / 100);
+  // Calculate real values
+  const custoOperadorProjetado = calcularCustoOperadorProjetado(operadores, lucroBrutoProjeto);
+  const lucroBase = acordo.deduzir_custos_operador 
+    ? lucroBrutoProjeto - custoOperadorProjetado 
+    : lucroBrutoProjeto;
+  const isPrejuizo = lucroBase < 0;
+  
+  let valorInvestidor = 0;
+  let valorEmpresa = 0;
+
+  if (isPrejuizo) {
+    const prejuizoTotal = Math.abs(lucroBase);
+    switch (acordo.absorcao_prejuizo) {
+      case 'PROPORCIONAL':
+        valorInvestidor = -prejuizoTotal * (acordo.percentual_investidor / 100);
+        valorEmpresa = -prejuizoTotal * (acordo.percentual_empresa / 100);
+        break;
+      case 'INVESTIDOR_100':
+        valorInvestidor = -prejuizoTotal;
+        valorEmpresa = 0;
+        break;
+      case 'EMPRESA_100':
+        valorInvestidor = 0;
+        valorEmpresa = -prejuizoTotal;
+        break;
+      case 'LIMITE_INVESTIDOR':
+        const limite = acordo.limite_prejuizo_investidor ?? 50;
+        valorInvestidor = -Math.min(prejuizoTotal, prejuizoTotal * (limite / 100));
+        valorEmpresa = -prejuizoTotal - valorInvestidor;
+        break;
+    }
+  } else {
+    valorInvestidor = lucroBase * (acordo.percentual_investidor / 100);
+    valorEmpresa = lucroBase * (acordo.percentual_empresa / 100);
+  }
 
   return (
     <Card className="border-primary/20 bg-primary/5">
@@ -126,6 +256,36 @@ export function ProjetoAcordoSection({
         <div className="flex items-center gap-2 text-primary">
           <Handshake className="h-5 w-5" />
           <span className="font-semibold">Acordo de Divisão Investidor/Empresa</span>
+        </div>
+
+        {/* Operadores Vinculados */}
+        <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-3">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <Label className="text-sm font-medium">Operadores Vinculados</Label>
+          </div>
+          
+          {operadores.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic">Nenhum operador vinculado a este projeto</p>
+          ) : (
+            <div className="space-y-2">
+              {operadores.map((op) => (
+                <div key={op.id} className="flex items-center justify-between text-sm p-2 rounded bg-background/50">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{op.nome}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {getModeloPagamentoLabel(op.modelo_pagamento)}
+                    </Badge>
+                  </div>
+                  <span className="text-muted-foreground">{getOperadorCustoDisplay(op)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between pt-2 border-t border-border/50 text-sm">
+                <span className="text-muted-foreground">Custo Projetado Total:</span>
+                <span className="font-semibold text-amber-500">{formatCurrency(custoOperadorProjetado)}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Deduzir custos operador */}
@@ -230,43 +390,125 @@ export function ProjetoAcordoSection({
           )}
         </div>
 
-        {/* Exemplo de cálculo */}
-        <div className="p-4 rounded-lg bg-muted/50 border border-dashed border-border/50">
-          <div className="flex items-center gap-2 mb-3 text-muted-foreground">
-            <Calculator className="h-4 w-4" />
-            <span className="text-xs font-medium">Exemplo de Cálculo</span>
+        {/* Absorção de Prejuízo */}
+        <div className="p-4 rounded-lg bg-destructive/5 border border-destructive/20 space-y-4">
+          <div className="flex items-center gap-2">
+            <TrendingDown className="h-4 w-4 text-destructive" />
+            <Label className="text-sm font-medium">Em Caso de Prejuízo</Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="text-muted-foreground hover:text-foreground">
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs">
+                  <p className="text-xs">Define como o prejuízo será dividido entre investidor e empresa caso o projeto tenha resultado negativo.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+
+          <RadioGroup 
+            value={acordo.absorcao_prejuizo} 
+            onValueChange={(v) => handleAbsorcaoChange(v as AbsorcaoPrejuizo)}
+            disabled={isViewMode}
+            className="space-y-2"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="PROPORCIONAL" id="prop" />
+              <Label htmlFor="prop" className="text-sm cursor-pointer">
+                Proporcional ({acordo.percentual_investidor}% inv / {acordo.percentual_empresa}% emp)
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="INVESTIDOR_100" id="inv100" />
+              <Label htmlFor="inv100" className="text-sm cursor-pointer">
+                Investidor assume 100%
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="EMPRESA_100" id="emp100" />
+              <Label htmlFor="emp100" className="text-sm cursor-pointer">
+                Empresa assume 100%
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="LIMITE_INVESTIDOR" id="limite" />
+              <Label htmlFor="limite" className="text-sm cursor-pointer">
+                Investidor até limite, resto empresa
+              </Label>
+            </div>
+          </RadioGroup>
+
+          {acordo.absorcao_prejuizo === 'LIMITE_INVESTIDOR' && (
+            <div className="flex items-center gap-3 pl-6">
+              <Label className="text-sm text-muted-foreground">Limite do investidor:</Label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={acordo.limite_prejuizo_investidor ?? 50}
+                onChange={(e) => setAcordo(prev => ({ 
+                  ...prev, 
+                  limite_prejuizo_investidor: Number(e.target.value) 
+                }))}
+                disabled={isViewMode}
+                className="w-20 h-8"
+              />
+              <span className="text-sm text-muted-foreground">%</span>
+            </div>
+          )}
+        </div>
+
+        {/* Simulação com dados reais */}
+        <div className={`p-4 rounded-lg border border-dashed ${isPrejuizo ? 'bg-destructive/10 border-destructive/30' : 'bg-muted/50 border-border/50'}`}>
+          <div className="flex items-center gap-2 mb-3">
+            <Calculator className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground">Simulação com Dados Reais do Projeto</span>
+            {isPrejuizo && (
+              <Badge variant="destructive" className="text-xs">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                Prejuízo
+              </Badge>
+            )}
           </div>
           
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Lucro Bruto:</span>
-              <span>{formatCurrency(exemploLucroBruto)}</span>
+              <span className="text-muted-foreground">Lucro Bruto (Apostas + Surebets):</span>
+              <span className={lucroBrutoProjeto >= 0 ? 'text-emerald-500' : 'text-destructive'}>
+                {formatCurrency(lucroBrutoProjeto)}
+              </span>
             </div>
             {acordo.deduzir_custos_operador && (
               <div className="flex justify-between text-amber-500">
-                <span>(-) Custo Operador:</span>
-                <span>- {formatCurrency(exemploCustoOperador)}</span>
+                <span>(-) Custo Operadores:</span>
+                <span>- {formatCurrency(custoOperadorProjetado)}</span>
               </div>
             )}
             <div className="flex justify-between border-t border-border/50 pt-2">
               <span className="text-muted-foreground">Base de Divisão:</span>
-              <span className="font-medium">{formatCurrency(exemploLucroBase)}</span>
+              <span className={`font-medium ${lucroBase >= 0 ? '' : 'text-destructive'}`}>
+                {formatCurrency(lucroBase)}
+              </span>
             </div>
+            
             <div className="flex items-center gap-2 mt-2">
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              <span className="text-emerald-500">
-                Investidor ({acordo.percentual_investidor}%): <strong>{formatCurrency(exemploInvestidor)}</strong>
+              <span className={valorInvestidor >= 0 ? 'text-emerald-500' : 'text-destructive'}>
+                Investidor ({acordo.percentual_investidor}%): <strong>{formatCurrency(valorInvestidor)}</strong>
               </span>
             </div>
             <div className="flex items-center gap-2">
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              <span className="text-primary">
-                Empresa ({acordo.percentual_empresa}%): <strong>{formatCurrency(exemploEmpresa)}</strong>
+              <span className={valorEmpresa >= 0 ? 'text-primary' : 'text-destructive'}>
+                Empresa ({acordo.percentual_empresa}%): <strong>{formatCurrency(valorEmpresa)}</strong>
               </span>
             </div>
-            {!acordo.deduzir_custos_operador && (
+            {!acordo.deduzir_custos_operador && custoOperadorProjetado > 0 && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
-                <span>* Empresa paga operador ({formatCurrency(exemploCustoOperador)}) da sua parcela</span>
+                <span>* Empresa paga operadores ({formatCurrency(custoOperadorProjetado)}) da sua parcela</span>
               </div>
             )}
           </div>
@@ -289,4 +531,4 @@ export function ProjetoAcordoSection({
   );
 }
 
-export type { AcordoData };
+
