@@ -2,18 +2,15 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { HelpCircle, Handshake, Calculator, ArrowRight, Users, TrendingDown, AlertTriangle } from "lucide-react";
 import { 
   formatCurrency, 
   calcularCustoOperadorProjetado,
-  type AbsorcaoPrejuizo,
   type OperadorVinculado
 } from "@/lib/projetoAcordoUtils";
 
@@ -30,8 +27,7 @@ export interface AcordoData {
   percentual_investidor: number;
   percentual_empresa: number;
   deduzir_custos_operador: boolean;
-  absorcao_prejuizo: AbsorcaoPrejuizo;
-  limite_prejuizo_investidor: number | null;
+  percentual_prejuizo_investidor: number;
   observacoes: string | null;
 }
 
@@ -47,8 +43,7 @@ export function ProjetoAcordoSection({
     percentual_investidor: 40,
     percentual_empresa: 60,
     deduzir_custos_operador: true,
-    absorcao_prejuizo: 'PROPORCIONAL',
-    limite_prejuizo_investidor: null,
+    percentual_prejuizo_investidor: 40,
     observacoes: null,
   });
   
@@ -85,8 +80,7 @@ export function ProjetoAcordoSection({
           percentual_investidor: acordoData.percentual_investidor,
           percentual_empresa: acordoData.percentual_empresa,
           deduzir_custos_operador: acordoData.deduzir_custos_operador,
-          absorcao_prejuizo: (acordoData.absorcao_prejuizo as AbsorcaoPrejuizo) || 'PROPORCIONAL',
-          limite_prejuizo_investidor: acordoData.limite_prejuizo_investidor,
+          percentual_prejuizo_investidor: acordoData.percentual_prejuizo_investidor ?? acordoData.percentual_investidor,
           observacoes: acordoData.observacoes,
         });
       }
@@ -164,11 +158,10 @@ export function ProjetoAcordoSection({
     }));
   };
 
-  const handleAbsorcaoChange = (value: AbsorcaoPrejuizo) => {
+  const handlePrejuizoPercentualChange = (value: number[]) => {
     setAcordo(prev => ({
       ...prev,
-      absorcao_prejuizo: value,
-      limite_prejuizo_investidor: value === 'LIMITE_INVESTIDOR' ? (prev.limite_prejuizo_investidor ?? 50) : null,
+      percentual_prejuizo_investidor: value[0],
     }));
   };
 
@@ -226,25 +219,8 @@ export function ProjetoAcordoSection({
 
   if (isPrejuizo) {
     const prejuizoTotal = Math.abs(lucroBase);
-    switch (acordo.absorcao_prejuizo) {
-      case 'PROPORCIONAL':
-        valorInvestidor = -prejuizoTotal * (acordo.percentual_investidor / 100);
-        valorEmpresa = -prejuizoTotal * (acordo.percentual_empresa / 100);
-        break;
-      case 'INVESTIDOR_100':
-        valorInvestidor = -prejuizoTotal;
-        valorEmpresa = 0;
-        break;
-      case 'EMPRESA_100':
-        valorInvestidor = 0;
-        valorEmpresa = -prejuizoTotal;
-        break;
-      case 'LIMITE_INVESTIDOR':
-        const limite = acordo.limite_prejuizo_investidor ?? 50;
-        valorInvestidor = -Math.min(prejuizoTotal, prejuizoTotal * (limite / 100));
-        valorEmpresa = -prejuizoTotal - valorInvestidor;
-        break;
-    }
+    valorInvestidor = -prejuizoTotal * (acordo.percentual_prejuizo_investidor / 100);
+    valorEmpresa = -prejuizoTotal * ((100 - acordo.percentual_prejuizo_investidor) / 100);
   } else {
     valorInvestidor = lucroBase * (acordo.percentual_investidor / 100);
     valorEmpresa = lucroBase * (acordo.percentual_empresa / 100);
@@ -390,75 +366,98 @@ export function ProjetoAcordoSection({
           )}
         </div>
 
-        {/* Absorção de Prejuízo */}
+        {/* Absorção de Prejuízo - Slider */}
         <div className="p-4 rounded-lg bg-destructive/5 border border-destructive/20 space-y-4">
-          <div className="flex items-center gap-2">
-            <TrendingDown className="h-4 w-4 text-destructive" />
-            <Label className="text-sm font-medium">Em Caso de Prejuízo</Label>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button type="button" className="text-muted-foreground hover:text-foreground">
-                    <HelpCircle className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-xs">
-                  <p className="text-xs">Define como o prejuízo será dividido entre investidor e empresa caso o projeto tenha resultado negativo.</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingDown className="h-4 w-4 text-destructive" />
+              <Label className="text-sm font-medium">Em Caso de Prejuízo</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="text-muted-foreground hover:text-foreground">
+                      <HelpCircle className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p className="text-xs">Define como o prejuízo será dividido entre investidor e empresa caso o projeto tenha resultado negativo.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <Badge variant="outline" className="font-mono text-destructive">
+              {acordo.percentual_prejuizo_investidor}% / {100 - acordo.percentual_prejuizo_investidor}%
+            </Badge>
           </div>
 
-          <RadioGroup 
-            value={acordo.absorcao_prejuizo} 
-            onValueChange={(v) => handleAbsorcaoChange(v as AbsorcaoPrejuizo)}
+          <Slider
+            value={[acordo.percentual_prejuizo_investidor]}
+            onValueChange={handlePrejuizoPercentualChange}
+            min={0}
+            max={100}
+            step={5}
             disabled={isViewMode}
-            className="space-y-2"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="PROPORCIONAL" id="prop" />
-              <Label htmlFor="prop" className="text-sm cursor-pointer">
-                Proporcional ({acordo.percentual_investidor}% inv / {acordo.percentual_empresa}% emp)
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="INVESTIDOR_100" id="inv100" />
-              <Label htmlFor="inv100" className="text-sm cursor-pointer">
-                Investidor assume 100%
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="EMPRESA_100" id="emp100" />
-              <Label htmlFor="emp100" className="text-sm cursor-pointer">
-                Empresa assume 100%
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="LIMITE_INVESTIDOR" id="limite" />
-              <Label htmlFor="limite" className="text-sm cursor-pointer">
-                Investidor até limite, resto empresa
-              </Label>
-            </div>
-          </RadioGroup>
+            className="py-2"
+          />
 
-          {acordo.absorcao_prejuizo === 'LIMITE_INVESTIDOR' && (
-            <div className="flex items-center gap-3 pl-6">
-              <Label className="text-sm text-muted-foreground">Limite do investidor:</Label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                value={acordo.limite_prejuizo_investidor ?? 50}
-                onChange={(e) => setAcordo(prev => ({ 
+          <div className="flex justify-between text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-amber-500" />
+              <span>Investidor: <strong>{acordo.percentual_prejuizo_investidor}%</strong></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-destructive" />
+              <span>Empresa: <strong>{100 - acordo.percentual_prejuizo_investidor}%</strong></span>
+            </div>
+          </div>
+
+          {/* Preset buttons for loss */}
+          {!isViewMode && (
+            <div className="flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setAcordo(prev => ({ 
                   ...prev, 
-                  limite_prejuizo_investidor: Number(e.target.value) 
+                  percentual_prejuizo_investidor: prev.percentual_investidor 
                 }))}
-                disabled={isViewMode}
-                className="w-20 h-8"
-              />
-              <span className="text-sm text-muted-foreground">%</span>
+                className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                  acordo.percentual_prejuizo_investidor === acordo.percentual_investidor 
+                    ? "bg-destructive/20 text-destructive border-destructive" 
+                    : "border-border hover:border-destructive/50"
+                }`}
+              >
+                Igual ao lucro ({acordo.percentual_investidor}/{acordo.percentual_empresa})
+              </button>
+              {[
+                { inv: 0, label: "0/100 (Empresa)" },
+                { inv: 50, label: "50/50" },
+                { inv: 100, label: "100/0 (Investidor)" },
+              ].map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => setAcordo(prev => ({ 
+                    ...prev, 
+                    percentual_prejuizo_investidor: preset.inv
+                  }))}
+                  className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                    acordo.percentual_prejuizo_investidor === preset.inv 
+                      ? "bg-destructive/20 text-destructive border-destructive" 
+                      : "border-border hover:border-destructive/50"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
             </div>
           )}
+
+          {/* Example */}
+          <div className="text-xs text-muted-foreground bg-background/50 p-2 rounded">
+            💡 Exemplo com prejuízo de R$ 10.000:<br />
+            • Investidor: <span className="text-amber-500">-{formatCurrency(10000 * (acordo.percentual_prejuizo_investidor / 100))}</span><br />
+            • Empresa: <span className="text-destructive">-{formatCurrency(10000 * ((100 - acordo.percentual_prejuizo_investidor) / 100))}</span>
+          </div>
         </div>
 
         {/* Simulação com dados reais */}

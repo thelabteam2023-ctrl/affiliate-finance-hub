@@ -2328,49 +2328,46 @@ export type Database = {
       }
       projeto_acordos: {
         Row: {
-          absorcao_prejuizo: string
           ativo: boolean
           base_calculo: string
           created_at: string
           deduzir_custos_operador: boolean
           id: string
           investidor_id: string | null
-          limite_prejuizo_investidor: number | null
           observacoes: string | null
           percentual_empresa: number
           percentual_investidor: number
+          percentual_prejuizo_investidor: number | null
           projeto_id: string
           updated_at: string
           user_id: string
         }
         Insert: {
-          absorcao_prejuizo?: string
           ativo?: boolean
           base_calculo?: string
           created_at?: string
           deduzir_custos_operador?: boolean
           id?: string
           investidor_id?: string | null
-          limite_prejuizo_investidor?: number | null
           observacoes?: string | null
           percentual_empresa?: number
           percentual_investidor?: number
+          percentual_prejuizo_investidor?: number | null
           projeto_id: string
           updated_at?: string
           user_id: string
         }
         Update: {
-          absorcao_prejuizo?: string
           ativo?: boolean
           base_calculo?: string
           created_at?: string
           deduzir_custos_operador?: boolean
           id?: string
           investidor_id?: string | null
-          limite_prejuizo_investidor?: number | null
           observacoes?: string | null
           percentual_empresa?: number
           percentual_investidor?: number
+          percentual_prejuizo_investidor?: number | null
           projeto_id?: string
           updated_at?: string
           user_id?: string
