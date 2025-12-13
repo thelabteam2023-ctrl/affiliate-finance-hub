@@ -187,13 +187,16 @@ export function PagamentoOperadorDialog({
         // 🔒 REGRA DE CONVERSÃO CRYPTO:
         // A dívida é sempre em BRL (valor base). Se pagando com crypto:
         // - Converter BRL → USD usando cotação atual
-        // - Debitar quantidade equivalente em coins (não o valor numérico da dívida)
-        const cotacao = origemData.cotacao || 1;
+        // - Para cada moeda, calcular quantidade usando o preço real (BTC/ETH) ou 1:1 (stablecoins)
+        const cotacaoUSD = origemData.cotacao || 5.40; // Fallback se não tiver cotação
+        const coinPriceUSD = origemData.coinPriceUSD || 1; // Preço da crypto em USD (1 para stablecoins)
         const isCrypto = origemData.tipoMoeda === "CRYPTO";
         
         // Calcular valor em USD e quantidade de coins (se crypto)
-        const valorUSD = isCrypto ? formData.valor / cotacao : null;
-        const qtdCoin = isCrypto ? formData.valor / cotacao : null; // Para stablecoins, 1 USD ≈ 1 USDT
+        const valorUSD = isCrypto ? formData.valor / cotacaoUSD : null;
+        // Para stablecoins (USDT/USDC): qtdCoin = valorUSD (1:1)
+        // Para outras cryptos (BTC/ETH): qtdCoin = valorUSD / coinPriceUSD
+        const qtdCoin = isCrypto && valorUSD ? valorUSD / coinPriceUSD : null;
 
         const ledgerPayload: any = {
           user_id: userId,
@@ -211,7 +214,7 @@ export function PagamentoOperadorDialog({
           ledgerPayload.valor_usd = valorUSD;
           ledgerPayload.qtd_coin = qtdCoin;
           ledgerPayload.coin = origemData.coin;
-          ledgerPayload.cotacao = cotacao;
+          ledgerPayload.cotacao = cotacaoUSD;
         }
 
         // Configurar origem baseado no tipo selecionado
@@ -226,7 +229,7 @@ export function PagamentoOperadorDialog({
           ledgerPayload.origem_parceiro_id = origemData.origemParceiroId;
           ledgerPayload.origem_wallet_id = origemData.origemWalletId;
           ledgerPayload.coin = origemData.coin;
-          ledgerPayload.cotacao = cotacao;
+          ledgerPayload.cotacao = cotacaoUSD;
           ledgerPayload.valor_usd = valorUSD;
           ledgerPayload.qtd_coin = qtdCoin;
         }
