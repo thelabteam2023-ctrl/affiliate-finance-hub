@@ -198,6 +198,10 @@ export function PagamentoOperadorDialog({
         // Para outras cryptos (BTC/ETH): qtdCoin = valorUSD / coinPriceUSD
         const qtdCoin = isCrypto && valorUSD ? valorUSD / coinPriceUSD : null;
 
+        // Buscar nome do operador para descrição
+        const operadorSelecionado = operadores.find(op => op.id === formData.operador_id);
+        const nomeOperador = operadorSelecionado?.nome || "Operador";
+
         const ledgerPayload: any = {
           user_id: userId,
           tipo_transacao: "PAGTO_OPERADOR",
@@ -205,9 +209,10 @@ export function PagamentoOperadorDialog({
           moeda: "BRL", // A dívida é sempre em BRL
           tipo_moeda: origemData.tipoMoeda,
           data_transacao: formData.data_pagamento,
-          descricao: `Pagamento operador: ${formData.tipo_pagamento}${formData.descricao ? ` - ${formData.descricao}` : ""}`,
+          descricao: `${nomeOperador} - ${formData.tipo_pagamento}${formData.descricao ? `: ${formData.descricao}` : ""}`,
           status: "CONFIRMADO",
           destino_tipo: "OPERADOR",
+          operador_id: formData.operador_id, // Link direto para rastreabilidade
         };
 
         // Se pagando com crypto, registrar os dados de conversão

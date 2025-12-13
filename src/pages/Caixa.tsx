@@ -32,6 +32,7 @@ interface Transacao {
   valor: number;
   valor_usd: number | null;
   qtd_coin: number | null;
+  cotacao: number | null;
   origem_tipo: string | null;
   destino_tipo: string | null;
   descricao: string | null;
@@ -45,6 +46,7 @@ interface Transacao {
   destino_wallet_id: string | null;
   destino_bookmaker_id: string | null;
   nome_investidor: string | null;
+  operador_id: string | null;
 }
 
 interface SaldoFiat {
@@ -100,6 +102,7 @@ export default function Caixa() {
   const [wallets, setWallets] = useState<{ [key: string]: string }>({});
   const [walletsDetalhes, setWalletsDetalhes] = useState<Array<{ id: string; exchange: string; endereco: string; network: string; parceiro_id: string }>>([]);
   const [bookmakers, setBookmakers] = useState<{ [key: string]: { nome: string; status: string } }>({});
+  const [operadoresMap, setOperadoresMap] = useState<{ [key: string]: string }>({});
 
   const fetchData = async () => {
     try {
@@ -132,6 +135,11 @@ export default function Caixa() {
         .from("bookmakers")
         .select("id, nome, status");
 
+      // Fetch operadores for operator payment traceability
+      const { data: operadoresData } = await supabase
+        .from("operadores")
+        .select("id, nome");
+
       // Create lookup maps
       const parceirosMap: { [key: string]: string } = {};
       parceirosData?.forEach(p => parceirosMap[p.id] = p.nome);
@@ -150,6 +158,10 @@ export default function Caixa() {
       const bookmakersMap: { [key: string]: { nome: string; status: string } } = {};
       bookmakersData?.forEach(b => bookmakersMap[b.id] = { nome: b.nome, status: b.status });
       setBookmakers(bookmakersMap);
+
+      const operadoresLookup: { [key: string]: string } = {};
+      operadoresData?.forEach(op => operadoresLookup[op.id] = op.nome);
+      setOperadoresMap(operadoresLookup);
 
       // Fetch FIAT balances
       const { data: saldosFiatData, error: fiatError } = await supabase
@@ -389,6 +401,11 @@ export default function Caixa() {
     }
     
     if (transacao.destino_tipo === "OPERADOR") {
+      // Usar operador_id diretamente para rastreabilidade
+      if (transacao.operador_id && operadoresMap[transacao.operador_id]) {
+        return operadoresMap[transacao.operador_id];
+      }
+      // Fallback para descrição (registros antigos)
       return transacao.descricao?.split(" - ")[0] || "Operador";
     }
     

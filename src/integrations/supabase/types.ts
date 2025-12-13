@@ -532,6 +532,7 @@ export type Database = {
           investidor_id: string | null
           moeda: string
           nome_investidor: string | null
+          operador_id: string | null
           origem_bookmaker_id: string | null
           origem_conta_bancaria_id: string | null
           origem_parceiro_id: string | null
@@ -561,6 +562,7 @@ export type Database = {
           investidor_id?: string | null
           moeda: string
           nome_investidor?: string | null
+          operador_id?: string | null
           origem_bookmaker_id?: string | null
           origem_conta_bancaria_id?: string | null
           origem_parceiro_id?: string | null
@@ -590,6 +592,7 @@ export type Database = {
           investidor_id?: string | null
           moeda?: string
           nome_investidor?: string | null
+          operador_id?: string | null
           origem_bookmaker_id?: string | null
           origem_conta_bancaria_id?: string | null
           origem_parceiro_id?: string | null
@@ -702,6 +705,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_roi_investidores"
             referencedColumns: ["investidor_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "operadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_performance"
+            referencedColumns: ["operador_id"]
           },
           {
             foreignKeyName: "cash_ledger_origem_bookmaker_id_fkey"
