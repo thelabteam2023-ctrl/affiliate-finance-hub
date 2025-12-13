@@ -198,6 +198,8 @@ export default function CentralOperacoes() {
         custosResult,
         acordosResult,
         comissoesResult,
+        indicacoesResult,
+        indicadoresResult,
         pagamentosOperadorResult
       ] = await Promise.all([
         supabase.from("v_painel_operacional").select("*"),
@@ -265,21 +267,27 @@ export default function CentralOperacoes() {
         // For bonus calculation
         supabase.from("v_custos_aquisicao").select("*"),
         supabase.from("indicador_acordos").select("*").eq("ativo", true),
-        // For comissões pendentes
+        // For comissões pendentes - fetch parcerias separately
         supabase
           .from("parcerias")
           .select(`
             id,
             valor_comissao_indicador,
             comissao_paga,
-            parceiro:parceiros(nome),
-            indicacao:indicacoes(
-              indicador:indicadores_referral(id, nome)
-            )
+            parceiro_id,
+            parceiro:parceiros(nome)
           `)
           .eq("comissao_paga", false)
           .not("valor_comissao_indicador", "is", null)
           .gt("valor_comissao_indicador", 0),
+        // Fetch indicacoes for mapping parceiro -> indicador
+        supabase
+          .from("indicacoes")
+          .select("parceiro_id, indicador_id"),
+        // Fetch indicadores for names
+        supabase
+          .from("indicadores_referral")
+          .select("id, nome"),
         // Pagamentos de operador pendentes
         supabase
           .from("pagamentos_operador")
@@ -394,17 +402,37 @@ export default function CentralOperacoes() {
         setBonusPendentes(pendentes);
       }
 
-      // Calculate comissões pendentes
-      if (comissoesResult.data) {
+      // Calculate comissões pendentes - build mapping from indicacoes table
+      if (comissoesResult.data && indicacoesResult.data && indicadoresResult.data) {
+        // Build indicadores map
+        const indicadoresMap: Record<string, { id: string; nome: string }> = {};
+        indicadoresResult.data.forEach((ind: any) => {
+          if (ind.id) {
+            indicadoresMap[ind.id] = { id: ind.id, nome: ind.nome };
+          }
+        });
+
+        // Build parceiro -> indicador map from indicacoes table
+        const parceiroIndicadorMap: Record<string, { id: string; nome: string }> = {};
+        indicacoesResult.data.forEach((ind: any) => {
+          if (ind.parceiro_id && ind.indicador_id && indicadoresMap[ind.indicador_id]) {
+            parceiroIndicadorMap[ind.parceiro_id] = indicadoresMap[ind.indicador_id];
+          }
+        });
+
+        // Map comissões using the parceiro -> indicador relationship
         const comissoes: ComissaoPendente[] = comissoesResult.data
-          .filter((p: any) => p.indicacao?.indicador)
-          .map((p: any) => ({
-            parceriaId: p.id,
-            parceiroNome: p.parceiro?.nome || "N/A",
-            indicadorId: p.indicacao.indicador.id,
-            indicadorNome: p.indicacao.indicador.nome,
-            valorComissao: p.valor_comissao_indicador || 0,
-          }));
+          .filter((p: any) => p.parceiro_id && parceiroIndicadorMap[p.parceiro_id])
+          .map((p: any) => {
+            const indicador = parceiroIndicadorMap[p.parceiro_id];
+            return {
+              parceriaId: p.id,
+              parceiroNome: p.parceiro?.nome || "N/A",
+              indicadorId: indicador.id,
+              indicadorNome: indicador.nome,
+              valorComissao: p.valor_comissao_indicador || 0,
+            };
+          });
         setComissoesPendentes(comissoes);
       }
 
