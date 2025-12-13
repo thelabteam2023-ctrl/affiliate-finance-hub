@@ -34,10 +34,14 @@ import {
   Coins,
   Calculator,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  UserCheck
 } from "lucide-react";
 import { VincularOperadorDialog } from "@/components/projetos/VincularOperadorDialog";
 import { ProjetoConciliacaoDialog } from "@/components/projetos/ProjetoConciliacaoDialog";
+import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
+
+type TipoProjeto = 'INTERNO' | 'EXCLUSIVO_INVESTIDOR';
 
 interface Projeto {
   id?: string;
@@ -52,6 +56,8 @@ interface Projeto {
   tem_investimento_crypto?: boolean;
   conciliado?: boolean;
   modelo_absorcao_taxas?: string;
+  tipo_projeto?: TipoProjeto;
+  investidor_id?: string | null;
 }
 
 const MODELOS_ABSORCAO = [
@@ -104,6 +110,8 @@ export function ProjetoDialog({
     tem_investimento_crypto: false,
     conciliado: false,
     modelo_absorcao_taxas: "EMPRESA_100",
+    tipo_projeto: "INTERNO",
+    investidor_id: null,
   });
 
   useEffect(() => {
@@ -119,6 +127,8 @@ export function ProjetoDialog({
           tem_investimento_crypto: projeto.tem_investimento_crypto || false,
           conciliado: projeto.conciliado || false,
           modelo_absorcao_taxas: projeto.modelo_absorcao_taxas || "EMPRESA_100",
+          tipo_projeto: (projeto as any).tipo_projeto || "INTERNO",
+          investidor_id: (projeto as any).investidor_id || null,
         });
         if (projeto.id) {
           fetchOperadoresProjeto(projeto.id);
@@ -137,6 +147,8 @@ export function ProjetoDialog({
           tem_investimento_crypto: false,
           conciliado: false,
           modelo_absorcao_taxas: "EMPRESA_100",
+          tipo_projeto: "INTERNO",
+          investidor_id: null,
         });
         setOperadores([]);
         setTemConciliacao(false);
@@ -193,6 +205,12 @@ export function ProjetoDialog({
       return;
     }
 
+    // Validar investidor obrigatório para projeto exclusivo
+    if (formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && !formData.investidor_id) {
+      toast.error("Selecione um investidor para projetos exclusivos");
+      return;
+    }
+
     // Validar conciliação obrigatória para projetos crypto ao finalizar
     if (formData.status === "FINALIZADO" && formData.tem_investimento_crypto && !formData.conciliado) {
       toast.error("Projetos com investimento crypto precisam ser conciliados antes de finalizar");
@@ -218,6 +236,8 @@ export function ProjetoDialog({
         observacoes: formData.observacoes || null,
         tem_investimento_crypto: formData.tem_investimento_crypto || false,
         modelo_absorcao_taxas: formData.tem_investimento_crypto ? formData.modelo_absorcao_taxas : "EMPRESA_100",
+        tipo_projeto: formData.tipo_projeto || "INTERNO",
+        investidor_id: formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" ? formData.investidor_id : null,
         user_id: session.session.user.id,
       };
 
@@ -294,6 +314,66 @@ export function ProjetoDialog({
 
             <ScrollArea className="h-[500px] mt-4">
               <TabsContent value="dados" className="space-y-4 px-1">
+                {/* Tipo de Projeto */}
+                <Card className={formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" ? "border-primary/30 bg-primary/5" : ""}>
+                  <CardContent className="pt-4 space-y-4">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <UserCheck className="h-4 w-4" />
+                        Tipo de Projeto *
+                      </Label>
+                      <Select
+                        value={formData.tipo_projeto}
+                        onValueChange={(value: TipoProjeto) => {
+                          setFormData({ 
+                            ...formData, 
+                            tipo_projeto: value,
+                            investidor_id: value === "INTERNO" ? null : formData.investidor_id
+                          });
+                        }}
+                        disabled={isViewMode || mode === "edit"}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="INTERNO">
+                            <div className="flex flex-col">
+                              <span>Projeto Interno</span>
+                              <span className="text-xs text-muted-foreground">Capital próprio da empresa</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="EXCLUSIVO_INVESTIDOR">
+                            <div className="flex flex-col">
+                              <span>Projeto Exclusivo de Investidor</span>
+                              <span className="text-xs text-muted-foreground">Capital isolado de terceiro</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {mode === "edit" && (
+                        <p className="text-xs text-muted-foreground">
+                          O tipo de projeto não pode ser alterado após criação
+                        </p>
+                      )}
+                    </div>
+
+                    {formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && (
+                      <div className="space-y-2">
+                        <Label>Investidor *</Label>
+                        <InvestidorSelect
+                          value={formData.investidor_id || ""}
+                          onValueChange={(value) => setFormData({ ...formData, investidor_id: value })}
+                          disabled={isViewMode}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          As bookmakers deste projeto serão exclusivas e o lucro calculado isoladamente
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Nome *</Label>
