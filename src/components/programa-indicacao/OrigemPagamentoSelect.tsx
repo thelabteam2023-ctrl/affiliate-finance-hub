@@ -96,6 +96,9 @@ export function OrigemPagamentoSelect({
   const [saldosParceirosContas, setSaldosParceirosContas] = useState<SaldoParceiroContas[]>([]);
   const [saldosParceirosWallets, setSaldosParceirosWallets] = useState<SaldoParceiroWallets[]>([]);
 
+  // Flag para indicar que os dados foram carregados
+  const [dataLoaded, setDataLoaded] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -128,6 +131,7 @@ export function OrigemPagamentoSelect({
       setSaldosCaixaCrypto(saldoCryptoRes.data || []);
       setSaldosParceirosContas(saldoContasRes.data || []);
       setSaldosParceirosWallets(saldoWalletsRes.data || []);
+      setDataLoaded(true);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
@@ -185,21 +189,31 @@ export function OrigemPagamentoSelect({
   );
 
   // 🔒 VALIDAÇÃO CENTRALIZADA DE SALDO
-  const calcularSaldoEValidar = (origemTipo: string, tipoMoeda: string, coin?: string, contaId?: string, walletId?: string) => {
+  const calcularSaldoEValidar = (origemTipo: string, tipoMoeda: string, coin?: string, contaId?: string, walletId?: string, saldosFiat?: SaldoCaixaFiat[], saldosCrypto?: SaldoCaixaCrypto[], saldosContas?: SaldoParceiroContas[], saldosWallets?: SaldoParceiroWallets[]) => {
     let saldoDisponivel = 0;
+
+    // Usar arrays passados ou os do estado
+    const fiat = saldosFiat || saldosCaixaFiat;
+    const crypto = saldosCrypto || saldosCaixaCrypto;
+    const contas = saldosContas || saldosParceirosContas;
+    const wallets = saldosWallets || saldosParceirosWallets;
 
     if (origemTipo === "CAIXA_OPERACIONAL") {
       if (tipoMoeda === "FIAT") {
-        saldoDisponivel = getSaldoCaixaFiat();
+        const saldo = fiat.find(s => s.moeda === "BRL");
+        saldoDisponivel = saldo?.saldo || 0;
       } else if (coin) {
-        saldoDisponivel = getSaldoCaixaCryptoByCoin(coin).saldoBRL;
+        const saldo = crypto.find(s => s.coin === coin);
+        saldoDisponivel = (saldo?.saldo_usd || 0) * cotacaoUSD;
       } else {
-        saldoDisponivel = getTotalCryptoSaldo();
+        saldoDisponivel = crypto.reduce((acc, s) => acc + (s.saldo_usd || 0), 0) * cotacaoUSD;
       }
     } else if (origemTipo === "PARCEIRO_CONTA" && contaId) {
-      saldoDisponivel = getSaldoContaParceiro(contaId);
+      const saldo = contas.find(s => s.conta_id === contaId);
+      saldoDisponivel = saldo?.saldo || 0;
     } else if (origemTipo === "PARCEIRO_WALLET" && walletId) {
-      saldoDisponivel = getSaldoWalletParceiro(walletId).saldoBRL;
+      const saldo = wallets.find(s => s.wallet_id === walletId);
+      saldoDisponivel = (saldo?.saldo_usd || 0) * cotacaoUSD;
     }
 
     return {
@@ -207,6 +221,28 @@ export function OrigemPagamentoSelect({
       saldoInsuficiente: valorPagamento > 0 && saldoDisponivel < valorPagamento,
     };
   };
+
+  // 🔒 EFEITO CRÍTICO: Recalcula e propaga saldoInsuficiente quando dados são carregados ou valor muda
+  useEffect(() => {
+    if (!dataLoaded) return;
+
+    const { saldoDisponivel, saldoInsuficiente } = calcularSaldoEValidar(
+      value.origemTipo,
+      value.tipoMoeda,
+      value.coin,
+      value.origemContaBancariaId,
+      value.origemWalletId
+    );
+
+    // Só atualiza se houver diferença para evitar loop infinito
+    if (value.saldoDisponivel !== saldoDisponivel || value.saldoInsuficiente !== saldoInsuficiente) {
+      onChange({
+        ...value,
+        saldoDisponivel,
+        saldoInsuficiente,
+      });
+    }
+  }, [dataLoaded, valorPagamento, value.origemTipo, value.tipoMoeda, value.coin, value.origemContaBancariaId, value.origemWalletId, saldosCaixaFiat, saldosCaixaCrypto, saldosParceirosContas, saldosParceirosWallets, cotacaoUSD]);
 
   // Handle origem type change
   const handleOrigemTipoChange = (tipo: "CAIXA_OPERACIONAL" | "PARCEIRO_CONTA" | "PARCEIRO_WALLET") => {
