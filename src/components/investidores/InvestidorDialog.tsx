@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, HelpCircle, Percent, ArrowRight, ArrowLeft, FolderKanban, Eye, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Trash2, HelpCircle, Percent, ArrowRight, ArrowLeft, FolderKanban, Eye, TrendingUp, TrendingDown, Handshake } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,15 @@ interface ProjetoExclusivo {
   total_depositado: number;
   total_sacado: number;
   lucro: number;
+  custo_operador: number;
+  acordo?: {
+    base_calculo: string;
+    percentual_investidor: number;
+    percentual_empresa: number;
+    deduzir_custos_operador: boolean;
+  } | null;
+  lucro_investidor?: number;
+  lucro_empresa?: number;
 }
 
 interface InvestidorDialogProps {
@@ -131,29 +140,60 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
             // Get bookmaker balances for this project
             const { data: bookmakers } = await supabase
               .from("bookmakers")
-              .select("saldo_atual")
+              .select("id, saldo_atual")
               .eq("projeto_id", projeto.id);
 
             const saldoBookmakers = bookmakers?.reduce((sum, b) => sum + (b.saldo_atual || 0), 0) || 0;
 
             // Get deposits and withdrawals from cash_ledger for bookmakers of this project
+            const bookmakerIds = bookmakers?.map(b => b.id) || [];
+            
             const { data: depositos } = await supabase
               .from("cash_ledger")
               .select("valor")
               .eq("tipo_transacao", "DEPOSITO")
               .eq("status", "CONFIRMADO")
-              .in("destino_bookmaker_id", bookmakers?.map(b => (b as any).id) || []);
+              .in("destino_bookmaker_id", bookmakerIds.length > 0 ? bookmakerIds : ['none']);
 
             const { data: saques } = await supabase
               .from("cash_ledger")
               .select("valor")
               .eq("tipo_transacao", "SAQUE")
               .eq("status", "CONFIRMADO")
-              .in("origem_bookmaker_id", bookmakers?.map(b => (b as any).id) || []);
+              .in("origem_bookmaker_id", bookmakerIds.length > 0 ? bookmakerIds : ['none']);
 
             const totalDepositado = depositos?.reduce((sum, d) => sum + (d.valor || 0), 0) || 0;
             const totalSacado = saques?.reduce((sum, s) => sum + (s.valor || 0), 0) || 0;
             const lucro = saldoBookmakers + totalSacado - totalDepositado;
+
+            // Fetch acordo for this project
+            const { data: acordo } = await supabase
+              .from("projeto_acordos")
+              .select("base_calculo, percentual_investidor, percentual_empresa, deduzir_custos_operador")
+              .eq("projeto_id", projeto.id)
+              .eq("ativo", true)
+              .maybeSingle();
+
+            // Calculate operator cost (simplified - sum of operator payments for this project)
+            const { data: pagamentos } = await supabase
+              .from("pagamentos_operador")
+              .select("valor")
+              .eq("projeto_id", projeto.id)
+              .eq("status", "CONFIRMADO");
+            
+            const custoOperador = pagamentos?.reduce((sum, p) => sum + (p.valor || 0), 0) || 0;
+
+            // Calculate investor/company share based on acordo
+            let lucroInvestidor = 0;
+            let lucroEmpresa = 0;
+            
+            if (acordo && lucro > 0) {
+              const lucroBase = acordo.deduzir_custos_operador 
+                ? Math.max(0, lucro - custoOperador) 
+                : lucro;
+              lucroInvestidor = lucroBase * (acordo.percentual_investidor / 100);
+              lucroEmpresa = lucroBase * (acordo.percentual_empresa / 100);
+            }
 
             return {
               id: projeto.id,
@@ -164,6 +204,10 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
               total_depositado: totalDepositado,
               total_sacado: totalSacado,
               lucro,
+              custo_operador: custoOperador,
+              acordo: acordo || null,
+              lucro_investidor: lucroInvestidor,
+              lucro_empresa: lucroEmpresa,
             };
           })
         );
@@ -783,6 +827,12 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
                             <span className="font-medium">{projeto.nome}</span>
                           </div>
                           <div className="flex items-center gap-2">
+                            {projeto.acordo && (
+                              <Badge variant="outline" className="text-xs font-mono flex items-center gap-1">
+                                <Handshake className="h-3 w-3" />
+                                {projeto.acordo.deduzir_custos_operador ? "Líq" : "Bruto"} {projeto.acordo.percentual_investidor}/{projeto.acordo.percentual_empresa}
+                              </Badge>
+                            )}
                             <Badge className={
                               projeto.status === "EM_ANDAMENTO" 
                                 ? "bg-emerald-500/20 text-emerald-400" 

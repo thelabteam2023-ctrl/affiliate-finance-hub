@@ -2326,6 +2326,87 @@ export type Database = {
         }
         Relationships: []
       }
+      projeto_acordos: {
+        Row: {
+          ativo: boolean
+          base_calculo: string
+          created_at: string
+          deduzir_custos_operador: boolean
+          id: string
+          investidor_id: string | null
+          observacoes: string | null
+          percentual_empresa: number
+          percentual_investidor: number
+          projeto_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          base_calculo?: string
+          created_at?: string
+          deduzir_custos_operador?: boolean
+          id?: string
+          investidor_id?: string | null
+          observacoes?: string | null
+          percentual_empresa?: number
+          percentual_investidor?: number
+          projeto_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          base_calculo?: string
+          created_at?: string
+          deduzir_custos_operador?: boolean
+          id?: string
+          investidor_id?: string | null
+          observacoes?: string | null
+          percentual_empresa?: number
+          percentual_investidor?: number
+          projeto_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projeto_acordos_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "investidores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_acordos_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "v_roi_investidores"
+            referencedColumns: ["investidor_id"]
+          },
+          {
+            foreignKeyName: "projeto_acordos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_acordos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "projeto_acordos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+        ]
+      }
       projeto_bookmaker_historico: {
         Row: {
           bookmaker_id: string
