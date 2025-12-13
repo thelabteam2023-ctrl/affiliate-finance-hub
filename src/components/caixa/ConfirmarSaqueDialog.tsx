@@ -97,11 +97,24 @@ export function ConfirmarSaqueDialog({
 
       if (error) throw error;
 
-      // Atualizar status do bookmaker para 'ativo' após confirmação
+      // Verificar se ainda há saldo antes de mudar o status
       if (saque.origem_bookmaker_id) {
+        // Buscar saldo atual da bookmaker após o saque
+        const { data: bookmaker } = await supabase
+          .from("bookmakers")
+          .select("saldo_atual")
+          .eq("id", saque.origem_bookmaker_id)
+          .single();
+
+        // Se ainda há saldo > 0, MANTER como AGUARDANDO_SAQUE para novo saque
+        // Se saldo = 0, pode voltar para 'ativo'
+        const novoStatus = (bookmaker?.saldo_atual || 0) > 0.5 
+          ? "AGUARDANDO_SAQUE" 
+          : "ativo";
+
         await supabase
           .from("bookmakers")
-          .update({ status: "ativo" })
+          .update({ status: novoStatus })
           .eq("id", saque.origem_bookmaker_id);
       }
 
