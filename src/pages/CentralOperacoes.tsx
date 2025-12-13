@@ -68,6 +68,9 @@ interface EntregaPendente {
   modelo_pagamento: string;
   valor_fixo: number | null;
   percentual: number | null;
+  operador_projeto_id: string;
+  operador_id: string;
+  projeto_id: string;
 }
 
 interface PagamentoParceiroPendente {
