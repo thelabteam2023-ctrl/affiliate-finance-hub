@@ -689,15 +689,6 @@ export function OrigemPagamentoSelect({
         </div>
       )}
 
-      {/* 🔒 ALERTA GLOBAL DE SALDO INSUFICIENTE */}
-      {isInsuficiente && valorPagamento > 0 && (
-        <div className="p-3 rounded-lg bg-destructive/20 border border-destructive/40 text-destructive text-sm font-medium flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5 shrink-0" />
-          <span>
-            ⚠️ Transação bloqueada: saldo insuficiente para realizar este pagamento.
-          </span>
-        </div>
-      )}
     </div>
   );
 }
