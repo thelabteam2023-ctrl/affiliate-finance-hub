@@ -121,7 +121,32 @@ export function PagamentoBonusDialog({
         }
       }
 
-      // Create one bonus payment record per bonus being paid
+      // PASSO 1: Debitar do Caixa Operacional via cash_ledger (valor total)
+      if (origemData.origemTipo === "CAIXA_OPERACIONAL") {
+        const { error: ledgerError } = await supabase
+          .from("cash_ledger")
+          .insert({
+            user_id: user.id,
+            tipo_transacao: "BONUS_INDICADOR",
+            tipo_moeda: origemData.tipoMoeda,
+            moeda: origemData.moeda,
+            valor: valorTotal,
+            coin: origemData.coin || null,
+            qtd_coin: origemData.tipoMoeda === "CRYPTO" && origemData.cotacao 
+              ? valorTotal / origemData.cotacao 
+              : null,
+            cotacao: origemData.cotacao || null,
+            origem_tipo: "CAIXA_OPERACIONAL",
+            destino_tipo: "BONUS_INDICADOR",
+            data_transacao: dataPagamento,
+            descricao: `Bônus indicador - ${indicador.nome} (${qtdBonusPagar}x ${valorUnitario})`,
+            status: "CONFIRMADO",
+          });
+        
+        if (ledgerError) throw ledgerError;
+      }
+
+      // PASSO 2: Registrar em movimentacoes_indicacao (histórico do módulo - um por bônus)
       const insertPromises = [];
       for (let i = 0; i < qtdBonusPagar; i++) {
         insertPromises.push(
@@ -135,7 +160,6 @@ export function PagamentoBonusDialog({
             data_movimentacao: dataPagamento,
             descricao: descricao || `Pagamento de bônus para ${indicador.nome}${qtdBonusPagar > 1 ? ` (${i + 1}/${qtdBonusPagar})` : ''}`,
             status: "CONFIRMADO",
-            // New origin fields
             origem_tipo: origemData.origemTipo,
             origem_caixa_operacional: origemData.origemTipo === "CAIXA_OPERACIONAL",
             origem_conta_bancaria_id: origemData.origemContaBancariaId || null,

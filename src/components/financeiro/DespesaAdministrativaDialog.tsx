@@ -208,6 +208,32 @@ export function DespesaAdministrativaDialog({
         if (error) throw error;
         toast({ title: "Despesa atualizada com sucesso!" });
       } else {
+        // PASSO 1: Debitar do Caixa Operacional via cash_ledger (apenas para CONFIRMADO)
+        if (formData.status === "CONFIRMADO" && origemData.origemTipo === "CAIXA_OPERACIONAL") {
+          const { error: ledgerError } = await supabase
+            .from("cash_ledger")
+            .insert({
+              user_id: user.id,
+              tipo_transacao: "DESPESA_ADMINISTRATIVA",
+              tipo_moeda: origemData.tipoMoeda,
+              moeda: origemData.moeda,
+              valor: formData.valor,
+              coin: origemData.coin || null,
+              qtd_coin: origemData.tipoMoeda === "CRYPTO" && origemData.cotacao 
+                ? formData.valor / origemData.cotacao 
+                : null,
+              cotacao: origemData.cotacao || null,
+              origem_tipo: "CAIXA_OPERACIONAL",
+              destino_tipo: "DESPESA_ADMINISTRATIVA",
+              data_transacao: formData.data_despesa,
+              descricao: `Despesa administrativa - ${formData.categoria}${formData.descricao ? `: ${formData.descricao}` : ''}`,
+              status: "CONFIRMADO",
+            });
+          
+          if (ledgerError) throw ledgerError;
+        }
+
+        // PASSO 2: Registrar em despesas_administrativas
         const { error } = await supabase
           .from("despesas_administrativas")
           .insert(payload);
