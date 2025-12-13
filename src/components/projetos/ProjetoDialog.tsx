@@ -282,6 +282,12 @@ export function ProjetoDialog({
       return;
     }
 
+    // Data de início obrigatória para todos os projetos
+    if (!formData.data_inicio) {
+      toast.error("Data de início é obrigatória");
+      return;
+    }
+
     // Validar investidor obrigatório para projeto exclusivo
     if (formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && !formData.investidor_id) {
       toast.error("Selecione um investidor para projetos exclusivos");
