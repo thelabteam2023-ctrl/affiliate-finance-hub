@@ -713,7 +713,7 @@ export default function CentralOperacoes() {
       </div>
 
       {/* Alertas List */}
-      {alertas.length === 0 && entregasPendentes.length === 0 && pagamentosParceiros.length === 0 && bonusPendentes.length === 0 && comissoesPendentes.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 && saquesPendentes.length === 0 && alertasLucro.length === 0 ? (
+      {alertas.length === 0 && entregasPendentes.length === 0 && pagamentosParceiros.length === 0 && bonusPendentes.length === 0 && comissoesPendentes.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 && saquesPendentes.length === 0 && alertasLucro.length === 0 && pagamentosOperadorPendentes.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-10">
