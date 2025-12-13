@@ -65,6 +65,7 @@ import { DespesaAdministrativaDialog } from "@/components/financeiro/DespesaAdmi
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { SaudeFinanceiraCard } from "@/components/financeiro/SaudeFinanceiraCard";
 import { RentabilidadeCaptacaoCard } from "@/components/financeiro/RentabilidadeCaptacaoCard";
+import { HistoricoDespesasAdmin } from "@/components/financeiro/HistoricoDespesasAdmin";
 import { FluxoCaixaCard } from "@/components/financeiro/FluxoCaixaCard";
 import { ComposicaoCustosCard } from "@/components/financeiro/ComposicaoCustosCard";
 
@@ -1088,52 +1089,8 @@ export default function Financeiro() {
             </CardContent>
           </Card>
 
-          {/* Gráfico Evolução Mensal */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Evolução Mensal das Despesas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {despesasAdmin.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Nenhuma despesa cadastrada para exibir o gráfico
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={despesasAdminMensais}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="label" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                    <YAxis 
-                      tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}
-                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                    />
-                    <Tooltip
-                      contentStyle={{ 
-                        backgroundColor: "rgba(0, 0, 0, 0.4)", 
-                        border: "1px solid rgba(255, 255, 255, 0.1)",
-                        backdropFilter: "blur(12px)",
-                        borderRadius: "12px",
-                        padding: "12px 16px"
-                      }}
-                      cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
-                      formatter={(value: number, name: string) => [formatCurrency(value), name]}
-                    />
-                    <Legend />
-                    {categoriasUnicas.map((cat, index) => (
-                      <Bar 
-                        key={cat}
-                        dataKey={cat} 
-                        name={cat}
-                        stackId="a"
-                        fill={coresCategoria[cat] || `hsl(var(--chart-${(index % 5) + 1}))`}
-                        radius={index === categoriasUnicas.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-                      />
-                    ))}
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
+          {/* Histórico de Transações */}
+          <HistoricoDespesasAdmin formatCurrency={formatCurrency} />
         </TabsContent>
 
         <TabsContent value="historico" className="space-y-6">

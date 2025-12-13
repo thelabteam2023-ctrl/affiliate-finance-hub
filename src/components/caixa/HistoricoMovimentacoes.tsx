@@ -744,10 +744,32 @@ export function HistoricoMovimentacoes({
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="font-medium">
-                    {transacao.tipo_moeda === "FIAT"
-                      ? formatCurrency(transacao.valor, transacao.moeda)
-                      : `${transacao.qtd_coin} ${transacao.coin}`}
+                  {/* Valor com detalhes crypto inline */}
+                  <div className="text-right">
+                    {transacao.tipo_moeda === "CRYPTO" ? (
+                      <div className="flex flex-col items-end">
+                        <div className="font-medium text-primary">
+                          {transacao.qtd_coin?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} {transacao.coin}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          ≈ {formatCurrency(transacao.valor, "BRL")}
+                        </div>
+                        {transacao.cotacao && (
+                          <div className="text-xs text-muted-foreground/70">
+                            @${transacao.cotacao?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className={`font-medium ${
+                        transacao.tipo_transacao === "SAQUE" || transacao.tipo_transacao === "DEPOSITO" 
+                          ? transacao.tipo_transacao === "SAQUE" ? "text-emerald-400" : "text-destructive"
+                          : ""
+                      }`}>
+                        {transacao.tipo_transacao === "SAQUE" ? "+ " : transacao.tipo_transacao === "DEPOSITO" ? "- " : ""}
+                        {formatCurrency(transacao.valor, transacao.moeda)}
+                      </div>
+                    )}
                   </div>
                   {/* Status Badge para SAQUE */}
                   {transacao.tipo_transacao === "SAQUE" && transacao.status && transacao.status !== "CONFIRMADO" && (
@@ -765,7 +787,7 @@ export function HistoricoMovimentacoes({
                       Atualizar Status
                     </Button>
                   )}
-                  <div className="text-right">
+                  <div className="text-right min-w-[80px]">
                     <div className="text-sm font-medium">
                       {format(new Date(transacao.data_transacao), "dd/MM/yyyy")}
                     </div>
