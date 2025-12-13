@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliacaoDialog";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
+import { PagamentoOperadorDialog } from "@/components/operadores/PagamentoOperadorDialog";
 
 interface Alerta {
   tipo_alerta: string;
@@ -106,6 +107,7 @@ interface PagamentoOperadorPendente {
   tipo_pagamento: string;
   valor: number;
   data_pagamento: string;
+  projeto_id?: string | null;
   projeto_nome?: string | null;
 }
 
@@ -163,6 +165,8 @@ export default function CentralOperacoes() {
   const [selectedEntrega, setSelectedEntrega] = useState<EntregaPendente | null>(null);
   const [confirmarSaqueOpen, setConfirmarSaqueOpen] = useState(false);
   const [selectedSaque, setSelectedSaque] = useState<SaquePendenteConfirmacao | null>(null);
+  const [pagamentoOperadorOpen, setPagamentoOperadorOpen] = useState(false);
+  const [selectedPagamentoOperador, setSelectedPagamentoOperador] = useState<PagamentoOperadorPendente | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -496,6 +500,7 @@ export default function CentralOperacoes() {
           tipo_pagamento: p.tipo_pagamento,
           valor: p.valor,
           data_pagamento: p.data_pagamento,
+          projeto_id: p.projeto_id || null,
           projeto_nome: p.projeto?.nome || null,
         }));
         setPagamentosOperadorPendentes(pagamentosOp);
@@ -951,7 +956,10 @@ export default function CentralOperacoes() {
                         <div
                           key={pag.id}
                           className="flex items-center justify-between p-3 rounded-lg border border-orange-500/20 bg-orange-500/5 hover:bg-orange-500/10 transition-colors cursor-pointer"
-                          onClick={() => navigate("/operadores")}
+                          onClick={() => {
+                            setSelectedPagamentoOperador(pag);
+                            setPagamentoOperadorOpen(true);
+                          }}
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">
                             <div className="h-8 w-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
@@ -968,9 +976,17 @@ export default function CentralOperacoes() {
                             <span className="text-sm font-bold text-orange-400">
                               {formatCurrency(pag.valor)}
                             </span>
-                            <Badge className="bg-yellow-500/20 text-yellow-400 text-xs">
-                              Pendente
-                            </Badge>
+                            <Button
+                              size="sm"
+                              className="bg-orange-600 hover:bg-orange-700 h-7 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedPagamentoOperador(pag);
+                                setPagamentoOperadorOpen(true);
+                              }}
+                            >
+                              Pagar
+                            </Button>
                           </div>
                         </div>
                       ))}
@@ -1331,6 +1347,28 @@ export default function CentralOperacoes() {
         }}
         onSuccess={() => fetchData(true)}
         saque={selectedSaque}
+      />
+
+      {/* Dialog de Pagamento de Operador */}
+      <PagamentoOperadorDialog
+        open={pagamentoOperadorOpen}
+        onOpenChange={(open) => {
+          setPagamentoOperadorOpen(open);
+          if (!open) setSelectedPagamentoOperador(null);
+        }}
+        pagamento={selectedPagamentoOperador ? {
+          id: selectedPagamentoOperador.id,
+          operador_id: selectedPagamentoOperador.operador_id,
+          projeto_id: selectedPagamentoOperador.projeto_id || null,
+          tipo_pagamento: selectedPagamentoOperador.tipo_pagamento,
+          valor: selectedPagamentoOperador.valor,
+          moeda: "BRL",
+          data_pagamento: selectedPagamentoOperador.data_pagamento,
+          data_competencia: null,
+          descricao: null,
+          status: "PENDENTE",
+        } : undefined}
+        onSuccess={() => fetchData(true)}
       />
     </div>
   );
