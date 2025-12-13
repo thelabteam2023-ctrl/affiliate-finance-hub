@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Gift, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { OrigemPagamentoSelect, OrigemPagamentoData } from "./OrigemPagamentoSelect";
 
 interface PagamentoBonusDialogProps {
   open: boolean;
@@ -43,6 +44,14 @@ export function PagamentoBonusDialog({
   const [qtdBonusPagar, setQtdBonusPagar] = useState<number>(1);
   const [descricao, setDescricao] = useState("");
 
+  // Origem do pagamento
+  const [origemData, setOrigemData] = useState<OrigemPagamentoData>({
+    origemTipo: "CAIXA_OPERACIONAL",
+    tipoMoeda: "FIAT",
+    moeda: "BRL",
+    saldoDisponivel: 0,
+  });
+
   const ciclosPendentes = indicador?.ciclosPendentes || 1;
   const valorUnitario = indicador?.valorBonus || 0;
   const valorTotal = valorUnitario * qtdBonusPagar;
@@ -53,8 +62,24 @@ export function PagamentoBonusDialog({
     }
   }, [indicador]);
 
+  useEffect(() => {
+    if (open) {
+      resetForm();
+    }
+  }, [open]);
+
   const handleSubmit = async () => {
     if (!indicador) return;
+
+    // Validar saldo se não for caixa operacional
+    if (origemData.origemTipo !== "CAIXA_OPERACIONAL" && origemData.saldoDisponivel < valorTotal) {
+      toast({
+        title: "Saldo insuficiente",
+        description: "O saldo disponível na origem selecionada é insuficiente.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       setLoading(true);
@@ -102,10 +127,19 @@ export function PagamentoBonusDialog({
             parceria_id: finalParceriaId,
             tipo: "BONUS_INDICADOR",
             valor: valorUnitario,
-            moeda: "BRL",
+            moeda: origemData.moeda,
             data_movimentacao: dataPagamento,
             descricao: descricao || `Pagamento de bônus para ${indicador.nome}${qtdBonusPagar > 1 ? ` (${i + 1}/${qtdBonusPagar})` : ''}`,
             status: "CONFIRMADO",
+            // New origin fields
+            origem_tipo: origemData.origemTipo,
+            origem_caixa_operacional: origemData.origemTipo === "CAIXA_OPERACIONAL",
+            origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
+            origem_wallet_id: origemData.origemWalletId || null,
+            origem_parceiro_id: origemData.origemParceiroId || null,
+            tipo_moeda: origemData.tipoMoeda,
+            coin: origemData.coin || null,
+            cotacao: origemData.cotacao || null,
           })
         );
       }
@@ -139,6 +173,12 @@ export function PagamentoBonusDialog({
     setDataPagamento(format(new Date(), "yyyy-MM-dd"));
     setQtdBonusPagar(indicador?.ciclosPendentes || 1);
     setDescricao("");
+    setOrigemData({
+      origemTipo: "CAIXA_OPERACIONAL",
+      tipoMoeda: "FIAT",
+      moeda: "BRL",
+      saldoDisponivel: 0,
+    });
   };
 
   const formatCurrency = (value: number) => {
@@ -150,7 +190,7 @@ export function PagamentoBonusDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Gift className="h-5 w-5 text-primary" />
@@ -164,6 +204,14 @@ export function PagamentoBonusDialog({
               <p className="text-sm text-muted-foreground">Indicador</p>
               <p className="font-medium">{indicador.nome}</p>
             </div>
+
+            {/* Origem do Pagamento */}
+            <OrigemPagamentoSelect
+              value={origemData}
+              onChange={setOrigemData}
+              valorPagamento={valorTotal}
+              disabled={loading}
+            />
 
             <div className="grid gap-4">
               {ciclosPendentes > 1 && (
@@ -183,7 +231,7 @@ export function PagamentoBonusDialog({
               )}
 
               <div className="space-y-2">
-                <Label>Valor Unitário do Bônus</Label>
+                <Label>Valor Unitário do Bônus ({origemData.moeda})</Label>
                 <Input
                   type="number"
                   value={valorUnitario}

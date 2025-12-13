@@ -1713,41 +1713,68 @@ export type Database = {
       }
       movimentacoes_indicacao: {
         Row: {
+          coin: string | null
+          cotacao: number | null
           created_at: string | null
           data_movimentacao: string | null
           descricao: string | null
           id: string
           indicador_id: string | null
           moeda: string
+          origem_caixa_operacional: boolean | null
+          origem_conta_bancaria_id: string | null
+          origem_parceiro_id: string | null
+          origem_tipo: string | null
+          origem_wallet_id: string | null
           parceria_id: string
+          qtd_coin: number | null
           status: string
           tipo: string
+          tipo_moeda: string | null
           user_id: string
           valor: number
         }
         Insert: {
+          coin?: string | null
+          cotacao?: number | null
           created_at?: string | null
           data_movimentacao?: string | null
           descricao?: string | null
           id?: string
           indicador_id?: string | null
           moeda?: string
+          origem_caixa_operacional?: boolean | null
+          origem_conta_bancaria_id?: string | null
+          origem_parceiro_id?: string | null
+          origem_tipo?: string | null
+          origem_wallet_id?: string | null
           parceria_id: string
+          qtd_coin?: number | null
           status?: string
           tipo: string
+          tipo_moeda?: string | null
           user_id: string
           valor: number
         }
         Update: {
+          coin?: string | null
+          cotacao?: number | null
           created_at?: string | null
           data_movimentacao?: string | null
           descricao?: string | null
           id?: string
           indicador_id?: string | null
           moeda?: string
+          origem_caixa_operacional?: boolean | null
+          origem_conta_bancaria_id?: string | null
+          origem_parceiro_id?: string | null
+          origem_tipo?: string | null
+          origem_wallet_id?: string | null
           parceria_id?: string
+          qtd_coin?: number | null
           status?: string
           tipo?: string
+          tipo_moeda?: string | null
           user_id?: string
           valor?: number
         }
@@ -1765,6 +1792,62 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_indicador_performance"
             referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_conta_bancaria_id_fkey"
+            columns: ["origem_conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_conta_bancaria_id_fkey"
+            columns: ["origem_conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["conta_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_wallet_id_fkey"
+            columns: ["origem_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_wallet_id_fkey"
+            columns: ["origem_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets_crypto"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "movimentacoes_indicacao_parceria_id_fkey"

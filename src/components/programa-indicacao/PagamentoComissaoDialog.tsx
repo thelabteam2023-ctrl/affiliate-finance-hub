@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Banknote, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { OrigemPagamentoSelect, OrigemPagamentoData } from "./OrigemPagamentoSelect";
 
 interface PagamentoComissaoDialogProps {
   open: boolean;
@@ -38,8 +39,16 @@ export function PagamentoComissaoDialog({
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [dataPagamento, setDataPagamento] = useState<string>(format(new Date(), "yyyy-MM-dd"));
-  const [valor, setValor] = useState<number>(parceria?.valorComissao || 0);
+  const [valor, setValor] = useState<number>(0);
   const [descricao, setDescricao] = useState("");
+
+  // Origem do pagamento
+  const [origemData, setOrigemData] = useState<OrigemPagamentoData>({
+    origemTipo: "CAIXA_OPERACIONAL",
+    tipoMoeda: "FIAT",
+    moeda: "BRL",
+    saldoDisponivel: 0,
+  });
 
   useEffect(() => {
     if (parceria) {
@@ -47,8 +56,24 @@ export function PagamentoComissaoDialog({
     }
   }, [parceria]);
 
+  useEffect(() => {
+    if (open) {
+      resetForm();
+    }
+  }, [open]);
+
   const handleSubmit = async () => {
     if (!parceria) return;
+
+    // Validar saldo se não for caixa operacional
+    if (origemData.origemTipo !== "CAIXA_OPERACIONAL" && origemData.saldoDisponivel < valor) {
+      toast({
+        title: "Saldo insuficiente",
+        description: "O saldo disponível na origem selecionada é insuficiente.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       setLoading(true);
@@ -56,17 +81,26 @@ export function PagamentoComissaoDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Create commission payment record
+      // Create commission payment record with origin tracking
       const { error: movError } = await supabase.from("movimentacoes_indicacao").insert({
         user_id: user.id,
         indicador_id: parceria.indicadorId,
         parceria_id: parceria.id,
         tipo: "COMISSAO_INDICADOR",
         valor: valor,
-        moeda: "BRL",
+        moeda: origemData.moeda,
         data_movimentacao: dataPagamento,
         descricao: descricao || `Comissão por indicação de ${parceria.parceiroNome}`,
         status: "CONFIRMADO",
+        // New origin fields
+        origem_tipo: origemData.origemTipo,
+        origem_caixa_operacional: origemData.origemTipo === "CAIXA_OPERACIONAL",
+        origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
+        origem_wallet_id: origemData.origemWalletId || null,
+        origem_parceiro_id: origemData.origemParceiroId || null,
+        tipo_moeda: origemData.tipoMoeda,
+        coin: origemData.coin || null,
+        cotacao: origemData.cotacao || null,
       });
 
       if (movError) throw movError;
@@ -102,6 +136,12 @@ export function PagamentoComissaoDialog({
     setDataPagamento(format(new Date(), "yyyy-MM-dd"));
     setValor(parceria?.valorComissao || 0);
     setDescricao("");
+    setOrigemData({
+      origemTipo: "CAIXA_OPERACIONAL",
+      tipoMoeda: "FIAT",
+      moeda: "BRL",
+      saldoDisponivel: 0,
+    });
   };
 
   const formatCurrency = (value: number) => {
@@ -113,7 +153,7 @@ export function PagamentoComissaoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Banknote className="h-5 w-5 text-primary" />
@@ -134,9 +174,17 @@ export function PagamentoComissaoDialog({
               </div>
             </div>
 
+            {/* Origem do Pagamento */}
+            <OrigemPagamentoSelect
+              value={origemData}
+              onChange={setOrigemData}
+              valorPagamento={valor}
+              disabled={loading}
+            />
+
             <div className="grid gap-4">
               <div className="space-y-2">
-                <Label>Valor da Comissão</Label>
+                <Label>Valor da Comissão ({origemData.moeda})</Label>
                 <Input
                   type="number"
                   value={valor}
