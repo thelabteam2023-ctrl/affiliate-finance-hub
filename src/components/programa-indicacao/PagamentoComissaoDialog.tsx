@@ -85,7 +85,32 @@ export function PagamentoComissaoDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Create commission payment record with origin tracking
+      // PASSO 1: Debitar do Caixa Operacional via cash_ledger
+      if (origemData.origemTipo === "CAIXA_OPERACIONAL") {
+        const { error: ledgerError } = await supabase
+          .from("cash_ledger")
+          .insert({
+            user_id: user.id,
+            tipo_transacao: "COMISSAO_INDICADOR",
+            tipo_moeda: origemData.tipoMoeda,
+            moeda: origemData.moeda,
+            valor: valor,
+            coin: origemData.coin || null,
+            qtd_coin: origemData.tipoMoeda === "CRYPTO" && origemData.cotacao 
+              ? valor / origemData.cotacao 
+              : null,
+            cotacao: origemData.cotacao || null,
+            origem_tipo: "CAIXA_OPERACIONAL",
+            destino_tipo: "COMISSAO_INDICADOR",
+            data_transacao: dataPagamento,
+            descricao: `Comissão por indicação - ${parceria.parceiroNome} (Indicador: ${parceria.indicadorNome})`,
+            status: "CONFIRMADO",
+          });
+        
+        if (ledgerError) throw ledgerError;
+      }
+
+      // PASSO 2: Registrar em movimentacoes_indicacao (histórico do módulo)
       const { error: movError } = await supabase.from("movimentacoes_indicacao").insert({
         user_id: user.id,
         indicador_id: parceria.indicadorId,
@@ -96,7 +121,6 @@ export function PagamentoComissaoDialog({
         data_movimentacao: dataPagamento,
         descricao: descricao || `Comissão por indicação de ${parceria.parceiroNome}`,
         status: "CONFIRMADO",
-        // New origin fields
         origem_tipo: origemData.origemTipo,
         origem_caixa_operacional: origemData.origemTipo === "CAIXA_OPERACIONAL",
         origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
