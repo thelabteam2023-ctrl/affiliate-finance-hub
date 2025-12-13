@@ -905,6 +905,8 @@ export default function Testes() {
     { key: "parcerias", label: "Parcerias (Captação)", icon: UserPlus, action: () => handleDeleteAll("parcerias", "Parcerias"), description: "Apaga todas as parcerias de captação" },
     { key: "indicadores_referral", label: "Indicadores", icon: Users, action: () => handleDeleteAll("indicadores_referral", "Indicadores"), description: "Apaga todos os indicadores" },
     { key: "operadores", label: "Operadores", icon: Users, action: () => handleDeleteAll("operadores", "Operadores"), description: "Apaga todos os operadores" },
+    { key: "despesas_administrativas", label: "Despesas Administrativas", icon: Banknote, action: () => handleDeleteAll("despesas_administrativas", "Despesas Administrativas"), description: "Apaga todas as despesas administrativas" },
+    { key: "movimentacoes_indicacao", label: "Movimentações Indicação", icon: UserPlus, action: () => handleDeleteAll("movimentacoes_indicacao", "Movimentações Indicação"), description: "Apaga todos os pagamentos de captação (comissões, bônus, etc.)" },
   ];
 
   return (
