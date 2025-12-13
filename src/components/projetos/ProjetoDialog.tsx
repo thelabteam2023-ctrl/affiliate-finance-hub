@@ -383,8 +383,8 @@ export function ProjetoDialog({
                 {/* Tipo de Projeto */}
                 <Card className={formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" ? "border-primary/30 bg-primary/5" : ""}>
                   <CardContent className="pt-4 space-y-4">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
+                    <div className="space-y-3">
+                      <Label className="flex items-center gap-2 text-sm font-medium">
                         <UserCheck className="h-4 w-4" />
                         Tipo de Projeto *
                       </Label>
@@ -399,31 +399,31 @@ export function ProjetoDialog({
                         }}
                         disabled={isViewMode || mode === "edit"}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="h-auto py-2.5">
                           <SelectValue>
                             {formData.tipo_projeto === "INTERNO" ? (
-                              <div className="flex flex-col items-start">
-                                <span>Projeto Interno</span>
+                              <div className="flex flex-col items-start py-0.5">
+                                <span className="font-medium">Projeto Interno</span>
                                 <span className="text-xs text-muted-foreground">Capital próprio da empresa</span>
                               </div>
                             ) : (
-                              <div className="flex flex-col items-start">
-                                <span>Projeto Exclusivo de Investidor</span>
+                              <div className="flex flex-col items-start py-0.5">
+                                <span className="font-medium">Projeto Exclusivo de Investidor</span>
                                 <span className="text-xs text-muted-foreground">Capital isolado de terceiro</span>
                               </div>
                             )}
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="INTERNO">
-                            <div className="flex flex-col">
-                              <span>Projeto Interno</span>
+                          <SelectItem value="INTERNO" className="py-2.5">
+                            <div className="flex flex-col py-0.5">
+                              <span className="font-medium">Projeto Interno</span>
                               <span className="text-xs text-muted-foreground">Capital próprio da empresa</span>
                             </div>
                           </SelectItem>
-                          <SelectItem value="EXCLUSIVO_INVESTIDOR">
-                            <div className="flex flex-col">
-                              <span>Projeto Exclusivo de Investidor</span>
+                          <SelectItem value="EXCLUSIVO_INVESTIDOR" className="py-2.5">
+                            <div className="flex flex-col py-0.5">
+                              <span className="font-medium">Projeto Exclusivo de Investidor</span>
                               <span className="text-xs text-muted-foreground">Capital isolado de terceiro</span>
                             </div>
                           </SelectItem>
@@ -437,8 +437,8 @@ export function ProjetoDialog({
                     </div>
 
                     {formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && (
-                      <div className="space-y-2">
-                        <Label>Investidor *</Label>
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Investidor *</Label>
                         <InvestidorSelect
                           value={formData.investidor_id || ""}
                           onValueChange={(value) => setFormData({ ...formData, investidor_id: value })}
@@ -744,6 +744,12 @@ export function ProjetoDialog({
                   Próximo: Acordo
                 </Button>
               ) : mode === "create" && formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && activeTab === "acordo" ? (
+                <Button 
+                  onClick={() => setActiveTab("operadores")}
+                >
+                  Próximo: Operadores
+                </Button>
+              ) : mode === "create" && formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && activeTab === "operadores" ? (
                 <Button 
                   onClick={handleSave}
                   disabled={loading}

@@ -471,58 +471,7 @@ export function ProjetoAcordoSection({
           </div>
         </div>
 
-        {/* Simulação com dados reais */}
-        <div className={`p-4 rounded-lg border border-dashed ${isPrejuizo ? 'bg-destructive/10 border-destructive/30' : 'bg-muted/50 border-border/50'}`}>
-          <div className="flex items-center gap-2 mb-3">
-            <Calculator className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground">Simulação com Dados Reais do Projeto</span>
-            {isPrejuizo && (
-              <Badge variant="destructive" className="text-xs">
-                <AlertTriangle className="h-3 w-3 mr-1" />
-                Prejuízo
-              </Badge>
-            )}
-          </div>
-          
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Lucro Bruto (Apostas + Surebets):</span>
-              <span className={lucroBrutoProjeto >= 0 ? 'text-emerald-500' : 'text-destructive'}>
-                {formatCurrency(lucroBrutoProjeto)}
-              </span>
-            </div>
-            {acordo.deduzir_custos_operador && (
-              <div className="flex justify-between text-amber-500">
-                <span>(-) Custo Operadores:</span>
-                <span>- {formatCurrency(custoOperadorProjetado)}</span>
-              </div>
-            )}
-            <div className="flex justify-between border-t border-border/50 pt-2">
-              <span className="text-muted-foreground">Base de Divisão:</span>
-              <span className={`font-medium ${lucroBase >= 0 ? '' : 'text-destructive'}`}>
-                {formatCurrency(lucroBase)}
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-2 mt-2">
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              <span className={valorInvestidor >= 0 ? 'text-emerald-500' : 'text-destructive'}>
-                Investidor ({acordo.percentual_investidor}%): <strong>{formatCurrency(valorInvestidor)}</strong>
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              <span className={valorEmpresa >= 0 ? 'text-primary' : 'text-destructive'}>
-                Empresa ({acordo.percentual_empresa}%): <strong>{formatCurrency(valorEmpresa)}</strong>
-              </span>
-            </div>
-            {!acordo.deduzir_custos_operador && custoOperadorProjetado > 0 && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
-                <span>* Empresa paga operadores ({formatCurrency(custoOperadorProjetado)}) da sua parcela</span>
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Bloco de simulação removido - dados zerados não agregam valor na etapa de cadastro */}
 
         {/* Observações */}
         <div className="space-y-2">
