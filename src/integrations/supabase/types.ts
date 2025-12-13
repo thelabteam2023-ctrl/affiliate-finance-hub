@@ -1368,6 +1368,7 @@ export type Database = {
           id: string
           investidor_id: string
           percentual_fixo: number | null
+          projeto_id: string | null
           tipo_deal: string
           updated_at: string | null
           user_id: string
@@ -1382,6 +1383,7 @@ export type Database = {
           id?: string
           investidor_id: string
           percentual_fixo?: number | null
+          projeto_id?: string | null
           tipo_deal?: string
           updated_at?: string | null
           user_id: string
@@ -1396,6 +1398,7 @@ export type Database = {
           id?: string
           investidor_id?: string
           percentual_fixo?: number | null
+          projeto_id?: string | null
           tipo_deal?: string
           updated_at?: string | null
           user_id?: string
@@ -1416,6 +1419,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_roi_investidores"
             referencedColumns: ["investidor_id"]
+          },
+          {
+            foreignKeyName: "investidor_deals_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investidor_deals_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "investidor_deals_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
           },
         ]
       }
@@ -2602,12 +2626,14 @@ export type Database = {
           data_inicio: string | null
           descricao: string | null
           id: string
+          investidor_id: string | null
           modelo_absorcao_taxas: string
           nome: string
           observacoes: string | null
           orcamento_inicial: number | null
           status: string
           tem_investimento_crypto: boolean
+          tipo_projeto: string | null
           updated_at: string
           user_id: string
         }
@@ -2619,12 +2645,14 @@ export type Database = {
           data_inicio?: string | null
           descricao?: string | null
           id?: string
+          investidor_id?: string | null
           modelo_absorcao_taxas?: string
           nome: string
           observacoes?: string | null
           orcamento_inicial?: number | null
           status?: string
           tem_investimento_crypto?: boolean
+          tipo_projeto?: string | null
           updated_at?: string
           user_id: string
         }
@@ -2636,16 +2664,33 @@ export type Database = {
           data_inicio?: string | null
           descricao?: string | null
           id?: string
+          investidor_id?: string | null
           modelo_absorcao_taxas?: string
           nome?: string
           observacoes?: string | null
           orcamento_inicial?: number | null
           status?: string
           tem_investimento_crypto?: boolean
+          tipo_projeto?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projetos_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "investidores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projetos_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "v_roi_investidores"
+            referencedColumns: ["investidor_id"]
+          },
+        ]
       }
       promocao_participantes: {
         Row: {
