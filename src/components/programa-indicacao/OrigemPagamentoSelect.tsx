@@ -67,6 +67,8 @@ export interface OrigemPagamentoData {
   moeda: string;
   coin?: string;
   cotacao?: number;
+  /** Preço da crypto em USD (para BTC, ETH, etc.) - stablecoins = 1 */
+  coinPriceUSD?: number;
   saldoDisponivel: number;
   saldoInsuficiente?: boolean;
 }
@@ -84,7 +86,6 @@ export function OrigemPagamentoSelect({
   valorPagamento,
   disabled = false,
 }: OrigemPagamentoSelectProps) {
-  const { cotacaoUSD } = useCotacoes();
   const [loading, setLoading] = useState(true);
   
   // Data
@@ -98,6 +99,15 @@ export function OrigemPagamentoSelect({
 
   // Flag para indicar que os dados foram carregados
   const [dataLoaded, setDataLoaded] = useState(false);
+
+  // Extrair lista de moedas crypto únicas para buscar cotações em tempo real
+  const cryptoCoins = [...new Set([
+    ...saldosCaixaCrypto.map(s => s.coin),
+    ...saldosParceirosWallets.map(s => s.coin)
+  ])].filter(Boolean);
+
+  // Usar hook de cotações com as moedas crypto detectadas
+  const { cotacaoUSD, getCryptoPrice, loading: cotacoesLoading } = useCotacoes(cryptoCoins);
 
   useEffect(() => {
     fetchData();
@@ -145,19 +155,36 @@ export function OrigemPagamentoSelect({
     return saldo?.saldo || 0;
   };
 
+  // Obter preço da crypto em USD (usa cotação real-time da Binance)
+  const getCoinPriceUSD = (coin: string): number => {
+    // Stablecoins = 1 USD
+    if (coin === "USDT" || coin === "USDC") return 1;
+    // Buscar cotação real-time
+    const price = getCryptoPrice(coin);
+    return price ?? 0;
+  };
+
   // Get Caixa Operacional CRYPTO balance by coin
   const getSaldoCaixaCryptoByCoin = (coin: string) => {
     const saldo = saldosCaixaCrypto.find(s => s.coin === coin);
+    const saldoCoin = saldo?.saldo_coin || 0;
+    const priceUSD = getCoinPriceUSD(coin);
+    const saldoUSD = saldoCoin * priceUSD;
     return {
-      saldoCoin: saldo?.saldo_coin || 0,
-      saldoUSD: saldo?.saldo_usd || 0,
-      saldoBRL: (saldo?.saldo_usd || 0) * cotacaoUSD,
+      saldoCoin,
+      saldoUSD,
+      saldoBRL: saldoUSD * cotacaoUSD,
+      priceUSD,
     };
   };
 
   // Get total crypto balance
   const getTotalCryptoSaldo = () => {
-    const totalUSD = saldosCaixaCrypto.reduce((acc, s) => acc + (s.saldo_usd || 0), 0);
+    let totalUSD = 0;
+    for (const s of saldosCaixaCrypto) {
+      const priceUSD = getCoinPriceUSD(s.coin);
+      totalUSD += (s.saldo_coin || 0) * priceUSD;
+    }
     return totalUSD * cotacaoUSD;
   };
 
@@ -167,14 +194,19 @@ export function OrigemPagamentoSelect({
     return saldo?.saldo || 0;
   };
 
-  // Get partner wallet balance in USD and coin
+  // Get partner wallet balance in USD and coin (usando cotações em tempo real)
   const getSaldoWalletParceiro = (walletId: string) => {
     const saldo = saldosParceirosWallets.find(s => s.wallet_id === walletId);
+    const coin = saldo?.coin || "USDT";
+    const saldoCoin = saldo?.saldo_coin || 0;
+    const priceUSD = getCoinPriceUSD(coin);
+    const saldoUSD = saldoCoin * priceUSD;
     return {
-      coin: saldo?.coin || "USDT",
-      saldoCoin: saldo?.saldo_coin || 0,
-      saldoUSD: saldo?.saldo_usd || 0,
-      saldoBRL: (saldo?.saldo_usd || 0) * cotacaoUSD,
+      coin,
+      saldoCoin,
+      saldoUSD,
+      saldoBRL: saldoUSD * cotacaoUSD,
+      priceUSD,
     };
   };
 
@@ -188,7 +220,7 @@ export function OrigemPagamentoSelect({
     w => w.parceiro_id === value.origemParceiroId
   );
 
-  // 🔒 VALIDAÇÃO CENTRALIZADA DE SALDO
+  // 🔒 VALIDAÇÃO CENTRALIZADA DE SALDO (usa cotações em tempo real)
   const calcularSaldoEValidar = (origemTipo: string, tipoMoeda: string, coin?: string, contaId?: string, walletId?: string, saldosFiat?: SaldoCaixaFiat[], saldosCrypto?: SaldoCaixaCrypto[], saldosContas?: SaldoParceiroContas[], saldosWallets?: SaldoParceiroWallets[]) => {
     let saldoDisponivel = 0;
 
@@ -203,17 +235,29 @@ export function OrigemPagamentoSelect({
         const saldo = fiat.find(s => s.moeda === "BRL");
         saldoDisponivel = saldo?.saldo || 0;
       } else if (coin) {
+        // Usar cotação real-time da moeda
         const saldo = crypto.find(s => s.coin === coin);
-        saldoDisponivel = (saldo?.saldo_usd || 0) * cotacaoUSD;
+        const saldoCoin = saldo?.saldo_coin || 0;
+        const priceUSD = getCoinPriceUSD(coin);
+        saldoDisponivel = saldoCoin * priceUSD * cotacaoUSD;
       } else {
-        saldoDisponivel = crypto.reduce((acc, s) => acc + (s.saldo_usd || 0), 0) * cotacaoUSD;
+        // Total de todas as cryptos
+        let totalBRL = 0;
+        for (const s of crypto) {
+          const priceUSD = getCoinPriceUSD(s.coin);
+          totalBRL += (s.saldo_coin || 0) * priceUSD * cotacaoUSD;
+        }
+        saldoDisponivel = totalBRL;
       }
     } else if (origemTipo === "PARCEIRO_CONTA" && contaId) {
       const saldo = contas.find(s => s.conta_id === contaId);
       saldoDisponivel = saldo?.saldo || 0;
     } else if (origemTipo === "PARCEIRO_WALLET" && walletId) {
       const saldo = wallets.find(s => s.wallet_id === walletId);
-      saldoDisponivel = (saldo?.saldo_usd || 0) * cotacaoUSD;
+      const coinWallet = saldo?.coin || "USDT";
+      const saldoCoin = saldo?.saldo_coin || 0;
+      const priceUSD = getCoinPriceUSD(coinWallet);
+      saldoDisponivel = saldoCoin * priceUSD * cotacaoUSD;
     }
 
     return {
@@ -307,6 +351,7 @@ export function OrigemPagamentoSelect({
       ...value,
       coin,
       cotacao: cotacaoUSD,
+      coinPriceUSD: saldoCrypto.priceUSD,
       saldoDisponivel: saldoCrypto.saldoBRL,
       saldoInsuficiente,
     });
@@ -344,6 +389,7 @@ export function OrigemPagamentoSelect({
       saldoDisponivel: walletSaldo.saldoBRL,
       coin: walletSaldo.coin,
       cotacao: cotacaoUSD,
+      coinPriceUSD: walletSaldo.priceUSD,
       saldoInsuficiente: valorPagamento > 0 && walletSaldo.saldoBRL < valorPagamento,
     });
   };
@@ -563,30 +609,45 @@ export function OrigemPagamentoSelect({
               </div>
               
               {/* Preview de conversão - mostra exatamente quanto será debitado */}
-              {valorPagamento > 0 && cotacaoUSD > 0 && (
-                <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-sm">
-                  <div className="font-medium text-primary mb-2">📋 Resumo da Conversão</div>
-                  <div className="space-y-1 text-foreground">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Valor devido:</span>
-                      <span className="font-semibold">{formatCurrency(valorPagamento)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Cotação USD/BRL:</span>
-                      <span>{cotacaoUSD.toFixed(4)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Equivalente USD:</span>
-                      <span>{formatUSD(valorPagamento / cotacaoUSD)}</span>
-                    </div>
-                    <div className="border-t border-primary/30 my-2" />
-                    <div className="flex justify-between font-semibold text-primary">
-                      <span>Será debitado:</span>
-                      <span>{(valorPagamento / cotacaoUSD).toFixed(4)} {value.coin}</span>
+              {valorPagamento > 0 && cotacaoUSD > 0 && (() => {
+                const cryptoData = getSaldoCaixaCryptoByCoin(value.coin);
+                const priceUSD = cryptoData.priceUSD;
+                const valorUSD = valorPagamento / cotacaoUSD;
+                // Para stablecoins (USDT/USDC), 1 coin = 1 USD; para outras, divide pelo preço
+                const qtdCoin = priceUSD > 0 ? valorUSD / priceUSD : 0;
+                const isStablecoin = value.coin === "USDT" || value.coin === "USDC";
+                
+                return (
+                  <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-sm">
+                    <div className="font-medium text-primary mb-2">📋 Resumo da Conversão</div>
+                    <div className="space-y-1 text-foreground">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Valor devido:</span>
+                        <span className="font-semibold">{formatCurrency(valorPagamento)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Cotação USD/BRL:</span>
+                        <span>{cotacaoUSD.toFixed(4)} <span className="text-xs text-muted-foreground">(tempo real)</span></span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Equivalente USD:</span>
+                        <span>{formatUSD(valorUSD)}</span>
+                      </div>
+                      {!isStablecoin && priceUSD > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Cotação {value.coin}/USD:</span>
+                          <span>{formatUSD(priceUSD)} <span className="text-xs text-muted-foreground">(tempo real)</span></span>
+                        </div>
+                      )}
+                      <div className="border-t border-primary/30 my-2" />
+                      <div className="flex justify-between font-semibold text-primary">
+                        <span>Será debitado:</span>
+                        <span>{qtdCoin.toFixed(isStablecoin ? 4 : 8)} {value.coin}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           )}
         </div>
