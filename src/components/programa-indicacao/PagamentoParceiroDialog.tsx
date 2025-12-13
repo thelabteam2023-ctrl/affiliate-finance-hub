@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Loader2, User, Calendar, Banknote } from "lucide-react";
 import { format } from "date-fns";
+import { OrigemPagamentoSelect, OrigemPagamentoData } from "./OrigemPagamentoSelect";
 
 interface PagamentoParceiroDialogProps {
   open: boolean;
@@ -38,12 +39,26 @@ export function PagamentoParceiroDialog({
   const [dataPagamento, setDataPagamento] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [valor, setValor] = useState<string>("");
   const [descricao, setDescricao] = useState<string>("");
+  
+  // Origem do pagamento
+  const [origemData, setOrigemData] = useState<OrigemPagamentoData>({
+    origemTipo: "CAIXA_OPERACIONAL",
+    tipoMoeda: "FIAT",
+    moeda: "BRL",
+    saldoDisponivel: 0,
+  });
 
   useEffect(() => {
     if (parceria) {
       setValor(parceria.valorParceiro.toString());
     }
   }, [parceria]);
+
+  useEffect(() => {
+    if (open) {
+      resetForm();
+    }
+  }, [open]);
 
   const handleSubmit = async () => {
     if (!parceria || !dataPagamento) return;
@@ -58,13 +73,23 @@ export function PagamentoParceiroDialog({
       return;
     }
 
+    // Validar saldo se não for caixa operacional
+    if (origemData.origemTipo !== "CAIXA_OPERACIONAL" && origemData.saldoDisponivel < valorNumerico) {
+      toast({
+        title: "Saldo insuficiente",
+        description: "O saldo disponível na origem selecionada é insuficiente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setLoading(true);
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Create movimentacao record
+      // Create movimentacao record with origin tracking
       const { error: movError } = await supabase
         .from("movimentacoes_indicacao")
         .insert({
@@ -72,10 +97,19 @@ export function PagamentoParceiroDialog({
           parceria_id: parceria.id,
           tipo: "PAGTO_PARCEIRO",
           valor: valorNumerico,
-          moeda: "BRL",
+          moeda: origemData.moeda,
           data_movimentacao: dataPagamento,
           descricao: descricao || `Pagamento ao parceiro ${parceria.parceiroNome}`,
           status: "CONFIRMADO",
+          // New origin fields
+          origem_tipo: origemData.origemTipo,
+          origem_caixa_operacional: origemData.origemTipo === "CAIXA_OPERACIONAL",
+          origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
+          origem_wallet_id: origemData.origemWalletId || null,
+          origem_parceiro_id: origemData.origemParceiroId || null,
+          tipo_moeda: origemData.tipoMoeda,
+          coin: origemData.coin || null,
+          cotacao: origemData.cotacao || null,
         });
 
       if (movError) throw movError;
@@ -101,8 +135,14 @@ export function PagamentoParceiroDialog({
 
   const resetForm = () => {
     setDataPagamento(format(new Date(), "yyyy-MM-dd"));
-    setValor("");
+    setValor(parceria?.valorParceiro.toString() || "");
     setDescricao("");
+    setOrigemData({
+      origemTipo: "CAIXA_OPERACIONAL",
+      tipoMoeda: "FIAT",
+      moeda: "BRL",
+      saldoDisponivel: 0,
+    });
   };
 
   const formatCurrency = (value: number) => {
@@ -112,9 +152,11 @@ export function PagamentoParceiroDialog({
     }).format(value);
   };
 
+  const valorNumerico = parseFloat(valor) || 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5 text-primary" />
@@ -129,11 +171,19 @@ export function PagamentoParceiroDialog({
             <p className="font-semibold">{parceria?.parceiroNome || "N/A"}</p>
           </div>
 
+          {/* Origem do Pagamento */}
+          <OrigemPagamentoSelect
+            value={origemData}
+            onChange={setOrigemData}
+            valorPagamento={valorNumerico}
+            disabled={loading}
+          />
+
           {/* Valor */}
           <div className="space-y-2">
             <Label htmlFor="valor" className="flex items-center gap-2">
               <Banknote className="h-4 w-4" />
-              Valor do Pagamento (R$)
+              Valor do Pagamento ({origemData.moeda})
             </Label>
             <Input
               id="valor"
