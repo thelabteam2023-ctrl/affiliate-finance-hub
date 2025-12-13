@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import {
   Select,
@@ -437,12 +438,12 @@ export function ProjetoDialog({
                         <SelectTrigger className="h-auto py-2.5">
                           <SelectValue>
                             {formData.tipo_projeto === "INTERNO" ? (
-                              <div className="flex flex-col items-start py-0.5">
+                              <div className="flex flex-col items-center text-center py-0.5 w-full">
                                 <span className="font-medium">Projeto Interno</span>
                                 <span className="text-xs text-muted-foreground">Capital próprio da empresa</span>
                               </div>
                             ) : (
-                              <div className="flex flex-col items-start py-0.5">
+                              <div className="flex flex-col items-center text-center py-0.5 w-full">
                                 <span className="font-medium">Projeto Exclusivo de Investidor</span>
                                 <span className="text-xs text-muted-foreground">Capital isolado de terceiro</span>
                               </div>
@@ -451,13 +452,13 @@ export function ProjetoDialog({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="INTERNO" className="py-2.5">
-                            <div className="flex flex-col py-0.5">
+                            <div className="flex flex-col items-center text-center py-0.5 w-full">
                               <span className="font-medium">Projeto Interno</span>
                               <span className="text-xs text-muted-foreground">Capital próprio da empresa</span>
                             </div>
                           </SelectItem>
                           <SelectItem value="EXCLUSIVO_INVESTIDOR" className="py-2.5">
-                            <div className="flex flex-col py-0.5">
+                            <div className="flex flex-col items-center text-center py-0.5 w-full">
                               <span className="font-medium">Projeto Exclusivo de Investidor</span>
                               <span className="text-xs text-muted-foreground">Capital isolado de terceiro</span>
                             </div>
@@ -689,13 +690,25 @@ export function ProjetoDialog({
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium">Operadores Vinculados</h3>
                   {!isViewMode && (
-                    <Button 
-                      size="sm"
-                      onClick={() => setVincularDialogOpen(true)}
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Vincular Operador
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          <Button 
+                            size="sm"
+                            onClick={() => setVincularDialogOpen(true)}
+                            disabled={mode === "create"}
+                          >
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Vincular Operador
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {mode === "create" && (
+                        <TooltipContent>
+                          <p>Salve o projeto para vincular operadores</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
                   )}
                 </div>
 
