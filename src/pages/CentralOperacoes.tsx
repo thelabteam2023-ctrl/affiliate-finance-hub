@@ -99,6 +99,16 @@ interface ComissaoPendente {
   valorComissao: number;
 }
 
+interface PagamentoOperadorPendente {
+  id: string;
+  operador_id: string;
+  operador_nome: string;
+  tipo_pagamento: string;
+  valor: number;
+  data_pagamento: string;
+  projeto_nome?: string | null;
+}
+
 interface ParceriaAlertaEncerramento {
   id: string;
   parceiroNome: string;
@@ -146,6 +156,7 @@ export default function CentralOperacoes() {
   const [parceirosSemParceria, setParceirosSemParceria] = useState<ParceiroSemParceria[]>([]);
   const [saquesPendentes, setSaquesPendentes] = useState<SaquePendenteConfirmacao[]>([]);
   const [alertasLucro, setAlertasLucro] = useState<AlertaLucroParceiro[]>([]);
+  const [pagamentosOperadorPendentes, setPagamentosOperadorPendentes] = useState<PagamentoOperadorPendente[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
@@ -182,7 +193,8 @@ export default function CentralOperacoes() {
         alertasLucroResult,
         custosResult,
         acordosResult,
-        comissoesResult
+        comissoesResult,
+        pagamentosOperadorResult
       ] = await Promise.all([
         supabase.from("v_painel_operacional").select("*"),
         supabase.from("v_entregas_pendentes").select("*").in("status_conciliacao", ["PRONTA"]),
@@ -263,7 +275,22 @@ export default function CentralOperacoes() {
           `)
           .eq("comissao_paga", false)
           .not("valor_comissao_indicador", "is", null)
-          .gt("valor_comissao_indicador", 0)
+          .gt("valor_comissao_indicador", 0),
+        // Pagamentos de operador pendentes
+        supabase
+          .from("pagamentos_operador")
+          .select(`
+            id,
+            operador_id,
+            tipo_pagamento,
+            valor,
+            data_pagamento,
+            projeto_id,
+            operador:operadores(nome),
+            projeto:projetos(nome)
+          `)
+          .eq("status", "PENDENTE")
+          .order("data_pagamento", { ascending: false })
       ]);
 
       if (alertasResult.error) throw alertasResult.error;
@@ -458,6 +485,20 @@ export default function CentralOperacoes() {
         }));
 
         setSaquesPendentes(saquesEnriquecidos);
+      }
+
+      // Pagamentos de operador pendentes
+      if (!pagamentosOperadorResult.error && pagamentosOperadorResult.data) {
+        const pagamentosOp: PagamentoOperadorPendente[] = pagamentosOperadorResult.data.map((p: any) => ({
+          id: p.id,
+          operador_id: p.operador_id,
+          operador_nome: p.operador?.nome || "N/A",
+          tipo_pagamento: p.tipo_pagamento,
+          valor: p.valor,
+          data_pagamento: p.data_pagamento,
+          projeto_nome: p.projeto?.nome || null,
+        }));
+        setPagamentosOperadorPendentes(pagamentosOp);
       }
     } catch (error: any) {
       toast.error("Erro ao carregar dados: " + error.message);
@@ -889,9 +930,60 @@ export default function CentralOperacoes() {
             </div>
           )}
 
-          {/* GRID: Entregas + Captação de Parcerias */}
-          {(entregasPendentes.length > 0 || pagamentosParceiros.length > 0 || bonusPendentes.length > 0 || comissoesPendentes.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0) && (
+          {/* GRID: Entregas + Captação de Parcerias + Pagamentos Operador */}
+          {(entregasPendentes.length > 0 || pagamentosParceiros.length > 0 || bonusPendentes.length > 0 || comissoesPendentes.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0 || pagamentosOperadorPendentes.length > 0) && (
             <div className="grid gap-4 lg:grid-cols-2">
+              {/* Pagamentos de Operador Pendentes */}
+              {pagamentosOperadorPendentes.length > 0 && (
+                <Card className="border-orange-500/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Users className="h-5 w-5 text-orange-400" />
+                      Pagamentos de Operador Pendentes
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Pagamentos registrados aguardando confirmação
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {pagamentosOperadorPendentes.slice(0, 5).map((pag) => (
+                        <div
+                          key={pag.id}
+                          className="flex items-center justify-between p-3 rounded-lg border border-orange-500/20 bg-orange-500/5 hover:bg-orange-500/10 transition-colors cursor-pointer"
+                          onClick={() => navigate("/operadores")}
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="h-8 w-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
+                              <DollarSign className="h-4 w-4 text-orange-400" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate">{pag.operador_nome}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {pag.tipo_pagamento} {pag.projeto_nome ? `• ${pag.projeto_nome}` : ""}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-sm font-bold text-orange-400">
+                              {formatCurrency(pag.valor)}
+                            </span>
+                            <Badge className="bg-yellow-500/20 text-yellow-400 text-xs">
+                              Pendente
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                      {pagamentosOperadorPendentes.length > 5 && (
+                        <p className="text-xs text-muted-foreground text-center py-1">
+                          +{pagamentosOperadorPendentes.length - 5} pagamentos pendentes
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Entregas Pendentes de Conciliação */}
               {entregasPendentes.length > 0 && (
                 <Card className="border-purple-500/30">

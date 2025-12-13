@@ -67,6 +67,7 @@ interface Pagamento {
   data_competencia: string | null;
   descricao: string | null;
   status: string;
+  projeto_id?: string | null;
   projeto_nome?: string | null;
 }
 
@@ -114,6 +115,7 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
   const [entregas, setEntregas] = useState<Entrega[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedPagamento, setSelectedPagamento] = useState<Pagamento | null>(null);
 
   useEffect(() => {
     if (operadorId) {
@@ -146,6 +148,7 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
           data_competencia,
           descricao,
           status,
+          projeto_id,
           projetos(nome)
         `)
         .eq("operador_id", operadorId)
@@ -155,6 +158,7 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
       setPagamentos(
         (pagData || []).map((p: any) => ({
           ...p,
+          projeto_id: p.projeto_id || null,
           projeto_nome: p.projetos?.nome || null,
         }))
       );
@@ -676,7 +680,14 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
               </TableHeader>
               <TableBody>
                 {pagamentos.map((pag) => (
-                  <TableRow key={pag.id}>
+                  <TableRow 
+                    key={pag.id}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => {
+                      setSelectedPagamento(pag);
+                      setDialogOpen(true);
+                    }}
+                  >
                     <TableCell>
                       {format(new Date(pag.data_pagamento), "dd/MM/yyyy", { locale: ptBR })}
                     </TableCell>
@@ -714,8 +725,23 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
 
       <PagamentoOperadorDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setSelectedPagamento(null);
+        }}
         defaultOperadorId={operadorId}
+        pagamento={selectedPagamento ? {
+          id: selectedPagamento.id,
+          operador_id: operadorId,
+          projeto_id: selectedPagamento.projeto_id || null,
+          tipo_pagamento: selectedPagamento.tipo_pagamento,
+          valor: selectedPagamento.valor,
+          moeda: selectedPagamento.moeda,
+          data_pagamento: selectedPagamento.data_pagamento,
+          data_competencia: selectedPagamento.data_competencia,
+          descricao: selectedPagamento.descricao,
+          status: selectedPagamento.status,
+        } : undefined}
         onSuccess={fetchData}
       />
     </div>

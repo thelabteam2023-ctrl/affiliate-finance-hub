@@ -21,8 +21,13 @@ import { Switch } from "@/components/ui/switch";
 import { DatePicker } from "@/components/ui/date-picker";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, User } from "lucide-react";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
+
+interface Operador {
+  id: string;
+  nome: string;
+}
 
 interface DespesaAdministrativa {
   id?: string;
@@ -42,6 +47,7 @@ interface DespesaAdministrativa {
   coin?: string;
   qtd_coin?: number;
   cotacao?: number;
+  operador_id?: string | null;
 }
 
 interface DespesaAdministrativaDialogProps {
@@ -58,6 +64,7 @@ const categoriasBase = [
   { value: "ALUGUEL", label: "Aluguel" },
   { value: "DARF", label: "DARF" },
   { value: "CONTABILIDADE", label: "Contabilidade" },
+  { value: "OPERADORES", label: "Operadores" },
   { value: "OUTROS", label: "Outros" },
 ];
 
@@ -73,6 +80,7 @@ export function DespesaAdministrativaDialog({
   const [showNovaCategoria, setShowNovaCategoria] = useState(false);
   const [novaCategoria, setNovaCategoria] = useState("");
   const [categoriasLocais, setCategoriasLocais] = useState<string[]>([]);
+  const [operadores, setOperadores] = useState<Operador[]>([]);
   const [formData, setFormData] = useState<DespesaAdministrativa>({
     categoria: "ENERGIA",
     descricao: "",
@@ -80,6 +88,7 @@ export function DespesaAdministrativaDialog({
     data_despesa: new Date().toISOString().split("T")[0],
     recorrente: false,
     status: "CONFIRMADO",
+    operador_id: null,
   });
   const [origemData, setOrigemData] = useState<OrigemPagamentoData>({
     origemTipo: "CAIXA_OPERACIONAL",
@@ -92,6 +101,21 @@ export function DespesaAdministrativaDialog({
     coin: null,
     cotacao: null,
   });
+
+  // Fetch operadores quando categoria for OPERADORES
+  useEffect(() => {
+    if (formData.categoria === "OPERADORES" && operadores.length === 0) {
+      const fetchOperadores = async () => {
+        const { data } = await supabase
+          .from("operadores")
+          .select("id, nome")
+          .eq("status", "ATIVO")
+          .order("nome");
+        setOperadores(data || []);
+      };
+      fetchOperadores();
+    }
+  }, [formData.categoria, operadores.length]);
 
   // Combina categorias base com extras (do banco) e locais (criadas nesta sessão)
   const todasCategorias = [
@@ -333,6 +357,31 @@ export function DespesaAdministrativaDialog({
               </div>
             )}
           </div>
+
+          {/* Seletor de Operador - apenas quando categoria for OPERADORES */}
+          {formData.categoria === "OPERADORES" && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Operador *
+              </Label>
+              <Select
+                value={formData.operador_id || ""}
+                onValueChange={(value) => setFormData({ ...formData, operador_id: value || null })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o operador" />
+                </SelectTrigger>
+                <SelectContent>
+                  {operadores.map((op) => (
+                    <SelectItem key={op.id} value={op.id}>
+                      {op.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Valor *</Label>
