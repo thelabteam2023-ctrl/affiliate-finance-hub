@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Wallet, Building2, Bitcoin, Loader2 } from "lucide-react";
+import { Wallet, Building2, Bitcoin, Loader2, AlertTriangle } from "lucide-react";
 import { useCotacoes } from "@/hooks/useCotacoes";
 
 interface ContaBancaria {
@@ -68,6 +68,7 @@ export interface OrigemPagamentoData {
   coin?: string;
   cotacao?: number;
   saldoDisponivel: number;
+  saldoInsuficiente?: boolean;
 }
 
 interface OrigemPagamentoSelectProps {
@@ -134,15 +135,26 @@ export function OrigemPagamentoSelect({
     }
   };
 
-  // Calculate Caixa Operacional balance
-  const getSaldoCaixaOperacional = () => {
-    if (value.tipoMoeda === "FIAT") {
-      const saldo = saldosCaixaFiat.find(s => s.moeda === value.moeda);
-      return saldo?.saldo || 0;
-    } else {
-      const totalUSD = saldosCaixaCrypto.reduce((acc, s) => acc + (s.saldo_usd || 0), 0);
-      return totalUSD * cotacaoUSD;
-    }
+  // Calculate Caixa Operacional FIAT balance
+  const getSaldoCaixaFiat = () => {
+    const saldo = saldosCaixaFiat.find(s => s.moeda === "BRL");
+    return saldo?.saldo || 0;
+  };
+
+  // Get Caixa Operacional CRYPTO balance by coin
+  const getSaldoCaixaCryptoByCoin = (coin: string) => {
+    const saldo = saldosCaixaCrypto.find(s => s.coin === coin);
+    return {
+      saldoCoin: saldo?.saldo_coin || 0,
+      saldoUSD: saldo?.saldo_usd || 0,
+      saldoBRL: (saldo?.saldo_usd || 0) * cotacaoUSD,
+    };
+  };
+
+  // Get total crypto balance
+  const getTotalCryptoSaldo = () => {
+    const totalUSD = saldosCaixaCrypto.reduce((acc, s) => acc + (s.saldo_usd || 0), 0);
+    return totalUSD * cotacaoUSD;
   };
 
   // Get partner account balance
@@ -151,10 +163,15 @@ export function OrigemPagamentoSelect({
     return saldo?.saldo || 0;
   };
 
-  // Get partner wallet balance in USD
+  // Get partner wallet balance in USD and coin
   const getSaldoWalletParceiro = (walletId: string) => {
     const saldo = saldosParceirosWallets.find(s => s.wallet_id === walletId);
-    return saldo?.saldo_usd || 0;
+    return {
+      coin: saldo?.coin || "USDT",
+      saldoCoin: saldo?.saldo_coin || 0,
+      saldoUSD: saldo?.saldo_usd || 0,
+      saldoBRL: (saldo?.saldo_usd || 0) * cotacaoUSD,
+    };
   };
 
   // Filter accounts by selected partner
@@ -167,26 +184,96 @@ export function OrigemPagamentoSelect({
     w => w.parceiro_id === value.origemParceiroId
   );
 
+  // 🔒 VALIDAÇÃO CENTRALIZADA DE SALDO
+  const calcularSaldoEValidar = (origemTipo: string, tipoMoeda: string, coin?: string, contaId?: string, walletId?: string) => {
+    let saldoDisponivel = 0;
+
+    if (origemTipo === "CAIXA_OPERACIONAL") {
+      if (tipoMoeda === "FIAT") {
+        saldoDisponivel = getSaldoCaixaFiat();
+      } else if (coin) {
+        saldoDisponivel = getSaldoCaixaCryptoByCoin(coin).saldoBRL;
+      } else {
+        saldoDisponivel = getTotalCryptoSaldo();
+      }
+    } else if (origemTipo === "PARCEIRO_CONTA" && contaId) {
+      saldoDisponivel = getSaldoContaParceiro(contaId);
+    } else if (origemTipo === "PARCEIRO_WALLET" && walletId) {
+      saldoDisponivel = getSaldoWalletParceiro(walletId).saldoBRL;
+    }
+
+    return {
+      saldoDisponivel,
+      saldoInsuficiente: valorPagamento > 0 && saldoDisponivel < valorPagamento,
+    };
+  };
+
   // Handle origem type change
   const handleOrigemTipoChange = (tipo: "CAIXA_OPERACIONAL" | "PARCEIRO_CONTA" | "PARCEIRO_WALLET") => {
+    const tipoMoeda: "FIAT" | "CRYPTO" = tipo === "PARCEIRO_WALLET" ? "CRYPTO" : "FIAT";
+    const moeda = tipoMoeda === "FIAT" ? "BRL" : "USD";
+    
+    // Para Caixa Crypto, pré-selecionar primeira moeda disponível
+    const coinSelecionada = tipo === "CAIXA_OPERACIONAL" && saldosCaixaCrypto.length > 0 
+      ? saldosCaixaCrypto[0].coin 
+      : undefined;
+
+    const { saldoDisponivel, saldoInsuficiente } = calcularSaldoEValidar(
+      tipo, 
+      tipoMoeda, 
+      coinSelecionada
+    );
+
     const newData: OrigemPagamentoData = {
       ...value,
       origemTipo: tipo,
       origemParceiroId: undefined,
       origemContaBancariaId: undefined,
       origemWalletId: undefined,
-      saldoDisponivel: tipo === "CAIXA_OPERACIONAL" ? getSaldoCaixaOperacional() : 0,
+      tipoMoeda,
+      moeda,
+      coin: coinSelecionada,
+      saldoDisponivel,
+      saldoInsuficiente,
     };
 
-    if (tipo === "PARCEIRO_WALLET") {
-      newData.tipoMoeda = "CRYPTO";
-      newData.moeda = "USD";
-    } else if (tipo === "PARCEIRO_CONTA") {
-      newData.tipoMoeda = "FIAT";
-      newData.moeda = "BRL";
-    }
-
     onChange(newData);
+  };
+
+  // Handle tipo moeda change for Caixa Operacional
+  const handleTipoMoedaChange = (tipoMoeda: "FIAT" | "CRYPTO") => {
+    const coinSelecionada = tipoMoeda === "CRYPTO" && saldosCaixaCrypto.length > 0 
+      ? saldosCaixaCrypto[0].coin 
+      : undefined;
+
+    const { saldoDisponivel, saldoInsuficiente } = calcularSaldoEValidar(
+      "CAIXA_OPERACIONAL",
+      tipoMoeda,
+      coinSelecionada
+    );
+
+    onChange({
+      ...value,
+      tipoMoeda,
+      moeda: tipoMoeda === "FIAT" ? "BRL" : "USD",
+      coin: coinSelecionada,
+      saldoDisponivel,
+      saldoInsuficiente,
+    });
+  };
+
+  // Handle coin selection for Caixa Crypto
+  const handleCoinChange = (coin: string) => {
+    const saldoCrypto = getSaldoCaixaCryptoByCoin(coin);
+    const saldoInsuficiente = valorPagamento > 0 && saldoCrypto.saldoBRL < valorPagamento;
+
+    onChange({
+      ...value,
+      coin,
+      cotacao: cotacaoUSD,
+      saldoDisponivel: saldoCrypto.saldoBRL,
+      saldoInsuficiente,
+    });
   };
 
   // Handle partner selection
@@ -197,6 +284,7 @@ export function OrigemPagamentoSelect({
       origemContaBancariaId: undefined,
       origemWalletId: undefined,
       saldoDisponivel: 0,
+      saldoInsuficiente: valorPagamento > 0,
     });
   };
 
@@ -207,19 +295,20 @@ export function OrigemPagamentoSelect({
       ...value,
       origemContaBancariaId: contaId,
       saldoDisponivel: saldo,
+      saldoInsuficiente: valorPagamento > 0 && saldo < valorPagamento,
     });
   };
 
   // Handle wallet selection
   const handleWalletChange = (walletId: string) => {
-    const saldoUSD = getSaldoWalletParceiro(walletId);
-    const wallet = walletsCrypto.find(w => w.id === walletId);
+    const walletSaldo = getSaldoWalletParceiro(walletId);
     onChange({
       ...value,
       origemWalletId: walletId,
-      saldoDisponivel: saldoUSD * cotacaoUSD,
-      coin: wallet?.moeda?.[0] || "USDT",
+      saldoDisponivel: walletSaldo.saldoBRL,
+      coin: walletSaldo.coin,
       cotacao: cotacaoUSD,
+      saldoInsuficiente: valorPagamento > 0 && walletSaldo.saldoBRL < valorPagamento,
     });
   };
 
@@ -237,10 +326,20 @@ export function OrigemPagamentoSelect({
     }).format(val);
   };
 
-  const saldoCaixaOperacional = getSaldoCaixaOperacional();
-  const saldoInsuficiente = value.saldoDisponivel < valorPagamento && value.origemTipo !== "CAIXA_OPERACIONAL" 
-    ? value.saldoDisponivel < valorPagamento 
-    : saldoCaixaOperacional < valorPagamento && value.origemTipo === "CAIXA_OPERACIONAL";
+  const formatCoin = (val: number, coin: string) => {
+    return `${val.toFixed(4)} ${coin}`;
+  };
+
+  // Get current saldo display
+  const saldoCaixaFiat = getSaldoCaixaFiat();
+  const saldoCaixaCryptoTotal = getTotalCryptoSaldo();
+  
+  // Check if insufficient based on current selection
+  const isInsuficiente = value.saldoInsuficiente || (
+    value.origemTipo === "CAIXA_OPERACIONAL" 
+      ? (value.tipoMoeda === "FIAT" ? saldoCaixaFiat : (value.coin ? getSaldoCaixaCryptoByCoin(value.coin).saldoBRL : saldoCaixaCryptoTotal)) < valorPagamento
+      : value.saldoDisponivel < valorPagamento
+  );
 
   if (loading) {
     return (
@@ -273,9 +372,6 @@ export function OrigemPagamentoSelect({
                 <Wallet className="h-4 w-4 text-primary" />
                 <span className="font-medium">Caixa Operacional</span>
               </div>
-              <span className={`text-sm font-medium ${saldoCaixaOperacional < valorPagamento && value.origemTipo === "CAIXA_OPERACIONAL" ? "text-destructive" : "text-muted-foreground"}`}>
-                {formatCurrency(saldoCaixaOperacional)}
-              </span>
             </div>
           </label>
         </div>
@@ -310,6 +406,126 @@ export function OrigemPagamentoSelect({
           </label>
         </div>
       </RadioGroup>
+
+      {/* Caixa Operacional - FIAT/CRYPTO selection */}
+      {value.origemTipo === "CAIXA_OPERACIONAL" && (
+        <div className="space-y-3 pt-2 border-t">
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">Tipo de Moeda</Label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleTipoMoedaChange("FIAT")}
+                disabled={disabled}
+                className={`flex-1 p-3 rounded-lg border text-sm font-medium transition-colors ${
+                  value.tipoMoeda === "FIAT"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border hover:border-muted-foreground/50"
+                }`}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <span>FIAT (BRL)</span>
+                  <span className={`text-xs ${saldoCaixaFiat < valorPagamento && value.tipoMoeda === "FIAT" ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                    {formatCurrency(saldoCaixaFiat)}
+                  </span>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTipoMoedaChange("CRYPTO")}
+                disabled={disabled || saldosCaixaCrypto.length === 0}
+                className={`flex-1 p-3 rounded-lg border text-sm font-medium transition-colors ${
+                  value.tipoMoeda === "CRYPTO"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border hover:border-muted-foreground/50"
+                } ${saldosCaixaCrypto.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <span>CRYPTO</span>
+                  <span className={`text-xs ${saldosCaixaCrypto.length === 0 ? "text-muted-foreground italic" : "text-muted-foreground"}`}>
+                    {saldosCaixaCrypto.length === 0 ? "Sem saldo" : `≈ ${formatCurrency(saldoCaixaCryptoTotal)}`}
+                  </span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Crypto coin selector */}
+          {value.tipoMoeda === "CRYPTO" && saldosCaixaCrypto.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Selecione a Moeda</Label>
+              <Select
+                value={value.coin || ""}
+                onValueChange={handleCoinChange}
+                disabled={disabled}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Escolha a moeda..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {saldosCaixaCrypto.map((crypto) => {
+                    const saldoBRL = crypto.saldo_usd * cotacaoUSD;
+                    const insuficiente = saldoBRL < valorPagamento;
+                    return (
+                      <SelectItem key={crypto.coin} value={crypto.coin}>
+                        <div className="flex items-center justify-between w-full gap-4">
+                          <span className="font-medium">{crypto.coin}</span>
+                          <div className="flex flex-col items-end text-xs">
+                            <span className={insuficiente ? "text-destructive font-semibold" : "text-muted-foreground"}>
+                              {formatCoin(crypto.saldo_coin, crypto.coin)}
+                            </span>
+                            <span className="text-muted-foreground/70">
+                              ≈ {formatCurrency(saldoBRL)}
+                            </span>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Show selected balance for Caixa */}
+          {value.tipoMoeda === "FIAT" && (
+            <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
+              saldoCaixaFiat < valorPagamento && valorPagamento > 0
+                ? "bg-destructive/10 border border-destructive/30 text-destructive" 
+                : "bg-muted/50 text-muted-foreground"
+            }`}>
+              {saldoCaixaFiat < valorPagamento && valorPagamento > 0 && (
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+              )}
+              <span>
+                Saldo disponível: {formatCurrency(saldoCaixaFiat)}
+                {saldoCaixaFiat < valorPagamento && valorPagamento > 0 && (
+                  <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
+                )}
+              </span>
+            </div>
+          )}
+
+          {value.tipoMoeda === "CRYPTO" && value.coin && (
+            <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
+              getSaldoCaixaCryptoByCoin(value.coin).saldoBRL < valorPagamento && valorPagamento > 0
+                ? "bg-destructive/10 border border-destructive/30 text-destructive" 
+                : "bg-muted/50 text-muted-foreground"
+            }`}>
+              {getSaldoCaixaCryptoByCoin(value.coin).saldoBRL < valorPagamento && valorPagamento > 0 && (
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+              )}
+              <span>
+                Saldo disponível: {formatCoin(getSaldoCaixaCryptoByCoin(value.coin).saldoCoin, value.coin)} 
+                {" "}≈ {formatCurrency(getSaldoCaixaCryptoByCoin(value.coin).saldoBRL)}
+                {getSaldoCaixaCryptoByCoin(value.coin).saldoBRL < valorPagamento && valorPagamento > 0 && (
+                  <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
+                )}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Partner selection for PARCEIRO_CONTA or PARCEIRO_WALLET */}
       {(value.origemTipo === "PARCEIRO_CONTA" || value.origemTipo === "PARCEIRO_WALLET") && (
@@ -358,7 +574,7 @@ export function OrigemPagamentoSelect({
                         <SelectItem key={c.id} value={c.id}>
                           <div className="flex items-center justify-between w-full gap-4">
                             <span>{c.banco} - {c.titular}</span>
-                            <span className={`text-xs ${saldo < valorPagamento ? "text-destructive" : "text-muted-foreground"}`}>
+                            <span className={`text-xs ${saldo < valorPagamento ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
                               {formatCurrency(saldo)}
                             </span>
                           </div>
@@ -390,14 +606,19 @@ export function OrigemPagamentoSelect({
                   </SelectTrigger>
                   <SelectContent>
                     {walletsParceiroSelecionado.map((w) => {
-                      const saldoUSD = getSaldoWalletParceiro(w.id);
+                      const walletSaldo = getSaldoWalletParceiro(w.id);
                       return (
                         <SelectItem key={w.id} value={w.id}>
                           <div className="flex items-center justify-between w-full gap-4">
                             <span>{w.exchange} - {w.endereco.slice(0, 8)}...</span>
-                            <span className={`text-xs ${saldoUSD * cotacaoUSD < valorPagamento ? "text-destructive" : "text-muted-foreground"}`}>
-                              {formatUSD(saldoUSD)}
-                            </span>
+                            <div className="flex flex-col items-end text-xs">
+                              <span className={walletSaldo.saldoBRL < valorPagamento ? "text-destructive font-semibold" : "text-muted-foreground"}>
+                                {formatCoin(walletSaldo.saldoCoin, walletSaldo.coin)}
+                              </span>
+                              <span className="text-muted-foreground/70">
+                                ≈ {formatCurrency(walletSaldo.saldoBRL)}
+                              </span>
+                            </div>
                           </div>
                         </SelectItem>
                       );
@@ -408,20 +629,37 @@ export function OrigemPagamentoSelect({
             </div>
           )}
 
-          {/* Show selected balance */}
-          {value.saldoDisponivel > 0 && (
-            <div className={`p-2 rounded-md text-sm ${
-              saldoInsuficiente 
-                ? "bg-destructive/10 text-destructive" 
+          {/* Show selected balance for Partner accounts/wallets */}
+          {(value.origemContaBancariaId || value.origemWalletId) && (
+            <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
+              isInsuficiente && valorPagamento > 0
+                ? "bg-destructive/10 border border-destructive/30 text-destructive" 
                 : "bg-muted/50 text-muted-foreground"
             }`}>
-              Saldo disponível: {value.tipoMoeda === "CRYPTO" 
-                ? formatUSD(value.saldoDisponivel / cotacaoUSD) + ` (≈ ${formatCurrency(value.saldoDisponivel)})`
-                : formatCurrency(value.saldoDisponivel)
-              }
-              {saldoInsuficiente && " - Saldo insuficiente!"}
+              {isInsuficiente && valorPagamento > 0 && (
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+              )}
+              <span>
+                Saldo disponível: {value.origemTipo === "PARCEIRO_WALLET" && value.origemWalletId
+                  ? `${formatCoin(getSaldoWalletParceiro(value.origemWalletId).saldoCoin, getSaldoWalletParceiro(value.origemWalletId).coin)} ≈ ${formatCurrency(value.saldoDisponivel)}`
+                  : formatCurrency(value.saldoDisponivel)
+                }
+                {isInsuficiente && valorPagamento > 0 && (
+                  <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
+                )}
+              </span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* 🔒 ALERTA GLOBAL DE SALDO INSUFICIENTE */}
+      {isInsuficiente && valorPagamento > 0 && (
+        <div className="p-3 rounded-lg bg-destructive/20 border border-destructive/40 text-destructive text-sm font-medium flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 shrink-0" />
+          <span>
+            ⚠️ Transação bloqueada: saldo insuficiente para realizar este pagamento.
+          </span>
         </div>
       )}
     </div>
