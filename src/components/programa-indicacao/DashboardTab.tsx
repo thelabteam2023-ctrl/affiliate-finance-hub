@@ -193,11 +193,20 @@ export function DashboardTab() {
     direto: filteredCustos.filter((c) => c.origem_tipo === "DIRETO").length,
   };
 
-  // Calculate payments
+  // Calculate payments from confirmed movimentacoes (what was actually paid)
   const pagamentos = {
-    indicadores: filteredCustos.reduce((acc, c) => acc + (c.valor_indicador || 0), 0),
-    parceiros: filteredCustos.reduce((acc, c) => acc + (c.valor_parceiro || 0), 0),
-    fornecedores: filteredCustos.reduce((acc, c) => acc + (c.valor_fornecedor || 0), 0),
+    indicadores: filteredMovimentacoes
+      .filter((m) => m.tipo === "COMISSAO_INDICADOR" && m.status === "CONFIRMADO")
+      .reduce((acc, m) => acc + m.valor, 0),
+    parceiros: filteredMovimentacoes
+      .filter((m) => m.tipo === "PAGTO_PARCEIRO" && m.status === "CONFIRMADO")
+      .reduce((acc, m) => acc + m.valor, 0),
+    fornecedores: filteredMovimentacoes
+      .filter((m) => m.tipo === "PAGTO_FORNECEDOR" && m.status === "CONFIRMADO")
+      .reduce((acc, m) => acc + m.valor, 0),
+    bonus: filteredMovimentacoes
+      .filter((m) => m.tipo === "BONUS_INDICADOR" && m.status === "CONFIRMADO")
+      .reduce((acc, m) => acc + m.valor, 0),
   };
 
   // Ranking de Indicadores - sorted by TOTAL indicacoes (not meta progress)
@@ -299,12 +308,13 @@ export function DashboardTab() {
   
   const pieColors = ["#22C55E", "#3B82F6", "#8B5CF6"];
 
-  // Bar chart data
+  // Bar chart data - shows only what was actually paid (CONFIRMADO)
   const barData = [
-    { name: "Indicadores", valor: pagamentos.indicadores },
+    { name: "Comissões", valor: pagamentos.indicadores },
     { name: "Parceiros", valor: pagamentos.parceiros },
     { name: "Fornecedores", valor: pagamentos.fornecedores },
-  ];
+    { name: "Bônus", valor: pagamentos.bonus },
+  ].filter((d) => d.valor > 0);
 
   if (loading) {
     return (
