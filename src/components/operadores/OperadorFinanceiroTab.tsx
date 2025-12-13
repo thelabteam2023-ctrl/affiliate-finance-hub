@@ -676,17 +676,14 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
                   <TableHead>Projeto</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pagamentos.map((pag) => (
                   <TableRow 
                     key={pag.id}
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => {
-                      setSelectedPagamento(pag);
-                      setDialogOpen(true);
-                    }}
+                    className="hover:bg-muted/50 transition-colors"
                   >
                     <TableCell>
                       {format(new Date(pag.data_pagamento), "dd/MM/yyyy", { locale: ptBR })}
@@ -708,11 +705,39 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
                         {pag.status}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-right">
+                      {pag.status === "PENDENTE" ? (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedPagamento(pag);
+                            setDialogOpen(true);
+                          }}
+                        >
+                          <DollarSign className="h-3 w-3 mr-1" />
+                          Pagar
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedPagamento(pag);
+                            setDialogOpen(true);
+                          }}
+                        >
+                          Detalhes
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
                 {pagamentos.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       Nenhum pagamento registrado
                     </TableCell>
                   </TableRow>
