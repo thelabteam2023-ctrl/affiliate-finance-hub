@@ -112,7 +112,7 @@ export function PagamentoParceiroDialog({
           origem_parceiro_id: origemData.origemParceiroId || null,
           origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
           origem_wallet_id: origemData.origemWalletId || null,
-          destino_tipo: "PAGTO_PARCEIRO",
+          destino_tipo: "PARCEIRO",
           data_transacao: dataPagamento,
           descricao: `Pagamento de captação - ${parceria.parceiroNome}`,
           status: "CONFIRMADO",

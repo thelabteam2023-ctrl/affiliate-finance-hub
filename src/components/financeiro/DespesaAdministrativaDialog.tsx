@@ -251,7 +251,7 @@ export function DespesaAdministrativaDialog({
               origem_parceiro_id: origemData.origemParceiroId || null,
               origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
               origem_wallet_id: origemData.origemWalletId || null,
-              destino_tipo: "DESPESA_ADMINISTRATIVA",
+              // destino_tipo: NULL - despesas administrativas são externas ao sistema
               data_transacao: formData.data_despesa,
               descricao: `Despesa administrativa - ${formData.categoria}${formData.descricao ? `: ${formData.descricao}` : ''}`,
               status: "CONFIRMADO",
