@@ -1215,8 +1215,11 @@ export default function CentralOperacoes() {
             tipo_gatilho: selectedEntrega.tipo_gatilho,
             data_inicio: selectedEntrega.data_inicio,
             data_fim_prevista: selectedEntrega.data_fim_prevista,
+            operador_projeto_id: selectedEntrega.operador_projeto_id,
           }}
           operadorNome={selectedEntrega.operador_nome}
+          operadorId={selectedEntrega.operador_id}
+          projetoId={selectedEntrega.projeto_id}
           modeloPagamento={selectedEntrega.modelo_pagamento}
           valorFixo={selectedEntrega.valor_fixo || 0}
           percentual={selectedEntrega.percentual || 0}
