@@ -62,8 +62,8 @@ export function PagamentoParceiroDialog({
 
   const valorNumerico = parseFloat(valor) || 0;
 
-  // 🔒 VALIDAÇÃO CENTRAL DE SALDO
-  const isSaldoInsuficiente = origemData.saldoInsuficiente && valorNumerico > 0;
+  // 🔒 VALIDAÇÃO CENTRAL DE SALDO - Usa o valor calculado pelo OrigemPagamentoSelect
+  const isSaldoInsuficiente = Boolean(origemData.saldoInsuficiente) || (valorNumerico > 0 && origemData.saldoDisponivel < valorNumerico);
 
   const handleSubmit = async () => {
     if (!parceria || !dataPagamento) return;
@@ -77,11 +77,12 @@ export function PagamentoParceiroDialog({
       return;
     }
 
-    // 🔒 VALIDAÇÃO CENTRAL: Bloquear se saldo insuficiente
-    if (origemData.saldoInsuficiente) {
+    // 🔒 VALIDAÇÃO CENTRAL: Bloquear se saldo insuficiente (dupla verificação)
+    const saldoRealInsuficiente = Boolean(origemData.saldoInsuficiente) || (valorNumerico > 0 && origemData.saldoDisponivel < valorNumerico);
+    if (saldoRealInsuficiente) {
       toast({
-        title: "Saldo insuficiente",
-        description: "Não é possível realizar este pagamento. O saldo disponível na origem é insuficiente.",
+        title: "Transação bloqueada",
+        description: `Saldo insuficiente. Disponível: R$ ${origemData.saldoDisponivel.toFixed(2)} | Necessário: R$ ${valorNumerico.toFixed(2)}`,
         variant: "destructive",
       });
       return;

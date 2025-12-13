@@ -145,8 +145,10 @@ export function DespesaAdministrativaDialog({
     }
   }, [despesa, open]);
 
-  // 🔒 VALIDAÇÃO DE SALDO INSUFICIENTE
-  const isSaldoInsuficiente = origemData.saldoInsuficiente && formData.status === "CONFIRMADO" && formData.valor > 0;
+  // 🔒 VALIDAÇÃO DE SALDO INSUFICIENTE - Apenas para status CONFIRMADO
+  const isSaldoInsuficiente = formData.status === "CONFIRMADO" && formData.valor > 0 && (
+    Boolean(origemData.saldoInsuficiente) || origemData.saldoDisponivel < formData.valor
+  );
 
   const handleSubmit = async () => {
     if (!formData.categoria || formData.valor <= 0) {
@@ -158,14 +160,17 @@ export function DespesaAdministrativaDialog({
       return;
     }
 
-    // 🔒 VALIDAÇÃO CENTRAL: Bloquear se saldo insuficiente para status CONFIRMADO
-    if (formData.status === "CONFIRMADO" && origemData.saldoInsuficiente) {
-      toast({
-        title: "Saldo insuficiente",
-        description: "Não é possível confirmar esta despesa. O saldo disponível na origem é insuficiente.",
-        variant: "destructive",
-      });
-      return;
+    // 🔒 VALIDAÇÃO CENTRAL: Bloquear se saldo insuficiente para status CONFIRMADO (dupla verificação)
+    if (formData.status === "CONFIRMADO") {
+      const saldoRealInsuficiente = Boolean(origemData.saldoInsuficiente) || (formData.valor > 0 && origemData.saldoDisponivel < formData.valor);
+      if (saldoRealInsuficiente) {
+        toast({
+          title: "Transação bloqueada",
+          description: `Saldo insuficiente. Disponível: R$ ${origemData.saldoDisponivel.toFixed(2)} | Necessário: R$ ${formData.valor.toFixed(2)}`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     try {
