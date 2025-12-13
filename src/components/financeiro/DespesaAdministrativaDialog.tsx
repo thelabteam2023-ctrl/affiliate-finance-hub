@@ -145,11 +145,24 @@ export function DespesaAdministrativaDialog({
     }
   }, [despesa, open]);
 
+  // 🔒 VALIDAÇÃO DE SALDO INSUFICIENTE
+  const isSaldoInsuficiente = origemData.saldoInsuficiente && formData.status === "CONFIRMADO" && formData.valor > 0;
+
   const handleSubmit = async () => {
     if (!formData.categoria || formData.valor <= 0) {
       toast({
         title: "Campos obrigatórios",
         description: "Selecione a categoria e informe um valor válido.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 🔒 VALIDAÇÃO CENTRAL: Bloquear se saldo insuficiente para status CONFIRMADO
+    if (formData.status === "CONFIRMADO" && origemData.saldoInsuficiente) {
+      toast({
+        title: "Saldo insuficiente",
+        description: "Não é possível confirmar esta despesa. O saldo disponível na origem é insuficiente.",
         variant: "destructive",
       });
       return;
@@ -358,7 +371,11 @@ export function DespesaAdministrativaDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={loading || isSaldoInsuficiente}
+            title={isSaldoInsuficiente ? "Saldo insuficiente para confirmar esta despesa" : undefined}
+          >
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {despesa?.id ? "Salvar" : "Registrar"}
           </Button>

@@ -68,14 +68,17 @@ export function PagamentoBonusDialog({
     }
   }, [open]);
 
+  // 🔒 VALIDAÇÃO CENTRAL DE SALDO
+  const isSaldoInsuficiente = origemData.saldoInsuficiente && valorTotal > 0;
+
   const handleSubmit = async () => {
     if (!indicador) return;
 
-    // Validar saldo se não for caixa operacional
-    if (origemData.origemTipo !== "CAIXA_OPERACIONAL" && origemData.saldoDisponivel < valorTotal) {
+    // 🔒 VALIDAÇÃO CENTRAL: Bloquear se saldo insuficiente
+    if (origemData.saldoInsuficiente) {
       toast({
         title: "Saldo insuficiente",
-        description: "O saldo disponível na origem selecionada é insuficiente.",
+        description: "Não é possível realizar este pagamento. O saldo disponível na origem é insuficiente.",
         variant: "destructive",
       });
       return;
@@ -277,7 +280,11 @@ export function PagamentoBonusDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading || !indicador}>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={loading || !indicador || isSaldoInsuficiente}
+            title={isSaldoInsuficiente ? "Saldo insuficiente" : undefined}
+          >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confirmar Pagamento
           </Button>

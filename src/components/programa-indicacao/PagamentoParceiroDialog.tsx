@@ -60,10 +60,14 @@ export function PagamentoParceiroDialog({
     }
   }, [open]);
 
+  const valorNumerico = parseFloat(valor) || 0;
+
+  // 🔒 VALIDAÇÃO CENTRAL DE SALDO
+  const isSaldoInsuficiente = origemData.saldoInsuficiente && valorNumerico > 0;
+
   const handleSubmit = async () => {
     if (!parceria || !dataPagamento) return;
 
-    const valorNumerico = parseFloat(valor);
     if (isNaN(valorNumerico) || valorNumerico <= 0) {
       toast({
         title: "Valor inválido",
@@ -73,11 +77,11 @@ export function PagamentoParceiroDialog({
       return;
     }
 
-    // Validar saldo se não for caixa operacional
-    if (origemData.origemTipo !== "CAIXA_OPERACIONAL" && origemData.saldoDisponivel < valorNumerico) {
+    // 🔒 VALIDAÇÃO CENTRAL: Bloquear se saldo insuficiente
+    if (origemData.saldoInsuficiente) {
       toast({
         title: "Saldo insuficiente",
-        description: "O saldo disponível na origem selecionada é insuficiente.",
+        description: "Não é possível realizar este pagamento. O saldo disponível na origem é insuficiente.",
         variant: "destructive",
       });
       return;
@@ -151,8 +155,6 @@ export function PagamentoParceiroDialog({
       currency: "BRL",
     }).format(value);
   };
-
-  const valorNumerico = parseFloat(valor) || 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -230,7 +232,11 @@ export function PagamentoParceiroDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading || !parceria}>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={loading || !parceria || isSaldoInsuficiente}
+            title={isSaldoInsuficiente ? "Saldo insuficiente para realizar este pagamento" : undefined}
+          >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confirmar Pagamento
           </Button>
