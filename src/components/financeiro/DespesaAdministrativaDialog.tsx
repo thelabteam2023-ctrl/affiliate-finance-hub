@@ -22,6 +22,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus } from "lucide-react";
+import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 
 interface DespesaAdministrativa {
   id?: string;
@@ -31,6 +32,16 @@ interface DespesaAdministrativa {
   data_despesa: string;
   recorrente: boolean;
   status: string;
+  origem_tipo?: string;
+  origem_caixa_operacional?: boolean;
+  origem_conta_bancaria_id?: string;
+  origem_wallet_id?: string;
+  origem_parceiro_id?: string;
+  tipo_moeda?: string;
+  moeda?: string;
+  coin?: string;
+  qtd_coin?: number;
+  cotacao?: number;
 }
 
 interface DespesaAdministrativaDialogProps {
@@ -70,6 +81,17 @@ export function DespesaAdministrativaDialog({
     recorrente: false,
     status: "CONFIRMADO",
   });
+  const [origemData, setOrigemData] = useState<OrigemPagamentoData>({
+    origemTipo: "CAIXA_OPERACIONAL",
+    origemParceiroId: null,
+    origemContaBancariaId: null,
+    origemWalletId: null,
+    saldoDisponivel: 0,
+    tipoMoeda: "FIAT",
+    moeda: "BRL",
+    coin: null,
+    cotacao: null,
+  });
 
   // Combina categorias base com extras (do banco) e locais (criadas nesta sessão)
   const todasCategorias = [
@@ -88,6 +110,18 @@ export function DespesaAdministrativaDialog({
         ...despesa,
         data_despesa: despesa.data_despesa.split("T")[0],
       });
+      // Set origem data from existing despesa
+      setOrigemData({
+        origemTipo: (despesa.origem_tipo as "CAIXA_OPERACIONAL" | "PARCEIRO_CONTA" | "PARCEIRO_WALLET") || "CAIXA_OPERACIONAL",
+        origemParceiroId: despesa.origem_parceiro_id || null,
+        origemContaBancariaId: despesa.origem_conta_bancaria_id || null,
+        origemWalletId: despesa.origem_wallet_id || null,
+        saldoDisponivel: 0,
+        tipoMoeda: (despesa.tipo_moeda as "FIAT" | "CRYPTO") || "FIAT",
+        moeda: despesa.moeda || "BRL",
+        coin: despesa.coin || null,
+        cotacao: despesa.cotacao || null,
+      });
     } else {
       setFormData({
         categoria: "ENERGIA",
@@ -96,6 +130,17 @@ export function DespesaAdministrativaDialog({
         data_despesa: new Date().toISOString().split("T")[0],
         recorrente: false,
         status: "CONFIRMADO",
+      });
+      setOrigemData({
+        origemTipo: "CAIXA_OPERACIONAL",
+        origemParceiroId: null,
+        origemContaBancariaId: null,
+        origemWalletId: null,
+        saldoDisponivel: 0,
+        tipoMoeda: "FIAT",
+        moeda: "BRL",
+        coin: null,
+        cotacao: null,
       });
     }
   }, [despesa, open]);
@@ -124,6 +169,17 @@ export function DespesaAdministrativaDialog({
         recorrente: formData.recorrente,
         status: formData.status,
         user_id: user.id,
+        origem_tipo: origemData.origemTipo,
+        origem_caixa_operacional: origemData.origemTipo === "CAIXA_OPERACIONAL",
+        origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
+        origem_wallet_id: origemData.origemWalletId || null,
+        origem_parceiro_id: origemData.origemParceiroId || null,
+        tipo_moeda: origemData.tipoMoeda,
+        coin: origemData.coin || null,
+        qtd_coin: origemData.tipoMoeda === "CRYPTO" && origemData.cotacao 
+          ? formData.valor / origemData.cotacao 
+          : null,
+        cotacao: origemData.cotacao || null,
       };
 
       if (despesa?.id) {
@@ -290,6 +346,12 @@ export function DespesaAdministrativaDialog({
               </SelectContent>
             </Select>
           </div>
+
+          <OrigemPagamentoSelect
+            value={origemData}
+            onChange={setOrigemData}
+            valorPagamento={formData.valor}
+          />
         </div>
 
         <DialogFooter>
