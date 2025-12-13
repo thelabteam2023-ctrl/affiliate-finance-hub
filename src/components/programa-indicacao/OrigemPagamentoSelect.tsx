@@ -278,12 +278,31 @@ export function OrigemPagamentoSelect({
       value.origemWalletId
     );
 
+    // 🔒 Propagar cotação e preço da crypto quando disponíveis
+    let newCotacao = value.cotacao;
+    let newCoinPriceUSD = value.coinPriceUSD;
+    
+    if (value.tipoMoeda === "CRYPTO") {
+      newCotacao = cotacaoUSD;
+      if (value.coin) {
+        newCoinPriceUSD = getCoinPriceUSD(value.coin);
+      }
+    }
+
     // Só atualiza se houver diferença para evitar loop infinito
-    if (value.saldoDisponivel !== saldoDisponivel || value.saldoInsuficiente !== saldoInsuficiente) {
+    const needsUpdate = 
+      value.saldoDisponivel !== saldoDisponivel || 
+      value.saldoInsuficiente !== saldoInsuficiente ||
+      (value.tipoMoeda === "CRYPTO" && value.cotacao !== newCotacao) ||
+      (value.tipoMoeda === "CRYPTO" && value.coinPriceUSD !== newCoinPriceUSD);
+      
+    if (needsUpdate) {
       onChange({
         ...value,
         saldoDisponivel,
         saldoInsuficiente,
+        cotacao: value.tipoMoeda === "CRYPTO" ? newCotacao : value.cotacao,
+        coinPriceUSD: value.tipoMoeda === "CRYPTO" ? newCoinPriceUSD : value.coinPriceUSD,
       });
     }
   }, [dataLoaded, valorPagamento, value.origemTipo, value.tipoMoeda, value.coin, value.origemContaBancariaId, value.origemWalletId, saldosCaixaFiat, saldosCaixaCrypto, saldosParceirosContas, saldosParceirosWallets, cotacaoUSD]);
@@ -297,6 +316,9 @@ export function OrigemPagamentoSelect({
     const coinSelecionada = tipo === "CAIXA_OPERACIONAL" && saldosCaixaCrypto.length > 0 
       ? saldosCaixaCrypto[0].coin 
       : undefined;
+
+    // Obter dados da moeda crypto selecionada
+    const saldoCrypto = coinSelecionada ? getSaldoCaixaCryptoByCoin(coinSelecionada) : null;
 
     const { saldoDisponivel, saldoInsuficiente } = calcularSaldoEValidar(
       tipo, 
@@ -313,6 +335,9 @@ export function OrigemPagamentoSelect({
       tipoMoeda,
       moeda,
       coin: coinSelecionada,
+      // 🔒 PROPAGAR cotação quando CRYPTO é selecionado
+      cotacao: tipoMoeda === "CRYPTO" ? cotacaoUSD : undefined,
+      coinPriceUSD: saldoCrypto?.priceUSD || 1,
       saldoDisponivel,
       saldoInsuficiente,
     };
@@ -326,6 +351,9 @@ export function OrigemPagamentoSelect({
       ? saldosCaixaCrypto[0].coin 
       : undefined;
 
+    // Obter dados da moeda crypto selecionada
+    const saldoCrypto = coinSelecionada ? getSaldoCaixaCryptoByCoin(coinSelecionada) : null;
+
     const { saldoDisponivel, saldoInsuficiente } = calcularSaldoEValidar(
       "CAIXA_OPERACIONAL",
       tipoMoeda,
@@ -337,6 +365,9 @@ export function OrigemPagamentoSelect({
       tipoMoeda,
       moeda: tipoMoeda === "FIAT" ? "BRL" : "USD",
       coin: coinSelecionada,
+      // 🔒 PROPAGAR cotação e preço da crypto quando CRYPTO é selecionado
+      cotacao: tipoMoeda === "CRYPTO" ? cotacaoUSD : undefined,
+      coinPriceUSD: saldoCrypto?.priceUSD || 1,
       saldoDisponivel,
       saldoInsuficiente,
     });
