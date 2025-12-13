@@ -85,6 +85,8 @@ interface ProjetoDialogProps {
   projeto: Projeto | null;
   mode: "view" | "edit" | "create";
   onSuccess: () => void;
+  onCreatedOpenEdit?: (projetoId: string, initialTab?: string) => void;
+  initialTab?: string;
 }
 
 export function ProjetoDialog({
@@ -93,9 +95,11 @@ export function ProjetoDialog({
   projeto,
   mode,
   onSuccess,
+  onCreatedOpenEdit,
+  initialTab,
 }: ProjetoDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("dados");
+  const [activeTab, setActiveTab] = useState(initialTab || "dados");
   const [operadores, setOperadores] = useState<OperadorVinculado[]>([]);
   const [vincularDialogOpen, setVincularDialogOpen] = useState(false);
   const [conciliacaoDialogOpen, setConciliacaoDialogOpen] = useState(false);
@@ -226,9 +230,9 @@ export function ProjetoDialog({
         setTemConciliacao(false);
         setAcordoData(null); // Limpar acordo em modo criação
       }
-      setActiveTab("dados");
+      setActiveTab(initialTab || "dados");
     }
-  }, [open, projeto, mode]);
+  }, [open, projeto, mode, initialTab]);
 
   const fetchOperadoresProjeto = async (projetoId: string) => {
     const { data, error } = await supabase
@@ -337,10 +341,15 @@ export function ProjetoDialog({
           if (acordoError) throw acordoError;
           
           // Após criar projeto exclusivo, redirecionar para aba operadores
-          toast.success("Projeto criado! Agora vincule os operadores responsáveis.");
+          toast.success("Projeto criado! Agora vincule os operadores.");
           onSuccess();
-          // Fechar e reabrir em modo edit para permitir vincular operadores
           onOpenChange(false);
+          // Reabrir automaticamente em modo edição na aba Operadores
+          if (onCreatedOpenEdit) {
+            setTimeout(() => {
+              onCreatedOpenEdit(newProjeto.id, "operadores");
+            }, 100);
+          }
           return;
         }
         

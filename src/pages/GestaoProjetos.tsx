@@ -63,6 +63,7 @@ export default function GestaoProjetos() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProjeto, setSelectedProjeto] = useState<Projeto | null>(null);
   const [dialogMode, setDialogMode] = useState<"view" | "edit" | "create">("create");
+  const [dialogInitialTab, setDialogInitialTab] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     fetchProjetos();
@@ -96,10 +97,34 @@ export default function GestaoProjetos() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleOpenDialog = (projeto: Projeto | null, mode: "view" | "edit" | "create") => {
+  const handleOpenDialog = (projeto: Projeto | null, mode: "view" | "edit" | "create", initialTab?: string) => {
     setSelectedProjeto(projeto);
     setDialogMode(mode);
+    setDialogInitialTab(initialTab);
     setDialogOpen(true);
+  };
+
+  // Callback para reabrir o dialog em modo edição após criar projeto
+  const handleCreatedOpenEdit = async (projetoId: string, initialTab?: string) => {
+    // Buscar projeto recém-criado
+    const { data } = await supabase
+      .from("projetos")
+      .select("*")
+      .eq("id", projetoId)
+      .single();
+    
+    if (data) {
+      const proj: Projeto = {
+        id: data.id,
+        nome: data.nome,
+        descricao: data.descricao,
+        status: data.status,
+        data_inicio: data.data_inicio,
+        data_fim_prevista: data.data_fim_prevista,
+        orcamento_inicial: data.orcamento_inicial || 0,
+      };
+      handleOpenDialog(proj, "edit", initialTab);
+    }
   };
 
   const formatCurrency = (value: number) => {
@@ -412,6 +437,8 @@ export default function GestaoProjetos() {
         projeto={selectedProjeto}
         mode={dialogMode}
         onSuccess={fetchProjetos}
+        onCreatedOpenEdit={handleCreatedOpenEdit}
+        initialTab={dialogInitialTab}
       />
     </div>
   );
