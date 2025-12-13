@@ -91,27 +91,35 @@ export function FinanceiroTab() {
       setLoading(true);
 
       // Fetch all data in parallel
-      const [movResult, custosResult, acordosResult, parceriasResult, parceirosResult] = await Promise.all([
+      const [movResult, custosResult, acordosResult, parceriasResult, indicacoesResult, parceirosResult] = await Promise.all([
         supabase
           .from("movimentacoes_indicacao")
           .select("*")
           .order("data_movimentacao", { ascending: false }),
         supabase.from("v_custos_aquisicao").select("*"),
         supabase.from("indicador_acordos").select("*").eq("ativo", true),
+        // Fetch parcerias with comissão pendente
         supabase
           .from("parcerias")
           .select(`
             id,
+            parceiro_id,
             valor_comissao_indicador,
             comissao_paga,
-            parceiro:parceiros(nome),
-            indicacao:indicacoes(
-              indicador:indicadores_referral(id, nome)
-            )
+            indicacao_id,
+            parceiro:parceiros(nome)
           `)
           .eq("comissao_paga", false)
           .not("valor_comissao_indicador", "is", null)
           .gt("valor_comissao_indicador", 0),
+        // Fetch all indicacoes to map parceiro -> indicador
+        supabase
+          .from("indicacoes")
+          .select(`
+            id,
+            parceiro_id,
+            indicador:indicadores_referral(id, nome)
+          `),
         // Fetch parcerias with valor_parceiro that haven't been paid (exclude exempt)
         supabase
           .from("parcerias")
@@ -180,17 +188,38 @@ export function FinanceiroTab() {
         setBonusPendentes(pendentes);
       }
 
-      // Calculate comissões pendentes
+      // Build map of parceiro_id -> indicador from indicacoes table
+      const parceiroIndicadorMap: Record<string, { id: string; nome: string }> = {};
+      if (indicacoesResult.data) {
+        indicacoesResult.data.forEach((ind: any) => {
+          if (ind.parceiro_id && ind.indicador) {
+            parceiroIndicadorMap[ind.parceiro_id] = {
+              id: ind.indicador.id,
+              nome: ind.indicador.nome,
+            };
+          }
+        });
+      }
+
+      // Calculate comissões pendentes - check via parceiro_id using indicacoes map
       if (parceriasResult.data) {
-        const comissoes: ComissaoPendente[] = parceriasResult.data
-          .filter((p: any) => p.indicacao?.indicador)
-          .map((p: any) => ({
-            parceriaId: p.id,
-            parceiroNome: p.parceiro?.nome || "N/A",
-            indicadorId: p.indicacao.indicador.id,
-            indicadorNome: p.indicacao.indicador.nome,
-            valorComissao: p.valor_comissao_indicador || 0,
-          }));
+        const comissoes: ComissaoPendente[] = [];
+        
+        parceriasResult.data.forEach((p: any) => {
+          // First try direct indicacao_id link, then fallback to parceiro mapping
+          const indicador = parceiroIndicadorMap[p.parceiro_id];
+          
+          if (indicador) {
+            comissoes.push({
+              parceriaId: p.id,
+              parceiroNome: p.parceiro?.nome || "N/A",
+              indicadorId: indicador.id,
+              indicadorNome: indicador.nome,
+              valorComissao: p.valor_comissao_indicador || 0,
+            });
+          }
+        });
+        
         setComissoesPendentes(comissoes);
       }
 
