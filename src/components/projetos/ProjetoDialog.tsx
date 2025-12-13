@@ -626,6 +626,7 @@ export function ProjetoDialog({
                     investidorId={formData.investidor_id}
                     isViewMode={isViewMode}
                     onAcordoChange={setAcordoData}
+                    onVincularOperador={projeto?.id ? () => setVincularDialogOpen(true) : undefined}
                   />
                 </TabsContent>
               )}

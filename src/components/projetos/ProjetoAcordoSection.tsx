@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { HelpCircle, Handshake, Calculator, ArrowRight, Users, TrendingDown, AlertTriangle } from "lucide-react";
+import { HelpCircle, Handshake, Calculator, ArrowRight, Users, TrendingDown, AlertTriangle, UserPlus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { 
   formatCurrency, 
   calcularCustoOperadorProjetado,
@@ -19,6 +20,7 @@ interface ProjetoAcordoSectionProps {
   investidorId: string | null;
   isViewMode: boolean;
   onAcordoChange?: (acordo: AcordoData | null) => void;
+  onVincularOperador?: () => void;
 }
 
 export interface AcordoData {
@@ -35,7 +37,8 @@ export function ProjetoAcordoSection({
   projetoId, 
   investidorId, 
   isViewMode,
-  onAcordoChange 
+  onAcordoChange,
+  onVincularOperador
 }: ProjetoAcordoSectionProps) {
   const [loading, setLoading] = useState(true);
   const [acordo, setAcordo] = useState<AcordoData>({
@@ -242,7 +245,15 @@ export function ProjetoAcordoSection({
           </div>
           
           {operadores.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic">Nenhum operador vinculado a este projeto</p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground italic">Nenhum operador vinculado a este projeto</p>
+              {onVincularOperador && !isViewMode && (
+                <Button variant="outline" size="sm" onClick={onVincularOperador}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Vincular Operador
+                </Button>
+              )}
+            </div>
           ) : (
             <div className="space-y-2">
               {operadores.map((op) => (
