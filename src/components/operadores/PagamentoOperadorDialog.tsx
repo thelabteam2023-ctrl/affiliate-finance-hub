@@ -265,6 +265,68 @@ export function PagamentoOperadorDialog({
       };
 
       if (pagamento?.id) {
+        // Se está atualizando de PENDENTE para CONFIRMADO e não tem cash_ledger_id ainda
+        // precisa criar o registro no ledger
+        const needsLedgerEntry = formData.status === "CONFIRMADO" && 
+                                  pagamento.status === "PENDENTE" && 
+                                  !cashLedgerId;
+        
+        if (needsLedgerEntry) {
+          // Criar registro no cash_ledger para o pagamento que está sendo confirmado
+          const operadorSelecionado = operadores.find(op => op.id === formData.operador_id);
+          const nomeOperador = operadorSelecionado?.nome || "Operador";
+          const cotacaoUSD = origemData.cotacao || 5.40;
+          const coinPriceUSD = origemData.coinPriceUSD || 1;
+          const isCrypto = origemData.tipoMoeda === "CRYPTO";
+          const valorUSD = isCrypto ? formData.valor / cotacaoUSD : null;
+          const qtdCoin = isCrypto && valorUSD ? valorUSD / coinPriceUSD : null;
+
+          const ledgerPayload: any = {
+            user_id: userId,
+            tipo_transacao: "PAGTO_OPERADOR",
+            valor: formData.valor,
+            moeda: "BRL",
+            tipo_moeda: origemData.tipoMoeda,
+            data_transacao: formData.data_pagamento,
+            descricao: `${nomeOperador} - ${formData.tipo_pagamento}${formData.descricao ? `: ${formData.descricao}` : ""}`,
+            status: "CONFIRMADO",
+            destino_tipo: "OPERADOR",
+            operador_id: formData.operador_id,
+          };
+
+          if (isCrypto) {
+            ledgerPayload.valor_usd = valorUSD;
+            ledgerPayload.qtd_coin = qtdCoin;
+            ledgerPayload.coin = origemData.coin;
+            ledgerPayload.cotacao = cotacaoUSD;
+          }
+
+          if (origemData.origemTipo === "CAIXA_OPERACIONAL") {
+            ledgerPayload.origem_tipo = "CAIXA_OPERACIONAL";
+          } else if (origemData.origemTipo === "PARCEIRO_CONTA") {
+            ledgerPayload.origem_tipo = "PARCEIRO_CONTA";
+            ledgerPayload.origem_parceiro_id = origemData.origemParceiroId;
+            ledgerPayload.origem_conta_bancaria_id = origemData.origemContaBancariaId;
+          } else if (origemData.origemTipo === "PARCEIRO_WALLET") {
+            ledgerPayload.origem_tipo = "PARCEIRO_WALLET";
+            ledgerPayload.origem_parceiro_id = origemData.origemParceiroId;
+            ledgerPayload.origem_wallet_id = origemData.origemWalletId;
+            ledgerPayload.coin = origemData.coin;
+            ledgerPayload.cotacao = cotacaoUSD;
+            ledgerPayload.valor_usd = valorUSD;
+            ledgerPayload.qtd_coin = qtdCoin;
+          }
+
+          const { data: ledgerData, error: ledgerError } = await supabase
+            .from("cash_ledger")
+            .insert(ledgerPayload)
+            .select("id")
+            .single();
+
+          if (ledgerError) throw ledgerError;
+          payload.cash_ledger_id = ledgerData.id;
+        }
+
         const { error } = await supabase
           .from("pagamentos_operador")
           .update(payload)

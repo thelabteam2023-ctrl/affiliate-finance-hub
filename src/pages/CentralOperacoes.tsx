@@ -1394,7 +1394,7 @@ export default function CentralOperacoes() {
           data_pagamento: selectedPagamentoOperador.data_pagamento,
           data_competencia: null,
           descricao: null,
-          status: "PENDENTE",
+          status: "PENDENTE", // Sempre PENDENTE pois só mostramos pendentes nesta lista
         } : undefined}
         onSuccess={() => fetchData(true)}
       />
