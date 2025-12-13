@@ -95,19 +95,32 @@ export function PagamentoParceiroDialog({
       if (!user) throw new Error("Usuário não autenticado");
 
       // PASSO 1: Debitar da origem selecionada via cash_ledger
+      // 🔒 REGRA DE CONVERSÃO CRYPTO:
+      // A dívida é sempre em BRL. Se pagando com crypto:
+      // - Converter BRL → USD usando cotação atual
+      // - Para cada moeda, calcular quantidade usando o preço real (BTC/ETH) ou 1:1 (stablecoins)
+      const isCrypto = origemData.tipoMoeda === "CRYPTO";
+      const cotacaoUSD = origemData.cotacao || 5.40; // Fallback se não tiver cotação
+      const coinPriceUSD = origemData.coinPriceUSD || 1; // Preço da crypto em USD (1 para stablecoins)
+      
+      // Calcular valor em USD e quantidade de coins (se crypto)
+      const valorUSD = isCrypto ? valorNumerico / cotacaoUSD : null;
+      // Para stablecoins (USDT/USDC): qtdCoin = valorUSD (1:1)
+      // Para outras cryptos (BTC/ETH): qtdCoin = valorUSD / coinPriceUSD
+      const qtdCoin = isCrypto && valorUSD ? valorUSD / coinPriceUSD : null;
+      
       const { error: ledgerError } = await supabase
         .from("cash_ledger")
         .insert({
           user_id: user.id,
           tipo_transacao: "PAGTO_PARCEIRO",
           tipo_moeda: origemData.tipoMoeda,
-          moeda: origemData.moeda,
+          moeda: isCrypto ? "BRL" : origemData.moeda, // A dívida é sempre em BRL
           valor: valorNumerico,
           coin: origemData.coin || null,
-          qtd_coin: origemData.tipoMoeda === "CRYPTO" && origemData.cotacao 
-            ? valorNumerico / origemData.cotacao 
-            : null,
-          cotacao: origemData.cotacao || null,
+          qtd_coin: qtdCoin,
+          valor_usd: valorUSD,
+          cotacao: isCrypto ? cotacaoUSD : null,
           origem_tipo: origemData.origemTipo,
           origem_parceiro_id: origemData.origemParceiroId || null,
           origem_conta_bancaria_id: origemData.origemContaBancariaId || null,

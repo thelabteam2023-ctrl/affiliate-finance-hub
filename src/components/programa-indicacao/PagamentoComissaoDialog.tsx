@@ -86,19 +86,25 @@ export function PagamentoComissaoDialog({
       if (!user) throw new Error("Usuário não autenticado");
 
       // PASSO 1: Debitar da origem selecionada via cash_ledger
+      // 🔒 REGRA DE CONVERSÃO CRYPTO:
+      const isCrypto = origemData.tipoMoeda === "CRYPTO";
+      const cotacaoUSD = origemData.cotacao || 5.40;
+      const coinPriceUSD = origemData.coinPriceUSD || 1;
+      const valorUSD = isCrypto ? valor / cotacaoUSD : null;
+      const qtdCoin = isCrypto && valorUSD ? valorUSD / coinPriceUSD : null;
+      
       const { error: ledgerError } = await supabase
         .from("cash_ledger")
         .insert({
           user_id: user.id,
           tipo_transacao: "COMISSAO_INDICADOR",
           tipo_moeda: origemData.tipoMoeda,
-          moeda: origemData.moeda,
+          moeda: isCrypto ? "BRL" : origemData.moeda,
           valor: valor,
           coin: origemData.coin || null,
-          qtd_coin: origemData.tipoMoeda === "CRYPTO" && origemData.cotacao 
-            ? valor / origemData.cotacao 
-            : null,
-          cotacao: origemData.cotacao || null,
+          qtd_coin: qtdCoin,
+          valor_usd: valorUSD,
+          cotacao: isCrypto ? cotacaoUSD : null,
           origem_tipo: origemData.origemTipo,
           origem_parceiro_id: origemData.origemParceiroId || null,
           origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
