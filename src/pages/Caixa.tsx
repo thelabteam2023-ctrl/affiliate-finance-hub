@@ -256,6 +256,12 @@ export default function Caixa() {
       TRANSFERENCIA: "Transferência",
       DEPOSITO: "Depósito",
       SAQUE: "Saque",
+      PAGTO_PARCEIRO: "Pagto. Parceiro",
+      PAGTO_FORNECEDOR: "Pagto. Fornecedor",
+      COMISSAO_INDICADOR: "Comissão Indicador",
+      BONUS_INDICADOR: "Bônus Indicador",
+      DESPESA_ADMINISTRATIVA: "Despesa Admin.",
+      PAGTO_OPERADOR: "Pagto. Operador",
     };
     return labels[tipo] || tipo;
   };
@@ -279,6 +285,12 @@ export default function Caixa() {
       TRANSFERENCIA: "bg-blue-500/20 text-blue-400 border-blue-500/30",
       DEPOSITO: "bg-amber-500/20 text-amber-400 border-amber-500/30",
       SAQUE: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+      PAGTO_PARCEIRO: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+      PAGTO_FORNECEDOR: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+      COMISSAO_INDICADOR: "bg-pink-500/20 text-pink-400 border-pink-500/30",
+      BONUS_INDICADOR: "bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/30",
+      DESPESA_ADMINISTRATIVA: "bg-red-500/20 text-red-400 border-red-500/30",
+      PAGTO_OPERADOR: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
     };
     return colors[tipo] || "bg-muted text-muted-foreground";
   };
@@ -365,6 +377,24 @@ export default function Caixa() {
     
     if (transacao.destino_tipo === "BOOKMAKER" && transacao.destino_bookmaker_id) {
       return bookmakers[transacao.destino_bookmaker_id]?.nome || "Bookmaker";
+    }
+    
+    // Pagamentos para parceiros, indicadores, operadores
+    if (transacao.destino_tipo === "PARCEIRO" && transacao.destino_parceiro_id) {
+      return parceiros[transacao.destino_parceiro_id] || "Parceiro";
+    }
+    
+    if (transacao.destino_tipo === "INDICADOR") {
+      return transacao.descricao?.split(" - ")[0] || "Indicador";
+    }
+    
+    if (transacao.destino_tipo === "OPERADOR") {
+      return transacao.descricao?.split(" - ")[0] || "Operador";
+    }
+    
+    // Despesas administrativas - destino externo
+    if (!transacao.destino_tipo) {
+      return "Despesa Externa";
     }
     
     return "Destino";
