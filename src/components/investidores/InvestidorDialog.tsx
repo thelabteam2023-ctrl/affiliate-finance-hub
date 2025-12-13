@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, HelpCircle, Percent, ArrowRight, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, HelpCircle, Percent, ArrowRight, ArrowLeft, FolderKanban, Eye, TrendingUp, TrendingDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,13 +9,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { validateCPF, validateCNPJ, formatCPF, formatCNPJ } from "@/lib/validators";
+import { useNavigate } from "react-router-dom";
 
 interface FaixaProgressiva {
   limite: number;
   percentual: number;
+}
+
+interface ProjetoExclusivo {
+  id: string;
+  nome: string;
+  status: string;
+  data_inicio: string | null;
+  saldo_bookmakers: number;
+  total_depositado: number;
+  total_sacado: number;
+  lucro: number;
 }
 
 interface InvestidorDialogProps {
@@ -35,8 +50,11 @@ const formatCurrency = (value: number) => {
 };
 
 export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSuccess }: InvestidorDialogProps) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("dados");
+  const [projetosExclusivos, setProjetosExclusivos] = useState<ProjetoExclusivo[]>([]);
+  const [loadingProjetos, setLoadingProjetos] = useState(false);
   
   // Dados pessoais
   const [nome, setNome] = useState("");
@@ -70,6 +88,7 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
       // Fetch deal if exists
       if (mode !== "create") {
         fetchDeal(investidor.id);
+        fetchProjetosExclusivos(investidor.id);
       }
     } else {
       setNome("");
@@ -86,10 +105,80 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
         { limite: 50000, percentual: 30 },
         { limite: 100000, percentual: 40 },
       ]);
+      setProjetosExclusivos([]);
     }
     setDocumentoValidation(null);
     setActiveTab("dados");
   }, [investidor, open]);
+
+  const fetchProjetosExclusivos = async (investidorId: string) => {
+    setLoadingProjetos(true);
+    try {
+      // Fetch projects where this investor is the owner
+      const { data: projetos, error } = await supabase
+        .from("projetos")
+        .select("id, nome, status, data_inicio")
+        .eq("investidor_id", investidorId)
+        .eq("tipo_projeto", "EXCLUSIVO_INVESTIDOR")
+        .order("data_inicio", { ascending: false });
+
+      if (error) throw error;
+
+      if (projetos && projetos.length > 0) {
+        // For each project, calculate financial metrics
+        const projetosComMetricas = await Promise.all(
+          projetos.map(async (projeto) => {
+            // Get bookmaker balances for this project
+            const { data: bookmakers } = await supabase
+              .from("bookmakers")
+              .select("saldo_atual")
+              .eq("projeto_id", projeto.id);
+
+            const saldoBookmakers = bookmakers?.reduce((sum, b) => sum + (b.saldo_atual || 0), 0) || 0;
+
+            // Get deposits and withdrawals from cash_ledger for bookmakers of this project
+            const { data: depositos } = await supabase
+              .from("cash_ledger")
+              .select("valor")
+              .eq("tipo_transacao", "DEPOSITO")
+              .eq("status", "CONFIRMADO")
+              .in("destino_bookmaker_id", bookmakers?.map(b => (b as any).id) || []);
+
+            const { data: saques } = await supabase
+              .from("cash_ledger")
+              .select("valor")
+              .eq("tipo_transacao", "SAQUE")
+              .eq("status", "CONFIRMADO")
+              .in("origem_bookmaker_id", bookmakers?.map(b => (b as any).id) || []);
+
+            const totalDepositado = depositos?.reduce((sum, d) => sum + (d.valor || 0), 0) || 0;
+            const totalSacado = saques?.reduce((sum, s) => sum + (s.valor || 0), 0) || 0;
+            const lucro = saldoBookmakers + totalSacado - totalDepositado;
+
+            return {
+              id: projeto.id,
+              nome: projeto.nome,
+              status: projeto.status,
+              data_inicio: projeto.data_inicio,
+              saldo_bookmakers: saldoBookmakers,
+              total_depositado: totalDepositado,
+              total_sacado: totalSacado,
+              lucro,
+            };
+          })
+        );
+
+        setProjetosExclusivos(projetosComMetricas);
+      } else {
+        setProjetosExclusivos([]);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar projetos exclusivos:", error);
+      setProjetosExclusivos([]);
+    } finally {
+      setLoadingProjetos(false);
+    }
+  };
 
   const fetchDeal = async (investidorId: string) => {
     try {
@@ -396,14 +485,20 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className={`grid w-full ${mode === "create" ? "grid-cols-2" : "grid-cols-3"}`}>
             <TabsTrigger value="dados">Dados Pessoais</TabsTrigger>
-            <TabsTrigger value="acordo">
-              Acordo de Remuneração
-            </TabsTrigger>
+            <TabsTrigger value="acordo">Acordo</TabsTrigger>
+            {mode !== "create" && (
+              <TabsTrigger value="projetos">
+                <FolderKanban className="h-4 w-4 mr-1" />
+                Projetos ({projetosExclusivos.length})
+              </TabsTrigger>
+            )}
           </TabsList>
 
-          <TabsContent value="dados" className="space-y-4 mt-4">
+          <ScrollArea className="h-[450px] mt-4">
+
+          <TabsContent value="dados" className="space-y-4 px-1">
             <div className="space-y-2">
               <Label htmlFor="nome">Nome Completo *</Label>
               <Input
@@ -493,7 +588,7 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
             </div>
           </TabsContent>
 
-          <TabsContent value="acordo" className="space-y-4 mt-4">
+          <TabsContent value="acordo" className="space-y-4 px-1">
             <div className="space-y-4">
               <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50">
                 <div className="space-y-1">
@@ -655,6 +750,133 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
               )}
             </div>
           </TabsContent>
+
+          {/* Tab: Projetos Exclusivos */}
+          {mode !== "create" && (
+            <TabsContent value="projetos" className="space-y-4 px-1">
+              {loadingProjetos ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Carregando projetos...
+                </div>
+              ) : projetosExclusivos.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8">
+                    <div className="text-center">
+                      <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                      <p className="mt-4 text-muted-foreground">
+                        Nenhum projeto exclusivo vinculado a este investidor
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Crie um projeto do tipo "Exclusivo de Investidor" para vincular
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {projetosExclusivos.map((projeto) => (
+                    <Card key={projeto.id} className="hover:border-primary/30 transition-colors">
+                      <CardContent className="py-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <FolderKanban className="h-4 w-4 text-primary" />
+                            <span className="font-medium">{projeto.nome}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge className={
+                              projeto.status === "EM_ANDAMENTO" 
+                                ? "bg-emerald-500/20 text-emerald-400" 
+                                : projeto.status === "FINALIZADO"
+                                  ? "bg-gray-500/20 text-gray-400"
+                                  : "bg-blue-500/20 text-blue-400"
+                            }>
+                              {projeto.status.replace("_", " ")}
+                            </Badge>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                onOpenChange(false);
+                                navigate(`/projeto/${projeto.id}`);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              Ver
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <p className="text-muted-foreground text-xs">Depositado</p>
+                            <p className="font-medium">{formatCurrency(projeto.total_depositado)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Sacado</p>
+                            <p className="font-medium">{formatCurrency(projeto.total_sacado)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Saldo Bookmakers</p>
+                            <p className="font-medium">{formatCurrency(projeto.saldo_bookmakers)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Lucro/Prejuízo</p>
+                            <p className={`font-semibold flex items-center gap-1 ${
+                              projeto.lucro >= 0 ? "text-emerald-500" : "text-red-500"
+                            }`}>
+                              {projeto.lucro >= 0 ? (
+                                <TrendingUp className="h-3 w-3" />
+                              ) : (
+                                <TrendingDown className="h-3 w-3" />
+                              )}
+                              {formatCurrency(projeto.lucro)}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+
+                  {/* Totais */}
+                  <Card className="bg-muted/30 border-primary/20">
+                    <CardContent className="py-4">
+                      <div className="grid grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground text-xs">Total Depositado</p>
+                          <p className="font-semibold">
+                            {formatCurrency(projetosExclusivos.reduce((sum, p) => sum + p.total_depositado, 0))}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Total Sacado</p>
+                          <p className="font-semibold">
+                            {formatCurrency(projetosExclusivos.reduce((sum, p) => sum + p.total_sacado, 0))}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Saldo Total</p>
+                          <p className="font-semibold">
+                            {formatCurrency(projetosExclusivos.reduce((sum, p) => sum + p.saldo_bookmakers, 0))}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Lucro Total</p>
+                          <p className={`font-bold ${
+                            projetosExclusivos.reduce((sum, p) => sum + p.lucro, 0) >= 0 
+                              ? "text-emerald-500" 
+                              : "text-red-500"
+                          }`}>
+                            {formatCurrency(projetosExclusivos.reduce((sum, p) => sum + p.lucro, 0))}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </TabsContent>
+          )}
+          </ScrollArea>
         </Tabs>
 
         <div className="flex justify-between gap-2 mt-6">
