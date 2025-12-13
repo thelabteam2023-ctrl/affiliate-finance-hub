@@ -182,6 +182,26 @@ export default function Testes() {
         return;
       }
 
+      // Buscar nomes de parceiros já existentes para este usuário
+      const { data: parceirosExistentes } = await supabase
+        .from("parceiros")
+        .select("nome")
+        .eq("user_id", user.id);
+
+      const nomesExistentes = new Set(
+        (parceirosExistentes || []).map(p => p.nome.toUpperCase())
+      );
+
+      // Filtrar nomes disponíveis (que ainda não existem)
+      const nomesDisponiveis = nomesParceiros.filter(
+        nome => !nomesExistentes.has(nome.toUpperCase())
+      );
+
+      if (nomesDisponiveis.length === 0) {
+        toast.warning("Todos os nomes de parceiros de teste já foram utilizados!");
+        return;
+      }
+
       const shuffle = <T,>(array: T[]): T[] => {
         const arr = [...array];
         for (let i = arr.length - 1; i > 0; i--) {
@@ -191,8 +211,15 @@ export default function Testes() {
         return arr;
       };
 
-      const nomesEmbaralhados = shuffle(nomesParceiros);
-      const novosParceiros = nomesEmbaralhados.slice(0, 3).map(nome => ({
+      // Usar apenas nomes disponíveis
+      const nomesEmbaralhados = shuffle(nomesDisponiveis);
+      const quantidadeGerar = Math.min(3, nomesDisponiveis.length);
+      
+      if (quantidadeGerar < 3) {
+        toast.info(`Apenas ${quantidadeGerar} nome(s) disponível(is) para gerar`);
+      }
+
+      const novosParceiros = nomesEmbaralhados.slice(0, quantidadeGerar).map(nome => ({
         user_id: user.id,
         nome,
         cpf: gerarCPF(),
@@ -273,7 +300,7 @@ export default function Testes() {
       const { error: walletsError } = await supabase.from("wallets_crypto").insert(walletsCrypto);
       if (walletsError) throw walletsError;
 
-      toast.success(`3 parceiros criados com ${contasBancarias.length} contas e ${walletsCrypto.length} wallets!`);
+      toast.success(`${quantidadeGerar} parceiros criados com ${contasBancarias.length} contas e ${walletsCrypto.length} wallets!`);
     } catch (error: any) {
       console.error("Erro ao gerar parceiros:", error);
       toast.error(`Erro ao gerar parceiros: ${error.message}`);
@@ -291,6 +318,26 @@ export default function Testes() {
         return;
       }
 
+      // Buscar nomes de indicadores já existentes para este usuário
+      const { data: indicadoresExistentes } = await supabase
+        .from("indicadores_referral")
+        .select("nome")
+        .eq("user_id", user.id);
+
+      const nomesExistentes = new Set(
+        (indicadoresExistentes || []).map(i => i.nome.toUpperCase())
+      );
+
+      // Filtrar nomes disponíveis (que ainda não existem)
+      const nomesDisponiveis = nomesIndicadores.filter(
+        nome => !nomesExistentes.has(nome.toUpperCase())
+      );
+
+      if (nomesDisponiveis.length === 0) {
+        toast.warning("Todos os nomes de indicadores de teste já foram utilizados!");
+        return;
+      }
+
       const shuffle = <T,>(array: T[]): T[] => {
         const arr = [...array];
         for (let i = arr.length - 1; i > 0; i--) {
@@ -300,8 +347,15 @@ export default function Testes() {
         return arr;
       };
 
-      const nomesEmbaralhados = shuffle(nomesIndicadores);
-      const novosIndicadores = nomesEmbaralhados.slice(0, 2).map(nome => ({
+      // Usar apenas nomes disponíveis
+      const nomesEmbaralhados = shuffle(nomesDisponiveis);
+      const quantidadeGerar = Math.min(2, nomesDisponiveis.length);
+      
+      if (quantidadeGerar < 2) {
+        toast.info(`Apenas ${quantidadeGerar} nome(s) disponível(is) para gerar`);
+      }
+
+      const novosIndicadores = nomesEmbaralhados.slice(0, quantidadeGerar).map(nome => ({
         user_id: user.id,
         nome,
         cpf: gerarCPF(),
@@ -335,7 +389,7 @@ export default function Testes() {
       
       if (acordoError) throw acordoError;
 
-      toast.success("2 indicadores criados com acordos de comissão!");
+      toast.success(`${quantidadeGerar} indicadores criados com acordos de comissão!`);
     } catch (error: any) {
       console.error("Erro ao gerar indicadores:", error);
       toast.error(`Erro ao gerar indicadores: ${error.message}`);
@@ -343,6 +397,11 @@ export default function Testes() {
       setLoading(null);
     }
   };
+
+  const nomesInvestidores = [
+    "CARLOS EDUARDO MENDES", "ROBERTO SILVA SANTOS", "FERNANDA COSTA LIMA",
+    "MARCELO OLIVEIRA NETO", "PATRICIA ALMEIDA ROCHA", "RICARDO SOUZA DIAS"
+  ];
 
   const handleGerarInvestidorAleatorio = async () => {
     setLoading("investidor_gerar");
@@ -353,12 +412,27 @@ export default function Testes() {
         return;
       }
 
-      const nomesInvestidores = [
-        "CARLOS EDUARDO MENDES", "ROBERTO SILVA SANTOS", "FERNANDA COSTA LIMA",
-        "MARCELO OLIVEIRA NETO", "PATRICIA ALMEIDA ROCHA", "RICARDO SOUZA DIAS"
-      ];
+      // Buscar nomes de investidores já existentes para este usuário
+      const { data: investidoresExistentes } = await supabase
+        .from("investidores")
+        .select("nome")
+        .eq("user_id", user.id);
 
-      const nomeAleatorio = nomesInvestidores[Math.floor(Math.random() * nomesInvestidores.length)];
+      const nomesExistentes = new Set(
+        (investidoresExistentes || []).map(i => i.nome.toUpperCase())
+      );
+
+      // Filtrar nomes disponíveis (que ainda não existem)
+      const nomesDisponiveis = nomesInvestidores.filter(
+        nome => !nomesExistentes.has(nome.toUpperCase())
+      );
+
+      if (nomesDisponiveis.length === 0) {
+        toast.warning("Todos os nomes de investidores de teste já foram utilizados!");
+        return;
+      }
+
+      const nomeAleatorio = nomesDisponiveis[Math.floor(Math.random() * nomesDisponiveis.length)];
 
       const novoInvestidor = {
         user_id: user.id,
@@ -370,7 +444,7 @@ export default function Testes() {
       const { error } = await supabase.from("investidores").insert([novoInvestidor]);
       if (error) throw error;
 
-      toast.success("1 investidor criado com sucesso!");
+      toast.success(`1 investidor criado! (${nomesDisponiveis.length - 1} nomes restantes)`);
     } catch (error: any) {
       console.error("Erro ao gerar investidor:", error);
       toast.error(`Erro ao gerar investidor: ${error.message}`);
@@ -388,6 +462,26 @@ export default function Testes() {
         return;
       }
 
+      // Buscar nomes de operadores já existentes para este usuário
+      const { data: operadoresExistentes } = await supabase
+        .from("operadores")
+        .select("nome")
+        .eq("user_id", user.id);
+
+      const nomesExistentes = new Set(
+        (operadoresExistentes || []).map(o => o.nome.toUpperCase())
+      );
+
+      // Filtrar nomes disponíveis (que ainda não existem)
+      const nomesDisponiveis = nomesOperadores.filter(
+        nome => !nomesExistentes.has(nome.toUpperCase())
+      );
+
+      if (nomesDisponiveis.length === 0) {
+        toast.warning("Todos os nomes de operadores de teste já foram utilizados!");
+        return;
+      }
+
       const shuffle = <T,>(array: T[]): T[] => {
         const arr = [...array];
         for (let i = arr.length - 1; i > 0; i--) {
@@ -397,8 +491,15 @@ export default function Testes() {
         return arr;
       };
 
-      const nomesEmbaralhados = shuffle(nomesOperadores);
-      const novosOperadores = nomesEmbaralhados.slice(0, 2).map(nome => ({
+      // Usar apenas nomes disponíveis
+      const nomesEmbaralhados = shuffle(nomesDisponiveis);
+      const quantidadeGerar = Math.min(2, nomesDisponiveis.length);
+      
+      if (quantidadeGerar < 2) {
+        toast.info(`Apenas ${quantidadeGerar} nome(s) disponível(is) para gerar`);
+      }
+
+      const novosOperadores = nomesEmbaralhados.slice(0, quantidadeGerar).map(nome => ({
         user_id: user.id,
         nome,
         cpf: gerarCPF(),
@@ -409,7 +510,7 @@ export default function Testes() {
       const { error } = await supabase.from("operadores").insert(novosOperadores);
       if (error) throw error;
 
-      toast.success("2 operadores criados com sucesso!");
+      toast.success(`${quantidadeGerar} operadores criados com sucesso!`);
     } catch (error: any) {
       console.error("Erro ao gerar operadores:", error);
       toast.error(`Erro ao gerar operadores: ${error.message}`);
