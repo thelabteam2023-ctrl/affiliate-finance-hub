@@ -131,6 +131,9 @@ interface SaudeFinanceiraData {
   compromissosPendentes: {
     despesasAdmin: number;
     pagamentosOperador: number;
+    pagamentosParcerias: number;
+    comissoesIndicador: number;
+    bonusIndicador: number;
     total: number;
   };
   compromissosQuitados: {
@@ -154,6 +157,7 @@ export default function Financeiro() {
   const [despesasAdminPendentes, setDespesasAdminPendentes] = useState<DespesaAdministrativa[]>([]);
   const [pagamentosOperador, setPagamentosOperador] = useState<PagamentoOperador[]>([]);
   const [pagamentosOperadorPendentes, setPagamentosOperadorPendentes] = useState<PagamentoOperador[]>([]);
+  const [movimentacoesIndicacaoPendentes, setMovimentacoesIndicacaoPendentes] = useState<DespesaIndicacao[]>([]);
   const [bookmakersSaldos, setBookmakersSaldos] = useState<BookmakerSaldo[]>([]);
   const [lucroOperacionalApostas, setLucroOperacionalApostas] = useState<number>(0);
   const [totalParceirosAtivos, setTotalParceirosAtivos] = useState<number>(0);
@@ -226,6 +230,7 @@ export default function Financeiro() {
         despesasAdminPendentesResult,
         pagamentosOpResult, 
         pagamentosOpPendentesResult,
+        movIndicacaoPendentesResult,
         bookmakersResult,
         apostasLucroResult,
         parceirosAtivosResult
@@ -239,6 +244,7 @@ export default function Financeiro() {
         supabase.from("despesas_administrativas").select("*").eq("status", "PENDENTE"),
         supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status").eq("status", "CONFIRMADO"),
         supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status").eq("status", "PENDENTE"),
+        supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao").eq("status", "PENDENTE"),
         supabase.from("bookmakers").select("saldo_atual, saldo_freebet, saldo_irrecuperavel, status").in("status", ["ativo", "ATIVO", "EM_USO", "AGUARDANDO_SAQUE"]),
         supabase.from("apostas").select("lucro_prejuizo").not("resultado", "is", null),
         supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("status", "ativo"),
@@ -253,6 +259,7 @@ export default function Financeiro() {
       if (despesasAdminPendentesResult.error) throw despesasAdminPendentesResult.error;
       if (pagamentosOpResult.error) throw pagamentosOpResult.error;
       if (pagamentosOpPendentesResult.error) throw pagamentosOpPendentesResult.error;
+      if (movIndicacaoPendentesResult.error) throw movIndicacaoPendentesResult.error;
       if (bookmakersResult.error) throw bookmakersResult.error;
 
       setCaixaFiat(fiatResult.data || []);
@@ -264,6 +271,7 @@ export default function Financeiro() {
       setDespesasAdminPendentes(despesasAdminPendentesResult.data || []);
       setPagamentosOperador(pagamentosOpResult.data || []);
       setPagamentosOperadorPendentes(pagamentosOpPendentesResult.data || []);
+      setMovimentacoesIndicacaoPendentes(movIndicacaoPendentesResult.data || []);
       setBookmakersSaldos(bookmakersResult.data || []);
       
       // Calcular lucro operacional das apostas
@@ -518,12 +526,30 @@ export default function Financeiro() {
   }, 0);
 
   // Compromissos PENDENTES (ainda não pagos - representam risco futuro)
+  const pagamentosParceirasPendentes = movimentacoesIndicacaoPendentes
+    .filter(m => m.tipo === "PAGTO_PARCEIRO" || m.tipo === "PAGTO_FORNECEDOR")
+    .reduce((acc, m) => acc + m.valor, 0);
+  const comissoesIndicadorPendentes = movimentacoesIndicacaoPendentes
+    .filter(m => m.tipo === "COMISSAO_INDICADOR")
+    .reduce((acc, m) => acc + m.valor, 0);
+  const bonusIndicadorPendentes = movimentacoesIndicacaoPendentes
+    .filter(m => m.tipo === "BONUS_INDICADOR")
+    .reduce((acc, m) => acc + m.valor, 0);
+
   const compromissosPendentesData = {
     despesasAdmin: despesasAdminPendentes.reduce((acc, d) => acc + d.valor, 0),
     pagamentosOperador: pagamentosOperadorPendentes.reduce((acc, p) => acc + p.valor, 0),
+    pagamentosParcerias: pagamentosParceirasPendentes,
+    comissoesIndicador: comissoesIndicadorPendentes,
+    bonusIndicador: bonusIndicadorPendentes,
     total: 0,
   };
-  compromissosPendentesData.total = compromissosPendentesData.despesasAdmin + compromissosPendentesData.pagamentosOperador;
+  compromissosPendentesData.total = 
+    compromissosPendentesData.despesasAdmin + 
+    compromissosPendentesData.pagamentosOperador + 
+    compromissosPendentesData.pagamentosParcerias + 
+    compromissosPendentesData.comissoesIndicador + 
+    compromissosPendentesData.bonusIndicador;
 
   // Compromissos JÁ QUITADOS (histórico - não impactam saúde financeira)
   const compromissosQuitadosData = {

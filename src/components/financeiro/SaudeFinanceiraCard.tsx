@@ -23,6 +23,9 @@ interface SaudeFinanceiraData {
   compromissosPendentes: {
     despesasAdmin: number;
     pagamentosOperador: number;
+    pagamentosParcerias: number;
+    comissoesIndicador: number;
+    bonusIndicador: number;
     total: number;
   };
   compromissosQuitados: {
@@ -386,16 +389,34 @@ export function SaudeFinanceiraCard({
           
           {compromissosPendentes.total > 0 && (
             <div className="pl-5 space-y-1 text-xs text-muted-foreground">
-              {compromissosPendentes.despesasAdmin > 0 && (
+              {compromissosPendentes.pagamentosParcerias > 0 && (
                 <div className="flex justify-between">
-                  <span>Despesas Admin.</span>
-                  <span>{formatCurrency(compromissosPendentes.despesasAdmin)}</span>
+                  <span>Pagamentos Parceiros/Fornecedores</span>
+                  <span>{formatCurrency(compromissosPendentes.pagamentosParcerias)}</span>
+                </div>
+              )}
+              {compromissosPendentes.comissoesIndicador > 0 && (
+                <div className="flex justify-between">
+                  <span>Comissões Indicador</span>
+                  <span>{formatCurrency(compromissosPendentes.comissoesIndicador)}</span>
+                </div>
+              )}
+              {compromissosPendentes.bonusIndicador > 0 && (
+                <div className="flex justify-between">
+                  <span>Bônus Indicador</span>
+                  <span>{formatCurrency(compromissosPendentes.bonusIndicador)}</span>
                 </div>
               )}
               {compromissosPendentes.pagamentosOperador > 0 && (
                 <div className="flex justify-between">
                   <span>Pagamentos Operador</span>
                   <span>{formatCurrency(compromissosPendentes.pagamentosOperador)}</span>
+                </div>
+              )}
+              {compromissosPendentes.despesasAdmin > 0 && (
+                <div className="flex justify-between">
+                  <span>Despesas Admin.</span>
+                  <span>{formatCurrency(compromissosPendentes.despesasAdmin)}</span>
                 </div>
               )}
             </div>
