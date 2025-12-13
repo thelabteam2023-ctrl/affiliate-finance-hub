@@ -265,6 +265,13 @@ export function ProjetoDialog({
           
           const { error: acordoError } = await supabase.from("projeto_acordos").insert(acordoPayload);
           if (acordoError) throw acordoError;
+          
+          // Após criar projeto exclusivo, redirecionar para aba operadores
+          toast.success("Projeto criado! Agora vincule os operadores responsáveis.");
+          onSuccess();
+          // Fechar e reabrir em modo edit para permitir vincular operadores
+          onOpenChange(false);
+          return;
         }
         
         toast.success("Projeto criado com sucesso");
@@ -393,7 +400,19 @@ export function ProjetoDialog({
                         disabled={isViewMode || mode === "edit"}
                       >
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue>
+                            {formData.tipo_projeto === "INTERNO" ? (
+                              <div className="flex flex-col items-start">
+                                <span>Projeto Interno</span>
+                                <span className="text-xs text-muted-foreground">Capital próprio da empresa</span>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-start">
+                                <span>Projeto Exclusivo de Investidor</span>
+                                <span className="text-xs text-muted-foreground">Capital isolado de terceiro</span>
+                              </div>
+                            )}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="INTERNO">
@@ -716,13 +735,20 @@ export function ProjetoDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
-              {/* Em modo criação com investidor exclusivo, na aba dados, botão avança para acordo */}
+              {/* Em modo criação com investidor exclusivo, navegação: dados -> acordo -> operadores */}
               {mode === "create" && formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && activeTab === "dados" ? (
                 <Button 
                   onClick={() => setActiveTab("acordo")}
                   disabled={!formData.nome.trim() || !formData.investidor_id}
                 >
                   Próximo: Acordo
+                </Button>
+              ) : mode === "create" && formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && activeTab === "acordo" ? (
+                <Button 
+                  onClick={handleSave}
+                  disabled={loading}
+                >
+                  {loading ? "Salvando..." : "Criar Projeto"}
                 </Button>
               ) : (
                 <Button 
