@@ -117,21 +117,56 @@ export function ProjetoDialog({
     investidor_id: null,
   });
 
+  // Buscar dados completos do projeto (inclui tipo_projeto e investidor_id)
+  const fetchProjetoCompleto = async (projetoId: string) => {
+    const { data, error } = await supabase
+      .from("projetos")
+      .select("*")
+      .eq("id", projetoId)
+      .single();
+    
+    if (error) {
+      console.error("Erro ao buscar projeto:", error);
+      return null;
+    }
+    return data;
+  };
+
   useEffect(() => {
     if (open) {
       if (projeto && mode !== "create") {
-        setFormData({
-          ...projeto,
-          descricao: projeto.descricao || null,
-          data_inicio: projeto.data_inicio || null,
-          data_fim_prevista: projeto.data_fim_prevista || null,
-          data_fim_real: projeto.data_fim_real || null,
-          observacoes: projeto.observacoes || null,
-          tem_investimento_crypto: projeto.tem_investimento_crypto || false,
-          conciliado: projeto.conciliado || false,
-          modelo_absorcao_taxas: projeto.modelo_absorcao_taxas || "EMPRESA_100",
-          tipo_projeto: (projeto as any).tipo_projeto || "INTERNO",
-          investidor_id: (projeto as any).investidor_id || null,
+        // Buscar dados completos do projeto diretamente da tabela
+        fetchProjetoCompleto(projeto.id!).then((projetoCompleto) => {
+          if (projetoCompleto) {
+            setFormData({
+              ...projeto,
+              descricao: projetoCompleto.descricao || null,
+              data_inicio: projetoCompleto.data_inicio || null,
+              data_fim_prevista: projetoCompleto.data_fim_prevista || null,
+              data_fim_real: projetoCompleto.data_fim_real || null,
+              observacoes: projetoCompleto.observacoes || null,
+              tem_investimento_crypto: projetoCompleto.tem_investimento_crypto || false,
+              conciliado: projetoCompleto.conciliado || false,
+              modelo_absorcao_taxas: projetoCompleto.modelo_absorcao_taxas || "EMPRESA_100",
+              tipo_projeto: (projetoCompleto.tipo_projeto as TipoProjeto) || "INTERNO",
+              investidor_id: projetoCompleto.investidor_id || null,
+            });
+          } else {
+            // Fallback se não conseguir buscar
+            setFormData({
+              ...projeto,
+              descricao: projeto.descricao || null,
+              data_inicio: projeto.data_inicio || null,
+              data_fim_prevista: projeto.data_fim_prevista || null,
+              data_fim_real: projeto.data_fim_real || null,
+              observacoes: (projeto as any).observacoes || null,
+              tem_investimento_crypto: projeto.tem_investimento_crypto || false,
+              conciliado: projeto.conciliado || false,
+              modelo_absorcao_taxas: (projeto as any).modelo_absorcao_taxas || "EMPRESA_100",
+              tipo_projeto: projeto.tipo_projeto || "INTERNO",
+              investidor_id: projeto.investidor_id || null,
+            });
+          }
         });
         if (projeto.id) {
           fetchOperadoresProjeto(projeto.id);
