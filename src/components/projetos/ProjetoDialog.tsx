@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -35,11 +35,13 @@ import {
   Calculator,
   AlertTriangle,
   CheckCircle2,
-  UserCheck
+  UserCheck,
+  Handshake
 } from "lucide-react";
 import { VincularOperadorDialog } from "@/components/projetos/VincularOperadorDialog";
 import { ProjetoConciliacaoDialog } from "@/components/projetos/ProjetoConciliacaoDialog";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
+import { ProjetoAcordoSection, AcordoData } from "@/components/projetos/ProjetoAcordoSection";
 
 type TipoProjeto = 'INTERNO' | 'EXCLUSIVO_INVESTIDOR';
 
@@ -97,6 +99,7 @@ export function ProjetoDialog({
   const [vincularDialogOpen, setVincularDialogOpen] = useState(false);
   const [conciliacaoDialogOpen, setConciliacaoDialogOpen] = useState(false);
   const [temConciliacao, setTemConciliacao] = useState(false);
+  const [acordoData, setAcordoData] = useState<AcordoData | null>(null);
   
   const [formData, setFormData] = useState<Projeto>({
     nome: "",
@@ -242,8 +245,27 @@ export function ProjetoDialog({
       };
 
       if (mode === "create") {
-        const { error } = await supabase.from("projetos").insert(payload);
+        const { data: newProjeto, error } = await supabase.from("projetos").insert(payload).select("id").single();
         if (error) throw error;
+        
+        // Create projeto_acordos if it's an exclusive investor project
+        if (payload.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && acordoData && newProjeto) {
+          const acordoPayload = {
+            user_id: session.session.user.id,
+            projeto_id: newProjeto.id,
+            investidor_id: payload.investidor_id,
+            base_calculo: acordoData.base_calculo,
+            percentual_investidor: acordoData.percentual_investidor,
+            percentual_empresa: acordoData.percentual_empresa,
+            deduzir_custos_operador: acordoData.deduzir_custos_operador,
+            observacoes: acordoData.observacoes,
+            ativo: true,
+          };
+          
+          const { error: acordoError } = await supabase.from("projeto_acordos").insert(acordoPayload);
+          if (acordoError) throw acordoError;
+        }
+        
         toast.success("Projeto criado com sucesso");
       } else {
         const { error } = await supabase
@@ -251,6 +273,35 @@ export function ProjetoDialog({
           .update(payload)
           .eq("id", projeto!.id);
         if (error) throw error;
+        
+        // Update or create projeto_acordos if it's an exclusive investor project
+        if (payload.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && acordoData) {
+          const acordoPayload = {
+            user_id: session.session.user.id,
+            projeto_id: projeto!.id,
+            investidor_id: payload.investidor_id,
+            base_calculo: acordoData.base_calculo,
+            percentual_investidor: acordoData.percentual_investidor,
+            percentual_empresa: acordoData.percentual_empresa,
+            deduzir_custos_operador: acordoData.deduzir_custos_operador,
+            observacoes: acordoData.observacoes,
+            ativo: true,
+          };
+          
+          if (acordoData.id) {
+            // Update existing
+            const { error: acordoError } = await supabase
+              .from("projeto_acordos")
+              .update(acordoPayload)
+              .eq("id", acordoData.id);
+            if (acordoError) throw acordoError;
+          } else {
+            // Create new
+            const { error: acordoError } = await supabase.from("projeto_acordos").insert(acordoPayload);
+            if (acordoError) throw acordoError;
+          }
+        }
+        
         toast.success("Projeto atualizado com sucesso");
       }
 
@@ -301,11 +352,17 @@ export function ProjetoDialog({
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className={`grid w-full ${formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" ? "grid-cols-3" : "grid-cols-2"}`}>
               <TabsTrigger value="dados">
                 <FolderKanban className="h-4 w-4 mr-2" />
                 Dados
               </TabsTrigger>
+              {formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && (
+                <TabsTrigger value="acordo">
+                  <Handshake className="h-4 w-4 mr-2" />
+                  Acordo
+                </TabsTrigger>
+              )}
               <TabsTrigger value="operadores" disabled={mode === "create"}>
                 <Users className="h-4 w-4 mr-2" />
                 Operadores
@@ -558,6 +615,18 @@ export function ProjetoDialog({
                   />
                 </div>
               </TabsContent>
+
+              {/* Tab: Acordo (only for exclusive investor projects) */}
+              {formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && (
+                <TabsContent value="acordo" className="space-y-4 px-1">
+                  <ProjetoAcordoSection
+                    projetoId={projeto?.id || "new"}
+                    investidorId={formData.investidor_id}
+                    isViewMode={isViewMode}
+                    onAcordoChange={setAcordoData}
+                  />
+                </TabsContent>
+              )}
 
               <TabsContent value="operadores" className="space-y-4 px-1">
                 <div className="flex justify-between items-center">
