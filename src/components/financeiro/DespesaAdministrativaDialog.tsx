@@ -289,14 +289,14 @@ export function DespesaAdministrativaDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>
             {despesa?.id ? "Editar Despesa Administrativa" : "Nova Despesa Administrativa"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 overflow-y-auto flex-1 pr-2">
           <div className="space-y-2">
             <Label>Categoria *</Label>
             {showNovaCategoria ? (
