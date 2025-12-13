@@ -326,7 +326,13 @@ export function ProjetoDialog({
 
       if (mode === "create") {
         const { data: newProjeto, error } = await supabase.from("projetos").insert(payload).select("id").single();
-        if (error) throw error;
+        if (error) {
+          if (error.code === "23505" && error.message.includes("idx_projetos_nome_user_unique")) {
+            toast.error("Já existe um projeto com este nome");
+            return;
+          }
+          throw error;
+        }
         
         // Create projeto_acordos if it's an exclusive investor project
         if (payload.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && acordoData && newProjeto) {
@@ -365,7 +371,13 @@ export function ProjetoDialog({
           .from("projetos")
           .update(payload)
           .eq("id", projeto!.id);
-        if (error) throw error;
+        if (error) {
+          if (error.code === "23505" && error.message.includes("idx_projetos_nome_user_unique")) {
+            toast.error("Já existe um projeto com este nome");
+            return;
+          }
+          throw error;
+        }
         
         // Update projeto_acordos APENAS se o usuário passou pela aba acordo e fez alterações
         // Se acordoData.id existe, já temos um acordo ativo carregado - apenas atualizar
