@@ -70,7 +70,6 @@ const TIPOS_GATILHO = [
 const METRICAS = [
   { value: "LUCRO", label: "Lucro Realizado" },
   { value: "VOLUME_APOSTADO", label: "Volume Apostado" },
-  { value: "TURNOVER", label: "Turnover" },
 ];
 
 export function CicloDialog({
@@ -195,9 +194,17 @@ export function CicloDialog({
       return;
     }
 
-    if (formData.tipo_gatilho !== "TEMPO" && !formData.meta_volume) {
-      toast.error("Informe a meta de volume para ciclos volumétricos");
-      return;
+    // Validar meta baseada no tipo de gatilho e métrica
+    if (formData.tipo_gatilho === "VOLUME") {
+      if (!formData.meta_volume) {
+        toast.error("Informe a meta de volume para ciclos por volume");
+        return;
+      }
+    } else if (formData.tipo_gatilho === "HIBRIDO") {
+      if (!formData.meta_volume) {
+        toast.error("Informe a meta para ciclos híbridos");
+        return;
+      }
     }
 
     if (new Date(formData.data_fim_prevista) <= new Date(formData.data_inicio)) {
@@ -318,7 +325,7 @@ export function CicloDialog({
             </Select>
           </div>
 
-          {/* Campos de Volume */}
+          {/* Campos de Volume/Meta */}
           {showVolumeFields && (
             <>
               <div className="space-y-2">
@@ -338,17 +345,24 @@ export function CicloDialog({
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  {formData.metrica_acumuladora === "LUCRO" 
+                    ? "O ciclo será concluído quando o lucro realizado atingir a meta"
+                    : "O ciclo será concluído quando o volume apostado atingir a meta"}
+                </p>
               </div>
 
               <div className="space-y-2">
-                <Label>Meta de Volume (R$) *</Label>
+                <Label>
+                  {formData.metrica_acumuladora === "LUCRO" ? "Meta de Lucro (R$)" : "Meta de Volume (R$)"} *
+                </Label>
                 <Input
                   type="number"
-                  step="1000"
+                  step="100"
                   min="0"
                   value={formData.meta_volume}
                   onChange={(e) => setFormData({ ...formData, meta_volume: e.target.value })}
-                  placeholder="150000"
+                  placeholder={formData.metrica_acumuladora === "LUCRO" ? "5000" : "150000"}
                 />
               </div>
             </>

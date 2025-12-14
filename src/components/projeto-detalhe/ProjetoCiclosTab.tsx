@@ -273,9 +273,29 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
     return differenceInDays(fim, hoje);
   };
 
-  const getProgressoVolume = (ciclo: Ciclo) => {
-    if (!ciclo.meta_volume || ciclo.meta_volume === 0) return 0;
-    return Math.min(100, (ciclo.valor_acumulado / ciclo.meta_volume) * 100);
+  const getProgressoVolume = (ciclo: Ciclo, realTimeMetrics?: CicloMetrics) => {
+    if (!ciclo.meta_volume || ciclo.meta_volume === 0) return { progresso: 0, valorAtual: 0 };
+    
+    // Para ciclos em andamento, usar métricas em tempo real
+    if (ciclo.status === "EM_ANDAMENTO" && realTimeMetrics) {
+      const valorAtual = ciclo.metrica_acumuladora === "LUCRO" 
+        ? realTimeMetrics.lucro 
+        : realTimeMetrics.volume;
+      return {
+        progresso: Math.min(100, (valorAtual / ciclo.meta_volume) * 100),
+        valorAtual
+      };
+    }
+    
+    // Para ciclos fechados, usar valor_acumulado
+    return {
+      progresso: Math.min(100, (ciclo.valor_acumulado / ciclo.meta_volume) * 100),
+      valorAtual: ciclo.valor_acumulado
+    };
+  };
+
+  const getMetricaLabel = (metrica: string) => {
+    return metrica === "LUCRO" ? "Lucro Realizado" : "Volume Apostado";
   };
 
   if (loading) {
@@ -322,11 +342,13 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
           {ciclos.map((ciclo) => {
             const diasRestantes = getDiasRestantes(ciclo.data_fim_prevista);
             const isAtrasado = ciclo.status === "EM_ANDAMENTO" && diasRestantes < 0;
-            const progressoVolume = getProgressoVolume(ciclo);
-            const isVolumeProximo = ciclo.tipo_gatilho !== "TEMPO" && progressoVolume >= 90;
+            const realTimeMetrics = cicloMetrics[ciclo.id];
+            const { progresso: progressoVolume, valorAtual } = getProgressoVolume(ciclo, realTimeMetrics);
+            const isMetaProxima = ciclo.tipo_gatilho !== "TEMPO" && progressoVolume >= 90;
+            const isMetaAtingida = progressoVolume >= 100;
 
             return (
-              <Card key={ciclo.id} className={isAtrasado || isVolumeProximo ? "border-amber-500/50" : ""}>
+              <Card key={ciclo.id} className={isAtrasado || isMetaProxima ? "border-amber-500/50" : isMetaAtingida ? "border-emerald-500/50" : ""}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -361,17 +383,27 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
                     <div className="mb-4 space-y-2">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">
-                          Progresso: {formatCurrency(ciclo.valor_acumulado)} de {formatCurrency(ciclo.meta_volume)}
+                          {getMetricaLabel(ciclo.metrica_acumuladora)}: {formatCurrency(valorAtual)} de {formatCurrency(ciclo.meta_volume)}
                         </span>
-                        <span className={progressoVolume >= 90 ? "text-amber-400 font-medium" : "text-muted-foreground"}>
+                        <span className={`font-medium ${
+                          isMetaAtingida ? "text-emerald-400" : 
+                          isMetaProxima ? "text-amber-400" : 
+                          "text-muted-foreground"
+                        }`}>
                           {progressoVolume.toFixed(1)}%
                         </span>
                       </div>
                       <Progress 
                         value={progressoVolume} 
-                        className={progressoVolume >= 90 ? "bg-amber-500/20" : ""} 
+                        className={isMetaAtingida ? "bg-emerald-500/20" : isMetaProxima ? "bg-amber-500/20" : ""} 
                       />
-                      {isVolumeProximo && (
+                      {isMetaAtingida && (
+                        <div className="flex items-center gap-2 text-emerald-400 text-sm">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span>Meta atingida! Ciclo pronto para fechamento.</span>
+                        </div>
+                      )}
+                      {isMetaProxima && !isMetaAtingida && (
                         <div className="flex items-center gap-2 text-amber-400 text-sm">
                           <AlertTriangle className="h-4 w-4" />
                           <span>Meta próxima de ser atingida!</span>
