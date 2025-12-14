@@ -93,32 +93,7 @@ export default function ProjetoDetalhe() {
   // KPIs should only show on performance tabs
   const showKpis = ["dashboard", "apostas", "perdas"].includes(activeTab);
 
-  // Helper to get date range for hook
-  const getResultadoDateRange = () => {
-    return getDateRangeFromFilter();
-  };
-  const { start: dataInicio, end: dataFim } = getResultadoDateRange();
-  
-  // FONTE ÚNICA DE VERDADE: Hook centralizado para resultado do projeto
-  const { resultado: projetoResultado, refresh: refreshResultado } = useProjetoResultado({
-    projetoId: id || '',
-    dataInicio,
-    dataFim,
-  });
-
-  useEffect(() => {
-    if (id) {
-      fetchProjeto();
-    }
-  }, [id]);
-
-  // Refetch KPIs when period changes
-  useEffect(() => {
-    if (id && projeto) {
-      fetchApostasResumo();
-    }
-  }, [periodFilter, dateRange]);
-
+  // Helper to get date range from filter - MUST be defined before use
   const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
     const today = new Date();
     
@@ -144,6 +119,29 @@ export default function ProjetoDetalhe() {
         return { start: null, end: null };
     }
   };
+
+  // Get date range for resultado hook
+  const { start: dataInicio, end: dataFim } = getDateRangeFromFilter();
+  
+  // FONTE ÚNICA DE VERDADE: Hook centralizado para resultado do projeto
+  const { resultado: projetoResultado, refresh: refreshResultado } = useProjetoResultado({
+    projetoId: id || '',
+    dataInicio,
+    dataFim,
+  });
+
+  useEffect(() => {
+    if (id) {
+      fetchProjeto();
+    }
+  }, [id]);
+
+  // Refetch KPIs when period changes
+  useEffect(() => {
+    if (id && projeto) {
+      fetchApostasResumo();
+    }
+  }, [periodFilter, dateRange]);
 
   const fetchApostasResumo = async () => {
     try {
