@@ -56,6 +56,18 @@ const FREQUENCIAS = [
   { value: "MENSAL", label: "Mensal" },
 ];
 
+const TIPOS_GATILHO = [
+  { value: "TEMPO", label: "Por Tempo (período fixo)" },
+  { value: "VOLUME", label: "Por Volume (meta financeira)" },
+  { value: "HIBRIDO", label: "Híbrido (o que ocorrer primeiro)" },
+];
+
+const METRICAS_ACUMULADORAS = [
+  { value: "LUCRO", label: "Lucro Realizado" },
+  { value: "VOLUME_APOSTADO", label: "Volume Apostado" },
+  { value: "TURNOVER", label: "Turnover (giro de capital)" },
+];
+
 const TIPOS_META = [
   { value: "VALOR_FIXO", label: "Valor Fixo" },
   { value: "PERCENTUAL", label: "Percentual (%)" },
@@ -102,6 +114,12 @@ export function VincularOperadorDialog({
     regra_prejuizo: "ZERAR",
     teto_pagamento: "",
     piso_pagamento: "",
+    // Campos de gatilho de ciclo
+    tipo_gatilho: "TEMPO",
+    meta_volume: "",
+    periodo_maximo_dias: "30",
+    periodo_minimo_dias: "7",
+    metrica_acumuladora: "LUCRO",
   });
   const [faixasEscalonadas, setFaixasEscalonadas] = useState<Faixa[]>([
     { min: 0, max: 10000, percentual: 5 },
@@ -143,6 +161,11 @@ export function VincularOperadorDialog({
         regra_prejuizo: "ZERAR",
         teto_pagamento: "",
         piso_pagamento: "",
+        tipo_gatilho: "TEMPO",
+        meta_volume: "",
+        periodo_maximo_dias: "30",
+        periodo_minimo_dias: "7",
+        metrica_acumuladora: "LUCRO",
       });
       setFaixasEscalonadas([
         { min: 0, max: 10000, percentual: 5 },
@@ -220,6 +243,12 @@ export function VincularOperadorDialog({
         regra_prejuizo: formData.regra_prejuizo,
         teto_pagamento: formData.teto_pagamento ? parseFloat(formData.teto_pagamento) : null,
         piso_pagamento: formData.piso_pagamento ? parseFloat(formData.piso_pagamento) : null,
+        // Campos de gatilho de ciclo
+        tipo_gatilho: formData.tipo_gatilho,
+        meta_volume: formData.meta_volume ? parseFloat(formData.meta_volume) : null,
+        periodo_maximo_dias: formData.periodo_maximo_dias ? parseInt(formData.periodo_maximo_dias) : 30,
+        periodo_minimo_dias: formData.periodo_minimo_dias ? parseInt(formData.periodo_minimo_dias) : 7,
+        metrica_acumuladora: formData.metrica_acumuladora,
       };
 
       if (modelo === "POR_ENTREGA") {
@@ -589,6 +618,109 @@ export function VincularOperadorDialog({
                     </p>
                   </div>
                 </div>
+              </div>
+
+              {/* Configuração de Gatilho de Ciclo */}
+              <div className="border-t pt-4 space-y-4">
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Gatilho de Fechamento de Ciclo
+                </h4>
+                
+                <div className="space-y-2">
+                  <Label>Tipo de Gatilho *</Label>
+                  <Select
+                    value={formData.tipo_gatilho}
+                    onValueChange={(value) => setFormData({ ...formData, tipo_gatilho: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIPOS_GATILHO.map((tipo) => (
+                        <SelectItem key={tipo.value} value={tipo.value}>
+                          {tipo.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {formData.tipo_gatilho === "TEMPO" && "Ciclo fecha ao atingir o período configurado (semanal, quinzenal, mensal)"}
+                    {formData.tipo_gatilho === "VOLUME" && "Ciclo fecha ao atingir a meta de volume financeiro"}
+                    {formData.tipo_gatilho === "HIBRIDO" && "Ciclo fecha quando atingir o volume OU o período máximo (o que ocorrer primeiro)"}
+                  </p>
+                </div>
+
+                {/* Campos para Volume/Híbrido */}
+                {(formData.tipo_gatilho === "VOLUME" || formData.tipo_gatilho === "HIBRIDO") && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Métrica Acumuladora *</Label>
+                      <Select
+                        value={formData.metrica_acumuladora}
+                        onValueChange={(value) => setFormData({ ...formData, metrica_acumuladora: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {METRICAS_ACUMULADORAS.map((m) => (
+                            <SelectItem key={m.value} value={m.value}>
+                              {m.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        O que será acumulado para atingir a meta de volume
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Meta de Volume (R$) *</Label>
+                      <Input
+                        type="number"
+                        step="1000"
+                        min="0"
+                        value={formData.meta_volume}
+                        onChange={(e) => handleNumericChange("meta_volume", e.target.value)}
+                        placeholder="150000"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Ciclo fecha ao atingir este valor na métrica selecionada
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* Campos para Tempo/Híbrido */}
+                {(formData.tipo_gatilho === "TEMPO" || formData.tipo_gatilho === "HIBRIDO") && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Período Máximo (dias)</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={formData.periodo_maximo_dias}
+                        onChange={(e) => setFormData({ ...formData, periodo_maximo_dias: e.target.value })}
+                        placeholder="30"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Período Mínimo (dias)</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={formData.periodo_minimo_dias}
+                        onChange={(e) => setFormData({ ...formData, periodo_minimo_dias: e.target.value })}
+                        placeholder="7"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Trava de segurança
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Modal de Ajuda - Base de Cálculo */}

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { 
   Plus, 
@@ -12,10 +13,11 @@ import {
   CheckCircle2, 
   XCircle,
   Play,
-  Pause,
   TrendingUp,
   TrendingDown,
-  RotateCcw
+  Target,
+  Zap,
+  AlertTriangle
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -31,6 +33,13 @@ interface Ciclo {
   lucro_bruto: number;
   lucro_liquido: number;
   observacoes: string | null;
+  tipo_gatilho: string;
+  meta_volume: number | null;
+  metrica_acumuladora: string;
+  valor_acumulado: number;
+  excedente_anterior: number;
+  excedente_proximo: number;
+  operador_projeto_id: string | null;
 }
 
 interface ProjetoCiclosTabProps {
@@ -80,7 +89,7 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
       // Calcular lucros do período
       const { data: apostas, error: apostasError } = await supabase
         .from("apostas")
-        .select("lucro_prejuizo")
+        .select("lucro_prejuizo, stake")
         .eq("projeto_id", projetoId)
         .gte("data_aposta", ciclo.data_inicio)
         .lte("data_aposta", ciclo.data_fim_prevista)
@@ -89,6 +98,16 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
       if (apostasError) throw apostasError;
 
       const lucroBruto = (apostas || []).reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+      const volumeApostado = (apostas || []).reduce((acc, a) => acc + (a.stake || 0), 0);
+
+      // Calcular excedente se ciclo por volume
+      let excedenteProximo = 0;
+      if (ciclo.tipo_gatilho !== "TEMPO" && ciclo.meta_volume) {
+        const metricaFinal = ciclo.metrica_acumuladora === "VOLUME_APOSTADO" ? volumeApostado : lucroBruto;
+        if (metricaFinal > ciclo.meta_volume) {
+          excedenteProximo = metricaFinal - ciclo.meta_volume;
+        }
+      }
 
       const { error } = await supabase
         .from("projeto_ciclos")
@@ -96,7 +115,11 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
           status: "FECHADO",
           data_fim_real: new Date().toISOString().split("T")[0],
           lucro_bruto: lucroBruto,
-          lucro_liquido: lucroBruto, // Será ajustado após deduzir custos
+          lucro_liquido: lucroBruto,
+          valor_acumulado: ciclo.metrica_acumuladora === "VOLUME_APOSTADO" ? volumeApostado : lucroBruto,
+          excedente_proximo: excedenteProximo,
+          gatilho_fechamento: "MANUAL",
+          data_fechamento: new Date().toISOString(),
         })
         .eq("id", ciclo.id);
 
@@ -121,6 +144,19 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
     }
   };
 
+  const getTipoGatilhoBadge = (tipo: string) => {
+    switch (tipo) {
+      case "TEMPO":
+        return <Badge variant="outline" className="text-blue-400 border-blue-500/30"><Clock className="h-3 w-3 mr-1" />Tempo</Badge>;
+      case "VOLUME":
+        return <Badge variant="outline" className="text-purple-400 border-purple-500/30"><Target className="h-3 w-3 mr-1" />Volume</Badge>;
+      case "HIBRIDO":
+        return <Badge variant="outline" className="text-amber-400 border-amber-500/30"><Zap className="h-3 w-3 mr-1" />Híbrido</Badge>;
+      default:
+        return null;
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -132,6 +168,11 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
     const fim = new Date(dataFim);
     const hoje = new Date();
     return differenceInDays(fim, hoje);
+  };
+
+  const getProgressoVolume = (ciclo: Ciclo) => {
+    if (!ciclo.meta_volume || ciclo.meta_volume === 0) return 0;
+    return Math.min(100, (ciclo.valor_acumulado / ciclo.meta_volume) * 100);
   };
 
   if (loading) {
@@ -148,9 +189,9 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Ciclos do Projeto</h3>
+          <h3 className="text-lg font-semibold">Ciclos de Apuração</h3>
           <p className="text-sm text-muted-foreground">
-            Períodos de apuração financeira para pagamento de operadores
+            Períodos de apuração financeira (por tempo ou volume)
           </p>
         </div>
         <Button onClick={handleCreateCiclo}>
@@ -178,9 +219,11 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
           {ciclos.map((ciclo) => {
             const diasRestantes = getDiasRestantes(ciclo.data_fim_prevista);
             const isAtrasado = ciclo.status === "EM_ANDAMENTO" && diasRestantes < 0;
+            const progressoVolume = getProgressoVolume(ciclo);
+            const isVolumeProximo = ciclo.tipo_gatilho !== "TEMPO" && progressoVolume >= 90;
 
             return (
-              <Card key={ciclo.id} className={isAtrasado ? "border-amber-500/50" : ""}>
+              <Card key={ciclo.id} className={isAtrasado || isVolumeProximo ? "border-amber-500/50" : ""}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -188,7 +231,10 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
                         {ciclo.numero_ciclo}
                       </div>
                       <div>
-                        <CardTitle className="text-base">Ciclo {ciclo.numero_ciclo}</CardTitle>
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-base">Ciclo {ciclo.numero_ciclo}</CardTitle>
+                          {getTipoGatilhoBadge(ciclo.tipo_gatilho)}
+                        </div>
                         <CardDescription className="flex items-center gap-2">
                           <Calendar className="h-3 w-3" />
                           {format(new Date(ciclo.data_inicio), "dd/MM/yyyy", { locale: ptBR })} - {format(new Date(ciclo.data_fim_prevista), "dd/MM/yyyy", { locale: ptBR })}
@@ -197,7 +243,7 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
                     </div>
                     <div className="flex items-center gap-2">
                       {getStatusBadge(ciclo.status)}
-                      {ciclo.status === "EM_ANDAMENTO" && (
+                      {ciclo.status === "EM_ANDAMENTO" && ciclo.tipo_gatilho === "TEMPO" && (
                         <Badge variant="outline" className={isAtrasado ? "text-amber-400 border-amber-500/50" : ""}>
                           <Clock className="h-3 w-3 mr-1" />
                           {isAtrasado ? `${Math.abs(diasRestantes)} dias atrasado` : `${diasRestantes} dias restantes`}
@@ -207,6 +253,30 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
                   </div>
                 </CardHeader>
                 <CardContent>
+                  {/* Barra de progresso para ciclos volumétricos */}
+                  {ciclo.tipo_gatilho !== "TEMPO" && ciclo.meta_volume && ciclo.status === "EM_ANDAMENTO" && (
+                    <div className="mb-4 space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          Progresso: {formatCurrency(ciclo.valor_acumulado)} de {formatCurrency(ciclo.meta_volume)}
+                        </span>
+                        <span className={progressoVolume >= 90 ? "text-amber-400 font-medium" : "text-muted-foreground"}>
+                          {progressoVolume.toFixed(1)}%
+                        </span>
+                      </div>
+                      <Progress 
+                        value={progressoVolume} 
+                        className={progressoVolume >= 90 ? "bg-amber-500/20" : ""} 
+                      />
+                      {isVolumeProximo && (
+                        <div className="flex items-center gap-2 text-amber-400 text-sm">
+                          <AlertTriangle className="h-4 w-4" />
+                          <span>Meta próxima de ser atingida!</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Lucro Bruto</p>
@@ -216,9 +286,14 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Lucro Líquido</p>
+                      <p className="text-sm text-muted-foreground">
+                        {ciclo.excedente_anterior > 0 ? "Excedente Anterior" : "Lucro Líquido"}
+                      </p>
                       <p className={`text-lg font-semibold ${ciclo.lucro_liquido >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                        {formatCurrency(ciclo.lucro_liquido)}
+                        {ciclo.excedente_anterior > 0 
+                          ? formatCurrency(ciclo.excedente_anterior)
+                          : formatCurrency(ciclo.lucro_liquido)
+                        }
                       </p>
                     </div>
                     <div className="flex items-center justify-end gap-2">
@@ -229,7 +304,7 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
                           </Button>
                           <Button size="sm" onClick={() => handleFecharCiclo(ciclo)}>
                             <CheckCircle2 className="h-4 w-4 mr-1" />
-                            Fechar Ciclo
+                            Fechar
                           </Button>
                         </>
                       )}
@@ -240,6 +315,15 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
                       )}
                     </div>
                   </div>
+
+                  {/* Info de excedente */}
+                  {ciclo.excedente_proximo > 0 && ciclo.status === "FECHADO" && (
+                    <div className="mt-2 pt-2 border-t flex items-center gap-2 text-sm text-muted-foreground">
+                      <Target className="h-4 w-4" />
+                      <span>Excedente de {formatCurrency(ciclo.excedente_proximo)} transferido para próximo ciclo</span>
+                    </div>
+                  )}
+
                   {ciclo.observacoes && (
                     <p className="text-sm text-muted-foreground mt-2 pt-2 border-t">
                       {ciclo.observacoes}
