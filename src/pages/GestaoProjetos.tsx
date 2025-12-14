@@ -22,8 +22,10 @@ import {
   List,
   Edit,
   ExternalLink,
-  Trash2
+  Trash2,
+  Eye
 } from "lucide-react";
+import { VisualizarOperadoresDialog } from "@/components/projetos/VisualizarOperadoresDialog";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import {
   AlertDialog,
@@ -77,6 +79,8 @@ export default function GestaoProjetos() {
   const [dialogInitialTab, setDialogInitialTab] = useState<string | undefined>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [projetoToDelete, setProjetoToDelete] = useState<Projeto | null>(null);
+  const [visualizarOperadoresOpen, setVisualizarOperadoresOpen] = useState(false);
+  const [projetoParaVisualizar, setProjetoParaVisualizar] = useState<Projeto | null>(null);
 
   useEffect(() => {
     fetchProjetos();
@@ -385,6 +389,18 @@ export default function GestaoProjetos() {
                   <Button 
                     variant="outline" 
                     size="icon"
+                    title="Ver Operadores"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setProjetoParaVisualizar(projeto);
+                      setVisualizarOperadoresOpen(true);
+                    }}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
                     className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -471,6 +487,18 @@ export default function GestaoProjetos() {
                       <Button 
                         variant="ghost" 
                         size="icon"
+                        title="Ver Operadores"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProjetoParaVisualizar(projeto);
+                          setVisualizarOperadoresOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -519,6 +547,15 @@ export default function GestaoProjetos() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {projetoParaVisualizar && (
+        <VisualizarOperadoresDialog
+          open={visualizarOperadoresOpen}
+          onOpenChange={setVisualizarOperadoresOpen}
+          projetoId={projetoParaVisualizar.id}
+          projetoNome={projetoParaVisualizar.nome}
+        />
+      )}
     </div>
   );
 }
