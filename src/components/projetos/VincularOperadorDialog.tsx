@@ -53,7 +53,6 @@ const BASES_CALCULO = [
   { value: "LUCRO_PROJETO", label: "Lucro do Projeto" },
   { value: "FATURAMENTO_PROJETO", label: "Faturamento do Projeto" },
   { value: "RESULTADO_OPERACAO", label: "Resultado da Operação" },
-  { value: "VOLUME_APOSTADO", label: "Volume de Valor Apostado" },
 ];
 
 const FREQUENCIAS = [
