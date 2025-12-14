@@ -49,12 +49,11 @@ import {
   UserCheck,
   Handshake,
   FileText,
-  Eye,
   Pencil
 } from "lucide-react";
 import { VincularOperadorDialog } from "@/components/projetos/VincularOperadorDialog";
 import { EditarAcordoOperadorDialog } from "@/components/projetos/EditarAcordoOperadorDialog";
-import { VisualizarAcordoOperadorDialog } from "@/components/projetos/VisualizarAcordoOperadorDialog";
+
 import { ProjetoConciliacaoDialog } from "@/components/projetos/ProjetoConciliacaoDialog";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { ProjetoAcordoSection, AcordoData } from "@/components/projetos/ProjetoAcordoSection";
@@ -125,7 +124,6 @@ export function ProjetoDialog({
   const [operadores, setOperadores] = useState<OperadorVinculado[]>([]);
   const [vincularDialogOpen, setVincularDialogOpen] = useState(false);
   const [editarAcordoDialogOpen, setEditarAcordoDialogOpen] = useState(false);
-  const [viewAcordoDialogOpen, setViewAcordoDialogOpen] = useState(false);
   const [selectedOperadorVinculado, setSelectedOperadorVinculado] = useState<OperadorVinculado | null>(null);
   const [conciliacaoDialogOpen, setConciliacaoDialogOpen] = useState(false);
   const [temConciliacao, setTemConciliacao] = useState(false);
@@ -859,22 +857,6 @@ export function ProjetoDialog({
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => {
-                                        setSelectedOperadorVinculado(operador);
-                                        setViewAcordoDialogOpen(true);
-                                      }}
-                                    >
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Visualizar Acordo</TooltipContent>
-                                </Tooltip>
                                 {!isViewMode && operador.status === "ATIVO" && (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -1112,12 +1094,6 @@ export function ProjetoDialog({
         }}
       />
 
-      {/* Dialog para Visualizar Acordo do Operador */}
-      <VisualizarAcordoOperadorDialog
-        open={viewAcordoDialogOpen}
-        onOpenChange={setViewAcordoDialogOpen}
-        operador={selectedOperadorVinculado}
-      />
     </>
   );
 }
