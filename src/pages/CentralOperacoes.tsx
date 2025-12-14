@@ -31,6 +31,7 @@ import {
 import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliacaoDialog";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { PagamentoOperadorDialog } from "@/components/operadores/PagamentoOperadorDialog";
+import { PropostasPagamentoCard } from "@/components/operadores/PropostasPagamentoCard";
 
 interface Alerta {
   tipo_alerta: string;
@@ -711,6 +712,9 @@ export default function CentralOperacoes() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Propostas de Pagamento Pendentes */}
+      <PropostasPagamentoCard />
 
       {/* Alertas List */}
       {alertas.length === 0 && entregasPendentes.length === 0 && pagamentosParceiros.length === 0 && bonusPendentes.length === 0 && comissoesPendentes.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 && saquesPendentes.length === 0 && alertasLucro.length === 0 && pagamentosOperadorPendentes.length === 0 ? (
