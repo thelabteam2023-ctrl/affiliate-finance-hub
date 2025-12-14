@@ -911,9 +911,6 @@ export function ProjetoDialog({
                                   até {format(new Date(operador.data_saida), "dd/MM/yyyy", { locale: ptBR })}
                                 </span>
                               )}
-                              <div className="flex items-center gap-1">
-                                <span>Conciliação: {getFrequenciaLabel(operador.frequencia_conciliacao)}</span>
-                              </div>
                             </div>
 
                             {/* Referência do Acordo */}

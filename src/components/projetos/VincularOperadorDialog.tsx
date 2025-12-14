@@ -55,12 +55,6 @@ const BASES_CALCULO = [
   { value: "RESULTADO_OPERACAO", label: "Resultado da Operação" },
 ];
 
-const FREQUENCIAS = [
-  { value: "SEMANAL", label: "Semanal", descricao: "Toda segunda-feira" },
-  { value: "MENSAL", label: "Mensal", descricao: "Dia 1º de cada mês" },
-  { value: "CUSTOMIZADO", label: "Customizado", descricao: "A cada X dias" },
-];
-
 export function VincularOperadorDialog({
   open,
   onOpenChange,
@@ -75,8 +69,6 @@ export function VincularOperadorDialog({
     operador_id: "",
     funcao: "",
     data_entrada: new Date().toISOString().split("T")[0],
-    frequencia_conciliacao: "MENSAL",
-    dias_intervalo_conciliacao: "15",
     resumo_acordo: "",
     // Campos de referência do acordo (opcionais)
     modelo_pagamento: "FIXO_MENSAL",
@@ -93,8 +85,6 @@ export function VincularOperadorDialog({
         operador_id: "",
         funcao: "",
         data_entrada: new Date().toISOString().split("T")[0],
-        frequencia_conciliacao: "MENSAL",
-        dias_intervalo_conciliacao: "15",
         resumo_acordo: "",
         modelo_pagamento: "FIXO_MENSAL",
         valor_fixo: "",
@@ -150,10 +140,6 @@ export function VincularOperadorDialog({
         data_entrada: formData.data_entrada,
         status: "ATIVO",
         user_id: session.session.user.id,
-        frequencia_conciliacao: formData.frequencia_conciliacao,
-        dias_intervalo_conciliacao: formData.frequencia_conciliacao === "CUSTOMIZADO" 
-          ? parseInt(formData.dias_intervalo_conciliacao) || 15 
-          : null,
         resumo_acordo: formData.resumo_acordo || null,
         // Campos de referência (opcionais - não usados para cálculo automático)
         modelo_pagamento: formData.modelo_pagamento,
@@ -243,50 +229,6 @@ export function VincularOperadorDialog({
                 />
               </div>
             </div>
-
-            <div className="space-y-2">
-              <Label>Frequência de Conciliação *</Label>
-              <Select
-                value={formData.frequencia_conciliacao}
-                onValueChange={(value) => setFormData({ ...formData, frequencia_conciliacao: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FREQUENCIAS.map((freq) => (
-                    <SelectItem key={freq.value} value={freq.value}>
-                      <div className="flex flex-col">
-                        <span>{freq.label}</span>
-                        <span className="text-xs text-muted-foreground">{freq.descricao}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {formData.frequencia_conciliacao === "SEMANAL" && "Alertas toda segunda-feira"}
-                {formData.frequencia_conciliacao === "MENSAL" && "Alertas no dia 1º de cada mês"}
-                {formData.frequencia_conciliacao === "CUSTOMIZADO" && "Alertas a cada X dias a partir da data de entrada"}
-              </p>
-            </div>
-
-            {formData.frequencia_conciliacao === "CUSTOMIZADO" && (
-              <div className="space-y-2">
-                <Label>Intervalo em Dias *</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  max="365"
-                  value={formData.dias_intervalo_conciliacao}
-                  onChange={(e) => setFormData({ ...formData, dias_intervalo_conciliacao: e.target.value })}
-                  placeholder="15"
-                />
-                <p className="text-xs text-muted-foreground">
-                  A cada {formData.dias_intervalo_conciliacao || "X"} dias a partir da data de entrada
-                </p>
-              </div>
-            )}
 
             <div className="space-y-2">
               <Label>Resumo do Acordo</Label>
