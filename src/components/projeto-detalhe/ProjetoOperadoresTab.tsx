@@ -34,6 +34,8 @@ interface OperadorProjeto {
   percentual: number | null;
   base_calculo: string | null;
   frequencia_conciliacao: string | null;
+  dias_intervalo_conciliacao: number | null;
+  proxima_conciliacao: string | null;
   resumo_acordo: string | null;
   tipo_meta: string | null;
   meta_valor: number | null;

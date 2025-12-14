@@ -41,6 +41,7 @@ interface EditarAcordoOperadorDialogProps {
     percentual: number | null;
     base_calculo: string | null;
     frequencia_conciliacao: string | null;
+    dias_intervalo_conciliacao: number | null;
     resumo_acordo: string | null;
     operador?: {
       nome: string;
@@ -51,9 +52,9 @@ interface EditarAcordoOperadorDialogProps {
 }
 
 const FREQUENCIAS = [
-  { value: "SEMANAL", label: "Semanal" },
-  { value: "QUINZENAL", label: "Quinzenal" },
-  { value: "MENSAL", label: "Mensal" },
+  { value: "SEMANAL", label: "Semanal", descricao: "Toda segunda-feira" },
+  { value: "MENSAL", label: "Mensal", descricao: "Dia 1º de cada mês" },
+  { value: "CUSTOMIZADO", label: "Customizado", descricao: "A cada X dias" },
 ];
 
 const MODELOS_PAGAMENTO = [
@@ -81,6 +82,7 @@ export function EditarAcordoOperadorDialog({
   
   // Form state
   const [frequenciaConciliacao, setFrequenciaConciliacao] = useState("MENSAL");
+  const [diasIntervaloConciliacao, setDiasIntervaloConciliacao] = useState("15");
   const [resumoAcordo, setResumoAcordo] = useState("");
   const [modeloPagamento, setModeloPagamento] = useState("FIXO_MENSAL");
   const [valorFixo, setValorFixo] = useState("");
@@ -90,6 +92,7 @@ export function EditarAcordoOperadorDialog({
   useEffect(() => {
     if (operadorProjeto) {
       setFrequenciaConciliacao(operadorProjeto.frequencia_conciliacao || "MENSAL");
+      setDiasIntervaloConciliacao(operadorProjeto.dias_intervalo_conciliacao?.toString() || "15");
       setResumoAcordo(operadorProjeto.resumo_acordo || "");
       setModeloPagamento(operadorProjeto.modelo_pagamento || "FIXO_MENSAL");
       setValorFixo(operadorProjeto.valor_fixo?.toString() || "");
@@ -113,6 +116,9 @@ export function EditarAcordoOperadorDialog({
         .from("operador_projetos")
         .update({
           frequencia_conciliacao: frequenciaConciliacao,
+          dias_intervalo_conciliacao: frequenciaConciliacao === "CUSTOMIZADO" 
+            ? parseInt(diasIntervaloConciliacao) || 15 
+            : null,
           resumo_acordo: resumoAcordo || null,
           modelo_pagamento: modeloPagamento,
           valor_fixo: valorFixo ? parseFloat(valorFixo) : null,
@@ -170,12 +176,37 @@ export function EditarAcordoOperadorDialog({
               <SelectContent>
                 {FREQUENCIAS.map((freq) => (
                   <SelectItem key={freq.value} value={freq.value}>
-                    {freq.label}
+                    <div className="flex flex-col">
+                      <span>{freq.label}</span>
+                      <span className="text-xs text-muted-foreground">{freq.descricao}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              {frequenciaConciliacao === "SEMANAL" && "Alertas toda segunda-feira"}
+              {frequenciaConciliacao === "MENSAL" && "Alertas no dia 1º de cada mês"}
+              {frequenciaConciliacao === "CUSTOMIZADO" && "Alertas a cada X dias a partir da entrada"}
+            </p>
           </div>
+
+          {frequenciaConciliacao === "CUSTOMIZADO" && (
+            <div className="space-y-2">
+              <Label>Intervalo em Dias</Label>
+              <Input
+                type="number"
+                min="1"
+                max="365"
+                value={diasIntervaloConciliacao}
+                onChange={(e) => setDiasIntervaloConciliacao(e.target.value)}
+                placeholder="15"
+              />
+              <p className="text-xs text-muted-foreground">
+                A cada {diasIntervaloConciliacao || "X"} dias a partir da data de entrada
+              </p>
+            </div>
+          )}
 
           {/* Resumo do Acordo */}
           <div className="space-y-2">
