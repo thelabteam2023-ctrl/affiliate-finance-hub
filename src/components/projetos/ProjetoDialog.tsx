@@ -48,9 +48,13 @@ import {
   CheckCircle2,
   UserCheck,
   Handshake,
-  FileText
+  FileText,
+  Eye,
+  Pencil
 } from "lucide-react";
 import { VincularOperadorDialog } from "@/components/projetos/VincularOperadorDialog";
+import { EditarAcordoOperadorDialog } from "@/components/projetos/EditarAcordoOperadorDialog";
+import { VisualizarAcordoOperadorDialog } from "@/components/projetos/VisualizarAcordoOperadorDialog";
 import { ProjetoConciliacaoDialog } from "@/components/projetos/ProjetoConciliacaoDialog";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { ProjetoAcordoSection, AcordoData } from "@/components/projetos/ProjetoAcordoSection";
@@ -120,6 +124,9 @@ export function ProjetoDialog({
   const [activeTab, setActiveTab] = useState(initialTab || "dados");
   const [operadores, setOperadores] = useState<OperadorVinculado[]>([]);
   const [vincularDialogOpen, setVincularDialogOpen] = useState(false);
+  const [editarAcordoDialogOpen, setEditarAcordoDialogOpen] = useState(false);
+  const [viewAcordoDialogOpen, setViewAcordoDialogOpen] = useState(false);
+  const [selectedOperadorVinculado, setSelectedOperadorVinculado] = useState<OperadorVinculado | null>(null);
   const [conciliacaoDialogOpen, setConciliacaoDialogOpen] = useState(false);
   const [temConciliacao, setTemConciliacao] = useState(false);
   const [acordoData, setAcordoData] = useState<AcordoData | null>(null);
@@ -852,6 +859,40 @@ export function ProjetoDialog({
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => {
+                                        setSelectedOperadorVinculado(operador);
+                                        setViewAcordoDialogOpen(true);
+                                      }}
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Visualizar Acordo</TooltipContent>
+                                </Tooltip>
+                                {!isViewMode && operador.status === "ATIVO" && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => {
+                                          setSelectedOperadorVinculado(operador);
+                                          setEditarAcordoDialogOpen(true);
+                                        }}
+                                      >
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Editar Acordo</TooltipContent>
+                                  </Tooltip>
+                                )}
                                 <Badge 
                                   className={
                                     operador.status === "ATIVO" 
@@ -1045,6 +1086,37 @@ export function ProjetoDialog({
         description="Esta ação finalizará o vínculo do operador com este projeto. Digite o código abaixo para confirmar."
         confirmLabel="Desvincular"
         variant="danger"
+      />
+
+      {/* Dialog para Editar Acordo do Operador */}
+      <EditarAcordoOperadorDialog
+        open={editarAcordoDialogOpen}
+        onOpenChange={setEditarAcordoDialogOpen}
+        operadorProjeto={selectedOperadorVinculado ? {
+          id: selectedOperadorVinculado.id,
+          operador_id: selectedOperadorVinculado.operador_id,
+          funcao: selectedOperadorVinculado.funcao,
+          data_entrada: selectedOperadorVinculado.data_entrada,
+          modelo_pagamento: selectedOperadorVinculado.modelo_pagamento || "FIXO_MENSAL",
+          valor_fixo: selectedOperadorVinculado.valor_fixo,
+          percentual: selectedOperadorVinculado.percentual,
+          base_calculo: selectedOperadorVinculado.base_calculo,
+          frequencia_conciliacao: selectedOperadorVinculado.frequencia_conciliacao,
+          resumo_acordo: selectedOperadorVinculado.resumo_acordo,
+          operador: { nome: selectedOperadorVinculado.operador_nome, cpf: "" },
+        } : null}
+        onSuccess={() => {
+          if (projeto?.id) {
+            fetchOperadoresProjeto(projeto.id);
+          }
+        }}
+      />
+
+      {/* Dialog para Visualizar Acordo do Operador */}
+      <VisualizarAcordoOperadorDialog
+        open={viewAcordoDialogOpen}
+        onOpenChange={setViewAcordoDialogOpen}
+        operador={selectedOperadorVinculado}
       />
     </>
   );
