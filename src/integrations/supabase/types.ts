@@ -3134,10 +3134,13 @@ export type Database = {
           bookmaker_id: string | null
           categoria: string
           created_at: string
+          data_confirmacao: string | null
           data_registro: string
+          data_reversao: string | null
           descricao: string | null
           id: string
           projeto_id: string
+          status: string
           updated_at: string
           user_id: string
           valor: number
@@ -3146,10 +3149,13 @@ export type Database = {
           bookmaker_id?: string | null
           categoria: string
           created_at?: string
+          data_confirmacao?: string | null
           data_registro?: string
+          data_reversao?: string | null
           descricao?: string | null
           id?: string
           projeto_id: string
+          status?: string
           updated_at?: string
           user_id: string
           valor: number
@@ -3158,10 +3164,13 @@ export type Database = {
           bookmaker_id?: string | null
           categoria?: string
           created_at?: string
+          data_confirmacao?: string | null
           data_registro?: string
+          data_reversao?: string | null
           descricao?: string | null
           id?: string
           projeto_id?: string
+          status?: string
           updated_at?: string
           user_id?: string
           valor?: number

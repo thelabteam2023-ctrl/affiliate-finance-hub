@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Plus, AlertTriangle, Trash2, DollarSign, Hash } from "lucide-react";
+import { Plus, AlertTriangle, Trash2, Clock, CheckCircle, RotateCcw, Ban } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PerdaOperacionalDialog } from "./PerdaOperacionalDialog";
@@ -27,6 +27,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ProjetoPerdasTabProps {
   projetoId: string;
@@ -38,6 +44,9 @@ interface Perda {
   categoria: string;
   descricao: string | null;
   data_registro: string;
+  status: string;
+  data_confirmacao: string | null;
+  data_reversao: string | null;
   bookmaker_id: string | null;
   bookmaker?: {
     nome: string;
@@ -54,12 +63,31 @@ const CATEGORIAS: Record<string, { label: string; color: string }> = {
   OUTRO: { label: "Outro", color: "bg-slate-500/20 text-slate-400 border-slate-500/30" },
 };
 
+const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof Clock }> = {
+  PENDENTE: { 
+    label: "Pendente", 
+    color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+    icon: Clock
+  },
+  CONFIRMADA: { 
+    label: "Confirmada", 
+    color: "bg-red-500/20 text-red-400 border-red-500/30",
+    icon: CheckCircle
+  },
+  REVERSA: { 
+    label: "Revertida", 
+    color: "bg-green-500/20 text-green-400 border-green-500/30",
+    icon: RotateCcw
+  },
+};
+
 export function ProjetoPerdasTab({ projetoId }: ProjetoPerdasTabProps) {
   const [perdas, setPerdas] = useState<Perda[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPerdas();
@@ -76,6 +104,9 @@ export function ProjetoPerdasTab({ projetoId }: ProjetoPerdasTabProps) {
           categoria,
           descricao,
           data_registro,
+          status,
+          data_confirmacao,
+          data_reversao,
           bookmaker_id,
           bookmaker:bookmakers(nome)
         `)
@@ -91,11 +122,130 @@ export function ProjetoPerdasTab({ projetoId }: ProjetoPerdasTabProps) {
     }
   };
 
+  const handleStatusChange = async (perdaId: string, newStatus: string, perda: Perda) => {
+    if (perda.status === newStatus) return;
+    
+    try {
+      setUpdatingStatus(perdaId);
+      
+      const updates: Record<string, any> = { status: newStatus };
+      
+      if (newStatus === 'CONFIRMADA') {
+        updates.data_confirmacao = new Date().toISOString();
+        updates.data_reversao = null;
+        
+        // When confirming, deduct from bookmaker's saldo_atual
+        if (perda.bookmaker_id) {
+          const { data: bkData } = await supabase
+            .from("bookmakers")
+            .select("saldo_atual")
+            .eq("id", perda.bookmaker_id)
+            .single();
+          
+          if (bkData) {
+            await supabase
+              .from("bookmakers")
+              .update({ 
+                saldo_atual: Math.max(0, bkData.saldo_atual - perda.valor),
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", perda.bookmaker_id);
+          }
+        }
+      } else if (newStatus === 'REVERSA') {
+        updates.data_reversao = new Date().toISOString();
+        
+        // When reversing a confirmed loss, add back to bookmaker's saldo_atual
+        if (perda.status === 'CONFIRMADA' && perda.bookmaker_id) {
+          const { data: bkData } = await supabase
+            .from("bookmakers")
+            .select("saldo_atual")
+            .eq("id", perda.bookmaker_id)
+            .single();
+          
+          if (bkData) {
+            await supabase
+              .from("bookmakers")
+              .update({ 
+                saldo_atual: bkData.saldo_atual + perda.valor,
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", perda.bookmaker_id);
+          }
+        }
+      } else if (newStatus === 'PENDENTE') {
+        updates.data_confirmacao = null;
+        updates.data_reversao = null;
+        
+        // If going back to pending from confirmed, add back to saldo
+        if (perda.status === 'CONFIRMADA' && perda.bookmaker_id) {
+          const { data: bkData } = await supabase
+            .from("bookmakers")
+            .select("saldo_atual")
+            .eq("id", perda.bookmaker_id)
+            .single();
+          
+          if (bkData) {
+            await supabase
+              .from("bookmakers")
+              .update({ 
+                saldo_atual: bkData.saldo_atual + perda.valor,
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", perda.bookmaker_id);
+          }
+        }
+      }
+
+      const { error } = await supabase
+        .from("projeto_perdas")
+        .update(updates)
+        .eq("id", perdaId);
+
+      if (error) throw error;
+      
+      const statusLabels: Record<string, string> = {
+        PENDENTE: "pendente",
+        CONFIRMADA: "confirmada",
+        REVERSA: "revertida"
+      };
+      
+      toast.success(`Perda marcada como ${statusLabels[newStatus]}`);
+      fetchPerdas();
+    } catch (error: any) {
+      toast.error("Erro ao atualizar status: " + error.message);
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteId) return;
     
+    const perda = perdas.find(p => p.id === deleteId);
+    
     try {
       setDeleting(true);
+      
+      // If deleting a confirmed loss, add back to bookmaker balance
+      if (perda && perda.status === 'CONFIRMADA' && perda.bookmaker_id) {
+        const { data: bkData } = await supabase
+          .from("bookmakers")
+          .select("saldo_atual")
+          .eq("id", perda.bookmaker_id)
+          .single();
+        
+        if (bkData) {
+          await supabase
+            .from("bookmakers")
+            .update({ 
+              saldo_atual: bkData.saldo_atual + perda.valor,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", perda.bookmaker_id);
+        }
+      }
+      
       const { error } = await supabase
         .from("projeto_perdas")
         .delete()
@@ -120,13 +270,20 @@ export function ProjetoPerdasTab({ projetoId }: ProjetoPerdasTabProps) {
     }).format(value);
   };
 
-  const totalPerdas = perdas.reduce((acc, p) => acc + Number(p.valor), 0);
-  const qtdRegistros = perdas.length;
+  // Calculate totals by status
+  const perdasPendentes = perdas.filter(p => p.status === 'PENDENTE');
+  const perdasConfirmadas = perdas.filter(p => p.status === 'CONFIRMADA');
+  const perdasReversas = perdas.filter(p => p.status === 'REVERSA');
+  
+  const totalPendente = perdasPendentes.reduce((acc, p) => acc + Number(p.valor), 0);
+  const totalConfirmada = perdasConfirmadas.reduce((acc, p) => acc + Number(p.valor), 0);
+  const totalReversa = perdasReversas.reduce((acc, p) => acc + Number(p.valor), 0);
 
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Skeleton className="h-24" />
           <Skeleton className="h-24" />
           <Skeleton className="h-24" />
         </div>
@@ -138,36 +295,53 @@ export function ProjetoPerdasTab({ projetoId }: ProjetoPerdasTabProps) {
   return (
     <div className="space-y-4">
       {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-yellow-500/30">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Perdas</CardTitle>
-            <DollarSign className="h-4 w-4 text-red-500" />
+            <CardTitle className="text-sm font-medium">Perdas Pendentes</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-500">
+              {formatCurrency(totalPendente)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {perdasPendentes.length} registro(s) • Capital bloqueado
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-red-500/30">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Perdas Confirmadas</CardTitle>
+            <Ban className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-500">
-              {formatCurrency(totalPerdas)}
+              {formatCurrency(totalConfirmada)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Impacta diretamente o resultado do projeto
+              {perdasConfirmadas.length} registro(s) • Impacta lucro/ROI
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-green-500/30">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Perdas Revertidas</CardTitle>
+            <RotateCcw className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-500">
+              {formatCurrency(totalReversa)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {perdasReversas.length} registro(s) • Recuperado
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Registros</CardTitle>
-            <Hash className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{qtdRegistros}</div>
-            <p className="text-xs text-muted-foreground">
-              Perdas registradas neste projeto
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="md:col-span-2 lg:col-span-1">
           <CardContent className="pt-6">
             <Button onClick={() => setDialogOpen(true)} className="w-full">
               <Plus className="mr-2 h-4 w-4" />
@@ -197,42 +371,84 @@ export function ProjetoPerdasTab({ projetoId }: ProjetoPerdasTabProps) {
                   <TableHead>Data</TableHead>
                   <TableHead>Bookmaker</TableHead>
                   <TableHead>Categoria</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {perdas.map((perda) => (
-                  <TableRow key={perda.id}>
-                    <TableCell>
-                      {format(new Date(perda.data_registro), "dd/MM/yyyy", { locale: ptBR })}
-                    </TableCell>
-                    <TableCell>
-                      {perda.bookmaker?.nome || "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={CATEGORIAS[perda.categoria]?.color || CATEGORIAS.OUTRO.color}>
-                        {CATEGORIAS[perda.categoria]?.label || perda.categoria}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate">
-                      {perda.descricao || "-"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-red-500">
-                      {formatCurrency(perda.valor)}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleteId(perda.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-muted-foreground hover:text-red-500" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {perdas.map((perda) => {
+                  const StatusIcon = STATUS_CONFIG[perda.status]?.icon || Clock;
+                  return (
+                    <TableRow key={perda.id} className={perda.status === 'REVERSA' ? 'opacity-60' : ''}>
+                      <TableCell>
+                        {format(new Date(perda.data_registro), "dd/MM/yyyy", { locale: ptBR })}
+                      </TableCell>
+                      <TableCell>
+                        {perda.bookmaker?.nome || "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={CATEGORIAS[perda.categoria]?.color || CATEGORIAS.OUTRO.color}>
+                          {CATEGORIAS[perda.categoria]?.label || perda.categoria}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild disabled={updatingStatus === perda.id}>
+                            <Button variant="ghost" size="sm" className="h-auto p-0">
+                              <Badge className={`${STATUS_CONFIG[perda.status]?.color || ''} cursor-pointer`}>
+                                <StatusIcon className="h-3 w-3 mr-1" />
+                                {STATUS_CONFIG[perda.status]?.label || perda.status}
+                              </Badge>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuItem 
+                              onClick={() => handleStatusChange(perda.id, 'PENDENTE', perda)}
+                              disabled={perda.status === 'PENDENTE'}
+                            >
+                              <Clock className="h-4 w-4 mr-2 text-yellow-500" />
+                              Marcar como Pendente
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleStatusChange(perda.id, 'CONFIRMADA', perda)}
+                              disabled={perda.status === 'CONFIRMADA'}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2 text-red-500" />
+                              Confirmar Perda
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleStatusChange(perda.id, 'REVERSA', perda)}
+                              disabled={perda.status === 'REVERSA'}
+                            >
+                              <RotateCcw className="h-4 w-4 mr-2 text-green-500" />
+                              Reverter Perda
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate">
+                        {perda.descricao || "-"}
+                      </TableCell>
+                      <TableCell className={`text-right font-medium ${
+                        perda.status === 'REVERSA' ? 'text-green-500 line-through' :
+                        perda.status === 'CONFIRMADA' ? 'text-red-500' : 'text-yellow-500'
+                      }`}>
+                        {formatCurrency(perda.valor)}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteId(perda.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-red-500" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -254,6 +470,11 @@ export function ProjetoPerdasTab({ projetoId }: ProjetoPerdasTabProps) {
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja remover este registro de perda? Esta ação não pode ser desfeita.
+              {perdas.find(p => p.id === deleteId)?.status === 'CONFIRMADA' && (
+                <span className="block mt-2 text-yellow-500">
+                  ⚠️ Esta perda está confirmada. O valor será devolvido ao saldo da bookmaker.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
