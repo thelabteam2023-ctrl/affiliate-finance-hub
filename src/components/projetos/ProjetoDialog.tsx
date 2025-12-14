@@ -6,6 +6,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -105,6 +115,8 @@ export function ProjetoDialog({
   const [conciliacaoDialogOpen, setConciliacaoDialogOpen] = useState(false);
   const [temConciliacao, setTemConciliacao] = useState(false);
   const [acordoData, setAcordoData] = useState<AcordoData | null>(null);
+  const [showVincularPrompt, setShowVincularPrompt] = useState(false);
+  const [novoprojetoId, setNovoProjetoId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<Projeto>({
     nome: "",
@@ -365,7 +377,12 @@ export function ProjetoDialog({
           return;
         }
         
-        toast.success("Projeto criado com sucesso");
+        // Para projetos internos, perguntar se deseja vincular operador
+        setNovoProjetoId(newProjeto.id);
+        setShowVincularPrompt(true);
+        onSuccess();
+        onOpenChange(false);
+        return;
       } else {
         const { error } = await supabase
           .from("projetos")
@@ -617,16 +634,6 @@ export function ProjetoDialog({
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <Label>Orçamento Inicial</Label>
-                  <Input
-                    type="number"
-                    value={formData.orcamento_inicial}
-                    onChange={(e) => setFormData({ ...formData, orcamento_inicial: parseFloat(e.target.value) || 0 })}
-                    disabled={isViewMode}
-                    placeholder="0.00"
-                  />
-                </div>
 
                 {/* Investimento Crypto */}
                 <Card className={formData.tem_investimento_crypto ? "border-orange-500/30" : ""}>
@@ -906,6 +913,33 @@ export function ProjetoDialog({
           />
         </>
       )}
+
+      {/* Prompt para vincular operador após criar projeto interno */}
+      <AlertDialog open={showVincularPrompt} onOpenChange={setShowVincularPrompt}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Projeto criado com sucesso!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja vincular um operador a este projeto agora?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowVincularPrompt(false)}>
+              Depois
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowVincularPrompt(false);
+                if (novoprojetoId && onCreatedOpenEdit) {
+                  onCreatedOpenEdit(novoprojetoId, "operadores");
+                }
+              }}
+            >
+              Sim, vincular
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
