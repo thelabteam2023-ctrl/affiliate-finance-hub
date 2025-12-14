@@ -126,9 +126,9 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
         apostasMultiplas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
         surebets.reduce((acc, a) => acc + (a.lucro_real || 0), 0);
 
-      // Calcular ROI
-      const roi = volumeApostado > 0 ? (lucroBruto / volumeApostado) * 100 : 0;
-
+          // Calcular ROI e Ticket Médio
+          const roi = volumeApostado > 0 ? (lucroBruto / volumeApostado) * 100 : 0;
+          const ticketMedio = qtdApostas > 0 ? volumeApostado / qtdApostas : 0;
       // Calcular excedente se ciclo por volume
       let excedenteProximo = 0;
       if (ciclo.tipo_gatilho !== "TEMPO" && ciclo.meta_volume) {
@@ -151,8 +151,8 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
           data_fechamento: new Date().toISOString(),
           // Store additional metrics in observacoes JSON-like format
           observacoes: ciclo.observacoes 
-            ? `${ciclo.observacoes}\n\n📊 Métricas: ${qtdApostas} apostas | Volume: R$ ${volumeApostado.toFixed(2)} | ROI: ${roi.toFixed(2)}%`
-            : `📊 Métricas: ${qtdApostas} apostas | Volume: R$ ${volumeApostado.toFixed(2)} | ROI: ${roi.toFixed(2)}%`,
+            ? `${ciclo.observacoes}\n\n📊 Métricas: ${qtdApostas} apostas | Volume: R$ ${volumeApostado.toFixed(2)} | Ticket Médio: R$ ${ticketMedio.toFixed(2)} | ROI: ${roi.toFixed(2)}%`
+            : `📊 Métricas: ${qtdApostas} apostas | Volume: R$ ${volumeApostado.toFixed(2)} | Ticket Médio: R$ ${ticketMedio.toFixed(2)} | ROI: ${roi.toFixed(2)}%`,
         })
         .eq("id", ciclo.id);
 
@@ -310,23 +310,12 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Lucro Bruto</p>
                       <p className={`text-lg font-semibold ${ciclo.lucro_bruto >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                         {ciclo.lucro_bruto >= 0 ? <TrendingUp className="h-4 w-4 inline mr-1" /> : <TrendingDown className="h-4 w-4 inline mr-1" />}
                         {formatCurrency(ciclo.lucro_bruto)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        {ciclo.excedente_anterior > 0 ? "Excedente Anterior" : "Lucro Líquido"}
-                      </p>
-                      <p className={`text-lg font-semibold ${ciclo.lucro_liquido >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                        {ciclo.excedente_anterior > 0 
-                          ? formatCurrency(ciclo.excedente_anterior)
-                          : formatCurrency(ciclo.lucro_liquido)
-                        }
                       </p>
                     </div>
                     <div className="flex items-center justify-end gap-2">
