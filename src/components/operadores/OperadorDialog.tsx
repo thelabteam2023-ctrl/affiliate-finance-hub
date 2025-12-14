@@ -120,6 +120,7 @@ export function OperadorDialog({
   const [cpfError, setCpfError] = useState<string | null>(null);
   const [pagamentoDialogOpen, setPagamentoDialogOpen] = useState(false);
   const [vincularProjetoDialogOpen, setVincularProjetoDialogOpen] = useState(false);
+  const [selectedPagamentoEdit, setSelectedPagamentoEdit] = useState<PagamentoOperador | null>(null);
   
   const [formData, setFormData] = useState<Operador>({
     nome: "",
@@ -786,11 +787,25 @@ export function OperadorDialog({
                               )}
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="font-semibold">{formatCurrency(pagamento.valor)}</p>
-                            <Badge className={getStatusPagamentoColor(pagamento.status)}>
-                              {pagamento.status}
-                            </Badge>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="font-semibold">{formatCurrency(pagamento.valor)}</p>
+                              <Badge className={getStatusPagamentoColor(pagamento.status)}>
+                                {pagamento.status}
+                              </Badge>
+                            </div>
+                            {pagamento.status === "PENDENTE" && (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedPagamentoEdit(pagamento);
+                                  setPagamentoDialogOpen(true);
+                                }}
+                              >
+                                <DollarSign className="h-3 w-3 mr-1" />
+                                Pagar
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -814,15 +829,31 @@ export function OperadorDialog({
         )}
       </DialogContent>
 
-      {/* Dialog para novo pagamento */}
+      {/* Dialog para novo/editar pagamento */}
       <PagamentoOperadorDialog
         open={pagamentoDialogOpen}
-        onOpenChange={setPagamentoDialogOpen}
+        onOpenChange={(open) => {
+          setPagamentoDialogOpen(open);
+          if (!open) setSelectedPagamentoEdit(null);
+        }}
         defaultOperadorId={operador?.id}
+        pagamento={selectedPagamentoEdit ? {
+          id: selectedPagamentoEdit.id,
+          operador_id: operador?.id || "",
+          projeto_id: null,
+          tipo_pagamento: selectedPagamentoEdit.tipo_pagamento,
+          valor: selectedPagamentoEdit.valor,
+          moeda: selectedPagamentoEdit.moeda,
+          data_pagamento: selectedPagamentoEdit.data_pagamento,
+          data_competencia: null,
+          descricao: selectedPagamentoEdit.descricao,
+          status: selectedPagamentoEdit.status,
+        } : undefined}
         onSuccess={() => {
           if (operador?.id) {
             fetchPagamentosOperador(operador.id);
           }
+          setSelectedPagamentoEdit(null);
         }}
       />
 
