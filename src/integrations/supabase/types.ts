@@ -2000,21 +2000,17 @@ export type Database = {
           meta_percentual: number | null
           meta_valor: number | null
           meta_volume: number | null
-          metrica_acumuladora: string
           modelo_pagamento: string
           motivo_saida: string | null
           observacoes: string | null
           operador_id: string
           percentual: number | null
-          periodo_maximo_dias: number | null
-          periodo_minimo_dias: number | null
           piso_pagamento: number | null
           prejuizo_acumulado: number | null
           projeto_id: string
           regra_prejuizo: string | null
           status: string
           teto_pagamento: number | null
-          tipo_gatilho: string
           tipo_meta: string | null
           updated_at: string
           user_id: string
@@ -2032,21 +2028,17 @@ export type Database = {
           meta_percentual?: number | null
           meta_valor?: number | null
           meta_volume?: number | null
-          metrica_acumuladora?: string
           modelo_pagamento?: string
           motivo_saida?: string | null
           observacoes?: string | null
           operador_id: string
           percentual?: number | null
-          periodo_maximo_dias?: number | null
-          periodo_minimo_dias?: number | null
           piso_pagamento?: number | null
           prejuizo_acumulado?: number | null
           projeto_id: string
           regra_prejuizo?: string | null
           status?: string
           teto_pagamento?: number | null
-          tipo_gatilho?: string
           tipo_meta?: string | null
           updated_at?: string
           user_id: string
@@ -2064,21 +2056,17 @@ export type Database = {
           meta_percentual?: number | null
           meta_valor?: number | null
           meta_volume?: number | null
-          metrica_acumuladora?: string
           modelo_pagamento?: string
           motivo_saida?: string | null
           observacoes?: string | null
           operador_id?: string
           percentual?: number | null
-          periodo_maximo_dias?: number | null
-          periodo_minimo_dias?: number | null
           piso_pagamento?: number | null
           prejuizo_acumulado?: number | null
           projeto_id?: string
           regra_prejuizo?: string | null
           status?: string
           teto_pagamento?: number | null
-          tipo_gatilho?: string
           tipo_meta?: string | null
           updated_at?: string
           user_id?: string
