@@ -724,17 +724,6 @@ export function ProjetoDialog({
                     )}
                   </CardContent>
                 </Card>
-
-                <div className="space-y-2">
-                  <Label>Observações</Label>
-                  <Textarea
-                    value={formData.observacoes || ""}
-                    onChange={(e) => setFormData({ ...formData, observacoes: e.target.value || null })}
-                    disabled={isViewMode}
-                    placeholder="Observações sobre o projeto..."
-                    rows={3}
-                  />
-                </div>
               </TabsContent>
 
               {/* Tab: Acordo (only for exclusive investor projects) */}
