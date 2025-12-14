@@ -309,7 +309,7 @@ export function CicloDialog({
               value={formData.tipo_gatilho}
               onValueChange={(value) => setFormData({ ...formData, tipo_gatilho: value })}
             >
-              <SelectTrigger>
+              <SelectTrigger className="justify-center [&>span]:flex [&>span]:items-center [&>span]:justify-center [&>span]:gap-2">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
