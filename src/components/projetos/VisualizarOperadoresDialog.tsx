@@ -186,18 +186,18 @@ export function VisualizarOperadoresDialog({
                       
                       <div className="flex flex-wrap gap-2">
                         {op.valor_fixo && op.valor_fixo > 0 && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge className="bg-primary/20 text-primary border-primary/30">
                             Fixo: {formatCurrency(op.valor_fixo)}
                           </Badge>
                         )}
                         {op.percentual && op.percentual > 0 && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
                             {op.percentual}%
                           </Badge>
                         )}
                         {op.base_calculo && (
-                          <Badge variant="outline" className="text-xs">
-                            Base: {op.base_calculo === "LUCRO_BRUTO" ? "Lucro Bruto" : "Lucro Líquido"}
+                          <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30">
+                            Base: {op.base_calculo === "LUCRO_BRUTO" ? "Lucro Bruto" : op.base_calculo === "LUCRO_LIQUIDO" ? "Lucro Líquido" : "Faturamento"}
                           </Badge>
                         )}
                       </div>
