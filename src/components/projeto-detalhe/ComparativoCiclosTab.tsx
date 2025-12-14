@@ -141,6 +141,136 @@ export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
     }
   };
 
+  // Helper functions - defined before useMemo
+  const calcularTendencia = (ciclosFechados: CicloData[]): "crescimento" | "estabilidade" | "queda" => {
+    if (ciclosFechados.length < 2) return "estabilidade";
+    
+    const ultimos3 = ciclosFechados.slice(-3);
+    if (ultimos3.length < 2) return "estabilidade";
+
+    let crescimentos = 0;
+    let quedas = 0;
+
+    for (let i = 1; i < ultimos3.length; i++) {
+      if (ultimos3[i].lucro > ultimos3[i - 1].lucro) crescimentos++;
+      else if (ultimos3[i].lucro < ultimos3[i - 1].lucro) quedas++;
+    }
+
+    if (crescimentos > quedas) return "crescimento";
+    if (quedas > crescimentos) return "queda";
+    return "estabilidade";
+  };
+
+  const calcularVariacoes = (ciclosData: CicloData[]) => {
+    const variacoes: Array<{
+      cicloAtual: CicloData;
+      cicloAnterior: CicloData;
+      varLucro: number;
+      varLucroAbs: number;
+      varApostas: number;
+      varTicketMedio: number;
+      varRoi: number;
+      varVolume: number;
+    }> = [];
+
+    for (let i = 1; i < ciclosData.length; i++) {
+      const atual = ciclosData[i];
+      const anterior = ciclosData[i - 1];
+
+      variacoes.push({
+        cicloAtual: atual,
+        cicloAnterior: anterior,
+        varLucro: anterior.lucro !== 0 ? ((atual.lucro - anterior.lucro) / Math.abs(anterior.lucro)) * 100 : atual.lucro > 0 ? 100 : -100,
+        varLucroAbs: atual.lucro - anterior.lucro,
+        varApostas: atual.qtdApostas - anterior.qtdApostas,
+        varTicketMedio: anterior.ticketMedio !== 0 ? ((atual.ticketMedio - anterior.ticketMedio) / anterior.ticketMedio) * 100 : 0,
+        varRoi: atual.roi - anterior.roi,
+        varVolume: anterior.volume !== 0 ? ((atual.volume - anterior.volume) / anterior.volume) * 100 : 0,
+      });
+    }
+
+    return variacoes;
+  };
+
+  const calcularMelhorMes = (ciclosFechados: CicloData[]) => {
+    const porMes: Record<string, { lucro: number; volume: number; apostas: number }> = {};
+    
+    ciclosFechados.forEach(ciclo => {
+      const mes = format(new Date(ciclo.data_inicio), "MMMM yyyy", { locale: ptBR });
+      if (!porMes[mes]) {
+        porMes[mes] = { lucro: 0, volume: 0, apostas: 0 };
+      }
+      porMes[mes].lucro += ciclo.lucro;
+      porMes[mes].volume += ciclo.volume;
+      porMes[mes].apostas += ciclo.qtdApostas;
+    });
+
+    const meses = Object.entries(porMes);
+    if (meses.length === 0) return null;
+
+    const melhor = meses.reduce((a, b) => a[1].lucro > b[1].lucro ? a : b);
+    return { mes: melhor[0], ...melhor[1], lucroMedio: melhor[1].apostas > 0 ? melhor[1].lucro / melhor[1].apostas : 0 };
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
+
+  const identificarPontosAtencao = (ciclosData: CicloData[], variacoes: ReturnType<typeof calcularVariacoes>) => {
+    const pontos: string[] = [];
+
+    // Quedas de ROI
+    variacoes.forEach(v => {
+      if (v.varRoi < -5) {
+        pontos.push(`Ciclo ${v.cicloAtual.numero_ciclo}: queda de ${Math.abs(v.varRoi).toFixed(1)}pp no ROI em relação ao ciclo anterior`);
+      }
+    });
+
+    // Volume aumentou mas lucro não acompanhou
+    variacoes.forEach(v => {
+      if (v.varVolume > 20 && v.varLucro < 10) {
+        pontos.push(`Ciclo ${v.cicloAtual.numero_ciclo}: aumento de ${v.varVolume.toFixed(0)}% no volume sem aumento proporcional de lucro`);
+      }
+    });
+
+    // Ciclos com prejuízo
+    ciclosData.filter(c => c.lucro < 0 && c.status === "FECHADO").forEach(c => {
+      pontos.push(`Ciclo ${c.numero_ciclo}: fechou com prejuízo de ${formatCurrency(Math.abs(c.lucro))}`);
+    });
+
+    return pontos;
+  };
+
+  const identificarDestaquesPositivos = (ciclosData: CicloData[], variacoes: ReturnType<typeof calcularVariacoes>) => {
+    const destaques: string[] = [];
+
+    // Melhoria significativa de ROI
+    variacoes.forEach(v => {
+      if (v.varRoi > 5) {
+        destaques.push(`Ciclo ${v.cicloAtual.numero_ciclo}: melhoria de ${v.varRoi.toFixed(1)}pp no ROI`);
+      }
+    });
+
+    // Aumento de lucro com menos apostas (eficiência)
+    variacoes.forEach(v => {
+      if (v.varLucro > 20 && v.varApostas <= 0) {
+        destaques.push(`Ciclo ${v.cicloAtual.numero_ciclo}: +${v.varLucro.toFixed(0)}% de lucro com menos apostas (maior eficiência)`);
+      }
+    });
+
+    // Ticket médio melhorou
+    variacoes.forEach(v => {
+      if (v.varTicketMedio > 15 && v.varLucro > 0) {
+        destaques.push(`Ciclo ${v.cicloAtual.numero_ciclo}: ticket médio subiu ${v.varTicketMedio.toFixed(0)}%, impulsionando o lucro`);
+      }
+    });
+
+    return destaques;
+  };
+
   // Análises calculadas
   const analises = useMemo(() => {
     if (ciclos.length === 0) return null;
@@ -196,134 +326,6 @@ export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
     };
   }, [ciclos]);
 
-  const calcularTendencia = (ciclosFechados: CicloData[]): "crescimento" | "estabilidade" | "queda" => {
-    if (ciclosFechados.length < 2) return "estabilidade";
-    
-    const ultimos3 = ciclosFechados.slice(-3);
-    if (ultimos3.length < 2) return "estabilidade";
-
-    let crescimentos = 0;
-    let quedas = 0;
-
-    for (let i = 1; i < ultimos3.length; i++) {
-      if (ultimos3[i].lucro > ultimos3[i - 1].lucro) crescimentos++;
-      else if (ultimos3[i].lucro < ultimos3[i - 1].lucro) quedas++;
-    }
-
-    if (crescimentos > quedas) return "crescimento";
-    if (quedas > crescimentos) return "queda";
-    return "estabilidade";
-  };
-
-  const calcularVariacoes = (ciclos: CicloData[]) => {
-    const variacoes: Array<{
-      cicloAtual: CicloData;
-      cicloAnterior: CicloData;
-      varLucro: number;
-      varLucroAbs: number;
-      varApostas: number;
-      varTicketMedio: number;
-      varRoi: number;
-      varVolume: number;
-    }> = [];
-
-    for (let i = 1; i < ciclos.length; i++) {
-      const atual = ciclos[i];
-      const anterior = ciclos[i - 1];
-
-      variacoes.push({
-        cicloAtual: atual,
-        cicloAnterior: anterior,
-        varLucro: anterior.lucro !== 0 ? ((atual.lucro - anterior.lucro) / Math.abs(anterior.lucro)) * 100 : atual.lucro > 0 ? 100 : -100,
-        varLucroAbs: atual.lucro - anterior.lucro,
-        varApostas: atual.qtdApostas - anterior.qtdApostas,
-        varTicketMedio: anterior.ticketMedio !== 0 ? ((atual.ticketMedio - anterior.ticketMedio) / anterior.ticketMedio) * 100 : 0,
-        varRoi: atual.roi - anterior.roi,
-        varVolume: anterior.volume !== 0 ? ((atual.volume - anterior.volume) / anterior.volume) * 100 : 0,
-      });
-    }
-
-    return variacoes;
-  };
-
-  const calcularMelhorMes = (ciclosFechados: CicloData[]) => {
-    const porMes: Record<string, { lucro: number; volume: number; apostas: number }> = {};
-    
-    ciclosFechados.forEach(ciclo => {
-      const mes = format(new Date(ciclo.data_inicio), "MMMM yyyy", { locale: ptBR });
-      if (!porMes[mes]) {
-        porMes[mes] = { lucro: 0, volume: 0, apostas: 0 };
-      }
-      porMes[mes].lucro += ciclo.lucro;
-      porMes[mes].volume += ciclo.volume;
-      porMes[mes].apostas += ciclo.qtdApostas;
-    });
-
-    const meses = Object.entries(porMes);
-    if (meses.length === 0) return null;
-
-    const melhor = meses.reduce((a, b) => a[1].lucro > b[1].lucro ? a : b);
-    return { mes: melhor[0], ...melhor[1], lucroMedio: melhor[1].apostas > 0 ? melhor[1].lucro / melhor[1].apostas : 0 };
-  };
-
-  const identificarPontosAtencao = (ciclos: CicloData[], variacoes: ReturnType<typeof calcularVariacoes>) => {
-    const pontos: string[] = [];
-
-    // Quedas de ROI
-    variacoes.forEach(v => {
-      if (v.varRoi < -5) {
-        pontos.push(`Ciclo ${v.cicloAtual.numero_ciclo}: queda de ${Math.abs(v.varRoi).toFixed(1)}pp no ROI em relação ao ciclo anterior`);
-      }
-    });
-
-    // Volume aumentou mas lucro não acompanhou
-    variacoes.forEach(v => {
-      if (v.varVolume > 20 && v.varLucro < 10) {
-        pontos.push(`Ciclo ${v.cicloAtual.numero_ciclo}: aumento de ${v.varVolume.toFixed(0)}% no volume sem aumento proporcional de lucro`);
-      }
-    });
-
-    // Ciclos com prejuízo
-    ciclos.filter(c => c.lucro < 0 && c.status === "FECHADO").forEach(c => {
-      pontos.push(`Ciclo ${c.numero_ciclo}: fechou com prejuízo de ${formatCurrency(Math.abs(c.lucro))}`);
-    });
-
-    return pontos;
-  };
-
-  const identificarDestaquesPositivos = (ciclos: CicloData[], variacoes: ReturnType<typeof calcularVariacoes>) => {
-    const destaques: string[] = [];
-
-    // Melhoria significativa de ROI
-    variacoes.forEach(v => {
-      if (v.varRoi > 5) {
-        destaques.push(`Ciclo ${v.cicloAtual.numero_ciclo}: melhoria de ${v.varRoi.toFixed(1)}pp no ROI`);
-      }
-    });
-
-    // Aumento de lucro com menos apostas (eficiência)
-    variacoes.forEach(v => {
-      if (v.varLucro > 20 && v.varApostas <= 0) {
-        destaques.push(`Ciclo ${v.cicloAtual.numero_ciclo}: +${v.varLucro.toFixed(0)}% de lucro com menos apostas (maior eficiência)`);
-      }
-    });
-
-    // Ticket médio melhorou
-    variacoes.forEach(v => {
-      if (v.varTicketMedio > 15 && v.varLucro > 0) {
-        destaques.push(`Ciclo ${v.cicloAtual.numero_ciclo}: ticket médio subiu ${v.varTicketMedio.toFixed(0)}%, impulsionando o lucro`);
-      }
-    });
-
-    return destaques;
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   const gerarInsightComparativo = (v: ReturnType<typeof calcularVariacoes>[0]) => {
     const partes: string[] = [];
