@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import {
@@ -27,11 +28,14 @@ import {
   Landmark,
   TrendingUp,
   Gift,
+  Zap,
+  Play,
 } from "lucide-react";
 import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliacaoDialog";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { PagamentoOperadorDialog } from "@/components/operadores/PagamentoOperadorDialog";
 import { PropostasPagamentoCard } from "@/components/operadores/PropostasPagamentoCard";
+import { useCicloAlertas, AlertaCiclo } from "@/hooks/useCicloAlertas";
 
 interface Alerta {
   tipo_alerta: string;
@@ -149,17 +153,7 @@ interface AlertaLucroParceiro {
   data_atingido: string;
 }
 
-interface AlertaConciliacao {
-  id: string;
-  operador_id: string;
-  operador_nome: string;
-  projeto_id: string;
-  projeto_nome: string;
-  proxima_conciliacao: string;
-  frequencia_conciliacao: string;
-  dias_intervalo_conciliacao: number | null;
-  dias_atraso: number;
-}
+// AlertaCiclo interface is imported from useCicloAlertas hook
 
 export default function CentralOperacoes() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
@@ -172,7 +166,6 @@ export default function CentralOperacoes() {
   const [saquesPendentes, setSaquesPendentes] = useState<SaquePendenteConfirmacao[]>([]);
   const [alertasLucro, setAlertasLucro] = useState<AlertaLucroParceiro[]>([]);
   const [pagamentosOperadorPendentes, setPagamentosOperadorPendentes] = useState<PagamentoOperadorPendente[]>([]);
-  const [alertasConciliacao, setAlertasConciliacao] = useState<AlertaConciliacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
@@ -182,6 +175,9 @@ export default function CentralOperacoes() {
   const [pagamentoOperadorOpen, setPagamentoOperadorOpen] = useState(false);
   const [selectedPagamentoOperador, setSelectedPagamentoOperador] = useState<PagamentoOperadorPendente | null>(null);
   const navigate = useNavigate();
+
+  // Alertas de ciclos via hook dedicado
+  const { alertas: alertasCiclos, refetch: refetchCiclos } = useCicloAlertas();
 
   useEffect(() => {
     fetchData();
@@ -214,8 +210,7 @@ export default function CentralOperacoes() {
         comissoesResult,
         indicacoesResult,
         indicadoresResult,
-        pagamentosOperadorResult,
-        alertasConciliacaoResult
+        pagamentosOperadorResult
       ] = await Promise.all([
         supabase.from("v_painel_operacional").select("*"),
         supabase.from("v_entregas_pendentes").select("*").in("status_conciliacao", ["PRONTA"]),
@@ -317,23 +312,7 @@ export default function CentralOperacoes() {
             projeto:projetos(nome)
           `)
           .eq("status", "PENDENTE")
-          .order("data_pagamento", { ascending: false }),
-        // Alertas de conciliação - operadores com conciliação pendente
-        supabase
-          .from("operador_projetos")
-          .select(`
-            id,
-            operador_id,
-            projeto_id,
-            proxima_conciliacao,
-            frequencia_conciliacao,
-            dias_intervalo_conciliacao,
-            operador:operadores(nome),
-            projeto:projetos(nome)
-          `)
-          .eq("status", "ATIVO")
-          .not("proxima_conciliacao", "is", null)
-          .lte("proxima_conciliacao", new Date().toISOString().split("T")[0])
+          .order("data_pagamento", { ascending: false })
       ]);
 
       if (alertasResult.error) throw alertasResult.error;
@@ -565,26 +544,7 @@ export default function CentralOperacoes() {
         setPagamentosOperadorPendentes(pagamentosOp);
       }
 
-      // Alertas de conciliação
-      if (!alertasConciliacaoResult.error && alertasConciliacaoResult.data) {
-        const alertasConc: AlertaConciliacao[] = alertasConciliacaoResult.data.map((a: any) => {
-          const proximaData = new Date(a.proxima_conciliacao);
-          proximaData.setHours(0, 0, 0, 0);
-          const diasAtraso = Math.ceil((hoje.getTime() - proximaData.getTime()) / (1000 * 60 * 60 * 24));
-          return {
-            id: a.id,
-            operador_id: a.operador_id,
-            operador_nome: a.operador?.nome || "N/A",
-            projeto_id: a.projeto_id,
-            projeto_nome: a.projeto?.nome || "N/A",
-            proxima_conciliacao: a.proxima_conciliacao,
-            frequencia_conciliacao: a.frequencia_conciliacao,
-            dias_intervalo_conciliacao: a.dias_intervalo_conciliacao,
-            dias_atraso: diasAtraso,
-          };
-        });
-        setAlertasConciliacao(alertasConc.sort((a, b) => b.dias_atraso - a.dias_atraso));
-      }
+      // Alertas de ciclos são gerenciados pelo hook useCicloAlertas
     } catch (error: any) {
       toast.error("Erro ao carregar dados: " + error.message);
     } finally {
@@ -768,7 +728,7 @@ export default function CentralOperacoes() {
       <PropostasPagamentoCard />
 
       {/* Alertas List */}
-      {alertas.length === 0 && entregasPendentes.length === 0 && pagamentosParceiros.length === 0 && bonusPendentes.length === 0 && comissoesPendentes.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 && saquesPendentes.length === 0 && alertasLucro.length === 0 && pagamentosOperadorPendentes.length === 0 && alertasConciliacao.length === 0 ? (
+      {alertas.length === 0 && entregasPendentes.length === 0 && pagamentosParceiros.length === 0 && bonusPendentes.length === 0 && comissoesPendentes.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 && saquesPendentes.length === 0 && alertasLucro.length === 0 && pagamentosOperadorPendentes.length === 0 && alertasCiclos.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-10">
@@ -782,50 +742,114 @@ export default function CentralOperacoes() {
         </Card>
       ) : (
         <div className="space-y-6">
-          {/* Alertas de Conciliação Pendente */}
-          {alertasConciliacao.length > 0 && (
-            <Card className="border-violet-500/30 max-w-2xl">
+          {/* Alertas de Ciclos */}
+          {alertasCiclos.length > 0 && (
+            <Card className="border-violet-500/30 max-w-3xl">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-violet-400" />
-                  Conciliações Pendentes
+                  <Target className="h-4 w-4 text-violet-400" />
+                  Ciclos de Apuração
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Operadores com período de conciliação vencido
+                  Ciclos que atingiram gatilho de tempo ou volume
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="space-y-1.5">
-                  {alertasConciliacao.map((alerta) => (
-                    <div
-                      key={alerta.id}
-                      className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-colors ${
-                        alerta.dias_atraso >= 7 
-                          ? "border-red-500/30 bg-red-500/10 hover:bg-red-500/15" 
-                          : alerta.dias_atraso >= 3 
-                            ? "border-orange-500/30 bg-orange-500/10 hover:bg-orange-500/15"
-                            : "border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/15"
-                      }`}
-                      onClick={() => navigate(`/projeto/${alerta.projeto_id}`)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <span className="font-medium text-sm">{alerta.operador_nome}</span>
-                          <span className="text-xs text-muted-foreground ml-2">• {alerta.projeto_nome}</span>
+                <div className="space-y-2">
+                  {alertasCiclos.map((ciclo) => {
+                    const getTipoGatilhoIcon = () => {
+                      switch (ciclo.tipo_gatilho) {
+                        case "TEMPO": return <Clock className="h-3 w-3" />;
+                        case "VOLUME": return <Target className="h-3 w-3" />;
+                        case "HIBRIDO": return <Zap className="h-3 w-3" />;
+                        default: return null;
+                      }
+                    };
+                    
+                    const getUrgencyColor = () => {
+                      switch (ciclo.urgencia) {
+                        case "CRITICA": return "border-red-500/40 bg-red-500/10 hover:bg-red-500/15";
+                        case "ALTA": return "border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/15";
+                        default: return "border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/15";
+                      }
+                    };
+
+                    const getBadgeColor = () => {
+                      switch (ciclo.urgencia) {
+                        case "CRITICA": return "border-red-500/50 text-red-400";
+                        case "ALTA": return "border-orange-500/50 text-orange-400";
+                        default: return "border-violet-500/50 text-violet-400";
+                      }
+                    };
+
+                    return (
+                      <div
+                        key={ciclo.id}
+                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${getUrgencyColor()}`}
+                        onClick={() => navigate(`/projeto/${ciclo.projeto_id}`)}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <FolderKanban className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <span className="font-medium text-sm truncate">{ciclo.projeto_nome}</span>
+                              <Badge variant="outline" className="text-xs shrink-0">
+                                Ciclo {ciclo.numero_ciclo}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs shrink-0 flex items-center gap-1">
+                                {getTipoGatilhoIcon()}
+                                {ciclo.tipo_gatilho}
+                              </Badge>
+                            </div>
+                            
+                            {/* Mensagens de alerta */}
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {ciclo.mensagem_tempo && (
+                                <Badge variant="outline" className={getBadgeColor()}>
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  {ciclo.mensagem_tempo}
+                                </Badge>
+                              )}
+                              {ciclo.mensagem_volume && (
+                                <Badge variant="outline" className={getBadgeColor()}>
+                                  <Target className="h-3 w-3 mr-1" />
+                                  {ciclo.mensagem_volume}
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* Barra de progresso para ciclos volumétricos */}
+                            {(ciclo.tipo_gatilho === "VOLUME" || ciclo.tipo_gatilho === "HIBRIDO") && ciclo.meta_volume && (
+                              <div className="mt-2">
+                                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                                  <span>{formatCurrency(ciclo.valor_acumulado)} de {formatCurrency(ciclo.meta_volume)}</span>
+                                  <span className={ciclo.progresso_volume >= 90 ? "text-amber-400 font-medium" : ""}>
+                                    {ciclo.progresso_volume.toFixed(0)}%
+                                  </span>
+                                </div>
+                                <Progress 
+                                  value={Math.min(100, ciclo.progresso_volume)} 
+                                  className={ciclo.progresso_volume >= 100 ? "bg-red-500/20" : ciclo.progresso_volume >= 90 ? "bg-amber-500/20" : ""} 
+                                />
+                              </div>
+                            )}
+                          </div>
+                          
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/projeto/${ciclo.projeto_id}`);
+                            }}
+                          >
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                      <Badge variant="outline" className={
-                        alerta.dias_atraso >= 7 
-                          ? "border-red-500/50 text-red-400" 
-                          : alerta.dias_atraso >= 3 
-                            ? "border-orange-500/50 text-orange-400"
-                            : "border-violet-500/50 text-violet-400"
-                      }>
-                        {alerta.dias_atraso === 0 ? "Hoje" : `${alerta.dias_atraso}d atraso`}
-                      </Badge>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
