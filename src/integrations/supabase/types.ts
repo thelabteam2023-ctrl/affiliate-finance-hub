@@ -2004,8 +2004,12 @@ export type Database = {
           observacoes: string | null
           operador_id: string
           percentual: number | null
+          piso_pagamento: number | null
+          prejuizo_acumulado: number | null
           projeto_id: string
+          regra_prejuizo: string | null
           status: string
+          teto_pagamento: number | null
           tipo_meta: string | null
           updated_at: string
           user_id: string
@@ -2027,8 +2031,12 @@ export type Database = {
           observacoes?: string | null
           operador_id: string
           percentual?: number | null
+          piso_pagamento?: number | null
+          prejuizo_acumulado?: number | null
           projeto_id: string
+          regra_prejuizo?: string | null
           status?: string
+          teto_pagamento?: number | null
           tipo_meta?: string | null
           updated_at?: string
           user_id: string
@@ -2050,8 +2058,12 @@ export type Database = {
           observacoes?: string | null
           operador_id?: string
           percentual?: number | null
+          piso_pagamento?: number | null
+          prejuizo_acumulado?: number | null
           projeto_id?: string
+          regra_prejuizo?: string | null
           status?: string
+          teto_pagamento?: number | null
           tipo_meta?: string | null
           updated_at?: string
           user_id?: string
@@ -2247,6 +2259,162 @@ export type Database = {
           },
           {
             foreignKeyName: "pagamentos_operador_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+        ]
+      }
+      pagamentos_propostos: {
+        Row: {
+          aprovado_por: string | null
+          base_calculo: string | null
+          ciclo_id: string | null
+          created_at: string | null
+          data_aprovacao: string | null
+          data_proposta: string | null
+          desconto_prejuizo_anterior: number | null
+          id: string
+          lucro_base: number
+          modelo_pagamento: string
+          motivo_rejeicao: string | null
+          observacoes: string | null
+          operador_id: string
+          operador_projeto_id: string
+          pagamento_id: string | null
+          percentual_aplicado: number | null
+          projeto_id: string
+          status: string
+          updated_at: string | null
+          user_id: string
+          valor_ajustado: number | null
+          valor_calculado: number
+          valor_fixo_aplicado: number | null
+        }
+        Insert: {
+          aprovado_por?: string | null
+          base_calculo?: string | null
+          ciclo_id?: string | null
+          created_at?: string | null
+          data_aprovacao?: string | null
+          data_proposta?: string | null
+          desconto_prejuizo_anterior?: number | null
+          id?: string
+          lucro_base?: number
+          modelo_pagamento: string
+          motivo_rejeicao?: string | null
+          observacoes?: string | null
+          operador_id: string
+          operador_projeto_id: string
+          pagamento_id?: string | null
+          percentual_aplicado?: number | null
+          projeto_id: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+          valor_ajustado?: number | null
+          valor_calculado?: number
+          valor_fixo_aplicado?: number | null
+        }
+        Update: {
+          aprovado_por?: string | null
+          base_calculo?: string | null
+          ciclo_id?: string | null
+          created_at?: string | null
+          data_aprovacao?: string | null
+          data_proposta?: string | null
+          desconto_prejuizo_anterior?: number | null
+          id?: string
+          lucro_base?: number
+          modelo_pagamento?: string
+          motivo_rejeicao?: string | null
+          observacoes?: string | null
+          operador_id?: string
+          operador_projeto_id?: string
+          pagamento_id?: string | null
+          percentual_aplicado?: number | null
+          projeto_id?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+          valor_ajustado?: number | null
+          valor_calculado?: number
+          valor_fixo_aplicado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagamentos_propostos_ciclo_id_fkey"
+            columns: ["ciclo_id"]
+            isOneToOne: false
+            referencedRelation: "projeto_ciclos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_propostos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "operadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_propostos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "pagamentos_propostos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_performance"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "pagamentos_propostos_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "operador_projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_propostos_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_sem_entrega"
+            referencedColumns: ["operador_projeto_id"]
+          },
+          {
+            foreignKeyName: "pagamentos_propostos_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_lucro_operador"
+            referencedColumns: ["operador_projeto_id"]
+          },
+          {
+            foreignKeyName: "pagamentos_propostos_pagamento_id_fkey"
+            columns: ["pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "pagamentos_operador"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_propostos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_propostos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "pagamentos_propostos_projeto_id_fkey"
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "v_projeto_resumo"
@@ -2714,6 +2882,76 @@ export type Database = {
           },
           {
             foreignKeyName: "projeto_bookmaker_historico_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+        ]
+      }
+      projeto_ciclos: {
+        Row: {
+          created_at: string | null
+          data_fim_prevista: string
+          data_fim_real: string | null
+          data_inicio: string
+          id: string
+          lucro_bruto: number | null
+          lucro_liquido: number | null
+          numero_ciclo: number
+          observacoes: string | null
+          projeto_id: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data_fim_prevista: string
+          data_fim_real?: string | null
+          data_inicio: string
+          id?: string
+          lucro_bruto?: number | null
+          lucro_liquido?: number | null
+          numero_ciclo?: number
+          observacoes?: string | null
+          projeto_id: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data_fim_prevista?: string
+          data_fim_real?: string | null
+          data_inicio?: string
+          id?: string
+          lucro_bruto?: number | null
+          lucro_liquido?: number | null
+          numero_ciclo?: number
+          observacoes?: string | null
+          projeto_id?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projeto_ciclos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_ciclos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "projeto_ciclos_projeto_id_fkey"
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "v_projeto_resumo"
