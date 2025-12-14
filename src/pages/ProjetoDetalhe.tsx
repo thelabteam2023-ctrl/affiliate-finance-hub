@@ -34,6 +34,7 @@ import { ProjetoApostasTab } from "@/components/projeto-detalhe/ProjetoApostasTa
 import { ProjetoVinculosTab } from "@/components/projeto-detalhe/ProjetoVinculosTab";
 import { ProjetoPerdasTab } from "@/components/projeto-detalhe/ProjetoPerdasTab";
 import { ProjetoFreebetsTab } from "@/components/projeto-detalhe/ProjetoFreebetsTab";
+import { ProjetoCiclosTab } from "@/components/projeto-detalhe/ProjetoCiclosTab";
 // ProjetoSurebetTab removida - Surebets agora são exibidas na aba "Apostas Livres" unificada
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { DateRange } from "react-day-picker";
@@ -503,7 +504,7 @@ export default function ProjetoDetalhe() {
 
       {/* Tabs */}
       <Tabs defaultValue="apostas" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <LayoutDashboard className="h-4 w-4" />
             Dashboard
@@ -511,6 +512,10 @@ export default function ProjetoDetalhe() {
           <TabsTrigger value="apostas" className="flex items-center gap-2">
             <Target className="h-4 w-4" />
             Apostas Livres
+          </TabsTrigger>
+          <TabsTrigger value="ciclos" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Ciclos
           </TabsTrigger>
           <TabsTrigger value="vinculos" className="flex items-center gap-2">
             <Link2 className="h-4 w-4" />
@@ -541,6 +546,10 @@ export default function ProjetoDetalhe() {
             periodFilter={periodFilter}
             dateRange={dateRange}
           />
+        </TabsContent>
+
+        <TabsContent value="ciclos">
+          <ProjetoCiclosTab projetoId={id!} />
         </TabsContent>
 
         <TabsContent value="vinculos">

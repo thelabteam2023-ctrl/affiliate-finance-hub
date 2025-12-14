@@ -98,6 +98,10 @@ export function VincularOperadorDialog({
     meta_valor: "",
     moeda_meta: "BRL",
     meta_percentual: "",
+    // Novos campos de regras financeiras
+    regra_prejuizo: "ZERAR",
+    teto_pagamento: "",
+    piso_pagamento: "",
   });
   const [faixasEscalonadas, setFaixasEscalonadas] = useState<Faixa[]>([
     { min: 0, max: 10000, percentual: 5 },
@@ -136,6 +140,9 @@ export function VincularOperadorDialog({
         meta_valor: "",
         moeda_meta: "BRL",
         meta_percentual: "",
+        regra_prejuizo: "ZERAR",
+        teto_pagamento: "",
+        piso_pagamento: "",
       });
       setFaixasEscalonadas([
         { min: 0, max: 10000, percentual: 5 },
@@ -209,6 +216,10 @@ export function VincularOperadorDialog({
         percentual: formData.percentual ? parseFloat(formData.percentual) : 0,
         base_calculo: formData.base_calculo,
         frequencia_entrega: formData.frequencia_entrega,
+        // Novos campos de regras financeiras
+        regra_prejuizo: formData.regra_prejuizo,
+        teto_pagamento: formData.teto_pagamento ? parseFloat(formData.teto_pagamento) : null,
+        piso_pagamento: formData.piso_pagamento ? parseFloat(formData.piso_pagamento) : null,
       };
 
       if (modelo === "POR_ENTREGA") {
@@ -518,6 +529,67 @@ export function VincularOperadorDialog({
                   />
                 </div>
               )}
+
+              {/* Regras Financeiras */}
+              <div className="border-t pt-4 space-y-4">
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Regras Financeiras
+                </h4>
+                
+                <div className="space-y-2">
+                  <Label>Regra de Prejuízo</Label>
+                  <Select
+                    value={formData.regra_prejuizo}
+                    onValueChange={(value) => setFormData({ ...formData, regra_prejuizo: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ZERAR">Zerar e seguir (não acumula dívida)</SelectItem>
+                      <SelectItem value="CARRY_FORWARD">Carry-forward (abate do próximo ciclo)</SelectItem>
+                      <SelectItem value="PROPORCIONAL">Proporcional (divide com empresa)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {formData.regra_prejuizo === "ZERAR" && "Em ciclos negativos, operador não recebe mas não acumula dívida"}
+                    {formData.regra_prejuizo === "CARRY_FORWARD" && "Prejuízo é descontado dos lucros dos próximos ciclos"}
+                    {formData.regra_prejuizo === "PROPORCIONAL" && "Empresa e operador dividem o prejuízo proporcionalmente"}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Piso de Pagamento</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.piso_pagamento}
+                      onChange={(e) => handleNumericChange("piso_pagamento", e.target.value)}
+                      placeholder="0,00"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Valor mínimo por ciclo (opcional)
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Teto de Pagamento</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.teto_pagamento}
+                      onChange={(e) => handleNumericChange("teto_pagamento", e.target.value)}
+                      placeholder="0,00"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Valor máximo por ciclo (opcional)
+                    </p>
+                  </div>
+                </div>
+              </div>
 
               {/* Modal de Ajuda - Base de Cálculo */}
               <Dialog open={showBaseCalculoHelp} onOpenChange={setShowBaseCalculoHelp}>
