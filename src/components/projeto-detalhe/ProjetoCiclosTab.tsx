@@ -46,11 +46,20 @@ interface ProjetoCiclosTabProps {
   projetoId: string;
 }
 
+interface CicloMetrics {
+  qtdApostas: number;
+  volume: number;
+  ticketMedio: number;
+  lucro: number;
+  roi: number;
+}
+
 export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCiclo, setSelectedCiclo] = useState<Ciclo | null>(null);
+  const [cicloMetrics, setCicloMetrics] = useState<Record<string, CicloMetrics>>({});
 
   useEffect(() => {
     fetchCiclos();
@@ -67,11 +76,72 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
 
       if (error) throw error;
       setCiclos(data || []);
+      
+      // Fetch real-time metrics for active cycles
+      if (data) {
+        const activeCycles = data.filter(c => c.status === "EM_ANDAMENTO");
+        if (activeCycles.length > 0) {
+          fetchMetricsForActiveCycles(activeCycles);
+        }
+      }
     } catch (error: any) {
       toast.error("Erro ao carregar ciclos: " + error.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchMetricsForActiveCycles = async (activeCycles: Ciclo[]) => {
+    const metricsMap: Record<string, CicloMetrics> = {};
+    
+    for (const ciclo of activeCycles) {
+      const [apostasResult, apostasMultiplasResult, surebetsResult] = await Promise.all([
+        supabase
+          .from("apostas")
+          .select("lucro_prejuizo, stake, status")
+          .eq("projeto_id", projetoId)
+          .gte("data_aposta", ciclo.data_inicio)
+          .lte("data_aposta", ciclo.data_fim_prevista),
+        supabase
+          .from("apostas_multiplas")
+          .select("lucro_prejuizo, stake, resultado")
+          .eq("projeto_id", projetoId)
+          .gte("data_aposta", ciclo.data_inicio)
+          .lte("data_aposta", ciclo.data_fim_prevista),
+        supabase
+          .from("surebets")
+          .select("lucro_real, stake_total, status")
+          .eq("projeto_id", projetoId)
+          .gte("data_evento", ciclo.data_inicio)
+          .lte("data_evento", ciclo.data_fim_prevista),
+      ]);
+
+      const apostas = apostasResult.data || [];
+      const apostasMultiplas = apostasMultiplasResult.data || [];
+      const surebets = surebetsResult.data || [];
+
+      // Count all entries (including pending)
+      const qtdApostas = apostas.length + apostasMultiplas.length + surebets.length;
+      
+      // Calculate volume from all entries
+      const volume = 
+        apostas.reduce((acc, a) => acc + (a.stake || 0), 0) +
+        apostasMultiplas.reduce((acc, a) => acc + (a.stake || 0), 0) +
+        surebets.reduce((acc, a) => acc + (a.stake_total || 0), 0);
+      
+      // Calculate profit only from finalized entries
+      const lucro = 
+        apostas.filter(a => a.status === "FINALIZADA").reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
+        apostasMultiplas.filter(a => ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"].includes(a.resultado)).reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
+        surebets.filter(a => a.status === "FINALIZADA").reduce((acc, a) => acc + (a.lucro_real || 0), 0);
+
+      const ticketMedio = qtdApostas > 0 ? volume / qtdApostas : 0;
+      const roi = volume > 0 ? (lucro / volume) * 100 : 0;
+
+      metricsMap[ciclo.id] = { qtdApostas, volume, ticketMedio, lucro, roi };
+    }
+    
+    setCicloMetrics(metricsMap);
   };
 
   const handleCreateCiclo = () => {
@@ -346,8 +416,37 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
                     </div>
                   )}
 
-                  {/* Parse and display metrics from observacoes */}
-                  {ciclo.observacoes && ciclo.observacoes.includes("📊 Métricas:") && (
+                  {/* Real-time metrics for EM_ANDAMENTO cycles */}
+                  {ciclo.status === "EM_ANDAMENTO" && cicloMetrics[ciclo.id] && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                        <Target className="h-3 w-3" /> Métricas em Tempo Real
+                      </p>
+                      <div className="flex flex-wrap gap-3 text-sm">
+                        <div className="bg-muted/50 px-3 py-1.5 rounded-md">
+                          <span className="text-muted-foreground">Apostas: </span>
+                          <span className="font-medium">{cicloMetrics[ciclo.id].qtdApostas}</span>
+                        </div>
+                        <div className="bg-muted/50 px-3 py-1.5 rounded-md">
+                          <span className="text-muted-foreground">Volume: </span>
+                          <span className="font-medium">{formatCurrency(cicloMetrics[ciclo.id].volume)}</span>
+                        </div>
+                        <div className="bg-primary/10 px-3 py-1.5 rounded-md border border-primary/20">
+                          <span className="text-muted-foreground">Ticket Médio: </span>
+                          <span className="font-medium text-primary">{formatCurrency(cicloMetrics[ciclo.id].ticketMedio)}</span>
+                        </div>
+                        <div className={`px-3 py-1.5 rounded-md ${cicloMetrics[ciclo.id].roi >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
+                          <span className="text-muted-foreground">ROI: </span>
+                          <span className={`font-medium ${cicloMetrics[ciclo.id].roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {cicloMetrics[ciclo.id].roi.toFixed(2)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Parse and display metrics from observacoes for FECHADO cycles */}
+                  {ciclo.status === "FECHADO" && ciclo.observacoes && ciclo.observacoes.includes("📊 Métricas:") && (
                     <div className="mt-3 pt-3 border-t">
                       <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
                         <Target className="h-3 w-3" /> Métricas do Ciclo
