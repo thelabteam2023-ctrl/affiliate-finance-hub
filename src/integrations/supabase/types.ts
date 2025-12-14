@@ -1999,17 +1999,22 @@ export type Database = {
           id: string
           meta_percentual: number | null
           meta_valor: number | null
+          meta_volume: number | null
+          metrica_acumuladora: string
           modelo_pagamento: string
           motivo_saida: string | null
           observacoes: string | null
           operador_id: string
           percentual: number | null
+          periodo_maximo_dias: number | null
+          periodo_minimo_dias: number | null
           piso_pagamento: number | null
           prejuizo_acumulado: number | null
           projeto_id: string
           regra_prejuizo: string | null
           status: string
           teto_pagamento: number | null
+          tipo_gatilho: string
           tipo_meta: string | null
           updated_at: string
           user_id: string
@@ -2026,17 +2031,22 @@ export type Database = {
           id?: string
           meta_percentual?: number | null
           meta_valor?: number | null
+          meta_volume?: number | null
+          metrica_acumuladora?: string
           modelo_pagamento?: string
           motivo_saida?: string | null
           observacoes?: string | null
           operador_id: string
           percentual?: number | null
+          periodo_maximo_dias?: number | null
+          periodo_minimo_dias?: number | null
           piso_pagamento?: number | null
           prejuizo_acumulado?: number | null
           projeto_id: string
           regra_prejuizo?: string | null
           status?: string
           teto_pagamento?: number | null
+          tipo_gatilho?: string
           tipo_meta?: string | null
           updated_at?: string
           user_id: string
@@ -2053,17 +2063,22 @@ export type Database = {
           id?: string
           meta_percentual?: number | null
           meta_valor?: number | null
+          meta_volume?: number | null
+          metrica_acumuladora?: string
           modelo_pagamento?: string
           motivo_saida?: string | null
           observacoes?: string | null
           operador_id?: string
           percentual?: number | null
+          periodo_maximo_dias?: number | null
+          periodo_minimo_dias?: number | null
           piso_pagamento?: number | null
           prejuizo_acumulado?: number | null
           projeto_id?: string
           regra_prejuizo?: string | null
           status?: string
           teto_pagamento?: number | null
+          tipo_gatilho?: string
           tipo_meta?: string | null
           updated_at?: string
           user_id?: string
@@ -2277,6 +2292,8 @@ export type Database = {
           desconto_prejuizo_anterior: number | null
           id: string
           lucro_base: number
+          meta_volume_atingida: number | null
+          metrica_acumuladora: string | null
           modelo_pagamento: string
           motivo_rejeicao: string | null
           observacoes: string | null
@@ -2286,6 +2303,7 @@ export type Database = {
           percentual_aplicado: number | null
           projeto_id: string
           status: string
+          tipo_gatilho: string | null
           updated_at: string | null
           user_id: string
           valor_ajustado: number | null
@@ -2302,6 +2320,8 @@ export type Database = {
           desconto_prejuizo_anterior?: number | null
           id?: string
           lucro_base?: number
+          meta_volume_atingida?: number | null
+          metrica_acumuladora?: string | null
           modelo_pagamento: string
           motivo_rejeicao?: string | null
           observacoes?: string | null
@@ -2311,6 +2331,7 @@ export type Database = {
           percentual_aplicado?: number | null
           projeto_id: string
           status?: string
+          tipo_gatilho?: string | null
           updated_at?: string | null
           user_id: string
           valor_ajustado?: number | null
@@ -2327,6 +2348,8 @@ export type Database = {
           desconto_prejuizo_anterior?: number | null
           id?: string
           lucro_base?: number
+          meta_volume_atingida?: number | null
+          metrica_acumuladora?: string | null
           modelo_pagamento?: string
           motivo_rejeicao?: string | null
           observacoes?: string | null
@@ -2336,6 +2359,7 @@ export type Database = {
           percentual_aplicado?: number | null
           projeto_id?: string
           status?: string
+          tipo_gatilho?: string | null
           updated_at?: string | null
           user_id?: string
           valor_ajustado?: number | null
@@ -2892,50 +2916,107 @@ export type Database = {
       projeto_ciclos: {
         Row: {
           created_at: string | null
+          data_aprovacao: string | null
+          data_fechamento: string | null
           data_fim_prevista: string
           data_fim_real: string | null
           data_inicio: string
+          excedente_anterior: number
+          excedente_proximo: number
+          gatilho_fechamento: string | null
           id: string
           lucro_bruto: number | null
           lucro_liquido: number | null
+          meta_volume: number | null
+          metrica_acumuladora: string | null
           numero_ciclo: number
           observacoes: string | null
+          operador_projeto_id: string | null
+          pagamento_aprovado: boolean | null
           projeto_id: string
           status: string
+          tipo_gatilho: string
           updated_at: string | null
           user_id: string
+          valor_acumulado: number
+          valor_pagamento_calculado: number | null
         }
         Insert: {
           created_at?: string | null
+          data_aprovacao?: string | null
+          data_fechamento?: string | null
           data_fim_prevista: string
           data_fim_real?: string | null
           data_inicio: string
+          excedente_anterior?: number
+          excedente_proximo?: number
+          gatilho_fechamento?: string | null
           id?: string
           lucro_bruto?: number | null
           lucro_liquido?: number | null
+          meta_volume?: number | null
+          metrica_acumuladora?: string | null
           numero_ciclo?: number
           observacoes?: string | null
+          operador_projeto_id?: string | null
+          pagamento_aprovado?: boolean | null
           projeto_id: string
           status?: string
+          tipo_gatilho?: string
           updated_at?: string | null
           user_id: string
+          valor_acumulado?: number
+          valor_pagamento_calculado?: number | null
         }
         Update: {
           created_at?: string | null
+          data_aprovacao?: string | null
+          data_fechamento?: string | null
           data_fim_prevista?: string
           data_fim_real?: string | null
           data_inicio?: string
+          excedente_anterior?: number
+          excedente_proximo?: number
+          gatilho_fechamento?: string | null
           id?: string
           lucro_bruto?: number | null
           lucro_liquido?: number | null
+          meta_volume?: number | null
+          metrica_acumuladora?: string | null
           numero_ciclo?: number
           observacoes?: string | null
+          operador_projeto_id?: string | null
+          pagamento_aprovado?: boolean | null
           projeto_id?: string
           status?: string
+          tipo_gatilho?: string
           updated_at?: string | null
           user_id?: string
+          valor_acumulado?: number
+          valor_pagamento_calculado?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "projeto_ciclos_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "operador_projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_ciclos_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_sem_entrega"
+            referencedColumns: ["operador_projeto_id"]
+          },
+          {
+            foreignKeyName: "projeto_ciclos_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_lucro_operador"
+            referencedColumns: ["operador_projeto_id"]
+          },
           {
             foreignKeyName: "projeto_ciclos_projeto_id_fkey"
             columns: ["projeto_id"]
