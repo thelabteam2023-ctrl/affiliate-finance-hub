@@ -24,8 +24,7 @@ import {
   ShieldAlert,
   ChevronDown,
   Ban,
-  Lock,
-  Undo2
+  Lock
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -340,97 +339,6 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
     }
   };
 
-  const handleRecalcularCiclo = async (ciclo: Ciclo) => {
-    try {
-      const dataFim = ciclo.data_fim_real || ciclo.data_fim_prevista;
-      
-      // Buscar apostas simples
-      const { data: apostas } = await supabase
-        .from("apostas")
-        .select("lucro_prejuizo, stake")
-        .eq("projeto_id", projetoId)
-        .neq("status", "PENDENTE")
-        .gte("data_aposta", ciclo.data_inicio)
-        .lte("data_aposta", dataFim);
-
-      // Buscar apostas múltiplas
-      const { data: apostasMultiplas } = await supabase
-        .from("apostas_multiplas")
-        .select("lucro_prejuizo, stake")
-        .eq("projeto_id", projetoId)
-        .neq("resultado", "PENDENTE")
-        .gte("data_aposta", ciclo.data_inicio)
-        .lte("data_aposta", dataFim);
-
-      // Buscar surebets
-      const { data: surebets } = await supabase
-        .from("surebets")
-        .select("lucro_real, stake_total")
-        .eq("projeto_id", projetoId)
-        .eq("status", "CONCLUIDA")
-        .gte("data_evento", ciclo.data_inicio)
-        .lte("data_evento", dataFim);
-
-      // Buscar perdas confirmadas do período
-      const { data: perdas } = await supabase
-        .from("projeto_perdas")
-        .select("valor")
-        .eq("projeto_id", projetoId)
-        .eq("status", "CONFIRMADA")
-        .gte("data_confirmacao", ciclo.data_inicio)
-        .lte("data_confirmacao", dataFim);
-
-      const lucroBruto = 
-        (apostas || []).reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
-        (apostasMultiplas || []).reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
-        (surebets || []).reduce((acc, a) => acc + (a.lucro_real || 0), 0);
-
-      const totalPerdas = (perdas || []).reduce((acc, p) => acc + p.valor, 0);
-      const lucroLiquido = lucroBruto - totalPerdas;
-      
-      const volumeApostado = 
-        (apostas || []).reduce((acc, a) => acc + (a.stake || 0), 0) +
-        (apostasMultiplas || []).reduce((acc, a) => acc + (a.stake || 0), 0) +
-        (surebets || []).reduce((acc, a) => acc + (a.stake_total || 0), 0);
-
-      const qtdApostas = (apostas || []).length + (apostasMultiplas || []).length + (surebets || []).length;
-      const roi = volumeApostado > 0 ? (lucroLiquido / volumeApostado) * 100 : 0;
-      const ticketMedio = qtdApostas > 0 ? volumeApostado / qtdApostas : 0;
-
-      // Construir observações atualizadas
-      let metricsInfo = `📊 Métricas: ${qtdApostas} apostas | Volume: R$ ${volumeApostado.toFixed(2)} | Ticket Médio: R$ ${ticketMedio.toFixed(2)} | ROI: ${roi.toFixed(2)}%`;
-      
-      if (totalPerdas > 0) {
-        metricsInfo += ` | Perdas: R$ ${totalPerdas.toFixed(2)}`;
-      }
-
-      // Preservar observações manuais, atualizar métricas
-      const obsBase = ciclo.observacoes?.split("\n\n📊")[0] || "";
-      const observacoesFinais = obsBase ? `${obsBase}\n\n${metricsInfo}` : metricsInfo;
-
-      const { error } = await supabase
-        .from("projeto_ciclos")
-        .update({
-          lucro_bruto: lucroBruto,
-          lucro_liquido: lucroLiquido,
-          valor_acumulado: ciclo.metrica_acumuladora === "VOLUME_APOSTADO" ? volumeApostado : lucroLiquido,
-          observacoes: observacoesFinais,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", ciclo.id);
-
-      if (error) throw error;
-      
-      toast.success(
-        totalPerdas > 0
-          ? `Ciclo recalculado! Lucro Real: R$ ${lucroLiquido.toFixed(2)} (após R$ ${totalPerdas.toFixed(2)} em perdas)`
-          : `Ciclo recalculado! Lucro: R$ ${lucroLiquido.toFixed(2)}`
-      );
-      fetchCiclos();
-    } catch (error: any) {
-      toast.error("Erro ao recalcular ciclo: " + error.message);
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -701,20 +609,9 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
                         </>
                       )}
                       {ciclo.status === "FECHADO" && (
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => handleRecalcularCiclo(ciclo)}
-                            title="Recalcular lucro líquido considerando perdas atuais"
-                          >
-                            <Undo2 className="h-4 w-4 mr-1" />
-                            Recalcular
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleEditCiclo(ciclo)}>
-                            Ver Detalhes
-                          </Button>
-                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => handleEditCiclo(ciclo)}>
+                          Ver Detalhes
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -816,7 +713,7 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
                           <div className="space-y-2">
                             <div className="flex items-center justify-between text-xs">
                               <span className="text-emerald-400 font-medium flex items-center gap-1">
-                                <Undo2 className="h-3 w-3" />
+                                <CheckCircle2 className="h-3 w-3" />
                                 Revertidas (recuperadas)
                               </span>
                               <span className="text-emerald-400 font-semibold">+{formatCurrency(realTimeMetrics.perdas.totalRevertidas)}</span>
