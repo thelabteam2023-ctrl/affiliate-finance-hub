@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { HelpCircle, TrendingUp, DollarSign, Target } from "lucide-react";
+import { HelpCircle, TrendingUp, DollarSign, Target, Layers } from "lucide-react";
 
 interface Projeto {
   id: string;
@@ -46,6 +46,7 @@ const BASES_CALCULO = [
   { value: "LUCRO_PROJETO", label: "Lucro do Projeto" },
   { value: "FATURAMENTO_PROJETO", label: "Faturamento do Projeto" },
   { value: "RESULTADO_OPERACAO", label: "Resultado da Operação" },
+  { value: "VOLUME_APOSTADO", label: "Volume de Valor Apostado" },
 ];
 
 
@@ -67,6 +68,7 @@ export function VincularProjetoDialog({
     valor_fixo: "",
     percentual: "",
     base_calculo: "LUCRO_PROJETO",
+    meta_volume: "",
   });
 
   useEffect(() => {
@@ -81,6 +83,7 @@ export function VincularProjetoDialog({
         valor_fixo: "",
         percentual: "",
         base_calculo: "LUCRO_PROJETO",
+        meta_volume: "",
       });
     }
   }, [open, operadorId]);
@@ -144,6 +147,9 @@ export function VincularProjetoDialog({
         valor_fixo: formData.valor_fixo ? parseFloat(formData.valor_fixo) : 0,
         percentual: formData.percentual ? parseFloat(formData.percentual) : 0,
         base_calculo: formData.base_calculo,
+        meta_volume: formData.base_calculo === "VOLUME_APOSTADO" && formData.meta_volume 
+          ? parseFloat(formData.meta_volume) 
+          : null,
       });
 
       if (error) throw error;
@@ -168,7 +174,8 @@ export function VincularProjetoDialog({
 
   const showValorFixo = ["FIXO_MENSAL", "HIBRIDO", "POR_ENTREGA"].includes(formData.modelo_pagamento);
   const showPercentual = ["PORCENTAGEM", "HIBRIDO", "COMISSAO_ESCALONADA"].includes(formData.modelo_pagamento);
-  const showBaseCalculo = showPercentual;
+  const showBaseCalculo = showPercentual || formData.modelo_pagamento === "POR_ENTREGA";
+  const showMetaVolume = formData.base_calculo === "VOLUME_APOSTADO";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -303,7 +310,23 @@ export function VincularProjetoDialog({
                 </div>
               )}
 
-              {/* Modal de Ajuda - Base de Cálculo */}
+              {/* Campo de Meta de Volume (quando base_calculo = VOLUME_APOSTADO) */}
+              {showMetaVolume && (
+                <div className="space-y-2">
+                  <Label>Meta de Volume (R$) *</Label>
+                  <Input
+                    type="number"
+                    step="1000"
+                    min="0"
+                    value={formData.meta_volume}
+                    onChange={(e) => setFormData({ ...formData, meta_volume: e.target.value })}
+                    placeholder="150000"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    O ciclo será fechado quando o volume apostado atingir este valor
+                  </p>
+                </div>
+              )}
               <Dialog open={showBaseCalculoHelp} onOpenChange={setShowBaseCalculoHelp}>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
@@ -370,6 +393,28 @@ export function VincularProjetoDialog({
                         </div>
                         <p className="text-xs text-purple-400/70 mt-1">
                           ✓ Melhor para traders com operações individuais rastreáveis
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                      <div className="flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                          <Layers className="h-5 w-5 text-amber-500" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-amber-400">Volume de Valor Apostado</h4>
+                        <p className="text-sm text-muted-foreground">
+                          O ciclo de pagamento é <strong>fechado por volume</strong>. Ao atingir a meta de 
+                          valor apostado, o ciclo encerra e o operador é pago.
+                        </p>
+                        <div className="text-xs text-muted-foreground mt-2 p-2 bg-background/50 rounded">
+                          <strong>Exemplo:</strong> Meta de R$ 120.000 em volume apostado. 
+                          Ao atingir, operador recebe o valor fixo definido (ex: R$ 5.000).
+                        </div>
+                        <p className="text-xs text-amber-400/70 mt-1">
+                          ✓ Ideal para operadores com foco em gerar volume de apostas
                         </p>
                       </div>
                     </div>

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Plus, Users, DollarSign, Calendar, ChevronDown, ChevronUp, AlertTriangle, Clock, Target, Zap } from "lucide-react";
+import { Plus, Users, DollarSign, Calendar, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { VincularOperadorDialog } from "@/components/projetos/VincularOperadorDialog";
@@ -31,12 +31,8 @@ interface OperadorProjeto {
   meta_valor: number | null;
   meta_percentual: number | null;
   status: string;
-  // Campos do acordo de ciclo
-  tipo_gatilho: string | null;
-  metrica_acumuladora: string | null;
+  // Meta de volume (quando base_calculo = VOLUME_APOSTADO)
   meta_volume: number | null;
-  periodo_minimo_dias: number | null;
-  periodo_maximo_dias: number | null;
   operador?: {
     nome: string;
     cpf: string;
@@ -128,20 +124,13 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
     }
   };
 
-  const getTipoGatilhoInfo = (tipo: string | null) => {
-    switch (tipo) {
-      case "TEMPO": return { label: "Por Tempo", icon: Clock, color: "text-blue-400" };
-      case "VOLUME": return { label: "Por Volume", icon: Target, color: "text-purple-400" };
-      case "HIBRIDO": return { label: "Híbrido", icon: Zap, color: "text-amber-400" };
-      default: return null;
-    }
-  };
-
-  const getMetricaLabel = (metrica: string | null) => {
-    switch (metrica) {
-      case "LUCRO": return "Lucro";
+  const getBaseCalculoLabel = (base: string | null) => {
+    switch (base) {
+      case "LUCRO_PROJETO": return "Lucro do Projeto";
+      case "FATURAMENTO_PROJETO": return "Faturamento";
+      case "RESULTADO_OPERACAO": return "Resultado da Operação";
       case "VOLUME_APOSTADO": return "Volume Apostado";
-      default: return metrica;
+      default: return base;
     }
   };
 
@@ -302,40 +291,12 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
                     )}
                   </div>
 
-                  {/* Informações do Acordo de Ciclo */}
-                  {op.tipo_gatilho && (
-                    <div className="space-y-2 pt-2 border-t border-border/50">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Acordo de Ciclo</p>
-                      {(() => {
-                        const gatilhoInfo = getTipoGatilhoInfo(op.tipo_gatilho);
-                        if (!gatilhoInfo) return null;
-                        const IconComponent = gatilhoInfo.icon;
-                        return (
-                          <div className="flex items-center gap-2 text-sm">
-                            <IconComponent className={`h-4 w-4 ${gatilhoInfo.color}`} />
-                            <span className={gatilhoInfo.color}>{gatilhoInfo.label}</span>
-                          </div>
-                        );
-                      })()}
-                      {op.metrica_acumuladora && (
-                        <div className="text-sm text-muted-foreground">
-                          Métrica: <span className="text-foreground">{getMetricaLabel(op.metrica_acumuladora)}</span>
-                        </div>
-                      )}
-                      {op.meta_volume && op.meta_volume > 0 && (
-                        <div className="text-sm text-muted-foreground">
-                          Meta Volume: <span className="text-primary">{formatCurrency(op.meta_volume)}</span>
-                        </div>
-                      )}
-                      {op.tipo_gatilho !== "VOLUME" && (
-                        <div className="text-sm text-muted-foreground">
-                          Período: <span className="text-foreground">
-                            {op.periodo_minimo_dias || 7}-{op.periodo_maximo_dias || 30} dias
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    {/* Meta de Volume (quando base_calculo = VOLUME_APOSTADO) */}
+                    {op.base_calculo === "VOLUME_APOSTADO" && op.meta_volume && (
+                      <div className="text-sm text-purple-400">
+                        Meta: {formatCurrency(op.meta_volume)} de volume
+                      </div>
+                    )}
 
                   {/* Seção de Entregas */}
                   <Collapsible open={isExpanded} onOpenChange={() => toggleCardExpanded(op.id)}>

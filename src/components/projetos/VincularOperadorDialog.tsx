@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { HelpCircle, TrendingUp, DollarSign, Target, Calendar, Layers, Percent, Clock } from "lucide-react";
+import { HelpCircle, TrendingUp, DollarSign, Target, Layers, Percent } from "lucide-react";
 import { FaixasEscalonadasInput } from "@/components/entregas/FaixasEscalonadasInput";
 
 interface Operador {
@@ -48,24 +48,13 @@ const BASES_CALCULO = [
   { value: "LUCRO_PROJETO", label: "Lucro do Projeto" },
   { value: "FATURAMENTO_PROJETO", label: "Faturamento do Projeto" },
   { value: "RESULTADO_OPERACAO", label: "Resultado da Operação" },
+  { value: "VOLUME_APOSTADO", label: "Volume de Valor Apostado" },
 ];
 
 const FREQUENCIAS = [
   { value: "SEMANAL", label: "Semanal" },
   { value: "QUINZENAL", label: "Quinzenal" },
   { value: "MENSAL", label: "Mensal" },
-];
-
-const TIPOS_GATILHO = [
-  { value: "TEMPO", label: "Por Tempo (período fixo)" },
-  { value: "VOLUME", label: "Por Volume (meta financeira)" },
-  { value: "HIBRIDO", label: "Híbrido (o que ocorrer primeiro)" },
-];
-
-const METRICAS_ACUMULADORAS = [
-  { value: "LUCRO", label: "Lucro Realizado" },
-  { value: "VOLUME_APOSTADO", label: "Volume Apostado" },
-  { value: "TURNOVER", label: "Turnover (giro de capital)" },
 ];
 
 const TIPOS_META = [
@@ -110,16 +99,12 @@ export function VincularOperadorDialog({
     meta_valor: "",
     moeda_meta: "BRL",
     meta_percentual: "",
-    // Novos campos de regras financeiras
+    // Regras financeiras
     regra_prejuizo: "ZERAR",
     teto_pagamento: "",
     piso_pagamento: "",
-    // Campos de gatilho de ciclo
-    tipo_gatilho: "TEMPO",
+    // Meta de volume (quando base_calculo = VOLUME_APOSTADO)
     meta_volume: "",
-    periodo_maximo_dias: "30",
-    periodo_minimo_dias: "7",
-    metrica_acumuladora: "LUCRO",
   });
   const [faixasEscalonadas, setFaixasEscalonadas] = useState<Faixa[]>([
     { min: 0, max: 10000, percentual: 5 },
@@ -161,11 +146,7 @@ export function VincularOperadorDialog({
         regra_prejuizo: "ZERAR",
         teto_pagamento: "",
         piso_pagamento: "",
-        tipo_gatilho: "TEMPO",
         meta_volume: "",
-        periodo_maximo_dias: "30",
-        periodo_minimo_dias: "7",
-        metrica_acumuladora: "LUCRO",
       });
       setFaixasEscalonadas([
         { min: 0, max: 10000, percentual: 5 },
@@ -239,16 +220,14 @@ export function VincularOperadorDialog({
         percentual: formData.percentual ? parseFloat(formData.percentual) : 0,
         base_calculo: formData.base_calculo,
         frequencia_entrega: formData.frequencia_entrega,
-        // Novos campos de regras financeiras
+        // Regras financeiras
         regra_prejuizo: formData.regra_prejuizo,
         teto_pagamento: formData.teto_pagamento ? parseFloat(formData.teto_pagamento) : null,
         piso_pagamento: formData.piso_pagamento ? parseFloat(formData.piso_pagamento) : null,
-        // Campos de gatilho de ciclo
-        tipo_gatilho: formData.tipo_gatilho,
-        meta_volume: formData.meta_volume ? parseFloat(formData.meta_volume) : null,
-        periodo_maximo_dias: formData.periodo_maximo_dias ? parseInt(formData.periodo_maximo_dias) : 30,
-        periodo_minimo_dias: formData.periodo_minimo_dias ? parseInt(formData.periodo_minimo_dias) : 7,
-        metrica_acumuladora: formData.metrica_acumuladora,
+        // Meta de volume (quando base_calculo = VOLUME_APOSTADO)
+        meta_volume: formData.base_calculo === "VOLUME_APOSTADO" && formData.meta_volume 
+          ? parseFloat(formData.meta_volume) 
+          : null,
       };
 
       if (modelo === "POR_ENTREGA") {
@@ -289,6 +268,7 @@ export function VincularOperadorDialog({
   const showFrequencia = ["FIXO_MENSAL", "PORCENTAGEM", "HIBRIDO", "COMISSAO_ESCALONADA", "PROPORCIONAL_LUCRO"].includes(formData.modelo_pagamento);
   const showFaixas = formData.modelo_pagamento === "COMISSAO_ESCALONADA";
   const showMetaPorEntrega = formData.modelo_pagamento === "POR_ENTREGA";
+  const showMetaVolume = formData.base_calculo === "VOLUME_APOSTADO";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -620,108 +600,23 @@ export function VincularOperadorDialog({
                 </div>
               </div>
 
-              {/* Configuração de Gatilho de Ciclo */}
-              <div className="border-t pt-4 space-y-4">
-                <h4 className="text-sm font-medium flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Gatilho de Fechamento de Ciclo
-                </h4>
-                
+              {/* Campo de Meta de Volume (quando base_calculo = VOLUME_APOSTADO) */}
+              {showMetaVolume && (
                 <div className="space-y-2">
-                  <Label>Tipo de Gatilho *</Label>
-                  <Select
-                    value={formData.tipo_gatilho}
-                    onValueChange={(value) => setFormData({ ...formData, tipo_gatilho: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIPOS_GATILHO.map((tipo) => (
-                        <SelectItem key={tipo.value} value={tipo.value}>
-                          {tipo.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Meta de Volume (R$) *</Label>
+                  <Input
+                    type="number"
+                    step="1000"
+                    min="0"
+                    value={formData.meta_volume}
+                    onChange={(e) => handleNumericChange("meta_volume", e.target.value)}
+                    placeholder="150000"
+                  />
                   <p className="text-xs text-muted-foreground">
-                    {formData.tipo_gatilho === "TEMPO" && "Ciclo fecha ao atingir o período configurado (semanal, quinzenal, mensal)"}
-                    {formData.tipo_gatilho === "VOLUME" && "Ciclo fecha ao atingir a meta de volume financeiro"}
-                    {formData.tipo_gatilho === "HIBRIDO" && "Ciclo fecha quando atingir o volume OU o período máximo (o que ocorrer primeiro)"}
+                    O ciclo será fechado quando o volume apostado atingir este valor
                   </p>
                 </div>
-
-                {/* Campos para Volume/Híbrido */}
-                {(formData.tipo_gatilho === "VOLUME" || formData.tipo_gatilho === "HIBRIDO") && (
-                  <>
-                    <div className="space-y-2">
-                      <Label>Métrica Acumuladora *</Label>
-                      <Select
-                        value={formData.metrica_acumuladora}
-                        onValueChange={(value) => setFormData({ ...formData, metrica_acumuladora: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {METRICAS_ACUMULADORAS.map((m) => (
-                            <SelectItem key={m.value} value={m.value}>
-                              {m.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        O que será acumulado para atingir a meta de volume
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Meta de Volume (R$) *</Label>
-                      <Input
-                        type="number"
-                        step="1000"
-                        min="0"
-                        value={formData.meta_volume}
-                        onChange={(e) => handleNumericChange("meta_volume", e.target.value)}
-                        placeholder="150000"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Ciclo fecha ao atingir este valor na métrica selecionada
-                      </p>
-                    </div>
-                  </>
-                )}
-
-                {/* Campos para Tempo/Híbrido */}
-                {(formData.tipo_gatilho === "TEMPO" || formData.tipo_gatilho === "HIBRIDO") && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Período Máximo (dias)</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={formData.periodo_maximo_dias}
-                        onChange={(e) => setFormData({ ...formData, periodo_maximo_dias: e.target.value })}
-                        placeholder="30"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Período Mínimo (dias)</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={formData.periodo_minimo_dias}
-                        onChange={(e) => setFormData({ ...formData, periodo_minimo_dias: e.target.value })}
-                        placeholder="7"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Trava de segurança
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
 
               {/* Modal de Ajuda - Base de Cálculo */}
               <Dialog open={showBaseCalculoHelp} onOpenChange={setShowBaseCalculoHelp}>
@@ -786,6 +681,28 @@ export function VincularOperadorDialog({
                           <strong>Exemplo:</strong> Operador gerou R$ 50.000 em resultado. 
                           Se tem 10%, recebe <strong>R$ 5.000</strong>.
                         </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                      <div className="flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                          <Layers className="h-5 w-5 text-amber-500" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-amber-400">Volume de Valor Apostado</h4>
+                        <p className="text-sm text-muted-foreground">
+                          O ciclo de pagamento é <strong>fechado por volume</strong>. Ao atingir a meta de 
+                          valor apostado, o ciclo encerra e o operador é pago.
+                        </p>
+                        <div className="text-xs text-muted-foreground mt-2 p-2 bg-background/50 rounded">
+                          <strong>Exemplo:</strong> Meta de R$ 120.000 em volume apostado. 
+                          Ao atingir, operador recebe o valor fixo definido (ex: R$ 5.000).
+                        </div>
+                        <p className="text-xs text-amber-400/70 mt-1">
+                          ✓ Ideal para operadores com foco em gerar volume de apostas
+                        </p>
                       </div>
                     </div>
                   </div>
