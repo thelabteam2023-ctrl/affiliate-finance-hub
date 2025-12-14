@@ -786,17 +786,10 @@ export function OperadorDialog({
                                 </p>
                               )}
                             </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="text-right">
-                              <p className="font-semibold">{formatCurrency(pagamento.valor)}</p>
-                              <Badge className={getStatusPagamentoColor(pagamento.status)}>
-                                {pagamento.status}
-                              </Badge>
-                            </div>
                             {pagamento.status === "PENDENTE" && (
                               <Button
                                 size="sm"
+                                variant="outline"
                                 onClick={() => {
                                   setSelectedPagamentoEdit(pagamento);
                                   setPagamentoDialogOpen(true);
@@ -806,6 +799,12 @@ export function OperadorDialog({
                                 Pagar
                               </Button>
                             )}
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold">{formatCurrency(pagamento.valor)}</p>
+                            <Badge className={getStatusPagamentoColor(pagamento.status)}>
+                              {pagamento.status}
+                            </Badge>
                           </div>
                         </div>
                       ))}
