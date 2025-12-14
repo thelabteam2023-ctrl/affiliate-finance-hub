@@ -53,6 +53,7 @@ import { VincularOperadorDialog } from "@/components/projetos/VincularOperadorDi
 import { ProjetoConciliacaoDialog } from "@/components/projetos/ProjetoConciliacaoDialog";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { ProjetoAcordoSection, AcordoData } from "@/components/projetos/ProjetoAcordoSection";
+import { ConfirmacaoSenhaDialog } from "@/components/ui/confirmacao-senha-dialog";
 
 type TipoProjeto = 'INTERNO' | 'EXCLUSIVO_INVESTIDOR';
 
@@ -117,6 +118,8 @@ export function ProjetoDialog({
   const [acordoData, setAcordoData] = useState<AcordoData | null>(null);
   const [showVincularPrompt, setShowVincularPrompt] = useState(false);
   const [novoprojetoId, setNovoProjetoId] = useState<string | null>(null);
+  const [confirmacaoDialogOpen, setConfirmacaoDialogOpen] = useState(false);
+  const [operadorParaDesvincular, setOperadorParaDesvincular] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<Projeto>({
     nome: "",
@@ -433,7 +436,16 @@ export function ProjetoDialog({
     }
   };
 
-  const handleDesvincularOperador = async (vinculoId: string) => {
+  // Iniciar fluxo de desvinculação com confirmação CAPTCHA
+  const iniciarDesvincular = (vinculoId: string) => {
+    setOperadorParaDesvincular(vinculoId);
+    setConfirmacaoDialogOpen(true);
+  };
+
+  // Executar desvinculação após confirmação
+  const handleDesvincularOperador = async () => {
+    if (!operadorParaDesvincular) return;
+    
     try {
       const { error } = await supabase
         .from("operador_projetos")
@@ -441,7 +453,7 @@ export function ProjetoDialog({
           status: "FINALIZADO",
           data_saida: new Date().toISOString().split("T")[0]
         })
-        .eq("id", vinculoId);
+        .eq("id", operadorParaDesvincular);
 
       if (error) throw error;
       toast.success("Operador desvinculado do projeto");
@@ -450,6 +462,8 @@ export function ProjetoDialog({
       }
     } catch (error: any) {
       toast.error("Erro ao desvincular: " + error.message);
+    } finally {
+      setOperadorParaDesvincular(null);
     }
   };
 
@@ -802,7 +816,7 @@ export function ProjetoDialog({
                                 <Button 
                                   variant="outline" 
                                   size="sm"
-                                  onClick={() => handleDesvincularOperador(operador.id)}
+                                  onClick={() => iniciarDesvincular(operador.id)}
                                 >
                                   Desvincular
                                 </Button>
@@ -929,6 +943,16 @@ export function ProjetoDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Dialog de Confirmação CAPTCHA para Desvincular */}
+      <ConfirmacaoSenhaDialog
+        open={confirmacaoDialogOpen}
+        onOpenChange={setConfirmacaoDialogOpen}
+        onConfirm={handleDesvincularOperador}
+        title="Desvincular Operador"
+        description="Esta ação finalizará o vínculo do operador com este projeto. Digite o código abaixo para confirmar."
+        confirmLabel="Desvincular"
+        variant="danger"
+      />
     </>
   );
 }
