@@ -5,12 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Plus, Users, DollarSign, Calendar, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { Plus, Users, DollarSign, Calendar, ChevronDown, ChevronUp, AlertTriangle, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { VincularOperadorDialog } from "@/components/projetos/VincularOperadorDialog";
 import { EntregasSection } from "@/components/entregas/EntregasSection";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ProjetoOperadoresTabProps {
   projetoId: string;
@@ -26,12 +32,12 @@ interface OperadorProjeto {
   valor_fixo: number | null;
   percentual: number | null;
   base_calculo: string | null;
-  frequencia_entrega: string | null;
+  frequencia_conciliacao: string | null;
+  resumo_acordo: string | null;
   tipo_meta: string | null;
   meta_valor: number | null;
   meta_percentual: number | null;
   status: string;
-  // Meta de volume (quando base_calculo = VOLUME_APOSTADO)
   meta_volume: number | null;
   operador?: {
     nome: string;
@@ -124,16 +130,6 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
     }
   };
 
-  const getBaseCalculoLabel = (base: string | null) => {
-    switch (base) {
-      case "LUCRO_PROJETO": return "Lucro do Projeto";
-      case "FATURAMENTO_PROJETO": return "Faturamento";
-      case "RESULTADO_OPERACAO": return "Resultado da Operação";
-      case "VOLUME_APOSTADO": return "Volume Apostado";
-      default: return base;
-    }
-  };
-
   const toggleCardExpanded = (id: string) => {
     const newExpanded = new Set(expandedCards);
     if (newExpanded.has(id)) {
@@ -178,18 +174,30 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Custo Fixo Mensal</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalPagamentos)}</div>
-            <p className="text-xs text-muted-foreground">
-              Soma dos valores fixos
-            </p>
-          </CardContent>
-        </Card>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-1">
+                    Custo Fixo (Referência)
+                    <FileText className="h-3 w-3 text-muted-foreground" />
+                  </CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(totalPagamentos)}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Soma dos valores de referência
+                  </p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Valor de referência - pagamento real é registrado manualmente</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       <div className="flex justify-between items-center">
@@ -205,11 +213,11 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
         <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="h-5 w-5 text-yellow-400" />
-            <span className="font-medium text-yellow-400">Atenção: Operadores sem entrega ativa</span>
+            <span className="font-medium text-yellow-400">Atenção: Operadores sem período de conciliação ativo</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            {operadoresSemEntrega.map(op => op.operador?.nome).join(", ")} não possuem entrega em andamento. 
-            Crie novas entregas para dar continuidade às operações.
+            {operadoresSemEntrega.map(op => op.operador?.nome).join(", ")} não possuem período em andamento. 
+            Crie novos períodos para gerar relatórios de performance.
           </p>
         </div>
       )}
@@ -260,51 +268,51 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
                         Desde {format(new Date(op.data_entrada), "dd/MM/yyyy", { locale: ptBR })}
                       </span>
                     </div>
+                    
+                    {/* Frequência de Conciliação */}
                     <div className="flex items-center gap-2 text-sm">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span>{getModeloLabel(op.modelo_pagamento)}</span>
-                      {op.frequencia_entrega && op.modelo_pagamento !== "POR_ENTREGA" && (
-                        <span className="text-xs text-muted-foreground">
-                          ({getFrequenciaLabel(op.frequencia_entrega)})
-                        </span>
-                      )}
+                      <span className="text-muted-foreground">Conciliação:</span>
+                      <span>{getFrequenciaLabel(op.frequencia_conciliacao)}</span>
                     </div>
-                    {op.valor_fixo && op.valor_fixo > 0 && (
-                      <div className="text-sm text-emerald-500">
-                        {formatCurrency(op.valor_fixo)} / mês
+
+                    {/* Resumo do acordo se existir */}
+                    {op.resumo_acordo && (
+                      <div className="p-2 rounded bg-muted/50 text-xs text-muted-foreground">
+                        <FileText className="h-3 w-3 inline mr-1" />
+                        {op.resumo_acordo.length > 80 
+                          ? `${op.resumo_acordo.substring(0, 80)}...` 
+                          : op.resumo_acordo}
                       </div>
                     )}
-                    {op.percentual && op.percentual > 0 && (
-                      <div className="text-sm text-emerald-500">
-                        {op.percentual}% {op.base_calculo && `sobre ${op.base_calculo.replace(/_/g, " ").toLowerCase()}`}
-                      </div>
-                    )}
-                    {/* Meta para POR_ENTREGA */}
-                    {op.modelo_pagamento === "POR_ENTREGA" && op.tipo_meta && (
-                      <div className="text-sm text-emerald-500">
-                        Meta: {op.tipo_meta === "VALOR_FIXO" && op.meta_valor
-                          ? formatCurrency(op.meta_valor)
-                          : op.tipo_meta === "PERCENTUAL" && op.meta_percentual
-                          ? `${op.meta_percentual}% sobre ${op.base_calculo?.replace(/_/g, " ").toLowerCase() || "lucro"}`
-                          : "Não definida"}
+
+                    {/* Referência do Acordo (badge indicativo) */}
+                    {(op.valor_fixo || op.percentual) && (
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="outline" className="text-xs">
+                          <FileText className="h-3 w-3 mr-1" />
+                          Ref: {getModeloLabel(op.modelo_pagamento)}
+                        </Badge>
+                        {op.valor_fixo && op.valor_fixo > 0 && (
+                          <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-400/30">
+                            {formatCurrency(op.valor_fixo)}
+                          </Badge>
+                        )}
+                        {op.percentual && op.percentual > 0 && (
+                          <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-400/30">
+                            {op.percentual}%
+                          </Badge>
+                        )}
                       </div>
                     )}
                   </div>
 
-                    {/* Meta de Volume (quando base_calculo = VOLUME_APOSTADO) */}
-                    {op.base_calculo === "VOLUME_APOSTADO" && op.meta_volume && (
-                      <div className="text-sm text-purple-400">
-                        Meta: {formatCurrency(op.meta_volume)} de volume
-                      </div>
-                    )}
-
-                  {/* Seção de Entregas */}
+                  {/* Seção de Períodos de Conciliação */}
                   <Collapsible open={isExpanded} onOpenChange={() => toggleCardExpanded(op.id)}>
                     <div className="border-t pt-3">
                       <CollapsibleTrigger asChild>
                         <Button variant="ghost" size="sm" className="w-full justify-between">
                           <span className="flex items-center gap-2">
-                            Entregas
+                            Períodos de Conciliação
                             {needsAttention && (
                               <AlertTriangle className="h-3 w-3 text-yellow-400" />
                             )}
@@ -323,7 +331,7 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
                           modeloPagamento={op.modelo_pagamento}
                           valorFixo={op.valor_fixo || 0}
                           percentual={op.percentual || 0}
-                          frequenciaEntrega={op.frequencia_entrega || "MENSAL"}
+                          frequenciaEntrega={op.frequencia_conciliacao || "MENSAL"}
                           expanded={isExpanded}
                         />
                       </CollapsibleContent>

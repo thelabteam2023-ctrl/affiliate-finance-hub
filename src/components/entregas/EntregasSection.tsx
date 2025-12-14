@@ -68,7 +68,7 @@ export function EntregasSection({
       if (error) throw error;
       setEntregas(data || []);
     } catch (error: any) {
-      toast.error("Erro ao carregar entregas: " + error.message);
+      toast.error("Erro ao carregar períodos: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -98,7 +98,7 @@ export function EntregasSection({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Package className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Entregas</span>
+          <span className="text-sm font-medium">Períodos</span>
           <span className="text-xs text-muted-foreground">({entregas.length})</span>
         </div>
         <Button
@@ -108,23 +108,23 @@ export function EntregasSection({
           disabled={!!entregaAtiva}
         >
           <Plus className="h-3 w-3 mr-1" />
-          Nova
+          Novo
         </Button>
       </div>
 
-      {/* Alerta se não houver entrega ativa */}
+      {/* Alerta se não houver período ativo */}
       {!entregaAtiva && entregas.length > 0 && (
         <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-yellow-400" />
             <span className="text-sm text-yellow-400">
-              Operador sem entrega ativa. Crie uma nova para continuar.
+              Sem período ativo. Crie um novo para gerar relatórios.
             </span>
           </div>
         </div>
       )}
 
-      {/* Entrega Ativa */}
+      {/* Período Ativo */}
       {entregaAtiva && (
         <EntregaCard
           entrega={entregaAtiva}
@@ -133,7 +133,7 @@ export function EntregasSection({
         />
       )}
 
-      {/* Entregas Concluídas (mostrar apenas se expandido) */}
+      {/* Períodos Concluídos (mostrar apenas se expandido) */}
       {expanded && entregasConcluidas.length > 0 && (
         <div className="space-y-2">
           <span className="text-xs text-muted-foreground">Histórico</span>
@@ -142,17 +142,17 @@ export function EntregasSection({
           ))}
           {entregasConcluidas.length > 3 && (
             <p className="text-xs text-muted-foreground text-center">
-              +{entregasConcluidas.length - 3} entregas anteriores
+              +{entregasConcluidas.length - 3} períodos anteriores
             </p>
           )}
         </div>
       )}
 
-      {/* Sem entregas */}
+      {/* Sem períodos */}
       {entregas.length === 0 && (
         <div className="p-4 rounded-lg border border-dashed text-center">
           <Package className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
-          <p className="text-sm text-muted-foreground">Nenhuma entrega criada</p>
+          <p className="text-sm text-muted-foreground">Nenhum período de conciliação criado</p>
           <Button
             size="sm"
             variant="outline"
@@ -160,7 +160,7 @@ export function EntregasSection({
             onClick={() => setDialogOpen(true)}
           >
             <Plus className="h-3 w-3 mr-1" />
-            Criar Primeira Entrega
+            Criar Primeiro Período
           </Button>
         </div>
       )}

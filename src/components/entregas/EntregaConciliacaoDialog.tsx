@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { AlertTriangle, CheckCircle2, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { AlertTriangle, TrendingDown, TrendingUp, Wallet, FileText } from "lucide-react";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 
 interface Entrega {
@@ -88,6 +88,7 @@ export function EntregaConciliacaoDialog({
 
   useEffect(() => {
     if (open && entrega) {
+      // Sugestão baseada na referência do acordo (apenas como guia, não automático)
       const valorSugerido = calcularPagamentoSugerido(entrega.resultado_nominal);
       setFormData({
         resultado_real: entrega.resultado_nominal.toString(),
@@ -106,6 +107,7 @@ export function EntregaConciliacaoDialog({
     }
   }, [open, entrega]);
 
+  // Calcula sugestão baseada na referência do acordo (apenas informativo)
   const calcularPagamentoSugerido = (resultado: number) => {
     switch (modeloPagamento) {
       case "FIXO_MENSAL":
@@ -114,8 +116,6 @@ export function EntregaConciliacaoDialog({
         return resultado * (percentual / 100);
       case "HIBRIDO":
         return valorFixo + (resultado * (percentual / 100));
-      case "POR_ENTREGA":
-        return entrega?.meta_valor || 0;
       default:
         return 0;
     }
@@ -130,10 +130,6 @@ export function EntregaConciliacaoDialog({
 
   const ajuste = entrega 
     ? parseFloat(formData.resultado_real || "0") - entrega.resultado_nominal
-    : 0;
-
-  const excedente = entrega
-    ? Math.max(0, parseFloat(formData.resultado_real || "0") - (entrega.meta_valor || 0))
     : 0;
 
   const handleSave = async () => {
@@ -188,7 +184,7 @@ export function EntregaConciliacaoDialog({
           moeda: origemData.tipoMoeda === "CRYPTO" ? "USD" : "BRL",
           tipo_moeda: origemData.tipoMoeda,
           data_transacao: new Date().toISOString(),
-          descricao: `Pagamento conciliação entrega #${entrega.numero_entrega}${operadorNome ? ` - ${operadorNome}` : ""}`,
+          descricao: `Pagamento conciliação período #${entrega.numero_entrega}${operadorNome ? ` - ${operadorNome}` : ""}`,
           status: "CONFIRMADO",
         };
 
@@ -231,7 +227,7 @@ export function EntregaConciliacaoDialog({
             valor: valorPagamento,
             moeda: "BRL",
             data_pagamento: new Date().toISOString().split("T")[0],
-            descricao: `Pagamento referente à entrega #${entrega.numero_entrega}`,
+            descricao: `Pagamento referente ao período #${entrega.numero_entrega}`,
             status: "CONFIRMADO",
             cash_ledger_id: cashLedgerId,
           });
@@ -248,7 +244,6 @@ export function EntregaConciliacaoDialog({
           tipo_ajuste: ajuste !== 0 ? formData.tipo_ajuste : null,
           observacoes_conciliacao: formData.observacoes_conciliacao || null,
           valor_pagamento_operador: valorPagamento,
-          excedente_proximo: excedente,
           conciliado: true,
           pagamento_realizado: registrarPagamento && valorPagamento > 0,
           data_conciliacao: new Date().toISOString(),
@@ -259,7 +254,7 @@ export function EntregaConciliacaoDialog({
 
       if (error) throw error;
 
-      toast.success("Entrega conciliada com sucesso");
+      toast.success("Período conciliado com sucesso");
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
@@ -275,14 +270,14 @@ export function EntregaConciliacaoDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Conciliar Entrega #{entrega.numero_entrega}</DialogTitle>
+          <DialogTitle>Conciliar Período #{entrega.numero_entrega}</DialogTitle>
           <DialogDescription>
             {operadorNome && `Operador: ${operadorNome}`}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Resumo da Entrega */}
+          {/* Resumo do Período */}
           <div className="p-4 rounded-lg bg-muted/50 border space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Saldo Inicial:</span>
@@ -292,12 +287,6 @@ export function EntregaConciliacaoDialog({
               <span className="text-muted-foreground">Resultado Nominal:</span>
               <span className="font-medium">{formatCurrency(entrega.resultado_nominal)}</span>
             </div>
-            {entrega.meta_valor && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Meta:</span>
-                <span>{formatCurrency(entrega.meta_valor)}</span>
-              </div>
-            )}
           </div>
 
           {/* Resultado Real */}
@@ -346,19 +335,7 @@ export function EntregaConciliacaoDialog({
             </div>
           )}
 
-          {/* Excedente */}
-          {excedente > 0 && modeloPagamento === "POR_ENTREGA" && (
-            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-blue-400" />
-                <span className="text-sm text-blue-400">
-                  <strong>Excedente para próxima entrega:</strong> {formatCurrency(excedente)}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Valor Pagamento */}
+          {/* Valor Pagamento - Campo manual */}
           <div className="space-y-2">
             <Label>Valor Pagamento ao Operador (R$)</Label>
             <Input
@@ -368,12 +345,17 @@ export function EntregaConciliacaoDialog({
               onChange={(e) => setFormData({ ...formData, valor_pagamento_operador: e.target.value })}
               placeholder="0,00"
             />
-            <p className="text-xs text-muted-foreground">
-              Sugerido: {formatCurrency(calcularPagamentoSugerido(parseFloat(formData.resultado_real) || 0))}
-            </p>
+            {(valorFixo > 0 || percentual > 0) && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <FileText className="h-3 w-3" />
+                <span>
+                  Referência do acordo: {formatCurrency(calcularPagamentoSugerido(parseFloat(formData.resultado_real) || 0))}
+                </span>
+              </div>
+            )}
           </div>
 
-          {/* Toggle para registrar pagamento automaticamente */}
+          {/* Toggle para registrar pagamento */}
           {valorPagamento > 0 && (
             <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
               <div className="flex items-center justify-between">
@@ -426,7 +408,7 @@ export function EntregaConciliacaoDialog({
             onClick={handleSave} 
             disabled={loading || (registrarPagamento && isSaldoInsuficiente)}
           >
-            {loading ? "Conciliando..." : "Conciliar Entrega"}
+            {loading ? "Conciliando..." : "Conciliar Período"}
           </Button>
         </div>
       </DialogContent>

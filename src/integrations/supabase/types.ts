@@ -1994,7 +1994,7 @@ export type Database = {
           data_entrada: string
           data_saida: string | null
           faixas_escalonadas: Json | null
-          frequencia_entrega: string | null
+          frequencia_conciliacao: string | null
           funcao: string | null
           id: string
           meta_percentual: number | null
@@ -2009,6 +2009,7 @@ export type Database = {
           prejuizo_acumulado: number | null
           projeto_id: string
           regra_prejuizo: string | null
+          resumo_acordo: string | null
           status: string
           teto_pagamento: number | null
           tipo_meta: string | null
@@ -2022,7 +2023,7 @@ export type Database = {
           data_entrada?: string
           data_saida?: string | null
           faixas_escalonadas?: Json | null
-          frequencia_entrega?: string | null
+          frequencia_conciliacao?: string | null
           funcao?: string | null
           id?: string
           meta_percentual?: number | null
@@ -2037,6 +2038,7 @@ export type Database = {
           prejuizo_acumulado?: number | null
           projeto_id: string
           regra_prejuizo?: string | null
+          resumo_acordo?: string | null
           status?: string
           teto_pagamento?: number | null
           tipo_meta?: string | null
@@ -2050,7 +2052,7 @@ export type Database = {
           data_entrada?: string
           data_saida?: string | null
           faixas_escalonadas?: Json | null
-          frequencia_entrega?: string | null
+          frequencia_conciliacao?: string | null
           funcao?: string | null
           id?: string
           meta_percentual?: number | null
@@ -2065,6 +2067,7 @@ export type Database = {
           prejuizo_acumulado?: number | null
           projeto_id?: string
           regra_prejuizo?: string | null
+          resumo_acordo?: string | null
           status?: string
           teto_pagamento?: number | null
           tipo_meta?: string | null
