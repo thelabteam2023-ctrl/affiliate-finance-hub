@@ -47,7 +47,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   UserCheck,
-  Handshake
+  Handshake,
+  FileText
 } from "lucide-react";
 import { VincularOperadorDialog } from "@/components/projetos/VincularOperadorDialog";
 import { ProjetoConciliacaoDialog } from "@/components/projetos/ProjetoConciliacaoDialog";
@@ -88,6 +89,12 @@ interface OperadorVinculado {
   data_saida: string | null;
   status: string;
   funcao: string | null;
+  modelo_pagamento: string | null;
+  valor_fixo: number | null;
+  percentual: number | null;
+  base_calculo: string | null;
+  frequencia_conciliacao: string | null;
+  resumo_acordo: string | null;
 }
 
 interface ProjetoDialogProps {
@@ -259,6 +266,12 @@ export function ProjetoDialog({
         data_saida,
         status,
         funcao,
+        modelo_pagamento,
+        valor_fixo,
+        percentual,
+        base_calculo,
+        frequencia_conciliacao,
+        resumo_acordo,
         operadores!inner(nome)
       `)
       .eq("projeto_id", projetoId)
@@ -274,6 +287,12 @@ export function ProjetoDialog({
           data_saida: op.data_saida,
           status: op.status,
           funcao: op.funcao,
+          modelo_pagamento: op.modelo_pagamento,
+          valor_fixo: op.valor_fixo,
+          percentual: op.percentual,
+          base_calculo: op.base_calculo,
+          frequencia_conciliacao: op.frequencia_conciliacao,
+          resumo_acordo: op.resumo_acordo,
         }))
       );
     }
@@ -792,53 +811,127 @@ export function ProjetoDialog({
                   </Card>
                 ) : (
                   <div className="space-y-3">
-                    {operadores.map((operador) => (
-                      <Card key={operador.id}>
-                        <CardContent className="pt-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium">{operador.operador_nome}</p>
-                              {operador.funcao && (
-                                <p className="text-sm text-muted-foreground">{operador.funcao}</p>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge 
-                                className={
-                                  operador.status === "ATIVO" 
-                                    ? "bg-emerald-500/20 text-emerald-400" 
-                                    : "bg-gray-500/20 text-gray-400"
-                                }
-                              >
-                                {operador.status}
-                              </Badge>
-                              {!isViewMode && operador.status === "ATIVO" && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => iniciarDesvincular(operador.id)}
+                    {operadores.map((operador) => {
+                      const getModeloLabel = (modelo: string | null) => {
+                        switch (modelo) {
+                          case "FIXO_MENSAL": return "Fixo Mensal";
+                          case "PORCENTAGEM": return "Porcentagem";
+                          case "HIBRIDO": return "Híbrido";
+                          case "POR_ENTREGA": return "Por Entrega";
+                          case "COMISSAO_ESCALONADA": return "Comissão Escalonada";
+                          default: return modelo || "Não definido";
+                        }
+                      };
+
+                      const getFrequenciaLabel = (freq: string | null) => {
+                        switch (freq) {
+                          case "SEMANAL": return "Semanal";
+                          case "QUINZENAL": return "Quinzenal";
+                          case "MENSAL": return "Mensal";
+                          default: return "Mensal";
+                        }
+                      };
+
+                      const formatCurrency = (value: number) => {
+                        return new Intl.NumberFormat("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        }).format(value);
+                      };
+
+                      const hasAcordoInfo = operador.modelo_pagamento || operador.valor_fixo || operador.percentual || operador.resumo_acordo;
+
+                      return (
+                        <Card key={operador.id}>
+                          <CardContent className="pt-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium">{operador.operador_nome}</p>
+                                {operador.funcao && (
+                                  <p className="text-sm text-muted-foreground">{operador.funcao}</p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge 
+                                  className={
+                                    operador.status === "ATIVO" 
+                                      ? "bg-emerald-500/20 text-emerald-400" 
+                                      : "bg-gray-500/20 text-gray-400"
+                                  }
                                 >
-                                  Desvincular
-                                </Button>
+                                  {operador.status}
+                                </Badge>
+                                {!isViewMode && operador.status === "ATIVO" && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => iniciarDesvincular(operador.id)}
+                                  >
+                                    Desvincular
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>
+                                  Desde {format(new Date(operador.data_entrada), "dd/MM/yyyy", { locale: ptBR })}
+                                </span>
+                              </div>
+                              {operador.data_saida && (
+                                <span>
+                                  até {format(new Date(operador.data_saida), "dd/MM/yyyy", { locale: ptBR })}
+                                </span>
                               )}
+                              <div className="flex items-center gap-1">
+                                <span>Conciliação: {getFrequenciaLabel(operador.frequencia_conciliacao)}</span>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              <span>
-                                Desde {format(new Date(operador.data_entrada), "dd/MM/yyyy", { locale: ptBR })}
-                              </span>
-                            </div>
-                            {operador.data_saida && (
-                              <span>
-                                até {format(new Date(operador.data_saida), "dd/MM/yyyy", { locale: ptBR })}
-                              </span>
+
+                            {/* Referência do Acordo */}
+                            {hasAcordoInfo && (
+                              <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2">
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <FileText className="h-3 w-3" />
+                                  <span className="font-medium">Referência do Acordo</span>
+                                </div>
+                                
+                                <div className="flex flex-wrap gap-2">
+                                  {operador.modelo_pagamento && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {getModeloLabel(operador.modelo_pagamento)}
+                                    </Badge>
+                                  )}
+                                  {operador.valor_fixo && operador.valor_fixo > 0 && (
+                                    <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-400/30">
+                                      {formatCurrency(operador.valor_fixo)}
+                                    </Badge>
+                                  )}
+                                  {operador.percentual && operador.percentual > 0 && (
+                                    <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-400/30">
+                                      {operador.percentual}%
+                                    </Badge>
+                                  )}
+                                  {operador.base_calculo && (
+                                    <Badge variant="outline" className="text-xs text-blue-400 border-blue-400/30">
+                                      Base: {operador.base_calculo === "LUCRO_PROJETO" ? "Lucro" : operador.base_calculo === "FATURAMENTO_PROJETO" ? "Faturamento" : "Resultado Op."}
+                                    </Badge>
+                                  )}
+                                </div>
+
+                                {operador.resumo_acordo && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {operador.resumo_acordo}
+                                  </p>
+                                )}
+                              </div>
                             )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 )}
               </TabsContent>
