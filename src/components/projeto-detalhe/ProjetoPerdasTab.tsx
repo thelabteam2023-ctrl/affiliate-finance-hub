@@ -36,6 +36,7 @@ import {
 
 interface ProjetoPerdasTabProps {
   projetoId: string;
+  onDataChange?: () => void;
 }
 
 interface Perda {
@@ -81,7 +82,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof
   },
 };
 
-export function ProjetoPerdasTab({ projetoId }: ProjetoPerdasTabProps) {
+export function ProjetoPerdasTab({ projetoId, onDataChange }: ProjetoPerdasTabProps) {
   const [perdas, setPerdas] = useState<Perda[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -212,6 +213,7 @@ export function ProjetoPerdasTab({ projetoId }: ProjetoPerdasTabProps) {
       
       toast.success(`Perda marcada como ${statusLabels[newStatus]}`);
       fetchPerdas();
+      onDataChange?.();
     } catch (error: any) {
       toast.error("Erro ao atualizar status: " + error.message);
     } finally {
@@ -255,6 +257,7 @@ export function ProjetoPerdasTab({ projetoId }: ProjetoPerdasTabProps) {
       
       toast.success("Perda removida com sucesso");
       fetchPerdas();
+      onDataChange?.();
     } catch (error: any) {
       toast.error("Erro ao remover perda: " + error.message);
     } finally {
@@ -460,7 +463,7 @@ export function ProjetoPerdasTab({ projetoId }: ProjetoPerdasTabProps) {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         projetoId={projetoId}
-        onSuccess={fetchPerdas}
+        onSuccess={() => { fetchPerdas(); onDataChange?.(); }}
       />
 
       {/* Dialog de Confirmação de Exclusão */}

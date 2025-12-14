@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useProjetoResultado } from "@/hooks/useProjetoResultado";
 import { 
   ArrowLeft, 
   FolderKanban, 
@@ -91,6 +92,19 @@ export default function ProjetoDetalhe() {
   
   // KPIs should only show on performance tabs
   const showKpis = ["dashboard", "apostas", "perdas"].includes(activeTab);
+
+  // Helper to get date range for hook
+  const getResultadoDateRange = () => {
+    return getDateRangeFromFilter();
+  };
+  const { start: dataInicio, end: dataFim } = getResultadoDateRange();
+  
+  // FONTE ÚNICA DE VERDADE: Hook centralizado para resultado do projeto
+  const { resultado: projetoResultado, refresh: refreshResultado } = useProjetoResultado({
+    projetoId: id || '',
+    dataInicio,
+    dataFim,
+  });
 
   useEffect(() => {
     if (id) {
@@ -455,44 +469,48 @@ export default function ProjetoDetalhe() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(apostasResumo?.total_stake || 0)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(projetoResultado?.totalStaked || 0)}</div>
             <p className="text-xs text-muted-foreground">
               Total apostado
             </p>
           </CardContent>
         </Card>
 
-        {/* Resultado */}
+        {/* Resultado - FONTE ÚNICA DE VERDADE (usa projetoResultado.netProfit) */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {(apostasResumo?.lucro_total || 0) >= 0 ? "Lucro" : "Prejuízo"}
+              {(projetoResultado?.netProfit || 0) >= 0 ? "Lucro" : "Prejuízo"}
             </CardTitle>
-            {(apostasResumo?.lucro_total || 0) >= 0 ? (
+            {(projetoResultado?.netProfit || 0) >= 0 ? (
               <TrendingUp className="h-4 w-4 text-emerald-500" />
             ) : (
               <TrendingDown className="h-4 w-4 text-red-500" />
             )}
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${(apostasResumo?.lucro_total || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-              {formatCurrency(Math.abs(apostasResumo?.lucro_total || 0))}
+            <div className={`text-2xl font-bold ${(projetoResultado?.netProfit || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+              {formatCurrency(Math.abs(projetoResultado?.netProfit || 0))}
             </div>
             <p className="text-xs text-muted-foreground">
-              Resultado do período
+              {projetoResultado?.operationalLossesConfirmed ? (
+                <>Bruto: {formatCurrency(projetoResultado.grossProfitFromBets)} - Perdas: {formatCurrency(projetoResultado.operationalLossesConfirmed)}</>
+              ) : (
+                "Resultado do período"
+              )}
             </p>
           </CardContent>
         </Card>
 
-        {/* ROI */}
+        {/* ROI - FONTE ÚNICA DE VERDADE */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">ROI</CardTitle>
             <Percent className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${(apostasResumo?.roi_percentual || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-              {(apostasResumo?.roi_percentual || 0).toFixed(2)}%
+            <div className={`text-2xl font-bold ${(projetoResultado?.roi || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+              {(projetoResultado?.roi || 0).toFixed(2)}%
             </div>
             <p className="text-xs text-muted-foreground">
               Retorno sobre investimento
@@ -542,7 +560,7 @@ export default function ProjetoDetalhe() {
         <TabsContent value="apostas">
           <ProjetoApostasTab 
             projetoId={id!} 
-            onDataChange={fetchApostasResumo}
+            onDataChange={() => { fetchApostasResumo(); refreshResultado(); }}
             periodFilter={periodFilter}
             dateRange={dateRange}
           />
@@ -561,7 +579,7 @@ export default function ProjetoDetalhe() {
         </TabsContent>
 
         <TabsContent value="perdas">
-          <ProjetoPerdasTab projetoId={id!} />
+          <ProjetoPerdasTab projetoId={id!} onDataChange={refreshResultado} />
         </TabsContent>
 
       </Tabs>
