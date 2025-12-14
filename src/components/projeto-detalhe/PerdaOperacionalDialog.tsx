@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { Clock, CheckCircle } from "lucide-react";
 
 interface PerdaOperacionalDialogProps {
   open: boolean;
@@ -48,6 +49,11 @@ const CATEGORIAS = [
   { value: "OUTRO", label: "Outro" },
 ];
 
+const STATUS_OPTIONS = [
+  { value: "PENDENTE", label: "Pendente", description: "Capital bloqueado, não afeta lucro ainda", icon: Clock },
+  { value: "CONFIRMADA", label: "Confirmada", description: "Prejuízo efetivo, impacta lucro e ROI", icon: CheckCircle },
+];
+
 export function PerdaOperacionalDialog({
   open,
   onOpenChange,
@@ -61,6 +67,7 @@ export function PerdaOperacionalDialog({
   const [bookmakerId, setBookmakerId] = useState<string>("");
   const [valor, setValor] = useState<string>("");
   const [categoria, setCategoria] = useState<string>("");
+  const [status, setStatus] = useState<string>("PENDENTE");
   const [descricao, setDescricao] = useState<string>("");
 
   useEffect(() => {
@@ -74,6 +81,7 @@ export function PerdaOperacionalDialog({
     setBookmakerId("");
     setValor("");
     setCategoria("");
+    setStatus("PENDENTE");
     setDescricao("");
   };
 
@@ -118,16 +126,34 @@ export function PerdaOperacionalDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      const { error } = await supabase.from("projeto_perdas").insert({
+      const insertData = {
         user_id: user.id,
         projeto_id: projetoId,
         bookmaker_id: bookmakerId,
         valor: valorNumerico,
         categoria,
+        status,
         descricao: descricao || null,
-      });
+        data_confirmacao: status === 'CONFIRMADA' ? new Date().toISOString() : null,
+      };
+
+      const { error } = await supabase.from("projeto_perdas").insert(insertData);
 
       if (error) throw error;
+
+      // If confirming immediately, deduct from bookmaker balance
+      if (status === 'CONFIRMADA') {
+        const selectedBk = bookmakers.find(b => b.id === bookmakerId);
+        if (selectedBk) {
+          await supabase
+            .from("bookmakers")
+            .update({ 
+              saldo_atual: Math.max(0, selectedBk.saldo_atual - valorNumerico),
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", bookmakerId);
+        }
+      }
 
       toast.success("Perda registrada com sucesso");
       onSuccess();
@@ -216,6 +242,39 @@ export function PerdaOperacionalDialog({
               value={valor}
               onChange={(e) => setValor(e.target.value)}
             />
+          </div>
+
+          {/* Status */}
+          <div className="grid gap-2">
+            <Label>Status Inicial *</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {STATUS_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                const isSelected = status === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setStatus(opt.value)}
+                    className={`p-3 rounded-lg border text-left transition-all ${
+                      isSelected 
+                        ? opt.value === 'PENDENTE' 
+                          ? 'border-yellow-500 bg-yellow-500/10' 
+                          : 'border-red-500 bg-red-500/10'
+                        : 'border-border hover:border-muted-foreground/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Icon className={`h-4 w-4 ${
+                        opt.value === 'PENDENTE' ? 'text-yellow-500' : 'text-red-500'
+                      }`} />
+                      <span className="font-medium text-sm">{opt.label}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{opt.description}</p>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Descrição */}
