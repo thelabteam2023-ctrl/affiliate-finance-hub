@@ -670,13 +670,13 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Competência</TableHead>
-                  <TableHead>Tipo</TableHead>
+                  <TableHead className="w-[90px]">Data</TableHead>
+                  <TableHead className="w-[80px]">Compet.</TableHead>
+                  <TableHead className="w-[90px]">Tipo</TableHead>
                   <TableHead>Projeto</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="text-right w-[100px]">Valor</TableHead>
+                  <TableHead className="w-[100px]">Status</TableHead>
+                  <TableHead className="text-right w-[90px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
