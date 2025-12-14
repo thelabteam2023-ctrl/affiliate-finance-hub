@@ -346,9 +346,38 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
                     </div>
                   )}
 
-                  {ciclo.observacoes && (
+                  {/* Parse and display metrics from observacoes */}
+                  {ciclo.observacoes && ciclo.observacoes.includes("📊 Métricas:") && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                        <Target className="h-3 w-3" /> Métricas do Ciclo
+                      </p>
+                      <div className="flex flex-wrap gap-4 text-sm">
+                        {(() => {
+                          const metricsMatch = ciclo.observacoes.match(/📊 Métricas: (.+)/);
+                          if (!metricsMatch) return null;
+                          const metricsStr = metricsMatch[1];
+                          const parts = metricsStr.split(" | ");
+                          return parts.map((part, idx) => {
+                            const [label, value] = part.includes(":") 
+                              ? [part.split(":")[0].trim(), part.split(":").slice(1).join(":").trim()]
+                              : [part.split(" ")[0], part.split(" ").slice(1).join(" ")];
+                            return (
+                              <div key={idx} className="bg-muted/50 px-3 py-1.5 rounded-md">
+                                <span className="text-muted-foreground">{label}: </span>
+                                <span className="font-medium">{value || label}</span>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Show other observacoes (not metrics) */}
+                  {ciclo.observacoes && !ciclo.observacoes.startsWith("📊") && (
                     <p className="text-sm text-muted-foreground mt-2 pt-2 border-t">
-                      {ciclo.observacoes}
+                      {ciclo.observacoes.split("\n\n📊")[0]}
                     </p>
                   )}
                 </CardContent>
