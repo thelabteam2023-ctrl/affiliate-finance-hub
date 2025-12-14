@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Plus, Users, DollarSign, Calendar, ChevronDown, ChevronUp, AlertTriangle, FileText } from "lucide-react";
+import { Plus, Users, DollarSign, Calendar, ChevronDown, ChevronUp, AlertTriangle, FileText, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { VincularOperadorDialog } from "@/components/projetos/VincularOperadorDialog";
+import { EditarAcordoOperadorDialog } from "@/components/projetos/EditarAcordoOperadorDialog";
 import { EntregasSection } from "@/components/entregas/EntregasSection";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -51,6 +52,8 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
   const [operadores, setOperadores] = useState<OperadorProjeto[]>([]);
   const [loading, setLoading] = useState(true);
   const [vincularDialogOpen, setVincularDialogOpen] = useState(false);
+  const [editarAcordoDialogOpen, setEditarAcordoDialogOpen] = useState(false);
+  const [selectedOperadorProjeto, setSelectedOperadorProjeto] = useState<OperadorProjeto | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -138,6 +141,11 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
       newExpanded.add(id);
     }
     setExpandedCards(newExpanded);
+  };
+
+  const handleEditarAcordo = (op: OperadorProjeto) => {
+    setSelectedOperadorProjeto(op);
+    setEditarAcordoDialogOpen(true);
   };
 
   if (loading) {
@@ -255,9 +263,28 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
                         )}
                       </div>
                     </div>
-                    <Badge className={getStatusColor(op.status)}>
-                      {op.status}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleEditarAcordo(op)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Editar Acordo</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <Badge className={getStatusColor(op.status)}>
+                        {op.status}
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -348,6 +375,13 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
         open={vincularDialogOpen}
         onOpenChange={setVincularDialogOpen}
         projetoId={projetoId}
+        onSuccess={fetchOperadores}
+      />
+
+      <EditarAcordoOperadorDialog
+        open={editarAcordoDialogOpen}
+        onOpenChange={setEditarAcordoDialogOpen}
+        operadorProjeto={selectedOperadorProjeto}
         onSuccess={fetchOperadores}
       />
     </div>
