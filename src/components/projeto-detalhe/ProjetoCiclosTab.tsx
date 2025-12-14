@@ -86,19 +86,48 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
 
   const handleFecharCiclo = async (ciclo: Ciclo) => {
     try {
-      // Calcular lucros do período
-      const { data: apostas, error: apostasError } = await supabase
-        .from("apostas")
-        .select("lucro_prejuizo, stake")
-        .eq("projeto_id", projetoId)
-        .gte("data_aposta", ciclo.data_inicio)
-        .lte("data_aposta", ciclo.data_fim_prevista)
-        .eq("status", "FINALIZADA");
+      // Calcular métricas completas do período
+      const [apostasResult, apostasMultiplasResult, surebetsResult] = await Promise.all([
+        supabase
+          .from("apostas")
+          .select("lucro_prejuizo, stake")
+          .eq("projeto_id", projetoId)
+          .gte("data_aposta", ciclo.data_inicio)
+          .lte("data_aposta", ciclo.data_fim_prevista)
+          .eq("status", "FINALIZADA"),
+        supabase
+          .from("apostas_multiplas")
+          .select("lucro_prejuizo, stake")
+          .eq("projeto_id", projetoId)
+          .gte("data_aposta", ciclo.data_inicio)
+          .lte("data_aposta", ciclo.data_fim_prevista)
+          .in("resultado", ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"]),
+        supabase
+          .from("surebets")
+          .select("lucro_real, stake_total")
+          .eq("projeto_id", projetoId)
+          .gte("data_evento", ciclo.data_inicio)
+          .lte("data_evento", ciclo.data_fim_prevista)
+          .eq("status", "FINALIZADA"),
+      ]);
 
-      if (apostasError) throw apostasError;
+      const apostas = apostasResult.data || [];
+      const apostasMultiplas = apostasMultiplasResult.data || [];
+      const surebets = surebetsResult.data || [];
 
-      const lucroBruto = (apostas || []).reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
-      const volumeApostado = (apostas || []).reduce((acc, a) => acc + (a.stake || 0), 0);
+      // Calcular totais
+      const qtdApostas = apostas.length + apostasMultiplas.length + surebets.length;
+      const volumeApostado = 
+        apostas.reduce((acc, a) => acc + (a.stake || 0), 0) +
+        apostasMultiplas.reduce((acc, a) => acc + (a.stake || 0), 0) +
+        surebets.reduce((acc, a) => acc + (a.stake_total || 0), 0);
+      const lucroBruto = 
+        apostas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
+        apostasMultiplas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
+        surebets.reduce((acc, a) => acc + (a.lucro_real || 0), 0);
+
+      // Calcular ROI
+      const roi = volumeApostado > 0 ? (lucroBruto / volumeApostado) * 100 : 0;
 
       // Calcular excedente se ciclo por volume
       let excedenteProximo = 0;
@@ -120,11 +149,15 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
           excedente_proximo: excedenteProximo,
           gatilho_fechamento: "MANUAL",
           data_fechamento: new Date().toISOString(),
+          // Store additional metrics in observacoes JSON-like format
+          observacoes: ciclo.observacoes 
+            ? `${ciclo.observacoes}\n\n📊 Métricas: ${qtdApostas} apostas | Volume: R$ ${volumeApostado.toFixed(2)} | ROI: ${roi.toFixed(2)}%`
+            : `📊 Métricas: ${qtdApostas} apostas | Volume: R$ ${volumeApostado.toFixed(2)} | ROI: ${roi.toFixed(2)}%`,
         })
         .eq("id", ciclo.id);
 
       if (error) throw error;
-      toast.success("Ciclo fechado com sucesso!");
+      toast.success(`Ciclo fechado! ${qtdApostas} apostas, Lucro: R$ ${lucroBruto.toFixed(2)}, ROI: ${roi.toFixed(2)}%`);
       fetchCiclos();
     } catch (error: any) {
       toast.error("Erro ao fechar ciclo: " + error.message);

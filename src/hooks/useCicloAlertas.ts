@@ -1,0 +1,169 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { differenceInDays } from "date-fns";
+
+export interface AlertaCiclo {
+  id: string;
+  projeto_id: string;
+  projeto_nome: string;
+  numero_ciclo: number;
+  tipo_gatilho: string;
+  data_inicio: string;
+  data_fim_prevista: string;
+  meta_volume: number | null;
+  valor_acumulado: number;
+  metrica_acumuladora: string;
+  // Calculated fields
+  dias_restantes: number;
+  dias_atraso: number;
+  progresso_volume: number;
+  urgencia: "CRITICA" | "ALTA" | "NORMAL";
+  mensagem_tempo: string | null;
+  mensagem_volume: string | null;
+}
+
+export function useCicloAlertas() {
+  const [alertas, setAlertas] = useState<AlertaCiclo[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchAlertas = async () => {
+    try {
+      setLoading(true);
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+
+      // Fetch ciclos em andamento
+      const { data: ciclos, error: ciclosError } = await supabase
+        .from("projeto_ciclos")
+        .select(`
+          id,
+          projeto_id,
+          numero_ciclo,
+          tipo_gatilho,
+          data_inicio,
+          data_fim_prevista,
+          meta_volume,
+          valor_acumulado,
+          metrica_acumuladora,
+          projeto:projetos(nome)
+        `)
+        .eq("status", "EM_ANDAMENTO");
+
+      if (ciclosError) throw ciclosError;
+      if (!ciclos || ciclos.length === 0) {
+        setAlertas([]);
+        return;
+      }
+
+      // Para cada ciclo, calcular valor_acumulado atual baseado em apostas
+      const alertasCalculados: AlertaCiclo[] = [];
+
+      for (const ciclo of ciclos) {
+        // Calcular métricas do período
+        const { data: apostas } = await supabase
+          .from("apostas")
+          .select("lucro_prejuizo, stake")
+          .eq("projeto_id", ciclo.projeto_id)
+          .gte("data_aposta", ciclo.data_inicio)
+          .lte("data_aposta", ciclo.data_fim_prevista)
+          .eq("status", "FINALIZADA");
+
+        const lucroTotal = (apostas || []).reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+        const volumeTotal = (apostas || []).reduce((acc, a) => acc + (a.stake || 0), 0);
+
+        // Definir valor acumulado baseado na métrica
+        let valorAcumuladoReal = 0;
+        if (ciclo.metrica_acumuladora === "VOLUME_APOSTADO") {
+          valorAcumuladoReal = volumeTotal;
+        } else if (ciclo.metrica_acumuladora === "LUCRO") {
+          valorAcumuladoReal = lucroTotal;
+        } else {
+          valorAcumuladoReal = volumeTotal; // TURNOVER = volume
+        }
+
+        // Calcular dias
+        const dataFim = new Date(ciclo.data_fim_prevista);
+        dataFim.setHours(0, 0, 0, 0);
+        const diasRestantes = differenceInDays(dataFim, hoje);
+        const diasAtraso = diasRestantes < 0 ? Math.abs(diasRestantes) : 0;
+
+        // Calcular progresso de volume
+        let progressoVolume = 0;
+        if (ciclo.meta_volume && ciclo.meta_volume > 0) {
+          progressoVolume = (valorAcumuladoReal / ciclo.meta_volume) * 100;
+        }
+
+        // Determinar se deve gerar alerta
+        let deveAlertar = false;
+        let urgencia: "CRITICA" | "ALTA" | "NORMAL" = "NORMAL";
+        let mensagemTempo: string | null = null;
+        let mensagemVolume: string | null = null;
+
+        // Gatilho TEMPO: alertar quando vencido ou próximo (≤ 2 dias)
+        if (ciclo.tipo_gatilho === "TEMPO" || ciclo.tipo_gatilho === "HIBRIDO") {
+          if (diasAtraso > 0) {
+            deveAlertar = true;
+            urgencia = diasAtraso >= 3 ? "CRITICA" : "ALTA";
+            mensagemTempo = `${diasAtraso} dia${diasAtraso > 1 ? "s" : ""} atrasado`;
+          } else if (diasRestantes <= 2) {
+            deveAlertar = true;
+            urgencia = diasRestantes === 0 ? "ALTA" : "NORMAL";
+            mensagemTempo = diasRestantes === 0 ? "Vence hoje" : `${diasRestantes} dia${diasRestantes > 1 ? "s" : ""} restante${diasRestantes > 1 ? "s" : ""}`;
+          }
+        }
+
+        // Gatilho VOLUME: alertar quando atingir 90%+ da meta
+        if ((ciclo.tipo_gatilho === "VOLUME" || ciclo.tipo_gatilho === "HIBRIDO") && ciclo.meta_volume) {
+          if (progressoVolume >= 100) {
+            deveAlertar = true;
+            urgencia = "CRITICA";
+            mensagemVolume = "Meta atingida!";
+          } else if (progressoVolume >= 90) {
+            deveAlertar = true;
+            if (urgencia !== "CRITICA") urgencia = "ALTA";
+            mensagemVolume = `${progressoVolume.toFixed(0)}% da meta`;
+          }
+        }
+
+        if (deveAlertar) {
+          alertasCalculados.push({
+            id: ciclo.id,
+            projeto_id: ciclo.projeto_id,
+            projeto_nome: (ciclo.projeto as any)?.nome || "Projeto",
+            numero_ciclo: ciclo.numero_ciclo,
+            tipo_gatilho: ciclo.tipo_gatilho,
+            data_inicio: ciclo.data_inicio,
+            data_fim_prevista: ciclo.data_fim_prevista,
+            meta_volume: ciclo.meta_volume,
+            valor_acumulado: valorAcumuladoReal,
+            metrica_acumuladora: ciclo.metrica_acumuladora,
+            dias_restantes: diasRestantes,
+            dias_atraso: diasAtraso,
+            progresso_volume: progressoVolume,
+            urgencia,
+            mensagem_tempo: mensagemTempo,
+            mensagem_volume: mensagemVolume,
+          });
+        }
+      }
+
+      // Ordenar por urgência
+      alertasCalculados.sort((a, b) => {
+        const ordemUrgencia = { CRITICA: 0, ALTA: 1, NORMAL: 2 };
+        return ordemUrgencia[a.urgencia] - ordemUrgencia[b.urgencia];
+      });
+
+      setAlertas(alertasCalculados);
+    } catch (error) {
+      console.error("Erro ao buscar alertas de ciclo:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAlertas();
+  }, []);
+
+  return { alertas, loading, refetch: fetchAlertas };
+}
