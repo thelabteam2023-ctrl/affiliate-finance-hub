@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { 
   Plus, 
@@ -17,11 +18,13 @@ import {
   TrendingDown,
   Target,
   Zap,
-  AlertTriangle
+  AlertTriangle,
+  BarChart3
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CicloDialog } from "./CicloDialog";
+import { ComparativoCiclosTab } from "./ComparativoCiclosTab";
 
 interface Ciclo {
   id: string;
@@ -309,19 +312,31 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <Tabs defaultValue="ciclos" className="space-y-4">
       <div className="flex items-center justify-between">
+        <TabsList>
+          <TabsTrigger value="ciclos" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            Ciclos
+          </TabsTrigger>
+          <TabsTrigger value="comparativo" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Comparativo
+          </TabsTrigger>
+        </TabsList>
+        <Button onClick={handleCreateCiclo}>
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Ciclo
+        </Button>
+      </div>
+
+      <TabsContent value="ciclos" className="space-y-4">
         <div>
           <h3 className="text-lg font-semibold">Ciclos de Apuração</h3>
           <p className="text-sm text-muted-foreground">
             Períodos de apuração financeira (por tempo ou volume)
           </p>
         </div>
-        <Button onClick={handleCreateCiclo}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Ciclo
-        </Button>
-      </div>
 
       {ciclos.length === 0 ? (
         <Card>
@@ -526,6 +541,11 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
         proximoNumero={ciclos.length > 0 ? Math.max(...ciclos.map(c => c.numero_ciclo)) + 1 : 1}
         onSuccess={fetchCiclos}
       />
-    </div>
+      </TabsContent>
+
+      <TabsContent value="comparativo">
+        <ComparativoCiclosTab projetoId={projetoId} />
+      </TabsContent>
+    </Tabs>
   );
 }
