@@ -118,14 +118,6 @@ export function VisualizarOperadoresDialog({
     }
   };
 
-  const getFrequenciaLabel = (freq: string | null) => {
-    switch (freq) {
-      case "SEMANAL": return "Semanal";
-      case "QUINZENAL": return "Quinzenal";
-      case "MENSAL": return "Mensal";
-      default: return "Não definida";
-    }
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -172,10 +164,6 @@ export function VisualizarOperadoresDialog({
                         <span>Entrada: {format(new Date(op.data_entrada), "dd/MM/yyyy", { locale: ptBR })}</span>
                       </div>
                       
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Clock className="h-4 w-4" />
-                        <span>Conciliação: {getFrequenciaLabel(op.frequencia_conciliacao)}</span>
-                      </div>
                     </div>
 
                     <div className="mt-3 pt-3 border-t border-border/50">

@@ -39,14 +39,6 @@ const getModeloLabel = (modelo: string | null) => {
   }
 };
 
-const getFrequenciaLabel = (freq: string | null) => {
-  switch (freq) {
-    case "SEMANAL": return "Semanal";
-    case "QUINZENAL": return "Quinzenal";
-    case "MENSAL": return "Mensal";
-    default: return "Mensal";
-  }
-};
 
 const getBaseCalculoLabel = (base: string | null) => {
   switch (base) {
@@ -116,10 +108,6 @@ export function VisualizarAcordoOperadorDialog({
                 <span>{format(new Date(operador.data_saida), "dd/MM/yyyy", { locale: ptBR })}</span>
               </div>
             )}
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Frequência de Conciliação:</span>
-              <span>{getFrequenciaLabel(operador.frequencia_conciliacao)}</span>
-            </div>
           </div>
 
           {/* Referência do Acordo */}
