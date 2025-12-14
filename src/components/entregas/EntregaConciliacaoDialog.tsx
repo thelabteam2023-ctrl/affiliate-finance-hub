@@ -254,6 +254,16 @@ export function EntregaConciliacaoDialog({
 
       if (error) throw error;
 
+      // 4. Atualizar ultima_conciliacao no operador_projetos para recalcular proxima_conciliacao
+      if (entrega.operador_projeto_id) {
+        await supabase
+          .from("operador_projetos")
+          .update({
+            ultima_conciliacao: new Date().toISOString().split("T")[0],
+          })
+          .eq("id", entrega.operador_projeto_id);
+      }
+
       toast.success("Período conciliado com sucesso");
       onSuccess();
       onOpenChange(false);

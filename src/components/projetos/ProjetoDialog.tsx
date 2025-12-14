@@ -97,6 +97,7 @@ interface OperadorVinculado {
   percentual: number | null;
   base_calculo: string | null;
   frequencia_conciliacao: string | null;
+  dias_intervalo_conciliacao: number | null;
   resumo_acordo: string | null;
 }
 
@@ -276,6 +277,7 @@ export function ProjetoDialog({
         percentual,
         base_calculo,
         frequencia_conciliacao,
+        dias_intervalo_conciliacao,
         resumo_acordo,
         operadores!inner(nome)
       `)
@@ -297,6 +299,7 @@ export function ProjetoDialog({
           percentual: op.percentual,
           base_calculo: op.base_calculo,
           frequencia_conciliacao: op.frequencia_conciliacao,
+          dias_intervalo_conciliacao: op.dias_intervalo_conciliacao,
           resumo_acordo: op.resumo_acordo,
         }))
       );
@@ -1084,6 +1087,7 @@ export function ProjetoDialog({
           percentual: selectedOperadorVinculado.percentual,
           base_calculo: selectedOperadorVinculado.base_calculo,
           frequencia_conciliacao: selectedOperadorVinculado.frequencia_conciliacao,
+          dias_intervalo_conciliacao: selectedOperadorVinculado.dias_intervalo_conciliacao,
           resumo_acordo: selectedOperadorVinculado.resumo_acordo,
           operador: { nome: selectedOperadorVinculado.operador_nome, cpf: "" },
         } : null}

@@ -1993,6 +1993,7 @@ export type Database = {
           created_at: string
           data_entrada: string
           data_saida: string | null
+          dias_intervalo_conciliacao: number | null
           faixas_escalonadas: Json | null
           frequencia_conciliacao: string | null
           funcao: string | null
@@ -2008,11 +2009,13 @@ export type Database = {
           piso_pagamento: number | null
           prejuizo_acumulado: number | null
           projeto_id: string
+          proxima_conciliacao: string | null
           regra_prejuizo: string | null
           resumo_acordo: string | null
           status: string
           teto_pagamento: number | null
           tipo_meta: string | null
+          ultima_conciliacao: string | null
           updated_at: string
           user_id: string
           valor_fixo: number | null
@@ -2022,6 +2025,7 @@ export type Database = {
           created_at?: string
           data_entrada?: string
           data_saida?: string | null
+          dias_intervalo_conciliacao?: number | null
           faixas_escalonadas?: Json | null
           frequencia_conciliacao?: string | null
           funcao?: string | null
@@ -2037,11 +2041,13 @@ export type Database = {
           piso_pagamento?: number | null
           prejuizo_acumulado?: number | null
           projeto_id: string
+          proxima_conciliacao?: string | null
           regra_prejuizo?: string | null
           resumo_acordo?: string | null
           status?: string
           teto_pagamento?: number | null
           tipo_meta?: string | null
+          ultima_conciliacao?: string | null
           updated_at?: string
           user_id: string
           valor_fixo?: number | null
@@ -2051,6 +2057,7 @@ export type Database = {
           created_at?: string
           data_entrada?: string
           data_saida?: string | null
+          dias_intervalo_conciliacao?: number | null
           faixas_escalonadas?: Json | null
           frequencia_conciliacao?: string | null
           funcao?: string | null
@@ -2066,11 +2073,13 @@ export type Database = {
           piso_pagamento?: number | null
           prejuizo_acumulado?: number | null
           projeto_id?: string
+          proxima_conciliacao?: string | null
           regra_prejuizo?: string | null
           resumo_acordo?: string | null
           status?: string
           teto_pagamento?: number | null
           tipo_meta?: string | null
+          ultima_conciliacao?: string | null
           updated_at?: string
           user_id?: string
           valor_fixo?: number | null
@@ -4745,6 +4754,15 @@ export type Database = {
       }
     }
     Functions: {
+      calcular_proxima_conciliacao: {
+        Args: {
+          p_data_entrada: string
+          p_dias_intervalo?: number
+          p_frequencia: string
+          p_ultima_conciliacao: string
+        }
+        Returns: string
+      }
       is_master: { Args: { _user_id: string }; Returns: boolean }
       update_parcerias_em_encerramento: { Args: never; Returns: undefined }
     }
