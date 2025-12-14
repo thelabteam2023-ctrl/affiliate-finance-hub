@@ -822,14 +822,22 @@ export default function CentralOperacoes() {
                             {(ciclo.tipo_gatilho === "VOLUME" || ciclo.tipo_gatilho === "HIBRIDO") && ciclo.meta_volume && (
                               <div className="mt-2">
                                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                                  <span>{formatCurrency(ciclo.valor_acumulado)} de {formatCurrency(ciclo.meta_volume)}</span>
-                                  <span className={ciclo.progresso_volume >= 90 ? "text-amber-400 font-medium" : ""}>
+                                  <span>
+                                    {ciclo.metrica_acumuladora === "LUCRO" ? "Lucro" : "Volume"}: {formatCurrency(ciclo.valor_acumulado)} de {formatCurrency(ciclo.meta_volume)}
+                                  </span>
+                                  <span className={
+                                    ciclo.progresso_volume >= 100 ? "text-emerald-400 font-medium" :
+                                    ciclo.progresso_volume >= 90 ? "text-amber-400 font-medium" : ""
+                                  }>
                                     {ciclo.progresso_volume.toFixed(0)}%
                                   </span>
                                 </div>
                                 <Progress 
                                   value={Math.min(100, ciclo.progresso_volume)} 
-                                  className={ciclo.progresso_volume >= 100 ? "bg-red-500/20" : ciclo.progresso_volume >= 90 ? "bg-amber-500/20" : ""} 
+                                  className={
+                                    ciclo.progresso_volume >= 100 ? "bg-emerald-500/20" : 
+                                    ciclo.progresso_volume >= 90 ? "bg-amber-500/20" : ""
+                                  } 
                                 />
                               </div>
                             )}
