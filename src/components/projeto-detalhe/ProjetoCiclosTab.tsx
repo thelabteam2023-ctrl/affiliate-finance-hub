@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { 
   Plus, 
@@ -19,7 +20,12 @@ import {
   Target,
   Zap,
   AlertTriangle,
-  BarChart3
+  BarChart3,
+  ShieldAlert,
+  ChevronDown,
+  Ban,
+  Lock,
+  Undo2
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -49,12 +55,34 @@ interface ProjetoCiclosTabProps {
   projetoId: string;
 }
 
+interface PerdaCiclo {
+  id: string;
+  valor: number;
+  categoria: string;
+  status: string;
+  bookmaker_id: string | null;
+  bookmaker_nome?: string;
+  descricao: string | null;
+  data_registro: string;
+}
+
+interface PerdasCiclo {
+  confirmadas: PerdaCiclo[];
+  pendentes: PerdaCiclo[];
+  revertidas: PerdaCiclo[];
+  totalConfirmadas: number;
+  totalPendentes: number;
+  totalRevertidas: number;
+}
+
 interface CicloMetrics {
   qtdApostas: number;
   volume: number;
   ticketMedio: number;
-  lucro: number;
+  lucroBruto: number;  // Lucro das apostas antes das perdas
+  lucroReal: number;   // Lucro líquido = lucroBruto - perdasConfirmadas
   roi: number;
+  perdas: PerdasCiclo;
 }
 
 export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
@@ -98,30 +126,74 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
     const metricsMap: Record<string, CicloMetrics> = {};
     
     for (const ciclo of activeCycles) {
-      const [apostasResult, apostasMultiplasResult, surebetsResult] = await Promise.all([
+      const dataFim = ciclo.data_fim_real || ciclo.data_fim_prevista;
+      
+      const [apostasResult, apostasMultiplasResult, surebetsResult, perdasResult, bookmakersResult] = await Promise.all([
         supabase
           .from("apostas")
           .select("lucro_prejuizo, stake, status")
           .eq("projeto_id", projetoId)
           .gte("data_aposta", ciclo.data_inicio)
-          .lte("data_aposta", ciclo.data_fim_prevista),
+          .lte("data_aposta", dataFim),
         supabase
           .from("apostas_multiplas")
           .select("lucro_prejuizo, stake, resultado")
           .eq("projeto_id", projetoId)
           .gte("data_aposta", ciclo.data_inicio)
-          .lte("data_aposta", ciclo.data_fim_prevista),
+          .lte("data_aposta", dataFim),
         supabase
           .from("surebets")
           .select("lucro_real, stake_total, status")
           .eq("projeto_id", projetoId)
           .gte("data_evento", ciclo.data_inicio)
-          .lte("data_evento", ciclo.data_fim_prevista),
+          .lte("data_evento", dataFim),
+        supabase
+          .from("projeto_perdas")
+          .select("id, valor, categoria, status, bookmaker_id, descricao, data_registro")
+          .eq("projeto_id", projetoId)
+          .gte("data_registro", ciclo.data_inicio)
+          .lte("data_registro", dataFim),
+        supabase
+          .from("bookmakers")
+          .select("id, nome")
       ]);
 
       const apostas = apostasResult.data || [];
       const apostasMultiplas = apostasMultiplasResult.data || [];
       const surebets = surebetsResult.data || [];
+      const perdasData = perdasResult.data || [];
+      const bookmakers = bookmakersResult.data || [];
+
+      // Map bookmaker IDs to names
+      const bookmakerMap = new Map(bookmakers.map(b => [b.id, b.nome]));
+
+      // Categorize losses
+      const perdas: PerdasCiclo = {
+        confirmadas: [],
+        pendentes: [],
+        revertidas: [],
+        totalConfirmadas: 0,
+        totalPendentes: 0,
+        totalRevertidas: 0
+      };
+
+      perdasData.forEach(perda => {
+        const perdaComNome: PerdaCiclo = {
+          ...perda,
+          bookmaker_nome: perda.bookmaker_id ? bookmakerMap.get(perda.bookmaker_id) : undefined
+        };
+        
+        if (perda.status === "CONFIRMADA") {
+          perdas.confirmadas.push(perdaComNome);
+          perdas.totalConfirmadas += perda.valor;
+        } else if (perda.status === "PENDENTE") {
+          perdas.pendentes.push(perdaComNome);
+          perdas.totalPendentes += perda.valor;
+        } else if (perda.status === "REVERTIDA") {
+          perdas.revertidas.push(perdaComNome);
+          perdas.totalRevertidas += perda.valor;
+        }
+      });
 
       // Count all entries (including pending)
       const qtdApostas = apostas.length + apostasMultiplas.length + surebets.length;
@@ -132,16 +204,19 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
         apostasMultiplas.reduce((acc, a) => acc + (a.stake || 0), 0) +
         surebets.reduce((acc, a) => acc + (a.stake_total || 0), 0);
       
-      // Calculate profit only from finalized entries
-      const lucro = 
+      // Calculate profit only from finalized entries (lucro bruto das apostas)
+      const lucroBruto = 
         apostas.filter(a => a.status === "FINALIZADA").reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
-        apostasMultiplas.filter(a => ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"].includes(a.resultado)).reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
+        apostasMultiplas.filter(a => ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"].includes(a.resultado || "")).reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
         surebets.filter(a => a.status === "FINALIZADA").reduce((acc, a) => acc + (a.lucro_real || 0), 0);
 
-      const ticketMedio = qtdApostas > 0 ? volume / qtdApostas : 0;
-      const roi = volume > 0 ? (lucro / volume) * 100 : 0;
+      // Lucro real = lucro bruto - perdas confirmadas
+      const lucroReal = lucroBruto - perdas.totalConfirmadas;
 
-      metricsMap[ciclo.id] = { qtdApostas, volume, ticketMedio, lucro, roi };
+      const ticketMedio = qtdApostas > 0 ? volume / qtdApostas : 0;
+      const roi = volume > 0 ? (lucroReal / volume) * 100 : 0;
+
+      metricsMap[ciclo.id] = { qtdApostas, volume, ticketMedio, lucroBruto, lucroReal, roi, perdas };
     }
     
     setCicloMetrics(metricsMap);
@@ -159,8 +234,8 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
 
   const handleFecharCiclo = async (ciclo: Ciclo) => {
     try {
-      // Calcular métricas completas do período
-      const [apostasResult, apostasMultiplasResult, surebetsResult] = await Promise.all([
+      // Calcular métricas completas do período incluindo perdas
+      const [apostasResult, apostasMultiplasResult, surebetsResult, perdasResult] = await Promise.all([
         supabase
           .from("apostas")
           .select("lucro_prejuizo, stake")
@@ -182,11 +257,19 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
           .gte("data_evento", ciclo.data_inicio)
           .lte("data_evento", ciclo.data_fim_prevista)
           .eq("status", "FINALIZADA"),
+        supabase
+          .from("projeto_perdas")
+          .select("valor, status, categoria")
+          .eq("projeto_id", projetoId)
+          .eq("status", "CONFIRMADA")
+          .gte("data_registro", ciclo.data_inicio)
+          .lte("data_registro", ciclo.data_fim_prevista),
       ]);
 
       const apostas = apostasResult.data || [];
       const apostasMultiplas = apostasMultiplasResult.data || [];
       const surebets = surebetsResult.data || [];
+      const perdasConfirmadas = perdasResult.data || [];
 
       // Calcular totais
       const qtdApostas = apostas.length + apostasMultiplas.length + surebets.length;
@@ -199,17 +282,35 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
         apostasMultiplas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
         surebets.reduce((acc, a) => acc + (a.lucro_real || 0), 0);
 
-          // Calcular ROI e Ticket Médio
-          const roi = volumeApostado > 0 ? (lucroBruto / volumeApostado) * 100 : 0;
-          const ticketMedio = qtdApostas > 0 ? volumeApostado / qtdApostas : 0;
+      // Calcular perdas confirmadas do período
+      const totalPerdasConfirmadas = perdasConfirmadas.reduce((acc, p) => acc + p.valor, 0);
+      
+      // Lucro líquido = lucro bruto - perdas confirmadas
+      const lucroLiquido = lucroBruto - totalPerdasConfirmadas;
+
+      // Calcular ROI baseado no lucro líquido (real)
+      const roi = volumeApostado > 0 ? (lucroLiquido / volumeApostado) * 100 : 0;
+      const ticketMedio = qtdApostas > 0 ? volumeApostado / qtdApostas : 0;
+      
       // Calcular excedente se ciclo por volume
       let excedenteProximo = 0;
       if (ciclo.tipo_gatilho !== "TEMPO" && ciclo.meta_volume) {
-        const metricaFinal = ciclo.metrica_acumuladora === "VOLUME_APOSTADO" ? volumeApostado : lucroBruto;
+        const metricaFinal = ciclo.metrica_acumuladora === "VOLUME_APOSTADO" ? volumeApostado : lucroLiquido;
         if (metricaFinal > ciclo.meta_volume) {
           excedenteProximo = metricaFinal - ciclo.meta_volume;
         }
       }
+
+      // Construir observações com métricas e perdas
+      let metricsInfo = `📊 Métricas: ${qtdApostas} apostas | Volume: R$ ${volumeApostado.toFixed(2)} | Ticket Médio: R$ ${ticketMedio.toFixed(2)} | ROI: ${roi.toFixed(2)}%`;
+      
+      if (totalPerdasConfirmadas > 0) {
+        metricsInfo += ` | Perdas: R$ ${totalPerdasConfirmadas.toFixed(2)}`;
+      }
+
+      const observacoesFinais = ciclo.observacoes 
+        ? `${ciclo.observacoes}\n\n${metricsInfo}`
+        : metricsInfo;
 
       const { error } = await supabase
         .from("projeto_ciclos")
@@ -217,20 +318,22 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
           status: "FECHADO",
           data_fim_real: new Date().toISOString().split("T")[0],
           lucro_bruto: lucroBruto,
-          lucro_liquido: lucroBruto,
-          valor_acumulado: ciclo.metrica_acumuladora === "VOLUME_APOSTADO" ? volumeApostado : lucroBruto,
+          lucro_liquido: lucroLiquido,
+          valor_acumulado: ciclo.metrica_acumuladora === "VOLUME_APOSTADO" ? volumeApostado : lucroLiquido,
           excedente_proximo: excedenteProximo,
           gatilho_fechamento: "MANUAL",
           data_fechamento: new Date().toISOString(),
-          // Store additional metrics in observacoes JSON-like format
-          observacoes: ciclo.observacoes 
-            ? `${ciclo.observacoes}\n\n📊 Métricas: ${qtdApostas} apostas | Volume: R$ ${volumeApostado.toFixed(2)} | Ticket Médio: R$ ${ticketMedio.toFixed(2)} | ROI: ${roi.toFixed(2)}%`
-            : `📊 Métricas: ${qtdApostas} apostas | Volume: R$ ${volumeApostado.toFixed(2)} | Ticket Médio: R$ ${ticketMedio.toFixed(2)} | ROI: ${roi.toFixed(2)}%`,
+          observacoes: observacoesFinais,
         })
         .eq("id", ciclo.id);
 
       if (error) throw error;
-      toast.success(`Ciclo fechado! ${qtdApostas} apostas, Lucro: R$ ${lucroBruto.toFixed(2)}, ROI: ${roi.toFixed(2)}%`);
+      
+      const toastMsg = totalPerdasConfirmadas > 0
+        ? `Ciclo fechado! ${qtdApostas} apostas, Lucro Real: R$ ${lucroLiquido.toFixed(2)} (após R$ ${totalPerdasConfirmadas.toFixed(2)} em perdas), ROI: ${roi.toFixed(2)}%`
+        : `Ciclo fechado! ${qtdApostas} apostas, Lucro: R$ ${lucroLiquido.toFixed(2)}, ROI: ${roi.toFixed(2)}%`;
+      
+      toast.success(toastMsg);
       fetchCiclos();
     } catch (error: any) {
       toast.error("Erro ao fechar ciclo: " + error.message);
@@ -282,7 +385,7 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
     // Para ciclos em andamento, usar métricas em tempo real
     if (ciclo.status === "EM_ANDAMENTO" && realTimeMetrics) {
       const valorAtual = ciclo.metrica_acumuladora === "LUCRO" 
-        ? realTimeMetrics.lucro 
+        ? realTimeMetrics.lucroReal 
         : realTimeMetrics.volume;
       return {
         progresso: Math.min(100, (valorAtual / ciclo.meta_volume) * 100),
@@ -295,6 +398,33 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
       progresso: Math.min(100, (ciclo.valor_acumulado / ciclo.meta_volume) * 100),
       valorAtual: ciclo.valor_acumulado
     };
+  };
+
+  const getCategoriaLabel = (categoria: string) => {
+    const labels: Record<string, string> = {
+      "SALDO_BLOQUEADO": "Saldo Bloqueado",
+      "CONTA_LIMITADA": "Conta Limitada", 
+      "BONUS_TRAVADO": "Bônus Travado",
+      "BONUS_EXPIRADO": "Bônus Expirado",
+      "CONTA_FECHADA": "Conta Fechada",
+      "FRAUDE_DETECTADA": "Fraude Detectada",
+      "VERIFICACAO_FALHOU": "Verificação Falhou",
+      "OUTRO": "Outro"
+    };
+    return labels[categoria] || categoria;
+  };
+
+  const getCategoriaIcon = (categoria: string) => {
+    switch (categoria) {
+      case "SALDO_BLOQUEADO":
+      case "BONUS_TRAVADO":
+        return <Lock className="h-3 w-3" />;
+      case "CONTA_LIMITADA":
+      case "CONTA_FECHADA":
+        return <Ban className="h-3 w-3" />;
+      default:
+        return <ShieldAlert className="h-3 w-3" />;
+    }
   };
 
   const getMetricaLabel = (metrica: string) => {
@@ -429,11 +559,42 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Lucro Bruto</p>
-                      <p className={`text-lg font-semibold ${ciclo.lucro_bruto >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                        {ciclo.lucro_bruto >= 0 ? <TrendingUp className="h-4 w-4 inline mr-1" /> : <TrendingDown className="h-4 w-4 inline mr-1" />}
-                        {formatCurrency(ciclo.lucro_bruto)}
-                      </p>
+                      {/* Para ciclos EM_ANDAMENTO com métricas em tempo real */}
+                      {ciclo.status === "EM_ANDAMENTO" && realTimeMetrics ? (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm text-muted-foreground">Lucro Real</p>
+                            {realTimeMetrics.perdas.totalConfirmadas > 0 && (
+                              <Badge variant="outline" className="text-xs text-red-400 border-red-500/30">
+                                <ShieldAlert className="h-3 w-3 mr-1" />
+                                -{formatCurrency(realTimeMetrics.perdas.totalConfirmadas)}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className={`text-lg font-semibold ${realTimeMetrics.lucroReal >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                            {realTimeMetrics.lucroReal >= 0 ? <TrendingUp className="h-4 w-4 inline mr-1" /> : <TrendingDown className="h-4 w-4 inline mr-1" />}
+                            {formatCurrency(realTimeMetrics.lucroReal)}
+                          </p>
+                          {realTimeMetrics.perdas.totalConfirmadas > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              Bruto: {formatCurrency(realTimeMetrics.lucroBruto)}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Lucro Líquido</p>
+                          <p className={`text-lg font-semibold ${ciclo.lucro_liquido >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                            {ciclo.lucro_liquido >= 0 ? <TrendingUp className="h-4 w-4 inline mr-1" /> : <TrendingDown className="h-4 w-4 inline mr-1" />}
+                            {formatCurrency(ciclo.lucro_liquido)}
+                          </p>
+                          {ciclo.lucro_bruto !== ciclo.lucro_liquido && (
+                            <p className="text-xs text-muted-foreground">
+                              Bruto: {formatCurrency(ciclo.lucro_bruto)}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center justify-end gap-2">
                       {ciclo.status === "EM_ANDAMENTO" && (
@@ -455,6 +616,143 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
                     </div>
                   </div>
 
+                  {/* Seção de Perdas do Ciclo (apenas para ciclos EM_ANDAMENTO com métricas) */}
+                  {ciclo.status === "EM_ANDAMENTO" && realTimeMetrics && (realTimeMetrics.perdas.confirmadas.length > 0 || realTimeMetrics.perdas.pendentes.length > 0 || realTimeMetrics.perdas.revertidas.length > 0) && (
+                    <Collapsible className="mt-3 pt-3 border-t">
+                      <CollapsibleTrigger className="flex items-center justify-between w-full text-sm">
+                        <div className="flex items-center gap-2">
+                          <ShieldAlert className="h-4 w-4 text-amber-400" />
+                          <span className="font-medium">Perdas Operacionais do Ciclo</span>
+                          <div className="flex gap-1">
+                            {realTimeMetrics.perdas.totalConfirmadas > 0 && (
+                              <Badge variant="outline" className="text-xs bg-red-500/10 text-red-400 border-red-500/30">
+                                {realTimeMetrics.perdas.confirmadas.length} confirmada{realTimeMetrics.perdas.confirmadas.length !== 1 ? 's' : ''}
+                              </Badge>
+                            )}
+                            {realTimeMetrics.perdas.totalPendentes > 0 && (
+                              <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-400 border-amber-500/30">
+                                {realTimeMetrics.perdas.pendentes.length} pendente{realTimeMetrics.perdas.pendentes.length !== 1 ? 's' : ''}
+                              </Badge>
+                            )}
+                            {realTimeMetrics.perdas.totalRevertidas > 0 && (
+                              <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                                {realTimeMetrics.perdas.revertidas.length} revertida{realTimeMetrics.perdas.revertidas.length !== 1 ? 's' : ''}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <ChevronDown className="h-4 w-4" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-3 space-y-3">
+                        {/* Perdas Confirmadas */}
+                        {realTimeMetrics.perdas.confirmadas.length > 0 && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-red-400 font-medium flex items-center gap-1">
+                                <XCircle className="h-3 w-3" />
+                                Confirmadas (impactam lucro)
+                              </span>
+                              <span className="text-red-400 font-semibold">-{formatCurrency(realTimeMetrics.perdas.totalConfirmadas)}</span>
+                            </div>
+                            <div className="grid gap-2">
+                              {realTimeMetrics.perdas.confirmadas.map(perda => (
+                                <div key={perda.id} className="bg-red-500/5 border border-red-500/20 rounded-md px-3 py-2 text-sm">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      {getCategoriaIcon(perda.categoria)}
+                                      <span className="font-medium">{getCategoriaLabel(perda.categoria)}</span>
+                                      {perda.bookmaker_nome && (
+                                        <Badge variant="outline" className="text-xs">{perda.bookmaker_nome}</Badge>
+                                      )}
+                                    </div>
+                                    <span className="text-red-400 font-semibold">-{formatCurrency(perda.valor)}</span>
+                                  </div>
+                                  {perda.descricao && (
+                                    <p className="text-xs text-muted-foreground mt-1">{perda.descricao}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Perdas Pendentes */}
+                        {realTimeMetrics.perdas.pendentes.length > 0 && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-amber-400 font-medium flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                Pendentes (capital em risco)
+                              </span>
+                              <span className="text-amber-400 font-semibold">{formatCurrency(realTimeMetrics.perdas.totalPendentes)}</span>
+                            </div>
+                            <div className="grid gap-2">
+                              {realTimeMetrics.perdas.pendentes.map(perda => (
+                                <div key={perda.id} className="bg-amber-500/5 border border-amber-500/20 rounded-md px-3 py-2 text-sm">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      {getCategoriaIcon(perda.categoria)}
+                                      <span className="font-medium">{getCategoriaLabel(perda.categoria)}</span>
+                                      {perda.bookmaker_nome && (
+                                        <Badge variant="outline" className="text-xs">{perda.bookmaker_nome}</Badge>
+                                      )}
+                                    </div>
+                                    <span className="text-amber-400 font-semibold">{formatCurrency(perda.valor)}</span>
+                                  </div>
+                                  {perda.descricao && (
+                                    <p className="text-xs text-muted-foreground mt-1">{perda.descricao}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Perdas Revertidas */}
+                        {realTimeMetrics.perdas.revertidas.length > 0 && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-emerald-400 font-medium flex items-center gap-1">
+                                <Undo2 className="h-3 w-3" />
+                                Revertidas (recuperadas)
+                              </span>
+                              <span className="text-emerald-400 font-semibold">+{formatCurrency(realTimeMetrics.perdas.totalRevertidas)}</span>
+                            </div>
+                            <div className="grid gap-2">
+                              {realTimeMetrics.perdas.revertidas.map(perda => (
+                                <div key={perda.id} className="bg-emerald-500/5 border border-emerald-500/20 rounded-md px-3 py-2 text-sm">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      {getCategoriaIcon(perda.categoria)}
+                                      <span className="font-medium">{getCategoriaLabel(perda.categoria)}</span>
+                                      {perda.bookmaker_nome && (
+                                        <Badge variant="outline" className="text-xs">{perda.bookmaker_nome}</Badge>
+                                      )}
+                                    </div>
+                                    <span className="text-emerald-400 font-semibold">+{formatCurrency(perda.valor)}</span>
+                                  </div>
+                                  {perda.descricao && (
+                                    <p className="text-xs text-muted-foreground mt-1">{perda.descricao}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
+
+                  {/* Sem perdas no ciclo - indicação visual */}
+                  {ciclo.status === "EM_ANDAMENTO" && realTimeMetrics && realTimeMetrics.perdas.confirmadas.length === 0 && realTimeMetrics.perdas.pendentes.length === 0 && (
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="flex items-center gap-2 text-sm text-emerald-400">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>Nenhuma perda operacional registrada neste ciclo</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Info de excedente */}
                   {ciclo.excedente_proximo > 0 && ciclo.status === "FECHADO" && (
                     <div className="mt-2 pt-2 border-t flex items-center gap-2 text-sm text-muted-foreground">
@@ -464,7 +762,7 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
                   )}
 
                   {/* Real-time metrics for EM_ANDAMENTO cycles */}
-                  {ciclo.status === "EM_ANDAMENTO" && cicloMetrics[ciclo.id] && (
+                  {ciclo.status === "EM_ANDAMENTO" && realTimeMetrics && (
                     <div className="mt-3 pt-3 border-t">
                       <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
                         <Target className="h-3 w-3" /> Métricas em Tempo Real
@@ -472,20 +770,20 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
                       <div className="flex flex-wrap gap-3 text-sm">
                         <div className="bg-muted/50 px-3 py-1.5 rounded-md">
                           <span className="text-muted-foreground">Apostas: </span>
-                          <span className="font-medium">{cicloMetrics[ciclo.id].qtdApostas}</span>
+                          <span className="font-medium">{realTimeMetrics.qtdApostas}</span>
                         </div>
                         <div className="bg-muted/50 px-3 py-1.5 rounded-md">
                           <span className="text-muted-foreground">Volume: </span>
-                          <span className="font-medium">{formatCurrency(cicloMetrics[ciclo.id].volume)}</span>
+                          <span className="font-medium">{formatCurrency(realTimeMetrics.volume)}</span>
                         </div>
                         <div className="bg-primary/10 px-3 py-1.5 rounded-md border border-primary/20">
                           <span className="text-muted-foreground">Ticket Médio: </span>
-                          <span className="font-medium text-primary">{formatCurrency(cicloMetrics[ciclo.id].ticketMedio)}</span>
+                          <span className="font-medium text-primary">{formatCurrency(realTimeMetrics.ticketMedio)}</span>
                         </div>
-                        <div className={`px-3 py-1.5 rounded-md ${cicloMetrics[ciclo.id].roi >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
+                        <div className={`px-3 py-1.5 rounded-md ${realTimeMetrics.roi >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
                           <span className="text-muted-foreground">ROI: </span>
-                          <span className={`font-medium ${cicloMetrics[ciclo.id].roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {cicloMetrics[ciclo.id].roi.toFixed(2)}%
+                          <span className={`font-medium ${realTimeMetrics.roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {realTimeMetrics.roi.toFixed(2)}%
                           </span>
                         </div>
                       </div>

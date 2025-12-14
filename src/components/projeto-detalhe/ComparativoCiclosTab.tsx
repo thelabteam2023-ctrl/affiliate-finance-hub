@@ -33,6 +33,7 @@ interface CicloData {
   data_fim_real: string | null;
   status: string;
   lucro_bruto: number;
+  lucro_liquido: number;
   meta_volume: number | null;
   metrica_acumuladora: string;
   valor_acumulado: number;
@@ -41,7 +42,9 @@ interface CicloData {
   qtdApostas: number;
   volume: number;
   ticketMedio: number;
-  lucro: number;
+  lucro: number;  // Lucro real (líquido, após perdas)
+  lucroBruto: number;
+  perdasConfirmadas: number;
   roi: number;
   // Métricas derivadas
   lucroPoAposta: number;
@@ -76,33 +79,43 @@ export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
         return;
       }
 
-      // Calcular métricas para cada ciclo
+      // Calcular métricas para cada ciclo incluindo perdas
       const ciclosComMetricas: CicloData[] = await Promise.all(
         ciclosData.map(async (ciclo) => {
-          const [apostasResult, apostasMultiplasResult, surebetsResult] = await Promise.all([
+          const dataFim = ciclo.data_fim_real || ciclo.data_fim_prevista;
+          
+          const [apostasResult, apostasMultiplasResult, surebetsResult, perdasResult] = await Promise.all([
             supabase
               .from("apostas")
               .select("lucro_prejuizo, stake, status")
               .eq("projeto_id", projetoId)
               .gte("data_aposta", ciclo.data_inicio)
-              .lte("data_aposta", ciclo.data_fim_prevista),
+              .lte("data_aposta", dataFim),
             supabase
               .from("apostas_multiplas")
               .select("lucro_prejuizo, stake, resultado")
               .eq("projeto_id", projetoId)
               .gte("data_aposta", ciclo.data_inicio)
-              .lte("data_aposta", ciclo.data_fim_prevista),
+              .lte("data_aposta", dataFim),
             supabase
               .from("surebets")
               .select("lucro_real, stake_total, status")
               .eq("projeto_id", projetoId)
               .gte("data_evento", ciclo.data_inicio)
-              .lte("data_evento", ciclo.data_fim_prevista),
+              .lte("data_evento", dataFim),
+            supabase
+              .from("projeto_perdas")
+              .select("valor, status")
+              .eq("projeto_id", projetoId)
+              .eq("status", "CONFIRMADA")
+              .gte("data_registro", ciclo.data_inicio)
+              .lte("data_registro", dataFim),
           ]);
 
           const apostas = apostasResult.data || [];
           const apostasMultiplas = apostasMultiplasResult.data || [];
           const surebets = surebetsResult.data || [];
+          const perdas = perdasResult.data || [];
 
           const qtdApostas = apostas.length + apostasMultiplas.length + surebets.length;
           const volume = 
@@ -110,22 +123,31 @@ export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
             apostasMultiplas.reduce((acc, a) => acc + (a.stake || 0), 0) +
             surebets.reduce((acc, a) => acc + (a.stake_total || 0), 0);
           
-          const lucro = 
+          const lucroBrutoCalculado = 
             apostas.filter(a => a.status === "FINALIZADA").reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
-            apostasMultiplas.filter(a => ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"].includes(a.resultado)).reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
+            apostasMultiplas.filter(a => ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"].includes(a.resultado || "")).reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
             surebets.filter(a => a.status === "FINALIZADA").reduce((acc, a) => acc + (a.lucro_real || 0), 0);
 
+          const perdasConfirmadas = perdas.reduce((acc, p) => acc + p.valor, 0);
+          
+          // Para ciclos fechados, usar lucro_liquido do banco; para em andamento, calcular
+          const lucroReal = ciclo.status === "FECHADO" 
+            ? (ciclo.lucro_liquido ?? ciclo.lucro_bruto) 
+            : lucroBrutoCalculado - perdasConfirmadas;
+
           const ticketMedio = qtdApostas > 0 ? volume / qtdApostas : 0;
-          const roi = volume > 0 ? (lucro / volume) * 100 : 0;
-          const lucroPoAposta = qtdApostas > 0 ? lucro / qtdApostas : 0;
-          const lucroPor100Apostados = volume > 0 ? (lucro / volume) * 100 : 0;
+          const roi = volume > 0 ? (lucroReal / volume) * 100 : 0;
+          const lucroPoAposta = qtdApostas > 0 ? lucroReal / qtdApostas : 0;
+          const lucroPor100Apostados = volume > 0 ? (lucroReal / volume) * 100 : 0;
 
           return {
             ...ciclo,
             qtdApostas,
             volume,
             ticketMedio,
-            lucro: ciclo.status === "FECHADO" ? ciclo.lucro_bruto : lucro,
+            lucro: lucroReal,
+            lucroBruto: ciclo.status === "FECHADO" ? ciclo.lucro_bruto : lucroBrutoCalculado,
+            perdasConfirmadas,
             roi,
             lucroPoAposta,
             lucroPor100Apostados,
