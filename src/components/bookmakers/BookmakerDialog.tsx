@@ -310,13 +310,40 @@ export default function BookmakerDialog({
 
           <div className="space-y-2">
             <Label>Bookmaker *</Label>
-            <BookmakerSelect
-              key={open ? `bookmaker-${parceiroId || 'none'}` : 'bookmaker-closed'}
-              value={bookmakerId}
-              onValueChange={lockBookmaker ? setBookmakerId : handleBookmakerChange}
-              disabled={loading || lockBookmaker}
-              excludeVinculosDoParceiro={!bookmaker ? parceiroId : undefined}
-            />
+            {/* Modo contextual: display estático (não usa BookmakerSelect) */}
+            {lockBookmaker && bookmakerId ? (
+              <div className="flex items-center justify-center gap-3 h-12 border rounded-md bg-muted/30 px-4">
+                {isLoadingDetails ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    <span className="text-muted-foreground">Carregando...</span>
+                  </>
+                ) : selectedBookmaker ? (
+                  <>
+                    {selectedBookmaker.logo_url && (
+                      <img 
+                        src={selectedBookmaker.logo_url} 
+                        alt="" 
+                        className="h-6 w-6 rounded object-contain"
+                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      />
+                    )}
+                    <span className="uppercase font-medium">{selectedBookmaker.nome}</span>
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">Bookmaker não encontrada</span>
+                )}
+              </div>
+            ) : (
+              /* Modo genérico: select normal */
+              <BookmakerSelect
+                key={open ? `bookmaker-${parceiroId || 'none'}` : 'bookmaker-closed'}
+                value={bookmakerId}
+                onValueChange={handleBookmakerChange}
+                disabled={loading}
+                excludeVinculosDoParceiro={!bookmaker ? parceiroId : undefined}
+              />
+            )}
             {lockBookmaker && (
               <p className="text-xs text-muted-foreground">
                 Bookmaker selecionada a partir do contexto atual
