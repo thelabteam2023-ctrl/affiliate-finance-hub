@@ -11,34 +11,25 @@ import {
   ShieldAlert,
   Target,
   Zap,
-  Star,
-  Ban,
-  ThumbsUp,
-  ThumbsDown,
-  Lightbulb
+  Activity,
+  Clock,
+  BarChart3,
+  Gauge,
+  Shield,
+  AlertCircle,
+  Timer,
+  Layers
 } from "lucide-react";
+import { BookmakerAnalise } from "@/hooks/useBookmakerAnalise";
 
-interface BookmakerAnalise {
+interface RecomendacaoLongevidade {
   bookmaker_id: string;
   bookmaker_nome: string;
-  lucro: number;
-  volume: number;
-  qtdApostas: number;
-  roi: number;
-  percentualLucroTotal: number;
-  eventosLimitacao: number;
-  eventosBloqueio: number;
-  statusAtual: string;
-}
-
-interface RecomendacaoCasa {
-  bookmaker_id: string;
-  bookmaker_nome: string;
-  tipo: "continuar" | "cautela" | "reduzir" | "evitar";
-  motivo: string;
-  lucro: number;
-  roi: number;
-  risco: "baixo" | "medio" | "alto";
+  tipo: "alto_giro" | "medio_giro" | "baixo_giro" | "critico";
+  recomendacao: string;
+  detalhes: string;
+  score: number;
+  classificacao: BookmakerAnalise["classificacaoLongevidade"];
 }
 
 interface AnalisePorCasaSectionProps {
@@ -54,119 +45,137 @@ export function AnalisePorCasaSection({ bookmakerAnalises, lucroTotalCiclo }: An
     }).format(value);
   };
 
-  // Calcular recomendações automáticas
-  const recomendacoes = useMemo((): RecomendacaoCasa[] => {
+  const formatNumber = (value: number) => {
+    return new Intl.NumberFormat("pt-BR").format(value);
+  };
+
+  // Gerar recomendações baseadas em longevidade
+  const recomendacoes = useMemo((): RecomendacaoLongevidade[] => {
     return bookmakerAnalises.map(casa => {
-      const temEventosRisco = casa.eventosLimitacao > 0 || casa.eventosBloqueio > 0;
-      const roiBom = casa.roi > 3;
-      const roiMediocre = casa.roi > 0 && casa.roi <= 3;
-      const lucroBom = casa.lucro > 0 && casa.percentualLucroTotal > 15;
+      let tipo: RecomendacaoLongevidade["tipo"];
+      let recomendacao: string;
+      let detalhes: string;
+
+      const totalEventos = casa.eventosLimitacao + casa.eventosBloqueio;
       const isLimitada = casa.statusAtual === "LIMITADA" || casa.statusAtual === "limitada";
       const isBloqueada = casa.statusAtual === "BLOQUEADA" || casa.statusAtual === "bloqueada";
 
-      let tipo: RecomendacaoCasa["tipo"];
-      let motivo: string;
-      let risco: RecomendacaoCasa["risco"];
-
       if (isBloqueada) {
-        tipo = "evitar";
-        motivo = "Casa bloqueada, não é possível operar";
-        risco = "alto";
-      } else if (isLimitada && casa.lucro < 0) {
-        tipo = "evitar";
-        motivo = "Casa limitada com prejuízo acumulado";
-        risco = "alto";
-      } else if (isLimitada && roiBom) {
-        tipo = "cautela";
-        motivo = "Bom ROI, mas já sofreu limitação - risco de continuidade";
-        risco = "medio";
-      } else if (casa.eventosLimitacao >= 2) {
-        tipo = "reduzir";
-        motivo = `Múltiplos eventos de limitação (${casa.eventosLimitacao}x) - padrão de risco`;
-        risco = "alto";
-      } else if (roiBom && lucroBom && !temEventosRisco) {
-        tipo = "continuar";
-        motivo = `Alto ROI (${casa.roi.toFixed(1)}%) e ${casa.percentualLucroTotal.toFixed(0)}% do lucro total sem eventos de risco`;
-        risco = "baixo";
-      } else if (roiBom && temEventosRisco) {
-        tipo = "cautela";
-        motivo = `Bom ROI, mas com ${casa.eventosLimitacao + casa.eventosBloqueio} evento(s) de risco`;
-        risco = "medio";
-      } else if (roiMediocre && temEventosRisco) {
-        tipo = "reduzir";
-        motivo = "ROI baixo combinado com eventos de risco";
-        risco = "alto";
-      } else if (casa.lucro < 0) {
-        tipo = "reduzir";
-        motivo = `Prejuízo de ${formatCurrency(Math.abs(casa.lucro))} no ciclo`;
-        risco = "medio";
-      } else if (roiMediocre && !temEventosRisco) {
-        tipo = "continuar";
-        motivo = "Operação estável, sem eventos de risco";
-        risco = "baixo";
+        tipo = "critico";
+        recomendacao = "Casa inoperante";
+        detalhes = "Conta bloqueada, não é possível operar. Considere encerrar vínculo.";
+      } else if (isLimitada) {
+        if (casa.volumeAteLimitacao >= 30000) {
+          tipo = "medio_giro";
+          recomendacao = "Casa com boa absorção antes de limitar";
+          detalhes = `Suportou ${formatCurrency(casa.volumeAteLimitacao)} antes da limitação. Pode ser reaberta ou substituída por nova conta.`;
+        } else {
+          tipo = "baixo_giro";
+          recomendacao = "Casa com baixa tolerância a volume";
+          detalhes = `Limitou com apenas ${formatCurrency(casa.volumeAteLimitacao)} de giro. Alta rotatividade necessária.`;
+        }
+      } else if (casa.scoreLongevidade >= 80) {
+        tipo = "alto_giro";
+        recomendacao = "Casa indicada para alto giro de capital";
+        detalhes = totalEventos === 0 
+          ? `Excelente longevidade: ${formatCurrency(casa.volumeTotal)} girados em ${casa.diasAtivos} dias sem eventos de risco.`
+          : `Boa resiliência: ${formatCurrency(casa.volumeAteLimitacao)} em média por evento. Capacidade de absorção comprovada.`;
+      } else if (casa.scoreLongevidade >= 60) {
+        tipo = "medio_giro";
+        recomendacao = "Casa com boa longevidade, uso controlado";
+        detalhes = `Volume de ${formatCurrency(casa.volumeTotal)} com ${totalEventos} evento(s). Rotação consciente recomendada.`;
+      } else if (casa.scoreLongevidade >= 40) {
+        tipo = "baixo_giro";
+        recomendacao = "Casa com longevidade limitada";
+        detalhes = `Tolera baixo volume antes de limitar (${formatCurrency(casa.volumeAteLimitacao)} por evento). Usar apenas pontualmente.`;
       } else {
-        tipo = "cautela";
-        motivo = "Necessita mais dados para avaliação completa";
-        risco = "medio";
+        tipo = "critico";
+        recomendacao = "Casa de alto risco operacional";
+        detalhes = `Frequência alta de limitação (${casa.frequenciaLimitacao}). Minimizar exposição.`;
       }
 
       return {
         bookmaker_id: casa.bookmaker_id,
         bookmaker_nome: casa.bookmaker_nome,
         tipo,
-        motivo,
-        lucro: casa.lucro,
-        roi: casa.roi,
-        risco
+        recomendacao,
+        detalhes,
+        score: casa.scoreLongevidade,
+        classificacao: casa.classificacaoLongevidade
       };
-    }).sort((a, b) => {
-      // Ordenar por prioridade: continuar > cautela > reduzir > evitar
-      const ordem = { continuar: 0, cautela: 1, reduzir: 2, evitar: 3 };
-      return ordem[a.tipo] - ordem[b.tipo];
-    });
+    }).sort((a, b) => b.score - a.score);
   }, [bookmakerAnalises]);
 
-  // Identificar casas destaque
-  const casaMaisLucrativa = bookmakerAnalises.length > 0 
-    ? bookmakerAnalises.reduce((a, b) => a.lucro > b.lucro ? a : b)
+  // Identificar casas por categoria
+  const casasMaiorLongevidade = bookmakerAnalises.filter(c => c.classificacaoLongevidade === "excelente" || c.scoreLongevidade >= 80);
+  const casasMaiorVolume = bookmakerAnalises.length > 0 
+    ? [...bookmakerAnalises].sort((a, b) => b.volumeAteLimitacao - a.volumeAteLimitacao)[0]
     : null;
-  
-  const casaMaiorRoi = bookmakerAnalises.filter(c => c.qtdApostas >= 3).length > 0
-    ? bookmakerAnalises.filter(c => c.qtdApostas >= 3).reduce((a, b) => a.roi > b.roi ? a : b)
-    : null;
-
-  const casasComRisco = bookmakerAnalises.filter(c => 
+  const casasRisco = bookmakerAnalises.filter(c => 
     c.eventosLimitacao > 0 || c.eventosBloqueio > 0 || 
-    c.statusAtual === "LIMITADA" || c.statusAtual === "limitada"
+    c.statusAtual === "LIMITADA" || c.statusAtual === "limitada" ||
+    c.statusAtual === "BLOQUEADA" || c.statusAtual === "bloqueada"
   );
 
-  const getTipoIcon = (tipo: RecomendacaoCasa["tipo"]) => {
-    switch (tipo) {
-      case "continuar": return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
-      case "cautela": return <AlertTriangle className="h-4 w-4 text-amber-500" />;
-      case "reduzir": return <TrendingDown className="h-4 w-4 text-orange-500" />;
-      case "evitar": return <Ban className="h-4 w-4 text-red-500" />;
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return "text-emerald-500";
+    if (score >= 70) return "text-green-500";
+    if (score >= 40) return "text-amber-500";
+    return "text-red-500";
+  };
+
+  const getScoreBgColor = (score: number) => {
+    if (score >= 90) return "bg-emerald-500/20 border-emerald-500/30";
+    if (score >= 70) return "bg-green-500/20 border-green-500/30";
+    if (score >= 40) return "bg-amber-500/20 border-amber-500/30";
+    return "bg-red-500/20 border-red-500/30";
+  };
+
+  const getClassificacaoBadge = (classificacao: BookmakerAnalise["classificacaoLongevidade"]) => {
+    switch (classificacao) {
+      case "excelente": 
+        return <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30">Excelente</Badge>;
+      case "boa": 
+        return <Badge className="bg-green-500/20 text-green-500 border-green-500/30">Boa</Badge>;
+      case "limitada": 
+        return <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30">Limitada</Badge>;
+      case "alto_risco": 
+        return <Badge className="bg-red-500/20 text-red-500 border-red-500/30">Alto Risco</Badge>;
     }
   };
 
-  const getTipoBadge = (tipo: RecomendacaoCasa["tipo"]) => {
-    switch (tipo) {
-      case "continuar": 
-        return <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30">Continuar</Badge>;
-      case "cautela": 
-        return <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30">Cautela</Badge>;
-      case "reduzir": 
-        return <Badge className="bg-orange-500/20 text-orange-500 border-orange-500/30">Reduzir</Badge>;
-      case "evitar": 
-        return <Badge className="bg-red-500/20 text-red-500 border-red-500/30">Evitar</Badge>;
+  const getFrequenciaBadge = (frequencia: BookmakerAnalise["frequenciaLimitacao"]) => {
+    switch (frequencia) {
+      case "rara": 
+        return <Badge variant="outline" className="text-emerald-500 border-emerald-500/30 text-xs">Rara</Badge>;
+      case "moderada": 
+        return <Badge variant="outline" className="text-amber-500 border-amber-500/30 text-xs">Moderada</Badge>;
+      case "frequente": 
+        return <Badge variant="outline" className="text-orange-500 border-orange-500/30 text-xs">Frequente</Badge>;
+      case "muito_frequente": 
+        return <Badge variant="outline" className="text-red-500 border-red-500/30 text-xs">Muito Frequente</Badge>;
     }
   };
 
-  const getRiscoBadge = (risco: RecomendacaoCasa["risco"]) => {
-    switch (risco) {
-      case "baixo": return <Badge variant="outline" className="text-emerald-500 border-emerald-500/30 text-xs">Risco Baixo</Badge>;
-      case "medio": return <Badge variant="outline" className="text-amber-500 border-amber-500/30 text-xs">Risco Médio</Badge>;
-      case "alto": return <Badge variant="outline" className="text-red-500 border-red-500/30 text-xs">Risco Alto</Badge>;
+  const getTipoIcon = (tipo: RecomendacaoLongevidade["tipo"]) => {
+    switch (tipo) {
+      case "alto_giro": return <Zap className="h-4 w-4 text-emerald-500" />;
+      case "medio_giro": return <Activity className="h-4 w-4 text-green-500" />;
+      case "baixo_giro": return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+      case "critico": return <AlertCircle className="h-4 w-4 text-red-500" />;
+    }
+  };
+
+  const getTipoBadge = (tipo: RecomendacaoLongevidade["tipo"]) => {
+    switch (tipo) {
+      case "alto_giro": 
+        return <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30">Alto Giro</Badge>;
+      case "medio_giro": 
+        return <Badge className="bg-green-500/20 text-green-500 border-green-500/30">Médio Giro</Badge>;
+      case "baixo_giro": 
+        return <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30">Baixo Giro</Badge>;
+      case "critico": 
+        return <Badge className="bg-red-500/20 text-red-500 border-red-500/30">Crítico</Badge>;
     }
   };
 
@@ -186,100 +195,111 @@ export function AnalisePorCasaSection({ bookmakerAnalises, lucroTotalCiclo }: An
 
   return (
     <div className="space-y-6">
-      {/* Destaques Principais */}
+      {/* Score de Longevidade Overview */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Star className="h-5 w-5 text-amber-500" />
-            Destaques por Casa
+            <Gauge className="h-5 w-5 text-primary" />
+            Análise de Longevidade e Capacidade por Casa
           </CardTitle>
-          <CardDescription>Visão rápida das casas mais relevantes</CardDescription>
+          <CardDescription>
+            Avaliação de tolerância a volume e risco de limitação em apostas protegidas
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-3">
-            {/* Casa mais lucrativa */}
-            {casaMaisLucrativa && casaMaisLucrativa.lucro > 0 && (
-              <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="h-4 w-4 text-emerald-500" />
-                  <span className="text-sm font-medium text-emerald-500">Mais Lucrativa</span>
-                </div>
-                <p className="text-lg font-bold truncate">{casaMaisLucrativa.bookmaker_nome}</p>
-                <p className="text-sm text-muted-foreground">
-                  {formatCurrency(casaMaisLucrativa.lucro)} ({casaMaisLucrativa.percentualLucroTotal.toFixed(0)}% do total)
-                </p>
+            {/* Casas de Alta Longevidade */}
+            <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="h-4 w-4 text-emerald-500" />
+                <span className="text-sm font-medium text-emerald-500">Alta Longevidade</span>
               </div>
-            )}
+              <p className="text-2xl font-bold">{casasMaiorLongevidade.length} casa(s)</p>
+              <p className="text-sm text-muted-foreground">
+                {casasMaiorLongevidade.length > 0 
+                  ? "Indicadas para alto giro e ciclos longos"
+                  : "Nenhuma casa com excelente longevidade"}
+              </p>
+            </div>
 
-            {/* Melhor ROI */}
-            {casaMaiorRoi && casaMaiorRoi.roi > 0 && (
+            {/* Maior Capacidade de Volume */}
+            {casasMaiorVolume && (
               <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
                 <div className="flex items-center gap-2 mb-2">
-                  <Target className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm font-medium text-blue-500">Melhor ROI</span>
+                  <BarChart3 className="h-4 w-4 text-blue-500" />
+                  <span className="text-sm font-medium text-blue-500">Maior Capacidade</span>
                 </div>
-                <p className="text-lg font-bold truncate">{casaMaiorRoi.bookmaker_nome}</p>
+                <p className="text-lg font-bold truncate">{casasMaiorVolume.bookmaker_nome}</p>
                 <p className="text-sm text-muted-foreground">
-                  {casaMaiorRoi.roi.toFixed(2)}% de retorno
+                  {formatCurrency(casasMaiorVolume.volumeAteLimitacao)} por evento
                 </p>
               </div>
             )}
 
-            {/* Casas com risco */}
+            {/* Casas com Risco */}
             <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
               <div className="flex items-center gap-2 mb-2">
                 <ShieldAlert className="h-4 w-4 text-amber-500" />
-                <span className="text-sm font-medium text-amber-500">Risco Operacional</span>
+                <span className="text-sm font-medium text-amber-500">Com Eventos de Risco</span>
               </div>
-              <p className="text-lg font-bold">{casasComRisco.length} casa(s)</p>
+              <p className="text-2xl font-bold">{casasRisco.length} casa(s)</p>
               <p className="text-sm text-muted-foreground">
-                {casasComRisco.length > 0 
-                  ? `Com limitação ou bloqueio`
+                {casasRisco.length > 0 
+                  ? "Limitação ou bloqueio registrado"
                   : "Nenhum evento de risco"}
               </p>
             </div>
           </div>
 
-          {/* Performance por Casa (lista compacta) */}
+          {/* Ranking por Score de Longevidade */}
           <div className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">Participação no Lucro por Casa</h4>
+            <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Layers className="h-4 w-4" />
+              Ranking por Score de Longevidade
+            </h4>
             {bookmakerAnalises
-              .filter(c => c.lucro !== 0)
-              .sort((a, b) => b.percentualLucroTotal - a.percentualLucroTotal)
-              .slice(0, 5)
+              .sort((a, b) => b.scoreLongevidade - a.scoreLongevidade)
+              .slice(0, 6)
               .map(casa => (
                 <div key={casa.bookmaker_id} className="flex items-center gap-3">
                   <span className="text-sm font-medium w-32 truncate">{casa.bookmaker_nome}</span>
                   <Progress 
-                    value={Math.min(Math.abs(casa.percentualLucroTotal), 100)} 
-                    className={`flex-1 h-2 ${casa.lucro < 0 ? '[&>div]:bg-red-500' : ''}`}
+                    value={casa.scoreLongevidade} 
+                    className={`flex-1 h-2 ${
+                      casa.scoreLongevidade >= 70 ? '[&>div]:bg-emerald-500' :
+                      casa.scoreLongevidade >= 40 ? '[&>div]:bg-amber-500' :
+                      '[&>div]:bg-red-500'
+                    }`}
                   />
-                  <span className={`text-sm font-medium w-20 text-right ${casa.lucro >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {casa.lucro >= 0 ? '+' : ''}{casa.percentualLucroTotal.toFixed(1)}%
+                  <span className={`text-sm font-bold w-12 text-right ${getScoreColor(casa.scoreLongevidade)}`}>
+                    {casa.scoreLongevidade.toFixed(0)}
                   </span>
+                  {getClassificacaoBadge(casa.classificacaoLongevidade)}
                 </div>
               ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Recomendações Automáticas */}
+      {/* Recomendações Estratégicas de Longevidade */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-primary" />
-            Recomendações Estratégicas por Casa
+            <Target className="h-5 w-5 text-primary" />
+            Recomendações de Alocação por Longevidade
           </CardTitle>
-          <CardDescription>Análise automática de risco × performance para decisão de alocação</CardDescription>
+          <CardDescription>
+            Onde alocar volume de forma estratégica, baseado em capacidade operacional
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {recomendacoes.map(rec => (
             <div 
               key={rec.bookmaker_id} 
               className={`p-4 rounded-lg border ${
-                rec.tipo === 'continuar' ? 'bg-emerald-500/5 border-emerald-500/20' :
-                rec.tipo === 'cautela' ? 'bg-amber-500/5 border-amber-500/20' :
-                rec.tipo === 'reduzir' ? 'bg-orange-500/5 border-orange-500/20' :
+                rec.tipo === 'alto_giro' ? 'bg-emerald-500/5 border-emerald-500/20' :
+                rec.tipo === 'medio_giro' ? 'bg-green-500/5 border-green-500/20' :
+                rec.tipo === 'baixo_giro' ? 'bg-amber-500/5 border-amber-500/20' :
                 'bg-red-500/5 border-red-500/20'
               }`}
             >
@@ -290,25 +310,29 @@ export function AnalisePorCasaSection({ bookmakerAnalises, lucroTotalCiclo }: An
                   {getTipoBadge(rec.tipo)}
                 </div>
                 <div className="flex items-center gap-2">
-                  {getRiscoBadge(rec.risco)}
-                  <span className={`text-sm font-medium ${rec.lucro >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {rec.lucro >= 0 ? '+' : ''}{formatCurrency(rec.lucro)}
+                  <span className={`text-lg font-bold ${getScoreColor(rec.score)}`}>
+                    {rec.score.toFixed(0)}
                   </span>
+                  <span className="text-xs text-muted-foreground">pts</span>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground">{rec.motivo}</p>
+              <p className="text-sm font-medium mb-1">{rec.recomendacao}</p>
+              <p className="text-sm text-muted-foreground">{rec.detalhes}</p>
             </div>
           ))}
         </CardContent>
       </Card>
 
-      {/* Tabela Detalhada */}
+      {/* Métricas Detalhadas por Casa */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            Métricas Detalhadas por Casa
+            Métricas de Longevidade por Casa
           </CardTitle>
+          <CardDescription>
+            Volume girado, eventos de limitação e capacidade de absorção
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -316,40 +340,44 @@ export function AnalisePorCasaSection({ bookmakerAnalises, lucroTotalCiclo }: An
               <thead>
                 <tr className="border-b">
                   <th className="text-left p-2">Casa</th>
+                  <th className="text-right p-2">Score</th>
+                  <th className="text-right p-2">Volume Total</th>
+                  <th className="text-right p-2">Volume/Limitação</th>
                   <th className="text-right p-2">Apostas</th>
-                  <th className="text-right p-2">Volume</th>
-                  <th className="text-right p-2">Lucro</th>
-                  <th className="text-right p-2">ROI</th>
-                  <th className="text-right p-2">% Lucro Total</th>
+                  <th className="text-right p-2">Dias Ativos</th>
                   <th className="text-center p-2">Limitações</th>
+                  <th className="text-center p-2">Frequência</th>
                   <th className="text-center p-2">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {bookmakerAnalises
-                  .sort((a, b) => b.lucro - a.lucro)
+                  .sort((a, b) => b.scoreLongevidade - a.scoreLongevidade)
                   .map(casa => (
                     <tr key={casa.bookmaker_id} className="border-b hover:bg-muted/50">
                       <td className="p-2 font-medium">{casa.bookmaker_nome}</td>
-                      <td className="p-2 text-right">{casa.qtdApostas}</td>
-                      <td className="p-2 text-right">{formatCurrency(casa.volume)}</td>
-                      <td className={`p-2 text-right font-medium ${casa.lucro >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {casa.lucro >= 0 ? '+' : ''}{formatCurrency(casa.lucro)}
-                      </td>
-                      <td className={`p-2 text-right ${casa.roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {casa.roi.toFixed(2)}%
-                      </td>
                       <td className="p-2 text-right">
-                        {casa.percentualLucroTotal.toFixed(1)}%
+                        <span className={`font-bold ${getScoreColor(casa.scoreLongevidade)}`}>
+                          {casa.scoreLongevidade.toFixed(0)}
+                        </span>
                       </td>
+                      <td className="p-2 text-right">{formatCurrency(casa.volumeTotal)}</td>
+                      <td className="p-2 text-right font-medium">
+                        {formatCurrency(casa.volumeAteLimitacao)}
+                      </td>
+                      <td className="p-2 text-right">{casa.qtdApostas}</td>
+                      <td className="p-2 text-right">{casa.diasAtivos}</td>
                       <td className="p-2 text-center">
                         {casa.eventosLimitacao > 0 || casa.eventosBloqueio > 0 ? (
                           <Badge variant="destructive" className="text-xs">
                             {casa.eventosLimitacao + casa.eventosBloqueio}
                           </Badge>
                         ) : (
-                          <span className="text-muted-foreground">-</span>
+                          <span className="text-muted-foreground">0</span>
                         )}
+                      </td>
+                      <td className="p-2 text-center">
+                        {getFrequenciaBadge(casa.frequenciaLimitacao)}
                       </td>
                       <td className="p-2 text-center">
                         {casa.statusAtual === "LIMITADA" || casa.statusAtual === "limitada" ? (
@@ -359,6 +387,59 @@ export function AnalisePorCasaSection({ bookmakerAnalises, lucroTotalCiclo }: An
                         ) : (
                           <Badge className="bg-emerald-500/20 text-emerald-500 text-xs">Ativo</Badge>
                         )}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Métricas Financeiras (Contexto Secundário) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-muted-foreground" />
+            Contexto Financeiro (Referência)
+          </CardTitle>
+          <CardDescription>
+            Lucro e ROI são métricas secundárias em apostas protegidas - use apenas como contexto
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">Casa</th>
+                  <th className="text-right p-2">Lucro</th>
+                  <th className="text-right p-2">ROI</th>
+                  <th className="text-right p-2">% do Total</th>
+                  <th className="text-right p-2">Depositado</th>
+                  <th className="text-right p-2">Sacado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookmakerAnalises
+                  .sort((a, b) => b.lucro - a.lucro)
+                  .map(casa => (
+                    <tr key={casa.bookmaker_id} className="border-b hover:bg-muted/50">
+                      <td className="p-2 font-medium">{casa.bookmaker_nome}</td>
+                      <td className={`p-2 text-right font-medium ${casa.lucro >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {casa.lucro >= 0 ? '+' : ''}{formatCurrency(casa.lucro)}
+                      </td>
+                      <td className={`p-2 text-right ${casa.roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {casa.roi.toFixed(2)}%
+                      </td>
+                      <td className="p-2 text-right text-muted-foreground">
+                        {casa.percentualLucroTotal.toFixed(1)}%
+                      </td>
+                      <td className="p-2 text-right text-muted-foreground">
+                        {formatCurrency(casa.totalDepositado || 0)}
+                      </td>
+                      <td className="p-2 text-right text-muted-foreground">
+                        {formatCurrency(casa.totalSacado || 0)}
                       </td>
                     </tr>
                   ))}
