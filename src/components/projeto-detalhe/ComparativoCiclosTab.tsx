@@ -460,6 +460,58 @@ export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Tabela Completa - PRIMEIRA POSIÇÃO */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tabela de Ciclos</CardTitle>
+          <CardDescription>Dados completos de todos os ciclos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">Ciclo</th>
+                  <th className="text-left p-2">Período</th>
+                  <th className="text-right p-2">Apostas</th>
+                  <th className="text-right p-2">Volume</th>
+                  <th className="text-right p-2">Ticket Médio</th>
+                  <th className="text-right p-2">Lucro</th>
+                  <th className="text-right p-2">ROI</th>
+                  <th className="text-right p-2">Lucro/Aposta</th>
+                  <th className="text-center p-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ciclos.map((ciclo) => (
+                  <tr key={ciclo.id} className="border-b hover:bg-muted/50">
+                    <td className="p-2 font-medium">{ciclo.numero_ciclo}</td>
+                    <td className="p-2 text-muted-foreground">
+                      {format(new Date(ciclo.data_inicio), "dd/MM")} - {format(new Date(ciclo.data_fim_prevista), "dd/MM")}
+                    </td>
+                    <td className="p-2 text-right">{ciclo.qtdApostas}</td>
+                    <td className="p-2 text-right">{formatCurrency(ciclo.volume)}</td>
+                    <td className="p-2 text-right">{formatCurrency(ciclo.ticketMedio)}</td>
+                    <td className={`p-2 text-right font-medium ${ciclo.lucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                      {formatCurrency(ciclo.lucro)}
+                    </td>
+                    <td className={`p-2 text-right ${ciclo.roi >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                      {ciclo.roi.toFixed(2)}%
+                    </td>
+                    <td className="p-2 text-right">{formatCurrency(ciclo.lucroPoAposta)}</td>
+                    <td className="p-2 text-center">
+                      <Badge variant={ciclo.status === "FECHADO" ? "secondary" : "default"} className="text-xs">
+                        {ciclo.status === "FECHADO" ? "Fechado" : "Em Andamento"}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Resumo Executivo */}
       <Card>
         <CardHeader>
@@ -554,68 +606,6 @@ export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
         </CardContent>
       </Card>
 
-      {/* Comparação Ciclo a Ciclo */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Comparação Ciclo a Ciclo
-          </CardTitle>
-          <CardDescription>Análise detalhada das variações entre ciclos consecutivos</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {analises?.variacoes.map((v, idx) => (
-            <div key={idx} className="p-4 rounded-lg border bg-card/50">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">Ciclo {v.cicloAnterior.numero_ciclo}</Badge>
-                  <ArrowUp className="h-4 w-4 rotate-90 text-muted-foreground" />
-                  <Badge variant="outline">Ciclo {v.cicloAtual.numero_ciclo}</Badge>
-                </div>
-                <Badge className={v.varLucro >= 0 ? "bg-emerald-500/20 text-emerald-500" : "bg-red-500/20 text-red-500"}>
-                  {v.varLucro >= 0 ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
-                  {v.varLucro >= 0 ? "+" : ""}{v.varLucro.toFixed(1)}% lucro
-                </Badge>
-              </div>
-
-              {/* Métricas */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                <div className="text-center p-2 rounded bg-muted/30">
-                  <p className="text-xs text-muted-foreground">Δ Lucro</p>
-                  <p className={`font-medium ${v.varLucroAbs >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                    {v.varLucroAbs >= 0 ? "+" : ""}{formatCurrency(v.varLucroAbs)}
-                  </p>
-                </div>
-                <div className="text-center p-2 rounded bg-muted/30">
-                  <p className="text-xs text-muted-foreground">Δ Apostas</p>
-                  <p className="font-medium">
-                    {v.varApostas >= 0 ? "+" : ""}{v.varApostas}
-                  </p>
-                </div>
-                <div className="text-center p-2 rounded bg-muted/30">
-                  <p className="text-xs text-muted-foreground">Δ Ticket Médio</p>
-                  <p className="font-medium">
-                    {v.varTicketMedio >= 0 ? "+" : ""}{v.varTicketMedio.toFixed(1)}%
-                  </p>
-                </div>
-                <div className="text-center p-2 rounded bg-muted/30">
-                  <p className="text-xs text-muted-foreground">Δ ROI</p>
-                  <p className={`font-medium ${v.varRoi >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                    {v.varRoi >= 0 ? "+" : ""}{v.varRoi.toFixed(2)}pp
-                  </p>
-                </div>
-              </div>
-
-              {/* Insight Verbal */}
-              <div className="flex items-start gap-2 p-3 rounded bg-primary/5 border border-primary/10">
-                <Lightbulb className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                <p className="text-sm">{gerarInsightComparativo(v)}</p>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
       {/* Destaques Positivos */}
       {analises?.destaquesPositivos && analises.destaquesPositivos.length > 0 && (
         <Card>
@@ -662,47 +652,6 @@ export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
         </Card>
       )}
 
-      {/* Conclusão Gerencial */}
-      {conclusao && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-primary" />
-              Conclusão Gerencial
-            </CardTitle>
-            <CardDescription>Recomendações para o próximo ciclo</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {conclusao.manter.length > 0 && (
-              <div>
-                <h4 className="font-medium text-emerald-500 mb-2 flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4" />
-                  O que manter
-                </h4>
-                <ul className="space-y-1 pl-6">
-                  {conclusao.manter.map((item, idx) => (
-                    <li key={idx} className="text-sm text-muted-foreground list-disc">{item}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {conclusao.ajustar.length > 0 && (
-              <div>
-                <h4 className="font-medium text-amber-500 mb-2 flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  O que ajustar
-                </h4>
-                <ul className="space-y-1 pl-6">
-                  {conclusao.ajustar.map((item, idx) => (
-                    <li key={idx} className="text-sm text-muted-foreground list-disc">{item}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
       {/* Análise por Casa */}
       <Card>
         <CardHeader>
@@ -724,58 +673,6 @@ export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
               lucroTotalCiclo={lucroTotal} 
             />
           )}
-        </CardContent>
-      </Card>
-
-      {/* Tabela Completa */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Tabela de Ciclos</CardTitle>
-          <CardDescription>Dados completos de todos os ciclos</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Ciclo</th>
-                  <th className="text-left p-2">Período</th>
-                  <th className="text-right p-2">Apostas</th>
-                  <th className="text-right p-2">Volume</th>
-                  <th className="text-right p-2">Ticket Médio</th>
-                  <th className="text-right p-2">Lucro</th>
-                  <th className="text-right p-2">ROI</th>
-                  <th className="text-right p-2">Lucro/Aposta</th>
-                  <th className="text-center p-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ciclos.map((ciclo) => (
-                  <tr key={ciclo.id} className="border-b hover:bg-muted/50">
-                    <td className="p-2 font-medium">{ciclo.numero_ciclo}</td>
-                    <td className="p-2 text-muted-foreground">
-                      {format(new Date(ciclo.data_inicio), "dd/MM")} - {format(new Date(ciclo.data_fim_prevista), "dd/MM")}
-                    </td>
-                    <td className="p-2 text-right">{ciclo.qtdApostas}</td>
-                    <td className="p-2 text-right">{formatCurrency(ciclo.volume)}</td>
-                    <td className="p-2 text-right">{formatCurrency(ciclo.ticketMedio)}</td>
-                    <td className={`p-2 text-right font-medium ${ciclo.lucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                      {formatCurrency(ciclo.lucro)}
-                    </td>
-                    <td className={`p-2 text-right ${ciclo.roi >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                      {ciclo.roi.toFixed(2)}%
-                    </td>
-                    <td className="p-2 text-right">{formatCurrency(ciclo.lucroPoAposta)}</td>
-                    <td className="p-2 text-center">
-                      <Badge variant={ciclo.status === "FECHADO" ? "secondary" : "default"} className="text-xs">
-                        {ciclo.status === "FECHADO" ? "Fechado" : "Em Andamento"}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </CardContent>
       </Card>
     </div>
