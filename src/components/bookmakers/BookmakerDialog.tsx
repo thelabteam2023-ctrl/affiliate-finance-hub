@@ -109,25 +109,32 @@ export default function BookmakerDialog({
     }
   };
 
-  // Inicialização quando dialog abre
+  // Reset quando dialog fecha
   useEffect(() => {
     if (!open) {
-      // Reset COMPLETO quando fecha
-      setParceiroId("");
-      setBookmakerId("");
-      setSelectedBookmaker(null);
-      setSelectedLink("");
-      setLoginUsername("");
-      setLoginPassword("");
-      setStatus("ativo");
-      setSaldoIrrecuperavel("");
-      setObservacoes("");
-      setIsLoadingDetails(false);
-      return;
+      // Pequeno delay para garantir que o dialog fechou antes de resetar
+      const timeout = setTimeout(() => {
+        setParceiroId("");
+        setBookmakerId("");
+        setSelectedBookmaker(null);
+        setSelectedLink("");
+        setLoginUsername("");
+        setLoginPassword("");
+        setStatus("ativo");
+        setSaldoIrrecuperavel("");
+        setObservacoes("");
+        setIsLoadingDetails(false);
+      }, 100);
+      return () => clearTimeout(timeout);
     }
+  }, [open]);
+
+  // Inicialização quando dialog abre - efeito separado para garantir execução determinística
+  useEffect(() => {
+    if (!open) return;
     
+    // Modo edição
     if (bookmaker) {
-      // Modo edição
       setParceiroId(bookmaker.parceiro_id || "");
       setBookmakerId(bookmaker.bookmaker_catalogo_id || "");
       setLoginUsername(bookmaker.login_username || "");
@@ -142,7 +149,7 @@ export default function BookmakerDialog({
         fetchBookmakerDetails(bookmaker.bookmaker_catalogo_id, bookmaker.link_origem);
       }
     } else {
-      // Modo criação - reset completo
+      // Modo criação - inicialização com valores dos props
       setLoginUsername("");
       setLoginPassword("");
       setStatus("ativo");
@@ -150,14 +157,20 @@ export default function BookmakerDialog({
       setObservacoes("");
       setSelectedLink("");
       setSelectedBookmaker(null);
-      setParceiroId(defaultParceiroId || "");
-      setBookmakerId(defaultBookmakerId || "");
       
-      if (defaultBookmakerId) {
-        fetchBookmakerDetails(defaultBookmakerId);
+      // Definir parceiro e bookmaker a partir dos defaults
+      const newParceiroId = defaultParceiroId || "";
+      const newBookmakerId = defaultBookmakerId || "";
+      
+      setParceiroId(newParceiroId);
+      setBookmakerId(newBookmakerId);
+      
+      // Carregar detalhes da bookmaker se houver ID default
+      if (newBookmakerId) {
+        fetchBookmakerDetails(newBookmakerId);
       }
     }
-  }, [open, bookmaker, defaultParceiroId, defaultBookmakerId]);
+  }, [open, bookmaker?.id, defaultParceiroId, defaultBookmakerId]);
 
   // Handler para mudança manual de bookmaker
   const handleBookmakerChange = (newBookmakerId: string) => {
