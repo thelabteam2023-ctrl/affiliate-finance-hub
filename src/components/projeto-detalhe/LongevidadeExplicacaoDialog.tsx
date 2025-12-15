@@ -12,8 +12,7 @@ import {
   HelpCircle, 
   TrendingUp, 
   BarChart3, 
-  AlertTriangle, 
-  Clock,
+  AlertTriangle,
   Target,
   Zap,
   Activity,
@@ -109,10 +108,10 @@ export function LongevidadeExplicacaoDialog({ projetoContexto }: LongevidadeExpl
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-2 rounded bg-background/50">
-                  <Clock className="h-4 w-4 text-purple-500 mt-0.5" />
+                  <Zap className="h-4 w-4 text-purple-500 mt-0.5" />
                   <div>
-                    <p className="font-medium">Velocidade de Limitação</p>
-                    <p className="text-xs text-muted-foreground">Limitou cedo (ruim) ou tarde (bom) na operação?</p>
+                    <p className="font-medium">Volume por Evento de Risco</p>
+                    <p className="text-xs text-muted-foreground">Quanto volume a casa girou antes de cada limitação?</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-2 rounded bg-background/50">
@@ -263,7 +262,7 @@ export function LongevidadeExplicacaoDialog({ projetoContexto }: LongevidadeExpl
               {projetoContexto && projetoContexto.volumeTotal > 0 && (
                 <div className="mt-3 p-3 rounded bg-background/50 border">
                   <p className="text-xs text-muted-foreground mb-2">Neste projeto:</p>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-3 gap-2 text-xs">
                     <div>
                       <span className="text-muted-foreground">Volume total:</span>
                       <span className="font-medium ml-2">{formatCurrency(projetoContexto.volumeTotal)}</span>
@@ -276,13 +275,19 @@ export function LongevidadeExplicacaoDialog({ projetoContexto }: LongevidadeExpl
                       <span className="text-muted-foreground">Eventos de risco:</span>
                       <span className="font-medium ml-2">{projetoContexto.totalEventosRisco}</span>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Dias ativos:</span>
-                      <span className="font-medium ml-2">{projetoContexto.diasProjetoAtivo}</span>
-                    </div>
                   </div>
                 </div>
               )}
+              
+              <div className="mt-4 p-3 rounded bg-amber-500/10 border border-amber-500/20">
+                <p className="text-xs font-medium text-amber-600 mb-1">❌ Por que NÃO usamos tempo (dias ativos)?</p>
+                <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>Tempo cronológico não representa esforço real</li>
+                  <li>Uma casa pode ficar 30 dias "ativa" com poucas operações</li>
+                  <li>Outra pode girar muito em 2 dias e ser limitada</li>
+                  <li><strong>O risco está no volume e nos eventos, não no calendário</strong></li>
+                </ul>
+              </div>
             </div>
           </section>
 

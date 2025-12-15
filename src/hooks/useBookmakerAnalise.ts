@@ -42,11 +42,11 @@ export interface BookmakerAnalise {
 }
 
 // Contexto do projeto para cálculos proporcionais
+// NOTA: diasProjetoAtivo removido pois tempo cronológico não representa risco/esforço real
 export interface ProjetoContexto {
   volumeTotal: number;
   totalEventosRisco: number;
   totalCasas: number;
-  diasProjetoAtivo: number;
   qtdApostasTotal: number;
 }
 
@@ -115,6 +115,7 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
         : 0;
       
       // Eficiência: volume girado por evento de risco (métrica ouro)
+      // Quanto mais volume a casa aguenta antes de cada evento = melhor
       const volumePorRisco = totalEventos > 0 
         ? casa.volumeTotal / totalEventos 
         : casa.volumeTotal * 2; // Casa sem eventos = alta eficiência
@@ -124,13 +125,11 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
         ? (totalEventos / casa.volumeTotal) * 10000 // Normalizar para escala útil
         : 0;
       
-      // Velocidade de limitação: quanto tempo levou para ter primeiro evento
-      let velocidadeLimitacao = 1; // 1 = nunca limitou (melhor)
-      if (totalEventos > 0 && casa.primeiraAposta) {
-        const diasAtePrimeiroEvento = casa.diasAtivos / totalEventos;
-        // Normalizar: mais dias até limitar = melhor (0-1)
-        velocidadeLimitacao = Math.min(diasAtePrimeiroEvento / contexto.diasProjetoAtivo, 1);
-      }
+      // Volume por evento comparado à média do projeto (baseado em VOLUME, não tempo)
+      const volumeMedioPorCasa = contexto.volumeTotal / Math.max(contexto.totalCasas, 1);
+      const eficienciaVolumeRisco = volumeMedioPorCasa > 0
+        ? Math.min(volumePorRisco / (volumeMedioPorCasa * 2), 1)
+        : 1;
       
       return {
         ...casa,
@@ -139,7 +138,7 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
         participacaoRisco,
         volumePorRisco,
         densidadeRisco,
-        velocidadeLimitacao
+        eficienciaVolumeRisco
       };
     });
     
@@ -182,23 +181,24 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
       const posRankingEficiencia = rankingEficiencia.get(casa.id) || totalCasas;
       
       // Componentes do score (total = 100):
+      // NOTA: Não usamos tempo/dias ativos - apenas volume e eventos de risco
       
-      // A) Ranking de Eficiência (40 pontos)
-      // Top 25% = 40pts, próximos 25% = 30pts, próximos 25% = 20pts, bottom 25% = 10pts
+      // A) Ranking de Eficiência (45 pontos) - baseado em volume por evento
+      // Top 25% = 45pts, próximos 25% = 35pts, próximos 25% = 22pts, bottom 25% = 10pts
       const percentilEficiencia = posRankingEficiencia / totalCasas;
       let scoreEficiencia: number;
-      if (percentilEficiencia <= 0.25) scoreEficiencia = 40;
-      else if (percentilEficiencia <= 0.50) scoreEficiencia = 30;
-      else if (percentilEficiencia <= 0.75) scoreEficiencia = 20;
+      if (percentilEficiencia <= 0.25) scoreEficiencia = 45;
+      else if (percentilEficiencia <= 0.50) scoreEficiencia = 35;
+      else if (percentilEficiencia <= 0.75) scoreEficiencia = 22;
       else scoreEficiencia = 10;
       
       // B) Participação no Volume (25 pontos)
       // Proporcional: casa com 30% do volume = 25pts, 15% = 12.5pts, etc.
       const scoreParticipacao = Math.min((casa.participacaoVolume / 30) * 25, 25);
       
-      // C) Velocidade de Limitação (20 pontos)
-      // Nunca limitou = 20pts, limitou tarde = 15pts, limitou cedo = 5pts
-      const scoreVelocidade = casa.velocidadeLimitacao * 20;
+      // C) Volume por Evento de Risco (15 pontos) - substitui velocidade baseada em tempo
+      // Quanto mais volume a casa aguentou por evento = melhor
+      const scoreVolumeEvento = casa.eficienciaVolumeRisco * 15;
       
       // D) Penalização por Risco Concentrado (até -15 pontos)
       // Se casa concentra mais de 30% dos eventos de risco = penalidade máxima
@@ -224,7 +224,7 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
       let scoreFinal = 
         scoreEficiencia + 
         scoreParticipacao + 
-        scoreVelocidade + 
+        scoreVolumeEvento + 
         bonusSemEventos -
         penalizacaoRisco - 
         penalizacaoEventos -
@@ -537,18 +537,13 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
       );
       const qtdApostasTotalProjeto = Object.values(bookmakerData).reduce((acc, d) => acc + d.qtdApostas, 0);
       
-      // Dias do projeto ativo
-      let diasProjetoAtivo = 30; // Default
-      if (projeto?.data_inicio) {
-        const diffTime = Math.abs(new Date().getTime() - new Date(projeto.data_inicio).getTime());
-        diasProjetoAtivo = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-      }
+      // NOTA: Removido cálculo de diasProjetoAtivo
+      // Tempo cronológico não representa esforço, risco nem retorno real em apostas protegidas
 
       const contexto: ProjetoContexto = {
         volumeTotal: volumeTotalProjeto,
         totalEventosRisco,
         totalCasas: bookmakers.length,
-        diasProjetoAtivo,
         qtdApostasTotal: qtdApostasTotalProjeto
       };
       setProjetoContexto(contexto);
