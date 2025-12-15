@@ -20,10 +20,13 @@ import {
   Zap,
   Award,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  Building2
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { AnalisePorCasaSection } from "./AnalisePorCasaSection";
+import { useBookmakerAnalise } from "@/hooks/useBookmakerAnalise";
 
 interface CicloData {
   id: string;
@@ -58,6 +61,9 @@ interface ComparativoCiclosTabProps {
 export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
   const [ciclos, setCiclos] = useState<CicloData[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Hook para análise por casa
+  const { analises: bookmakerAnalises, loading: loadingBookmakers, lucroTotal } = useBookmakerAnalise({ projetoId });
 
   useEffect(() => {
     fetchCiclosComMetricas();
@@ -696,6 +702,30 @@ export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Análise por Casa */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-primary" />
+            Análise por Casa (Bookmaker)
+          </CardTitle>
+          <CardDescription>Inteligência estratégica de performance × risco operacional por casa</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingBookmakers ? (
+            <div className="space-y-4">
+              <Skeleton className="h-24" />
+              <Skeleton className="h-32" />
+            </div>
+          ) : (
+            <AnalisePorCasaSection 
+              bookmakerAnalises={bookmakerAnalises} 
+              lucroTotalCiclo={lucroTotal} 
+            />
+          )}
+        </CardContent>
+      </Card>
 
       {/* Tabela Completa */}
       <Card>
