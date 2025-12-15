@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Hourglass } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Hourglass, Copy, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
 import { ParceiroBookmakersTab } from "./ParceiroBookmakersTab";
+import { useToast } from "@/hooks/use-toast";
 
 interface ParceiroDetalhesPanelProps {
   parceiroId: string | null;
@@ -35,6 +37,35 @@ export function ParceiroDetalhesPanel({
   diasRestantes
 }: ParceiroDetalhesPanelProps) {
   const { data, loading, error } = useParceiroFinanceiroConsolidado(parceiroId);
+  const { toast } = useToast();
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
+
+  const copyToClipboard = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      toast({
+        title: "Copiado!",
+        description: `${field} copiado para a área de transferência`,
+      });
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (error) {
+      toast({
+        title: "Erro ao copiar",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const decryptPassword = (encrypted: string) => {
+    if (!encrypted) return "";
+    try {
+      return atob(encrypted);
+    } catch {
+      return encrypted;
+    }
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -101,8 +132,15 @@ export function ParceiroDetalhesPanel({
           >
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold truncate group-hover:text-primary transition-colors">{data.parceiro_nome}</h2>
-              {hasParceria && (
-                <Hourglass className="h-4 w-4 text-warning shrink-0" />
+              {hasParceria && diasRestantes !== null && diasRestantes !== undefined && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Hourglass className="h-4 w-4 text-warning shrink-0 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs font-medium">{diasRestantes} dias restantes de parceria</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
               <Badge
                 variant="outline"
@@ -307,11 +345,11 @@ export function ParceiroDetalhesPanel({
                               <img
                                 src={bm.logo_url}
                                 alt={bm.bookmaker_nome}
-                                className="h-6 w-6 rounded object-contain bg-white p-0.5 shrink-0"
+                                className="h-8 w-8 rounded object-contain bg-white p-0.5 shrink-0"
                               />
                             ) : (
-                              <div className="h-6 w-6 rounded bg-muted flex items-center justify-center shrink-0">
-                                <Building2 className="h-3 w-3 text-muted-foreground" />
+                              <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0">
+                                <Building2 className="h-4 w-4 text-muted-foreground" />
                               </div>
                             )}
                             <div className="min-w-0 flex-1">
@@ -330,19 +368,68 @@ export function ParceiroDetalhesPanel({
                                 >
                                   {bm.status}
                                 </Badge>
-                                {bm.has_credentials && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div className="shrink-0">
-                                        <IdCard 
-                                          className="h-3 w-3 text-foreground" 
-                                        />
+                                {bm.has_credentials && bm.login_username && (
+                                  <Popover
+                                    open={credentialsPopoverOpen === bm.bookmaker_id}
+                                    onOpenChange={(open) => setCredentialsPopoverOpen(open ? bm.bookmaker_id : null)}
+                                  >
+                                    <PopoverTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="h-5 w-5 p-0.5 shrink-0 rounded hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setCredentialsPopoverOpen(credentialsPopoverOpen === bm.bookmaker_id ? null : bm.bookmaker_id);
+                                        }}
+                                      >
+                                        <IdCard className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-52 p-2 bg-popover border border-border z-50" align="start">
+                                      <div className="space-y-2">
+                                        <div>
+                                          <label className="text-[10px] text-muted-foreground">Usuário</label>
+                                          <div className="flex items-center gap-1 mt-0.5">
+                                            <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
+                                              {showSensitiveData ? bm.login_username : "••••••"}
+                                            </code>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => copyToClipboard(bm.login_username || "", "Usuário")}
+                                              className="h-6 w-6 p-0 shrink-0"
+                                            >
+                                              {copiedField === "Usuário" ? (
+                                                <Check className="h-3 w-3 text-success" />
+                                              ) : (
+                                                <Copy className="h-3 w-3" />
+                                              )}
+                                            </Button>
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <label className="text-[10px] text-muted-foreground">Senha</label>
+                                          <div className="flex items-center gap-1 mt-0.5">
+                                            <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
+                                              {showSensitiveData ? decryptPassword(bm.login_password_encrypted || "") : "••••••"}
+                                            </code>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => copyToClipboard(decryptPassword(bm.login_password_encrypted || ""), "Senha")}
+                                              className="h-6 w-6 p-0 shrink-0"
+                                            >
+                                              {copiedField === "Senha" ? (
+                                                <Check className="h-3 w-3 text-success" />
+                                              ) : (
+                                                <Copy className="h-3 w-3" />
+                                              )}
+                                            </Button>
+                                          </div>
+                                        </div>
                                       </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="right">
-                                      <p className="text-xs">Credenciais cadastradas</p>
-                                    </TooltipContent>
-                                  </Tooltip>
+                                    </PopoverContent>
+                                  </Popover>
                                 )}
                               </div>
                             </div>
