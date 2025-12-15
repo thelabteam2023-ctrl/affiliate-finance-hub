@@ -516,8 +516,9 @@ export default function GestaoParceiros() {
       cpf: p.cpf,
       status: p.status,
       lucro_prejuizo: roiData.get(p.id)?.lucro_prejuizo || 0,
+      has_parceria: parceriasData.has(p.id),
     }));
-  }, [parceiros, roiData]);
+  }, [parceiros, roiData, parceriasData]);
 
   const stats = {
     total: parceiros.length,
@@ -565,39 +566,6 @@ export default function GestaoParceiros() {
 
             {/* Tab: Parceiros (Visão Geral) */}
             <TabsContent value="parceiros" className="space-y-6">
-              {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="border-border bg-gradient-surface">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Total de Parceiros
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{stats.total}</div>
-                  </CardContent>
-                </Card>
-                <Card className="border-border bg-gradient-surface">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Ativos
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-success">{stats.ativos}</div>
-                  </CardContent>
-                </Card>
-                <Card className="border-border bg-gradient-surface">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Inativos
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-warning">{stats.inativos}</div>
-                  </CardContent>
-                </Card>
-              </div>
 
               {/* Toolbar */}
               <Card className="border-border bg-gradient-surface">
@@ -895,6 +863,7 @@ export default function GestaoParceiros() {
                     selectedId={selectedParceiroDetalhes}
                     onSelect={handleSelectParceiroDetalhes}
                     showSensitiveData={showSensitiveData}
+                    onAddParceiro={() => setDialogOpen(true)}
                   />
 
                   {/* Painel Direito - Detalhes */}
