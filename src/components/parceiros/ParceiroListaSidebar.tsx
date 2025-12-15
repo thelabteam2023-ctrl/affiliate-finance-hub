@@ -17,12 +17,14 @@ interface ParceiroListaSidebarProps {
   parceiros: Parceiro[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  showSensitiveData?: boolean;
 }
 
 export function ParceiroListaSidebar({
   parceiros,
   selectedId,
   onSelect,
+  showSensitiveData = false,
 }: ParceiroListaSidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -42,7 +44,15 @@ export function ParceiroListaSidebar({
     }).format(value);
   };
 
+  const maskCurrency = (value: number) => {
+    if (showSensitiveData) return formatCurrency(value);
+    return "R$ ••••";
+  };
+
   const maskCPF = (cpf: string) => {
+    if (showSensitiveData) {
+      return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    }
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4");
   };
 
@@ -96,10 +106,12 @@ export function ParceiroListaSidebar({
                   <span
                     className={cn(
                       "font-medium",
-                      parceiro.lucro_prejuizo >= 0 ? "text-success" : "text-destructive"
+                      showSensitiveData
+                        ? (parceiro.lucro_prejuizo >= 0 ? "text-success" : "text-destructive")
+                        : "text-muted-foreground"
                     )}
                   >
-                    {formatCurrency(parceiro.lucro_prejuizo)}
+                    {maskCurrency(parceiro.lucro_prejuizo)}
                   </span>
                 </div>
               </div>
