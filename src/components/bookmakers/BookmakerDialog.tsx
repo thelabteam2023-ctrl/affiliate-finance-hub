@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import BookmakerSelect from "./BookmakerSelect";
 import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
@@ -56,6 +56,7 @@ export default function BookmakerDialog({
   const [loading, setLoading] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [parceiroId, setParceiroId] = useState("");
+  const [parceiroNome, setParceiroNome] = useState("");  // Nome do parceiro para display estático
   const [bookmakerId, setBookmakerId] = useState("");
   const [selectedBookmaker, setSelectedBookmaker] = useState<BookmakerCatalogo | null>(null);
   const [selectedLink, setSelectedLink] = useState("");
@@ -109,12 +110,32 @@ export default function BookmakerDialog({
     }
   };
 
+  // Função para buscar nome do parceiro
+  const fetchParceiroNome = async (parceiroIdToFetch: string) => {
+    if (!parceiroIdToFetch) return;
+    
+    try {
+      const { data } = await supabase
+        .from("parceiros")
+        .select("nome")
+        .eq("id", parceiroIdToFetch)
+        .maybeSingle();
+      
+      if (data) {
+        setParceiroNome(data.nome);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar nome do parceiro:", error);
+    }
+  };
+
   // Reset quando dialog fecha
   useEffect(() => {
     if (!open) {
       // Pequeno delay para garantir que o dialog fechou antes de resetar
       const timeout = setTimeout(() => {
         setParceiroId("");
+        setParceiroNome("");
         setBookmakerId("");
         setSelectedBookmaker(null);
         setSelectedLink("");
@@ -144,7 +165,11 @@ export default function BookmakerDialog({
       setObservacoes(bookmaker.observacoes || "");
       setSelectedLink(bookmaker.link_origem || "");
       setSelectedBookmaker(null);
+      setParceiroNome("");
       
+      if (bookmaker.parceiro_id) {
+        fetchParceiroNome(bookmaker.parceiro_id);
+      }
       if (bookmaker.bookmaker_catalogo_id) {
         fetchBookmakerDetails(bookmaker.bookmaker_catalogo_id, bookmaker.link_origem);
       }
@@ -157,6 +182,7 @@ export default function BookmakerDialog({
       setObservacoes("");
       setSelectedLink("");
       setSelectedBookmaker(null);
+      setParceiroNome("");
       
       // Definir parceiro e bookmaker a partir dos defaults
       const newParceiroId = defaultParceiroId || "";
@@ -165,6 +191,10 @@ export default function BookmakerDialog({
       setParceiroId(newParceiroId);
       setBookmakerId(newBookmakerId);
       
+      // Carregar nome do parceiro se houver ID default
+      if (newParceiroId) {
+        fetchParceiroNome(newParceiroId);
+      }
       // Carregar detalhes da bookmaker se houver ID default
       if (newBookmakerId) {
         fetchBookmakerDetails(newBookmakerId);
@@ -287,20 +317,30 @@ export default function BookmakerDialog({
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label>Parceiro *</Label>
-            <ParceiroSelect
-              key={open ? 'parceiro-open' : 'parceiro-closed'}
-              value={parceiroId}
-              onValueChange={(newParceiroId) => {
-                setParceiroId(newParceiroId);
-                // Resetar bookmaker quando parceiro muda (lista filtrada muda)
-                if (!bookmaker) {
-                  setBookmakerId("");
-                  setSelectedBookmaker(null);
-                  setSelectedLink("");
-                }
-              }}
-              disabled={loading || lockParceiro}
-            />
+            {/* Modo contextual: display estático (não usa ParceiroSelect) */}
+            {lockParceiro && parceiroId ? (
+              <div className="flex items-center justify-center gap-3 h-12 border rounded-md bg-muted/30 px-4">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium uppercase">
+                  {parceiroNome || "Carregando..."}
+                </span>
+              </div>
+            ) : (
+              <ParceiroSelect
+                key={open ? 'parceiro-open' : 'parceiro-closed'}
+                value={parceiroId}
+                onValueChange={(newParceiroId) => {
+                  setParceiroId(newParceiroId);
+                  // Resetar bookmaker quando parceiro muda (lista filtrada muda)
+                  if (!bookmaker) {
+                    setBookmakerId("");
+                    setSelectedBookmaker(null);
+                    setSelectedLink("");
+                  }
+                }}
+                disabled={loading}
+              />
+            )}
             {lockParceiro && (
               <p className="text-xs text-muted-foreground">
                 Parceiro selecionado a partir do contexto atual
