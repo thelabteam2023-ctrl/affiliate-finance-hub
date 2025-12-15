@@ -856,7 +856,7 @@ export default function GestaoParceiros() {
             {/* Tab: Detalhes do Parceiro */}
             <TabsContent value="detalhes" className="space-y-0">
               <Card className="border-border bg-gradient-surface overflow-hidden">
-                <div className="grid grid-cols-[240px_1fr] h-[calc(100vh-240px)] min-h-[480px]">
+                <div className="grid grid-cols-[340px_1fr] lg:grid-cols-[360px_1fr] h-[calc(100vh-240px)] min-h-[480px]">
                   {/* Painel Esquerdo - Lista de Parceiros */}
                   <ParceiroListaSidebar
                     parceiros={parceirosParaSidebar}
