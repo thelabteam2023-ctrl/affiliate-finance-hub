@@ -1,9 +1,8 @@
 import { useParceiroFinanceiroConsolidado } from "@/hooks/useParceiroFinanceiroConsolidado";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, TrendingDown, DollarSign, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ParceiroDetalhesPanelProps {
@@ -23,30 +22,31 @@ export function ParceiroDetalhesPanel({ parceiroId }: ParceiroDetalhesPanelProps
   if (!parceiroId) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-        <User className="h-16 w-16 mb-4 opacity-30" />
-        <p className="text-lg font-medium">Selecione um parceiro</p>
-        <p className="text-sm">Escolha um parceiro na lista para ver os detalhes</p>
+        <User className="h-12 w-12 mb-3 opacity-30" />
+        <p className="text-sm font-medium">Selecione um parceiro</p>
+        <p className="text-xs">Escolha um parceiro na lista</p>
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="p-4 space-y-3">
+        <div className="grid gap-2 grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-24" />
+            <Skeleton key={i} className="h-14" />
           ))}
         </div>
-        <Skeleton className="h-[400px]" />
+        <Skeleton className="h-[300px]" />
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="flex items-center justify-center h-full text-destructive">
-        Erro ao carregar dados: {error || "Dados não encontrados"}
+      <div className="flex items-center justify-center h-full text-destructive text-sm">
+        <AlertCircle className="h-4 w-4 mr-2" />
+        Erro ao carregar dados
       </div>
     );
   }
@@ -57,207 +57,176 @@ export function ParceiroDetalhesPanel({ parceiroId }: ParceiroDetalhesPanelProps
 
   return (
     <ScrollArea className="h-full">
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-            <User className="h-7 w-7 text-primary" />
+      <div className="p-4 space-y-3">
+        {/* Header compacto */}
+        <div className="flex items-center gap-3 pb-2 border-b border-border">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+            <User className="h-5 w-5 text-primary" />
           </div>
-          <div>
-            <h2 className="text-2xl font-bold">{data.parceiro_nome}</h2>
-            <p className="text-sm text-muted-foreground">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-semibold truncate">{data.parceiro_nome}</h2>
+            <p className="text-xs text-muted-foreground">
               {data.bookmakers.length} casa{data.bookmakers.length !== 1 ? "s" : ""} vinculada{data.bookmakers.length !== 1 ? "s" : ""}
             </p>
           </div>
         </div>
 
-        {/* KPIs Consolidados */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="border-border bg-gradient-surface">
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
-                  <ArrowDownToLine className="h-5 w-5 text-blue-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Total Depositado</p>
-                  <p className="text-xl font-bold">{formatCurrency(data.total_depositado)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* KPIs compactos - 4 colunas */}
+        <div className="grid gap-2 grid-cols-2 lg:grid-cols-4">
+          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
+            <ArrowDownToLine className="h-4 w-4 text-blue-500 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Depositado</p>
+              <p className="text-sm font-semibold truncate">{formatCurrency(data.total_depositado)}</p>
+            </div>
+          </div>
 
-          <Card className="border-border bg-gradient-surface">
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
-                  <ArrowUpFromLine className="h-5 w-5 text-green-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Total Sacado</p>
-                  <p className="text-xl font-bold">{formatCurrency(data.total_sacado)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
+            <ArrowUpFromLine className="h-4 w-4 text-green-500 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Sacado</p>
+              <p className="text-sm font-semibold truncate">{formatCurrency(data.total_sacado)}</p>
+            </div>
+          </div>
 
-          <Card className="border-border bg-gradient-surface">
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-lg",
-                  data.lucro_prejuizo >= 0 ? "bg-success/10" : "bg-destructive/10"
-                )}>
-                  {data.lucro_prejuizo >= 0 ? (
-                    <TrendingUp className="h-5 w-5 text-success" />
-                  ) : (
-                    <TrendingDown className="h-5 w-5 text-destructive" />
-                  )}
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Resultado Líquido</p>
-                  <p className={cn(
-                    "text-xl font-bold",
-                    data.lucro_prejuizo >= 0 ? "text-success" : "text-destructive"
-                  )}>
-                    {formatCurrency(data.lucro_prejuizo)}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
+            {data.lucro_prejuizo >= 0 ? (
+              <TrendingUp className="h-4 w-4 text-success shrink-0" />
+            ) : (
+              <TrendingDown className="h-4 w-4 text-destructive shrink-0" />
+            )}
+            <div className="min-w-0">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Resultado</p>
+              <p className={cn(
+                "text-sm font-semibold truncate",
+                data.lucro_prejuizo >= 0 ? "text-success" : "text-destructive"
+              )}>
+                {formatCurrency(data.lucro_prejuizo)}
+              </p>
+            </div>
+          </div>
 
-          <Card className="border-border bg-gradient-surface">
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10">
-                  <Target className="h-5 w-5 text-purple-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Total de Apostas</p>
-                  <p className="text-xl font-bold">{data.qtd_apostas_total.toLocaleString("pt-BR")}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
+            <Target className="h-4 w-4 text-purple-500 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Apostas</p>
+              <p className="text-sm font-semibold">{data.qtd_apostas_total.toLocaleString("pt-BR")}</p>
+            </div>
+          </div>
         </div>
 
-        {/* Info adicional */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card className="border-border bg-gradient-surface">
-            <CardContent className="pt-4 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Saldo em Bookmakers</p>
-              <p className="text-lg font-bold text-primary">{formatCurrency(totalSaldoBookmakers)}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-border bg-gradient-surface">
-            <CardContent className="pt-4 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Casas Ativas</p>
-              <p className="text-lg font-bold text-success">{bookmarkersAtivos}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-border bg-gradient-surface">
-            <CardContent className="pt-4 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Casas Limitadas</p>
-              <p className="text-lg font-bold text-warning">{bookmakersLimitados}</p>
-            </CardContent>
-          </Card>
+        {/* Info secundária inline */}
+        <div className="flex flex-wrap gap-3 text-xs">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30">
+            <Wallet className="h-3 w-3 text-primary" />
+            <span className="text-muted-foreground">Saldo:</span>
+            <span className="font-medium text-primary">{formatCurrency(totalSaldoBookmakers)}</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30">
+            <Building2 className="h-3 w-3 text-success" />
+            <span className="text-muted-foreground">Ativas:</span>
+            <span className="font-medium text-success">{bookmarkersAtivos}</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30">
+            <AlertCircle className="h-3 w-3 text-warning" />
+            <span className="text-muted-foreground">Limitadas:</span>
+            <span className="font-medium text-warning">{bookmakersLimitados}</span>
+          </div>
         </div>
 
         {/* Tabela por Casa de Apostas */}
-        <Card className="border-border bg-gradient-surface">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-primary" />
-              Desempenho por Casa de Apostas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {data.bookmakers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Nenhuma casa de apostas vinculada
+        <div className="border border-border rounded-lg overflow-hidden">
+          <div className="px-3 py-2 bg-muted/30 border-b border-border">
+            <h3 className="text-xs font-medium flex items-center gap-1.5">
+              <Building2 className="h-3.5 w-3.5 text-primary" />
+              Desempenho por Casa
+            </h3>
+          </div>
+          
+          {data.bookmakers.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground text-xs">
+              Nenhuma casa vinculada
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {/* Header */}
+              <div className="grid grid-cols-6 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/20">
+                <div className="col-span-2">Casa</div>
+                <div className="text-right">Dep.</div>
+                <div className="text-right">Saq.</div>
+                <div className="text-right">Result.</div>
+                <div className="text-right">Apost.</div>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {/* Header */}
-                <div className="grid grid-cols-6 gap-3 px-3 py-2 text-xs font-medium text-muted-foreground border-b border-border">
-                  <div className="col-span-2">Casa</div>
-                  <div className="text-right">Depositado</div>
-                  <div className="text-right">Sacado</div>
-                  <div className="text-right">Resultado</div>
-                  <div className="text-right">Apostas</div>
-                </div>
 
-                {/* Rows */}
-                {data.bookmakers.map((bm) => (
-                  <div
-                    key={bm.bookmaker_id}
-                    className="grid grid-cols-6 gap-3 px-3 py-3 rounded-lg hover:bg-muted/30 transition-colors items-center"
-                  >
-                    <div className="col-span-2 flex items-center gap-3">
-                      {bm.logo_url ? (
-                        <img
-                          src={bm.logo_url}
-                          alt={bm.bookmaker_nome}
-                          className="h-8 w-8 rounded object-contain bg-white p-0.5"
-                        />
-                      ) : (
-                        <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-medium text-sm">{bm.bookmaker_nome}</p>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-[10px] px-1.5 py-0 mt-0.5",
-                            bm.status === "ativo"
-                              ? "border-success/50 text-success"
-                              : bm.status === "limitada"
-                              ? "border-warning/50 text-warning"
-                              : "border-muted-foreground/50 text-muted-foreground"
-                          )}
-                        >
-                          {bm.status}
-                        </Badge>
+              {/* Rows */}
+              {data.bookmakers.map((bm) => (
+                <div
+                  key={bm.bookmaker_id}
+                  className="grid grid-cols-6 gap-2 px-3 py-2 hover:bg-muted/20 transition-colors items-center"
+                >
+                  <div className="col-span-2 flex items-center gap-2 min-w-0">
+                    {bm.logo_url ? (
+                      <img
+                        src={bm.logo_url}
+                        alt={bm.bookmaker_nome}
+                        className="h-6 w-6 rounded object-contain bg-white p-0.5 shrink-0"
+                      />
+                    ) : (
+                      <div className="h-6 w-6 rounded bg-muted flex items-center justify-center shrink-0">
+                        <Building2 className="h-3 w-3 text-muted-foreground" />
                       </div>
-                    </div>
-                    <div className="text-right text-sm">
-                      {formatCurrency(bm.total_depositado)}
-                    </div>
-                    <div className="text-right text-sm">
-                      {formatCurrency(bm.total_sacado)}
-                    </div>
-                    <div className={cn(
-                      "text-right text-sm font-medium",
-                      bm.lucro_prejuizo >= 0 ? "text-success" : "text-destructive"
-                    )}>
-                      {formatCurrency(bm.lucro_prejuizo)}
-                    </div>
-                    <div className="text-right text-sm text-muted-foreground">
-                      {bm.qtd_apostas.toLocaleString("pt-BR")}
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-medium text-xs truncate">{bm.bookmaker_nome}</p>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[9px] px-1 py-0 h-4",
+                          bm.status === "ativo"
+                            ? "border-success/50 text-success"
+                            : bm.status === "limitada"
+                            ? "border-warning/50 text-warning"
+                            : "border-muted-foreground/50 text-muted-foreground"
+                        )}
+                      >
+                        {bm.status}
+                      </Badge>
                     </div>
                   </div>
-                ))}
-
-                {/* Totais */}
-                <div className="grid grid-cols-6 gap-3 px-3 py-3 border-t border-border mt-2 font-medium">
-                  <div className="col-span-2 text-sm">Total</div>
-                  <div className="text-right text-sm">{formatCurrency(data.total_depositado)}</div>
-                  <div className="text-right text-sm">{formatCurrency(data.total_sacado)}</div>
+                  <div className="text-right text-xs tabular-nums">
+                    {formatCurrency(bm.total_depositado)}
+                  </div>
+                  <div className="text-right text-xs tabular-nums">
+                    {formatCurrency(bm.total_sacado)}
+                  </div>
                   <div className={cn(
-                    "text-right text-sm",
-                    data.lucro_prejuizo >= 0 ? "text-success" : "text-destructive"
+                    "text-right text-xs font-medium tabular-nums",
+                    bm.lucro_prejuizo >= 0 ? "text-success" : "text-destructive"
                   )}>
-                    {formatCurrency(data.lucro_prejuizo)}
+                    {formatCurrency(bm.lucro_prejuizo)}
                   </div>
-                  <div className="text-right text-sm">{data.qtd_apostas_total.toLocaleString("pt-BR")}</div>
+                  <div className="text-right text-xs text-muted-foreground tabular-nums">
+                    {bm.qtd_apostas.toLocaleString("pt-BR")}
+                  </div>
                 </div>
+              ))}
+
+              {/* Totais */}
+              <div className="grid grid-cols-6 gap-2 px-3 py-2 bg-muted/30 font-medium text-xs">
+                <div className="col-span-2">Total</div>
+                <div className="text-right tabular-nums">{formatCurrency(data.total_depositado)}</div>
+                <div className="text-right tabular-nums">{formatCurrency(data.total_sacado)}</div>
+                <div className={cn(
+                  "text-right tabular-nums",
+                  data.lucro_prejuizo >= 0 ? "text-success" : "text-destructive"
+                )}>
+                  {formatCurrency(data.lucro_prejuizo)}
+                </div>
+                <div className="text-right tabular-nums">{data.qtd_apostas_total.toLocaleString("pt-BR")}</div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          )}
+        </div>
       </div>
     </ScrollArea>
   );
