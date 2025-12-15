@@ -127,31 +127,34 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
     for (const ciclo of activeCycles) {
       const dataFim = ciclo.data_fim_real || ciclo.data_fim_prevista;
       
+      // Ajustar data fim para incluir o dia inteiro (timestamp com hora 23:59:59)
+      const dataFimAjustada = `${dataFim}T23:59:59.999Z`;
+      
       const [apostasResult, apostasMultiplasResult, surebetsResult, perdasResult, bookmakersResult] = await Promise.all([
         supabase
           .from("apostas")
           .select("lucro_prejuizo, stake, status")
           .eq("projeto_id", projetoId)
           .gte("data_aposta", ciclo.data_inicio)
-          .lte("data_aposta", dataFim),
+          .lte("data_aposta", dataFimAjustada),
         supabase
           .from("apostas_multiplas")
           .select("lucro_prejuizo, stake, resultado")
           .eq("projeto_id", projetoId)
           .gte("data_aposta", ciclo.data_inicio)
-          .lte("data_aposta", dataFim),
+          .lte("data_aposta", dataFimAjustada),
         supabase
           .from("surebets")
           .select("lucro_real, stake_total, status")
           .eq("projeto_id", projetoId)
           .gte("data_evento", ciclo.data_inicio)
-          .lte("data_evento", dataFim),
+          .lte("data_evento", dataFimAjustada),
         supabase
           .from("projeto_perdas")
           .select("id, valor, categoria, status, bookmaker_id, descricao, data_registro")
           .eq("projeto_id", projetoId)
           .gte("data_registro", ciclo.data_inicio)
-          .lte("data_registro", dataFim),
+          .lte("data_registro", dataFimAjustada),
         supabase
           .from("bookmakers")
           .select("id, nome")
