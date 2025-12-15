@@ -87,6 +87,8 @@ export default function GestaoParceiros() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [parceiroToDelete, setParceiroToDelete] = useState<string | null>(null);
   const [vinculoDialogOpen, setVinculoDialogOpen] = useState(false);
+  const [vinculoParceiroId, setVinculoParceiroId] = useState<string | null>(null);
+  const [vinculoBookmakerId, setVinculoBookmakerId] = useState<string | null>(null);
   const [selectedParceiroDetalhes, setSelectedParceiroDetalhes] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("parceiros");
 
@@ -476,7 +478,15 @@ export default function GestaoParceiros() {
 
   const handleVinculoDialogClose = () => {
     setVinculoDialogOpen(false);
+    setVinculoParceiroId(null);
+    setVinculoBookmakerId(null);
     fetchParceiros();
+  };
+
+  const handleCreateVinculo = (parceiroId: string, bookmakerCatalogoId: string) => {
+    setVinculoParceiroId(parceiroId);
+    setVinculoBookmakerId(bookmakerCatalogoId);
+    setVinculoDialogOpen(true);
   };
 
   const maskCPF = (cpf: string) => {
@@ -892,6 +902,7 @@ export default function GestaoParceiros() {
                     parceiroId={selectedParceiroDetalhes} 
                     showSensitiveData={showSensitiveData}
                     onToggleSensitiveData={() => setShowSensitiveData(!showSensitiveData)}
+                    onCreateVinculo={handleCreateVinculo}
                   />
                 </div>
               </Card>
@@ -911,6 +922,10 @@ export default function GestaoParceiros() {
           open={vinculoDialogOpen}
           onClose={handleVinculoDialogClose}
           bookmaker={null}
+          defaultParceiroId={vinculoParceiroId || undefined}
+          defaultBookmakerId={vinculoBookmakerId || undefined}
+          lockParceiro={!!vinculoParceiroId}
+          lockBookmaker={!!vinculoBookmakerId}
         />
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
