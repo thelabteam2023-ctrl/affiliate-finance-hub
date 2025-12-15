@@ -1,7 +1,5 @@
 // Tipos centralizados de projeto
 
-export type TipoProjeto = 'INTERNO' | 'EXCLUSIVO_INVESTIDOR';
-
 export interface Projeto {
   id: string;
   projeto_id?: string;
@@ -23,9 +21,6 @@ export interface Projeto {
   lucro_operacional_total?: number;
   conciliado?: boolean;
   tem_investimento_crypto?: boolean;
-  tipo_projeto?: TipoProjeto;
-  investidor_id?: string | null;
-  investidor_nome?: string | null;
 }
 
 export type ProjetoStatus = 'PLANEJADO' | 'EM_ANDAMENTO' | 'PAUSADO' | 'FINALIZADO';

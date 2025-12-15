@@ -167,8 +167,6 @@ export default function Testes() {
         // Apagar perdas do projeto
         await supabase.from("projeto_perdas").delete().in("projeto_id", projetoIds);
 
-        // Apagar acordos do projeto (investidor)
-        await supabase.from("projeto_acordos").delete().in("projeto_id", projetoIds);
 
         // Apagar apostas (incluindo as vinculadas a surebets)
         await supabase.from("apostas").delete().in("projeto_id", projetoIds);

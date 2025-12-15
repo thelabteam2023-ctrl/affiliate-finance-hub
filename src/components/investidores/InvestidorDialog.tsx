@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, HelpCircle, Percent, ArrowRight, ArrowLeft, FolderKanban, Eye, TrendingUp, TrendingDown, Handshake } from "lucide-react";
+import { Plus, Trash2, HelpCircle, Percent, ArrowRight, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,37 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { validateCPF, validateCNPJ, formatCPF, formatCNPJ } from "@/lib/validators";
-import { useNavigate } from "react-router-dom";
+import { validateCPF, validateCNPJ } from "@/lib/validators";
 
 interface FaixaProgressiva {
   limite: number;
   percentual: number;
-}
-
-interface ProjetoExclusivo {
-  id: string;
-  nome: string;
-  status: string;
-  data_inicio: string | null;
-  saldo_bookmakers: number;
-  total_depositado: number;
-  total_sacado: number;
-  lucro: number;
-  custo_operador: number;
-  acordo?: {
-    base_calculo: string;
-    percentual_investidor: number;
-    percentual_empresa: number;
-    deduzir_custos_operador: boolean;
-  } | null;
-  lucro_investidor?: number;
-  lucro_empresa?: number;
 }
 
 interface InvestidorDialogProps {
@@ -50,20 +27,9 @@ interface InvestidorDialogProps {
   onSuccess: () => void;
 }
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    minimumFractionDigits: 2,
-  }).format(value);
-};
-
 export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSuccess }: InvestidorDialogProps) {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("dados");
-  const [projetosExclusivos, setProjetosExclusivos] = useState<ProjetoExclusivo[]>([]);
-  const [loadingProjetos, setLoadingProjetos] = useState(false);
   
   // Dados pessoais
   const [nome, setNome] = useState("");
@@ -94,10 +60,8 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
       setTipoDocumento(cleanDoc.length === 14 ? "CNPJ" : "CPF");
       setStatus(investidor.status || "ativo");
       setObservacoes(investidor.observacoes || "");
-      // Fetch deal if exists
       if (mode !== "create") {
         fetchDeal(investidor.id);
-        fetchProjetosExclusivos(investidor.id);
       }
     } else {
       setNome("");
@@ -114,115 +78,10 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
         { limite: 50000, percentual: 30 },
         { limite: 100000, percentual: 40 },
       ]);
-      setProjetosExclusivos([]);
     }
     setDocumentoValidation(null);
     setActiveTab("dados");
   }, [investidor, open]);
-
-  const fetchProjetosExclusivos = async (investidorId: string) => {
-    setLoadingProjetos(true);
-    try {
-      // Fetch projects where this investor is the owner
-      const { data: projetos, error } = await supabase
-        .from("projetos")
-        .select("id, nome, status, data_inicio")
-        .eq("investidor_id", investidorId)
-        .eq("tipo_projeto", "EXCLUSIVO_INVESTIDOR")
-        .order("data_inicio", { ascending: false });
-
-      if (error) throw error;
-
-      if (projetos && projetos.length > 0) {
-        // For each project, calculate financial metrics
-        const projetosComMetricas = await Promise.all(
-          projetos.map(async (projeto) => {
-            // Get bookmaker balances for this project
-            const { data: bookmakers } = await supabase
-              .from("bookmakers")
-              .select("id, saldo_atual")
-              .eq("projeto_id", projeto.id);
-
-            const saldoBookmakers = bookmakers?.reduce((sum, b) => sum + (b.saldo_atual || 0), 0) || 0;
-
-            // Get deposits and withdrawals from cash_ledger for bookmakers of this project
-            const bookmakerIds = bookmakers?.map(b => b.id) || [];
-            
-            const { data: depositos } = await supabase
-              .from("cash_ledger")
-              .select("valor")
-              .eq("tipo_transacao", "DEPOSITO")
-              .eq("status", "CONFIRMADO")
-              .in("destino_bookmaker_id", bookmakerIds.length > 0 ? bookmakerIds : ['none']);
-
-            const { data: saques } = await supabase
-              .from("cash_ledger")
-              .select("valor")
-              .eq("tipo_transacao", "SAQUE")
-              .eq("status", "CONFIRMADO")
-              .in("origem_bookmaker_id", bookmakerIds.length > 0 ? bookmakerIds : ['none']);
-
-            const totalDepositado = depositos?.reduce((sum, d) => sum + (d.valor || 0), 0) || 0;
-            const totalSacado = saques?.reduce((sum, s) => sum + (s.valor || 0), 0) || 0;
-            const lucro = saldoBookmakers + totalSacado - totalDepositado;
-
-            // Fetch acordo for this project
-            const { data: acordo } = await supabase
-              .from("projeto_acordos")
-              .select("base_calculo, percentual_investidor, percentual_empresa, deduzir_custos_operador")
-              .eq("projeto_id", projeto.id)
-              .eq("ativo", true)
-              .maybeSingle();
-
-            // Calculate operator cost (simplified - sum of operator payments for this project)
-            const { data: pagamentos } = await supabase
-              .from("pagamentos_operador")
-              .select("valor")
-              .eq("projeto_id", projeto.id)
-              .eq("status", "CONFIRMADO");
-            
-            const custoOperador = pagamentos?.reduce((sum, p) => sum + (p.valor || 0), 0) || 0;
-
-            // Calculate investor/company share based on acordo
-            let lucroInvestidor = 0;
-            let lucroEmpresa = 0;
-            
-            if (acordo && lucro > 0) {
-              const lucroBase = acordo.deduzir_custos_operador 
-                ? Math.max(0, lucro - custoOperador) 
-                : lucro;
-              lucroInvestidor = lucroBase * (acordo.percentual_investidor / 100);
-              lucroEmpresa = lucroBase * (acordo.percentual_empresa / 100);
-            }
-
-            return {
-              id: projeto.id,
-              nome: projeto.nome,
-              status: projeto.status,
-              data_inicio: projeto.data_inicio,
-              saldo_bookmakers: saldoBookmakers,
-              total_depositado: totalDepositado,
-              total_sacado: totalSacado,
-              lucro,
-              custo_operador: custoOperador,
-              acordo: acordo || null,
-              lucro_investidor: lucroInvestidor,
-              lucro_empresa: lucroEmpresa,
-            };
-          })
-        );
-
-        setProjetosExclusivos(projetosComMetricas);
-      } else {
-        setProjetosExclusivos([]);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar projetos exclusivos:", error);
-      setProjetosExclusivos([]);
-    } finally {
-      setLoadingProjetos(false);
-    }
-  };
 
   const fetchDeal = async (investidorId: string) => {
     try {
@@ -244,7 +103,6 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
           setFaixasProgressivas(data.faixas_progressivas as unknown as FaixaProgressiva[]);
         }
       } else {
-        // Reset deal state when no existing deal found - CRITICAL for creating new deals per investor
         setDealId(null);
         setTipoDeal("FIXO");
         setBaseCalculo("LUCRO");
@@ -265,21 +123,17 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
 
     const cleanDoc = docValue.replace(/\D/g, "");
     
-    // Determine document type by length
     if (cleanDoc.length === 11) {
-      // Validate as CPF
       if (!validateCPF(cleanDoc)) {
         setDocumentoValidation({ valid: false, message: "CPF inválido" });
         return;
       }
     } else if (cleanDoc.length === 14) {
-      // Validate as CNPJ
       if (!validateCNPJ(cleanDoc)) {
         setDocumentoValidation({ valid: false, message: "CNPJ inválido" });
         return;
       }
     } else {
-      // Invalid length
       if (cleanDoc.length > 0 && cleanDoc.length < 11) {
         setDocumentoValidation({ valid: false, message: "CPF incompleto" });
       } else if (cleanDoc.length > 11 && cleanDoc.length < 14) {
@@ -301,7 +155,6 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
         .eq("user_id", user.id)
         .eq("cpf", cleanDoc);
 
-      // Only exclude current investor when editing (not creating)
       if (mode === "edit" && investidor?.id) {
         query = query.neq("id", investidor.id);
       }
@@ -335,13 +188,11 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
     const numbers = value.replace(/\D/g, "");
     
     if (numbers.length <= 11) {
-      // Format as CPF
       return numbers
         .replace(/(\d{3})(\d)/, "$1.$2")
         .replace(/(\d{3})(\d)/, "$1.$2")
         .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
     } else if (numbers.length <= 14) {
-      // Format as CNPJ
       return numbers
         .replace(/(\d{2})(\d)/, "$1.$2")
         .replace(/(\d{3})(\d)/, "$1.$2")
@@ -355,7 +206,6 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
     const formatted = formatDocumentoInput(value);
     setDocumento(formatted);
     
-    // Auto-detect document type based on length
     const cleanDoc = value.replace(/\D/g, "");
     if (cleanDoc.length <= 11) {
       setTipoDocumento("CPF");
@@ -404,7 +254,7 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
       const investidorData = {
         user_id: user.id,
         nome: nome.trim(),
-        cpf: cleanDoc, // Field is named cpf but stores CPF or CNPJ
+        cpf: cleanDoc,
         status,
         observacoes: observacoes.trim() || null,
       };
@@ -442,14 +292,12 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
         };
 
         if (dealId) {
-          // Update existing deal
           const { error } = await supabase
             .from("investidor_deals")
             .update(dealData)
             .eq("id", dealId);
           if (error) throw error;
         } else {
-          // Create new deal
           const { error } = await supabase
             .from("investidor_deals")
             .insert([dealData]);
@@ -468,7 +316,6 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
     }
   };
 
-  // Validate personal data before advancing to agreement tab
   const validateDadosPessoais = (): boolean => {
     if (!nome.trim()) {
       toast.error("Preencha o nome do investidor");
@@ -498,17 +345,14 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
     return true;
   };
 
-  // Handle advancing to next tab
   const handleAvancar = () => {
     if (validateDadosPessoais()) {
       setActiveTab("acordo");
     }
   };
 
-  // Handle tab change with validation
   const handleTabChange = (value: string) => {
     if (value === "acordo" && activeTab === "dados") {
-      // Only allow going to agreement tab if personal data is valid
       if (validateDadosPessoais()) {
         setActiveTab(value);
       }
@@ -529,403 +373,262 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className={`grid w-full ${mode === "create" ? "grid-cols-2" : "grid-cols-3"}`}>
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="dados">Dados Pessoais</TabsTrigger>
             <TabsTrigger value="acordo">Acordo</TabsTrigger>
-            {mode !== "create" && (
-              <TabsTrigger value="projetos">
-                <FolderKanban className="h-4 w-4 mr-1" />
-                Projetos ({projetosExclusivos.length})
-              </TabsTrigger>
-            )}
           </TabsList>
 
           <ScrollArea className="h-[450px] mt-4">
-
-          <TabsContent value="dados" className="space-y-4 px-1">
-            <div className="space-y-2">
-              <Label htmlFor="nome">Nome Completo *</Label>
-              <Input
-                id="nome"
-                value={nome}
-                onChange={(e) => setNome(e.target.value.toUpperCase())}
-                disabled={isViewMode}
-                placeholder="Nome do investidor"
-                className="uppercase"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="documento">CPF / CNPJ *</Label>
-              <div className="flex gap-2">
-                <div className="flex gap-1">
-                  <Button
-                    type="button"
-                    variant={tipoDocumento === "CPF" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      setTipoDocumento("CPF");
-                      setDocumento("");
-                      setDocumentoValidation(null);
-                    }}
-                    disabled={isViewMode}
-                    className="text-xs px-3"
-                  >
-                    PF
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={tipoDocumento === "CNPJ" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      setTipoDocumento("CNPJ");
-                      setDocumento("");
-                      setDocumentoValidation(null);
-                    }}
-                    disabled={isViewMode}
-                    className="text-xs px-3"
-                  >
-                    PJ
-                  </Button>
-                </div>
+            <TabsContent value="dados" className="space-y-4 px-1">
+              <div className="space-y-2">
+                <Label htmlFor="nome">Nome Completo *</Label>
                 <Input
-                  id="documento"
-                  value={documento}
-                  onChange={(e) => handleDocumentoChange(e.target.value)}
+                  id="nome"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value.toUpperCase())}
                   disabled={isViewMode}
-                  placeholder={tipoDocumento === "CPF" ? "000.000.000-00" : "00.000.000/0000-00"}
-                  maxLength={tipoDocumento === "CPF" ? 14 : 18}
-                  className="flex-1"
+                  placeholder="Nome do investidor"
+                  className="uppercase"
                 />
               </div>
-              {!isViewMode && documentoLoading && (
-                <p className="text-xs text-muted-foreground">Validando {tipoDocumento}...</p>
-              )}
-              {!isViewMode && documentoValidation && !documentoValidation.valid && (
-                <p className="text-xs text-destructive">{documentoValidation.message}</p>
-              )}
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select value={status} onValueChange={setStatus} disabled={isViewMode}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ativo">ATIVO</SelectItem>
-                  <SelectItem value="inativo">INATIVO</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="observacoes">Observações (opcional)</Label>
-              <Textarea
-                id="observacoes"
-                value={observacoes}
-                onChange={(e) => setObservacoes(e.target.value)}
-                disabled={isViewMode}
-                placeholder="Informações adicionais sobre o investidor"
-                rows={4}
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="acordo" className="space-y-4 px-1">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-base">Tipo de Acordo</Label>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                            <HelpCircle className="h-4 w-4" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-xs">
-                          <div className="space-y-2 text-xs">
-                            <p><strong>Fixo:</strong> Percentual único aplicado a todos os resultados. Ideal para acordos simples e previsíveis.</p>
-                            <p><strong>Progressivo:</strong> Percentuais diferentes por faixa de lucro. Ideal para incentivar maior performance com remuneração escalonada.</p>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+              <div className="space-y-2">
+                <Label htmlFor="documento">CPF / CNPJ *</Label>
+                <div className="flex gap-2">
+                  <div className="flex gap-1">
+                    <Button
+                      type="button"
+                      variant={tipoDocumento === "CPF" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setTipoDocumento("CPF");
+                        setDocumento("");
+                        setDocumentoValidation(null);
+                      }}
+                      disabled={isViewMode}
+                      className="text-xs px-3"
+                    >
+                      PF
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={tipoDocumento === "CNPJ" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setTipoDocumento("CNPJ");
+                        setDocumento("");
+                        setDocumentoValidation(null);
+                      }}
+                      disabled={isViewMode}
+                      className="text-xs px-3"
+                    >
+                      PJ
+                    </Button>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {tipoDeal === "FIXO" 
-                      ? `Percentual fixo sobre ${baseCalculo === "LUCRO" ? "lucros" : "valor aportado"}` 
-                      : "Percentual progressivo por faixas de lucro"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-sm ${tipoDeal === "FIXO" ? "text-primary font-semibold" : "text-muted-foreground"}`}>
-                    Fixo
-                  </span>
-                  <Switch
-                    checked={tipoDeal === "PROGRESSIVO"}
-                    onCheckedChange={(checked) => setTipoDeal(checked ? "PROGRESSIVO" : "FIXO")}
+                  <Input
+                    id="documento"
+                    value={documento}
+                    onChange={(e) => handleDocumentoChange(e.target.value)}
                     disabled={isViewMode}
+                    placeholder={tipoDocumento === "CPF" ? "000.000.000-00" : "00.000.000/0000-00"}
+                    maxLength={tipoDocumento === "CPF" ? 14 : 18}
+                    className="flex-1"
                   />
-                  <span className={`text-sm ${tipoDeal === "PROGRESSIVO" ? "text-primary font-semibold" : "text-muted-foreground"}`}>
-                    Progressivo
-                  </span>
                 </div>
+                {!isViewMode && documentoLoading && (
+                  <p className="text-xs text-muted-foreground">Validando {tipoDocumento}...</p>
+                )}
+                {!isViewMode && documentoValidation && !documentoValidation.valid && (
+                  <p className="text-xs text-destructive">{documentoValidation.message}</p>
+                )}
               </div>
 
-              {tipoDeal === "FIXO" ? (
-                <div className="space-y-4">
-                  {/* Base de Cálculo */}
-                  <div className="p-4 rounded-lg bg-muted/20 border border-border/50">
-                    <Label className="text-sm text-muted-foreground mb-3 block">Base de Cálculo</Label>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant={baseCalculo === "LUCRO" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setBaseCalculo("LUCRO")}
-                        disabled={isViewMode}
-                        className="flex-1"
-                      >
-                        Sobre Lucros
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={baseCalculo === "APORTE" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setBaseCalculo("APORTE")}
-                        disabled={isViewMode}
-                        className="flex-1"
-                      >
-                        Sobre Valor Aportado
-                      </Button>
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select value={status} onValueChange={setStatus} disabled={isViewMode}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ativo">ATIVO</SelectItem>
+                    <SelectItem value="inativo">INATIVO</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="observacoes">Observações (opcional)</Label>
+                <Textarea
+                  id="observacoes"
+                  value={observacoes}
+                  onChange={(e) => setObservacoes(e.target.value)}
+                  disabled={isViewMode}
+                  placeholder="Informações adicionais sobre o investidor"
+                  rows={4}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="acordo" className="space-y-4 px-1">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-base">Tipo de Acordo</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                              <HelpCircle className="h-4 w-4" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-xs">
+                            <div className="space-y-2 text-xs">
+                              <p><strong>Fixo:</strong> Percentual único aplicado a todos os resultados.</p>
+                              <p><strong>Progressivo:</strong> Percentuais diferentes por faixa de lucro.</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {baseCalculo === "LUCRO" 
-                        ? "O investidor recebe o percentual sobre os lucros gerados"
-                        : "O investidor recebe o percentual sobre o valor total aportado"}
+                    <p className="text-sm text-muted-foreground">
+                      {tipoDeal === "FIXO" 
+                        ? `Percentual fixo sobre ${baseCalculo === "LUCRO" ? "lucros" : "valor aportado"}` 
+                        : "Percentual progressivo por faixas de lucro"}
                     </p>
                   </div>
-
-                  {/* Percentual */}
-                  <div className="p-4 rounded-lg bg-muted/20 border border-border/50">
-                    <Label className="text-sm text-muted-foreground">Percentual Fixo</Label>
-                    <div className="flex items-center gap-3 mt-2">
-                      <Input
-                        type="number"
-                        value={percentualFixo}
-                        onChange={(e) => setPercentualFixo(e.target.value)}
-                        disabled={isViewMode}
-                        className="w-24 text-center text-lg font-bold"
-                        min={0}
-                        max={100}
-                      />
-                      <Percent className="h-5 w-5 text-primary" />
-                      <span className="text-sm text-muted-foreground">
-                        {baseCalculo === "LUCRO" ? "dos lucros" : "do valor aportado"}
-                      </span>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm ${tipoDeal === "FIXO" ? "text-primary font-semibold" : "text-muted-foreground"}`}>
+                      Fixo
+                    </span>
+                    <Switch
+                      checked={tipoDeal === "PROGRESSIVO"}
+                      onCheckedChange={(checked) => setTipoDeal(checked ? "PROGRESSIVO" : "FIXO")}
+                      disabled={isViewMode}
+                    />
+                    <span className={`text-sm ${tipoDeal === "PROGRESSIVO" ? "text-primary font-semibold" : "text-muted-foreground"}`}>
+                      Progressivo
+                    </span>
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label>Faixas Progressivas</Label>
-                    {!isViewMode && (
-                      <Button variant="outline" size="sm" onClick={addFaixa}>
-                        <Plus className="h-4 w-4 mr-1" />
-                        Adicionar Faixa
-                      </Button>
-                    )}
+
+                {tipoDeal === "FIXO" ? (
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-lg bg-muted/20 border border-border/50">
+                      <Label className="text-sm text-muted-foreground mb-3 block">Base de Cálculo</Label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant={baseCalculo === "LUCRO" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setBaseCalculo("LUCRO")}
+                          disabled={isViewMode}
+                          className="flex-1"
+                        >
+                          Sobre Lucros
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={baseCalculo === "APORTE" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setBaseCalculo("APORTE")}
+                          disabled={isViewMode}
+                          className="flex-1"
+                        >
+                          Sobre Valor Aportado
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {baseCalculo === "LUCRO" 
+                          ? "O investidor recebe o percentual sobre os lucros gerados"
+                          : "O investidor recebe o percentual sobre o valor total aportado"}
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-lg bg-muted/20 border border-border/50">
+                      <Label className="text-sm text-muted-foreground">Percentual Fixo</Label>
+                      <div className="flex items-center gap-3 mt-2">
+                        <Input
+                          type="number"
+                          value={percentualFixo}
+                          onChange={(e) => setPercentualFixo(e.target.value)}
+                          disabled={isViewMode}
+                          className="w-24 text-center text-lg font-bold"
+                          min={0}
+                          max={100}
+                        />
+                        <Percent className="h-5 w-5 text-primary" />
+                        <span className="text-sm text-muted-foreground">
+                          {baseCalculo === "LUCRO" ? "dos lucros" : "do valor aportado"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="space-y-2">
-                    {faixasProgressivas.map((faixa, index) => (
-                      <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/20 border border-border/50">
-                        <div className="flex-1 grid grid-cols-2 gap-3">
-                          <div>
-                            <Label className="text-xs text-muted-foreground">
-                              {index === 0 ? "Até" : "Acima de"}
-                            </Label>
-                            <Input
-                              type="number"
-                              value={faixa.limite}
-                              onChange={(e) => updateFaixa(index, "limite", parseFloat(e.target.value) || 0)}
-                              disabled={isViewMode}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs text-muted-foreground">Percentual</Label>
-                            <div className="flex items-center gap-2 mt-1">
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label>Faixas Progressivas</Label>
+                      {!isViewMode && (
+                        <Button variant="outline" size="sm" onClick={addFaixa}>
+                          <Plus className="h-4 w-4 mr-1" />
+                          Adicionar Faixa
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {faixasProgressivas.map((faixa, index) => (
+                        <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/20 border border-border/50">
+                          <div className="flex-1 grid grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">
+                                {index === 0 ? "Até" : "Acima de"}
+                              </Label>
                               <Input
                                 type="number"
-                                value={faixa.percentual}
-                                onChange={(e) => updateFaixa(index, "percentual", parseFloat(e.target.value) || 0)}
+                                value={faixa.limite}
+                                onChange={(e) => updateFaixa(index, "limite", parseFloat(e.target.value) || 0)}
                                 disabled={isViewMode}
-                                className="w-20"
-                                min={0}
-                                max={100}
+                                className="mt-1"
                               />
-                              <span className="text-sm font-semibold text-primary">%</span>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Percentual</Label>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Input
+                                  type="number"
+                                  value={faixa.percentual}
+                                  onChange={(e) => updateFaixa(index, "percentual", parseFloat(e.target.value) || 0)}
+                                  disabled={isViewMode}
+                                  className="w-20"
+                                  min={0}
+                                  max={100}
+                                />
+                                <span className="text-sm font-semibold text-primary">%</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        {!isViewMode && faixasProgressivas.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeFaixa(index)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <p className="text-xs text-muted-foreground">
-                    * O lucro é calculado de forma progressiva, aplicando cada percentual à faixa correspondente.
-                  </p>
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          {/* Tab: Projetos Exclusivos */}
-          {mode !== "create" && (
-            <TabsContent value="projetos" className="space-y-4 px-1">
-              {loadingProjetos ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Carregando projetos...
-                </div>
-              ) : projetosExclusivos.length === 0 ? (
-                <Card>
-                  <CardContent className="py-8">
-                    <div className="text-center">
-                      <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                      <p className="mt-4 text-muted-foreground">
-                        Nenhum projeto exclusivo vinculado a este investidor
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Crie um projeto do tipo "Exclusivo de Investidor" para vincular
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-3">
-                  {projetosExclusivos.map((projeto) => (
-                    <Card key={projeto.id} className="hover:border-primary/30 transition-colors">
-                      <CardContent className="py-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <FolderKanban className="h-4 w-4 text-primary" />
-                            <span className="font-medium">{projeto.nome}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {projeto.acordo && (
-                              <Badge variant="outline" className="text-xs font-mono flex items-center gap-1">
-                                <Handshake className="h-3 w-3" />
-                                {projeto.acordo.deduzir_custos_operador ? "Líq" : "Bruto"} {projeto.acordo.percentual_investidor}/{projeto.acordo.percentual_empresa}
-                              </Badge>
-                            )}
-                            <Badge className={
-                              projeto.status === "EM_ANDAMENTO" 
-                                ? "bg-emerald-500/20 text-emerald-400" 
-                                : projeto.status === "FINALIZADO"
-                                  ? "bg-gray-500/20 text-gray-400"
-                                  : "bg-blue-500/20 text-blue-400"
-                            }>
-                              {projeto.status.replace("_", " ")}
-                            </Badge>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => {
-                                onOpenChange(false);
-                                navigate(`/projeto/${projeto.id}`);
-                              }}
+                          {!isViewMode && faixasProgressivas.length > 1 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeFaixa(index)}
+                              className="text-destructive hover:text-destructive"
                             >
-                              <Eye className="h-4 w-4 mr-1" />
-                              Ver
+                              <Trash2 className="h-4 w-4" />
                             </Button>
-                          </div>
+                          )}
                         </div>
+                      ))}
+                    </div>
 
-                        <div className="grid grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <p className="text-muted-foreground text-xs">Depositado</p>
-                            <p className="font-medium">{formatCurrency(projeto.total_depositado)}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground text-xs">Sacado</p>
-                            <p className="font-medium">{formatCurrency(projeto.total_sacado)}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground text-xs">Saldo Bookmakers</p>
-                            <p className="font-medium">{formatCurrency(projeto.saldo_bookmakers)}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground text-xs">Lucro/Prejuízo</p>
-                            <p className={`font-semibold flex items-center gap-1 ${
-                              projeto.lucro >= 0 ? "text-emerald-500" : "text-red-500"
-                            }`}>
-                              {projeto.lucro >= 0 ? (
-                                <TrendingUp className="h-3 w-3" />
-                              ) : (
-                                <TrendingDown className="h-3 w-3" />
-                              )}
-                              {formatCurrency(projeto.lucro)}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-
-                  {/* Totais */}
-                  <Card className="bg-muted/30 border-primary/20">
-                    <CardContent className="py-4">
-                      <div className="grid grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <p className="text-muted-foreground text-xs">Total Depositado</p>
-                          <p className="font-semibold">
-                            {formatCurrency(projetosExclusivos.reduce((sum, p) => sum + p.total_depositado, 0))}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground text-xs">Total Sacado</p>
-                          <p className="font-semibold">
-                            {formatCurrency(projetosExclusivos.reduce((sum, p) => sum + p.total_sacado, 0))}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground text-xs">Saldo Total</p>
-                          <p className="font-semibold">
-                            {formatCurrency(projetosExclusivos.reduce((sum, p) => sum + p.saldo_bookmakers, 0))}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground text-xs">Lucro Total</p>
-                          <p className={`font-bold ${
-                            projetosExclusivos.reduce((sum, p) => sum + p.lucro, 0) >= 0 
-                              ? "text-emerald-500" 
-                              : "text-red-500"
-                          }`}>
-                            {formatCurrency(projetosExclusivos.reduce((sum, p) => sum + p.lucro, 0))}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
+                    <p className="text-xs text-muted-foreground">
+                      * O lucro é calculado de forma progressiva, aplicando cada percentual à faixa correspondente.
+                    </p>
+                  </div>
+                )}
+              </div>
             </TabsContent>
-          )}
           </ScrollArea>
         </Tabs>
 

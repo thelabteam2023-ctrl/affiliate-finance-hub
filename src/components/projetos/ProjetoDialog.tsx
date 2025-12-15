@@ -46,20 +46,13 @@ import {
   Calculator,
   AlertTriangle,
   CheckCircle2,
-  UserCheck,
-  Handshake,
   FileText,
   Pencil
 } from "lucide-react";
 import { VincularOperadorDialog } from "@/components/projetos/VincularOperadorDialog";
 import { EditarAcordoOperadorDialog } from "@/components/projetos/EditarAcordoOperadorDialog";
-
 import { ProjetoConciliacaoDialog } from "@/components/projetos/ProjetoConciliacaoDialog";
-import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
-import { ProjetoAcordoSection, AcordoData } from "@/components/projetos/ProjetoAcordoSection";
 import { ConfirmacaoSenhaDialog } from "@/components/ui/confirmacao-senha-dialog";
-
-type TipoProjeto = 'INTERNO' | 'EXCLUSIVO_INVESTIDOR';
 
 interface Projeto {
   id?: string;
@@ -74,8 +67,6 @@ interface Projeto {
   tem_investimento_crypto?: boolean;
   conciliado?: boolean;
   modelo_absorcao_taxas?: string;
-  tipo_projeto?: TipoProjeto;
-  investidor_id?: string | null;
 }
 
 const MODELOS_ABSORCAO = [
@@ -128,7 +119,6 @@ export function ProjetoDialog({
   const [selectedOperadorVinculado, setSelectedOperadorVinculado] = useState<OperadorVinculado | null>(null);
   const [conciliacaoDialogOpen, setConciliacaoDialogOpen] = useState(false);
   const [temConciliacao, setTemConciliacao] = useState(false);
-  const [acordoData, setAcordoData] = useState<AcordoData | null>(null);
   const [showVincularPrompt, setShowVincularPrompt] = useState(false);
   const [novoprojetoId, setNovoProjetoId] = useState<string | null>(null);
   const [confirmacaoDialogOpen, setConfirmacaoDialogOpen] = useState(false);
@@ -146,40 +136,7 @@ export function ProjetoDialog({
     tem_investimento_crypto: false,
     conciliado: false,
     modelo_absorcao_taxas: "EMPRESA_100",
-    tipo_projeto: "INTERNO",
-    investidor_id: null,
   });
-
-  // Buscar dados completos do projeto (inclui tipo_projeto e investidor_id)
-  const fetchProjetoCompleto = async (projetoId: string) => {
-    const { data, error } = await supabase
-      .from("projetos")
-      .select("*")
-      .eq("id", projetoId)
-      .single();
-    
-    if (error) {
-      console.error("Erro ao buscar projeto:", error);
-      return null;
-    }
-    return data;
-  };
-
-  // Buscar acordo ativo existente para o projeto
-  const fetchAcordoAtivo = async (projetoId: string) => {
-    const { data, error } = await supabase
-      .from("projeto_acordos")
-      .select("*")
-      .eq("projeto_id", projetoId)
-      .eq("ativo", true)
-      .single();
-    
-    if (error && error.code !== "PGRST116") { // PGRST116 = no rows returned
-      console.error("Erro ao buscar acordo:", error);
-      return null;
-    }
-    return data;
-  };
 
   useEffect(() => {
     if (open) {
@@ -197,26 +154,7 @@ export function ProjetoDialog({
               tem_investimento_crypto: projetoCompleto.tem_investimento_crypto || false,
               conciliado: projetoCompleto.conciliado || false,
               modelo_absorcao_taxas: projetoCompleto.modelo_absorcao_taxas || "EMPRESA_100",
-              tipo_projeto: (projetoCompleto.tipo_projeto as TipoProjeto) || "INTERNO",
-              investidor_id: projetoCompleto.investidor_id || null,
             });
-
-            // Se for projeto exclusivo, carregar acordo existente
-            if (projetoCompleto.tipo_projeto === "EXCLUSIVO_INVESTIDOR") {
-              fetchAcordoAtivo(projeto.id!).then((acordo) => {
-                if (acordo) {
-                  setAcordoData({
-                    id: acordo.id,
-                    base_calculo: acordo.base_calculo as "LUCRO_BRUTO" | "LUCRO_LIQUIDO",
-                    percentual_investidor: acordo.percentual_investidor,
-                    percentual_empresa: acordo.percentual_empresa,
-                    deduzir_custos_operador: acordo.deduzir_custos_operador,
-                    percentual_prejuizo_investidor: acordo.percentual_prejuizo_investidor,
-                    observacoes: acordo.observacoes,
-                  });
-                }
-              });
-            }
           } else {
             // Fallback se não conseguir buscar
             setFormData({
@@ -229,8 +167,6 @@ export function ProjetoDialog({
               tem_investimento_crypto: projeto.tem_investimento_crypto || false,
               conciliado: projeto.conciliado || false,
               modelo_absorcao_taxas: (projeto as any).modelo_absorcao_taxas || "EMPRESA_100",
-              tipo_projeto: projeto.tipo_projeto || "INTERNO",
-              investidor_id: projeto.investidor_id || null,
             });
           }
         });
@@ -251,16 +187,28 @@ export function ProjetoDialog({
           tem_investimento_crypto: false,
           conciliado: false,
           modelo_absorcao_taxas: "EMPRESA_100",
-          tipo_projeto: "INTERNO",
-          investidor_id: null,
         });
         setOperadores([]);
         setTemConciliacao(false);
-        setAcordoData(null); // Limpar acordo em modo criação
       }
       setActiveTab(initialTab || "dados");
     }
   }, [open, projeto, mode, initialTab]);
+
+  // Buscar dados completos do projeto
+  const fetchProjetoCompleto = async (projetoId: string) => {
+    const { data, error } = await supabase
+      .from("projetos")
+      .select("*")
+      .eq("id", projetoId)
+      .single();
+    
+    if (error) {
+      console.error("Erro ao buscar projeto:", error);
+      return null;
+    }
+    return data;
+  };
 
   const fetchOperadoresProjeto = async (projetoId: string) => {
     const { data, error } = await supabase
@@ -330,12 +278,6 @@ export function ProjetoDialog({
       return;
     }
 
-    // Validar investidor obrigatório para projeto exclusivo
-    if (formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && !formData.investidor_id) {
-      toast.error("Selecione um investidor para projetos exclusivos");
-      return;
-    }
-
     // Validar conciliação obrigatória para projetos crypto ao finalizar
     if (formData.status === "FINALIZADO" && formData.tem_investimento_crypto && !formData.conciliado) {
       toast.error("Projetos com investimento crypto precisam ser conciliados antes de finalizar");
@@ -361,8 +303,7 @@ export function ProjetoDialog({
         observacoes: formData.observacoes || null,
         tem_investimento_crypto: formData.tem_investimento_crypto || false,
         modelo_absorcao_taxas: formData.tem_investimento_crypto ? formData.modelo_absorcao_taxas : "EMPRESA_100",
-        tipo_projeto: formData.tipo_projeto || "INTERNO",
-        investidor_id: formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" ? formData.investidor_id : null,
+        tipo_projeto: "INTERNO",
         user_id: session.session.user.id,
       };
 
@@ -376,38 +317,7 @@ export function ProjetoDialog({
           throw error;
         }
         
-        // Create projeto_acordos if it's an exclusive investor project
-        if (payload.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && acordoData && newProjeto) {
-          const acordoPayload = {
-            user_id: session.session.user.id,
-            projeto_id: newProjeto.id,
-            investidor_id: payload.investidor_id,
-            base_calculo: acordoData.base_calculo,
-            percentual_investidor: acordoData.percentual_investidor,
-            percentual_empresa: acordoData.percentual_empresa,
-            deduzir_custos_operador: acordoData.deduzir_custos_operador,
-            percentual_prejuizo_investidor: acordoData.percentual_prejuizo_investidor,
-            observacoes: acordoData.observacoes,
-            ativo: true,
-          };
-          
-          const { error: acordoError } = await supabase.from("projeto_acordos").insert(acordoPayload);
-          if (acordoError) throw acordoError;
-          
-          // Após criar projeto exclusivo, redirecionar para aba operadores
-          toast.success("Projeto criado! Agora vincule os operadores.");
-          onSuccess();
-          onOpenChange(false);
-          // Reabrir automaticamente em modo edição na aba Operadores
-          if (onCreatedOpenEdit) {
-            setTimeout(() => {
-              onCreatedOpenEdit(newProjeto.id, "operadores");
-            }, 100);
-          }
-          return;
-        }
-        
-        // Para projetos internos, perguntar se deseja vincular operador
+        // Perguntar se deseja vincular operador
         setNovoProjetoId(newProjeto.id);
         setShowVincularPrompt(true);
         onSuccess();
@@ -425,31 +335,6 @@ export function ProjetoDialog({
           }
           throw error;
         }
-        
-        // Update projeto_acordos APENAS se o usuário passou pela aba acordo e fez alterações
-        // Se acordoData.id existe, já temos um acordo ativo carregado - apenas atualizar
-        // Se não existe acordoData, não fazer nada (não tentar criar novo acordo)
-        if (payload.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && acordoData && acordoData.id) {
-          // Apenas atualizar acordo existente
-          const acordoPayload = {
-            investidor_id: payload.investidor_id,
-            base_calculo: acordoData.base_calculo,
-            percentual_investidor: acordoData.percentual_investidor,
-            percentual_empresa: acordoData.percentual_empresa,
-            deduzir_custos_operador: acordoData.deduzir_custos_operador,
-            percentual_prejuizo_investidor: acordoData.percentual_prejuizo_investidor,
-            observacoes: acordoData.observacoes,
-          };
-          
-          const { error: acordoError } = await supabase
-            .from("projeto_acordos")
-            .update(acordoPayload)
-            .eq("id", acordoData.id);
-          if (acordoError) throw acordoError;
-        }
-        // NOTA: Se acordoData não tem id, significa que o projeto exclusivo foi criado
-        // sem acordo configurado - isso não deveria acontecer no fluxo normal,
-        // mas não tentamos criar um novo acordo aqui para evitar duplicação
         
         toast.success("Projeto atualizado com sucesso");
       }
@@ -512,17 +397,11 @@ export function ProjetoDialog({
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={`grid w-full ${formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" ? "grid-cols-3" : "grid-cols-2"}`}>
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="dados">
                 <FolderKanban className="h-4 w-4 mr-2" />
                 Dados
               </TabsTrigger>
-              {formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && (
-                <TabsTrigger value="acordo">
-                  <Handshake className="h-4 w-4 mr-2" />
-                  Acordo
-                </TabsTrigger>
-              )}
               <TabsTrigger value="operadores" disabled={mode === "create"}>
                 <Users className="h-4 w-4 mr-2" />
                 Operadores
@@ -531,78 +410,6 @@ export function ProjetoDialog({
 
             <ScrollArea className="h-[500px] mt-4">
               <TabsContent value="dados" className="space-y-4 px-1">
-                {/* Tipo de Projeto */}
-                <Card className={formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" ? "border-primary/30 bg-primary/5" : ""}>
-                  <CardContent className="pt-4 space-y-4">
-                    <div className="space-y-3">
-                      <Label className="flex items-center gap-2 text-sm font-medium">
-                        <UserCheck className="h-4 w-4" />
-                        Tipo de Projeto *
-                      </Label>
-                      <Select
-                        value={formData.tipo_projeto}
-                        onValueChange={(value: TipoProjeto) => {
-                          setFormData({ 
-                            ...formData, 
-                            tipo_projeto: value,
-                            investidor_id: value === "INTERNO" ? null : formData.investidor_id
-                          });
-                        }}
-                        disabled={isViewMode || mode === "edit"}
-                      >
-                        <SelectTrigger className="h-auto py-2.5">
-                          <SelectValue>
-                            {formData.tipo_projeto === "INTERNO" ? (
-                              <div className="flex flex-col items-center text-center py-0.5 w-full">
-                                <span className="font-medium">Projeto Interno</span>
-                                <span className="text-xs text-muted-foreground">Capital próprio da empresa</span>
-                              </div>
-                            ) : (
-                              <div className="flex flex-col items-center text-center py-0.5 w-full">
-                                <span className="font-medium">Projeto Exclusivo de Investidor</span>
-                                <span className="text-xs text-muted-foreground">Capital isolado de terceiro</span>
-                              </div>
-                            )}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="INTERNO" className="py-2.5">
-                            <div className="flex flex-col items-center text-center py-0.5 w-full">
-                              <span className="font-medium">Projeto Interno</span>
-                              <span className="text-xs text-muted-foreground">Capital próprio da empresa</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="EXCLUSIVO_INVESTIDOR" className="py-2.5">
-                            <div className="flex flex-col items-center text-center py-0.5 w-full">
-                              <span className="font-medium">Projeto Exclusivo de Investidor</span>
-                              <span className="text-xs text-muted-foreground">Capital isolado de terceiro</span>
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {mode === "edit" && (
-                        <p className="text-xs text-muted-foreground">
-                          O tipo de projeto não pode ser alterado após criação
-                        </p>
-                      )}
-                    </div>
-
-                    {formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && (
-                      <div className="space-y-3">
-                        <Label className="text-sm font-medium">Investidor *</Label>
-                        <InvestidorSelect
-                          value={formData.investidor_id || ""}
-                          onValueChange={(value) => setFormData({ ...formData, investidor_id: value })}
-                          disabled={isViewMode}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          As bookmakers deste projeto serão exclusivas e o lucro calculado isoladamente
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Nome *</Label>
@@ -647,7 +454,7 @@ export function ProjetoDialog({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Data de Início</Label>
+                    <Label>Data de Início *</Label>
                     <DatePicker
                       value={formData.data_inicio || ""}
                       onChange={(date) => setFormData({ ...formData, data_inicio: date })}
@@ -674,7 +481,6 @@ export function ProjetoDialog({
                     />
                   </div>
                 )}
-
 
                 {/* Investimento Crypto */}
                 <Card className={formData.tem_investimento_crypto ? "border-orange-500/30" : ""}>
@@ -767,19 +573,6 @@ export function ProjetoDialog({
                 </Card>
               </TabsContent>
 
-              {/* Tab: Acordo (only for exclusive investor projects) */}
-              {formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && (
-                <TabsContent value="acordo" className="space-y-4 px-1">
-                  <ProjetoAcordoSection
-                    projetoId={projeto?.id || "new"}
-                    investidorId={formData.investidor_id}
-                    isViewMode={isViewMode}
-                    onAcordoChange={setAcordoData}
-                    onVincularOperador={projeto?.id ? () => setVincularDialogOpen(true) : undefined}
-                  />
-                </TabsContent>
-              )}
-
               <TabsContent value="operadores" className="space-y-4 px-1">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium">Operadores Vinculados</h3>
@@ -828,15 +621,6 @@ export function ProjetoDialog({
                           case "POR_ENTREGA": return "Por Entrega";
                           case "COMISSAO_ESCALONADA": return "Comissão Escalonada";
                           default: return modelo || "Não definido";
-                        }
-                      };
-
-                      const getFrequenciaLabel = (freq: string | null) => {
-                        switch (freq) {
-                          case "SEMANAL": return "Semanal";
-                          case "QUINZENAL": return "Quinzenal";
-                          case "MENSAL": return "Mensal";
-                          default: return "Mensal";
                         }
                       };
 
@@ -966,35 +750,12 @@ export function ProjetoDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
-              {/* Em modo criação com investidor exclusivo, navegação: dados -> acordo -> operadores */}
-              {mode === "create" && formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && activeTab === "dados" ? (
-                <Button 
-                  onClick={() => setActiveTab("acordo")}
-                  disabled={!formData.nome.trim() || !formData.investidor_id}
-                >
-                  Próximo: Acordo
-                </Button>
-              ) : mode === "create" && formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && activeTab === "acordo" ? (
-                <Button 
-                  onClick={() => setActiveTab("operadores")}
-                >
-                  Próximo: Operadores
-                </Button>
-              ) : mode === "create" && formData.tipo_projeto === "EXCLUSIVO_INVESTIDOR" && activeTab === "operadores" ? (
-                <Button 
-                  onClick={handleSave}
-                  disabled={loading}
-                >
-                  {loading ? "Salvando..." : "Criar Projeto"}
-                </Button>
-              ) : (
-                <Button 
-                  onClick={handleSave} 
-                  disabled={loading || (formData.status === "FINALIZADO" && precisaConciliacao)}
-                >
-                  {loading ? "Salvando..." : mode === "create" ? "Criar Projeto" : "Salvar Alterações"}
-                </Button>
-              )}
+              <Button 
+                onClick={handleSave} 
+                disabled={loading || (formData.status === "FINALIZADO" && precisaConciliacao)}
+              >
+                {loading ? "Salvando..." : mode === "create" ? "Criar Projeto" : "Salvar Alterações"}
+              </Button>
             </div>
           )}
 
@@ -1033,7 +794,7 @@ export function ProjetoDialog({
         </>
       )}
 
-      {/* Prompt para vincular operador após criar projeto interno */}
+      {/* Prompt para vincular operador após criar projeto */}
       <AlertDialog open={showVincularPrompt} onOpenChange={setShowVincularPrompt}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1059,6 +820,7 @@ export function ProjetoDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
       {/* Dialog de Confirmação CAPTCHA para Desvincular */}
       <ConfirmacaoSenhaDialog
         open={confirmacaoDialogOpen}
@@ -1094,7 +856,6 @@ export function ProjetoDialog({
           }
         }}
       />
-
     </>
   );
 }
