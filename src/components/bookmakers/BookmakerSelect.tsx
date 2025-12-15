@@ -179,13 +179,14 @@ export default function BookmakerSelect({
       return;
     }
 
-    // Skip se já temos os dados corretos para este valor
-    if (lastFetchedValue.current === value && displayData) {
+    // Skip APENAS se já temos os dados corretos para ESTE EXATO valor
+    if (lastFetchedValue.current === value) {
       return;
     }
 
-    // Marcar como carregando display
+    // Marcar como carregando display IMEDIATAMENTE
     setLoadingDisplay(true);
+    lastFetchedValue.current = value; // Marcar que estamos buscando este valor
 
     const fetchDisplayData = async () => {
       try {
@@ -206,7 +207,9 @@ export default function BookmakerSelect({
               nome: data.nome, 
               logo_url: (data.bookmakers_catalogo as any)?.logo_url || null 
             });
-            lastFetchedValue.current = value;
+          } else {
+            // Dados não encontrados - resetar
+            setDisplayData(null);
           }
         } else {
           // Modo catálogo - buscar na tabela de catálogo
@@ -218,18 +221,21 @@ export default function BookmakerSelect({
           
           if (data) {
             setDisplayData({ nome: data.nome, logo_url: data.logo_url });
-            lastFetchedValue.current = value;
+          } else {
+            // Dados não encontrados - resetar
+            setDisplayData(null);
           }
         }
       } catch (error) {
         console.error("Erro ao buscar bookmaker:", error);
+        setDisplayData(null);
       } finally {
         setLoadingDisplay(false);
       }
     };
 
     fetchDisplayData();
-  }, [value, isVinculoMode, displayData]);
+  }, [value, isVinculoMode]); // REMOVIDO displayData das dependências para evitar loop
 
   // Filtrar itens pela busca
   const filteredItems = items.filter((item) => 
