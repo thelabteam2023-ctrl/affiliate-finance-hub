@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, KeyRound } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, KeyRound, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
@@ -16,13 +16,17 @@ interface ParceiroDetalhesPanelProps {
   showSensitiveData?: boolean;
   onToggleSensitiveData?: () => void;
   onCreateVinculo?: (parceiroId: string, bookmakerId: string) => void;
+  onEditParceiro?: () => void;
+  onDeleteParceiro?: () => void;
 }
 
 export function ParceiroDetalhesPanel({ 
   parceiroId, 
   showSensitiveData = false,
   onToggleSensitiveData,
-  onCreateVinculo
+  onCreateVinculo,
+  onEditParceiro,
+  onDeleteParceiro
 }: ParceiroDetalhesPanelProps) {
   const { data, loading, error } = useParceiroFinanceiroConsolidado(parceiroId);
 
@@ -79,32 +83,74 @@ export function ParceiroDetalhesPanel({
       <div className="h-full flex flex-col">
         {/* Header compacto */}
         <div className="flex items-center gap-3 p-4 pb-2 border-b border-border">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+          <div 
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 cursor-pointer hover:bg-primary/20 transition-colors"
+            onClick={onEditParceiro}
+          >
             <User className="h-5 w-5 text-primary" />
           </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold truncate">{data.parceiro_nome}</h2>
+          <div 
+            className="flex-1 min-w-0 cursor-pointer group"
+            onClick={onEditParceiro}
+          >
+            <h2 className="text-lg font-semibold truncate group-hover:text-primary transition-colors">{data.parceiro_nome}</h2>
             <p className="text-xs text-muted-foreground">
               {data.bookmakers.length} casa{data.bookmakers.length !== 1 ? "s" : ""} vinculada{data.bookmakers.length !== 1 ? "s" : ""}
             </p>
           </div>
-          {onToggleSensitiveData && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={onToggleSensitiveData}
-                  className="shrink-0 h-8 w-8"
-                >
-                  {showSensitiveData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{showSensitiveData ? "Ocultar dados sensíveis" : "Mostrar dados sensíveis"}</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
+          <div className="flex items-center gap-1.5">
+            {onEditParceiro && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={onEditParceiro}
+                    className="shrink-0 h-8 w-8"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Editar parceiro</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {onDeleteParceiro && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={onDeleteParceiro}
+                    className="shrink-0 h-8 w-8 text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Excluir parceiro</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {onToggleSensitiveData && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={onToggleSensitiveData}
+                    className="shrink-0 h-8 w-8"
+                  >
+                    {showSensitiveData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{showSensitiveData ? "Ocultar dados sensíveis" : "Mostrar dados sensíveis"}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         </div>
 
         {/* Tabs */}

@@ -872,6 +872,20 @@ export default function GestaoParceiros() {
                     showSensitiveData={showSensitiveData}
                     onToggleSensitiveData={() => setShowSensitiveData(!showSensitiveData)}
                     onCreateVinculo={handleCreateVinculo}
+                    onEditParceiro={() => {
+                      const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
+                      if (parceiro) {
+                        setEditingParceiro(parceiro);
+                        setViewMode(false);
+                        setDialogOpen(true);
+                      }
+                    }}
+                    onDeleteParceiro={() => {
+                      if (selectedParceiroDetalhes) {
+                        setParceiroToDelete(selectedParceiroDetalhes);
+                        setDeleteDialogOpen(true);
+                      }
+                    }}
                   />
                 </div>
               </Card>
