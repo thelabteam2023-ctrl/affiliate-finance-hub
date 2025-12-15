@@ -279,15 +279,6 @@ export function LongevidadeExplicacaoDialog({ projetoContexto }: LongevidadeExpl
                 </div>
               )}
               
-              <div className="mt-4 p-3 rounded bg-amber-500/10 border border-amber-500/20">
-                <p className="text-xs font-medium text-amber-600 mb-1">❌ Por que NÃO usamos tempo (dias ativos)?</p>
-                <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                  <li>Tempo cronológico não representa esforço real</li>
-                  <li>Uma casa pode ficar 30 dias "ativa" com poucas operações</li>
-                  <li>Outra pode girar muito em 2 dias e ser limitada</li>
-                  <li><strong>O risco está no volume e nos eventos, não no calendário</strong></li>
-                </ul>
-              </div>
             </div>
           </section>
 
