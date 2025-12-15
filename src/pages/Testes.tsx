@@ -113,6 +113,102 @@ export default function Testes() {
     }
   };
 
+  const handleDeleteProjetos = async () => {
+    setLoading("projetos");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+
+      // Buscar todos os projetos do usuário
+      const { data: projetos } = await supabase
+        .from("projetos")
+        .select("id")
+        .eq("user_id", user.id);
+
+      if (projetos && projetos.length > 0) {
+        const projetoIds = projetos.map(p => p.id);
+
+        // Buscar operador_projetos para apagar entregas
+        const { data: opProjetos } = await supabase
+          .from("operador_projetos")
+          .select("id")
+          .in("projeto_id", projetoIds);
+
+        if (opProjetos && opProjetos.length > 0) {
+          const opProjetoIds = opProjetos.map(op => op.id);
+          
+          // Apagar entregas vinculadas
+          await supabase.from("entregas").delete().in("operador_projeto_id", opProjetoIds);
+          
+          // Apagar pagamentos propostos
+          await supabase.from("pagamentos_propostos").delete().in("operador_projeto_id", opProjetoIds);
+        }
+
+        // Buscar matched_betting_rounds para apagar pernas
+        const { data: mbRounds } = await supabase
+          .from("matched_betting_rounds")
+          .select("id")
+          .in("projeto_id", projetoIds);
+
+        if (mbRounds && mbRounds.length > 0) {
+          const roundIds = mbRounds.map(r => r.id);
+          await supabase.from("matched_betting_pernas").delete().in("round_id", roundIds);
+        }
+
+        // Apagar matched_betting_rounds
+        await supabase.from("matched_betting_rounds").delete().in("projeto_id", projetoIds);
+
+        // Apagar ciclos do projeto
+        await supabase.from("projeto_ciclos").delete().in("projeto_id", projetoIds);
+
+        // Apagar perdas do projeto
+        await supabase.from("projeto_perdas").delete().in("projeto_id", projetoIds);
+
+        // Apagar acordos do projeto (investidor)
+        await supabase.from("projeto_acordos").delete().in("projeto_id", projetoIds);
+
+        // Apagar apostas (incluindo as vinculadas a surebets)
+        await supabase.from("apostas").delete().in("projeto_id", projetoIds);
+
+        // Apagar apostas múltiplas
+        await supabase.from("apostas_multiplas").delete().in("projeto_id", projetoIds);
+
+        // Apagar surebets
+        await supabase.from("surebets").delete().in("projeto_id", projetoIds);
+
+        // Apagar freebets recebidas
+        await supabase.from("freebets_recebidas").delete().in("projeto_id", projetoIds);
+
+        // Apagar operador_projetos (vínculos de operadores)
+        await supabase.from("operador_projetos").delete().in("projeto_id", projetoIds);
+
+        // Desvincular bookmakers do projeto (não apagar, apenas remover vínculo)
+        await supabase
+          .from("bookmakers")
+          .update({ projeto_id: null })
+          .in("projeto_id", projetoIds);
+      }
+
+      // Por fim, apagar os projetos
+      const { error } = await supabase
+        .from("projetos")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      toast.success("Projetos e todos os dados vinculados apagados com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao apagar projetos:", error);
+      toast.error(`Erro ao apagar projetos: ${error.message}`);
+    } finally {
+      setLoading(null);
+    }
+  };
+
   // Função para gerar CPF válido aleatório
   const gerarCPF = () => {
     const random = (n: number) => Math.floor(Math.random() * n);
@@ -1001,7 +1097,7 @@ export default function Testes() {
     { key: "parceiros", label: "Parceiros", icon: Users, action: handleDeleteParceiros, description: "Apaga todos os parceiros, contas bancárias e wallets" },
     { key: "bookmakers", label: "Bookmakers (Vínculos)", icon: Building2, action: handleDeleteBookmakers, description: "Apaga todos os vínculos parceiro-bookmaker" },
     { key: "cash_ledger", label: "Transações (Caixa)", icon: Wallet, action: () => handleDeleteAll("cash_ledger", "Transações"), description: "Apaga todas as movimentações do caixa" },
-    { key: "projetos", label: "Projetos", icon: FolderKanban, action: () => handleDeleteAll("projetos", "Projetos"), description: "Apaga todos os projetos" },
+    { key: "projetos", label: "Projetos", icon: FolderKanban, action: handleDeleteProjetos, description: "Apaga todos os projetos, ciclos, apostas, surebets, freebets, perdas e vínculos" },
     { key: "investidores", label: "Investidores", icon: TrendingUp, action: () => handleDeleteAll("investidores", "Investidores"), description: "Apaga todos os investidores" },
     { key: "parcerias", label: "Parcerias (Captação)", icon: UserPlus, action: () => handleDeleteAll("parcerias", "Parcerias"), description: "Apaga todas as parcerias de captação" },
     { key: "indicadores_referral", label: "Indicadores", icon: Users, action: () => handleDeleteAll("indicadores_referral", "Indicadores"), description: "Apaga todos os indicadores" },
