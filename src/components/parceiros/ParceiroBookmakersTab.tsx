@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Building2, Search, Plus, ShieldCheck, ShieldAlert, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Building2, Search, Plus, ShieldCheck, ShieldAlert, AlertCircle, ChevronDown, ChevronUp, KeyRound } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -192,6 +193,7 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
   }
 
   return (
+    <TooltipProvider>
     <div className="grid grid-cols-2 gap-3 p-2">
       {/* Coluna: Casas Vinculadas */}
       <div className="space-y-2">
@@ -239,7 +241,30 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
                   )}
                   
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">{bm.nome}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs font-medium truncate">{bm.nome}</p>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="shrink-0">
+                            <KeyRound 
+                              className={cn(
+                                "h-3 w-3",
+                                bm.login_username && bm.login_username.trim()
+                                  ? "text-success" 
+                                  : "text-muted-foreground/40"
+                              )} 
+                            />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                          <p className="text-xs">
+                            {bm.login_username && bm.login_username.trim() 
+                              ? "Credenciais cadastradas" 
+                              : "Sem credenciais"}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] text-muted-foreground truncate">
                         {maskUsername(bm.login_username)}
@@ -391,5 +416,6 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
         </ScrollArea>
       </div>
     </div>
+    </TooltipProvider>
   );
 }

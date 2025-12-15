@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3 } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
@@ -246,21 +246,42 @@ export function ParceiroDetalhesPanel({
                                 <Building2 className="h-3 w-3 text-muted-foreground" />
                               </div>
                             )}
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <p className="font-medium text-xs truncate">{bm.bookmaker_nome}</p>
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "text-[9px] px-1 py-0 h-4",
-                                  bm.status === "ativo"
-                                    ? "border-success/50 text-success"
-                                    : bm.status === "limitada"
-                                    ? "border-warning/50 text-warning"
-                                    : "border-muted-foreground/50 text-muted-foreground"
-                                )}
-                              >
-                                {bm.status}
-                              </Badge>
+                              <div className="flex items-center gap-1.5">
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "text-[9px] px-1 py-0 h-4",
+                                    bm.status === "ativo"
+                                      ? "border-success/50 text-success"
+                                      : bm.status === "limitada"
+                                      ? "border-warning/50 text-warning"
+                                      : "border-muted-foreground/50 text-muted-foreground"
+                                  )}
+                                >
+                                  {bm.status}
+                                </Badge>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="shrink-0">
+                                      <KeyRound 
+                                        className={cn(
+                                          "h-3 w-3",
+                                          bm.has_credentials 
+                                            ? "text-success" 
+                                            : "text-muted-foreground/40"
+                                        )} 
+                                      />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="right">
+                                    <p className="text-xs">
+                                      {bm.has_credentials ? "Credenciais cadastradas" : "Sem credenciais"}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
                             </div>
                           </div>
                           <div className="text-right text-xs tabular-nums">
