@@ -292,7 +292,7 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
       // Query base para apostas
       let apostasQuery = supabase
         .from("apostas")
-        .select("bookmaker_id, lucro_prejuizo, stake, status, data_aposta")
+        .select("bookmaker_id, lucro_prejuizo, stake, status, data_aposta, surebet_id")
         .eq("projeto_id", projetoId)
         .in("bookmaker_id", bookmakerIds);
 
@@ -445,16 +445,22 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
         };
       });
 
-      // Agregar apostas simples
+      // Agregar apostas simples (EXCLUINDO apostas que fazem parte de surebets)
+      // As apostas com surebet_id serão contadas na seção de surebets para evitar contagem dupla
       apostas.forEach(a => {
         if (bookmakerData[a.bookmaker_id]) {
-          if (a.status === "FINALIZADA" || a.status === "LIQUIDADA") {
-            bookmakerData[a.bookmaker_id].lucro += Number(a.lucro_prejuizo || 0);
-          }
-          bookmakerData[a.bookmaker_id].volume += Number(a.stake || 0);
-          bookmakerData[a.bookmaker_id].qtdApostas += 1;
+          // Pular apostas que são pernas de surebet - serão contadas na seção de surebets
+          const fazParteDesSurebet = (a as any).surebet_id != null;
           
-          // Rastrear datas
+          if (!fazParteDesSurebet) {
+            if (a.status === "FINALIZADA" || a.status === "LIQUIDADA") {
+              bookmakerData[a.bookmaker_id].lucro += Number(a.lucro_prejuizo || 0);
+            }
+            bookmakerData[a.bookmaker_id].volume += Number(a.stake || 0);
+            bookmakerData[a.bookmaker_id].qtdApostas += 1;
+          }
+          
+          // Rastrear datas (para todas as apostas, incluindo surebets)
           const dataAposta = a.data_aposta;
           if (!bookmakerData[a.bookmaker_id].primeiraAposta || dataAposta < bookmakerData[a.bookmaker_id].primeiraAposta!) {
             bookmakerData[a.bookmaker_id].primeiraAposta = dataAposta;
