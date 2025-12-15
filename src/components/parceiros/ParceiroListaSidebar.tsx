@@ -68,18 +68,16 @@ export function ParceiroListaSidebar({
             placeholder="Buscar..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8 h-8 text-xs"
+            className="pl-8 h-8 text-xs text-center placeholder:text-center focus:text-left focus:placeholder:text-left"
           />
         </div>
         {/* Linha de adicionar parceiro */}
         {onAddParceiro && (
           <button
             onClick={onAddParceiro}
-            className="w-full flex items-center gap-2 p-2 rounded-md text-left transition-colors hover:bg-primary/10 border border-dashed border-primary/30 text-primary"
+            className="w-full flex items-center justify-center gap-2 p-2 rounded-md transition-colors hover:bg-primary/10 border border-dashed border-primary/30 text-primary"
           >
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20">
-              <Plus className="h-3.5 w-3.5" />
-            </div>
+            <Plus className="h-3.5 w-3.5" />
             <span className="font-medium text-xs">Novo Parceiro</span>
           </button>
         )}
