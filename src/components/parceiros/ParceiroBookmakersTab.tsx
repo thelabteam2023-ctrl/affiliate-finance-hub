@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Building2, Search, Plus, ShieldCheck, ShieldAlert, AlertCircle, ChevronDown, ChevronUp, KeyRound, Copy, Check } from "lucide-react";
+import { Building2, Search, Plus, ShieldCheck, ShieldAlert, AlertCircle, ChevronDown, ChevronUp, IdCard, Copy, Check, Calendar } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 interface ParceiroBookmakersTabProps {
   parceiroId: string;
   showSensitiveData: boolean;
+  diasRestantes?: number | null;
   onCreateVinculo?: (parceiroId: string, bookmakerId: string) => void;
 }
 
@@ -36,7 +37,7 @@ interface BookmakerCatalogo {
   status: string;
 }
 
-export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateVinculo }: ParceiroBookmakersTabProps) {
+export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, diasRestantes, onCreateVinculo }: ParceiroBookmakersTabProps) {
   const [bookmakersVinculados, setBookmakersVinculados] = useState<BookmakerVinculado[]>([]);
   const [bookmakersDisponiveis, setBookmakersDisponiveis] = useState<BookmakerCatalogo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -233,6 +234,12 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
         <div className="flex items-center gap-2">
           <Building2 className="h-4 w-4 text-primary" />
           <h4 className="text-sm font-medium">Casas Vinculadas</h4>
+          {diasRestantes !== null && diasRestantes !== undefined && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Calendar className="h-3 w-3" />
+              <span>Dias restantes: {diasRestantes}</span>
+            </div>
+          )}
           <Badge variant="secondary" className="text-xs ml-auto">
             {bookmakersVinculados.length}
           </Badge>
@@ -276,7 +283,7 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <p className="text-xs font-medium truncate">{bm.nome}</p>
-                      {hasCredentials(bm) ? (
+                      {hasCredentials(bm) && (
                         <Popover
                           open={credentialsPopoverOpen === bm.id}
                           onOpenChange={(open) => setCredentialsPopoverOpen(open ? bm.id : null)}
@@ -287,7 +294,7 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
                               size="sm"
                               className="h-5 w-5 p-0 shrink-0"
                             >
-                              <KeyRound className="h-3 w-3 text-success" />
+                              <IdCard className="h-3.5 w-3.5" />
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-52 p-2" align="start">
@@ -335,8 +342,6 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
                             </div>
                           </PopoverContent>
                         </Popover>
-                      ) : (
-                        <KeyRound className="h-3 w-3 text-muted-foreground/40 shrink-0" />
                       )}
                     </div>
                     <div className="flex items-center gap-1.5">
