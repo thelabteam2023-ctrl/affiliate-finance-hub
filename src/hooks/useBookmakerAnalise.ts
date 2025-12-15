@@ -22,6 +22,12 @@ export interface BookmakerAnalise {
   diasAtivos: number;
   apostasAteLimitacao: number; // Média de apostas até limitação
   
+  // Métricas Proporcionais (novas)
+  participacaoVolume: number; // % do volume total do projeto
+  participacaoRisco: number; // % dos eventos de risco do projeto
+  rankingVolume: number; // Posição no ranking de volume (1 = top)
+  rankingLongevidade: number; // Posição no ranking de longevidade (1 = top)
+  
   // Classificação
   scoreLongevidade: number; // 0-100
   classificacaoLongevidade: "excelente" | "boa" | "limitada" | "alto_risco";
@@ -35,6 +41,15 @@ export interface BookmakerAnalise {
   ultimaAposta?: string;
 }
 
+// Contexto do projeto para cálculos proporcionais
+export interface ProjetoContexto {
+  volumeTotal: number;
+  totalEventosRisco: number;
+  totalCasas: number;
+  diasProjetoAtivo: number;
+  qtdApostasTotal: number;
+}
+
 interface UseBookmakerAnaliseParams {
   projetoId: string;
   dataInicio?: string;
@@ -45,6 +60,7 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
   const [analises, setAnalises] = useState<BookmakerAnalise[]>([]);
   const [loading, setLoading] = useState(true);
   const [lucroTotal, setLucroTotal] = useState(0);
+  const [projetoContexto, setProjetoContexto] = useState<ProjetoContexto | null>(null);
 
   useEffect(() => {
     if (projetoId) {
@@ -52,76 +68,205 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
     }
   }, [projetoId, dataInicio, dataFim]);
 
-  const calcularScoreLongevidade = (
-    volumeTotal: number,
-    eventosLimitacao: number,
-    eventosBloqueio: number,
-    diasAtivos: number,
-    qtdApostas: number,
-    statusAtual: string
-  ): { score: number; classificacao: BookmakerAnalise["classificacaoLongevidade"]; frequencia: BookmakerAnalise["frequenciaLimitacao"] } => {
-    const totalEventos = eventosLimitacao + eventosBloqueio;
+  /**
+   * NOVA LÓGICA: Score de Longevidade baseado em Ranking Relativo
+   * 
+   * Princípios:
+   * 1. Participação proporcional no projeto (não valores absolutos)
+   * 2. Ranking relativo entre casas (não média/desvio)
+   * 3. Penalização progressiva por eventos de risco
+   * 4. Tempo comportamental (limitou cedo vs tarde)
+   */
+  const calcularScoreLongevidadeRelativo = (
+    casas: Array<{
+      id: string;
+      volumeTotal: number;
+      eventosLimitacao: number;
+      eventosBloqueio: number;
+      diasAtivos: number;
+      qtdApostas: number;
+      statusAtual: string;
+      primeiraAposta?: string | null;
+    }>,
+    contexto: ProjetoContexto
+  ): Map<string, { 
+    score: number; 
+    classificacao: BookmakerAnalise["classificacaoLongevidade"]; 
+    frequencia: BookmakerAnalise["frequenciaLimitacao"];
+    participacaoVolume: number;
+    participacaoRisco: number;
+    rankingVolume: number;
+    rankingLongevidade: number;
+  }> => {
+    const resultados = new Map<string, any>();
     
-    // Se está bloqueada, score baixo
-    if (statusAtual === "BLOQUEADA" || statusAtual === "bloqueada") {
-      return { score: 0, classificacao: "alto_risco", frequencia: "muito_frequente" };
-    }
-    
-    // Se está limitada atualmente
-    if (statusAtual === "LIMITADA" || statusAtual === "limitada") {
-      // Calcular baseado em quanto volume girou antes de limitar
-      const volumeScore = Math.min(volumeTotal / 50000, 1) * 40; // Até 40 pts para 50k+ volume
-      const tempoScore = Math.min(diasAtivos / 60, 1) * 30; // Até 30 pts para 60+ dias
-      const apostasScore = Math.min(qtdApostas / 100, 1) * 30; // Até 30 pts para 100+ apostas
+    // 1. Calcular métricas proporcionais para cada casa
+    const casasComMetricas = casas.map(casa => {
+      const totalEventos = casa.eventosLimitacao + casa.eventosBloqueio;
       
-      const score = Math.max(0, Math.min(60, volumeScore + tempoScore + apostasScore)); // Max 60 se limitada
+      // Participação no volume do projeto (%)
+      const participacaoVolume = contexto.volumeTotal > 0 
+        ? (casa.volumeTotal / contexto.volumeTotal) * 100 
+        : 0;
+      
+      // Participação nos eventos de risco (% - quanto menor, melhor)
+      const participacaoRisco = contexto.totalEventosRisco > 0 
+        ? (totalEventos / contexto.totalEventosRisco) * 100 
+        : 0;
+      
+      // Eficiência: volume girado por evento de risco (métrica ouro)
+      const volumePorRisco = totalEventos > 0 
+        ? casa.volumeTotal / totalEventos 
+        : casa.volumeTotal * 2; // Casa sem eventos = alta eficiência
+      
+      // Densidade de risco: eventos por volume (quanto menor, melhor)
+      const densidadeRisco = casa.volumeTotal > 0 
+        ? (totalEventos / casa.volumeTotal) * 10000 // Normalizar para escala útil
+        : 0;
+      
+      // Velocidade de limitação: quanto tempo levou para ter primeiro evento
+      let velocidadeLimitacao = 1; // 1 = nunca limitou (melhor)
+      if (totalEventos > 0 && casa.primeiraAposta) {
+        const diasAtePrimeiroEvento = casa.diasAtivos / totalEventos;
+        // Normalizar: mais dias até limitar = melhor (0-1)
+        velocidadeLimitacao = Math.min(diasAtePrimeiroEvento / contexto.diasProjetoAtivo, 1);
+      }
       
       return {
-        score,
-        classificacao: score > 40 ? "limitada" : "alto_risco",
-        frequencia: totalEventos > 2 ? "muito_frequente" : totalEventos > 1 ? "frequente" : "moderada"
+        ...casa,
+        totalEventos,
+        participacaoVolume,
+        participacaoRisco,
+        volumePorRisco,
+        densidadeRisco,
+        velocidadeLimitacao
       };
-    }
+    });
     
-    // Casa ativa - calcular score completo
-    if (totalEventos === 0) {
-      // Nunca foi limitada - score alto baseado em volume e tempo
-      const volumeScore = Math.min(volumeTotal / 30000, 1) * 35;
-      const tempoScore = Math.min(diasAtivos / 45, 1) * 35;
-      const apostasScore = Math.min(qtdApostas / 50, 1) * 30;
+    // 2. Criar rankings relativos
+    // Ranking por volume (maior = melhor = posição 1)
+    const rankingVolume = [...casasComMetricas]
+      .sort((a, b) => b.volumeTotal - a.volumeTotal)
+      .reduce((acc, casa, idx) => {
+        acc.set(casa.id, idx + 1);
+        return acc;
+      }, new Map<string, number>());
+    
+    // Ranking por eficiência (volumePorRisco maior = melhor = posição 1)
+    const rankingEficiencia = [...casasComMetricas]
+      .sort((a, b) => b.volumePorRisco - a.volumePorRisco)
+      .reduce((acc, casa, idx) => {
+        acc.set(casa.id, idx + 1);
+        return acc;
+      }, new Map<string, number>());
+    
+    // 3. Calcular score final para cada casa
+    const totalCasas = casas.length;
+    
+    casasComMetricas.forEach(casa => {
+      // Se bloqueada = score 0 automático
+      if (casa.statusAtual === "BLOQUEADA" || casa.statusAtual === "bloqueada") {
+        resultados.set(casa.id, {
+          score: 0,
+          classificacao: "alto_risco" as const,
+          frequencia: "muito_frequente" as const,
+          participacaoVolume: casa.participacaoVolume,
+          participacaoRisco: casa.participacaoRisco,
+          rankingVolume: rankingVolume.get(casa.id) || totalCasas,
+          rankingLongevidade: totalCasas
+        });
+        return;
+      }
       
-      const score = Math.min(100, 70 + volumeScore + tempoScore + apostasScore * 0.3);
+      const posRankingVolume = rankingVolume.get(casa.id) || totalCasas;
+      const posRankingEficiencia = rankingEficiencia.get(casa.id) || totalCasas;
       
-      return {
-        score,
-        classificacao: score >= 90 ? "excelente" : "boa",
-        frequencia: "rara"
-      };
-    }
+      // Componentes do score (total = 100):
+      
+      // A) Ranking de Eficiência (40 pontos)
+      // Top 25% = 40pts, próximos 25% = 30pts, próximos 25% = 20pts, bottom 25% = 10pts
+      const percentilEficiencia = posRankingEficiencia / totalCasas;
+      let scoreEficiencia: number;
+      if (percentilEficiencia <= 0.25) scoreEficiencia = 40;
+      else if (percentilEficiencia <= 0.50) scoreEficiencia = 30;
+      else if (percentilEficiencia <= 0.75) scoreEficiencia = 20;
+      else scoreEficiencia = 10;
+      
+      // B) Participação no Volume (25 pontos)
+      // Proporcional: casa com 30% do volume = 25pts, 15% = 12.5pts, etc.
+      const scoreParticipacao = Math.min((casa.participacaoVolume / 30) * 25, 25);
+      
+      // C) Velocidade de Limitação (20 pontos)
+      // Nunca limitou = 20pts, limitou tarde = 15pts, limitou cedo = 5pts
+      const scoreVelocidade = casa.velocidadeLimitacao * 20;
+      
+      // D) Penalização por Risco Concentrado (até -15 pontos)
+      // Se casa concentra mais de 30% dos eventos de risco = penalidade máxima
+      const penalizacaoRisco = Math.min((casa.participacaoRisco / 30) * 15, 15);
+      
+      // E) Penalização Progressiva por Quantidade de Eventos (-20 pontos max)
+      // 1 evento = -3, 2 = -6, 3 = -10, 4+ = -15 a -20
+      let penalizacaoEventos = 0;
+      if (casa.totalEventos === 1) penalizacaoEventos = 3;
+      else if (casa.totalEventos === 2) penalizacaoEventos = 6;
+      else if (casa.totalEventos === 3) penalizacaoEventos = 10;
+      else if (casa.totalEventos === 4) penalizacaoEventos = 15;
+      else if (casa.totalEventos >= 5) penalizacaoEventos = 20;
+      
+      // F) Bônus para casa sem eventos (+15 pontos)
+      const bonusSemEventos = casa.totalEventos === 0 ? 15 : 0;
+      
+      // G) Penalização extra se LIMITADA atualmente (-10 pontos)
+      const penalizacaoStatusLimitada = 
+        (casa.statusAtual === "LIMITADA" || casa.statusAtual === "limitada") ? 10 : 0;
+      
+      // Score final
+      let scoreFinal = 
+        scoreEficiencia + 
+        scoreParticipacao + 
+        scoreVelocidade + 
+        bonusSemEventos -
+        penalizacaoRisco - 
+        penalizacaoEventos -
+        penalizacaoStatusLimitada;
+      
+      // Normalizar entre 0-100
+      scoreFinal = Math.max(0, Math.min(100, scoreFinal));
+      
+      // Determinar classificação
+      let classificacao: BookmakerAnalise["classificacaoLongevidade"];
+      if (scoreFinal >= 80) classificacao = "excelente";
+      else if (scoreFinal >= 55) classificacao = "boa";
+      else if (scoreFinal >= 30) classificacao = "limitada";
+      else classificacao = "alto_risco";
+      
+      // Se está limitada atualmente, cap máximo é "limitada"
+      if (casa.statusAtual === "LIMITADA" || casa.statusAtual === "limitada") {
+        if (classificacao === "excelente" || classificacao === "boa") {
+          classificacao = "limitada";
+        }
+      }
+      
+      // Determinar frequência de limitação
+      let frequencia: BookmakerAnalise["frequenciaLimitacao"];
+      if (casa.totalEventos === 0) frequencia = "rara";
+      else if (casa.totalEventos === 1) frequencia = "moderada";
+      else if (casa.totalEventos <= 3) frequencia = "frequente";
+      else frequencia = "muito_frequente";
+      
+      // Ranking de longevidade = ranking de eficiência (já calculado)
+      resultados.set(casa.id, {
+        score: Math.round(scoreFinal),
+        classificacao,
+        frequencia,
+        participacaoVolume: Math.round(casa.participacaoVolume * 10) / 10,
+        participacaoRisco: Math.round(casa.participacaoRisco * 10) / 10,
+        rankingVolume: posRankingVolume,
+        rankingLongevidade: posRankingEficiencia
+      });
+    });
     
-    // Tem eventos mas ainda ativa - calcular volume médio por limitação
-    const volumePorLimitacao = volumeTotal / totalEventos;
-    const diasPorLimitacao = diasAtivos / totalEventos;
-    
-    // Score baseado em capacidade de absorção
-    const capacidadeScore = Math.min(volumePorLimitacao / 20000, 1) * 40; // 40 pts para 20k+ por limitação
-    const resilienciaScore = Math.min(diasPorLimitacao / 30, 1) * 30; // 30 pts para 30+ dias por limitação
-    const volumeAbsolutoScore = Math.min(volumeTotal / 50000, 1) * 20; // 20 pts para volume alto
-    const penalidade = Math.min(totalEventos * 5, 30); // Penalidade por cada evento
-    
-    const score = Math.max(0, capacidadeScore + resilienciaScore + volumeAbsolutoScore - penalidade);
-    
-    let classificacao: BookmakerAnalise["classificacaoLongevidade"];
-    if (score >= 70) classificacao = "boa";
-    else if (score >= 40) classificacao = "limitada";
-    else classificacao = "alto_risco";
-    
-    let frequencia: BookmakerAnalise["frequenciaLimitacao"];
-    if (totalEventos === 1) frequencia = "moderada";
-    else if (totalEventos === 2) frequencia = "frequente";
-    else frequencia = "muito_frequente";
-    
-    return { score, classificacao, frequencia };
+    return resultados;
   };
 
   const fetchAnalises = async () => {
@@ -138,6 +283,7 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
       if (!bookmakers || bookmakers.length === 0) {
         setAnalises([]);
         setLucroTotal(0);
+        setProjetoContexto(null);
         return;
       }
 
@@ -204,6 +350,13 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
         .select("id")
         .eq("projeto_id", projetoId);
 
+      // Buscar data de início do projeto
+      const projetoQuery = supabase
+        .from("projetos")
+        .select("data_inicio")
+        .eq("id", projetoId)
+        .single();
+
       // Executar todas as queries
       const [
         apostasResult,
@@ -212,7 +365,8 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
         perdasResult,
         depositosResult,
         saquesResult,
-        ciclosResult
+        ciclosResult,
+        projetoResult
       ] = await Promise.all([
         apostasQuery,
         apostasMultiplasQuery,
@@ -220,7 +374,8 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
         perdasQuery,
         depositosQuery,
         saquesQuery,
-        ciclosQuery
+        ciclosQuery,
+        projetoQuery
       ]);
 
       const apostas = apostasResult.data || [];
@@ -230,6 +385,7 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
       const depositos = depositosResult.data || [];
       const saques = saquesResult.data || [];
       const ciclos = ciclosResult.data || [];
+      const projeto = projetoResult.data;
 
       // Buscar pernas de surebet para mapear bookmaker
       const { data: surebetPernas } = await supabase
@@ -374,6 +530,58 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
       const lucroTotalCalc = Object.values(bookmakerData).reduce((acc, d) => acc + d.lucro, 0);
       setLucroTotal(lucroTotalCalc);
 
+      // Calcular contexto do projeto para cálculos proporcionais
+      const volumeTotalProjeto = Object.values(bookmakerData).reduce((acc, d) => acc + d.volume, 0);
+      const totalEventosRisco = Object.values(bookmakerData).reduce(
+        (acc, d) => acc + d.eventosLimitacao + d.eventosBloqueio, 0
+      );
+      const qtdApostasTotalProjeto = Object.values(bookmakerData).reduce((acc, d) => acc + d.qtdApostas, 0);
+      
+      // Dias do projeto ativo
+      let diasProjetoAtivo = 30; // Default
+      if (projeto?.data_inicio) {
+        const diffTime = Math.abs(new Date().getTime() - new Date(projeto.data_inicio).getTime());
+        diasProjetoAtivo = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      }
+
+      const contexto: ProjetoContexto = {
+        volumeTotal: volumeTotalProjeto,
+        totalEventosRisco,
+        totalCasas: bookmakers.length,
+        diasProjetoAtivo,
+        qtdApostasTotal: qtdApostasTotalProjeto
+      };
+      setProjetoContexto(contexto);
+
+      // Preparar dados das casas para cálculo relativo
+      const casasParaCalculo = bookmakers.map(b => {
+        const data = bookmakerData[b.id];
+        
+        // Calcular dias ativos
+        let diasAtivos = 0;
+        if (data.primeiraAposta && data.ultimaAposta) {
+          const diffTime = Math.abs(new Date(data.ultimaAposta).getTime() - new Date(data.primeiraAposta).getTime());
+          diasAtivos = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        } else if (data.primeiraAposta) {
+          const diffTime = Math.abs(new Date().getTime() - new Date(data.primeiraAposta).getTime());
+          diasAtivos = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        }
+
+        return {
+          id: b.id,
+          volumeTotal: data.volume,
+          eventosLimitacao: data.eventosLimitacao,
+          eventosBloqueio: data.eventosBloqueio,
+          diasAtivos,
+          qtdApostas: data.qtdApostas,
+          statusAtual: b.status,
+          primeiraAposta: data.primeiraAposta
+        };
+      });
+
+      // Calcular scores relativos
+      const scoresRelativos = calcularScoreLongevidadeRelativo(casasParaCalculo, contexto);
+
       // Montar resultado final
       const result: BookmakerAnalise[] = bookmakers.map(b => {
         const data = bookmakerData[b.id];
@@ -396,15 +604,16 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
         const volumeAteLimitacao = totalEventos > 0 ? data.volume / totalEventos : data.volume;
         const apostasAteLimitacao = totalEventos > 0 ? data.qtdApostas / totalEventos : data.qtdApostas;
 
-        // Calcular score de longevidade
-        const { score, classificacao, frequencia } = calcularScoreLongevidade(
-          data.volume,
-          data.eventosLimitacao,
-          data.eventosBloqueio,
-          diasAtivos,
-          data.qtdApostas,
-          b.status
-        );
+        // Obter score calculado relativamente
+        const scoreData = scoresRelativos.get(b.id) || {
+          score: 50,
+          classificacao: "limitada" as const,
+          frequencia: "moderada" as const,
+          participacaoVolume: 0,
+          participacaoRisco: 0,
+          rankingVolume: bookmakers.length,
+          rankingLongevidade: bookmakers.length
+        };
 
         return {
           bookmaker_id: b.id,
@@ -424,9 +633,15 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
           diasAtivos,
           apostasAteLimitacao,
           
-          scoreLongevidade: score,
-          classificacaoLongevidade: classificacao,
-          frequenciaLimitacao: frequencia,
+          // Novas métricas proporcionais
+          participacaoVolume: scoreData.participacaoVolume,
+          participacaoRisco: scoreData.participacaoRisco,
+          rankingVolume: scoreData.rankingVolume,
+          rankingLongevidade: scoreData.rankingLongevidade,
+          
+          scoreLongevidade: scoreData.score,
+          classificacaoLongevidade: scoreData.classificacao,
+          frequenciaLimitacao: scoreData.frequencia,
           
           totalDepositado: data.totalDepositado,
           totalSacado: data.totalSacado,
@@ -444,5 +659,5 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
     }
   };
 
-  return { analises, loading, lucroTotal, refresh: fetchAnalises };
+  return { analises, loading, lucroTotal, projetoContexto, refresh: fetchAnalises };
 }
