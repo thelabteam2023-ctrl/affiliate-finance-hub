@@ -1476,7 +1476,6 @@ export type Database = {
           id: string
           investidor_id: string
           percentual_fixo: number | null
-          projeto_id: string | null
           tipo_deal: string
           updated_at: string | null
           user_id: string
@@ -1491,7 +1490,6 @@ export type Database = {
           id?: string
           investidor_id: string
           percentual_fixo?: number | null
-          projeto_id?: string | null
           tipo_deal?: string
           updated_at?: string | null
           user_id: string
@@ -1506,7 +1504,6 @@ export type Database = {
           id?: string
           investidor_id?: string
           percentual_fixo?: number | null
-          projeto_id?: string | null
           tipo_deal?: string
           updated_at?: string | null
           user_id?: string
@@ -1527,27 +1524,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_roi_investidores"
             referencedColumns: ["investidor_id"]
-          },
-          {
-            foreignKeyName: "investidor_deals_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "projetos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "investidor_deals_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "investidor_deals_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
           },
         ]
       }
@@ -2716,90 +2692,6 @@ export type Database = {
         }
         Relationships: []
       }
-      projeto_acordos: {
-        Row: {
-          ativo: boolean
-          base_calculo: string
-          created_at: string
-          deduzir_custos_operador: boolean
-          id: string
-          investidor_id: string | null
-          observacoes: string | null
-          percentual_empresa: number
-          percentual_investidor: number
-          percentual_prejuizo_investidor: number | null
-          projeto_id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          ativo?: boolean
-          base_calculo?: string
-          created_at?: string
-          deduzir_custos_operador?: boolean
-          id?: string
-          investidor_id?: string | null
-          observacoes?: string | null
-          percentual_empresa?: number
-          percentual_investidor?: number
-          percentual_prejuizo_investidor?: number | null
-          projeto_id: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          ativo?: boolean
-          base_calculo?: string
-          created_at?: string
-          deduzir_custos_operador?: boolean
-          id?: string
-          investidor_id?: string | null
-          observacoes?: string | null
-          percentual_empresa?: number
-          percentual_investidor?: number
-          percentual_prejuizo_investidor?: number | null
-          projeto_id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "projeto_acordos_investidor_id_fkey"
-            columns: ["investidor_id"]
-            isOneToOne: false
-            referencedRelation: "investidores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "projeto_acordos_investidor_id_fkey"
-            columns: ["investidor_id"]
-            isOneToOne: false
-            referencedRelation: "v_roi_investidores"
-            referencedColumns: ["investidor_id"]
-          },
-          {
-            foreignKeyName: "projeto_acordos_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "projetos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "projeto_acordos_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "projeto_acordos_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-        ]
-      }
       projeto_bookmaker_historico: {
         Row: {
           bookmaker_id: string
@@ -3236,7 +3128,6 @@ export type Database = {
           data_inicio: string | null
           descricao: string | null
           id: string
-          investidor_id: string | null
           modelo_absorcao_taxas: string
           nome: string
           observacoes: string | null
@@ -3255,7 +3146,6 @@ export type Database = {
           data_inicio?: string | null
           descricao?: string | null
           id?: string
-          investidor_id?: string | null
           modelo_absorcao_taxas?: string
           nome: string
           observacoes?: string | null
@@ -3274,7 +3164,6 @@ export type Database = {
           data_inicio?: string | null
           descricao?: string | null
           id?: string
-          investidor_id?: string | null
           modelo_absorcao_taxas?: string
           nome?: string
           observacoes?: string | null
@@ -3285,22 +3174,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "projetos_investidor_id_fkey"
-            columns: ["investidor_id"]
-            isOneToOne: false
-            referencedRelation: "investidores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "projetos_investidor_id_fkey"
-            columns: ["investidor_id"]
-            isOneToOne: false
-            referencedRelation: "v_roi_investidores"
-            referencedColumns: ["investidor_id"]
-          },
-        ]
+        Relationships: []
       }
       promocao_participantes: {
         Row: {
