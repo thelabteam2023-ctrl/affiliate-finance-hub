@@ -78,7 +78,7 @@ export default function GestaoParceiros() {
   const [parceriasData, setParceriasData] = useState<Map<string, ParceriaStatus>>(new Map());
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
-  const [showCPF, setShowCPF] = useState(false);
+  const [showSensitiveData, setShowSensitiveData] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingParceiro, setEditingParceiro] = useState<Parceiro | null>(null);
@@ -89,6 +89,17 @@ export default function GestaoParceiros() {
   const [vinculoDialogOpen, setVinculoDialogOpen] = useState(false);
   const [selectedParceiroDetalhes, setSelectedParceiroDetalhes] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("parceiros");
+
+  // Reset sensitive data visibility when changing tab or partner
+  const handleTabChange = (newTab: string) => {
+    setShowSensitiveData(false);
+    setActiveTab(newTab);
+  };
+
+  const handleSelectParceiroDetalhes = (id: string) => {
+    setShowSensitiveData(false);
+    setSelectedParceiroDetalhes(id);
+  };
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -469,8 +480,13 @@ export default function GestaoParceiros() {
   };
 
   const maskCPF = (cpf: string) => {
-    if (showCPF) return formatCPF(cpf);
+    if (showSensitiveData) return formatCPF(cpf);
     return maskCPFPartial(cpf);
+  };
+
+  const maskCurrency = (value: number) => {
+    if (showSensitiveData) return formatCurrency(value);
+    return "R$ ••••";
   };
 
   const filteredParceiros = parceiros.filter((parceiro) => {
@@ -525,7 +541,7 @@ export default function GestaoParceiros() {
           </div>
 
           {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
             <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="parceiros" className="gap-2">
                 <Users className="h-4 w-4" />
@@ -601,10 +617,10 @@ export default function GestaoParceiros() {
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => setShowCPF(!showCPF)}
+                          onClick={() => setShowSensitiveData(!showSensitiveData)}
                           className="shrink-0"
                         >
-                          {showCPF ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {showSensitiveData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -719,9 +735,11 @@ export default function GestaoParceiros() {
                               <div className="flex items-center justify-between">
                                 <span className="text-xs text-muted-foreground">Lucro/Prejuízo</span>
                                 <span className={`text-lg font-bold ${
-                                  roi.lucro_prejuizo >= 0 ? "text-success" : "text-destructive"
+                                  showSensitiveData 
+                                    ? (roi.lucro_prejuizo >= 0 ? "text-success" : "text-destructive")
+                                    : "text-muted-foreground"
                                 }`}>
-                                  {formatCurrency(roi.lucro_prejuizo)}
+                                  {maskCurrency(roi.lucro_prejuizo)}
                                 </span>
                               </div>
                               <p className="text-xs text-muted-foreground text-center mt-1">
@@ -819,9 +837,11 @@ export default function GestaoParceiros() {
                                   }}
                                 >
                                   <div className={`font-bold ${
-                                    roi.lucro_prejuizo >= 0 ? "text-success" : "text-destructive"
+                                    showSensitiveData 
+                                      ? (roi.lucro_prejuizo >= 0 ? "text-success" : "text-destructive")
+                                      : "text-muted-foreground"
                                   }`}>
-                                    {formatCurrency(roi.lucro_prejuizo)}
+                                    {maskCurrency(roi.lucro_prejuizo)}
                                   </div>
                                   <div className="text-xs text-muted-foreground">Lucro/Prejuízo</div>
                                 </div>
@@ -863,11 +883,16 @@ export default function GestaoParceiros() {
                   <ParceiroListaSidebar
                     parceiros={parceirosParaSidebar}
                     selectedId={selectedParceiroDetalhes}
-                    onSelect={setSelectedParceiroDetalhes}
+                    onSelect={handleSelectParceiroDetalhes}
+                    showSensitiveData={showSensitiveData}
                   />
 
                   {/* Painel Direito - Detalhes */}
-                  <ParceiroDetalhesPanel parceiroId={selectedParceiroDetalhes} />
+                  <ParceiroDetalhesPanel 
+                    parceiroId={selectedParceiroDetalhes} 
+                    showSensitiveData={showSensitiveData}
+                    onToggleSensitiveData={() => setShowSensitiveData(!showSensitiveData)}
+                  />
                 </div>
               </Card>
             </TabsContent>
