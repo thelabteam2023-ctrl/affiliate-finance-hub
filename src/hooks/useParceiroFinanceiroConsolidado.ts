@@ -12,6 +12,7 @@ export interface BookmakerFinanceiro {
   saldo_atual: number;
   status: string;
   projetos: string[]; // IDs dos projetos onde foi usado
+  has_credentials: boolean; // Indica se tem login_username preenchido
 }
 
 export interface ParceiroFinanceiroConsolidado {
@@ -66,7 +67,8 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
           saldo_atual,
           status,
           projeto_id,
-          bookmaker_catalogo_id
+          bookmaker_catalogo_id,
+          login_username
         `)
         .eq("parceiro_id", parceiroId);
 
@@ -171,6 +173,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
           saldo_atual: saldoAtual,
           status: bm.status,
           projetos: bm.projeto_id ? [bm.projeto_id] : [],
+          has_credentials: !!(bm.login_username && bm.login_username.trim()),
         };
       });
 
