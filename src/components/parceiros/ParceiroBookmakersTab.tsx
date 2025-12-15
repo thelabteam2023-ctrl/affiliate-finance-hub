@@ -272,11 +272,11 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, diasResta
                     <img
                       src={bm.logo_url}
                       alt={bm.nome}
-                      className="h-9 w-9 rounded object-contain bg-white p-0.5 shrink-0"
+                      className="h-10 w-10 rounded object-contain bg-white p-0.5 shrink-0"
                     />
                   ) : (
-                    <div className="h-9 w-9 rounded bg-muted flex items-center justify-center shrink-0">
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
+                      <Building2 className="h-5 w-5 text-muted-foreground" />
                     </div>
                   )}
                   
@@ -289,13 +289,16 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, diasResta
                           onOpenChange={(open) => setCredentialsPopoverOpen(open ? bm.id : null)}
                         >
                           <PopoverTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-5 w-5 p-0 shrink-0"
+                            <button
+                              type="button"
+                              className="h-6 w-6 p-0.5 shrink-0 rounded hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCredentialsPopoverOpen(credentialsPopoverOpen === bm.id ? null : bm.id);
+                              }}
                             >
-                              <IdCard className="h-3.5 w-3.5" />
-                            </Button>
+                              <IdCard className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+                            </button>
                           </PopoverTrigger>
                           <PopoverContent className="w-52 p-2" align="start">
                             <div className="space-y-2">
