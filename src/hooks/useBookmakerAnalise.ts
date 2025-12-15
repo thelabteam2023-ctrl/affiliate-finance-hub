@@ -445,22 +445,16 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
         };
       });
 
-      // Agregar apostas simples (EXCLUINDO apostas que fazem parte de surebets)
-      // As apostas com surebet_id serão contadas na seção de surebets para evitar contagem dupla
+      // Agregar apostas simples (INCLUINDO pernas de surebet - cada perna = 1 aposta)
       apostas.forEach(a => {
         if (bookmakerData[a.bookmaker_id]) {
-          // Pular apostas que são pernas de surebet - serão contadas na seção de surebets
-          const fazParteDesSurebet = (a as any).surebet_id != null;
-          
-          if (!fazParteDesSurebet) {
-            if (a.status === "FINALIZADA" || a.status === "LIQUIDADA") {
-              bookmakerData[a.bookmaker_id].lucro += Number(a.lucro_prejuizo || 0);
-            }
-            bookmakerData[a.bookmaker_id].volume += Number(a.stake || 0);
-            bookmakerData[a.bookmaker_id].qtdApostas += 1;
+          if (a.status === "FINALIZADA" || a.status === "LIQUIDADA") {
+            bookmakerData[a.bookmaker_id].lucro += Number(a.lucro_prejuizo || 0);
           }
+          bookmakerData[a.bookmaker_id].volume += Number(a.stake || 0);
+          bookmakerData[a.bookmaker_id].qtdApostas += 1;
           
-          // Rastrear datas (para todas as apostas, incluindo surebets)
+          // Rastrear datas
           const dataAposta = a.data_aposta;
           if (!bookmakerData[a.bookmaker_id].primeiraAposta || dataAposta < bookmakerData[a.bookmaker_id].primeiraAposta!) {
             bookmakerData[a.bookmaker_id].primeiraAposta = dataAposta;
@@ -490,20 +484,11 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
         }
       });
 
-      // Distribuir lucro de surebets proporcionalmente
-      Object.entries(surebetBookmakerMap).forEach(([surebetId, bkSet]) => {
-        const lucro = surebetLucroMap[surebetId] || 0;
-        const stake = surebetStakeMap[surebetId] || 0;
-        const lucroPorBk = lucro / bkSet.size;
-        const stakePorBk = stake / bkSet.size;
-        bkSet.forEach(bkId => {
-          if (bookmakerData[bkId]) {
-            bookmakerData[bkId].lucro += lucroPorBk;
-            bookmakerData[bkId].volume += stakePorBk;
-            bookmakerData[bkId].qtdApostas += 1;
-          }
-        });
-      });
+      // NOTA: Surebets NÃO adicionam contagem extra de apostas
+      // Cada perna de surebet já está na tabela 'apostas' e foi contada acima
+      // A distribuição de lucro de surebets é feita apenas se lucro_prejuizo 
+      // individual das pernas estiver vazio (depende do modelo de dados)
+      // Por ora, mantemos apenas o mapeamento para referência sem adicionar contagens
 
       // Agregar perdas operacionais e rastrear datas
       perdas.forEach(p => {
