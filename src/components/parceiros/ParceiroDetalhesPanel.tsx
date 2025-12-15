@@ -149,7 +149,13 @@ export function ParceiroDetalhesPanel({
               {hasParceria && diasRestantes !== null && diasRestantes !== undefined && (
                 <>
                   <span>•</span>
-                  <span className="flex items-center gap-1 text-warning font-medium">
+                  <span className={cn(
+                    "flex items-center gap-1 font-medium",
+                    diasRestantes >= 31 ? "text-emerald-500" :
+                    diasRestantes >= 16 ? "text-lime-500" :
+                    diasRestantes >= 8 ? "text-yellow-500" :
+                    "text-red-500"
+                  )}>
                     <Calendar className="h-3 w-3" />
                     {diasRestantes} dias restantes
                   </span>
