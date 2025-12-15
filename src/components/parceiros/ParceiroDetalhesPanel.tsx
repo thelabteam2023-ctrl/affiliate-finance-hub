@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, KeyRound, Edit, Trash2 } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, KeyRound, Edit, Trash2, Hourglass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
@@ -18,6 +18,8 @@ interface ParceiroDetalhesPanelProps {
   onCreateVinculo?: (parceiroId: string, bookmakerId: string) => void;
   onEditParceiro?: () => void;
   onDeleteParceiro?: () => void;
+  parceiroStatus?: string;
+  hasParceria?: boolean;
 }
 
 export function ParceiroDetalhesPanel({ 
@@ -26,7 +28,9 @@ export function ParceiroDetalhesPanel({
   onToggleSensitiveData,
   onCreateVinculo,
   onEditParceiro,
-  onDeleteParceiro
+  onDeleteParceiro,
+  parceiroStatus,
+  hasParceria
 }: ParceiroDetalhesPanelProps) {
   const { data, loading, error } = useParceiroFinanceiroConsolidado(parceiroId);
 
@@ -93,7 +97,23 @@ export function ParceiroDetalhesPanel({
             className="flex-1 min-w-0 cursor-pointer group"
             onClick={onEditParceiro}
           >
-            <h2 className="text-lg font-semibold truncate group-hover:text-primary transition-colors">{data.parceiro_nome}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold truncate group-hover:text-primary transition-colors">{data.parceiro_nome}</h2>
+              {hasParceria && (
+                <Hourglass className="h-4 w-4 text-warning shrink-0" />
+              )}
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-[10px] px-1.5 py-0 h-5 shrink-0",
+                  parceiroStatus === "ativo"
+                    ? "border-success/50 text-success"
+                    : "border-muted-foreground/50 text-muted-foreground"
+                )}
+              >
+                {parceiroStatus === "ativo" ? "Ativo" : "Inativo"}
+              </Badge>
+            </div>
             <p className="text-xs text-muted-foreground">
               {data.bookmakers.length} casa{data.bookmakers.length !== 1 ? "s" : ""} vinculada{data.bookmakers.length !== 1 ? "s" : ""}
             </p>

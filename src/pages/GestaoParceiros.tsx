@@ -872,6 +872,8 @@ export default function GestaoParceiros() {
                     showSensitiveData={showSensitiveData}
                     onToggleSensitiveData={() => setShowSensitiveData(!showSensitiveData)}
                     onCreateVinculo={handleCreateVinculo}
+                    parceiroStatus={parceiros.find(p => p.id === selectedParceiroDetalhes)?.status}
+                    hasParceria={parceriasData.has(selectedParceiroDetalhes || '')}
                     onEditParceiro={() => {
                       const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
                       if (parceiro) {
