@@ -20,7 +20,8 @@ import {
   Timer,
   Layers
 } from "lucide-react";
-import { BookmakerAnalise } from "@/hooks/useBookmakerAnalise";
+import { BookmakerAnalise, ProjetoContexto } from "@/hooks/useBookmakerAnalise";
+import { LongevidadeExplicacaoDialog } from "./LongevidadeExplicacaoDialog";
 
 interface RecomendacaoLongevidade {
   bookmaker_id: string;
@@ -35,9 +36,10 @@ interface RecomendacaoLongevidade {
 interface AnalisePorCasaSectionProps {
   bookmakerAnalises: BookmakerAnalise[];
   lucroTotalCiclo: number;
+  projetoContexto?: ProjetoContexto | null;
 }
 
-export function AnalisePorCasaSection({ bookmakerAnalises, lucroTotalCiclo }: AnalisePorCasaSectionProps) {
+export function AnalisePorCasaSection({ bookmakerAnalises, lucroTotalCiclo, projetoContexto }: AnalisePorCasaSectionProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -198,10 +200,13 @@ export function AnalisePorCasaSection({ bookmakerAnalises, lucroTotalCiclo }: An
       {/* Score de Longevidade Overview */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Gauge className="h-5 w-5 text-primary" />
-            Análise de Longevidade e Capacidade por Casa
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Gauge className="h-5 w-5 text-primary" />
+              Análise de Longevidade e Capacidade por Casa
+            </CardTitle>
+            <LongevidadeExplicacaoDialog projetoContexto={projetoContexto} />
+          </div>
           <CardDescription>
             Avaliação de tolerância a volume e risco de limitação em apostas protegidas
           </CardDescription>
@@ -284,10 +289,13 @@ export function AnalisePorCasaSection({ bookmakerAnalises, lucroTotalCiclo }: An
       {/* Recomendações Estratégicas de Longevidade */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-primary" />
-            Recomendações de Alocação por Longevidade
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              Recomendações de Alocação por Longevidade
+            </CardTitle>
+            <LongevidadeExplicacaoDialog projetoContexto={projetoContexto} />
+          </div>
           <CardDescription>
             Onde alocar volume de forma estratégica, baseado em capacidade operacional
           </CardDescription>
