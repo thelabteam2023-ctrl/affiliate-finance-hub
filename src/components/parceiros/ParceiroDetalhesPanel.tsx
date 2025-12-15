@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Hourglass, Copy, Check } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
@@ -132,16 +132,6 @@ export function ParceiroDetalhesPanel({
           >
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold truncate group-hover:text-primary transition-colors">{data.parceiro_nome}</h2>
-              {hasParceria && diasRestantes !== null && diasRestantes !== undefined && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Hourglass className="h-4 w-4 text-warning shrink-0 cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="text-xs font-medium">{diasRestantes} dias restantes de parceria</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
               <Badge
                 variant="outline"
                 className={cn(
@@ -154,9 +144,18 @@ export function ParceiroDetalhesPanel({
                 {parceiroStatus === "ativo" ? "Ativo" : "Inativo"}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {data.bookmakers.length} casa{data.bookmakers.length !== 1 ? "s" : ""} vinculada{data.bookmakers.length !== 1 ? "s" : ""}
-            </p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{data.bookmakers.length} casa{data.bookmakers.length !== 1 ? "s" : ""} vinculada{data.bookmakers.length !== 1 ? "s" : ""}</span>
+              {hasParceria && diasRestantes !== null && diasRestantes !== undefined && (
+                <>
+                  <span>•</span>
+                  <span className="flex items-center gap-1 text-warning font-medium">
+                    <Calendar className="h-3 w-3" />
+                    {diasRestantes} dias restantes
+                  </span>
+                </>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-1.5">
             {onEditParceiro && (
@@ -345,11 +344,11 @@ export function ParceiroDetalhesPanel({
                               <img
                                 src={bm.logo_url}
                                 alt={bm.bookmaker_nome}
-                                className="h-8 w-8 rounded object-contain bg-white p-0.5 shrink-0"
+                                className="h-10 w-10 rounded object-contain bg-white p-0.5 shrink-0"
                               />
                             ) : (
-                              <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0">
-                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                              <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
+                                <Building2 className="h-5 w-5 text-muted-foreground" />
                               </div>
                             )}
                             <div className="min-w-0 flex-1">
@@ -376,13 +375,13 @@ export function ParceiroDetalhesPanel({
                                     <PopoverTrigger asChild>
                                       <button
                                         type="button"
-                                        className="h-5 w-5 p-0.5 shrink-0 rounded hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center"
+                                        className="h-6 w-6 p-0.5 shrink-0 rounded hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           setCredentialsPopoverOpen(credentialsPopoverOpen === bm.bookmaker_id ? null : bm.bookmaker_id);
                                         }}
                                       >
-                                        <IdCard className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                        <IdCard className="h-5 w-5 text-muted-foreground hover:text-foreground" />
                                       </button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-52 p-2 bg-popover border border-border z-50" align="start">
