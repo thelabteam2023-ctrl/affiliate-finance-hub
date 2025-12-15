@@ -874,6 +874,7 @@ export default function GestaoParceiros() {
                     onCreateVinculo={handleCreateVinculo}
                     parceiroStatus={parceiros.find(p => p.id === selectedParceiroDetalhes)?.status}
                     hasParceria={parceriasData.has(selectedParceiroDetalhes || '')}
+                    diasRestantes={parceriasData.get(selectedParceiroDetalhes || '')?.dias_restantes ?? null}
                     onEditParceiro={() => {
                       const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
                       if (parceiro) {

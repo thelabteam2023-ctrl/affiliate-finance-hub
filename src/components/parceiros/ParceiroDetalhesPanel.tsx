@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, KeyRound, Edit, Trash2, Hourglass } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Hourglass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
@@ -20,6 +20,7 @@ interface ParceiroDetalhesPanelProps {
   onDeleteParceiro?: () => void;
   parceiroStatus?: string;
   hasParceria?: boolean;
+  diasRestantes?: number | null;
 }
 
 export function ParceiroDetalhesPanel({ 
@@ -30,7 +31,8 @@ export function ParceiroDetalhesPanel({
   onEditParceiro,
   onDeleteParceiro,
   parceiroStatus,
-  hasParceria
+  hasParceria,
+  diasRestantes
 }: ParceiroDetalhesPanelProps) {
   const { data, loading, error } = useParceiroFinanceiroConsolidado(parceiroId);
 
@@ -328,25 +330,20 @@ export function ParceiroDetalhesPanel({
                                 >
                                   {bm.status}
                                 </Badge>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="shrink-0">
-                                      <KeyRound 
-                                        className={cn(
-                                          "h-3 w-3",
-                                          bm.has_credentials 
-                                            ? "text-success" 
-                                            : "text-muted-foreground/40"
-                                        )} 
-                                      />
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="right">
-                                    <p className="text-xs">
-                                      {bm.has_credentials ? "Credenciais cadastradas" : "Sem credenciais"}
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
+                                {bm.has_credentials && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="shrink-0">
+                                        <IdCard 
+                                          className="h-3 w-3 text-foreground" 
+                                        />
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">
+                                      <p className="text-xs">Credenciais cadastradas</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -405,6 +402,7 @@ export function ParceiroDetalhesPanel({
             <ParceiroBookmakersTab 
               parceiroId={parceiroId} 
               showSensitiveData={showSensitiveData}
+              diasRestantes={diasRestantes}
               onCreateVinculo={onCreateVinculo}
             />
           </TabsContent>
