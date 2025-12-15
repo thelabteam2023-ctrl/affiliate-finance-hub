@@ -7,8 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Eye, EyeOff, Edit, Trash2, LayoutGrid, List, Users, UserSearch } from "lucide-react";
+import { Plus, Search, Eye, EyeOff, Edit, Trash2, LayoutGrid, List, Users } from "lucide-react";
 import { ParceiroStatusIcon } from "@/components/parceiros/ParceiroStatusIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -90,15 +89,6 @@ export default function GestaoParceiros() {
   const [vinculoParceiroId, setVinculoParceiroId] = useState<string | null>(null);
   const [vinculoBookmakerId, setVinculoBookmakerId] = useState<string | null>(null);
   const [selectedParceiroDetalhes, setSelectedParceiroDetalhes] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("parceiros");
-
-  // Tab change handler
-  const handleTabChange = (newTab: string) => {
-    if (newTab === "detalhes" && !selectedParceiroDetalhes && parceiros.length > 0) {
-      setSelectedParceiroDetalhes(parceiros[0].id);
-    }
-    setActiveTab(newTab);
-  };
 
   const handleSelectParceiroDetalhes = (id: string) => {
     setSelectedParceiroDetalhes(id);
@@ -559,349 +549,44 @@ export default function GestaoParceiros() {
             </div>
           </div>
 
-          {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
-              <TabsTrigger value="parceiros" className="gap-2">
-                <Users className="h-4 w-4" />
-                Parceiros
-              </TabsTrigger>
-              <TabsTrigger value="detalhes" className="gap-2">
-                <UserSearch className="h-4 w-4" />
-                Detalhes
-              </TabsTrigger>
-            </TabsList>
+          {/* Partner Details Layout */}
+          <Card className="border-border bg-gradient-surface overflow-hidden">
+            <div className="grid grid-cols-[340px_1fr] lg:grid-cols-[360px_1fr] h-[calc(100vh-240px)] min-h-[480px]">
+              {/* Painel Esquerdo - Lista de Parceiros */}
+              <ParceiroListaSidebar
+                parceiros={parceirosParaSidebar}
+                selectedId={selectedParceiroDetalhes}
+                onSelect={handleSelectParceiroDetalhes}
+                showSensitiveData={showSensitiveData}
+                onAddParceiro={() => setDialogOpen(true)}
+              />
 
-            {/* Tab: Parceiros (Visão Geral) */}
-            <TabsContent value="parceiros" className="space-y-6">
-
-              {/* Toolbar */}
-              <Card className="border-border bg-gradient-surface">
-                <CardContent className="pt-6">
-                  <div className="flex flex-col md:flex-row gap-4">
-                    <div className="flex-1 relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                      <Input
-                        placeholder="Buscar por nome ou CPF..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todos">Todos os status</SelectItem>
-                        <SelectItem value="ativo">Ativos</SelectItem>
-                        <SelectItem value="inativo">Inativos</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setShowSensitiveData(!showSensitiveData)}
-                          className="shrink-0"
-                        >
-                          {showSensitiveData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Visualizar dados sensíveis</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setViewType(viewType === "cards" ? "list" : "cards")}
-                        >
-                          {viewType === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{viewType === "cards" ? "Visualizar como lista" : "Visualizar como cards"}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="icon"
-                          onClick={() => setDialogOpen(true)}
-                          className="shrink-0"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Novo Parceiro</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Parceiros View */}
-              {filteredParceiros.length === 0 ? (
-                <Card className="border-border bg-gradient-surface">
-                  <CardContent className="py-12 text-center">
-                    <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
-                    <p className="text-muted-foreground">
-                      Nenhum parceiro encontrado. Clique em "+" para adicionar.
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : viewType === "cards" ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredParceiros.map((parceiro) => {
-                    const roi = roiData.get(parceiro.id);
-                    return (
-                      <Card 
-                        key={parceiro.id} 
-                        className={`border-border bg-gradient-surface hover:shadow-lg transition-all relative ${
-                          parceiro.status === "inativo" ? "opacity-70" : ""
-                        }`}
-                      >
-                        <CardHeader className="pb-3">
-                          <div className="flex justify-between items-start gap-3">
-                            <div 
-                              className="flex items-center gap-3 flex-1 cursor-pointer group"
-                              onClick={() => handleView(parceiro)}
-                            >
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
-                                parceiro.status === "inativo"
-                                  ? "bg-warning/10 border-warning/30 group-hover:border-warning/60"
-                                  : "bg-primary/10 border-primary/30 group-hover:border-primary/60"
-                              }`}>
-                                <span className={`text-sm font-bold ${
-                                  parceiro.status === "inativo" ? "text-warning" : "text-primary"
-                                }`}>
-                                  {parceiro.nome.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <CardTitle className="text-base group-hover:text-primary transition-colors truncate">
-                                  {parceiro.nome}
-                                </CardTitle>
-                                <p className="text-xs text-muted-foreground font-mono">
-                                  {maskCPF(parceiro.cpf)}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge
-                                variant={parceiro.status === "ativo" ? "default" : "secondary"}
-                                className={parceiro.status === "inativo" ? "bg-warning/20 text-warning border-warning/30" : ""}
-                              >
-                                {parceiro.status}
-                              </Badge>
-                              {parceriasData.has(parceiro.id) && (
-                                <ParceiroStatusIcon
-                                  diasRestantes={parceriasData.get(parceiro.id)!.dias_restantes}
-                                  pagamentoRealizado={parceriasData.get(parceiro.id)!.pagamento_parceiro_realizado}
-                                />
-                              )}
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                          {/* Lucro/Prejuízo - Sem ROI */}
-                          {roi && (
-                            <div 
-                              className="py-3 px-4 -mx-4 mb-4 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
-                              onClick={() => {
-                                setSelectedParceiroDetalhes(parceiro.id);
-                                setActiveTab("detalhes");
-                              }}
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs text-muted-foreground">Lucro/Prejuízo</span>
-                                <span className={`text-lg font-bold ${
-                                  showSensitiveData 
-                                    ? (roi.lucro_prejuizo >= 0 ? "text-success" : "text-destructive")
-                                    : "text-muted-foreground"
-                                }`}>
-                                  {maskCurrency(roi.lucro_prejuizo)}
-                                </span>
-                              </div>
-                              <p className="text-xs text-muted-foreground text-center mt-1">
-                                Clique para ver detalhes
-                              </p>
-                            </div>
-                          )}
-
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => handleEdit(parceiro)}
-                            >
-                              <Edit className="mr-1 h-3.5 w-3.5" />
-                              Editar
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteClick(parceiro.id)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              ) : (
-                <Card className="border-border bg-gradient-surface">
-                  <CardContent className="p-0">
-                    <div className="divide-y divide-border">
-                      {filteredParceiros.map((parceiro) => {
-                        const roi = roiData.get(parceiro.id);
-                        return (
-                          <div 
-                            key={parceiro.id} 
-                            className={`p-4 transition-colors ${
-                              parceiro.status === "inativo" 
-                                ? "bg-warning/5 hover:bg-warning/10" 
-                                : "hover:bg-muted/30"
-                            }`}
-                          >
-                            <div className="flex items-center gap-4">
-                              <div 
-                                className="flex-1 cursor-pointer"
-                                onClick={() => handleView(parceiro)}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 ${
-                                    parceiro.status === "inativo"
-                                      ? "bg-warning/10 border-warning/30"
-                                      : "bg-primary/10 border-primary/30"
-                                  }`}>
-                                    <span className={`text-xs font-bold ${
-                                      parceiro.status === "inativo" ? "text-warning" : "text-primary"
-                                    }`}>
-                                      {parceiro.nome.charAt(0).toUpperCase()}
-                                    </span>
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <h3 className="font-medium">{parceiro.nome}</h3>
-                                      <Badge 
-                                        variant={parceiro.status === "ativo" ? "default" : "secondary"} 
-                                        className={`text-xs ${parceiro.status === "inativo" ? "bg-warning/20 text-warning border-warning/30" : ""}`}
-                                      >
-                                        {parceiro.status}
-                                      </Badge>
-                                      {parceriasData.has(parceiro.id) && (
-                                        <ParceiroStatusIcon
-                                          diasRestantes={parceriasData.get(parceiro.id)!.dias_restantes}
-                                          pagamentoRealizado={parceriasData.get(parceiro.id)!.pagamento_parceiro_realizado}
-                                        />
-                                      )}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground font-mono">
-                                      {maskCPF(parceiro.cpf)}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Lucro sem ROI */}
-                              {roi && (
-                                <div 
-                                  className="px-4 py-2 bg-muted/30 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                                  onClick={() => {
-                                    setSelectedParceiroDetalhes(parceiro.id);
-                                    setActiveTab("detalhes");
-                                  }}
-                                >
-                                  <div className={`font-bold ${
-                                    showSensitiveData 
-                                      ? (roi.lucro_prejuizo >= 0 ? "text-success" : "text-destructive")
-                                      : "text-muted-foreground"
-                                  }`}>
-                                    {maskCurrency(roi.lucro_prejuizo)}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">Lucro/Prejuízo</div>
-                                </div>
-                              )}
-
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEdit(parceiro)}
-                                >
-                                  <Edit className="mr-1 h-3.5 w-3.5" />
-                                  Editar
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-destructive hover:text-destructive"
-                                  onClick={() => handleDeleteClick(parceiro.id)}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            {/* Tab: Detalhes do Parceiro */}
-            <TabsContent value="detalhes" className="space-y-0">
-              <Card className="border-border bg-gradient-surface overflow-hidden">
-                <div className="grid grid-cols-[340px_1fr] lg:grid-cols-[360px_1fr] h-[calc(100vh-240px)] min-h-[480px]">
-                  {/* Painel Esquerdo - Lista de Parceiros */}
-                  <ParceiroListaSidebar
-                    parceiros={parceirosParaSidebar}
-                    selectedId={selectedParceiroDetalhes}
-                    onSelect={handleSelectParceiroDetalhes}
-                    showSensitiveData={showSensitiveData}
-                    onAddParceiro={() => setDialogOpen(true)}
-                  />
-
-                  {/* Painel Direito - Detalhes */}
-                  <ParceiroDetalhesPanel 
-                    parceiroId={selectedParceiroDetalhes} 
-                    showSensitiveData={showSensitiveData}
-                    onToggleSensitiveData={() => setShowSensitiveData(!showSensitiveData)}
-                    onCreateVinculo={handleCreateVinculo}
-                    parceiroStatus={parceiros.find(p => p.id === selectedParceiroDetalhes)?.status}
-                    hasParceria={parceriasData.has(selectedParceiroDetalhes || '')}
-                    diasRestantes={parceriasData.get(selectedParceiroDetalhes || '')?.dias_restantes ?? null}
-                    onEditParceiro={() => {
-                      const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
-                      if (parceiro) {
-                        setEditingParceiro(parceiro);
-                        setViewMode(false);
-                        setDialogOpen(true);
-                      }
-                    }}
-                    onDeleteParceiro={() => {
-                      if (selectedParceiroDetalhes) {
-                        setParceiroToDelete(selectedParceiroDetalhes);
-                        setDeleteDialogOpen(true);
-                      }
-                    }}
-                  />
-                </div>
-              </Card>
-            </TabsContent>
-          </Tabs>
+              {/* Painel Direito - Detalhes */}
+              <ParceiroDetalhesPanel 
+                parceiroId={selectedParceiroDetalhes} 
+                showSensitiveData={showSensitiveData}
+                onToggleSensitiveData={() => setShowSensitiveData(!showSensitiveData)}
+                onCreateVinculo={handleCreateVinculo}
+                parceiroStatus={parceiros.find(p => p.id === selectedParceiroDetalhes)?.status}
+                hasParceria={parceriasData.has(selectedParceiroDetalhes || '')}
+                diasRestantes={parceriasData.get(selectedParceiroDetalhes || '')?.dias_restantes ?? null}
+                onEditParceiro={() => {
+                  const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
+                  if (parceiro) {
+                    setEditingParceiro(parceiro);
+                    setViewMode(false);
+                    setDialogOpen(true);
+                  }
+                }}
+                onDeleteParceiro={() => {
+                  if (selectedParceiroDetalhes) {
+                    setParceiroToDelete(selectedParceiroDetalhes);
+                    setDeleteDialogOpen(true);
+                  }
+                }}
+              />
+            </div>
+          </Card>
         </div>
 
         <ParceiroDialog
