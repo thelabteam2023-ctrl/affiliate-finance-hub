@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, User } from "lucide-react";
+import { Search, User, Plus, Hourglass } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,6 +11,7 @@ interface Parceiro {
   cpf: string;
   status: string;
   lucro_prejuizo: number;
+  has_parceria?: boolean;
 }
 
 interface ParceiroListaSidebarProps {
@@ -18,6 +19,7 @@ interface ParceiroListaSidebarProps {
   selectedId: string | null;
   onSelect: (id: string) => void;
   showSensitiveData?: boolean;
+  onAddParceiro?: () => void;
 }
 
 export function ParceiroListaSidebar({
@@ -25,6 +27,7 @@ export function ParceiroListaSidebar({
   selectedId,
   onSelect,
   showSensitiveData = false,
+  onAddParceiro,
 }: ParceiroListaSidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -58,7 +61,7 @@ export function ParceiroListaSidebar({
 
   return (
     <div className="flex flex-col h-full border-r border-border">
-      <div className="p-2 border-b border-border">
+      <div className="p-2 border-b border-border space-y-1.5">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -68,6 +71,18 @@ export function ParceiroListaSidebar({
             className="pl-8 h-8 text-xs"
           />
         </div>
+        {/* Linha de adicionar parceiro */}
+        {onAddParceiro && (
+          <button
+            onClick={onAddParceiro}
+            className="w-full flex items-center gap-2 p-2 rounded-md text-left transition-colors hover:bg-primary/10 border border-dashed border-primary/30 text-primary"
+          >
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20">
+              <Plus className="h-3.5 w-3.5" />
+            </div>
+            <span className="font-medium text-xs">Novo Parceiro</span>
+          </button>
+        )}
       </div>
 
       <ScrollArea className="flex-1">
@@ -83,12 +98,21 @@ export function ParceiroListaSidebar({
                   : "hover:bg-muted/50 border border-transparent"
               )}
             >
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                <User className="h-3.5 w-3.5 text-primary" />
+              <div className={cn(
+                "flex h-7 w-7 shrink-0 items-center justify-center rounded-full cursor-pointer",
+                parceiro.status === "ativo" ? "bg-primary/10" : "bg-warning/10"
+              )}>
+                <User className={cn(
+                  "h-3.5 w-3.5",
+                  parceiro.status === "ativo" ? "text-primary" : "text-warning"
+                )} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="font-medium text-xs truncate">{parceiro.nome}</span>
+                  {parceiro.has_parceria && (
+                    <Hourglass className="h-3 w-3 text-warning shrink-0" />
+                  )}
                   <Badge
                     variant="outline"
                     className={cn(
