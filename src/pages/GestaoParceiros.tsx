@@ -92,14 +92,12 @@ export default function GestaoParceiros() {
   const [selectedParceiroDetalhes, setSelectedParceiroDetalhes] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("parceiros");
 
-  // Reset sensitive data visibility when changing tab or partner
+  // Tab change handler (visibility persists)
   const handleTabChange = (newTab: string) => {
-    setShowSensitiveData(false);
     setActiveTab(newTab);
   };
 
   const handleSelectParceiroDetalhes = (id: string) => {
-    setShowSensitiveData(false);
     setSelectedParceiroDetalhes(id);
   };
   const navigate = useNavigate();
