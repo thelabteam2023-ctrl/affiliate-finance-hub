@@ -92,8 +92,11 @@ export default function GestaoParceiros() {
   const [selectedParceiroDetalhes, setSelectedParceiroDetalhes] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("parceiros");
 
-  // Tab change handler (visibility persists)
+  // Tab change handler
   const handleTabChange = (newTab: string) => {
+    if (newTab === "detalhes" && !selectedParceiroDetalhes && parceiros.length > 0) {
+      setSelectedParceiroDetalhes(parceiros[0].id);
+    }
     setActiveTab(newTab);
   };
 
@@ -505,6 +508,13 @@ export default function GestaoParceiros() {
       statusFilter === "todos" || parceiro.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  // Auto-select first partner when list loads and none is selected
+  useEffect(() => {
+    if (!selectedParceiroDetalhes && parceiros.length > 0) {
+      setSelectedParceiroDetalhes(parceiros[0].id);
+    }
+  }, [parceiros]);
 
   // Prepare data for sidebar
   const parceirosParaSidebar = useMemo(() => {
