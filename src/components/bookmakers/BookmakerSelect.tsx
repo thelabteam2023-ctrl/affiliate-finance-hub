@@ -67,6 +67,7 @@ export default function BookmakerSelect({
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [displayData, setDisplayData] = useState<{ nome: string; logo_url: string | null } | null>(null);
+  const [loadingDisplay, setLoadingDisplay] = useState(false);
   
   const lastFetchedValue = useRef<string>("");
   const isVinculoMode = !!parceiroId;
@@ -168,17 +169,23 @@ export default function BookmakerSelect({
     fetchBookmakers();
   }, [parceiroId, somenteComSaldo, excludeVinculosDoParceiro]);
 
-  // Buscar dados de exibição quando value muda
+  // Buscar dados de exibição quando value muda - execução imediata e determinística
   useEffect(() => {
+    // Reset se não há valor
     if (!value) {
       setDisplayData(null);
       lastFetchedValue.current = "";
+      setLoadingDisplay(false);
       return;
     }
 
+    // Skip se já temos os dados corretos para este valor
     if (lastFetchedValue.current === value && displayData) {
       return;
     }
+
+    // Marcar como carregando display
+    setLoadingDisplay(true);
 
     const fetchDisplayData = async () => {
       try {
@@ -202,6 +209,7 @@ export default function BookmakerSelect({
             lastFetchedValue.current = value;
           }
         } else {
+          // Modo catálogo - buscar na tabela de catálogo
           const { data } = await supabase
             .from("bookmakers_catalogo")
             .select("nome, logo_url")
@@ -215,11 +223,13 @@ export default function BookmakerSelect({
         }
       } catch (error) {
         console.error("Erro ao buscar bookmaker:", error);
+      } finally {
+        setLoadingDisplay(false);
       }
     };
 
     fetchDisplayData();
-  }, [value, isVinculoMode]);
+  }, [value, isVinculoMode, displayData]);
 
   // Filtrar itens pela busca
   const filteredItems = items.filter((item) => 
@@ -255,7 +265,11 @@ export default function BookmakerSelect({
                     />
                   )}
                   <span className="uppercase truncate text-center">
-                    {displayData?.nome || (loading ? "Carregando..." : "Selecione...")}
+                    {displayData?.nome 
+                      ? displayData.nome 
+                      : (loading || loadingDisplay) 
+                        ? "Carregando..." 
+                        : "Selecione..."}
                   </span>
                   <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
                 </div>
