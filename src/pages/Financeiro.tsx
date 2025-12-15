@@ -58,7 +58,7 @@ import {
   ComposedChart,
   Line,
 } from "recharts";
-import { format, parseISO, subMonths, subWeeks, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
+import { format, parseISO, subMonths, subWeeks, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isWithinInterval, getWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
 import { DespesaAdministrativaDialog } from "@/components/financeiro/DespesaAdministrativaDialog";
@@ -654,8 +654,9 @@ export default function Financeiro() {
       const weekDate = subWeeks(new Date(), i);
       const weekStart = startOfWeek(weekDate, { weekStartsOn: 1 }); // Segunda-feira
       const weekEnd = endOfWeek(weekDate, { weekStartsOn: 1 }); // Domingo
+      const weekNumber = getWeek(weekStart, { weekStartsOn: 1 });
       weeks.push({
-        label: `Sem ${8 - i}`,
+        label: `Sem ${weekNumber}`,
         weekStart,
         weekEnd,
       });
@@ -1013,39 +1014,6 @@ export default function Financeiro() {
             />
           </div>
 
-          {/* Summary Cards - Links Rápidos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Caixa Operacional */}
-            <Card>
-              <CardHeader className="flex flex-row items-center gap-2">
-                <Wallet className="h-5 w-5 text-primary" />
-                <CardTitle className="text-base">Caixa Operacional</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                  <span className="text-sm">Saldo FIAT (BRL)</span>
-                  <span className="font-bold">{formatCurrency(saldoBRL)}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                  <span className="text-sm">Saldo FIAT (USD)</span>
-                  <span className="font-bold">{formatCurrency(saldoUSD, "USD")}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                  <span className="text-sm">Exposição Crypto</span>
-                  <span className="font-bold">${totalCryptoUSD.toFixed(2)}</span>
-                </div>
-                <Button
-                  variant="outline"
-                  className="w-full mt-2"
-                  onClick={() => navigate("/caixa")}
-                >
-                  <ArrowUpRight className="h-4 w-4 mr-2" />
-                  Ir para Caixa
-                </Button>
-              </CardContent>
-            </Card>
-
-          </div>
         </TabsContent>
 
 
