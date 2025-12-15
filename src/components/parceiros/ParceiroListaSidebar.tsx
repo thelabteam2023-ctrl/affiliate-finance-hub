@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Search, User, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 interface Parceiro {
@@ -29,13 +30,16 @@ export function ParceiroListaSidebar({
   onAddParceiro,
 }: ParceiroListaSidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("todos");
 
   const filteredParceiros = useMemo(() => {
-    return parceiros.filter((p) =>
-      p.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.cpf.includes(searchTerm)
-    );
-  }, [parceiros, searchTerm]);
+    return parceiros.filter((p) => {
+      const matchesSearch = p.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.cpf.includes(searchTerm);
+      const matchesStatus = statusFilter === "todos" || p.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [parceiros, searchTerm, statusFilter]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -70,6 +74,16 @@ export function ParceiroListaSidebar({
             className="pl-9 h-9 text-sm"
           />
         </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-9 text-sm">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os status</SelectItem>
+            <SelectItem value="ativo">Ativos</SelectItem>
+            <SelectItem value="inativo">Inativos</SelectItem>
+          </SelectContent>
+        </Select>
         {onAddParceiro && (
           <button
             onClick={onAddParceiro}
