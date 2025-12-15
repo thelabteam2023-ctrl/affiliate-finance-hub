@@ -63,7 +63,7 @@ export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
   const [loading, setLoading] = useState(true);
 
   // Hook para análise por casa
-  const { analises: bookmakerAnalises, loading: loadingBookmakers, lucroTotal } = useBookmakerAnalise({ projetoId });
+  const { analises: bookmakerAnalises, loading: loadingBookmakers, lucroTotal, projetoContexto } = useBookmakerAnalise({ projetoId });
 
   useEffect(() => {
     fetchCiclosComMetricas();
@@ -577,7 +577,8 @@ export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
           ) : (
             <AnalisePorCasaSection 
               bookmakerAnalises={bookmakerAnalises} 
-              lucroTotalCiclo={lucroTotal} 
+              lucroTotalCiclo={lucroTotal}
+              projetoContexto={projetoContexto}
             />
           )}
         </CardContent>
