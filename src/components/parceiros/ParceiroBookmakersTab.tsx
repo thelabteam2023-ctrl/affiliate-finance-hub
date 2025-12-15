@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Building2, Search, Plus, ShieldCheck, ShieldAlert, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -250,19 +251,56 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
                     </div>
                   </div>
 
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-1.5"
-                    onClick={() => handleToggleStatus(bm.id, bm.status)}
-                    disabled={editingStatus === bm.id}
-                  >
-                    {bm.status === "ativo" ? (
-                      <ShieldCheck className="h-4 w-4 text-success" />
-                    ) : (
-                      <ShieldAlert className="h-4 w-4 text-warning" />
-                    )}
-                  </Button>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-1.5"
+                        disabled={editingStatus === bm.id}
+                      >
+                        {bm.status === "ativo" ? (
+                          <ShieldCheck className="h-4 w-4 text-success" />
+                        ) : (
+                          <ShieldAlert className="h-4 w-4 text-warning" />
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-3" align="end">
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground">
+                          Alterar status para{" "}
+                          <span className="font-semibold">
+                            {bm.status === "ativo" ? "LIMITADA" : "ATIVO"}
+                          </span>
+                          ?
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs"
+                            onClick={(e) => {
+                              const popover = e.currentTarget.closest('[data-radix-popper-content-wrapper]');
+                              if (popover) {
+                                const trigger = document.querySelector(`[aria-expanded="true"]`) as HTMLButtonElement;
+                                trigger?.click();
+                              }
+                            }}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => handleToggleStatus(bm.id, bm.status)}
+                          >
+                            Confirmar
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               ))
             )}
