@@ -109,10 +109,10 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
     onRefresh?.();
   };
 
-  // Aguardando: A_PAGAR mas ciclo ainda EM_ANDAMENTO
+  // Aguardando: AGUARDANDO_CICLO ou (A_PAGAR mas ciclo ainda EM_ANDAMENTO)
   const aguardando = participacoes.filter(p => 
-    p.status === "A_PAGAR" && 
-    p.projeto_ciclos?.status === "EM_ANDAMENTO"
+    p.status === "AGUARDANDO_CICLO" ||
+    (p.status === "A_PAGAR" && p.projeto_ciclos?.status === "EM_ANDAMENTO")
   );
   
   // Pendentes (prontas para pagar): A_PAGAR e ciclo FECHADO ou CONCLUIDO
