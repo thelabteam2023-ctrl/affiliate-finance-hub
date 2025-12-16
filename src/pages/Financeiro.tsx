@@ -112,6 +112,11 @@ interface PagamentoOperador {
   operadores?: { nome: string } | null;
 }
 
+interface ApostaLucro {
+  lucro_prejuizo: number | null;
+  data_aposta: string;
+}
+
 interface BookmakerSaldo {
   saldo_atual: number;
   saldo_freebet: number;
@@ -180,7 +185,7 @@ export default function Financeiro() {
   const [movimentacoesIndicacao, setMovimentacoesIndicacao] = useState<DespesaIndicacao[]>([]);
   const [bookmakersSaldos, setBookmakersSaldos] = useState<BookmakerSaldo[]>([]);
   const [bookmakersDetalhados, setBookmakersDetalhados] = useState<BookmakerDetalhado[]>([]);
-  const [lucroOperacionalApostas, setLucroOperacionalApostas] = useState<number>(0);
+  const [apostasLucro, setApostasLucro] = useState<ApostaLucro[]>([]);
   const [totalParceirosAtivos, setTotalParceirosAtivos] = useState<number>(0);
   const [contasParceiros, setContasParceiros] = useState<ContaParceiro[]>([]);
   const [contasDetalhadas, setContasDetalhadas] = useState<ContaDetalhada[]>([]);
@@ -286,7 +291,7 @@ export default function Financeiro() {
         supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, indicadores_referral(nome)"),
         supabase.from("bookmakers").select("saldo_atual, saldo_freebet, saldo_irrecuperavel, status, projeto_id").in("status", ["ativo", "ATIVO", "EM_USO", "AGUARDANDO_SAQUE"]),
         supabase.from("bookmakers").select("saldo_atual, saldo_irrecuperavel, projeto_id, projetos(nome)").in("status", ["ativo", "ATIVO", "EM_USO", "AGUARDANDO_SAQUE"]),
-        supabase.from("apostas").select("lucro_prejuizo").not("resultado", "is", null),
+        supabase.from("apostas").select("lucro_prejuizo, data_aposta").not("resultado", "is", null),
         supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("status", "ativo"),
         supabase
           .from("parcerias")
@@ -339,10 +344,8 @@ export default function Financeiro() {
       setContasDetalhadas(contasDetalhadasResult.data || []);
       setWalletsDetalhadas(walletsDetalhadasResult.data || []);
       
-      // Calcular lucro operacional das apostas
-      const lucroTotal = (apostasLucroResult.data || []).reduce((acc: number, a: { lucro_prejuizo: number | null }) => 
-        acc + (a.lucro_prejuizo || 0), 0);
-      setLucroOperacionalApostas(lucroTotal);
+      // Armazenar apostas para filtrar por período
+      setApostasLucro((apostasLucroResult.data || []) as ApostaLucro[]);
       
       // Total de parceiros ativos
       setTotalParceirosAtivos(parceirosAtivosResult.count || 0);
@@ -421,7 +424,7 @@ export default function Financeiro() {
   };
 
   // Filtrar dados por período
-  const filterByPeriod = <T extends { data_movimentacao?: string; data_inicio?: string; data_transacao?: string; data_despesa?: string; data_pagamento?: string }>(
+  const filterByPeriod = <T extends { data_movimentacao?: string; data_inicio?: string; data_transacao?: string; data_despesa?: string; data_pagamento?: string; data_aposta?: string }>(
     data: T[],
     dateField: keyof T
   ): T[] => {
@@ -444,6 +447,10 @@ export default function Financeiro() {
   const filteredLedger = filterByPeriod(cashLedger, "data_transacao");
   const filteredDespesasAdmin = filterByPeriod(despesasAdmin, "data_despesa");
   const filteredPagamentosOp = filterByPeriod(pagamentosOperador, "data_pagamento") as PagamentoOperador[];
+  const filteredApostas = filterByPeriod(apostasLucro, "data_aposta");
+  
+  // Lucro operacional filtrado por período
+  const lucroOperacionalApostas = filteredApostas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
 
   // ==================== CÁLCULOS CORRIGIDOS ====================
   

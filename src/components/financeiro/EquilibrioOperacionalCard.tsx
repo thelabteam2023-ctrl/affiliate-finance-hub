@@ -20,9 +20,43 @@ export function EquilibrioOperacionalCard({
   formatCurrency,
 }: EquilibrioOperacionalCardProps) {
   const diferenca = lucroOperacional - custoSustentacao;
-  const coberturaPercent = custoSustentacao > 0 ? (lucroOperacional / custoSustentacao) * 100 : 0;
+  
+  // Calcular cobertura considerando caso especial quando custo = 0
+  const coberturaPercent = custoSustentacao > 0 
+    ? (lucroOperacional / custoSustentacao) * 100 
+    : (lucroOperacional > 0 ? 100 : (lucroOperacional === 0 ? 100 : 0));
 
   const getStatus = () => {
+    // Caso especial: sem custos
+    if (custoSustentacao === 0) {
+      if (lucroOperacional > 0) {
+        return { 
+          label: "Acima do Ponto", 
+          color: "text-success", 
+          bg: "bg-success/10",
+          icon: TrendingUp,
+          description: "Lucro positivo sem custos"
+        };
+      }
+      if (lucroOperacional === 0) {
+        return { 
+          label: "Neutro", 
+          color: "text-muted-foreground", 
+          bg: "bg-muted",
+          icon: Minus,
+          description: "Sem atividade no período"
+        };
+      }
+      return { 
+        label: "Abaixo do Ponto", 
+        color: "text-destructive", 
+        bg: "bg-destructive/10",
+        icon: TrendingDown,
+        description: "Prejuízo operacional"
+      };
+    }
+    
+    // Caso normal: com custos
     if (coberturaPercent >= 120) return { 
       label: "Acima do Ponto", 
       color: "text-success", 
