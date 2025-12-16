@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowDownCircle, ArrowUpCircle, TrendingUp, TrendingDown, Calendar, HelpCircle } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, TrendingUp, TrendingDown, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine } from "recharts";
 import {
@@ -9,36 +9,36 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-interface FluxoSemanal {
+export interface FluxoCaixaRealData {
   label: string;
   entradas: number;
   saidas: number;
   saldo: number;
 }
 
-interface FluxoCaixaCardProps {
-  fluxoSemanal: FluxoSemanal[];
+interface FluxoCaixaRealCardProps {
+  fluxoData: FluxoCaixaRealData[];
   totalEntradas: number;
   totalSaidas: number;
   formatCurrency: (value: number) => string;
 }
 
-export function FluxoCaixaCard({
-  fluxoSemanal,
+export function FluxoCaixaRealCard({
+  fluxoData,
   totalEntradas,
   totalSaidas,
   formatCurrency,
-}: FluxoCaixaCardProps) {
+}: FluxoCaixaRealCardProps) {
   const saldoLiquido = totalEntradas - totalSaidas;
-  const tendencia = saldoLiquido >= 0 ? "positiva" : "negativa";
+  const isPositivo = saldoLiquido >= 0;
 
   return (
     <Card className="overflow-hidden">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-primary" />
-            Fluxo de Caixa Semanal
+            <TrendingUp className="h-4 w-4 text-success" />
+            Fluxo de Caixa Real
             <TooltipProvider>
               <UITooltip delayDuration={300}>
                 <TooltipTrigger asChild>
@@ -46,21 +46,22 @@ export function FluxoCaixaCard({
                     <HelpCircle className="h-3.5 w-3.5" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[280px] text-xs">
-                  <p className="font-medium mb-1">Fluxo de Caixa Semanal</p>
-                  <p><strong>Entradas:</strong> Aportes de investidores + Saques de bookmakers</p>
-                  <p><strong>Saídas:</strong> Depósitos em bookmakers + Custos + Despesas administrativas</p>
-                  <p><strong>Saldo:</strong> Diferença entre entradas e saídas das últimas 8 semanas</p>
+                <TooltipContent side="top" className="max-w-[320px] text-xs">
+                  <p className="font-medium mb-1">Fluxo de Caixa Real</p>
+                  <p className="mb-2">Mostra apenas movimentações que impactam o P&L real.</p>
+                  <p><strong>Entradas:</strong> Aportes de investidores, receitas realizadas, saques de bookmakers</p>
+                  <p><strong>Saídas:</strong> Custos operacionais, despesas administrativas, pagamentos a parceiros/operadores</p>
+                  <p className="mt-2 text-muted-foreground italic">Não inclui depósitos em bookmakers (realocação patrimonial)</p>
                 </TooltipContent>
               </UITooltip>
             </TooltipProvider>
           </CardTitle>
           <div className={cn(
-            "flex items-center gap-1.5 text-xs font-medium",
-            tendencia === "positiva" ? "text-success" : "text-destructive"
+            "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full",
+            isPositivo ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
           )}>
-            {tendencia === "positiva" ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-            {tendencia === "positiva" ? "Tendência Positiva" : "Tendência Negativa"}
+            {isPositivo ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+            {isPositivo ? "Gerando Caixa" : "Queimando Caixa"}
           </div>
         </div>
       </CardHeader>
@@ -69,37 +70,37 @@ export function FluxoCaixaCard({
         <div className="grid grid-cols-3 gap-3">
           <div className="p-3 bg-success/5 border border-success/20 rounded-lg text-center">
             <ArrowUpCircle className="h-4 w-4 text-success mx-auto mb-1" />
-            <p className="text-[10px] text-muted-foreground uppercase">Entradas</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Entradas Reais</p>
             <p className="text-sm font-bold text-success">{formatCurrency(totalEntradas)}</p>
           </div>
           <div className="p-3 bg-destructive/5 border border-destructive/20 rounded-lg text-center">
             <ArrowDownCircle className="h-4 w-4 text-destructive mx-auto mb-1" />
-            <p className="text-[10px] text-muted-foreground uppercase">Saídas</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Saídas Reais</p>
             <p className="text-sm font-bold text-destructive">{formatCurrency(totalSaidas)}</p>
           </div>
           <div className={cn(
             "p-3 border rounded-lg text-center",
-            saldoLiquido >= 0 ? "bg-primary/5 border-primary/20" : "bg-destructive/5 border-destructive/20"
+            isPositivo ? "bg-primary/5 border-primary/20" : "bg-destructive/5 border-destructive/20"
           )}>
-            {saldoLiquido >= 0 ? <TrendingUp className="h-4 w-4 text-primary mx-auto mb-1" /> : <TrendingDown className="h-4 w-4 text-destructive mx-auto mb-1" />}
-            <p className="text-[10px] text-muted-foreground uppercase">Saldo</p>
-            <p className={cn("text-sm font-bold", saldoLiquido >= 0 ? "text-primary" : "text-destructive")}>
+            {isPositivo ? <TrendingUp className="h-4 w-4 text-primary mx-auto mb-1" /> : <TrendingDown className="h-4 w-4 text-destructive mx-auto mb-1" />}
+            <p className="text-[10px] text-muted-foreground uppercase">Saldo Real</p>
+            <p className={cn("text-sm font-bold", isPositivo ? "text-primary" : "text-destructive")}>
               {formatCurrency(saldoLiquido)}
             </p>
           </div>
         </div>
 
         {/* Chart */}
-        {fluxoSemanal.length > 0 && (
-          <div className="h-[140px]">
+        {fluxoData.length > 0 && (
+          <div className="h-[120px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={fluxoSemanal} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
+              <AreaChart data={fluxoData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="colorEntradasSemanal" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="colorEntradasReal" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient id="colorSaidasSemanal" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="colorSaidasReal" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
                   </linearGradient>
@@ -130,14 +131,14 @@ export function FluxoCaixaCard({
                   dataKey="entradas"
                   stroke="hsl(var(--success))"
                   strokeWidth={2}
-                  fill="url(#colorEntradasSemanal)"
+                  fill="url(#colorEntradasReal)"
                 />
                 <Area
                   type="monotone"
                   dataKey="saidas"
                   stroke="hsl(var(--destructive))"
                   strokeWidth={2}
-                  fill="url(#colorSaidasSemanal)"
+                  fill="url(#colorSaidasReal)"
                 />
               </AreaChart>
             </ResponsiveContainer>

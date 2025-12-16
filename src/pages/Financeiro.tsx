@@ -19,13 +19,8 @@ import {
   Wallet,
   TrendingUp,
   TrendingDown,
-  Users,
-  Gift,
-  Banknote,
-  ArrowUpRight,
   Loader2,
   BarChart3,
-  PieChart,
   Calendar,
   History,
   HelpCircle,
@@ -43,31 +38,32 @@ import {
 } from "@/components/ui/popover";
 import {
   ResponsiveContainer,
-  AreaChart,
-  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
-  PieChart as RechartsPie,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
   ComposedChart,
   Line,
+  Bar,
 } from "recharts";
 import { format, parseISO, subMonths, subWeeks, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isWithinInterval, getWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
 import { DespesaAdministrativaDialog } from "@/components/financeiro/DespesaAdministrativaDialog";
-import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { SaudeFinanceiraCard } from "@/components/financeiro/SaudeFinanceiraCard";
 import { RentabilidadeCaptacaoCard } from "@/components/financeiro/RentabilidadeCaptacaoCard";
 import { HistoricoDespesasAdmin } from "@/components/financeiro/HistoricoDespesasAdmin";
-import { FluxoCaixaCard } from "@/components/financeiro/FluxoCaixaCard";
 import { ComposicaoCustosCard } from "@/components/financeiro/ComposicaoCustosCard";
+// Novos cards CFO
+import { FluxoCaixaRealCard, FluxoCaixaRealData } from "@/components/financeiro/FluxoCaixaRealCard";
+import { MovimentacaoCapitalCard } from "@/components/financeiro/MovimentacaoCapitalCard";
+import { CustoSustentacaoCard } from "@/components/financeiro/CustoSustentacaoCard";
+import { BurnRateCard } from "@/components/financeiro/BurnRateCard";
+import { RunwayCard } from "@/components/financeiro/RunwayCard";
+import { EquilibrioOperacionalCard } from "@/components/financeiro/EquilibrioOperacionalCard";
+import { EficienciaCapitalCard } from "@/components/financeiro/EficienciaCapitalCard";
+import { MapaPatrimonioCard } from "@/components/financeiro/MapaPatrimonioCard";
 
 interface CaixaFiat {
   moeda: string;
@@ -144,6 +140,14 @@ interface SaudeFinanceiraData {
   };
 }
 
+interface ContaParceiro {
+  saldo: number;
+}
+
+interface WalletParceiro {
+  saldo_usd: number;
+}
+
 export default function Financeiro() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -161,6 +165,8 @@ export default function Financeiro() {
   const [bookmakersSaldos, setBookmakersSaldos] = useState<BookmakerSaldo[]>([]);
   const [lucroOperacionalApostas, setLucroOperacionalApostas] = useState<number>(0);
   const [totalParceirosAtivos, setTotalParceirosAtivos] = useState<number>(0);
+  const [contasParceiros, setContasParceiros] = useState<ContaParceiro[]>([]);
+  const [walletsParceiros, setWalletsParceiros] = useState<WalletParceiro[]>([]);
   
   // Estados para compromissos pendentes de parcerias
   const [parceirosPendentes, setParceirosPendentes] = useState<{ valorTotal: number; count: number }>({ valorTotal: 0, count: 0 });
@@ -169,18 +175,18 @@ export default function Financeiro() {
   
   // Hook centralizado de cotações
   const cryptoSymbols = useMemo(() => caixaCrypto.map(c => c.coin), [caixaCrypto]);
-  const { cotacaoUSD, cryptoPrices, getCryptoUSDValue, getCryptoPrice, refreshAll: refreshCotacoes, loading: loadingCotacoes, lastUpdate, source } = useCotacoes(cryptoSymbols);
+  const { cotacaoUSD, getCryptoUSDValue, getCryptoPrice, refreshAll: refreshCotacoes, loading: loadingCotacoes, lastUpdate, source } = useCotacoes(cryptoSymbols);
 
   // Filtros de período
-  const [periodoPreset, setPeriodoPreset] = useState<string>("all");
+  const [periodoPreset, setPeriodoPreset] = useState<string>("1m");
   const [dataInicio, setDataInicio] = useState<string>("");
+  const [dataFim, setDataFim] = useState<string>("");
 
   // Dialog states
   const [kpiDialogOpen, setKpiDialogOpen] = useState(false);
   const [kpiType, setKpiType] = useState<KpiType>(null);
   const [despesaAdminDialogOpen, setDespesaAdminDialogOpen] = useState(false);
   const [editingDespesa, setEditingDespesa] = useState<DespesaAdministrativa | null>(null);
-  const [dataFim, setDataFim] = useState<string>("");
 
   useEffect(() => {
     checkAuth();
@@ -240,10 +246,11 @@ export default function Financeiro() {
         bookmakersResult,
         apostasLucroResult,
         parceirosAtivosResult,
-        // Dados para cálculo de compromissos pendentes de parcerias
         parceriasParceiroResult,
         parceriasComissaoResult,
         acordosIndicadorResult,
+        contasParceirosResult,
+        walletsParceirosResult,
       ] = await Promise.all([
         supabase.from("v_saldo_caixa_fiat").select("*"),
         supabase.from("v_saldo_caixa_crypto").select("*"),
@@ -258,25 +265,24 @@ export default function Financeiro() {
         supabase.from("bookmakers").select("saldo_atual, saldo_freebet, saldo_irrecuperavel, status").in("status", ["ativo", "ATIVO", "EM_USO", "AGUARDANDO_SAQUE"]),
         supabase.from("apostas").select("lucro_prejuizo").not("resultado", "is", null),
         supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("status", "ativo"),
-        // Parcerias ativas com valor_parceiro > 0 e não isentas
         supabase
           .from("parcerias")
           .select("id, valor_parceiro, origem_tipo, status, custo_aquisicao_isento")
           .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
           .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
           .gt("valor_parceiro", 0),
-        // Parcerias com comissão pendente
         supabase
           .from("parcerias")
           .select("id, valor_comissao_indicador, comissao_paga")
           .eq("comissao_paga", false)
           .not("valor_comissao_indicador", "is", null)
           .gt("valor_comissao_indicador", 0),
-        // Acordos de indicadores ativos
         supabase
           .from("indicador_acordos")
           .select("indicador_id, meta_parceiros, valor_bonus")
           .eq("ativo", true),
+        supabase.from("v_saldo_parceiro_contas").select("saldo"),
+        supabase.from("v_saldo_parceiro_wallets").select("saldo_usd"),
       ]);
 
       if (fiatResult.error) throw fiatResult.error;
@@ -302,6 +308,8 @@ export default function Financeiro() {
       setPagamentosOperadorPendentes(pagamentosOpPendentesResult.data || []);
       setMovimentacoesIndicacao(movIndicacaoResult.data || []);
       setBookmakersSaldos(bookmakersResult.data || []);
+      setContasParceiros(contasParceirosResult.data || []);
+      setWalletsParceiros(walletsParceirosResult.data || []);
       
       // Calcular lucro operacional das apostas
       const lucroTotal = (apostasLucroResult.data || []).reduce((acc: number, a: { lucro_prejuizo: number | null }) => 
@@ -314,7 +322,7 @@ export default function Financeiro() {
       // ========== CÁLCULO DE COMPROMISSOS PENDENTES DE PARCERIAS ==========
       const allMovimentacoes = movIndicacaoResult.data || [];
       
-      // 1. Parceiros pendentes: parcerias que não receberam PAGTO_PARCEIRO confirmado
+      // 1. Parceiros pendentes
       const parceriasPagas = allMovimentacoes
         .filter((m: any) => m.tipo === "PAGTO_PARCEIRO" && m.parceria_id)
         .map((m: any) => m.parceria_id);
@@ -323,16 +331,15 @@ export default function Financeiro() {
       const valorParceirosPendentes = parceirosPendentesCalc.reduce((acc: number, p: any) => acc + (p.valor_parceiro || 0), 0);
       setParceirosPendentes({ valorTotal: valorParceirosPendentes, count: parceirosPendentesCalc.length });
       
-      // 2. Comissões pendentes: parcerias com comissao_paga = false
+      // 2. Comissões pendentes
       const comissoesPendentesCalc = parceriasComissaoResult.data || [];
       const valorComissoesPendentes = comissoesPendentesCalc.reduce((acc: number, p: any) => acc + (p.valor_comissao_indicador || 0), 0);
       setComissoesPendentes({ valorTotal: valorComissoesPendentes, count: comissoesPendentesCalc.length });
       
-      // 3. Bônus pendentes: indicadores que atingiram meta mas não receberam bônus
+      // 3. Bônus pendentes
       const custosData = custosResult.data || [];
       const acordosData = acordosIndicadorResult.data || [];
       
-      // Contar parceiros por indicador
       const indicadorStats: Record<string, number> = {};
       custosData.forEach((c: any) => {
         if (c.indicador_id) {
@@ -340,7 +347,6 @@ export default function Financeiro() {
         }
       });
       
-      // Contar bônus já pagos por indicador
       const bonusPagosPorIndicador: Record<string, number> = {};
       allMovimentacoes
         .filter((m: any) => m.tipo === "BONUS_INDICADOR" && m.indicador_id)
@@ -348,7 +354,6 @@ export default function Financeiro() {
           bonusPagosPorIndicador[m.indicador_id] = (bonusPagosPorIndicador[m.indicador_id] || 0) + 1;
         });
       
-      // Calcular bônus pendentes
       let totalBonusPendente = 0;
       let countBonusPendente = 0;
       acordosData.forEach((acordo: any) => {
@@ -412,65 +417,217 @@ export default function Financeiro() {
   const filteredDespesasAdmin = filterByPeriod(despesasAdmin, "data_despesa");
   const filteredPagamentosOp = filterByPeriod(pagamentosOperador, "data_pagamento") as PagamentoOperador[];
 
-  // Calculate KPIs
+  // ==================== CÁLCULOS CORRIGIDOS ====================
+  
+  // Saldos base
   const saldoBRL = caixaFiat.find(f => f.moeda === "BRL")?.saldo || 0;
   const saldoUSD = caixaFiat.find(f => f.moeda === "USD")?.saldo || 0;
-  // Usar cotações em tempo real para crypto
   const totalCryptoUSD = caixaCrypto.reduce((acc, c) => {
     return acc + getCryptoUSDValue(c.coin, c.saldo_coin, c.saldo_usd);
   }, 0);
 
-  // Custos de Captação - usando movimentacoes_indicacao como fonte única (pagamentos efetivos)
-  // Aquisição = PAGTO_PARCEIRO + PAGTO_FORNECEDOR
+  // Capital Operacional (Caixa = BRL + USD + Crypto convertidos)
+  const capitalOperacional = saldoBRL + (saldoUSD * cotacaoUSD) + (totalCryptoUSD * cotacaoUSD);
+
+  // Saldo em Bookmakers (capital em operação)
+  const saldoBookmakers = bookmakersSaldos.reduce((acc, b) => {
+    return acc + (b.saldo_atual || 0) - (b.saldo_irrecuperavel || 0);
+  }, 0);
+
+  // Saldos em contas de parceiros e wallets
+  const totalContasParceiros = contasParceiros.reduce((acc, c) => acc + (c.saldo || 0), 0);
+  const totalWalletsParceiros = walletsParceiros.reduce((acc, w) => acc + ((w.saldo_usd || 0) * cotacaoUSD), 0);
+
+  // ==================== CUSTOS REAIS (impactam P&L) ====================
+  
+  // Custos de Aquisição = PAGTO_PARCEIRO + PAGTO_FORNECEDOR
   const totalCustosAquisicao = filteredDespesas
     .filter(d => d.tipo === "PAGTO_PARCEIRO" || d.tipo === "PAGTO_FORNECEDOR")
     .reduce((acc, d) => acc + d.valor, 0);
   
-  // Indicação = COMISSAO_INDICADOR + BONUS_INDICADOR
+  // Custos de Indicação = COMISSAO_INDICADOR + BONUS_INDICADOR
   const totalComissoes = filteredDespesas.filter(d => d.tipo === "COMISSAO_INDICADOR").reduce((acc, d) => acc + d.valor, 0);
   const totalBonus = filteredDespesas.filter(d => d.tipo === "BONUS_INDICADOR").reduce((acc, d) => acc + d.valor, 0);
   const totalDespesasIndicacao = totalComissoes + totalBonus;
 
-  // Custos orçamentários (para análise de composição, não soma no total)
-  const custoIndicadores = filteredCustos.reduce((acc, c) => acc + (c.valor_indicador || 0), 0);
-  const custoParceiros = filteredCustos.reduce((acc, c) => acc + (c.valor_parceiro || 0), 0);
-  const custoFornecedores = filteredCustos.reduce((acc, c) => acc + (c.valor_fornecedor || 0), 0);
-
+  // Custos Operacionais Totais (Aquisição + Indicação)
+  const totalCustosOperacionais = totalCustosAquisicao + totalDespesasIndicacao;
+  
   // Despesas administrativas
   const totalDespesasAdmin = filteredDespesasAdmin.reduce((acc, d) => acc + d.valor, 0);
 
   // Pagamentos de operadores
   const totalPagamentosOperadores = filteredPagamentosOp.reduce((acc, p) => acc + p.valor, 0);
 
-  // Custos operacionais (Aquisição + Indicação) - usando apenas pagamentos efetivos
-  const totalCustosOperacionais = totalCustosAquisicao + totalDespesasIndicacao;
+  // ==================== FLUXO DE CAIXA REAL (CORRIGIDO) ====================
+  // Separa MOVIMENTAÇÃO DE CAPITAL (depósitos/saques bookmakers) de FLUXO REAL
   
-  // Despesas administrativas totais (infraestrutura + operadores)
-  const totalDespesasAdminCompleto = totalDespesasAdmin + totalPagamentosOperadores;
+  const getFluxoCaixaRealData = (): FluxoCaixaRealData[] => {
+    const weeks: { label: string; weekStart: Date; weekEnd: Date }[] = [];
+    
+    for (let i = 7; i >= 0; i--) {
+      const weekDate = subWeeks(new Date(), i);
+      const weekStart = startOfWeek(weekDate, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(weekDate, { weekStartsOn: 1 });
+      const weekNumber = getWeek(weekStart, { weekStartsOn: 1 });
+      weeks.push({
+        label: `Sem ${weekNumber}`,
+        weekStart,
+        weekEnd,
+      });
+    }
+    
+    return weeks.map(w => {
+      // ENTRADAS REAIS: Aportes de investidores, receitas (saques de bookmaker representam lucro realizado)
+      const entradasReais = cashLedger
+        .filter(l => {
+          if (l.moeda !== "BRL") return false;
+          // Entradas reais: APORTE_FINANCEIRO e SAQUE (lucro realizado)
+          if (l.tipo_transacao !== "APORTE_FINANCEIRO" && l.tipo_transacao !== "SAQUE") return false;
+          const dataTransacao = parseISO(l.data_transacao);
+          return isWithinInterval(dataTransacao, { start: w.weekStart, end: w.weekEnd });
+        })
+        .reduce((acc, l) => acc + l.valor, 0);
+      
+      // SAÍDAS REAIS: Custos operacionais + Despesas admin + Pagamentos
+      // NÃO inclui depósitos em bookmakers (realocação patrimonial)
+      const custosSemana = despesas
+        .filter(d => {
+          if (!d.data_movimentacao) return false;
+          const dataMovimentacao = parseISO(d.data_movimentacao);
+          return isWithinInterval(dataMovimentacao, { start: w.weekStart, end: w.weekEnd });
+        })
+        .reduce((acc, d) => acc + d.valor, 0);
+      
+      const despesasAdminSemana = despesasAdmin
+        .filter(d => {
+          if (!d.data_despesa) return false;
+          const dataDespesa = parseISO(d.data_despesa);
+          return isWithinInterval(dataDespesa, { start: w.weekStart, end: w.weekEnd });
+        })
+        .reduce((acc, d) => acc + d.valor, 0);
 
-  // Resultado operacional (saques - depósitos em BRL)
-  const resultadoOperacional = filteredLedger
-    .filter(l => l.moeda === "BRL")
-    .reduce((acc, l) => {
-      if (l.tipo_transacao === "SAQUE") return acc + l.valor;
-      if (l.tipo_transacao === "DEPOSITO") return acc - l.valor;
-      return acc;
-    }, 0);
+      const pagamentosOpSemana = pagamentosOperador
+        .filter(p => {
+          if (!p.data_pagamento) return false;
+          const dataPagamento = parseISO(p.data_pagamento);
+          return isWithinInterval(dataPagamento, { start: w.weekStart, end: w.weekEnd });
+        })
+        .reduce((acc, p) => acc + p.valor, 0);
+      
+      const saidasReais = custosSemana + despesasAdminSemana + pagamentosOpSemana;
+      
+      return {
+        label: w.label,
+        entradas: entradasReais,
+        saidas: saidasReais,
+        saldo: entradasReais - saidasReais,
+      };
+    });
+  };
 
-  // Capital e Margem líquida corrigida (usando cotação em tempo real)
-  const capitalOperacional = saldoBRL + (saldoUSD * cotacaoUSD) + (totalCryptoUSD * cotacaoUSD);
-  const margemLiquida = capitalOperacional - totalCustosOperacionais - totalDespesasAdminCompleto;
-  const margemPercent = capitalOperacional > 0 ? (margemLiquida / capitalOperacional) * 100 : 0;
+  const fluxoCaixaRealData = getFluxoCaixaRealData();
+  const totalEntradasReais = fluxoCaixaRealData.reduce((acc, f) => acc + f.entradas, 0);
+  const totalSaidasReais = fluxoCaixaRealData.reduce((acc, f) => acc + f.saidas, 0);
 
-  // Chart data - Distribution
-  const pieData = [
-    { name: "Indicadores", value: custoIndicadores, color: "hsl(var(--chart-1))" },
-    { name: "Parceiros", value: custoParceiros, color: "hsl(var(--chart-2))" },
-    { name: "Fornecedores", value: custoFornecedores, color: "hsl(var(--chart-3))" },
-  ].filter(d => d.value > 0);
+  // ==================== MOVIMENTAÇÃO DE CAPITAL (separado) ====================
+  
+  // Depósitos em bookmakers no período (realocação, não custo)
+  const depositosBookmakersPeriodo = filteredLedger
+    .filter(l => l.moeda === "BRL" && l.tipo_transacao === "DEPOSITO")
+    .reduce((acc, l) => acc + l.valor, 0);
 
-  // Monthly evolution data (últimos 12 meses)
-  const getMonthlyData = () => {
+  // Saques de bookmakers no período
+  const saquesBookmakersPeriodo = filteredLedger
+    .filter(l => l.moeda === "BRL" && l.tipo_transacao === "SAQUE")
+    .reduce((acc, l) => acc + l.valor, 0);
+
+  // ==================== MÉTRICAS CFO ====================
+  
+  // Custo de Sustentação = Custos Operacionais + Despesas Admin + Operadores
+  const custoSustentacao = totalCustosOperacionais + totalDespesasAdmin + totalPagamentosOperadores;
+
+  // Burn Rate (baseado em período de 1 mês = período filtrado padrão)
+  const burnRateMensal = totalSaidasReais;
+  const burnRateSemanal = burnRateMensal / 4;
+
+  // Entradas mensais (aportes + saques realizados)
+  const entradasMensais = totalEntradasReais;
+
+  // Liquidez Imediata = Capital Operacional (caixa disponível agora)
+  const liquidezImediata = capitalOperacional;
+
+  // ==================== COMPOSIÇÃO DE CUSTOS ====================
+  
+  const composicaoCustos = [
+    { name: "Custos Aquisição", value: totalCustosAquisicao, color: "#3B82F6" },
+    { name: "Comissões", value: totalComissoes, color: "#22C55E" },
+    { name: "Bônus", value: totalBonus, color: "#F59E0B" },
+    { name: "Infraestrutura", value: totalDespesasAdmin, color: "#8B5CF6" },
+    { name: "Operadores", value: totalPagamentosOperadores, color: "#06B6D4" },
+  ].filter(c => c.value > 0);
+
+  // Total período anterior
+  const getMesAnteriorCustos = () => {
+    const mesAnterior = subMonths(new Date(), 1);
+    const keyAnterior = format(mesAnterior, "yyyy-MM");
+    
+    const custosAnt = despesas
+      .filter(d => d.data_movimentacao && format(parseISO(d.data_movimentacao), "yyyy-MM") === keyAnterior)
+      .reduce((acc, d) => acc + d.valor, 0);
+    
+    const despesasAdmAnt = despesasAdmin
+      .filter(d => d.data_despesa && format(parseISO(d.data_despesa), "yyyy-MM") === keyAnterior)
+      .reduce((acc, d) => acc + d.valor, 0);
+    
+    const opAnt = pagamentosOperador
+      .filter(p => p.data_pagamento && format(parseISO(p.data_pagamento), "yyyy-MM") === keyAnterior)
+      .reduce((acc, p) => acc + p.valor, 0);
+    
+    return custosAnt + despesasAdmAnt + opAnt;
+  };
+
+  const totalCustosAnterior = getMesAnteriorCustos();
+
+  // ==================== SAÚDE FINANCEIRA ====================
+  
+  const compromissosPendentesData = {
+    despesasAdmin: despesasAdminPendentes.reduce((acc, d) => acc + d.valor, 0),
+    pagamentosOperador: pagamentosOperadorPendentes.reduce((acc, p) => acc + p.valor, 0),
+    pagamentosParcerias: parceirosPendentes.valorTotal,
+    comissoesIndicador: comissoesPendentes.valorTotal,
+    bonusIndicador: bonusPendentes.valorTotal,
+    total: 0,
+  };
+  compromissosPendentesData.total = 
+    compromissosPendentesData.despesasAdmin + 
+    compromissosPendentesData.pagamentosOperador + 
+    compromissosPendentesData.pagamentosParcerias + 
+    compromissosPendentesData.comissoesIndicador + 
+    compromissosPendentesData.bonusIndicador;
+
+  const compromissosQuitadosData = {
+    custosOperacionais: totalCustosOperacionais,
+    despesasAdmin: totalDespesasAdmin,
+    pagamentosOperador: totalPagamentosOperadores,
+    total: totalCustosOperacionais + totalDespesasAdmin + totalPagamentosOperadores,
+  };
+
+  const saudeFinanceiraData: SaudeFinanceiraData = {
+    liquidezImediata: capitalOperacional,
+    reservaEstrategica: saldoBookmakers,
+    compromissosPendentes: compromissosPendentesData,
+    compromissosQuitados: compromissosQuitadosData,
+  };
+
+  // ==================== RENTABILIDADE ====================
+  
+  const totalLucroParceiros = lucroOperacionalApostas > 0 ? lucroOperacionalApostas : 0;
+  const diasMedioAquisicao = 60;
+
+  // ==================== HISTÓRICO MENSAL ====================
+  
+  const getHistoricoMensal = () => {
     const months: Record<string, { mes: string; label: string; custos: number; despesas: number; despesasAdmin: number; resultado: number; patrimonio: number }> = {};
     
     for (let i = 11; i >= 0; i--) {
@@ -527,7 +684,6 @@ export default function Financeiro() {
       }
     });
 
-    // Calcular patrimônio acumulado
     let patrimonioAcumulado = 0;
     const monthsArray = Object.values(months);
     monthsArray.forEach((m, index) => {
@@ -535,63 +691,7 @@ export default function Financeiro() {
       monthsArray[index].patrimonio = patrimonioAcumulado;
     });
 
-    return monthsArray;
-  };
-
-  const monthlyData = getMonthlyData();
-
-  // Evolução mensal das despesas administrativas por categoria
-  const getDespesasAdminMensais = () => {
-    const months: Record<string, { label: string; total: number; categorias: Record<string, number> }> = {};
-    
-    for (let i = 5; i >= 0; i--) {
-      const date = subMonths(new Date(), i);
-      const key = format(date, "yyyy-MM");
-      months[key] = { label: format(date, "MMM/yy", { locale: ptBR }), total: 0, categorias: {} };
-    }
-
-    despesasAdmin.forEach(d => {
-      if (d.data_despesa) {
-        const key = format(parseISO(d.data_despesa), "yyyy-MM");
-        if (months[key]) {
-          months[key].categorias[d.categoria] = (months[key].categorias[d.categoria] || 0) + d.valor;
-          months[key].total += d.valor;
-        }
-      }
-    });
-
-    return Object.entries(months).map(([mes, data]) => ({ 
-      mes, 
-      label: data.label, 
-      total: data.total,
-      ...data.categorias 
-    }));
-  };
-
-  const despesasAdminMensais = getDespesasAdminMensais();
-
-  // Categorias únicas das despesas admin para cores do gráfico e passar ao dialog
-  const categoriasUnicas = [...new Set(despesasAdmin.map(d => d.categoria))];
-  const coresCategoria: Record<string, string> = {
-    ENERGIA: "hsl(var(--chart-1))",
-    INTERNET_MOVEL: "hsl(var(--chart-2))",
-    ALUGUEL: "hsl(var(--chart-3))",
-    DARF: "hsl(var(--chart-4))",
-    CONTABILIDADE: "hsl(var(--chart-5))",
-    OUTROS: "hsl(180 60% 50%)",
-  };
-
-  // Bar chart - comparison (usando cotacaoUSD em tempo real)
-  const comparisonData = [
-    { name: "Caixa FIAT", valor: saldoBRL + (saldoUSD * cotacaoUSD) },
-    { name: "Caixa Crypto", valor: totalCryptoUSD * cotacaoUSD },
-    { name: "Custos Operacionais", valor: totalCustosOperacionais },
-    { name: "Despesas Admin.", valor: totalDespesasAdminCompleto },
-  ];
-
-  // Histórico mensal detalhado
-  const getHistoricoMensal = () => {
-    return monthlyData.map(m => ({
+    return monthsArray.map(m => ({
       ...m,
       lucroLiquido: m.resultado - m.custos - m.despesas - m.despesasAdmin,
       totalCustos: m.custos + m.despesas + m.despesasAdmin,
@@ -599,154 +699,6 @@ export default function Financeiro() {
   };
 
   const historicoMensal = getHistoricoMensal();
-
-  // ==================== DADOS PARA NOVOS COMPONENTES ====================
-
-  // ===== SAÚDE FINANCEIRA - NOVO MODELO =====
-  // Saldo total em bookmakers (capital recuperável)
-  const saldoBookmakers = bookmakersSaldos.reduce((acc, b) => {
-    return acc + (b.saldo_atual || 0) - (b.saldo_irrecuperavel || 0);
-  }, 0);
-
-  // Compromissos PENDENTES (ainda não pagos - representam risco futuro)
-  // Usando os valores calculados durante o fetchData (parceirosPendentes, comissoesPendentes, bonusPendentes)
-  const compromissosPendentesData = {
-    despesasAdmin: despesasAdminPendentes.reduce((acc, d) => acc + d.valor, 0),
-    pagamentosOperador: pagamentosOperadorPendentes.reduce((acc, p) => acc + p.valor, 0),
-    pagamentosParcerias: parceirosPendentes.valorTotal,
-    comissoesIndicador: comissoesPendentes.valorTotal,
-    bonusIndicador: bonusPendentes.valorTotal,
-    total: 0,
-  };
-  compromissosPendentesData.total = 
-    compromissosPendentesData.despesasAdmin + 
-    compromissosPendentesData.pagamentosOperador + 
-    compromissosPendentesData.pagamentosParcerias + 
-    compromissosPendentesData.comissoesIndicador + 
-    compromissosPendentesData.bonusIndicador;
-
-  // Compromissos JÁ QUITADOS (histórico - não impactam saúde financeira)
-  const compromissosQuitadosData = {
-    custosOperacionais: totalCustosOperacionais,
-    despesasAdmin: totalDespesasAdmin,
-    pagamentosOperador: totalPagamentosOperadores,
-    total: totalCustosOperacionais + totalDespesasAdmin + totalPagamentosOperadores,
-  };
-
-  // Dados consolidados para o card de saúde financeira
-  const saudeFinanceiraData: SaudeFinanceiraData = {
-    liquidezImediata: capitalOperacional,
-    reservaEstrategica: saldoBookmakers,
-    compromissosPendentes: compromissosPendentesData,
-    compromissosQuitados: compromissosQuitadosData,
-  };
-
-  // Custos mensais médios (últimos 3 meses) - para referência histórica
-  const custosMensaisMedia = monthlyData.slice(-3).reduce((acc, m) => 
-    acc + m.custos + m.despesas + m.despesasAdmin, 0) / 3;
-
-  // Dados para Fluxo de Caixa - SEMANAL (últimas 8 semanas)
-  const getFluxoCaixaData = () => {
-    const weeks: { label: string; weekStart: Date; weekEnd: Date }[] = [];
-    
-    // Gerar últimas 8 semanas
-    for (let i = 7; i >= 0; i--) {
-      const weekDate = subWeeks(new Date(), i);
-      const weekStart = startOfWeek(weekDate, { weekStartsOn: 1 }); // Segunda-feira
-      const weekEnd = endOfWeek(weekDate, { weekStartsOn: 1 }); // Domingo
-      const weekNumber = getWeek(weekStart, { weekStartsOn: 1 });
-      weeks.push({
-        label: `Sem ${weekNumber}`,
-        weekStart,
-        weekEnd,
-      });
-    }
-    
-    return weeks.map(w => {
-      // Entradas = Aportes de investidores + Saques de bookmaker
-      const entradasSemana = cashLedger
-        .filter(l => {
-          if (l.moeda !== "BRL") return false;
-          if (l.tipo_transacao !== "SAQUE" && l.tipo_transacao !== "APORTE_FINANCEIRO") return false;
-          const dataTransacao = parseISO(l.data_transacao);
-          return isWithinInterval(dataTransacao, { start: w.weekStart, end: w.weekEnd });
-        })
-        .reduce((acc, l) => acc + l.valor, 0);
-      
-      // Saídas = Depósitos em bookmaker + Custos + Despesas
-      const depositosSemana = cashLedger
-        .filter(l => {
-          if (l.moeda !== "BRL" || l.tipo_transacao !== "DEPOSITO") return false;
-          const dataTransacao = parseISO(l.data_transacao);
-          return isWithinInterval(dataTransacao, { start: w.weekStart, end: w.weekEnd });
-        })
-        .reduce((acc, l) => acc + l.valor, 0);
-      
-      const custosSemana = despesas
-        .filter(d => {
-          if (!d.data_movimentacao) return false;
-          const dataMovimentacao = parseISO(d.data_movimentacao);
-          return isWithinInterval(dataMovimentacao, { start: w.weekStart, end: w.weekEnd });
-        })
-        .reduce((acc, d) => acc + d.valor, 0);
-      
-      const despesasAdminSemana = despesasAdmin
-        .filter(d => {
-          if (!d.data_despesa) return false;
-          const dataDespesa = parseISO(d.data_despesa);
-          return isWithinInterval(dataDespesa, { start: w.weekStart, end: w.weekEnd });
-        })
-        .reduce((acc, d) => acc + d.valor, 0);
-      
-      const saidasSemana = depositosSemana + custosSemana + despesasAdminSemana;
-      
-      return {
-        label: w.label,
-        entradas: entradasSemana,
-        saidas: saidasSemana,
-        saldo: entradasSemana - saidasSemana,
-      };
-    });
-  };
-
-  const fluxoCaixaData = getFluxoCaixaData();
-  const totalEntradasPeriodo = fluxoCaixaData.reduce((acc, f) => acc + f.entradas, 0);
-  const totalSaidasPeriodo = fluxoCaixaData.reduce((acc, f) => acc + f.saidas, 0);
-
-  // Composição de Custos por categoria
-  const composicaoCustos = [
-    { name: "Custos Aquisição", value: totalCustosAquisicao, color: "#3B82F6" },
-    { name: "Comissões", value: totalComissoes, color: "#22C55E" },
-    { name: "Bônus", value: totalBonus, color: "#F59E0B" },
-    { name: "Infraestrutura", value: totalDespesasAdmin, color: "#8B5CF6" },
-    { name: "Operadores", value: totalPagamentosOperadores, color: "#06B6D4" },
-  ].filter(c => c.value > 0);
-
-  // Total período anterior (para comparativo)
-  const getMesAnteriorCustos = () => {
-    const mesAnterior = subMonths(new Date(), 1);
-    const keyAnterior = format(mesAnterior, "yyyy-MM");
-    
-    const custosAnt = despesas
-      .filter(d => d.data_movimentacao && format(parseISO(d.data_movimentacao), "yyyy-MM") === keyAnterior)
-      .reduce((acc, d) => acc + d.valor, 0);
-    
-    const despesasAdmAnt = despesasAdmin
-      .filter(d => d.data_despesa && format(parseISO(d.data_despesa), "yyyy-MM") === keyAnterior)
-      .reduce((acc, d) => acc + d.valor, 0);
-    
-    const opAnt = pagamentosOperador
-      .filter(p => p.data_pagamento && format(parseISO(p.data_pagamento), "yyyy-MM") === keyAnterior)
-      .reduce((acc, p) => acc + p.valor, 0);
-    
-    return custosAnt + despesasAdmAnt + opAnt;
-  };
-
-  const totalCustosAnterior = getMesAnteriorCustos();
-
-  // Rentabilidade - usando lucro parceiros do resultado operacional
-  const totalLucroParceiros = resultadoOperacional > 0 ? resultadoOperacional : 0;
-  const diasMedioAquisicao = 60; // Média padrão de parcerias
 
   if (loading) {
     return (
@@ -760,180 +712,49 @@ export default function Financeiro() {
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Visão Financeira</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard CFO</h1>
         <p className="text-muted-foreground">
-          Dashboard consolidado: Caixa Operacional + Despesas de Infraestrutura
+          Visão financeira estratégica: Liquidez, Custos e Sustentabilidade
         </p>
       </div>
 
-      {/* Main KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Capital Operacional */}
-        <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-1">
-              <CardTitle className="text-sm font-medium">Capital Operacional</CardTitle>
-              <button onClick={() => openKpiHelp("capital_operacional")} className="text-muted-foreground hover:text-foreground transition-colors">
-                <HelpCircle className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <Wallet className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{formatCurrency(capitalOperacional)}</div>
-            <div className="mt-2 space-y-1">
-              <p className="text-xs text-muted-foreground flex justify-between">
-                <span>BRL:</span>
-                <span className="font-medium">{formatCurrency(saldoBRL)}</span>
-              </p>
-              <p className="text-xs text-muted-foreground flex justify-between">
-                <span>USD:</span>
-                <span className="font-medium">${saldoUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })} <span className="text-muted-foreground/60">({formatCurrency(saldoUSD * cotacaoUSD)})</span></span>
-              </p>
-              <div className="text-xs text-muted-foreground flex justify-between items-center">
-                <span>CRYPTO:</span>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="font-medium flex items-center gap-1 hover:text-foreground transition-colors">
-                      ${totalCryptoUSD.toFixed(2)} <span className="text-muted-foreground/60">({formatCurrency(totalCryptoUSD * cotacaoUSD)})</span>
-                      <Info className="h-3 w-3" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-72" align="end">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-medium">Cotações em tempo real (Binance)</p>
-                        <button 
-                          onClick={refreshCotacoes} 
-                          className="text-muted-foreground hover:text-foreground transition-colors"
-                          disabled={loadingCotacoes}
-                        >
-                          <RefreshCw className={`h-3 w-3 ${loadingCotacoes ? 'animate-spin' : ''}`} />
-                        </button>
-                      </div>
-                      {lastUpdate && (
-                        <p className="text-[10px] text-muted-foreground">
-                          Atualizado: {format(lastUpdate, "HH:mm:ss", { locale: ptBR })}
-                        </p>
-                      )}
-                      <div className="space-y-1.5 pt-1 border-t border-border/50">
-                        {caixaCrypto.map(c => {
-                          const price = getCryptoPrice(c.coin);
-                          const usdValue = getCryptoUSDValue(c.coin, c.saldo_coin, c.saldo_usd);
-                          return (
-                            <div key={c.coin} className="flex items-center justify-between text-xs">
-                              <span className="font-mono">{c.coin}</span>
-                              <div className="text-right">
-                                <span className="text-muted-foreground">
-                                  {c.saldo_coin.toFixed(c.saldo_coin < 1 ? 6 : 4)} × 
-                                </span>
-                                <span className="font-medium ml-1">
-                                  ${price ? price.toFixed(price < 1 ? 6 : 2) : '—'}
-                                </span>
-                                <span className="text-primary ml-2">
-                                  = {formatCurrency(usdValue, "USD")}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            <p className="text-[10px] text-muted-foreground/50 mt-2 border-t border-border/30 pt-1 flex items-center justify-between">
-              <span>Cotação USD/BRL: R$ {cotacaoUSD.toFixed(4)} ({source.usd})</span>
-              {lastUpdate && (
-                <button 
-                  onClick={refreshCotacoes}
-                  className="flex items-center gap-1 hover:text-foreground transition-colors"
-                  disabled={loadingCotacoes}
-                >
-                  <RefreshCw className={`h-2.5 w-2.5 ${loadingCotacoes ? 'animate-spin' : ''}`} />
-                </button>
-              )}
-            </p>
-          </CardContent>
-        </Card>
+      {/* Filtros de Período */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Select value={periodoPreset} onValueChange={setPeriodoPreset}>
+          <SelectTrigger className="w-[190px] flex items-center">
+            <Calendar className="h-4 w-4 mr-2 shrink-0" />
+            <SelectValue placeholder="Período" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1m">Último mês</SelectItem>
+            <SelectItem value="3m">3 meses</SelectItem>
+            <SelectItem value="6m">6 meses</SelectItem>
+            <SelectItem value="12m">12 meses</SelectItem>
+            <SelectItem value="all">Todo período</SelectItem>
+          </SelectContent>
+        </Select>
 
-        {/* Custos Operacionais (Unificado: Aquisição + Despesas Indicação) */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-1">
-              <CardTitle className="text-sm font-medium">Custos Operacionais</CardTitle>
-              <button onClick={() => openKpiHelp("custos_operacionais")} className="text-muted-foreground hover:text-foreground transition-colors">
-                <HelpCircle className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">
-              {formatCurrency(totalCustosOperacionais)}
-            </div>
-            <div className="flex gap-2 mt-2 text-xs text-muted-foreground flex-wrap">
-              <span>Aquisição: {formatCurrency(totalCustosAquisicao)}</span>
-              <span>•</span>
-              <span>Indicação: {formatCurrency(totalDespesasIndicacao)}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Despesas Administrativas */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-1">
-              <CardTitle className="text-sm font-medium">Despesas Admin.</CardTitle>
-              <button onClick={() => openKpiHelp("despesas_administrativas")} className="text-muted-foreground hover:text-foreground transition-colors">
-                <HelpCircle className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-500">
-              {formatCurrency(totalDespesasAdminCompleto)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Infraestrutura + Operadores
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Margem Líquida */}
-        <Card className={margemLiquida >= 0 ? "border-success/30" : "border-destructive/30"}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-1">
-              <CardTitle className="text-sm font-medium">Margem Líquida</CardTitle>
-              <button onClick={() => openKpiHelp("margem_liquida")} className="text-muted-foreground hover:text-foreground transition-colors">
-                <HelpCircle className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            {margemLiquida >= 0 ? (
-              <TrendingUp className="h-4 w-4 text-success" />
-            ) : (
-              <TrendingDown className="h-4 w-4 text-destructive" />
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${margemLiquida >= 0 ? "text-success" : "text-destructive"}`}>
-              {formatCurrency(margemLiquida)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {margemPercent >= 0 ? "+" : ""}{margemPercent.toFixed(1)}% do capital
-            </p>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-2">
+          <DatePicker
+            value={dataInicio}
+            onChange={setDataInicio}
+            placeholder="Data início"
+          />
+          <span className="text-muted-foreground">até</span>
+          <DatePicker
+            value={dataFim}
+            onChange={setDataFim}
+            placeholder="Data fim"
+          />
+        </div>
       </div>
 
-      {/* Detailed Sections */}
+      {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
-            Visão Geral
+            Visão CFO
           </TabsTrigger>
           <TabsTrigger value="despesas" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
@@ -946,46 +767,80 @@ export default function Financeiro() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* Filtros de Período */}
-          <div className="flex flex-wrap items-center gap-3">
-            <Select value={periodoPreset} onValueChange={setPeriodoPreset}>
-              <SelectTrigger className="w-[190px] flex items-center">
-                <Calendar className="h-4 w-4 mr-2 shrink-0" />
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todo período</SelectItem>
-                <SelectItem value="1m">Último mês</SelectItem>
-                <SelectItem value="3m">3 meses</SelectItem>
-                <SelectItem value="6m">6 meses</SelectItem>
-                <SelectItem value="12m">12 meses</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <div className="flex items-center gap-2">
-              <DatePicker
-                value={dataInicio}
-                onChange={setDataInicio}
-                placeholder="Data início"
-              />
-              <span className="text-muted-foreground">até</span>
-              <DatePicker
-                value={dataFim}
-                onChange={setDataFim}
-                placeholder="Data fim"
-              />
-            </div>
+          {/* LINHA 1: Métricas Críticas - Runway e Equilíbrio */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <RunwayCard
+              liquidezImediata={liquidezImediata}
+              burnRateMensal={burnRateMensal}
+              formatCurrency={formatCurrency}
+            />
+            <EquilibrioOperacionalCard
+              lucroOperacional={lucroOperacionalApostas}
+              custoSustentacao={custoSustentacao}
+              formatCurrency={formatCurrency}
+            />
+            <EficienciaCapitalCard
+              lucroOperacional={lucroOperacionalApostas}
+              capitalEmBookmakers={saldoBookmakers}
+              formatCurrency={formatCurrency}
+            />
           </div>
 
-          {/* NOVOS COMPONENTES - Grid Principal */}
+          {/* LINHA 2: Fluxo de Caixa Real vs Movimentação de Capital */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Saúde Financeira */}
+            <FluxoCaixaRealCard
+              fluxoData={fluxoCaixaRealData}
+              totalEntradas={totalEntradasReais}
+              totalSaidas={totalSaidasReais}
+              formatCurrency={formatCurrency}
+            />
+            <MovimentacaoCapitalCard
+              depositosBookmakers={depositosBookmakersPeriodo}
+              saquesBookmakers={saquesBookmakersPeriodo}
+              capitalEmOperacao={saldoBookmakers}
+              formatCurrency={formatCurrency}
+            />
+          </div>
+
+          {/* LINHA 3: Custos e Burn Rate */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CustoSustentacaoCard
+              custosOperacionais={totalCustosOperacionais}
+              despesasAdministrativas={totalDespesasAdmin}
+              pagamentosOperadores={totalPagamentosOperadores}
+              formatCurrency={formatCurrency}
+            />
+            <BurnRateCard
+              burnRateMensal={burnRateMensal}
+              burnRateSemanal={burnRateSemanal}
+              entradasMensais={entradasMensais}
+              formatCurrency={formatCurrency}
+            />
+          </div>
+
+          {/* LINHA 4: Patrimônio e Composição */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <MapaPatrimonioCard
+              caixaOperacional={capitalOperacional}
+              saldoBookmakers={saldoBookmakers}
+              contasParceiros={totalContasParceiros}
+              walletsCrypto={totalWalletsParceiros}
+              formatCurrency={formatCurrency}
+            />
+            <ComposicaoCustosCard
+              categorias={composicaoCustos}
+              totalAtual={custoSustentacao}
+              totalAnterior={totalCustosAnterior}
+              formatCurrency={formatCurrency}
+            />
+          </div>
+
+          {/* LINHA 5: Saúde Financeira e Rentabilidade (cards existentes, menor destaque) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <SaudeFinanceiraCard
               saudeData={saudeFinanceiraData}
               formatCurrency={formatCurrency}
             />
-
-            {/* Rentabilidade da Captação */}
             <RentabilidadeCaptacaoCard
               totalLucroParceiros={totalLucroParceiros}
               totalCustosAquisicao={totalCustosOperacionais}
@@ -995,27 +850,7 @@ export default function Financeiro() {
               formatCurrency={formatCurrency}
             />
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Fluxo de Caixa Semanal */}
-            <FluxoCaixaCard
-              fluxoSemanal={fluxoCaixaData}
-              totalEntradas={totalEntradasPeriodo}
-              totalSaidas={totalSaidasPeriodo}
-              formatCurrency={formatCurrency}
-            />
-
-            {/* Composição de Custos */}
-            <ComposicaoCustosCard
-              categorias={composicaoCustos}
-              totalAtual={totalCustosOperacionais + totalDespesasAdminCompleto}
-              totalAnterior={totalCustosAnterior}
-              formatCurrency={formatCurrency}
-            />
-          </div>
-
         </TabsContent>
-
 
         {/* Tab: Despesas Administrativas */}
         <TabsContent value="despesas" className="space-y-6">
@@ -1151,7 +986,7 @@ export default function Financeiro() {
                 </div>
                 <div className="pt-3 border-t flex items-center justify-between font-bold text-lg">
                   <span>Total Geral</span>
-                  <span className="text-orange-500">{formatCurrency(totalDespesasAdminCompleto)}</span>
+                  <span className="text-orange-500">{formatCurrency(totalDespesasAdmin + totalPagamentosOperadores)}</span>
                 </div>
               </div>
             </CardContent>
@@ -1219,163 +1054,38 @@ export default function Financeiro() {
             </CardContent>
           </Card>
 
-          {/* KPIs do Período */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
-                    Resultado Operacional
-                  </CardTitle>
-                  <button
-                    onClick={() => openKpiHelp("resultado")}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <HelpCircle className="h-4 w-4" />
-                  </button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-xl font-bold ${resultadoOperacional >= 0 ? "text-success" : "text-destructive"}`}>
-                  {formatCurrency(resultadoOperacional)}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
-                    Custos Aquisição
-                  </CardTitle>
-                  <button
-                    onClick={() => openKpiHelp("custos")}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <HelpCircle className="h-4 w-4" />
-                  </button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold text-destructive">
-                  {formatCurrency(totalCustosAquisicao)}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
-                    Despesas Operacionais
-                  </CardTitle>
-                  <button
-                    onClick={() => openKpiHelp("despesas_operacionais")}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <HelpCircle className="h-4 w-4" />
-                  </button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold text-muted-foreground">
-                  {formatCurrency(totalDespesasIndicacao)}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
-                    Despesas Admin.
-                  </CardTitle>
-                  <button
-                    onClick={() => openKpiHelp("despesas_administrativas")}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <HelpCircle className="h-4 w-4" />
-                  </button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold text-chart-2">
-                  {formatCurrency(totalDespesasAdminCompleto)}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2 h-7 text-xs"
-                  onClick={() => setDespesaAdminDialogOpen(true)}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Adicionar
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className={resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao - totalDespesasAdminCompleto >= 0 ? "border-success/30" : "border-destructive/30"}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
-                    Lucro Líquido
-                  </CardTitle>
-                  <button
-                    onClick={() => openKpiHelp("lucro")}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <HelpCircle className="h-4 w-4" />
-                  </button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-xl font-bold ${resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao - totalDespesasAdminCompleto >= 0 ? "text-success" : "text-destructive"}`}>
-                  {formatCurrency(resultadoOperacional - totalCustosAquisicao - totalDespesasIndicacao - totalDespesasAdminCompleto)}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Tabela de Histórico Mensal */}
+          {/* Tabela Histórica */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Detalhamento Mês a Mês</CardTitle>
+              <CardTitle className="text-base">Detalhamento Mensal</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-2 font-medium">Mês</th>
-                      <th className="text-right py-3 px-2 font-medium">Resultado</th>
-                      <th className="text-right py-3 px-2 font-medium">Custos Aq.</th>
-                      <th className="text-right py-3 px-2 font-medium">Desp. Oper.</th>
-                      <th className="text-right py-3 px-2 font-medium">Desp. Admin.</th>
-                      <th className="text-right py-3 px-2 font-medium">Lucro Líquido</th>
-                      <th className="text-right py-3 px-2 font-medium">Patrimônio</th>
+                    <tr className="border-b bg-muted/30">
+                      <th className="text-left py-3 px-4 font-medium">Mês</th>
+                      <th className="text-right py-3 px-4 font-medium">Resultado</th>
+                      <th className="text-right py-3 px-4 font-medium">Custos</th>
+                      <th className="text-right py-3 px-4 font-medium">Despesas</th>
+                      <th className="text-right py-3 px-4 font-medium">Lucro Líq.</th>
+                      <th className="text-right py-3 px-4 font-medium">Patrimônio Acum.</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {historicoMensal.map((mes, index) => (
-                      <tr key={mes.mes} className="border-b border-border/50 hover:bg-muted/30">
-                        <td className="py-3 px-2 font-medium">{mes.label}</td>
-                        <td className={`text-right py-3 px-2 ${mes.resultado >= 0 ? "text-success" : "text-destructive"}`}>
-                          {formatCurrency(mes.resultado)}
+                    {historicoMensal.map((m) => (
+                      <tr key={m.mes} className="border-b border-border/50 hover:bg-muted/30">
+                        <td className="py-3 px-4 font-medium">{m.label}</td>
+                        <td className={`py-3 px-4 text-right ${m.resultado >= 0 ? 'text-success' : 'text-destructive'}`}>
+                          {formatCurrency(m.resultado)}
                         </td>
-                        <td className="text-right py-3 px-2 text-destructive">
-                          {mes.custos > 0 ? `-${formatCurrency(mes.custos)}` : formatCurrency(0)}
+                        <td className="py-3 px-4 text-right text-destructive">{formatCurrency(m.custos)}</td>
+                        <td className="py-3 px-4 text-right text-muted-foreground">{formatCurrency(m.despesas + m.despesasAdmin)}</td>
+                        <td className={`py-3 px-4 text-right font-medium ${m.lucroLiquido >= 0 ? 'text-success' : 'text-destructive'}`}>
+                          {formatCurrency(m.lucroLiquido)}
                         </td>
-                        <td className="text-right py-3 px-2 text-muted-foreground">
-                          {mes.despesas > 0 ? `-${formatCurrency(mes.despesas)}` : formatCurrency(0)}
-                        </td>
-                        <td className="text-right py-3 px-2 text-chart-2">
-                          {mes.despesasAdmin > 0 ? `-${formatCurrency(mes.despesasAdmin)}` : formatCurrency(0)}
-                        </td>
-                        <td className={`text-right py-3 px-2 font-medium ${mes.lucroLiquido >= 0 ? "text-success" : "text-destructive"}`}>
-                          {formatCurrency(mes.lucroLiquido)}
-                        </td>
-                        <td className={`text-right py-3 px-2 font-bold ${mes.patrimonio >= 0 ? "text-primary" : "text-destructive"}`}>
-                          {formatCurrency(mes.patrimonio)}
+                        <td className={`py-3 px-4 text-right font-semibold ${m.patrimonio >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                          {formatCurrency(m.patrimonio)}
                         </td>
                       </tr>
                     ))}
@@ -1396,13 +1106,9 @@ export default function Financeiro() {
 
       <DespesaAdministrativaDialog
         open={despesaAdminDialogOpen}
-        onOpenChange={(open) => {
-          setDespesaAdminDialogOpen(open);
-          if (!open) setEditingDespesa(null);
-        }}
+        onOpenChange={setDespesaAdminDialogOpen}
         despesa={editingDespesa}
         onSuccess={fetchData}
-        categoriasExtras={categoriasUnicas}
       />
     </div>
   );
