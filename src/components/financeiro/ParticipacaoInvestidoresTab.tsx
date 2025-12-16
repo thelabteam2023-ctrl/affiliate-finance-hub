@@ -4,10 +4,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Users, CheckCircle2, Clock, TrendingUp } from "lucide-react";
+import { Loader2, Users, CheckCircle2, Clock, TrendingUp, Plus } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PagamentoParticipacaoDialog } from "@/components/projetos/PagamentoParticipacaoDialog";
+import { ParticipacaoManualDialog } from "./ParticipacaoManualDialog";
 
 interface Participacao {
   id: string;
@@ -38,6 +39,7 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
   const [participacoes, setParticipacoes] = useState<Participacao[]>([]);
   const [pagamentoDialogOpen, setPagamentoDialogOpen] = useState(false);
   const [selectedParticipacao, setSelectedParticipacao] = useState<Participacao | null>(null);
+  const [manualDialogOpen, setManualDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -79,6 +81,11 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
     onRefresh?.();
   };
 
+  const handleManualSuccess = () => {
+    fetchData();
+    onRefresh?.();
+  };
+
   const pendentes = participacoes.filter(p => p.status === "A_PAGAR");
   const pagas = participacoes.filter(p => p.status === "PAGO");
 
@@ -95,6 +102,15 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
 
   return (
     <div className="space-y-6">
+      {/* Header com botão */}
+      <div className="flex items-center justify-between">
+        <div />
+        <Button onClick={() => setManualDialogOpen(true)} size="sm">
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Participação Manual
+        </Button>
+      </div>
+
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -298,6 +314,13 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
           onSuccess={handlePagamentoSuccess}
         />
       )}
+
+      {/* Dialog de Participação Manual */}
+      <ParticipacaoManualDialog
+        open={manualDialogOpen}
+        onOpenChange={setManualDialogOpen}
+        onSuccess={handleManualSuccess}
+      />
     </div>
   );
 }
