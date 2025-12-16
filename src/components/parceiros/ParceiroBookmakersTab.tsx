@@ -16,6 +16,7 @@ interface ParceiroBookmakersTabProps {
   showSensitiveData: boolean;
   diasRestantes?: number | null;
   onCreateVinculo?: (parceiroId: string, bookmakerId: string) => void;
+  onDataChange?: () => void; // Called when data changes (status toggle, etc.)
 }
 
 interface BookmakerVinculado {
@@ -37,7 +38,7 @@ interface BookmakerCatalogo {
   status: string;
 }
 
-export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, diasRestantes, onCreateVinculo }: ParceiroBookmakersTabProps) {
+export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, diasRestantes, onCreateVinculo, onDataChange }: ParceiroBookmakersTabProps) {
   const [bookmakersVinculados, setBookmakersVinculados] = useState<BookmakerVinculado[]>([]);
   const [bookmakersDisponiveis, setBookmakersDisponiveis] = useState<BookmakerCatalogo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,6 +134,8 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, diasResta
       });
 
       fetchBookmakers();
+      // Notify parent that data changed to invalidate cache
+      onDataChange?.();
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar status",

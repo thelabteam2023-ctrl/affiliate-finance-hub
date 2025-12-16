@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import { ParceiroListaSidebar } from "@/components/parceiros/ParceiroListaSidebar";
 import { ParceiroDetalhesPanel } from "@/components/parceiros/ParceiroDetalhesPanel";
 import { formatCPF, maskCPFPartial } from "@/lib/validators";
+import { useParceiroFinanceiroCache } from "@/hooks/useParceiroFinanceiroCache";
 
 interface Parceiro {
   id: string;
@@ -90,9 +91,21 @@ export default function GestaoParceiros() {
   const [vinculoBookmakerId, setVinculoBookmakerId] = useState<string | null>(null);
   const [selectedParceiroDetalhes, setSelectedParceiroDetalhes] = useState<string | null>(null);
 
-  const handleSelectParceiroDetalhes = (id: string) => {
+  // Cache system for partner financial data
+  const {
+    data: parceiroFinanceiroData,
+    loading: parceiroFinanceiroLoading,
+    error: parceiroFinanceiroError,
+    selectParceiro,
+    invalidateCache,
+    refreshCurrent: refreshParceiroFinanceiro,
+  } = useParceiroFinanceiroCache();
+
+  const handleSelectParceiroDetalhes = useCallback((id: string) => {
     setSelectedParceiroDetalhes(id);
-  };
+    selectParceiro(id);
+  }, [selectParceiro]);
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -431,12 +444,21 @@ export default function GestaoParceiros() {
 
       if (error) throw error;
 
+      // Invalidar cache do parceiro excluído
+      invalidateCache(parceiroToDelete);
+
       toast({
         title: "Parceiro excluído",
         description: "O parceiro foi removido com sucesso.",
       });
       fetchParceiros();
       setDeleteDialogOpen(false);
+      
+      // Se o parceiro excluído era o selecionado, limpar seleção
+      if (selectedParceiroDetalhes === parceiroToDelete) {
+        setSelectedParceiroDetalhes(null);
+        selectParceiro(null);
+      }
       setParceiroToDelete(null);
     } catch (error: any) {
       toast({
@@ -460,18 +482,28 @@ export default function GestaoParceiros() {
   };
 
   const handleDialogClose = () => {
+    const editedParceiroId = editingParceiro?.id;
     setDialogOpen(false);
     setEditingParceiro(null);
     setViewMode(false);
     fetchParceiros();
     fetchSaldosData();
+    // Invalidar cache do parceiro editado para forçar refresh
+    if (editedParceiroId) {
+      invalidateCache(editedParceiroId);
+    }
   };
 
   const handleVinculoDialogClose = () => {
+    const parceiroId = vinculoParceiroId;
     setVinculoDialogOpen(false);
     setVinculoParceiroId(null);
     setVinculoBookmakerId(null);
     fetchParceiros();
+    // Invalidar cache do parceiro que recebeu novo vínculo
+    if (parceiroId) {
+      invalidateCache(parceiroId);
+    }
   };
 
   const handleCreateVinculo = (parceiroId: string, bookmakerCatalogoId: string) => {
@@ -502,9 +534,11 @@ export default function GestaoParceiros() {
   // Auto-select first partner when list loads and none is selected
   useEffect(() => {
     if (!selectedParceiroDetalhes && parceiros.length > 0) {
-      setSelectedParceiroDetalhes(parceiros[0].id);
+      const firstParceiroId = parceiros[0].id;
+      setSelectedParceiroDetalhes(firstParceiroId);
+      selectParceiro(firstParceiroId);
     }
-  }, [parceiros]);
+  }, [parceiros, selectedParceiroDetalhes, selectParceiro]);
 
   // Prepare data for sidebar
   const parceirosParaSidebar = useMemo(() => {
@@ -584,6 +618,11 @@ export default function GestaoParceiros() {
                     setDeleteDialogOpen(true);
                   }
                 }}
+                cachedData={parceiroFinanceiroData}
+                cachedLoading={parceiroFinanceiroLoading}
+                cachedError={parceiroFinanceiroError}
+                onRefresh={refreshParceiroFinanceiro}
+                onInvalidateCache={invalidateCache}
               />
             </div>
           </Card>

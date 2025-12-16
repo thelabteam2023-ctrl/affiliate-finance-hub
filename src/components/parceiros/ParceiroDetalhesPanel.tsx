@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useParceiroFinanceiroConsolidado } from "@/hooks/useParceiroFinanceiroConsolidado";
+import { ParceiroFinanceiroConsolidado } from "@/hooks/useParceiroFinanceiroConsolidado";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
@@ -23,6 +23,12 @@ interface ParceiroDetalhesPanelProps {
   parceiroStatus?: string;
   hasParceria?: boolean;
   diasRestantes?: number | null;
+  // Cache props
+  cachedData?: ParceiroFinanceiroConsolidado | null;
+  cachedLoading?: boolean;
+  cachedError?: string | null;
+  onRefresh?: () => void;
+  onInvalidateCache?: (parceiroId: string) => void;
 }
 
 export function ParceiroDetalhesPanel({ 
@@ -34,9 +40,18 @@ export function ParceiroDetalhesPanel({
   onDeleteParceiro,
   parceiroStatus,
   hasParceria,
-  diasRestantes
+  diasRestantes,
+  cachedData,
+  cachedLoading = false,
+  cachedError,
+  onRefresh,
+  onInvalidateCache
 }: ParceiroDetalhesPanelProps) {
-  const { data, loading, error } = useParceiroFinanceiroConsolidado(parceiroId);
+  // Use cached data if available
+  const data = cachedData;
+  const loading = cachedLoading;
+  const error = cachedError;
+  
   const { toast } = useToast();
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
@@ -164,6 +179,24 @@ export function ParceiroDetalhesPanel({
             </div>
           </div>
           <div className="flex items-center gap-1.5">
+            {onRefresh && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={onRefresh}
+                    disabled={loading}
+                    className="shrink-0 h-8 w-8"
+                  >
+                    <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Atualizar dados</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
             {onEditParceiro && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -496,6 +529,11 @@ export function ParceiroDetalhesPanel({
               showSensitiveData={showSensitiveData}
               diasRestantes={diasRestantes}
               onCreateVinculo={onCreateVinculo}
+              onDataChange={() => {
+                if (parceiroId && onInvalidateCache) {
+                  onInvalidateCache(parceiroId);
+                }
+              }}
             />
           </TabsContent>
         </Tabs>
