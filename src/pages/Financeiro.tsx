@@ -9,27 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Wallet,
-  TrendingUp,
-  TrendingDown,
   Loader2,
   BarChart3,
-  Calendar,
   History,
-  HelpCircle,
   Plus,
   Building2,
   Edit,
   Trash2,
-  RefreshCw,
-  Info,
 } from "lucide-react";
 import {
   Popover,
@@ -55,12 +41,9 @@ import { SaudeFinanceiraCard } from "@/components/financeiro/SaudeFinanceiraCard
 import { RentabilidadeCaptacaoCard } from "@/components/financeiro/RentabilidadeCaptacaoCard";
 import { HistoricoDespesasAdmin } from "@/components/financeiro/HistoricoDespesasAdmin";
 import { ComposicaoCustosCard } from "@/components/financeiro/ComposicaoCustosCard";
-// Novos cards CFO
-import { FluxoCaixaRealCard, FluxoCaixaRealData } from "@/components/financeiro/FluxoCaixaRealCard";
 import { MovimentacaoCapitalCard } from "@/components/financeiro/MovimentacaoCapitalCard";
 import { CustoSustentacaoCard } from "@/components/financeiro/CustoSustentacaoCard";
 import { BurnRateCard } from "@/components/financeiro/BurnRateCard";
-import { RunwayCard } from "@/components/financeiro/RunwayCard";
 import { EquilibrioOperacionalCard } from "@/components/financeiro/EquilibrioOperacionalCard";
 import { EficienciaCapitalCard } from "@/components/financeiro/EficienciaCapitalCard";
 import { MapaPatrimonioCard } from "@/components/financeiro/MapaPatrimonioCard";
@@ -462,7 +445,7 @@ export default function Financeiro() {
   // ==================== FLUXO DE CAIXA REAL (CORRIGIDO) ====================
   // Separa MOVIMENTAÇÃO DE CAPITAL (depósitos/saques bookmakers) de FLUXO REAL
   
-  const getFluxoCaixaRealData = (): FluxoCaixaRealData[] => {
+  const getFluxoCaixaRealData = (): { label: string; entradas: number; saidas: number; saldo: number }[] => {
     const weeks: { label: string; weekStart: Date; weekEnd: Date }[] = [];
     
     for (let i = 7; i >= 0; i--) {
@@ -735,33 +718,43 @@ export default function Financeiro() {
         </p>
       </div>
 
-      {/* Filtros de Período */}
-      <div className="flex flex-wrap items-center gap-3">
-        <Select value={periodoPreset} onValueChange={setPeriodoPreset}>
-          <SelectTrigger className="w-[190px] flex items-center">
-            <Calendar className="h-4 w-4 mr-2 shrink-0" />
-            <SelectValue placeholder="Período" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1m">Último mês</SelectItem>
-            <SelectItem value="3m">3 meses</SelectItem>
-            <SelectItem value="6m">6 meses</SelectItem>
-            <SelectItem value="12m">12 meses</SelectItem>
-            <SelectItem value="all">Todo período</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <div className="flex items-center gap-2">
+      {/* Filtros de Período - Compacto */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="inline-flex items-center rounded-lg border border-border/50 bg-muted/30 p-0.5">
+          {[
+            { value: "1m", label: "Mês" },
+            { value: "3m", label: "3M" },
+            { value: "6m", label: "6M" },
+            { value: "12m", label: "Ano" },
+            { value: "all", label: "Tudo" },
+          ].map((preset) => (
+            <button
+              key={preset.value}
+              onClick={() => setPeriodoPreset(preset.value)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                periodoPreset === preset.value
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              }`}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        
+        <div className="h-4 w-px bg-border/50 mx-1 hidden sm:block" />
+        
+        <div className="flex items-center gap-1.5 text-xs">
           <DatePicker
             value={dataInicio}
-            onChange={setDataInicio}
-            placeholder="Data início"
+            onChange={(val) => { setDataInicio(val); setPeriodoPreset("custom"); }}
+            placeholder="Início"
           />
-          <span className="text-muted-foreground">até</span>
+          <span className="text-muted-foreground/60">—</span>
           <DatePicker
             value={dataFim}
-            onChange={setDataFim}
-            placeholder="Data fim"
+            onChange={(val) => { setDataFim(val); setPeriodoPreset("custom"); }}
+            placeholder="Fim"
           />
         </div>
       </div>
@@ -784,58 +777,7 @@ export default function Financeiro() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* LINHA 1: Métricas Críticas - Runway e Equilíbrio */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <RunwayCard
-              liquidezImediata={liquidezImediata}
-              burnRateMensal={burnRateMensal}
-              formatCurrency={formatCurrency}
-            />
-            <EquilibrioOperacionalCard
-              lucroOperacional={lucroOperacionalApostas}
-              custoSustentacao={custoSustentacao}
-              formatCurrency={formatCurrency}
-            />
-            <EficienciaCapitalCard
-              lucroOperacional={lucroOperacionalApostas}
-              capitalEmBookmakers={saldoBookmakers}
-              formatCurrency={formatCurrency}
-            />
-          </div>
-
-          {/* LINHA 2: Fluxo de Caixa Real vs Movimentação de Capital */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <FluxoCaixaRealCard
-              fluxoData={fluxoCaixaRealData}
-              totalEntradas={totalEntradasReais}
-              totalSaidas={totalSaidasReais}
-              formatCurrency={formatCurrency}
-            />
-            <MovimentacaoCapitalCard
-              depositosBookmakers={depositosBookmakersPeriodo}
-              saquesBookmakers={saquesBookmakersPeriodo}
-              capitalEmOperacao={saldoBookmakers}
-              formatCurrency={formatCurrency}
-            />
-          </div>
-
-          {/* LINHA 3: Custos e Burn Rate */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <CustoSustentacaoCard
-              custosOperacionais={totalCustosOperacionais}
-              despesasAdministrativas={totalDespesasAdmin}
-              pagamentosOperadores={totalPagamentosOperadores}
-              formatCurrency={formatCurrency}
-            />
-            <BurnRateCard
-              burnRateMensal={burnRateMensal}
-              burnRateSemanal={burnRateSemanal}
-              entradasMensais={entradasMensais}
-              formatCurrency={formatCurrency}
-            />
-          </div>
-
-          {/* LINHA 4: Patrimônio e Composição */}
+          {/* LINHA 1: Visão Patrimonial - Onde está o dinheiro + Para onde vai */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <MapaPatrimonioCard
               caixaOperacional={capitalOperacional}
@@ -852,8 +794,44 @@ export default function Financeiro() {
             />
           </div>
 
-          {/* LINHA 5: Saúde Financeira e Rentabilidade (cards existentes, menor destaque) */}
+          {/* LINHA 2: Métricas Operacionais */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <EquilibrioOperacionalCard
+              lucroOperacional={lucroOperacionalApostas}
+              custoSustentacao={custoSustentacao}
+              formatCurrency={formatCurrency}
+            />
+            <EficienciaCapitalCard
+              lucroOperacional={lucroOperacionalApostas}
+              capitalEmBookmakers={saldoBookmakers}
+              formatCurrency={formatCurrency}
+            />
+            <MovimentacaoCapitalCard
+              depositosBookmakers={depositosBookmakersPeriodo}
+              saquesBookmakers={saquesBookmakersPeriodo}
+              capitalEmOperacao={saldoBookmakers}
+              formatCurrency={formatCurrency}
+            />
+          </div>
+
+          {/* LINHA 3: Custos Detalhados */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CustoSustentacaoCard
+              custosOperacionais={totalCustosOperacionais}
+              despesasAdministrativas={totalDespesasAdmin}
+              pagamentosOperadores={totalPagamentosOperadores}
+              formatCurrency={formatCurrency}
+            />
+            <BurnRateCard
+              burnRateMensal={burnRateMensal}
+              burnRateSemanal={burnRateSemanal}
+              entradasMensais={entradasMensais}
+              formatCurrency={formatCurrency}
+            />
+          </div>
+
+          {/* LINHA 4: Saúde e Rentabilidade (menor ênfase visual) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 opacity-90">
             <SaudeFinanceiraCard
               saudeData={saudeFinanceiraData}
               formatCurrency={formatCurrency}
