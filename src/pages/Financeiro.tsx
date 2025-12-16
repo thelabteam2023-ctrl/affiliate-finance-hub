@@ -16,6 +16,7 @@ import {
   Building2,
   Edit,
   Trash2,
+  ArrowUpDown,
 } from "lucide-react";
 import {
   Popover,
@@ -211,6 +212,9 @@ export default function Financeiro() {
   const [kpiType, setKpiType] = useState<KpiType>(null);
   const [despesaAdminDialogOpen, setDespesaAdminDialogOpen] = useState(false);
   const [editingDespesa, setEditingDespesa] = useState<DespesaAdministrativa | null>(null);
+
+  // Ordenação do histórico mensal
+  const [historicoSort, setHistoricoSort] = useState<{ field: "mes" | "lucroLiquido" | "patrimonio"; direction: "asc" | "desc" }>({ field: "mes", direction: "desc" });
 
   useEffect(() => {
     checkAuth();
@@ -1229,12 +1233,45 @@ export default function Financeiro() {
                       <th className="text-right py-3 px-4 font-medium">Resultado</th>
                       <th className="text-right py-3 px-4 font-medium">Custos</th>
                       <th className="text-right py-3 px-4 font-medium">Despesas</th>
-                      <th className="text-right py-3 px-4 font-medium">Lucro Líq.</th>
-                      <th className="text-right py-3 px-4 font-medium">Patrimônio Acum.</th>
+                      <th className="text-right py-3 px-4 font-medium">
+                        <button
+                          onClick={() => setHistoricoSort(prev => ({
+                            field: "lucroLiquido",
+                            direction: prev.field === "lucroLiquido" && prev.direction === "desc" ? "asc" : "desc"
+                          }))}
+                          className={`inline-flex items-center gap-1 hover:text-primary transition-colors ${historicoSort.field === "lucroLiquido" ? "text-primary" : ""}`}
+                        >
+                          Lucro Líq.
+                          <ArrowUpDown className="h-3 w-3" />
+                        </button>
+                      </th>
+                      <th className="text-right py-3 px-4 font-medium">
+                        <button
+                          onClick={() => setHistoricoSort(prev => ({
+                            field: "patrimonio",
+                            direction: prev.field === "patrimonio" && prev.direction === "desc" ? "asc" : "desc"
+                          }))}
+                          className={`inline-flex items-center gap-1 hover:text-primary transition-colors ${historicoSort.field === "patrimonio" ? "text-primary" : ""}`}
+                        >
+                          Patrimônio Acum.
+                          <ArrowUpDown className="h-3 w-3" />
+                        </button>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {historicoMensal.map((m) => (
+                    {[...historicoMensal].sort((a, b) => {
+                      const { field, direction } = historicoSort;
+                      let comparison = 0;
+                      if (field === "mes") {
+                        comparison = a.mes.localeCompare(b.mes);
+                      } else if (field === "lucroLiquido") {
+                        comparison = a.lucroLiquido - b.lucroLiquido;
+                      } else if (field === "patrimonio") {
+                        comparison = a.patrimonio - b.patrimonio;
+                      }
+                      return direction === "desc" ? -comparison : comparison;
+                    }).map((m) => (
                       <tr key={m.mes} className="border-b border-border/50 hover:bg-muted/30">
                         <td className="py-3 px-4 font-medium">{m.label}</td>
                         <td className={`py-3 px-4 text-right ${m.resultado >= 0 ? 'text-success' : 'text-destructive'}`}>
