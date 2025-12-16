@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRightLeft, ArrowUp, ArrowDown, HelpCircle, Wallet } from "lucide-react";
+import { ArrowRightLeft, ArrowUp, ArrowDown, HelpCircle, Wallet, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip as UITooltip,
@@ -21,6 +21,7 @@ export function MovimentacaoCapitalCard({
   capitalEmOperacao,
   formatCurrency,
 }: MovimentacaoCapitalCardProps) {
+  // Fluxo líquido = diferença entre o que saiu e entrou das bookmakers no período
   const fluxoLiquido = saquesBookmakers - depositosBookmakers;
   const isRetornando = fluxoLiquido > 0;
 
@@ -41,9 +42,10 @@ export function MovimentacaoCapitalCard({
                 <TooltipContent side="top" className="max-w-[320px] text-xs">
                   <p className="font-medium mb-1">Movimentação de Capital</p>
                   <p className="mb-2">Alocação de capital entre Caixa e Bookmakers.</p>
-                  <p><strong>Depósitos:</strong> Caixa → Bookmakers</p>
-                  <p><strong>Saques:</strong> Bookmakers → Caixa</p>
-                  <p className="mt-2 text-muted-foreground italic">Não impacta lucro ou fluxo real — apenas realocação patrimonial</p>
+                  <p><strong>Depósitos:</strong> Caixa → Bookmakers (no período)</p>
+                  <p><strong>Saques:</strong> Bookmakers → Caixa (no período)</p>
+                  <p className="mt-2"><strong>Capital em Operação:</strong> Saldo atual real nas casas (snapshot)</p>
+                  <p className="mt-2 text-muted-foreground italic">Depósitos/Saques não impactam lucro — apenas realocação patrimonial</p>
                 </TooltipContent>
               </UITooltip>
             </TooltipProvider>
@@ -58,11 +60,11 @@ export function MovimentacaoCapitalCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Fluxo entre Caixa e Bookmakers */}
+        {/* Fluxo entre Caixa e Bookmakers (período selecionado) */}
         <div className="grid grid-cols-2 gap-3">
           <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground">Depósitos</span>
+              <span className="text-xs text-muted-foreground">Depósitos (período)</span>
               <ArrowDown className="h-3.5 w-3.5 text-blue-500" />
             </div>
             <p className="text-lg font-bold text-blue-500">{formatCurrency(depositosBookmakers)}</p>
@@ -70,7 +72,7 @@ export function MovimentacaoCapitalCard({
           </div>
           <div className="p-3 bg-success/5 border border-success/20 rounded-lg">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground">Saques</span>
+              <span className="text-xs text-muted-foreground">Saques (período)</span>
               <ArrowUp className="h-3.5 w-3.5 text-success" />
             </div>
             <p className="text-lg font-bold text-success">{formatCurrency(saquesBookmakers)}</p>
@@ -78,26 +80,40 @@ export function MovimentacaoCapitalCard({
           </div>
         </div>
 
-        {/* Capital em Operação */}
-        <div className="p-4 bg-muted/30 border rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-medium">Capital em Operação</p>
-                <p className="text-[10px] text-muted-foreground">Saldo atual em todas as casas</p>
-              </div>
-            </div>
-            <p className="text-xl font-bold text-primary">{formatCurrency(capitalEmOperacao)}</p>
-          </div>
-        </div>
-
-        {/* Fluxo Líquido */}
+        {/* Fluxo Líquido do período */}
         <div className="flex items-center justify-between text-sm border-t pt-3">
           <span className="text-muted-foreground">Fluxo Líquido (período)</span>
           <span className={cn("font-semibold", fluxoLiquido >= 0 ? "text-success" : "text-blue-500")}>
             {fluxoLiquido >= 0 ? "+" : ""}{formatCurrency(fluxoLiquido)}
           </span>
+        </div>
+
+        {/* Capital em Operação - Saldo ATUAL */}
+        <div className="p-4 bg-muted/30 border rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-primary" />
+              <div>
+                <div className="flex items-center gap-1">
+                  <p className="text-sm font-medium">Capital em Operação</p>
+                  <TooltipProvider>
+                    <UITooltip delayDuration={300}>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[280px] text-xs">
+                        <p className="font-medium mb-1">Saldo Atual nas Bookmakers</p>
+                        <p className="mb-2">Este valor é o snapshot atual (saldo_atual - saldo_irrecuperável) de todas as casas ativas.</p>
+                        <p className="text-muted-foreground">Não depende do período selecionado — reflete a posição patrimonial no momento.</p>
+                      </TooltipContent>
+                    </UITooltip>
+                  </TooltipProvider>
+                </div>
+                <p className="text-[10px] text-muted-foreground">Saldo atual em todas as casas</p>
+              </div>
+            </div>
+            <p className="text-xl font-bold text-primary">{formatCurrency(capitalEmOperacao)}</p>
+          </div>
         </div>
       </CardContent>
     </Card>
