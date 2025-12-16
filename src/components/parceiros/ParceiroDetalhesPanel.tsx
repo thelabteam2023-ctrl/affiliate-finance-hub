@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { ParceiroFinanceiroConsolidado } from "@/hooks/useParceiroFinanceiroConsolidado";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,25 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
 import { ParceiroBookmakersTab } from "./ParceiroBookmakersTab";
 import { useToast } from "@/hooks/use-toast";
+import { MovimentacoesData, BookmakersData } from "@/hooks/useParceiroFinanceiroCache";
+
+interface ParceiroCache {
+  resumoData: ParceiroFinanceiroConsolidado | null;
+  movimentacoesData: MovimentacoesData | null;
+  bookmakersData: BookmakersData | null;
+  resumoLoading: boolean;
+  movimentacoesLoading: boolean;
+  bookmakersLoading: boolean;
+  resumoError: string | null;
+  movimentacoesError: string | null;
+  bookmakersError: string | null;
+  isRevalidating: Record<string, boolean>;
+  loadTab: (tab: "resumo" | "movimentacoes" | "bookmakers") => void;
+  invalidateTab: (parceiroId: string, tab: "resumo" | "movimentacoes" | "bookmakers") => void;
+  invalidateCache: (parceiroId: string) => void;
+  refreshTab: (tab: "resumo" | "movimentacoes" | "bookmakers") => void;
+  refreshCurrent: () => void;
+}
 
 interface ParceiroDetalhesPanelProps {
   parceiroId: string | null;
@@ -23,12 +42,7 @@ interface ParceiroDetalhesPanelProps {
   parceiroStatus?: string;
   hasParceria?: boolean;
   diasRestantes?: number | null;
-  // Cache props
-  cachedData?: ParceiroFinanceiroConsolidado | null;
-  cachedLoading?: boolean;
-  cachedError?: string | null;
-  onRefresh?: () => void;
-  onInvalidateCache?: (parceiroId: string) => void;
+  parceiroCache: ParceiroCache;
 }
 
 export function ParceiroDetalhesPanel({ 
@@ -41,20 +55,30 @@ export function ParceiroDetalhesPanel({
   parceiroStatus,
   hasParceria,
   diasRestantes,
-  cachedData,
-  cachedLoading = false,
-  cachedError,
-  onRefresh,
-  onInvalidateCache
+  parceiroCache
 }: ParceiroDetalhesPanelProps) {
-  // Use cached data if available
-  const data = cachedData;
-  const loading = cachedLoading;
-  const error = cachedError;
+  const data = parceiroCache.resumoData;
+  const loading = parceiroCache.resumoLoading;
+  const error = parceiroCache.resumoError;
   
   const { toast } = useToast();
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
+
+  const handleLoadMovimentacoes = useCallback(() => {
+    parceiroCache.loadTab("movimentacoes");
+  }, [parceiroCache.loadTab]);
+
+  const handleLoadBookmakers = useCallback(() => {
+    parceiroCache.loadTab("bookmakers");
+  }, [parceiroCache.loadTab]);
+
+  const handleBookmakersDataChange = useCallback(() => {
+    if (parceiroId) {
+      parceiroCache.invalidateTab(parceiroId, "bookmakers");
+      parceiroCache.invalidateTab(parceiroId, "resumo");
+    }
+  }, [parceiroId, parceiroCache.invalidateTab]);
 
   const copyToClipboard = async (text: string, field: string) => {
     try {
@@ -179,21 +203,22 @@ export function ParceiroDetalhesPanel({
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            {onRefresh && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={onRefresh}
-                    disabled={loading}
-                    className="shrink-0 h-8 w-8"
-                  >
-                    <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Atualizar dados</p>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => parceiroCache.refreshCurrent()}
+                  disabled={loading}
+                  className="shrink-0 h-8 w-8"
+                >
+                  <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Atualizar dados</p>
+              </TooltipContent>
+            </Tooltip>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -529,11 +554,12 @@ export function ParceiroDetalhesPanel({
               showSensitiveData={showSensitiveData}
               diasRestantes={diasRestantes}
               onCreateVinculo={onCreateVinculo}
-              onDataChange={() => {
-                if (parceiroId && onInvalidateCache) {
-                  onInvalidateCache(parceiroId);
-                }
-              }}
+              onDataChange={handleBookmakersDataChange}
+              cachedData={parceiroCache.bookmakersData}
+              loading={parceiroCache.bookmakersLoading}
+              error={parceiroCache.bookmakersError}
+              isRevalidating={parceiroCache.isRevalidating.bookmakers}
+              onLoadTab={handleLoadBookmakers}
             />
           </TabsContent>
         </Tabs>
