@@ -12,23 +12,12 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
 import { ParceiroBookmakersTab } from "./ParceiroBookmakersTab";
 import { useToast } from "@/hooks/use-toast";
-import { MovimentacoesData, BookmakersData } from "@/hooks/useParceiroFinanceiroCache";
 
 interface ParceiroCache {
   resumoData: ParceiroFinanceiroConsolidado | null;
-  movimentacoesData: MovimentacoesData | null;
-  bookmakersData: BookmakersData | null;
   resumoLoading: boolean;
-  movimentacoesLoading: boolean;
-  bookmakersLoading: boolean;
   resumoError: string | null;
-  movimentacoesError: string | null;
-  bookmakersError: string | null;
-  isRevalidating: Record<string, boolean>;
-  loadTab: (tab: "resumo" | "movimentacoes" | "bookmakers") => void;
-  invalidateTab: (parceiroId: string, tab: "resumo" | "movimentacoes" | "bookmakers") => void;
   invalidateCache: (parceiroId: string) => void;
-  refreshTab: (tab: "resumo" | "movimentacoes" | "bookmakers") => void;
   refreshCurrent: () => void;
 }
 
@@ -65,20 +54,11 @@ export function ParceiroDetalhesPanel({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
 
-  const handleLoadMovimentacoes = useCallback(() => {
-    parceiroCache.loadTab("movimentacoes");
-  }, [parceiroCache.loadTab]);
-
-  const handleLoadBookmakers = useCallback(() => {
-    parceiroCache.loadTab("bookmakers");
-  }, [parceiroCache.loadTab]);
-
   const handleBookmakersDataChange = useCallback(() => {
     if (parceiroId) {
-      parceiroCache.invalidateTab(parceiroId, "bookmakers");
-      parceiroCache.invalidateTab(parceiroId, "resumo");
+      parceiroCache.invalidateCache(parceiroId);
     }
-  }, [parceiroId, parceiroCache.invalidateTab]);
+  }, [parceiroId, parceiroCache.invalidateCache]);
 
   const copyToClipboard = async (text: string, field: string) => {
     try {
@@ -421,14 +401,12 @@ export function ParceiroDetalhesPanel({
                                     "text-[9px] px-1 py-0 h-4",
                                     bm.status === "ativo"
                                       ? "border-success/50 text-success"
-                                      : bm.status === "limitada"
-                                      ? "border-warning/50 text-warning"
-                                      : "border-muted-foreground/50 text-muted-foreground"
+                                      : "border-warning/50 text-warning"
                                   )}
                                 >
-                                  {bm.status}
+                                  {bm.status === "ativo" ? "Ativa" : "Limitada"}
                                 </Badge>
-                                {bm.has_credentials && bm.login_username && (
+                                {bm.has_credentials && (
                                   <Popover
                                     open={credentialsPopoverOpen === bm.bookmaker_id}
                                     onOpenChange={(open) => setCredentialsPopoverOpen(open ? bm.bookmaker_id : null)}
@@ -436,16 +414,16 @@ export function ParceiroDetalhesPanel({
                                     <PopoverTrigger asChild>
                                       <button
                                         type="button"
-                                        className="h-6 w-6 p-0.5 shrink-0 rounded hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center"
+                                        className="h-5 w-5 p-0.5 shrink-0 rounded hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           setCredentialsPopoverOpen(credentialsPopoverOpen === bm.bookmaker_id ? null : bm.bookmaker_id);
                                         }}
                                       >
-                                        <IdCard className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+                                        <IdCard className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                                       </button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-52 p-2 bg-popover border border-border z-50" align="start">
+                                    <PopoverContent className="w-52 p-2" align="start">
                                       <div className="space-y-2">
                                         <div>
                                           <label className="text-[10px] text-muted-foreground">Usuário</label>
@@ -494,41 +472,25 @@ export function ParceiroDetalhesPanel({
                               </div>
                             </div>
                           </div>
-                          <div className="text-right text-xs tabular-nums">
+                          <div className="text-right text-xs text-muted-foreground">
                             {maskCurrency(bm.total_depositado)}
                           </div>
-                          <div className="text-right text-xs tabular-nums">
+                          <div className="text-right text-xs text-muted-foreground">
                             {maskCurrency(bm.total_sacado)}
                           </div>
                           <div className={cn(
-                            "text-right text-xs font-medium tabular-nums",
-                            showSensitiveData 
+                            "text-right text-xs font-medium",
+                            showSensitiveData
                               ? (bm.lucro_prejuizo >= 0 ? "text-success" : "text-destructive")
                               : "text-muted-foreground"
                           )}>
                             {maskCurrency(bm.lucro_prejuizo)}
                           </div>
-                          <div className="text-right text-xs text-muted-foreground tabular-nums">
+                          <div className="text-right text-xs text-muted-foreground">
                             {bm.qtd_apostas.toLocaleString("pt-BR")}
                           </div>
                         </div>
                       ))}
-
-                      {/* Totais */}
-                      <div className="grid grid-cols-6 gap-2 px-3 py-2 bg-muted/30 font-medium text-xs">
-                        <div className="col-span-2">Total</div>
-                        <div className="text-right tabular-nums">{maskCurrency(data.total_depositado)}</div>
-                        <div className="text-right tabular-nums">{maskCurrency(data.total_sacado)}</div>
-                        <div className={cn(
-                          "text-right tabular-nums",
-                          showSensitiveData 
-                            ? (data.lucro_prejuizo >= 0 ? "text-success" : "text-destructive")
-                            : "text-muted-foreground"
-                        )}>
-                          {maskCurrency(data.lucro_prejuizo)}
-                        </div>
-                        <div className="text-right tabular-nums">{data.qtd_apostas_total.toLocaleString("pt-BR")}</div>
-                      </div>
                     </div>
                   )}
                 </div>
@@ -540,28 +502,18 @@ export function ParceiroDetalhesPanel({
           <TabsContent value="movimentacoes" className="flex-1 mt-0">
             <ParceiroMovimentacoesTab 
               parceiroId={parceiroId} 
-              showSensitiveData={showSensitiveData}
-              cachedData={parceiroCache.movimentacoesData}
-              loading={parceiroCache.movimentacoesLoading}
-              error={parceiroCache.movimentacoesError}
-              isRevalidating={parceiroCache.isRevalidating.movimentacoes}
-              onLoadTab={handleLoadMovimentacoes}
+              showSensitiveData={showSensitiveData} 
             />
           </TabsContent>
 
           {/* Aba Bookmakers */}
           <TabsContent value="bookmakers" className="flex-1 mt-0">
-            <ParceiroBookmakersTab 
-              parceiroId={parceiroId} 
+            <ParceiroBookmakersTab
+              parceiroId={parceiroId}
               showSensitiveData={showSensitiveData}
               diasRestantes={diasRestantes}
               onCreateVinculo={onCreateVinculo}
               onDataChange={handleBookmakersDataChange}
-              cachedData={parceiroCache.bookmakersData}
-              loading={parceiroCache.bookmakersLoading}
-              error={parceiroCache.bookmakersError}
-              isRevalidating={parceiroCache.isRevalidating.bookmakers}
-              onLoadTab={handleLoadBookmakers}
             />
           </TabsContent>
         </Tabs>
