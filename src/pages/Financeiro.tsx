@@ -939,7 +939,7 @@ export default function Financeiro() {
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard CFO</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard Financeiro</h1>
         <p className="text-muted-foreground">
           Visão financeira estratégica: Liquidez, Custos e Sustentabilidade
         </p>
@@ -991,7 +991,7 @@ export default function Financeiro() {
         <TabsList>
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
-            Visão CFO
+            Visão Financeira
           </TabsTrigger>
           <TabsTrigger value="despesas" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
@@ -1215,63 +1215,6 @@ export default function Financeiro() {
         </TabsContent>
 
         <TabsContent value="historico" className="space-y-6">
-          {/* Gráfico Comparativo Mensal */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Comparativo Mensal: Resultado vs Custos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={350}>
-                <ComposedChart data={historicoMensal}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="label" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                  <YAxis 
-                    tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}
-                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                  />
-                  <Tooltip
-                    contentStyle={{ 
-                      backgroundColor: "rgba(0, 0, 0, 0.4)", 
-                      border: "1px solid rgba(255, 255, 255, 0.1)",
-                      backdropFilter: "blur(12px)",
-                      borderRadius: "12px",
-                      padding: "12px 16px"
-                    }}
-                    cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
-                    formatter={(value: number, name: string) => [formatCurrency(value), name]}
-                  />
-                  <Legend />
-                  <Bar 
-                    dataKey="resultado" 
-                    name="Resultado Operacional" 
-                    fill="hsl(var(--primary))" 
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar 
-                    dataKey="custos" 
-                    name="Custos Aquisição" 
-                    fill="hsl(var(--destructive))" 
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar 
-                    dataKey="despesas" 
-                    name="Despesas Gerais" 
-                    fill="hsl(var(--chart-2))" 
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="patrimonio" 
-                    name="Patrimônio Acumulado" 
-                    stroke="hsl(var(--success))" 
-                    strokeWidth={3}
-                    dot={{ fill: "hsl(var(--success))", strokeWidth: 2 }}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
           {/* Tabela Histórica */}
           <Card>
             <CardHeader>
