@@ -119,24 +119,23 @@ async function fetchGrossProfitFromBets(
 ): Promise<number> {
   let lucroTotal = 0;
 
-  // 1. Apostas simples (excluindo pernas de surebet)
+  // 1. Apostas simples (excluindo pernas de surebet) - USAR status LIQUIDADA
   let querySimples = supabase
     .from('apostas')
     .select('lucro_prejuizo')
     .eq('projeto_id', projetoId)
-    .is('surebet_id', null)
-    .not('resultado', 'is', null)
-    .neq('resultado', 'PENDENTE');
+    .eq('status', 'LIQUIDADA')
+    .is('surebet_id', null);
   
   if (dataInicio) querySimples = querySimples.gte('data_aposta', dataInicio.toISOString());
   if (dataFim) querySimples = querySimples.lte('data_aposta', dataFim.toISOString());
 
-  // 2. Apostas múltiplas
+  // 2. Apostas múltiplas - USAR status LIQUIDADA
   let queryMultiplas = supabase
     .from('apostas_multiplas')
     .select('lucro_prejuizo')
     .eq('projeto_id', projetoId)
-    .neq('status', 'PENDENTE');
+    .eq('status', 'LIQUIDADA');
   
   if (dataInicio) queryMultiplas = queryMultiplas.gte('data_aposta', dataInicio.toISOString());
   if (dataFim) queryMultiplas = queryMultiplas.lte('data_aposta', dataFim.toISOString());

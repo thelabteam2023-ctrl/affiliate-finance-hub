@@ -48,11 +48,11 @@ export function useProjetoPerformance({
     if (dataInicio) querySimples = querySimples.gte('data_aposta', dataInicio.toISOString());
     if (dataFim) querySimples = querySimples.lte('data_aposta', dataFim.toISOString());
 
-    // 2. Apostas múltiplas - usar status diferente de PENDENTE
+    // 2. Apostas múltiplas - usar LIQUIDADA
     let queryMultiplas = supabase
       .from('apostas_multiplas')
       .select('lucro_prejuizo')
-      .neq('status', 'PENDENTE');
+      .eq('status', 'LIQUIDADA');
     if (projetoId) queryMultiplas = queryMultiplas.eq('projeto_id', projetoId);
     if (dataInicio) queryMultiplas = queryMultiplas.gte('data_aposta', dataInicio.toISOString());
     if (dataFim) queryMultiplas = queryMultiplas.lte('data_aposta', dataFim.toISOString());
