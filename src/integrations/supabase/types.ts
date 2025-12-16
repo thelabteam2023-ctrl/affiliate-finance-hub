@@ -4500,6 +4500,7 @@ export type Database = {
           data_fim_real: string | null
           data_inicio: string | null
           descricao: string | null
+          lucro_operacional: number | null
           nome: string | null
           operadores_ativos: number | null
           orcamento_inicial: number | null
@@ -4521,6 +4522,7 @@ export type Database = {
           data_fim_real?: string | null
           data_inicio?: string | null
           descricao?: string | null
+          lucro_operacional?: never
           nome?: string | null
           operadores_ativos?: never
           orcamento_inicial?: number | null
@@ -4542,6 +4544,7 @@ export type Database = {
           data_fim_real?: string | null
           data_inicio?: string | null
           descricao?: string | null
+          lucro_operacional?: never
           nome?: string | null
           operadores_ativos?: never
           orcamento_inicial?: number | null
