@@ -1,5 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Sector } from "recharts";
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DonutDataItem {
   name: string;
@@ -19,6 +25,179 @@ interface ModernDonutChartProps {
   formatValue?: (value: number) => string;
   formatTooltip?: (item: DonutDataItem, total: number) => React.ReactNode;
   colors?: string[];
+}
+
+// Format currency in compact form (k, M, B)
+const formatCompactCurrency = (valueStr: string): { 
+  display: string; 
+  full: string;
+  isAbbreviated: boolean;
+} => {
+  // Extract numeric value from currency string like "R$ 54.861,70"
+  const cleanStr = valueStr.replace(/[R$\s.]/g, '').replace(',', '.');
+  const value = parseFloat(cleanStr);
+  
+  if (isNaN(value)) {
+    return { display: valueStr, full: valueStr, isAbbreviated: false };
+  }
+
+  if (value >= 1_000_000_000) {
+    return { 
+      display: `R$ ${(value / 1_000_000_000).toFixed(1).replace('.', ',')}B`, 
+      full: valueStr,
+      isAbbreviated: true 
+    };
+  }
+  if (value >= 1_000_000) {
+    return { 
+      display: `R$ ${(value / 1_000_000).toFixed(1).replace('.', ',')}M`, 
+      full: valueStr,
+      isAbbreviated: true 
+    };
+  }
+  if (value >= 100_000) {
+    return { 
+      display: `R$ ${(value / 1_000).toFixed(1).replace('.', ',')}k`, 
+      full: valueStr,
+      isAbbreviated: true 
+    };
+  }
+  return { display: valueStr, full: valueStr, isAbbreviated: false };
+};
+
+// Auto-fit center value component
+interface AutoFitCenterValueProps {
+  value: string;
+  label?: string;
+  innerRadius: number;
+}
+
+function AutoFitCenterValue({ value, label, innerRadius }: AutoFitCenterValueProps) {
+  // Safe area = 85% of inner diameter
+  const safeWidth = innerRadius * 2 * 0.85;
+  
+  // Calculate optimal display strategy
+  const { displayValue, fullValue, fontSize, needsLineBreak, isAbbreviated } = useMemo(() => {
+    const charWidthRatio = 0.6; // Average char width relative to font size
+    const baseFontSize = 18;
+    const minFontSize = 10;
+    
+    // Check if value starts with R$ (currency)
+    const isCurrency = value.startsWith('R$');
+    const valueWithoutPrefix = isCurrency ? value.replace('R$ ', '') : value;
+    
+    // Calculate text width at base font size
+    const estimateWidth = (text: string, size: number) => text.length * size * charWidthRatio;
+    
+    // Strategy 1: Full value with scaled font
+    const fullWidth = estimateWidth(value, baseFontSize);
+    if (fullWidth <= safeWidth) {
+      return { 
+        displayValue: value, 
+        fullValue: value, 
+        fontSize: baseFontSize, 
+        needsLineBreak: false,
+        isAbbreviated: false 
+      };
+    }
+    
+    // Try scaling down font
+    const scaledFontSize = Math.max(minFontSize, Math.floor(baseFontSize * (safeWidth / fullWidth)));
+    if (estimateWidth(value, scaledFontSize) <= safeWidth && scaledFontSize >= 12) {
+      return { 
+        displayValue: value, 
+        fullValue: value, 
+        fontSize: scaledFontSize, 
+        needsLineBreak: false,
+        isAbbreviated: false 
+      };
+    }
+    
+    // Strategy 2: Line break for currency (R$ on line 1, value on line 2)
+    if (isCurrency) {
+      const valueOnlyWidth = estimateWidth(valueWithoutPrefix, 14);
+      if (valueOnlyWidth <= safeWidth) {
+        return { 
+          displayValue: value, 
+          fullValue: value, 
+          fontSize: 14, 
+          needsLineBreak: true,
+          isAbbreviated: false 
+        };
+      }
+    }
+    
+    // Strategy 3: Abbreviated format with tooltip
+    const compact = formatCompactCurrency(value);
+    const compactWidth = estimateWidth(compact.display, 14);
+    if (compactWidth <= safeWidth) {
+      return { 
+        displayValue: compact.display, 
+        fullValue: compact.full, 
+        fontSize: 14, 
+        needsLineBreak: false,
+        isAbbreviated: compact.isAbbreviated 
+      };
+    }
+    
+    // Final fallback: smallest abbreviated with minimum font
+    return { 
+      displayValue: compact.display, 
+      fullValue: compact.full, 
+      fontSize: minFontSize, 
+      needsLineBreak: false,
+      isAbbreviated: compact.isAbbreviated 
+    };
+  }, [value, safeWidth]);
+  
+  const renderValue = () => {
+    if (needsLineBreak && displayValue.startsWith('R$')) {
+      const valueWithoutPrefix = displayValue.replace('R$ ', '');
+      return (
+        <div className="flex flex-col items-center">
+          <span style={{ fontSize: fontSize * 0.75 }} className="text-muted-foreground">R$</span>
+          <span style={{ fontSize }} className="font-bold font-mono leading-none">{valueWithoutPrefix}</span>
+        </div>
+      );
+    }
+    return (
+      <span style={{ fontSize }} className="font-bold font-mono leading-tight">
+        {displayValue}
+      </span>
+    );
+  };
+
+  const content = (
+    <div 
+      className="text-center flex flex-col items-center justify-center"
+      style={{ maxWidth: safeWidth }}
+    >
+      {renderValue()}
+      {label && (
+        <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{label}</div>
+      )}
+    </div>
+  );
+
+  // Wrap with tooltip if abbreviated
+  if (isAbbreviated) {
+    return (
+      <TooltipProvider>
+        <UITooltip>
+          <TooltipTrigger asChild>
+            <div className="pointer-events-auto cursor-help">
+              {content}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <span className="font-mono">{fullValue}</span>
+          </TooltipContent>
+        </UITooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return content;
 }
 
 // Modern gradient color pairs [start, end]
@@ -294,33 +473,35 @@ export function ModernDonutChart({
         </PieChart>
       </ResponsiveContainer>
 
-      {/* Center content with animated percentage */}
+      {/* Center content with auto-fit */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="text-center px-2">
-          {centerValue !== undefined ? (
-            <>
+        {centerValue !== undefined ? (
+          typeof centerValue === 'number' ? (
+            <div className="text-center">
               <div className="text-lg font-bold font-mono leading-tight">
-                {typeof centerValue === 'number' ? (
-                  <AnimatedPercentage value={centerValue} />
-                ) : (
-                  centerValue
-                )}
+                <AnimatedPercentage value={centerValue} />
               </div>
               {centerLabel && (
                 <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{centerLabel}</div>
               )}
-            </>
+            </div>
           ) : (
-            <>
-              <div className="text-lg font-bold font-mono leading-tight">
-                <AnimatedPercentage value={mainPercentage} />
-              </div>
-              <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
-                {largestSegment.name}
-              </div>
-            </>
-          )}
-        </div>
+            <AutoFitCenterValue 
+              value={centerValue} 
+              label={centerLabel} 
+              innerRadius={innerRadius} 
+            />
+          )
+        ) : (
+          <div className="text-center">
+            <div className="text-lg font-bold font-mono leading-tight">
+              <AnimatedPercentage value={mainPercentage} />
+            </div>
+            <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+              {largestSegment.name}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Legend */}
