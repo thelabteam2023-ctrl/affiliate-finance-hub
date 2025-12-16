@@ -17,6 +17,7 @@ import {
   Edit,
   Trash2,
   ArrowUpDown,
+  Users,
 } from "lucide-react";
 import {
   Popover,
@@ -65,6 +66,7 @@ import {
   WalletPorExchange, 
   CaixaDetalhe 
 } from "@/components/financeiro/MapaPatrimonioCard";
+import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
 
 interface CaixaFiat {
   moeda: string;
@@ -1038,6 +1040,10 @@ export default function Financeiro() {
             <Building2 className="h-4 w-4" />
             Despesas Administrativas
           </TabsTrigger>
+          <TabsTrigger value="participacoes" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Participações
+          </TabsTrigger>
           <TabsTrigger value="historico" className="flex items-center gap-2">
             <History className="h-4 w-4" />
             Histórico Mensal
@@ -1253,6 +1259,18 @@ export default function Financeiro() {
 
           {/* Histórico de Transações */}
           <HistoricoDespesasAdmin formatCurrency={formatCurrency} />
+        </TabsContent>
+
+        {/* Tab: Participações de Investidores */}
+        <TabsContent value="participacoes" className="space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold">Participações de Investidores</h2>
+            <p className="text-sm text-muted-foreground">Gerencie distribuição de lucros para investidores vinculados a projetos</p>
+          </div>
+          <ParticipacaoInvestidoresTab 
+            formatCurrency={formatCurrency}
+            onRefresh={fetchData}
+          />
         </TabsContent>
 
         <TabsContent value="historico" className="space-y-6">
