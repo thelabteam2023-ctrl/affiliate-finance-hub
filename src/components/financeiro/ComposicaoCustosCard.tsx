@@ -300,9 +300,8 @@ export function ComposicaoCustosCard({
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm truncate">{cat.name}</span>
-                    <div className="flex items-center gap-1.5 ml-2">
-                      <span className="text-sm font-bold">{formatCurrency(cat.value)}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm truncate">{cat.name}</span>
                       {temDetalhes && (
                         <Popover>
                           <PopoverTrigger asChild>
@@ -311,7 +310,7 @@ export function ComposicaoCustosCard({
                             </button>
                           </PopoverTrigger>
                           <PopoverContent 
-                            side="left" 
+                            side="right" 
                             align="start" 
                             className="w-72 p-3"
                           >
@@ -352,6 +351,7 @@ export function ComposicaoCustosCard({
                         </Popover>
                       )}
                     </div>
+                    <span className="text-sm font-bold ml-2">{formatCurrency(cat.value)}</span>
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
