@@ -210,32 +210,38 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
       </div>
 
       {/* Aguardando Fechamento de Ciclo */}
-      {aguardando.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Hourglass className="h-4 w-4 text-blue-500" />
-              Aguardando Fechamento de Ciclo
-              <Badge variant="secondary" className="ml-2">{aguardando.length}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/30">
-                    <th className="text-left py-3 px-4 font-medium">Investidor</th>
-                    <th className="text-left py-3 px-4 font-medium">Projeto</th>
-                    <th className="text-center py-3 px-4 font-medium">Ciclo</th>
-                    <th className="text-center py-3 px-4 font-medium">Tipo</th>
-                    <th className="text-right py-3 px-4 font-medium">Lucro Base</th>
-                    <th className="text-center py-3 px-4 font-medium">%</th>
-                    <th className="text-right py-3 px-4 font-medium">Participação</th>
-                    <th className="text-left py-3 px-4 font-medium">Criado em</th>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Hourglass className="h-4 w-4 text-blue-500" />
+            Aguardando Fechamento de Ciclo
+            <Badge variant="secondary" className="ml-2">{aguardando.length}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/30">
+                  <th className="text-left py-3 px-4 font-medium">Investidor</th>
+                  <th className="text-left py-3 px-4 font-medium">Projeto</th>
+                  <th className="text-center py-3 px-4 font-medium">Ciclo</th>
+                  <th className="text-center py-3 px-4 font-medium">Tipo</th>
+                  <th className="text-right py-3 px-4 font-medium">Lucro Base</th>
+                  <th className="text-center py-3 px-4 font-medium">%</th>
+                  <th className="text-right py-3 px-4 font-medium">Participação</th>
+                  <th className="text-left py-3 px-4 font-medium">Criado em</th>
+                </tr>
+              </thead>
+              <tbody>
+                {aguardando.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center py-8 text-muted-foreground">
+                      Nenhuma participação aguardando fechamento de ciclo
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {aguardando.map((p) => (
+                ) : (
+                  aguardando.map((p) => (
                     <tr key={p.id} className="border-b border-border/50 hover:bg-muted/30">
                       <td className="py-3 px-4 font-medium">
                         {p.investidores?.nome || "—"}
@@ -267,13 +273,13 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
                         {format(parseISO(p.data_apuracao), "dd/MM/yyyy", { locale: ptBR })}
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Prontas para Pagamento */}
       <Card>
