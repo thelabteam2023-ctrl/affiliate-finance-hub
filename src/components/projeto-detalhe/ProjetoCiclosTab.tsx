@@ -237,7 +237,7 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
   const handleFecharCiclo = async (ciclo: Ciclo) => {
     try {
       // Calcular métricas completas do período incluindo perdas
-      const [apostasResult, apostasMultiplasResult, surebetsResult, perdasResult] = await Promise.all([
+      const [apostasResult, apostasMultiplasResult, surebetsResult, perdasResult, projetoResult] = await Promise.all([
         supabase
           .from("apostas")
           .select("lucro_prejuizo, stake")
@@ -266,12 +266,18 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
           .eq("status", "CONFIRMADA")
           .gte("data_registro", ciclo.data_inicio)
           .lte("data_registro", ciclo.data_fim_prevista),
+        supabase
+          .from("projetos")
+          .select("investidor_id, percentual_investidor, base_calculo_investidor")
+          .eq("id", projetoId)
+          .single(),
       ]);
 
       const apostas = apostasResult.data || [];
       const apostasMultiplas = apostasMultiplasResult.data || [];
       const surebets = surebetsResult.data || [];
       const perdasConfirmadas = perdasResult.data || [];
+      const projeto = projetoResult.data;
 
       // Calcular totais
       const qtdApostas = apostas.length + apostasMultiplas.length + surebets.length;
@@ -330,6 +336,45 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
         .eq("id", ciclo.id);
 
       if (error) throw error;
+
+      // ========== PARTICIPAÇÃO DE INVESTIDOR ==========
+      // Se o projeto tem investidor vinculado, calcular e registrar participação
+      if (projeto?.investidor_id && projeto.percentual_investidor > 0) {
+        const { data: session } = await supabase.auth.getSession();
+        if (session.session) {
+          // Determinar base de cálculo
+          const lucroBase = projeto.base_calculo_investidor === "LUCRO_BRUTO" 
+            ? lucroBruto 
+            : lucroLiquido;
+          
+          // Só registrar participação se houver lucro positivo
+          if (lucroBase > 0) {
+            const valorParticipacao = lucroBase * (projeto.percentual_investidor / 100);
+            
+            const { error: participacaoError } = await supabase
+              .from("participacao_ciclos")
+              .insert({
+                user_id: session.session.user.id,
+                projeto_id: projetoId,
+                ciclo_id: ciclo.id,
+                investidor_id: projeto.investidor_id,
+                percentual_aplicado: projeto.percentual_investidor,
+                base_calculo: projeto.base_calculo_investidor || "LUCRO_LIQUIDO",
+                lucro_base: lucroBase,
+                valor_participacao: valorParticipacao,
+                status: "A_PAGAR",
+                data_apuracao: new Date().toISOString(),
+              });
+
+            if (participacaoError) {
+              console.error("Erro ao registrar participação:", participacaoError);
+              toast.error("Ciclo fechado, mas erro ao calcular participação do investidor");
+            } else {
+              toast.success(`Participação de R$ ${valorParticipacao.toFixed(2)} apurada para o investidor`);
+            }
+          }
+        }
+      }
       
       const toastMsg = totalPerdasConfirmadas > 0
         ? `Ciclo fechado! ${qtdApostas} apostas, Lucro Real: R$ ${lucroLiquido.toFixed(2)} (após R$ ${totalPerdasConfirmadas.toFixed(2)} em perdas), ROI: ${roi.toFixed(2)}%`

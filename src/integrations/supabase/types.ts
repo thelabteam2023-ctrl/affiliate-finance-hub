@@ -2668,6 +2668,120 @@ export type Database = {
           },
         ]
       }
+      participacao_ciclos: {
+        Row: {
+          base_calculo: string
+          ciclo_id: string
+          created_at: string | null
+          data_apuracao: string
+          data_pagamento: string | null
+          id: string
+          investidor_id: string
+          lucro_base: number
+          observacoes: string | null
+          pagamento_ledger_id: string | null
+          percentual_aplicado: number
+          projeto_id: string
+          status: string
+          updated_at: string | null
+          user_id: string
+          valor_participacao: number
+        }
+        Insert: {
+          base_calculo: string
+          ciclo_id: string
+          created_at?: string | null
+          data_apuracao?: string
+          data_pagamento?: string | null
+          id?: string
+          investidor_id: string
+          lucro_base?: number
+          observacoes?: string | null
+          pagamento_ledger_id?: string | null
+          percentual_aplicado: number
+          projeto_id: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+          valor_participacao?: number
+        }
+        Update: {
+          base_calculo?: string
+          ciclo_id?: string
+          created_at?: string | null
+          data_apuracao?: string
+          data_pagamento?: string | null
+          id?: string
+          investidor_id?: string
+          lucro_base?: number
+          observacoes?: string | null
+          pagamento_ledger_id?: string | null
+          percentual_aplicado?: number
+          projeto_id?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+          valor_participacao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participacao_ciclos_ciclo_id_fkey"
+            columns: ["ciclo_id"]
+            isOneToOne: false
+            referencedRelation: "projeto_ciclos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participacao_ciclos_ciclo_id_fkey"
+            columns: ["ciclo_id"]
+            isOneToOne: false
+            referencedRelation: "v_ciclos_proximos_fechamento"
+            referencedColumns: ["ciclo_id"]
+          },
+          {
+            foreignKeyName: "participacao_ciclos_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "investidores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participacao_ciclos_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "v_roi_investidores"
+            referencedColumns: ["investidor_id"]
+          },
+          {
+            foreignKeyName: "participacao_ciclos_pagamento_ledger_id_fkey"
+            columns: ["pagamento_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "cash_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participacao_ciclos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participacao_ciclos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "participacao_ciclos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -3121,6 +3235,7 @@ export type Database = {
       }
       projetos: {
         Row: {
+          base_calculo_investidor: string | null
           conciliado: boolean
           created_at: string
           data_fim_prevista: string | null
@@ -3128,10 +3243,12 @@ export type Database = {
           data_inicio: string | null
           descricao: string | null
           id: string
+          investidor_id: string | null
           modelo_absorcao_taxas: string
           nome: string
           observacoes: string | null
           orcamento_inicial: number | null
+          percentual_investidor: number | null
           status: string
           tem_investimento_crypto: boolean
           tipo_projeto: string | null
@@ -3139,6 +3256,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          base_calculo_investidor?: string | null
           conciliado?: boolean
           created_at?: string
           data_fim_prevista?: string | null
@@ -3146,10 +3264,12 @@ export type Database = {
           data_inicio?: string | null
           descricao?: string | null
           id?: string
+          investidor_id?: string | null
           modelo_absorcao_taxas?: string
           nome: string
           observacoes?: string | null
           orcamento_inicial?: number | null
+          percentual_investidor?: number | null
           status?: string
           tem_investimento_crypto?: boolean
           tipo_projeto?: string | null
@@ -3157,6 +3277,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          base_calculo_investidor?: string | null
           conciliado?: boolean
           created_at?: string
           data_fim_prevista?: string | null
@@ -3164,17 +3285,34 @@ export type Database = {
           data_inicio?: string | null
           descricao?: string | null
           id?: string
+          investidor_id?: string | null
           modelo_absorcao_taxas?: string
           nome?: string
           observacoes?: string | null
           orcamento_inicial?: number | null
+          percentual_investidor?: number | null
           status?: string
           tem_investimento_crypto?: boolean
           tipo_projeto?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projetos_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "investidores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projetos_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "v_roi_investidores"
+            referencedColumns: ["investidor_id"]
+          },
+        ]
       }
       promocao_participantes: {
         Row: {
