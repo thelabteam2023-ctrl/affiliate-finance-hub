@@ -24,11 +24,17 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Tooltip as ShadcnTooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   ResponsiveContainer,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ComposedChart,
   Line,
@@ -859,40 +865,62 @@ export default function Financeiro() {
   // ==================== HISTÓRICO MENSAL ====================
   
   const getHistoricoMensal = () => {
-    const months: Record<string, { mes: string; label: string; custos: number; despesas: number; despesasAdmin: number; resultado: number; patrimonio: number }> = {};
+    // Novo modelo: baseado em lucro operacional (apostas), não fluxo de caixa
+    const months: Record<string, { 
+      mes: string; 
+      label: string; 
+      lucroApostas: number;      // Lucro operacional das apostas LIQUIDADAS
+      custosOperacionais: number; // Pagamentos a parceiros + indicadores + operadores
+      despesasAdmin: number;      // Despesas administrativas
+      patrimonio: number;
+    }> = {};
     
+    // Inicializar últimos 12 meses
     for (let i = 11; i >= 0; i--) {
       const date = subMonths(new Date(), i);
       const key = format(date, "yyyy-MM");
       months[key] = {
         mes: key,
         label: format(date, "MMM/yy", { locale: ptBR }),
-        custos: 0,
-        despesas: 0,
+        lucroApostas: 0,
+        custosOperacionais: 0,
         despesasAdmin: 0,
-        resultado: 0,
         patrimonio: 0,
       };
     }
 
-    custos.forEach(c => {
-      if (c.data_inicio) {
-        const key = format(parseISO(c.data_inicio), "yyyy-MM");
+    // 1. LUCRO OPERACIONAL: soma de lucro_prejuizo das apostas liquidadas
+    apostasLucro.forEach(aposta => {
+      if (aposta.data_aposta && aposta.lucro_prejuizo !== null) {
+        const key = format(parseISO(aposta.data_aposta), "yyyy-MM");
         if (months[key]) {
-          months[key].custos += c.custo_total || 0;
+          months[key].lucroApostas += aposta.lucro_prejuizo;
         }
       }
     });
 
+    // 2. CUSTOS OPERACIONAIS: pagamentos CONFIRMADOS a parceiros/indicadores
+    // (despesas já vem filtrado por CONFIRMADO na query)
     despesas.forEach(d => {
       if (d.data_movimentacao) {
         const key = format(parseISO(d.data_movimentacao), "yyyy-MM");
         if (months[key]) {
-          months[key].despesas += d.valor || 0;
+          months[key].custosOperacionais += d.valor || 0;
         }
       }
     });
 
+    // 2b. CUSTOS OPERACIONAIS: pagamentos a operadores CONFIRMADOS
+    pagamentosOperador.forEach(p => {
+      if (p.data_pagamento) {
+        const key = format(parseISO(p.data_pagamento), "yyyy-MM");
+        if (months[key]) {
+          months[key].custosOperacionais += p.valor || 0;
+        }
+      }
+    });
+
+    // 3. DESPESAS ADMINISTRATIVAS: despesas confirmadas
     despesasAdmin.forEach(d => {
       if (d.data_despesa) {
         const key = format(parseISO(d.data_despesa), "yyyy-MM");
@@ -902,30 +930,23 @@ export default function Financeiro() {
       }
     });
 
-    cashLedger.forEach(l => {
-      if (l.data_transacao && l.moeda === "BRL") {
-        const key = format(parseISO(l.data_transacao), "yyyy-MM");
-        if (months[key]) {
-          if (l.tipo_transacao === "SAQUE") {
-            months[key].resultado += l.valor;
-          } else if (l.tipo_transacao === "DEPOSITO") {
-            months[key].resultado -= l.valor;
-          }
-        }
-      }
-    });
-
+    // 4. PATRIMÔNIO ACUMULADO: soma progressiva do resultado líquido
     let patrimonioAcumulado = 0;
     const monthsArray = Object.values(months);
     monthsArray.forEach((m, index) => {
-      patrimonioAcumulado += m.resultado - m.custos - m.despesas - m.despesasAdmin;
+      const lucroLiquido = m.lucroApostas - m.custosOperacionais - m.despesasAdmin;
+      patrimonioAcumulado += lucroLiquido;
       monthsArray[index].patrimonio = patrimonioAcumulado;
     });
 
     return monthsArray.map(m => ({
       ...m,
-      lucroLiquido: m.resultado - m.custos - m.despesas - m.despesasAdmin,
-      totalCustos: m.custos + m.despesas + m.despesasAdmin,
+      // Mapeamento para compatibilidade com a UI existente
+      resultado: m.lucroApostas,           // Agora é lucro operacional, não fluxo de caixa
+      custos: m.custosOperacionais,        // Pagamentos reais, não compromissos
+      despesas: m.despesasAdmin,
+      lucroLiquido: m.lucroApostas - m.custosOperacionais - m.despesasAdmin,
+      totalCustos: m.custosOperacionais + m.despesasAdmin,
     }));
   };
 
@@ -1230,9 +1251,42 @@ export default function Financeiro() {
                   <thead>
                     <tr className="border-b bg-muted/30">
                       <th className="text-left py-3 px-4 font-medium">Mês</th>
-                      <th className="text-right py-3 px-4 font-medium">Resultado</th>
-                      <th className="text-right py-3 px-4 font-medium">Custos</th>
-                      <th className="text-right py-3 px-4 font-medium">Despesas</th>
+                      <th className="text-right py-3 px-4 font-medium">
+                        <TooltipProvider>
+                          <ShadcnTooltip>
+                            <TooltipTrigger className="cursor-help border-b border-dotted border-muted-foreground/50">
+                              Lucro Apostas
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-xs">Soma do lucro/prejuízo de todas as apostas liquidadas no período. Representa o resultado operacional real.</p>
+                            </TooltipContent>
+                          </ShadcnTooltip>
+                        </TooltipProvider>
+                      </th>
+                      <th className="text-right py-3 px-4 font-medium">
+                        <TooltipProvider>
+                          <ShadcnTooltip>
+                            <TooltipTrigger className="cursor-help border-b border-dotted border-muted-foreground/50">
+                              Custos
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-xs">Pagamentos confirmados: parceiros, comissões, bônus de indicadores e pagamentos a operadores.</p>
+                            </TooltipContent>
+                          </ShadcnTooltip>
+                        </TooltipProvider>
+                      </th>
+                      <th className="text-right py-3 px-4 font-medium">
+                        <TooltipProvider>
+                          <ShadcnTooltip>
+                            <TooltipTrigger className="cursor-help border-b border-dotted border-muted-foreground/50">
+                              Despesas
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-xs">Despesas administrativas confirmadas: infraestrutura, ferramentas, serviços, etc.</p>
+                            </TooltipContent>
+                          </ShadcnTooltip>
+                        </TooltipProvider>
+                      </th>
                       <th className="text-right py-3 px-4 font-medium">
                         <button
                           onClick={() => setHistoricoSort(prev => ({
@@ -1241,7 +1295,16 @@ export default function Financeiro() {
                           }))}
                           className={`inline-flex items-center gap-1 hover:text-primary transition-colors ${historicoSort.field === "lucroLiquido" ? "text-primary" : ""}`}
                         >
-                          Lucro Líq.
+                          <TooltipProvider>
+                            <ShadcnTooltip>
+                              <TooltipTrigger className="cursor-help border-b border-dotted border-muted-foreground/50">
+                                Lucro Líq.
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                <p className="text-xs">Lucro Apostas − Custos − Despesas. Resultado econômico real após todas as deduções.</p>
+                              </TooltipContent>
+                            </ShadcnTooltip>
+                          </TooltipProvider>
                           <ArrowUpDown className="h-3 w-3" />
                         </button>
                       </th>
@@ -1253,7 +1316,16 @@ export default function Financeiro() {
                           }))}
                           className={`inline-flex items-center gap-1 hover:text-primary transition-colors ${historicoSort.field === "patrimonio" ? "text-primary" : ""}`}
                         >
-                          Patrimônio Acum.
+                          <TooltipProvider>
+                            <ShadcnTooltip>
+                              <TooltipTrigger className="cursor-help border-b border-dotted border-muted-foreground/50">
+                                Patrimônio
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                <p className="text-xs">Soma acumulada do Lucro Líquido. Representa o crescimento patrimonial total até o mês.</p>
+                              </TooltipContent>
+                            </ShadcnTooltip>
+                          </TooltipProvider>
                           <ArrowUpDown className="h-3 w-3" />
                         </button>
                       </th>
