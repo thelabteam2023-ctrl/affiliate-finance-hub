@@ -623,8 +623,25 @@ export default function Financeiro() {
   // ==================== RENTABILIDADE ====================
   
   const totalLucroParceiros = lucroOperacionalApostas > 0 ? lucroOperacionalApostas : 0;
-  const diasMedioAquisicao = 60;
-
+  
+  // Calcular dias médio de operação dinamicamente
+  const diasMedioAquisicao = useMemo(() => {
+    if (custos.length === 0) return 30; // fallback mínimo
+    
+    const hoje = new Date();
+    const diasPorParceria = custos
+      .filter(c => c.data_inicio)
+      .map(c => {
+        const dataInicio = parseISO(c.data_inicio);
+        const diffMs = hoje.getTime() - dataInicio.getTime();
+        return Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+      });
+    
+    if (diasPorParceria.length === 0) return 30;
+    
+    const media = diasPorParceria.reduce((acc, d) => acc + d, 0) / diasPorParceria.length;
+    return Math.max(30, Math.round(media)); // mínimo 30 dias
+  }, [custos]);
   // ==================== HISTÓRICO MENSAL ====================
   
   const getHistoricoMensal = () => {
