@@ -44,7 +44,13 @@ import { MovimentacaoCapitalCard } from "@/components/financeiro/MovimentacaoCap
 import { CustoSustentacaoCard } from "@/components/financeiro/CustoSustentacaoCard";
 import { EquilibrioOperacionalCard } from "@/components/financeiro/EquilibrioOperacionalCard";
 import { EficienciaCapitalCard } from "@/components/financeiro/EficienciaCapitalCard";
-import { MapaPatrimonioCard } from "@/components/financeiro/MapaPatrimonioCard";
+import { 
+  MapaPatrimonioCard, 
+  BookmakerPorProjeto, 
+  ContaPorBanco, 
+  WalletPorExchange, 
+  CaixaDetalhe 
+} from "@/components/financeiro/MapaPatrimonioCard";
 
 interface CaixaFiat {
   moeda: string;
@@ -100,6 +106,24 @@ interface BookmakerSaldo {
   saldo_freebet: number;
   saldo_irrecuperavel: number;
   status: string;
+  projeto_id: string | null;
+}
+
+interface BookmakerDetalhado {
+  saldo_atual: number;
+  saldo_irrecuperavel: number;
+  projeto_id: string | null;
+  projetos?: { nome: string } | null;
+}
+
+interface ContaDetalhada {
+  saldo: number;
+  banco: string;
+}
+
+interface WalletDetalhada {
+  saldo_usd: number;
+  exchange: string;
 }
 
 interface SaudeFinanceiraData {
@@ -144,10 +168,13 @@ export default function Financeiro() {
   const [pagamentosOperadorPendentes, setPagamentosOperadorPendentes] = useState<PagamentoOperador[]>([]);
   const [movimentacoesIndicacao, setMovimentacoesIndicacao] = useState<DespesaIndicacao[]>([]);
   const [bookmakersSaldos, setBookmakersSaldos] = useState<BookmakerSaldo[]>([]);
+  const [bookmakersDetalhados, setBookmakersDetalhados] = useState<BookmakerDetalhado[]>([]);
   const [lucroOperacionalApostas, setLucroOperacionalApostas] = useState<number>(0);
   const [totalParceirosAtivos, setTotalParceirosAtivos] = useState<number>(0);
   const [contasParceiros, setContasParceiros] = useState<ContaParceiro[]>([]);
+  const [contasDetalhadas, setContasDetalhadas] = useState<ContaDetalhada[]>([]);
   const [walletsParceiros, setWalletsParceiros] = useState<WalletParceiro[]>([]);
+  const [walletsDetalhadas, setWalletsDetalhadas] = useState<WalletDetalhada[]>([]);
   
   // Estados para compromissos pendentes de parcerias
   const [parceirosPendentes, setParceirosPendentes] = useState<{ valorTotal: number; count: number }>({ valorTotal: 0, count: 0 });
@@ -225,6 +252,7 @@ export default function Financeiro() {
         pagamentosOpPendentesResult,
         movIndicacaoResult,
         bookmakersResult,
+        bookmakersDetalhadosResult,
         apostasLucroResult,
         parceirosAtivosResult,
         parceriasParceiroResult,
@@ -232,6 +260,8 @@ export default function Financeiro() {
         acordosIndicadorResult,
         contasParceirosResult,
         walletsParceirosResult,
+        contasDetalhadasResult,
+        walletsDetalhadasResult,
       ] = await Promise.all([
         supabase.from("v_saldo_caixa_fiat").select("*"),
         supabase.from("v_saldo_caixa_crypto").select("*"),
@@ -243,7 +273,8 @@ export default function Financeiro() {
         supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status").eq("status", "CONFIRMADO"),
         supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status").eq("status", "PENDENTE"),
         supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id"),
-        supabase.from("bookmakers").select("saldo_atual, saldo_freebet, saldo_irrecuperavel, status").in("status", ["ativo", "ATIVO", "EM_USO", "AGUARDANDO_SAQUE"]),
+        supabase.from("bookmakers").select("saldo_atual, saldo_freebet, saldo_irrecuperavel, status, projeto_id").in("status", ["ativo", "ATIVO", "EM_USO", "AGUARDANDO_SAQUE"]),
+        supabase.from("bookmakers").select("saldo_atual, saldo_irrecuperavel, projeto_id, projetos(nome)").in("status", ["ativo", "ATIVO", "EM_USO", "AGUARDANDO_SAQUE"]),
         supabase.from("apostas").select("lucro_prejuizo").not("resultado", "is", null),
         supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("status", "ativo"),
         supabase
@@ -264,6 +295,8 @@ export default function Financeiro() {
           .eq("ativo", true),
         supabase.from("v_saldo_parceiro_contas").select("saldo"),
         supabase.from("v_saldo_parceiro_wallets").select("saldo_usd"),
+        supabase.from("v_saldo_parceiro_contas").select("saldo, banco"),
+        supabase.from("v_saldo_parceiro_wallets").select("saldo_usd, exchange"),
       ]);
 
       if (fiatResult.error) throw fiatResult.error;
@@ -289,8 +322,11 @@ export default function Financeiro() {
       setPagamentosOperadorPendentes(pagamentosOpPendentesResult.data || []);
       setMovimentacoesIndicacao(movIndicacaoResult.data || []);
       setBookmakersSaldos(bookmakersResult.data || []);
+      setBookmakersDetalhados(bookmakersDetalhadosResult.data || []);
       setContasParceiros(contasParceirosResult.data || []);
       setWalletsParceiros(walletsParceirosResult.data || []);
+      setContasDetalhadas(contasDetalhadasResult.data || []);
+      setWalletsDetalhadas(walletsDetalhadasResult.data || []);
       
       // Calcular lucro operacional das apostas
       const lucroTotal = (apostasLucroResult.data || []).reduce((acc: number, a: { lucro_prejuizo: number | null }) => 
@@ -418,6 +454,100 @@ export default function Financeiro() {
   // Saldos em contas de parceiros e wallets
   const totalContasParceiros = contasParceiros.reduce((acc, c) => acc + (c.saldo || 0), 0);
   const totalWalletsParceiros = walletsParceiros.reduce((acc, w) => acc + ((w.saldo_usd || 0) * cotacaoUSD), 0);
+
+  // ==================== DADOS DETALHADOS PARA MAPA DE PATRIMÔNIO ====================
+  
+  // Bookmakers agrupados por projeto
+  const bookmakersPorProjeto = useMemo((): BookmakerPorProjeto[] => {
+    const agrupado: Record<string, { projetoId: string | null; projetoNome: string; saldo: number }> = {};
+    
+    bookmakersDetalhados.forEach((b: any) => {
+      const projetoId = b.projeto_id || null;
+      const projetoNome = b.projetos?.nome || "Sem Projeto";
+      const key = projetoId || "sem_projeto";
+      const saldoLiquido = (b.saldo_atual || 0) - (b.saldo_irrecuperavel || 0);
+      
+      if (!agrupado[key]) {
+        agrupado[key] = { projetoId, projetoNome, saldo: 0 };
+      }
+      agrupado[key].saldo += saldoLiquido;
+    });
+    
+    return Object.values(agrupado).filter(p => p.saldo !== 0);
+  }, [bookmakersDetalhados]);
+
+  // Contas agrupadas por banco
+  const contasPorBanco = useMemo((): ContaPorBanco[] => {
+    const agrupado: Record<string, { bancoNome: string; saldo: number; qtdContas: number }> = {};
+    
+    contasDetalhadas.forEach((c: any) => {
+      const bancoNome = c.banco || "Banco não informado";
+      
+      if (!agrupado[bancoNome]) {
+        agrupado[bancoNome] = { bancoNome, saldo: 0, qtdContas: 0 };
+      }
+      agrupado[bancoNome].saldo += c.saldo || 0;
+      agrupado[bancoNome].qtdContas += 1;
+    });
+    
+    return Object.values(agrupado);
+  }, [contasDetalhadas]);
+
+  // Wallets agrupadas por exchange
+  const walletsPorExchange = useMemo((): WalletPorExchange[] => {
+    const agrupado: Record<string, { exchange: string; saldoUsd: number }> = {};
+    
+    walletsDetalhadas.forEach((w: any) => {
+      const exchange = w.exchange || "Exchange não informada";
+      
+      if (!agrupado[exchange]) {
+        agrupado[exchange] = { exchange, saldoUsd: 0 };
+      }
+      agrupado[exchange].saldoUsd += w.saldo_usd || 0;
+    });
+    
+    return Object.values(agrupado);
+  }, [walletsDetalhadas]);
+
+  // Detalhes do caixa operacional
+  const caixaDetalhes = useMemo((): CaixaDetalhe[] => {
+    const detalhes: CaixaDetalhe[] = [];
+    
+    // BRL
+    if (saldoBRL > 0) {
+      detalhes.push({
+        tipo: "BRL",
+        nome: "Real (BRL)",
+        valor: saldoBRL,
+        valorBRL: saldoBRL,
+      });
+    }
+    
+    // USD
+    if (saldoUSD > 0) {
+      detalhes.push({
+        tipo: "USD",
+        nome: "Dólar (USD)",
+        valor: saldoUSD,
+        valorBRL: saldoUSD * cotacaoUSD,
+      });
+    }
+    
+    // Crypto
+    caixaCrypto.forEach(c => {
+      const valorUSD = getCryptoUSDValue(c.coin, c.saldo_coin, c.saldo_usd);
+      if (valorUSD > 0) {
+        detalhes.push({
+          tipo: "CRYPTO",
+          nome: c.coin,
+          valor: c.saldo_coin,
+          valorBRL: valorUSD * cotacaoUSD,
+        });
+      }
+    });
+    
+    return detalhes;
+  }, [saldoBRL, saldoUSD, caixaCrypto, cotacaoUSD, getCryptoUSDValue]);
 
   // ==================== CUSTOS REAIS (impactam P&L) ====================
   
@@ -783,6 +913,11 @@ export default function Financeiro() {
               contasParceiros={totalContasParceiros}
               walletsCrypto={totalWalletsParceiros}
               formatCurrency={formatCurrency}
+              bookmakersPorProjeto={bookmakersPorProjeto}
+              contasPorBanco={contasPorBanco}
+              walletsPorExchange={walletsPorExchange}
+              caixaDetalhes={caixaDetalhes}
+              cotacaoUSD={cotacaoUSD}
             />
             <ComposicaoCustosCard
               categorias={composicaoCustos}
