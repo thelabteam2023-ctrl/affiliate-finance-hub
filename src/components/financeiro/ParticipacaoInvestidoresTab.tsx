@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Users, CheckCircle2, Clock, TrendingUp, Plus, Gift } from "lucide-react";
+import { Loader2, Users, CheckCircle2, Clock, TrendingUp, Plus, Gift, Hourglass } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PagamentoParticipacaoDialog } from "@/components/projetos/PagamentoParticipacaoDialog";
@@ -27,7 +27,7 @@ interface Participacao {
   participacao_referencia_id?: string | null;
   projetos?: { nome: string } | null;
   investidores?: { nome: string } | null;
-  projeto_ciclos?: { numero_ciclo: number } | null;
+  projeto_ciclos?: { numero_ciclo: number; status: string } | null;
 }
 
 interface ParticipacaoInvestidoresTabProps {
@@ -56,7 +56,7 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
           *,
           projetos(nome),
           investidores(nome),
-          projeto_ciclos(numero_ciclo)
+          projeto_ciclos(numero_ciclo, status)
         `)
         .order("data_apuracao", { ascending: false });
 
@@ -109,9 +109,21 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
     onRefresh?.();
   };
 
-  const pendentes = participacoes.filter(p => p.status === "A_PAGAR");
+  // Aguardando: A_PAGAR mas ciclo ainda EM_ANDAMENTO
+  const aguardando = participacoes.filter(p => 
+    p.status === "A_PAGAR" && 
+    p.projeto_ciclos?.status === "EM_ANDAMENTO"
+  );
+  
+  // Pendentes (prontas para pagar): A_PAGAR e ciclo FECHADO ou CONCLUIDO
+  const pendentes = participacoes.filter(p => 
+    p.status === "A_PAGAR" && 
+    p.projeto_ciclos?.status !== "EM_ANDAMENTO"
+  );
+  
   const pagas = participacoes.filter(p => p.status === "PAGO");
 
+  const totalAguardando = aguardando.reduce((acc, p) => acc + p.valor_participacao, 0);
   const totalPendente = pendentes.reduce((acc, p) => acc + p.valor_participacao, 0);
   const totalPago = pagas.reduce((acc, p) => acc + p.valor_participacao, 0);
 
@@ -135,7 +147,22 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <Hourglass className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Aguardando</p>
+                <p className="text-xl font-bold text-blue-500">{formatCurrency(totalAguardando)}</p>
+                <p className="text-xs text-muted-foreground">{aguardando.length} participação(ões)</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -143,7 +170,7 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
                 <Clock className="h-5 w-5 text-amber-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Pendente</p>
+                <p className="text-sm text-muted-foreground">Pronto p/ Pagar</p>
                 <p className="text-xl font-bold text-amber-500">{formatCurrency(totalPendente)}</p>
                 <p className="text-xs text-muted-foreground">{pendentes.length} participação(ões)</p>
               </div>
@@ -173,8 +200,8 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
                 <TrendingUp className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Distribuído</p>
-                <p className="text-xl font-bold">{formatCurrency(totalPendente + totalPago)}</p>
+                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-xl font-bold">{formatCurrency(totalAguardando + totalPendente + totalPago)}</p>
                 <p className="text-xs text-muted-foreground">{participacoes.length} total</p>
               </div>
             </div>
@@ -182,12 +209,79 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
         </Card>
       </div>
 
-      {/* Participações Pendentes */}
+      {/* Aguardando Fechamento de Ciclo */}
+      {aguardando.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Hourglass className="h-4 w-4 text-blue-500" />
+              Aguardando Fechamento de Ciclo
+              <Badge variant="secondary" className="ml-2">{aguardando.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/30">
+                    <th className="text-left py-3 px-4 font-medium">Investidor</th>
+                    <th className="text-left py-3 px-4 font-medium">Projeto</th>
+                    <th className="text-center py-3 px-4 font-medium">Ciclo</th>
+                    <th className="text-center py-3 px-4 font-medium">Tipo</th>
+                    <th className="text-right py-3 px-4 font-medium">Lucro Base</th>
+                    <th className="text-center py-3 px-4 font-medium">%</th>
+                    <th className="text-right py-3 px-4 font-medium">Participação</th>
+                    <th className="text-left py-3 px-4 font-medium">Criado em</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {aguardando.map((p) => (
+                    <tr key={p.id} className="border-b border-border/50 hover:bg-muted/30">
+                      <td className="py-3 px-4 font-medium">
+                        {p.investidores?.nome || "—"}
+                      </td>
+                      <td className="py-3 px-4">
+                        {p.projetos?.nome || "—"}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Badge variant="outline">#{p.projeto_ciclos?.numero_ciclo || "—"}</Badge>
+                          <Badge variant="secondary" className="text-xs bg-blue-500/10 text-blue-500 border-blue-500/30">
+                            Em andamento
+                          </Badge>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        {getTipoBadge(p.tipo_participacao)}
+                      </td>
+                      <td className="py-3 px-4 text-right text-muted-foreground">
+                        {formatCurrency(p.lucro_base)}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <Badge variant="secondary">{p.percentual_aplicado}%</Badge>
+                      </td>
+                      <td className="py-3 px-4 text-right font-semibold text-blue-500">
+                        {formatCurrency(p.valor_participacao)}
+                      </td>
+                      <td className="py-3 px-4 text-muted-foreground">
+                        {format(parseISO(p.data_apuracao), "dd/MM/yyyy", { locale: ptBR })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Prontas para Pagamento */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Clock className="h-4 w-4 text-amber-500" />
-            Participações Pendentes
+            Prontas para Pagamento
+            <Badge variant="secondary" className="ml-2">{pendentes.length}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
