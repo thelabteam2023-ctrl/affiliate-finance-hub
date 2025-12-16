@@ -147,11 +147,14 @@ export function formatPhoneDisplay(phone: string): string {
 }
 
 /**
- * Mascara CPF parcialmente (***XXX***-**)
+ * Mascara CPF parcialmente - mostra início e final (123.•••.•••-45)
  */
 export function maskCPFPartial(cpf: string): string {
-  const formatted = formatCPF(cpf);
-  return formatted.replace(/(\d{3})\.(\d{3})\.(\d{3})-(\d{2})/, "•••.$2.•••-••");
+  const cleaned = cpf.replace(/\D/g, "");
+  if (cleaned.length !== 11) return cpf;
+  const inicio = cleaned.substring(0, 3);
+  const final = cleaned.substring(9, 11);
+  return `${inicio}.•••.•••-${final}`;
 }
 
 /**

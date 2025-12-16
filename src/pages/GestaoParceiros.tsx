@@ -77,7 +77,7 @@ export default function GestaoParceiros() {
   const [parceriasData, setParceriasData] = useState<Map<string, ParceriaStatus>>(new Map());
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
-  const [showSensitiveData, setShowSensitiveData] = useState(false);
+  const [showSensitiveData, setShowSensitiveData] = useState(true);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingParceiro, setEditingParceiro] = useState<Parceiro | null>(null);

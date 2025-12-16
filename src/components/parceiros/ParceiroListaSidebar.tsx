@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { maskCPFPartial } from "@/lib/validators";
 
 interface Parceiro {
   id: string;
@@ -26,7 +27,7 @@ export function ParceiroListaSidebar({
   parceiros,
   selectedId,
   onSelect,
-  showSensitiveData = false,
+  showSensitiveData = true,
   onAddParceiro,
 }: ParceiroListaSidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -50,16 +51,9 @@ export function ParceiroListaSidebar({
     }).format(value);
   };
 
-  const maskCurrency = (value: number) => {
-    if (showSensitiveData) return formatCurrency(value);
-    return "R$ ••••";
-  };
-
-  const maskCPF = (cpf: string) => {
-    if (showSensitiveData) {
-      return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-    }
-    return "•••.•••.•••-••";
+  const displayCurrency = (value: number) => {
+    if (!showSensitiveData) return "R$ ••••";
+    return formatCurrency(value);
   };
 
   return (
@@ -121,7 +115,7 @@ export function ParceiroListaSidebar({
                 <p className="font-medium text-sm leading-tight">{parceiro.nome}</p>
                 <div className="flex items-center justify-between gap-2 mt-0.5">
                   <span className="text-xs text-muted-foreground font-mono">
-                    {maskCPF(parceiro.cpf)}
+                    {maskCPFPartial(parceiro.cpf)}
                   </span>
                   <span
                     className={cn(
@@ -131,7 +125,7 @@ export function ParceiroListaSidebar({
                         : "text-muted-foreground"
                     )}
                   >
-                    {maskCurrency(parceiro.lucro_prejuizo)}
+                    {displayCurrency(parceiro.lucro_prejuizo)}
                   </span>
                 </div>
               </div>
