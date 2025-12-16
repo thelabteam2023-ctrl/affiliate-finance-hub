@@ -26,6 +26,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import {
   Select,
@@ -47,12 +48,16 @@ import {
   AlertTriangle,
   CheckCircle2,
   FileText,
-  Pencil
+  Pencil,
+  Briefcase,
+  Percent,
+  Info
 } from "lucide-react";
 import { VincularOperadorDialog } from "@/components/projetos/VincularOperadorDialog";
 import { EditarAcordoOperadorDialog } from "@/components/projetos/EditarAcordoOperadorDialog";
 import { ProjetoConciliacaoDialog } from "@/components/projetos/ProjetoConciliacaoDialog";
 import { ConfirmacaoSenhaDialog } from "@/components/ui/confirmacao-senha-dialog";
+import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 
 interface Projeto {
   id?: string;
@@ -67,6 +72,9 @@ interface Projeto {
   tem_investimento_crypto?: boolean;
   conciliado?: boolean;
   modelo_absorcao_taxas?: string;
+  investidor_id?: string | null;
+  percentual_investidor?: number;
+  base_calculo_investidor?: string;
 }
 
 const MODELOS_ABSORCAO = [
@@ -136,6 +144,9 @@ export function ProjetoDialog({
     tem_investimento_crypto: false,
     conciliado: false,
     modelo_absorcao_taxas: "EMPRESA_100",
+    investidor_id: null,
+    percentual_investidor: 0,
+    base_calculo_investidor: "LUCRO_LIQUIDO",
   });
 
   useEffect(() => {
@@ -154,6 +165,9 @@ export function ProjetoDialog({
               tem_investimento_crypto: projetoCompleto.tem_investimento_crypto || false,
               conciliado: projetoCompleto.conciliado || false,
               modelo_absorcao_taxas: projetoCompleto.modelo_absorcao_taxas || "EMPRESA_100",
+              investidor_id: projetoCompleto.investidor_id || null,
+              percentual_investidor: projetoCompleto.percentual_investidor || 0,
+              base_calculo_investidor: projetoCompleto.base_calculo_investidor || "LUCRO_LIQUIDO",
             });
           } else {
             // Fallback se não conseguir buscar
@@ -187,6 +201,9 @@ export function ProjetoDialog({
           tem_investimento_crypto: false,
           conciliado: false,
           modelo_absorcao_taxas: "EMPRESA_100",
+          investidor_id: null,
+          percentual_investidor: 0,
+          base_calculo_investidor: "LUCRO_LIQUIDO",
         });
         setOperadores([]);
         setTemConciliacao(false);
@@ -305,6 +322,9 @@ export function ProjetoDialog({
         modelo_absorcao_taxas: formData.tem_investimento_crypto ? formData.modelo_absorcao_taxas : "EMPRESA_100",
         tipo_projeto: "INTERNO",
         user_id: session.session.user.id,
+        investidor_id: formData.investidor_id || null,
+        percentual_investidor: formData.percentual_investidor || 0,
+        base_calculo_investidor: formData.base_calculo_investidor || "LUCRO_LIQUIDO",
       };
 
       if (mode === "create") {
@@ -569,6 +589,93 @@ export function ProjetoDialog({
                         )}
                       </>
                     )}
+                  </CardContent>
+                </Card>
+
+                {/* Participação de Investidor */}
+                <Card className={formData.investidor_id ? "border-purple-500/30" : ""}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Briefcase className="h-5 w-5 text-purple-500" />
+                      <div>
+                        <Label className="text-base font-medium">Participação de Investidor</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Opcional: vincule um investidor para dividir lucros
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Investidor</Label>
+                        <InvestidorSelect
+                          value={formData.investidor_id || ""}
+                          onValueChange={(value) => setFormData({ ...formData, investidor_id: value || null })}
+                          disabled={isViewMode}
+                        />
+                      </div>
+
+                      {formData.investidor_id && (
+                        <>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="flex items-center gap-1">
+                                <Percent className="h-3 w-3" />
+                                Percentual de Participação *
+                              </Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={formData.percentual_investidor || ""}
+                                onChange={(e) => setFormData({ 
+                                  ...formData, 
+                                  percentual_investidor: parseFloat(e.target.value) || 0 
+                                })}
+                                disabled={isViewMode}
+                                placeholder="Ex: 50"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Base de Cálculo *</Label>
+                              <RadioGroup
+                                value={formData.base_calculo_investidor || "LUCRO_LIQUIDO"}
+                                onValueChange={(value) => setFormData({ ...formData, base_calculo_investidor: value })}
+                                disabled={isViewMode}
+                                className="flex flex-col gap-2"
+                              >
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="LUCRO_LIQUIDO" id="lucro_liquido" />
+                                  <label htmlFor="lucro_liquido" className="text-sm cursor-pointer">
+                                    Lucro Líquido
+                                  </label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="LUCRO_BRUTO" id="lucro_bruto" />
+                                  <label htmlFor="lucro_bruto" className="text-sm cursor-pointer">
+                                    Lucro Bruto
+                                  </label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+                          </div>
+
+                          <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                            <div className="flex items-start gap-2">
+                              <Info className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
+                              <p className="text-xs text-muted-foreground">
+                                O investidor receberá <strong className="text-purple-400">{formData.percentual_investidor || 0}%</strong> do{" "}
+                                <strong className="text-purple-400">
+                                  {formData.base_calculo_investidor === "LUCRO_BRUTO" ? "lucro bruto" : "lucro líquido"}
+                                </strong>{" "}
+                                de cada ciclo fechado deste projeto. A participação será automaticamente calculada e ficará disponível para pagamento.
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>

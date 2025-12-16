@@ -35,6 +35,7 @@ import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliac
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { PagamentoOperadorDialog } from "@/components/operadores/PagamentoOperadorDialog";
 import { PropostasPagamentoCard } from "@/components/operadores/PropostasPagamentoCard";
+import { PagamentoParticipacaoDialog } from "@/components/projetos/PagamentoParticipacaoDialog";
 import { useCicloAlertas, AlertaCiclo } from "@/hooks/useCicloAlertas";
 
 interface Alerta {
@@ -153,6 +154,21 @@ interface AlertaLucroParceiro {
   data_atingido: string;
 }
 
+interface ParticipacaoPendente {
+  id: string;
+  projeto_id: string;
+  ciclo_id: string;
+  investidor_id: string;
+  percentual_aplicado: number;
+  base_calculo: string;
+  lucro_base: number;
+  valor_participacao: number;
+  data_apuracao: string;
+  investidor_nome?: string;
+  projeto_nome?: string;
+  ciclo_numero?: number;
+}
+
 // AlertaCiclo interface is imported from useCicloAlertas hook
 
 export default function CentralOperacoes() {
@@ -166,6 +182,7 @@ export default function CentralOperacoes() {
   const [saquesPendentes, setSaquesPendentes] = useState<SaquePendenteConfirmacao[]>([]);
   const [alertasLucro, setAlertasLucro] = useState<AlertaLucroParceiro[]>([]);
   const [pagamentosOperadorPendentes, setPagamentosOperadorPendentes] = useState<PagamentoOperadorPendente[]>([]);
+  const [participacoesPendentes, setParticipacoesPendentes] = useState<ParticipacaoPendente[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
@@ -174,6 +191,8 @@ export default function CentralOperacoes() {
   const [selectedSaque, setSelectedSaque] = useState<SaquePendenteConfirmacao | null>(null);
   const [pagamentoOperadorOpen, setPagamentoOperadorOpen] = useState(false);
   const [selectedPagamentoOperador, setSelectedPagamentoOperador] = useState<PagamentoOperadorPendente | null>(null);
+  const [pagamentoParticipacaoOpen, setPagamentoParticipacaoOpen] = useState(false);
+  const [selectedParticipacao, setSelectedParticipacao] = useState<ParticipacaoPendente | null>(null);
   const navigate = useNavigate();
 
   // Alertas de ciclos via hook dedicado
@@ -312,7 +331,26 @@ export default function CentralOperacoes() {
             projeto:projetos(nome)
           `)
           .eq("status", "PENDENTE")
-          .order("data_pagamento", { ascending: false })
+          .order("data_pagamento", { ascending: false }),
+        // Participações de investidores pendentes
+        supabase
+          .from("participacao_ciclos")
+          .select(`
+            id,
+            projeto_id,
+            ciclo_id,
+            investidor_id,
+            percentual_aplicado,
+            base_calculo,
+            lucro_base,
+            valor_participacao,
+            data_apuracao,
+            investidor:investidores(nome),
+            projeto:projetos(nome),
+            ciclo:projeto_ciclos(numero_ciclo)
+          `)
+          .eq("status", "A_PAGAR")
+          .order("data_apuracao", { ascending: false })
       ]);
 
       if (alertasResult.error) throw alertasResult.error;
@@ -542,6 +580,36 @@ export default function CentralOperacoes() {
           projeto_nome: p.projeto?.nome || null,
         }));
         setPagamentosOperadorPendentes(pagamentosOp);
+      }
+
+      // Participações de investidores pendentes
+      const participacoesResult = await supabase
+        .from("participacao_ciclos")
+        .select(`
+          id, projeto_id, ciclo_id, investidor_id, percentual_aplicado,
+          base_calculo, lucro_base, valor_participacao, data_apuracao,
+          investidor:investidores(nome),
+          projeto:projetos(nome),
+          ciclo:projeto_ciclos(numero_ciclo)
+        `)
+        .eq("status", "A_PAGAR");
+      
+      if (!participacoesResult.error && participacoesResult.data) {
+        const participacoes: ParticipacaoPendente[] = participacoesResult.data.map((p: any) => ({
+          id: p.id,
+          projeto_id: p.projeto_id,
+          ciclo_id: p.ciclo_id,
+          investidor_id: p.investidor_id,
+          percentual_aplicado: p.percentual_aplicado,
+          base_calculo: p.base_calculo,
+          lucro_base: p.lucro_base,
+          valor_participacao: p.valor_participacao,
+          data_apuracao: p.data_apuracao,
+          investidor_nome: p.investidor?.nome || "N/A",
+          projeto_nome: p.projeto?.nome || "N/A",
+          ciclo_numero: p.ciclo?.numero_ciclo || 0,
+        }));
+        setParticipacoesPendentes(participacoes);
       }
 
       // Alertas de ciclos são gerenciados pelo hook useCicloAlertas
