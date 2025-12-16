@@ -91,20 +91,13 @@ export default function GestaoParceiros() {
   const [vinculoBookmakerId, setVinculoBookmakerId] = useState<string | null>(null);
   const [selectedParceiroDetalhes, setSelectedParceiroDetalhes] = useState<string | null>(null);
 
-  // Cache system for partner financial data
-  const {
-    data: parceiroFinanceiroData,
-    loading: parceiroFinanceiroLoading,
-    error: parceiroFinanceiroError,
-    selectParceiro,
-    invalidateCache,
-    refreshCurrent: refreshParceiroFinanceiro,
-  } = useParceiroFinanceiroCache();
+  // Cache system for partner financial data (all tabs)
+  const parceiroCache = useParceiroFinanceiroCache();
 
   const handleSelectParceiroDetalhes = useCallback((id: string) => {
     setSelectedParceiroDetalhes(id);
-    selectParceiro(id);
-  }, [selectParceiro]);
+    parceiroCache.selectParceiro(id);
+  }, [parceiroCache.selectParceiro]);
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -445,7 +438,7 @@ export default function GestaoParceiros() {
       if (error) throw error;
 
       // Invalidar cache do parceiro excluído
-      invalidateCache(parceiroToDelete);
+      parceiroCache.invalidateCache(parceiroToDelete);
 
       toast({
         title: "Parceiro excluído",
@@ -457,7 +450,7 @@ export default function GestaoParceiros() {
       // Se o parceiro excluído era o selecionado, limpar seleção
       if (selectedParceiroDetalhes === parceiroToDelete) {
         setSelectedParceiroDetalhes(null);
-        selectParceiro(null);
+        parceiroCache.selectParceiro(null);
       }
       setParceiroToDelete(null);
     } catch (error: any) {
@@ -490,7 +483,7 @@ export default function GestaoParceiros() {
     fetchSaldosData();
     // Invalidar cache do parceiro editado para forçar refresh
     if (editedParceiroId) {
-      invalidateCache(editedParceiroId);
+      parceiroCache.invalidateCache(editedParceiroId);
     }
   };
 
@@ -502,7 +495,7 @@ export default function GestaoParceiros() {
     fetchParceiros();
     // Invalidar cache do parceiro que recebeu novo vínculo
     if (parceiroId) {
-      invalidateCache(parceiroId);
+      parceiroCache.invalidateCache(parceiroId);
     }
   };
 
@@ -536,9 +529,9 @@ export default function GestaoParceiros() {
     if (!selectedParceiroDetalhes && parceiros.length > 0) {
       const firstParceiroId = parceiros[0].id;
       setSelectedParceiroDetalhes(firstParceiroId);
-      selectParceiro(firstParceiroId);
+      parceiroCache.selectParceiro(firstParceiroId);
     }
-  }, [parceiros, selectedParceiroDetalhes, selectParceiro]);
+  }, [parceiros, selectedParceiroDetalhes, parceiroCache.selectParceiro]);
 
   // Prepare data for sidebar
   const parceirosParaSidebar = useMemo(() => {
@@ -618,11 +611,7 @@ export default function GestaoParceiros() {
                     setDeleteDialogOpen(true);
                   }
                 }}
-                cachedData={parceiroFinanceiroData}
-                cachedLoading={parceiroFinanceiroLoading}
-                cachedError={parceiroFinanceiroError}
-                onRefresh={refreshParceiroFinanceiro}
-                onInvalidateCache={invalidateCache}
+                parceiroCache={parceiroCache}
               />
             </div>
           </Card>
