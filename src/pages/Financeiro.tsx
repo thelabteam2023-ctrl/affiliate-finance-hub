@@ -37,13 +37,11 @@ import { format, parseISO, subMonths, subWeeks, startOfMonth, endOfMonth, startO
 import { ptBR } from "date-fns/locale";
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
 import { DespesaAdministrativaDialog } from "@/components/financeiro/DespesaAdministrativaDialog";
-import { SaudeFinanceiraCard } from "@/components/financeiro/SaudeFinanceiraCard";
 import { RentabilidadeCaptacaoCard } from "@/components/financeiro/RentabilidadeCaptacaoCard";
 import { HistoricoDespesasAdmin } from "@/components/financeiro/HistoricoDespesasAdmin";
 import { ComposicaoCustosCard } from "@/components/financeiro/ComposicaoCustosCard";
 import { MovimentacaoCapitalCard } from "@/components/financeiro/MovimentacaoCapitalCard";
 import { CustoSustentacaoCard } from "@/components/financeiro/CustoSustentacaoCard";
-import { BurnRateCard } from "@/components/financeiro/BurnRateCard";
 import { EquilibrioOperacionalCard } from "@/components/financeiro/EquilibrioOperacionalCard";
 import { EficienciaCapitalCard } from "@/components/financeiro/EficienciaCapitalCard";
 import { MapaPatrimonioCard } from "@/components/financeiro/MapaPatrimonioCard";
@@ -814,26 +812,12 @@ export default function Financeiro() {
             />
           </div>
 
-          {/* LINHA 3: Custos Detalhados */}
+          {/* LINHA 3: Custos e Rentabilidade */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <CustoSustentacaoCard
               custosOperacionais={totalCustosOperacionais}
               despesasAdministrativas={totalDespesasAdmin}
               pagamentosOperadores={totalPagamentosOperadores}
-              formatCurrency={formatCurrency}
-            />
-            <BurnRateCard
-              burnRateMensal={burnRateMensal}
-              burnRateSemanal={burnRateSemanal}
-              entradasMensais={entradasMensais}
-              formatCurrency={formatCurrency}
-            />
-          </div>
-
-          {/* LINHA 4: Saúde e Rentabilidade (menor ênfase visual) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 opacity-90">
-            <SaudeFinanceiraCard
-              saudeData={saudeFinanceiraData}
               formatCurrency={formatCurrency}
             />
             <RentabilidadeCaptacaoCard
