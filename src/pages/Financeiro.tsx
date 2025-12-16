@@ -39,7 +39,14 @@ import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplan
 import { DespesaAdministrativaDialog } from "@/components/financeiro/DespesaAdministrativaDialog";
 import { RentabilidadeCaptacaoCard } from "@/components/financeiro/RentabilidadeCaptacaoCard";
 import { HistoricoDespesasAdmin } from "@/components/financeiro/HistoricoDespesasAdmin";
-import { ComposicaoCustosCard } from "@/components/financeiro/ComposicaoCustosCard";
+import { 
+  ComposicaoCustosCard,
+  CustoAquisicaoDetalhe,
+  ComissaoDetalhe,
+  BonusDetalhe,
+  InfraestruturaDetalhe,
+  OperadorDetalhe,
+} from "@/components/financeiro/ComposicaoCustosCard";
 import { MovimentacaoCapitalCard } from "@/components/financeiro/MovimentacaoCapitalCard";
 import { CustoSustentacaoCard } from "@/components/financeiro/CustoSustentacaoCard";
 import { EquilibrioOperacionalCard } from "@/components/financeiro/EquilibrioOperacionalCard";
@@ -67,6 +74,8 @@ interface DespesaIndicacao {
   tipo: string;
   valor: number;
   data_movimentacao: string;
+  indicador_id?: string;
+  indicadores_referral?: { nome: string } | null;
 }
 
 interface CustoAquisicao {
@@ -99,6 +108,8 @@ interface PagamentoOperador {
   valor: number;
   data_pagamento: string;
   status: string;
+  operador_id?: string;
+  operadores?: { nome: string } | null;
 }
 
 interface BookmakerSaldo {
@@ -265,14 +276,14 @@ export default function Financeiro() {
       ] = await Promise.all([
         supabase.from("v_saldo_caixa_fiat").select("*"),
         supabase.from("v_saldo_caixa_crypto").select("*"),
-        supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id").eq("status", "CONFIRMADO"),
+        supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, indicadores_referral(nome)").eq("status", "CONFIRMADO"),
         supabase.from("v_custos_aquisicao").select("custo_total, valor_indicador, valor_parceiro, valor_fornecedor, data_inicio, indicador_id, indicador_nome"),
         supabase.from("cash_ledger").select("tipo_transacao, valor, data_transacao, moeda").eq("status", "CONFIRMADO"),
         supabase.from("despesas_administrativas").select("*").eq("status", "CONFIRMADO"),
         supabase.from("despesas_administrativas").select("*").eq("status", "PENDENTE"),
-        supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status").eq("status", "CONFIRMADO"),
-        supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status").eq("status", "PENDENTE"),
-        supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id"),
+        supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("status", "CONFIRMADO"),
+        supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("status", "PENDENTE"),
+        supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, indicadores_referral(nome)"),
         supabase.from("bookmakers").select("saldo_atual, saldo_freebet, saldo_irrecuperavel, status, projeto_id").in("status", ["ativo", "ATIVO", "EM_USO", "AGUARDANDO_SAQUE"]),
         supabase.from("bookmakers").select("saldo_atual, saldo_irrecuperavel, projeto_id, projetos(nome)").in("status", ["ativo", "ATIVO", "EM_USO", "AGUARDANDO_SAQUE"]),
         supabase.from("apostas").select("lucro_prejuizo").not("resultado", "is", null),
@@ -678,6 +689,87 @@ export default function Financeiro() {
     { name: "Operadores", value: totalPagamentosOperadores, color: "#06B6D4" },
   ].filter(c => c.value > 0);
 
+  // ==================== DETALHES PARA DRILL-DOWN COMPOSIÇÃO DE CUSTOS ====================
+  
+  // Custos de Aquisição por tipo
+  const custosAquisicaoDetalhes = useMemo((): CustoAquisicaoDetalhe[] => {
+    const parceiroTotal = filteredDespesas
+      .filter(d => d.tipo === "PAGTO_PARCEIRO")
+      .reduce((acc, d) => acc + d.valor, 0);
+    const fornecedorTotal = filteredDespesas
+      .filter(d => d.tipo === "PAGTO_FORNECEDOR")
+      .reduce((acc, d) => acc + d.valor, 0);
+    
+    const detalhes: CustoAquisicaoDetalhe[] = [];
+    if (parceiroTotal > 0) detalhes.push({ tipo: "PAGTO_PARCEIRO", valor: parceiroTotal });
+    if (fornecedorTotal > 0) detalhes.push({ tipo: "PAGTO_FORNECEDOR", valor: fornecedorTotal });
+    return detalhes;
+  }, [filteredDespesas]);
+
+  // Comissões por indicador
+  const comissoesDetalhes = useMemo((): ComissaoDetalhe[] => {
+    const agrupado: Record<string, { indicadorNome: string; valor: number }> = {};
+    
+    filteredDespesas
+      .filter(d => d.tipo === "COMISSAO_INDICADOR")
+      .forEach((d: any) => {
+        const indicadorNome = d.indicadores_referral?.nome || "Indicador não identificado";
+        if (!agrupado[indicadorNome]) {
+          agrupado[indicadorNome] = { indicadorNome, valor: 0 };
+        }
+        agrupado[indicadorNome].valor += d.valor;
+      });
+    
+    return Object.values(agrupado).sort((a, b) => b.valor - a.valor);
+  }, [filteredDespesas]);
+
+  // Bônus por indicador
+  const bonusDetalhes = useMemo((): BonusDetalhe[] => {
+    const agrupado: Record<string, { indicadorNome: string; valor: number }> = {};
+    
+    filteredDespesas
+      .filter(d => d.tipo === "BONUS_INDICADOR")
+      .forEach((d: any) => {
+        const indicadorNome = d.indicadores_referral?.nome || "Indicador não identificado";
+        if (!agrupado[indicadorNome]) {
+          agrupado[indicadorNome] = { indicadorNome, valor: 0 };
+        }
+        agrupado[indicadorNome].valor += d.valor;
+      });
+    
+    return Object.values(agrupado).sort((a, b) => b.valor - a.valor);
+  }, [filteredDespesas]);
+
+  // Infraestrutura por categoria
+  const infraestruturaDetalhes = useMemo((): InfraestruturaDetalhe[] => {
+    const agrupado: Record<string, { categoria: string; valor: number }> = {};
+    
+    filteredDespesasAdmin.forEach(d => {
+      const categoria = d.categoria || "Outros";
+      if (!agrupado[categoria]) {
+        agrupado[categoria] = { categoria, valor: 0 };
+      }
+      agrupado[categoria].valor += d.valor;
+    });
+    
+    return Object.values(agrupado).sort((a, b) => b.valor - a.valor);
+  }, [filteredDespesasAdmin]);
+
+  // Operadores por nome
+  const operadoresDetalhes = useMemo((): OperadorDetalhe[] => {
+    const agrupado: Record<string, { operadorNome: string; valor: number }> = {};
+    
+    filteredPagamentosOp.forEach((p: any) => {
+      const operadorNome = p.operadores?.nome || "Operador não identificado";
+      if (!agrupado[operadorNome]) {
+        agrupado[operadorNome] = { operadorNome, valor: 0 };
+      }
+      agrupado[operadorNome].valor += p.valor;
+    });
+    
+    return Object.values(agrupado).sort((a, b) => b.valor - a.valor);
+  }, [filteredPagamentosOp]);
+
   // Total período anterior
   const getMesAnteriorCustos = () => {
     const mesAnterior = subMonths(new Date(), 1);
@@ -924,6 +1016,11 @@ export default function Financeiro() {
               totalAtual={custoSustentacao}
               totalAnterior={totalCustosAnterior}
               formatCurrency={formatCurrency}
+              custosAquisicaoDetalhes={custosAquisicaoDetalhes}
+              comissoesDetalhes={comissoesDetalhes}
+              bonusDetalhes={bonusDetalhes}
+              infraestruturaDetalhes={infraestruturaDetalhes}
+              operadoresDetalhes={operadoresDetalhes}
             />
           </div>
 
