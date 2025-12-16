@@ -132,8 +132,8 @@ export function RentabilidadeCaptacaoCard({
 
   // Payback em dias (estimativa baseada no lucro médio diário)
   // Só calcular se houver lucro e investimento
-  const podeCalcularPayback = totalLucroParceiros > 0 && totalCustosAquisicao > 0;
-  const lucroDiarioMedio = totalLucroParceiros / Math.max(diasMedioAquisicao, 30);
+  const podeCalcularPayback = totalLucroParceiros > 0 && totalCustosAquisicao > 0 && diasMedioAquisicao > 0;
+  const lucroDiarioMedio = diasMedioAquisicao > 0 ? totalLucroParceiros / diasMedioAquisicao : 0;
   const paybackDias = podeCalcularPayback && lucroDiarioMedio > 0
     ? Math.ceil(totalCustosAquisicao / lucroDiarioMedio)
     : null;
@@ -270,9 +270,9 @@ export function RentabilidadeCaptacaoCard({
             )}>
               {paybackDias !== null ? `${paybackDias} dias` : "—"}
             </p>
-            {paybackDias !== null && (
+            {paybackDias !== null && diasMedioAquisicao > 0 && (
               <p className="text-[9px] text-muted-foreground mt-0.5">
-                ~{Math.round(totalLucroParceiros / Math.max(diasMedioAquisicao, 30))}/dia
+                ~{Math.round(totalLucroParceiros / diasMedioAquisicao)}/dia
               </p>
             )}
           </div>

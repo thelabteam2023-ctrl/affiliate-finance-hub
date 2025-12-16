@@ -607,7 +607,7 @@ export default function Financeiro() {
   
   // Calcular dias médio de operação dinamicamente
   const diasMedioAquisicao = useMemo(() => {
-    if (custos.length === 0) return 30; // fallback mínimo
+    if (custos.length === 0) return 1; // fallback mínimo de 1 dia
     
     const hoje = new Date();
     const diasPorParceria = custos
@@ -618,10 +618,10 @@ export default function Financeiro() {
         return Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
       });
     
-    if (diasPorParceria.length === 0) return 30;
+    if (diasPorParceria.length === 0) return 1;
     
     const media = diasPorParceria.reduce((acc, d) => acc + d, 0) / diasPorParceria.length;
-    return Math.max(30, Math.round(media)); // mínimo 30 dias
+    return Math.max(1, Math.round(media)); // mínimo 1 dia (real)
   }, [custos]);
   // ==================== HISTÓRICO MENSAL ====================
   
