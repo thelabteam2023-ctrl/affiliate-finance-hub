@@ -64,6 +64,7 @@ interface Projeto {
   total_sacado?: number;
   total_bookmakers?: number;
   perdas_confirmadas?: number;
+  lucro_operacional?: number;
 }
 
 export default function GestaoProjetos() {
@@ -330,11 +331,9 @@ export default function GestaoProjetos() {
                     </div>
                     
                     {(() => {
-                      // Saldo recuperável = Saldo Bookmakers - Saldo Irrecuperável
-                      const saldoRecuperavel = (projeto.saldo_bookmakers || 0) - (projeto.saldo_irrecuperavel || 0);
-                      // Resultado = Sacado + Saldo Recuperável - Depositado - Perdas Confirmadas
-                      const resultado = (projeto.total_sacado || 0) + saldoRecuperavel - (projeto.total_depositado || 0) - (projeto.perdas_confirmadas || 0);
-                      const isPositive = resultado >= 0;
+                      // Lucro operacional = soma de lucro_prejuizo das apostas LIQUIDADAS - perdas confirmadas
+                      const lucroOperacional = (projeto.lucro_operacional || 0) - (projeto.perdas_confirmadas || 0);
+                      const isPositive = lucroOperacional >= 0;
                       return (
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2 text-muted-foreground">
@@ -343,10 +342,10 @@ export default function GestaoProjetos() {
                             ) : (
                               <TrendingDown className="h-4 w-4 text-red-500" />
                             )}
-                            <span>Retorno Financeiro</span>
+                            <span>Lucro</span>
                           </div>
                           <span className={`font-medium ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {isPositive ? '+' : ''}{formatCurrency(resultado)}
+                            {isPositive ? '+' : ''}{formatCurrency(lucroOperacional)}
                           </span>
                         </div>
                       );
@@ -444,14 +443,13 @@ export default function GestaoProjetos() {
                       <p className="text-sm font-medium">{formatCurrency(projeto.saldo_bookmakers || 0)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Retorno Financeiro</p>
+                      <p className="text-xs text-muted-foreground">Lucro</p>
                       {(() => {
-                        const saldoRecuperavel = (projeto.saldo_bookmakers || 0) - (projeto.saldo_irrecuperavel || 0);
-                        const resultado = (projeto.total_sacado || 0) + saldoRecuperavel - (projeto.total_depositado || 0) - (projeto.perdas_confirmadas || 0);
-                        const isPositive = resultado >= 0;
+                        const lucroOperacional = (projeto.lucro_operacional || 0) - (projeto.perdas_confirmadas || 0);
+                        const isPositive = lucroOperacional >= 0;
                         return (
                           <p className={`text-sm font-medium ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {isPositive ? '+' : ''}{formatCurrency(resultado)}
+                            {isPositive ? '+' : ''}{formatCurrency(lucroOperacional)}
                           </p>
                         );
                       })()}
