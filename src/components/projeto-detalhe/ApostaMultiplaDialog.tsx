@@ -503,7 +503,7 @@ export function ApostaMultiplaDialog({
         lucro_prejuizo: lucroPrejuizo,
         valor_retorno: valorRetorno,
         selecoes: selecoesFormatadas,
-        status: resultadoFinal === "PENDENTE" ? "PENDENTE" : "REALIZADA",
+        status: resultadoFinal === "PENDENTE" ? "PENDENTE" : "LIQUIDADA",
         resultado: resultadoFinal,
         tipo_freebet: usarFreebet ? "freebet_snr" : null,
         gerou_freebet: gerouFreebet,

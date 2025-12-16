@@ -208,9 +208,9 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
       
       // Calculate profit only from finalized entries (lucro bruto das apostas)
       const lucroBruto = 
-        apostas.filter(a => a.status === "FINALIZADA").reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
+        apostas.filter(a => a.status === "LIQUIDADA").reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
         apostasMultiplas.filter(a => ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"].includes(a.resultado || "")).reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
-        surebets.filter(a => a.status === "FINALIZADA").reduce((acc, a) => acc + (a.lucro_real || 0), 0);
+        surebets.filter(a => a.status === "LIQUIDADA").reduce((acc, a) => acc + (a.lucro_real || 0), 0);
 
       // Lucro real = lucro bruto - perdas confirmadas
       const lucroReal = lucroBruto - perdas.totalConfirmadas;
@@ -244,7 +244,7 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
           .eq("projeto_id", projetoId)
           .gte("data_aposta", ciclo.data_inicio)
           .lte("data_aposta", ciclo.data_fim_prevista)
-          .eq("status", "FINALIZADA"),
+          .eq("status", "LIQUIDADA"),
         supabase
           .from("apostas_multiplas")
           .select("lucro_prejuizo, stake")
@@ -258,7 +258,7 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
           .eq("projeto_id", projetoId)
           .gte("data_evento", ciclo.data_inicio)
           .lte("data_evento", ciclo.data_fim_prevista)
-          .eq("status", "FINALIZADA"),
+          .eq("status", "LIQUIDADA"),
         supabase
           .from("projeto_perdas")
           .select("valor, status, categoria")

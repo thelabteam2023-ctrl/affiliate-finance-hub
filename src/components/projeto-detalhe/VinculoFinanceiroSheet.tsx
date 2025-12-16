@@ -123,7 +123,7 @@ export function VinculoFinanceiroSheet({
 
       // Calcular lucro
       const lucroApostas = (apostas || [])
-        .filter(a => a.status === "FINALIZADA" || a.status === "LIQUIDADA")
+        .filter(a => a.status === "LIQUIDADA")
         .reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0);
 
       const lucroMultiplas = (apostasMultiplas || [])

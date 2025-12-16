@@ -656,8 +656,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
               <SelectContent>
                 <SelectItem value="all">Todos Status</SelectItem>
                 <SelectItem value="PENDENTE">Pendente</SelectItem>
-                <SelectItem value="REALIZADA">Realizada</SelectItem>
-                <SelectItem value="CONCLUIDA">Concluída</SelectItem>
+                <SelectItem value="LIQUIDADA">Liquidada</SelectItem>
               </SelectContent>
             </Select>
             <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
