@@ -26,9 +26,9 @@ interface ParticipacaoPendente {
   base_calculo: string;
   lucro_base: number;
   valor_participacao: number;
-  status: string;
   data_apuracao: string;
-  observacoes: string | null;
+  status?: string;
+  observacoes?: string | null;
   investidor_nome?: string;
   projeto_nome?: string;
   ciclo_numero?: number;

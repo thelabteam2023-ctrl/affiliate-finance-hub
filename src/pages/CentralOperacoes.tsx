@@ -1167,6 +1167,68 @@ export default function CentralOperacoes() {
             </div>
           )}
 
+          {/* Participações de Investidores a Pagar */}
+          {participacoesPendentes.length > 0 && (
+            <Card className="border-indigo-500/30 max-w-3xl">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Banknote className="h-5 w-5 text-indigo-400" />
+                  Participações de Investidores a Pagar
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Distribuição de lucros pendente de pagamento
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {participacoesPendentes.slice(0, 5).map((part) => (
+                    <div
+                      key={part.id}
+                      className="flex items-center justify-between p-3 rounded-lg border border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/10 transition-colors cursor-pointer"
+                      onClick={() => {
+                        setSelectedParticipacao(part);
+                        setPagamentoParticipacaoOpen(true);
+                      }}
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
+                          <User className="h-4 w-4 text-indigo-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{part.investidor_nome}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {part.projeto_nome} • Ciclo {part.ciclo_numero} • {part.percentual_aplicado}% do {part.base_calculo === "LUCRO_BRUTO" ? "Lucro Bruto" : "Lucro Líquido"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-sm font-bold text-indigo-400">
+                          {formatCurrency(part.valor_participacao)}
+                        </span>
+                        <Button
+                          size="sm"
+                          className="bg-indigo-600 hover:bg-indigo-700 h-7 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedParticipacao(part);
+                            setPagamentoParticipacaoOpen(true);
+                          }}
+                        >
+                          Pagar
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {participacoesPendentes.length > 5 && (
+                    <p className="text-xs text-muted-foreground text-center py-1">
+                      +{participacoesPendentes.length - 5} participações pendentes
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* GRID: Entregas + Captação de Parcerias + Pagamentos Operador */}
           {(entregasPendentes.length > 0 || pagamentosParceiros.length > 0 || bonusPendentes.length > 0 || comissoesPendentes.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0 || pagamentosOperadorPendentes.length > 0) && (
             <div className="grid gap-4 lg:grid-cols-2">
@@ -1598,10 +1660,36 @@ export default function CentralOperacoes() {
           data_pagamento: selectedPagamentoOperador.data_pagamento,
           data_competencia: null,
           descricao: null,
-          status: "PENDENTE", // Sempre PENDENTE pois só mostramos pendentes nesta lista
+          status: "PENDENTE",
         } : undefined}
         onSuccess={() => fetchData(true)}
       />
+
+      {/* Dialog de Pagamento de Participação de Investidor */}
+      {selectedParticipacao && (
+        <PagamentoParticipacaoDialog
+          open={pagamentoParticipacaoOpen}
+          onOpenChange={(open) => {
+            setPagamentoParticipacaoOpen(open);
+            if (!open) setSelectedParticipacao(null);
+          }}
+          participacao={{
+            id: selectedParticipacao.id,
+            projeto_id: selectedParticipacao.projeto_id,
+            ciclo_id: selectedParticipacao.ciclo_id,
+            investidor_id: selectedParticipacao.investidor_id,
+            investidor_nome: selectedParticipacao.investidor_nome || "N/A",
+            projeto_nome: selectedParticipacao.projeto_nome || "N/A",
+            ciclo_numero: selectedParticipacao.ciclo_numero || 0,
+            percentual_aplicado: selectedParticipacao.percentual_aplicado,
+            base_calculo: selectedParticipacao.base_calculo,
+            lucro_base: selectedParticipacao.lucro_base,
+            valor_participacao: selectedParticipacao.valor_participacao,
+            data_apuracao: selectedParticipacao.data_apuracao,
+          }}
+          onSuccess={() => fetchData(true)}
+        />
+      )}
     </div>
   );
 }

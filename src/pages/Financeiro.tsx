@@ -198,6 +198,7 @@ export default function Financeiro() {
   const [contasDetalhadas, setContasDetalhadas] = useState<ContaDetalhada[]>([]);
   const [walletsParceiros, setWalletsParceiros] = useState<WalletParceiro[]>([]);
   const [walletsDetalhadas, setWalletsDetalhadas] = useState<WalletDetalhada[]>([]);
+  const [participacoesPagas, setParticipacoesPagas] = useState<{ valor_participacao: number; data_pagamento: string }[]>([]);
   
   // Estados para compromissos pendentes de parcerias
   const [parceirosPendentes, setParceirosPendentes] = useState<{ valorTotal: number; count: number }>({ valorTotal: 0, count: 0 });
@@ -288,6 +289,7 @@ export default function Financeiro() {
         walletsParceirosResult,
         contasDetalhadasResult,
         walletsDetalhadasResult,
+        participacoesResult,
       ] = await Promise.all([
         supabase.from("v_saldo_caixa_fiat").select("*"),
         supabase.from("v_saldo_caixa_crypto").select("*"),
@@ -323,6 +325,7 @@ export default function Financeiro() {
         supabase.from("v_saldo_parceiro_wallets").select("saldo_usd"),
         supabase.from("v_saldo_parceiro_contas").select("saldo, banco"),
         supabase.from("v_saldo_parceiro_wallets").select("saldo_usd, exchange"),
+        supabase.from("participacao_ciclos").select("valor_participacao, data_pagamento").eq("status", "PAGO"),
       ]);
 
       if (fiatResult.error) throw fiatResult.error;
@@ -353,6 +356,7 @@ export default function Financeiro() {
       setWalletsParceiros(walletsParceirosResult.data || []);
       setContasDetalhadas(contasDetalhadasResult.data || []);
       setWalletsDetalhadas(walletsDetalhadasResult.data || []);
+      setParticipacoesPagas(participacoesResult.data || []);
       
       // Armazenar apostas para filtrar por período
       setApostasLucro((apostasLucroResult.data || []) as ApostaLucro[]);
@@ -872,6 +876,7 @@ export default function Financeiro() {
       lucroApostas: number;      // Lucro operacional das apostas LIQUIDADAS
       custosOperacionais: number; // Pagamentos a parceiros + indicadores + operadores
       despesasAdmin: number;      // Despesas administrativas
+      participacoes: number;      // Participações pagas a investidores
       patrimonio: number;
     }> = {};
     
@@ -885,6 +890,7 @@ export default function Financeiro() {
         lucroApostas: 0,
         custosOperacionais: 0,
         despesasAdmin: 0,
+        participacoes: 0,
         patrimonio: 0,
       };
     }
@@ -930,11 +936,21 @@ export default function Financeiro() {
       }
     });
 
-    // 4. PATRIMÔNIO ACUMULADO: soma progressiva do resultado líquido
+    // 4. PARTICIPAÇÕES: distribuição de lucros a investidores PAGAS
+    participacoesPagas.forEach(p => {
+      if (p.data_pagamento) {
+        const key = format(parseISO(p.data_pagamento), "yyyy-MM");
+        if (months[key]) {
+          months[key].participacoes += p.valor_participacao || 0;
+        }
+      }
+    });
+
+    // 5. PATRIMÔNIO ACUMULADO: soma progressiva do resultado líquido
     let patrimonioAcumulado = 0;
     const monthsArray = Object.values(months);
     monthsArray.forEach((m, index) => {
-      const lucroLiquido = m.lucroApostas - m.custosOperacionais - m.despesasAdmin;
+      const lucroLiquido = m.lucroApostas - m.custosOperacionais - m.despesasAdmin - m.participacoes;
       patrimonioAcumulado += lucroLiquido;
       monthsArray[index].patrimonio = patrimonioAcumulado;
     });
@@ -945,8 +961,8 @@ export default function Financeiro() {
       resultado: m.lucroApostas,           // Agora é lucro operacional, não fluxo de caixa
       custos: m.custosOperacionais,        // Pagamentos reais, não compromissos
       despesas: m.despesasAdmin,
-      lucroLiquido: m.lucroApostas - m.custosOperacionais - m.despesasAdmin,
-      totalCustos: m.custosOperacionais + m.despesasAdmin,
+      lucroLiquido: m.lucroApostas - m.custosOperacionais - m.despesasAdmin - m.participacoes,
+      totalCustos: m.custosOperacionais + m.despesasAdmin + m.participacoes,
     }));
   };
 
@@ -1288,6 +1304,18 @@ export default function Financeiro() {
                         </TooltipProvider>
                       </th>
                       <th className="text-right py-3 px-4 font-medium">
+                        <TooltipProvider>
+                          <ShadcnTooltip>
+                            <TooltipTrigger className="cursor-help border-b border-dotted border-muted-foreground/50">
+                              Participações
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-xs">Distribuição de lucros pagas a investidores vinculados a projetos.</p>
+                            </TooltipContent>
+                          </ShadcnTooltip>
+                        </TooltipProvider>
+                      </th>
+                      <th className="text-right py-3 px-4 font-medium">
                         <button
                           onClick={() => setHistoricoSort(prev => ({
                             field: "lucroLiquido",
@@ -1301,7 +1329,7 @@ export default function Financeiro() {
                                 Lucro Líq.
                               </TooltipTrigger>
                               <TooltipContent side="top" className="max-w-xs">
-                                <p className="text-xs">Lucro Apostas − Custos − Despesas. Resultado econômico real após todas as deduções.</p>
+                                <p className="text-xs">Lucro Apostas − Custos − Despesas − Participações. Resultado econômico real após todas as deduções.</p>
                               </TooltipContent>
                             </ShadcnTooltip>
                           </TooltipProvider>
@@ -1351,6 +1379,7 @@ export default function Financeiro() {
                         </td>
                         <td className="py-3 px-4 text-right text-destructive">{formatCurrency(m.custos)}</td>
                         <td className="py-3 px-4 text-right text-muted-foreground">{formatCurrency(m.despesas + m.despesasAdmin)}</td>
+                        <td className="py-3 px-4 text-right text-indigo-400">{formatCurrency(m.participacoes)}</td>
                         <td className={`py-3 px-4 text-right font-medium ${m.lucroLiquido >= 0 ? 'text-success' : 'text-destructive'}`}>
                           {formatCurrency(m.lucroLiquido)}
                         </td>
