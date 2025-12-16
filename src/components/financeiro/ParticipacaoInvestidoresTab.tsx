@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Users, CheckCircle2, Clock, TrendingUp, Plus } from "lucide-react";
+import { Loader2, Users, CheckCircle2, Clock, TrendingUp, Plus, Gift } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PagamentoParticipacaoDialog } from "@/components/projetos/PagamentoParticipacaoDialog";
@@ -23,6 +23,8 @@ interface Participacao {
   data_apuracao: string;
   data_pagamento: string | null;
   observacoes: string | null;
+  tipo_participacao?: string;
+  participacao_referencia_id?: string | null;
   projetos?: { nome: string } | null;
   investidores?: { nome: string } | null;
   projeto_ciclos?: { numero_ciclo: number } | null;
@@ -68,6 +70,27 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getTipoBadge = (tipo?: string) => {
+    switch (tipo) {
+      case "AJUSTE_POSITIVO":
+        return (
+          <Badge variant="outline" className="bg-success/10 text-success border-success/30 text-xs">
+            <TrendingUp className="h-3 w-3 mr-1" />
+            +Ajuste
+          </Badge>
+        );
+      case "BONUS":
+        return (
+          <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30 text-xs">
+            <Gift className="h-3 w-3 mr-1" />
+            Bônus
+          </Badge>
+        );
+      default:
+        return null;
     }
   };
 
@@ -175,6 +198,7 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
                   <th className="text-left py-3 px-4 font-medium">Investidor</th>
                   <th className="text-left py-3 px-4 font-medium">Projeto</th>
                   <th className="text-center py-3 px-4 font-medium">Ciclo</th>
+                  <th className="text-center py-3 px-4 font-medium">Tipo</th>
                   <th className="text-right py-3 px-4 font-medium">Lucro Base</th>
                   <th className="text-center py-3 px-4 font-medium">%</th>
                   <th className="text-right py-3 px-4 font-medium">Participação</th>
@@ -185,7 +209,7 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
               <tbody>
                 {pendentes.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <td colSpan={9} className="text-center py-8 text-muted-foreground">
                       Nenhuma participação pendente
                     </td>
                   </tr>
@@ -200,6 +224,9 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
                       </td>
                       <td className="py-3 px-4 text-center">
                         <Badge variant="outline">#{p.projeto_ciclos?.numero_ciclo || "—"}</Badge>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        {getTipoBadge(p.tipo_participacao)}
                       </td>
                       <td className="py-3 px-4 text-right text-muted-foreground">
                         {formatCurrency(p.lucro_base)}
@@ -243,6 +270,7 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
                   <th className="text-left py-3 px-4 font-medium">Investidor</th>
                   <th className="text-left py-3 px-4 font-medium">Projeto</th>
                   <th className="text-center py-3 px-4 font-medium">Ciclo</th>
+                  <th className="text-center py-3 px-4 font-medium">Tipo</th>
                   <th className="text-right py-3 px-4 font-medium">Lucro Base</th>
                   <th className="text-center py-3 px-4 font-medium">%</th>
                   <th className="text-right py-3 px-4 font-medium">Valor Pago</th>
@@ -252,7 +280,7 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
               <tbody>
                 {pagas.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <td colSpan={8} className="text-center py-8 text-muted-foreground">
                       Nenhum pagamento realizado
                     </td>
                   </tr>
@@ -267,6 +295,9 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
                       </td>
                       <td className="py-3 px-4 text-center">
                         <Badge variant="outline">#{p.projeto_ciclos?.numero_ciclo || "—"}</Badge>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        {getTipoBadge(p.tipo_participacao)}
                       </td>
                       <td className="py-3 px-4 text-right text-muted-foreground">
                         {formatCurrency(p.lucro_base)}

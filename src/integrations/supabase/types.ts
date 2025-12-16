@@ -2680,9 +2680,11 @@ export type Database = {
           lucro_base: number
           observacoes: string | null
           pagamento_ledger_id: string | null
+          participacao_referencia_id: string | null
           percentual_aplicado: number
           projeto_id: string
           status: string
+          tipo_participacao: string
           updated_at: string | null
           user_id: string
           valor_participacao: number
@@ -2698,9 +2700,11 @@ export type Database = {
           lucro_base?: number
           observacoes?: string | null
           pagamento_ledger_id?: string | null
+          participacao_referencia_id?: string | null
           percentual_aplicado: number
           projeto_id: string
           status?: string
+          tipo_participacao?: string
           updated_at?: string | null
           user_id: string
           valor_participacao?: number
@@ -2716,9 +2720,11 @@ export type Database = {
           lucro_base?: number
           observacoes?: string | null
           pagamento_ledger_id?: string | null
+          participacao_referencia_id?: string | null
           percentual_aplicado?: number
           projeto_id?: string
           status?: string
+          tipo_participacao?: string
           updated_at?: string | null
           user_id?: string
           valor_participacao?: number
@@ -2757,6 +2763,13 @@ export type Database = {
             columns: ["pagamento_ledger_id"]
             isOneToOne: false
             referencedRelation: "cash_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participacao_ciclos_participacao_referencia_id_fkey"
+            columns: ["participacao_referencia_id"]
+            isOneToOne: false
+            referencedRelation: "participacao_ciclos"
             referencedColumns: ["id"]
           },
           {

@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Plus, Calculator } from "lucide-react";
+import { Loader2, Plus, Calculator, Gift, TrendingUp } from "lucide-react";
 
 interface Investidor {
   id: string;
@@ -37,11 +37,26 @@ interface Ciclo {
   lucro_liquido: number | null;
 }
 
+interface ParticipacaoExistente {
+  id: string;
+  valor_participacao: number;
+  data_apuracao: string;
+  projeto_ciclos?: { numero_ciclo: number } | null;
+}
+
 interface ParticipacaoManualDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
 }
+
+const TIPOS_PARTICIPACAO = [
+  { value: "REGULAR", label: "Regular", description: "Participação padrão calculada normalmente" },
+  { value: "AJUSTE_POSITIVO", label: "Ajuste Positivo", description: "Valor adicional a pagar ao investidor" },
+  { value: "BONUS", label: "Bônus", description: "Bonificação extra ao investidor" },
+] as const;
+
+type TipoParticipacao = typeof TIPOS_PARTICIPACAO[number]["value"];
 
 export function ParticipacaoManualDialog({
   open,
@@ -52,8 +67,10 @@ export function ParticipacaoManualDialog({
   const [investidores, setInvestidores] = useState<Investidor[]>([]);
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
+  const [participacoesExistentes, setParticipacoesExistentes] = useState<ParticipacaoExistente[]>([]);
   
   // Form state
+  const [tipoParticipacao, setTipoParticipacao] = useState<TipoParticipacao>("REGULAR");
   const [investidorId, setInvestidorId] = useState("");
   const [projetoId, setProjetoId] = useState("");
   const [cicloId, setCicloId] = useState("");
@@ -62,6 +79,7 @@ export function ParticipacaoManualDialog({
   const [lucroBase, setLucroBase] = useState("");
   const [valorParticipacao, setValorParticipacao] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [participacaoReferenciaId, setParticipacaoReferenciaId] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -79,6 +97,16 @@ export function ParticipacaoManualDialog({
       setCicloId("");
     }
   }, [projetoId]);
+
+  // Fetch existing participations when investidor changes (for AJUSTE_POSITIVO reference)
+  useEffect(() => {
+    if (investidorId && tipoParticipacao === "AJUSTE_POSITIVO") {
+      fetchParticipacoesExistentes(investidorId);
+    } else {
+      setParticipacoesExistentes([]);
+      setParticipacaoReferenciaId("");
+    }
+  }, [investidorId, tipoParticipacao]);
 
   // Auto-calculate valor_participacao when percentual or lucro_base changes
   useEffect(() => {
@@ -127,7 +155,18 @@ export function ParticipacaoManualDialog({
     setCiclos(data || []);
   };
 
+  const fetchParticipacoesExistentes = async (invId: string) => {
+    const { data } = await supabase
+      .from("participacao_ciclos")
+      .select("id, valor_participacao, data_apuracao, projeto_ciclos(numero_ciclo)")
+      .eq("investidor_id", invId)
+      .order("data_apuracao", { ascending: false })
+      .limit(20);
+    setParticipacoesExistentes(data || []);
+  };
+
   const resetForm = () => {
+    setTipoParticipacao("REGULAR");
     setInvestidorId("");
     setProjetoId("");
     setCicloId("");
@@ -136,6 +175,7 @@ export function ParticipacaoManualDialog({
     setLucroBase("");
     setValorParticipacao("");
     setObservacoes("");
+    setParticipacaoReferenciaId("");
   };
 
   const formatCurrency = (value: number) => {
@@ -151,6 +191,12 @@ export function ParticipacaoManualDialog({
       return;
     }
 
+    // Observações obrigatórias para tipos não-REGULAR
+    if (tipoParticipacao !== "REGULAR" && !observacoes.trim()) {
+      toast.error("Observações são obrigatórias para ajustes e bônus");
+      return;
+    }
+
     setLoading(true);
     try {
       const { data: session } = await supabase.auth.getSession();
@@ -158,6 +204,12 @@ export function ParticipacaoManualDialog({
         toast.error("Usuário não autenticado");
         return;
       }
+
+      const defaultObservacao = tipoParticipacao === "REGULAR" 
+        ? "Participação manual - criação direta"
+        : tipoParticipacao === "AJUSTE_POSITIVO"
+        ? "Ajuste positivo - valor adicional"
+        : "Bônus - bonificação extra";
 
       const { error } = await supabase.from("participacao_ciclos").insert({
         user_id: session.session.user.id,
@@ -169,13 +221,16 @@ export function ParticipacaoManualDialog({
         lucro_base: parseFloat(lucroBase),
         valor_participacao: parseFloat(valorParticipacao),
         status: "A_PAGAR",
-        observacoes: observacoes || `Participação manual - Ajuste de acordo`,
+        tipo_participacao: tipoParticipacao,
+        participacao_referencia_id: participacaoReferenciaId || null,
+        observacoes: observacoes.trim() || defaultObservacao,
         data_apuracao: new Date().toISOString(),
       });
 
       if (error) throw error;
 
-      toast.success("Participação criada com sucesso");
+      const tipoLabel = TIPOS_PARTICIPACAO.find(t => t.value === tipoParticipacao)?.label;
+      toast.success(`Participação (${tipoLabel}) criada com sucesso`);
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
@@ -185,9 +240,20 @@ export function ParticipacaoManualDialog({
     }
   };
 
+  const getTipoIcon = (tipo: TipoParticipacao) => {
+    switch (tipo) {
+      case "AJUSTE_POSITIVO":
+        return <TrendingUp className="h-4 w-4 text-success" />;
+      case "BONUS":
+        return <Gift className="h-4 w-4 text-amber-500" />;
+      default:
+        return <Calculator className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5 text-primary" />
@@ -196,6 +262,29 @@ export function ParticipacaoManualDialog({
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Tipo de Participação */}
+          <div className="space-y-2">
+            <Label>Tipo *</Label>
+            <Select value={tipoParticipacao} onValueChange={(v) => setTipoParticipacao(v as TipoParticipacao)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TIPOS_PARTICIPACAO.map((tipo) => (
+                  <SelectItem key={tipo.value} value={tipo.value}>
+                    <div className="flex items-center gap-2">
+                      {getTipoIcon(tipo.value)}
+                      <span>{tipo.label}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {TIPOS_PARTICIPACAO.find(t => t.value === tipoParticipacao)?.description}
+            </p>
+          </div>
+
           {/* Investidor */}
           <div className="space-y-2">
             <Label>Investidor *</Label>
@@ -247,6 +336,29 @@ export function ParticipacaoManualDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Referência (apenas para AJUSTE_POSITIVO) */}
+          {tipoParticipacao === "AJUSTE_POSITIVO" && investidorId && (
+            <div className="space-y-2">
+              <Label>Referência (opcional)</Label>
+              <Select value={participacaoReferenciaId} onValueChange={setParticipacaoReferenciaId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Vincular a uma participação existente" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhuma referência</SelectItem>
+                  {participacoesExistentes.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      Ciclo #{p.projeto_ciclos?.numero_ciclo || "?"} - {formatCurrency(p.valor_participacao)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Vincule este ajuste a uma participação existente para rastreabilidade
+              </p>
+            </div>
+          )}
 
           {/* Base de Cálculo e Percentual */}
           <div className="grid grid-cols-2 gap-4">
@@ -323,13 +435,24 @@ export function ParticipacaoManualDialog({
 
           {/* Observações */}
           <div className="space-y-2">
-            <Label>Observações</Label>
+            <Label>
+              Observações {tipoParticipacao !== "REGULAR" && <span className="text-destructive">*</span>}
+            </Label>
             <Textarea
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}
-              placeholder="Motivo do ajuste, detalhes do acordo..."
+              placeholder={
+                tipoParticipacao === "REGULAR" 
+                  ? "Motivo da criação manual..." 
+                  : "Justificativa obrigatória para ajustes e bônus..."
+              }
               rows={2}
             />
+            {tipoParticipacao !== "REGULAR" && (
+              <p className="text-xs text-amber-500">
+                Obrigatório para {tipoParticipacao === "AJUSTE_POSITIVO" ? "ajustes" : "bônus"}
+              </p>
+            )}
           </div>
         </div>
 
