@@ -1355,7 +1355,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             apostaData.odd,
             tipoAposta === "exchange" ? tipoOperacaoExchange : "bookmaker",
             apostaData.lay_liability,
-            apostaData.lay_comissao
+            apostaData.lay_comissao,
+            // Novos parâmetros para atualização do LAY em cobertura
+            tipoOperacaoExchange === "cobertura" ? apostaData.lay_exchange : null,
+            tipoOperacaoExchange === "cobertura" ? apostaData.lay_stake : null
           );
         }
 
@@ -1512,7 +1515,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             apostaData.odd,
             tipoAposta === "exchange" ? tipoOperacaoExchange : "bookmaker",
             apostaData.lay_liability,
-            apostaData.lay_comissao
+            apostaData.lay_comissao,
+            // Novos parâmetros para atualização do LAY em cobertura
+            tipoOperacaoExchange === "cobertura" ? apostaData.lay_exchange : null,
+            tipoOperacaoExchange === "cobertura" ? apostaData.lay_stake : null
           );
         }
 
@@ -1770,7 +1776,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     oddNovo: number,
     tipoOperacao: "bookmaker" | "back" | "lay" | "cobertura" = "bookmaker",
     layLiability: number | null = null,
-    layComissao: number | null = null
+    layComissao: number | null = null,
+    layExchangeId: string | null = null,
+    layStakeValue: number | null = null
   ) => {
     try {
       // Sistema de dois saldos:
@@ -1851,10 +1859,31 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         }
       };
 
+      // Função para calcular ajuste do lado LAY em cobertura
+      const calcularAjusteSaldoLay = (
+        resultado: string,
+        layStake: number,
+        liability: number,
+        comissaoPercent: number
+      ): number => {
+        const comissao = comissaoPercent / 100;
+        switch (resultado) {
+          case "GREEN_BOOKMAKER": // Back ganhou = LAY perdeu
+            return -liability;
+          case "RED_BOOKMAKER": // Back perdeu = LAY ganhou
+            return layStake * (1 - comissao);
+          case "VOID":
+            return 0;
+          default:
+            return 0;
+        }
+      };
+
       let saldoAjuste = 0;
+      let saldoAjusteLay = 0;
       const comissaoVal = layComissao ?? 5;
 
-      // Reverter efeito do resultado anterior
+      // Reverter efeito do resultado anterior (BACK side)
       if (resultadoAnterior && resultadoAnterior !== "PENDENTE") {
         saldoAjuste -= calcularAjusteSaldo(
           resultadoAnterior, 
@@ -1864,9 +1893,19 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           layLiability,
           comissaoVal
         );
+        
+        // Reverter efeito anterior do LAY side em cobertura
+        if (tipoOperacao === "cobertura" && layExchangeId && layStakeValue !== null && layLiability !== null) {
+          saldoAjusteLay -= calcularAjusteSaldoLay(
+            resultadoAnterior,
+            layStakeValue,
+            layLiability,
+            comissaoVal
+          );
+        }
       }
 
-      // Aplicar efeito do novo resultado
+      // Aplicar efeito do novo resultado (BACK side)
       if (resultadoNovo && resultadoNovo !== "PENDENTE") {
         saldoAjuste += calcularAjusteSaldo(
           resultadoNovo, 
@@ -1876,10 +1915,20 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           layLiability,
           comissaoVal
         );
+        
+        // Aplicar efeito do LAY side em cobertura
+        if (tipoOperacao === "cobertura" && layExchangeId && layStakeValue !== null && layLiability !== null) {
+          saldoAjusteLay += calcularAjusteSaldoLay(
+            resultadoNovo,
+            layStakeValue,
+            layLiability,
+            comissaoVal
+          );
+        }
       }
 
+      // Atualizar saldo do BACK bookmaker
       if (saldoAjuste !== 0) {
-        // Buscar saldo atual
         const { data: bookmaker } = await supabase
           .from("bookmakers")
           .select("saldo_atual")
@@ -1892,6 +1941,42 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             .from("bookmakers")
             .update({ saldo_atual: novoSaldo })
             .eq("id", bookmakerIdToUpdate);
+        }
+      }
+
+      // Atualizar saldo do LAY bookmaker (para cobertura)
+      if (tipoOperacao === "cobertura" && layExchangeId && saldoAjusteLay !== 0) {
+        // Caso especial: mesma bookmaker para BACK e LAY
+        if (layExchangeId === bookmakerIdToUpdate) {
+          // Já foi atualizado acima, precisamos adicionar o ajuste LAY
+          const { data: bookmaker } = await supabase
+            .from("bookmakers")
+            .select("saldo_atual")
+            .eq("id", layExchangeId)
+            .maybeSingle();
+
+          if (bookmaker) {
+            const novoSaldo = Math.max(0, bookmaker.saldo_atual + saldoAjusteLay);
+            await supabase
+              .from("bookmakers")
+              .update({ saldo_atual: novoSaldo })
+              .eq("id", layExchangeId);
+          }
+        } else {
+          // Bookmakers diferentes: atualizar LAY separadamente
+          const { data: layBookmaker } = await supabase
+            .from("bookmakers")
+            .select("saldo_atual")
+            .eq("id", layExchangeId)
+            .maybeSingle();
+
+          if (layBookmaker) {
+            const novoSaldoLay = Math.max(0, layBookmaker.saldo_atual + saldoAjusteLay);
+            await supabase
+              .from("bookmakers")
+              .update({ saldo_atual: novoSaldoLay })
+              .eq("id", layExchangeId);
+          }
         }
       }
     } catch (error) {
@@ -1922,7 +2007,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           0,
           tipoOperacao as any,
           aposta.lay_liability || null,
-          aposta.lay_comissao || null
+          aposta.lay_comissao || null,
+          // Novos parâmetros para atualização do LAY em cobertura
+          tipoOperacao === "cobertura" ? aposta.lay_exchange || null : null,
+          tipoOperacao === "cobertura" ? aposta.lay_stake || null : null
         );
       }
       
