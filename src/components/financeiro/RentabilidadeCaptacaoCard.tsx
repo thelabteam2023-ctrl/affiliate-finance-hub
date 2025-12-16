@@ -132,8 +132,13 @@ export function RentabilidadeCaptacaoCard({
 
   // Payback em dias (estimativa baseada no lucro médio diário)
   // Só calcular se houver lucro e investimento
-  const podeCalcularPayback = totalLucroParceiros > 0 && totalCustosAquisicao > 0 && diasMedioAquisicao > 0;
-  const lucroDiarioMedio = diasMedioAquisicao > 0 ? totalLucroParceiros / diasMedioAquisicao : 0;
+  // Usar mínimo de 15 dias para cálculo mais confiável
+  const DIAS_MINIMO_CONFIAVEL = 15;
+  const diasParaCalculo = Math.max(diasMedioAquisicao, DIAS_MINIMO_CONFIAVEL);
+  const projecaoConfiavel = diasMedioAquisicao >= DIAS_MINIMO_CONFIAVEL;
+  
+  const podeCalcularPayback = totalLucroParceiros > 0 && totalCustosAquisicao > 0;
+  const lucroDiarioMedio = diasParaCalculo > 0 ? totalLucroParceiros / diasParaCalculo : 0;
   const paybackDias = podeCalcularPayback && lucroDiarioMedio > 0
     ? Math.ceil(totalCustosAquisicao / lucroDiarioMedio)
     : null;
@@ -253,12 +258,22 @@ export function RentabilidadeCaptacaoCard({
                       <HelpCircle className="h-3 w-3" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[280px] text-xs">
+                  <TooltipContent side="top" className="max-w-[300px] text-xs">
                     <p className="font-medium mb-1">Projeção de Payback</p>
                     <p>Fórmula: Custos ÷ (Lucro ÷ Dias de operação)</p>
                     <p className="mt-1 text-muted-foreground">
-                      Operando há <strong>{diasMedioAquisicao} dias</strong> em média (calculado desde a data de início das parcerias ativas)
+                      Operando há <strong>{diasMedioAquisicao} dias</strong> em média
                     </p>
+                    {!projecaoConfiavel && (
+                      <p className="mt-1 text-amber-500">
+                        ⚠️ Projeção preliminar. Cálculo usa base mínima de {DIAS_MINIMO_CONFIAVEL} dias para maior precisão. A projeção será mais confiável após {DIAS_MINIMO_CONFIAVEL} dias de operação.
+                      </p>
+                    )}
+                    {projecaoConfiavel && (
+                      <p className="mt-1 text-success">
+                        ✓ Projeção baseada nos dias reais de operação
+                      </p>
+                    )}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -270,9 +285,10 @@ export function RentabilidadeCaptacaoCard({
             )}>
               {paybackDias !== null ? `${paybackDias} dias` : "—"}
             </p>
-            {paybackDias !== null && diasMedioAquisicao > 0 && (
+            {paybackDias !== null && (
               <p className="text-[9px] text-muted-foreground mt-0.5">
-                ~{Math.round(totalLucroParceiros / diasMedioAquisicao)}/dia
+                ~{formatCurrency(Math.round(totalLucroParceiros / diasParaCalculo))}/dia
+                {!projecaoConfiavel && " *"}
               </p>
             )}
           </div>
