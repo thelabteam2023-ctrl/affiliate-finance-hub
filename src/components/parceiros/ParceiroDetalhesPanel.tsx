@@ -219,9 +219,6 @@ export function ParceiroDetalhesPanel({
                 <p>Atualizar dados</p>
               </TooltipContent>
             </Tooltip>
-                </TooltipContent>
-              </Tooltip>
-            )}
             {onEditParceiro && (
               <Tooltip>
                 <TooltipTrigger asChild>
