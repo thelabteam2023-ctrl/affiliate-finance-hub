@@ -58,6 +58,7 @@ import { EditarAcordoOperadorDialog } from "@/components/projetos/EditarAcordoOp
 import { ProjetoConciliacaoDialog } from "@/components/projetos/ProjetoConciliacaoDialog";
 import { ConfirmacaoSenhaDialog } from "@/components/ui/confirmacao-senha-dialog";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
+import { CicloDialog } from "@/components/projeto-detalhe/CicloDialog";
 
 interface Projeto {
   id?: string;
@@ -131,6 +132,7 @@ export function ProjetoDialog({
   const [novoprojetoId, setNovoProjetoId] = useState<string | null>(null);
   const [confirmacaoDialogOpen, setConfirmacaoDialogOpen] = useState(false);
   const [operadorParaDesvincular, setOperadorParaDesvincular] = useState<string | null>(null);
+  const [cicloDialogOpen, setCicloDialogOpen] = useState(false);
   
   const [formData, setFormData] = useState<Projeto>({
     nome: "",
@@ -901,32 +903,66 @@ export function ProjetoDialog({
         </>
       )}
 
-      {/* Prompt para vincular operador após criar projeto */}
+      {/* Prompt para vincular operador ou criar ciclo após criar projeto */}
       <AlertDialog open={showVincularPrompt} onOpenChange={setShowVincularPrompt}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Projeto criado com sucesso!</AlertDialogTitle>
-            <AlertDialogDescription>
-              Deseja vincular um operador a este projeto agora?
+            <AlertDialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-success" />
+              Projeto criado com sucesso!
+            </AlertDialogTitle>
+            <AlertDialogDescription className="pt-2">
+              <p className="mb-3">O que você gostaria de fazer agora?</p>
+              <div className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start gap-2"
+                  onClick={() => {
+                    setShowVincularPrompt(false);
+                    if (novoprojetoId && onCreatedOpenEdit) {
+                      onCreatedOpenEdit(novoprojetoId, "operadores");
+                    }
+                  }}
+                >
+                  <Users className="h-4 w-4" />
+                  Vincular Operador
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start gap-2"
+                  onClick={() => {
+                    setShowVincularPrompt(false);
+                    setCicloDialogOpen(true);
+                  }}
+                >
+                  <Calendar className="h-4 w-4" />
+                  Criar Primeiro Ciclo
+                </Button>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setShowVincularPrompt(false)}>
-              Depois
+              Fazer Depois
             </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setShowVincularPrompt(false);
-                if (novoprojetoId && onCreatedOpenEdit) {
-                  onCreatedOpenEdit(novoprojetoId, "operadores");
-                }
-              }}
-            >
-              Sim, vincular
-            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog para criar ciclo após criação do projeto */}
+      {novoprojetoId && (
+        <CicloDialog
+          open={cicloDialogOpen}
+          onOpenChange={setCicloDialogOpen}
+          projetoId={novoprojetoId}
+          ciclo={null}
+          proximoNumero={1}
+          onSuccess={() => {
+            setCicloDialogOpen(false);
+            toast.success("Ciclo criado com sucesso!");
+          }}
+        />
+      )}
 
       {/* Dialog de Confirmação CAPTCHA para Desvincular */}
       <ConfirmacaoSenhaDialog
