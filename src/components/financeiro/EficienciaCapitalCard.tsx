@@ -23,17 +23,22 @@ export function EficienciaCapitalCard({
   const roiMensal = eficiencia; // ROI sobre capital alocado
 
   const getStatus = () => {
-    if (eficiencia >= 10) return { 
+    if (eficiencia >= 25) return { 
       label: "Excelente", 
       color: "text-success", 
       description: "Alta eficiência — otimizar mais difícil"
     };
-    if (eficiencia >= 5) return { 
+    if (eficiencia >= 15) return { 
+      label: "Muito Bom", 
+      color: "text-emerald-500", 
+      description: "Eficiência acima da média"
+    };
+    if (eficiencia >= 10) return { 
       label: "Bom", 
       color: "text-primary", 
       description: "Eficiência adequada"
     };
-    if (eficiencia >= 2) return { 
+    if (eficiencia >= 5) return { 
       label: "Razoável", 
       color: "text-yellow-500", 
       description: "Espaço para melhorar execução"
@@ -53,9 +58,10 @@ export function EficienciaCapitalCard({
   const status = getStatus();
 
   const getRecomendacao = () => {
-    if (eficiencia >= 10) return "Já operando no topo. Escalar capital pode diluir eficiência.";
-    if (eficiencia >= 5) return "Bom equilíbrio. Pode escalar com monitoramento.";
-    if (eficiencia >= 2) return "Focar em otimização antes de aumentar capital.";
+    if (eficiencia >= 25) return "Já operando no topo. Escalar capital pode diluir eficiência.";
+    if (eficiencia >= 15) return "Excelente desempenho. Pode escalar com confiança.";
+    if (eficiencia >= 10) return "Bom equilíbrio. Pode escalar com monitoramento.";
+    if (eficiencia >= 5) return "Focar em otimização antes de aumentar capital.";
     if (eficiencia > 0) return "Melhorar execução é mais prioritário que escalar.";
     return "Não escalar — revisar estratégia primeiro.";
   };
