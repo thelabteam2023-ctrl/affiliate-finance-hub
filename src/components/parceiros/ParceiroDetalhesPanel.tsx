@@ -540,7 +540,12 @@ export function ParceiroDetalhesPanel({
           <TabsContent value="movimentacoes" className="flex-1 mt-0">
             <ParceiroMovimentacoesTab 
               parceiroId={parceiroId} 
-              showSensitiveData={showSensitiveData} 
+              showSensitiveData={showSensitiveData}
+              cachedData={parceiroCache.movimentacoesData}
+              loading={parceiroCache.movimentacoesLoading}
+              error={parceiroCache.movimentacoesError}
+              isRevalidating={parceiroCache.isRevalidating.movimentacoes}
+              onLoadTab={handleLoadMovimentacoes}
             />
           </TabsContent>
 

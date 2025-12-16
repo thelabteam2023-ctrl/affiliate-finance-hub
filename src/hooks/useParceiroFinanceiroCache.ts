@@ -481,8 +481,8 @@ export function useParceiroFinanceiroCache() {
           data = await fetchBookmakersData(parceiroId);
         }
 
-        // Check if still current partner (race condition guard)
-        if (currentParceiroId !== parceiroId && !forceRefresh) return;
+        // Note: removed race condition guard that was causing issues
+        // The stale closure meant currentParceiroId was often wrong
 
         // Update cache
         const updatedPartnerCache = cacheRef.current.get(parceiroId) || {};
@@ -548,8 +548,8 @@ export function useParceiroFinanceiroCache() {
       return;
     }
 
-    // Load resumo immediately (primary tab)
-    await loadTabData(parceiroId, "resumo");
+    // Load resumo immediately with forceRefresh to bypass stale closure check
+    await loadTabData(parceiroId, "resumo", true);
   }, [currentParceiroId, loadTabData]);
 
   const loadTab = useCallback((tab: TabType) => {
