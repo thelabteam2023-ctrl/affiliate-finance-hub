@@ -88,7 +88,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
         .from("apostas")
         .select("bookmaker_id, lucro_prejuizo")
         .eq("projeto_id", projetoId)
-        .in("status", ["LIQUIDADA", "FINALIZADA", "CONCLUIDA"])
+        .eq("status", "LIQUIDADA")
         .is("surebet_id", null)
         .in("bookmaker_id", bookmakerIds);
 

@@ -947,7 +947,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       if (resultadoAnterior === resultado) return;
 
       let lucro: number | null = 0;
-      let status = "FINALIZADA";
+      let status = "LIQUIDADA";
       
       if (resultado === null) {
         lucro = null;

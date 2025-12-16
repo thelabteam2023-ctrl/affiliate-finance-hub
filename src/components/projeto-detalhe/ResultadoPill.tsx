@@ -522,7 +522,7 @@ export function ResultadoPill({
         .from("apostas")
         .update({
           resultado: novoResultado,
-          status: "CONCLUIDA",
+          status: "LIQUIDADA",
           lucro_prejuizo: lucroPrejuizo,
           valor_retorno: valorRetorno,
         })

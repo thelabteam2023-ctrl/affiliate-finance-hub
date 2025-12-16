@@ -101,9 +101,9 @@ export function useCicloAlertas() {
 
         // Calcular lucro realizado (apenas apostas finalizadas)
         const lucroTotal = 
-          apostas.filter(a => a.status === "FINALIZADA").reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
+          apostas.filter(a => a.status === "LIQUIDADA").reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
           apostasMultiplas.filter(a => ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"].includes(a.resultado || "")).reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
-          surebets.filter(a => a.status === "FINALIZADA").reduce((acc, a) => acc + (a.lucro_real || 0), 0) +
+          surebets.filter(a => a.status === "LIQUIDADA").reduce((acc, a) => acc + (a.lucro_real || 0), 0) +
           matchedBetting.filter(a => a.status === "FINALIZADO").reduce((acc, a) => acc + (a.lucro_real || 0), 0);
 
         // Definir valor acumulado baseado na métrica (sem TURNOVER)

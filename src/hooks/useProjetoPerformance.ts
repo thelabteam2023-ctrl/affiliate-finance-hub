@@ -38,11 +38,11 @@ export function useProjetoPerformance({
     const { dataInicio, dataFim } = periodo;
     let lucroTotal = 0;
 
-    // 1. Apostas simples (excluindo pernas de surebet) - usar LIQUIDADA/FINALIZADA/CONCLUIDA
+    // 1. Apostas simples (excluindo pernas de surebet) - usar LIQUIDADA
     let querySimples = supabase
       .from('apostas')
       .select('lucro_prejuizo')
-      .in('status', ['LIQUIDADA', 'FINALIZADA', 'CONCLUIDA'])
+      .eq('status', 'LIQUIDADA')
       .is('surebet_id', null);
     if (projetoId) querySimples = querySimples.eq('projeto_id', projetoId);
     if (dataInicio) querySimples = querySimples.gte('data_aposta', dataInicio.toISOString());

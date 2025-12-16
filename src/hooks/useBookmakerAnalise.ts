@@ -448,7 +448,7 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
       // Agregar apostas simples (INCLUINDO pernas de surebet - cada perna = 1 aposta)
       apostas.forEach(a => {
         if (bookmakerData[a.bookmaker_id]) {
-          if (a.status === "FINALIZADA" || a.status === "LIQUIDADA") {
+          if (a.status === "LIQUIDADA") {
             bookmakerData[a.bookmaker_id].lucro += Number(a.lucro_prejuizo || 0);
           }
           bookmakerData[a.bookmaker_id].volume += Number(a.stake || 0);

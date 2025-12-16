@@ -1095,7 +1095,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         evento,
         mercado: mercado || null,
         selecao: effectiveSelecao,
-        status: statusResultado === "PENDENTE" ? "PENDENTE" : "CONCLUIDA",
+        status: statusResultado === "PENDENTE" ? "PENDENTE" : "LIQUIDADA",
         resultado: statusResultado === "PENDENTE" ? null : statusResultado,
         observacoes: observacoes || null,
         gerou_freebet: gerouFreebet,
