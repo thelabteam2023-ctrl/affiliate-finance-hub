@@ -246,6 +246,22 @@ export function RentabilidadeCaptacaoCard({
             <div className="flex items-center gap-1.5 mb-1">
               <Clock className="h-3 w-3 text-muted-foreground" />
               <p className="text-[10px] text-muted-foreground uppercase">Payback</p>
+              <TooltipProvider>
+                <Tooltip delayDuration={300}>
+                  <TooltipTrigger asChild>
+                    <button className="text-muted-foreground hover:text-foreground transition-colors">
+                      <HelpCircle className="h-3 w-3" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[280px] text-xs">
+                    <p className="font-medium mb-1">Projeção de Payback</p>
+                    <p>Fórmula: Custos ÷ (Lucro ÷ Dias de operação)</p>
+                    <p className="mt-1 text-muted-foreground">
+                      Operando há <strong>{diasMedioAquisicao} dias</strong> em média (calculado desde a data de início das parcerias ativas)
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             <p className={cn(
               "text-sm font-bold",
@@ -254,6 +270,11 @@ export function RentabilidadeCaptacaoCard({
             )}>
               {paybackDias !== null ? `${paybackDias} dias` : "—"}
             </p>
+            {paybackDias !== null && (
+              <p className="text-[9px] text-muted-foreground mt-0.5">
+                ~{Math.round(totalLucroParceiros / Math.max(diasMedioAquisicao, 30))}/dia
+              </p>
+            )}
           </div>
 
           {/* Parceiros Ativos */}
