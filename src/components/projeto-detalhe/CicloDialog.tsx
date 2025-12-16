@@ -239,7 +239,8 @@ export function CicloDialog({
         if (error) throw error;
         toast.success("Ciclo atualizado com sucesso!");
       } else {
-        const { error } = await supabase
+        // Criar ciclo
+        const { data: novoCiclo, error } = await supabase
           .from("projeto_ciclos")
           .insert({
             ...cicloData,
@@ -249,9 +250,43 @@ export function CicloDialog({
             status: "EM_ANDAMENTO",
             valor_acumulado: 0,
             excedente_anterior: 0,
-          });
+          })
+          .select()
+          .single();
 
         if (error) throw error;
+
+        // Verificar se projeto tem investidor vinculado para criar participação automaticamente
+        const { data: projeto } = await supabase
+          .from("projetos")
+          .select("investidor_id, percentual_investidor, base_calculo_investidor")
+          .eq("id", projetoId)
+          .single();
+
+        if (projeto?.investidor_id && projeto.percentual_investidor > 0) {
+          // Criar participação com status AGUARDANDO_CICLO
+          const { error: partError } = await supabase
+            .from("participacao_ciclos")
+            .insert({
+              user_id: session.session.user.id,
+              projeto_id: projetoId,
+              ciclo_id: novoCiclo.id,
+              investidor_id: projeto.investidor_id,
+              percentual_aplicado: projeto.percentual_investidor,
+              base_calculo: projeto.base_calculo_investidor || "LUCRO_BRUTO",
+              lucro_base: 0,
+              valor_participacao: 0,
+              status: "AGUARDANDO_CICLO",
+              tipo_participacao: "LUCRO_CICLO",
+              data_apuracao: new Date().toISOString(),
+            });
+
+          if (partError) {
+            console.error("Erro ao criar participação:", partError);
+            // Não falhar a criação do ciclo por causa da participação
+          }
+        }
+
         toast.success("Ciclo criado com sucesso!");
       }
 
