@@ -19,20 +19,20 @@ const Index = () => {
             <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-4 py-2 backdrop-blur-sm">
               <Zap className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium text-muted-foreground">
-                Plataforma ERP para Apostas Esportivas
+                ERP para Operações de Apostas Esportivas
               </span>
             </div>
 
             {/* Heading */}
             <h1 className="mb-6 text-5xl font-bold leading-tight tracking-tight sm:text-6xl lg:text-7xl">
               Gestão Profissional de{" "}
-              <span className="text-gradient">Parcerias & Apostas</span>
+              <span className="text-gradient">Operações & Apostas</span>
             </h1>
 
             <p className="mb-10 text-lg text-muted-foreground sm:text-xl">
               Controle total sobre parceiros, fluxo de caixa multi-moeda e análise de ROI.
               <br className="hidden sm:block" />
-              Sistema completo para escritórios de apostas esportivas.
+              Do apostador organizado ao escritório profissional.
             </p>
 
             {/* CTA Buttons */}
@@ -117,7 +117,7 @@ const Index = () => {
             name="Free"
             price="R$ 0"
             period="/mês"
-            description="Ideal para começar"
+            description="Para organizar o começo"
             maxPartners="Até 3 parceiros ativos"
             features={[
               { text: "Gestão de parcerias", included: true },
@@ -133,7 +133,7 @@ const Index = () => {
             name="Starter"
             price="R$ 89"
             period="/mês"
-            description="Para operações pequenas"
+            description="Para operar com consistência"
             maxPartners="Até 10 parceiros ativos"
             features={[
               { text: "Tudo do Free", included: true },
@@ -149,15 +149,15 @@ const Index = () => {
             name="Pro"
             price="R$ 167"
             period="/mês"
-            description="Para escritórios estabelecidos"
+            description="Para operações sérias"
             maxPartners="Até 20 parceiros ativos"
             features={[
               { text: "Tudo do Starter", included: true },
               { text: "Sistemas de entrada por estratégia", included: true },
-              { text: "2 usuários", included: true },
-              { text: "API de integração", included: true },
+              { text: "2 usuários (times pequenos)", included: true },
+              { text: "Operação por projetos", included: true },
+              { text: "Hierarquia de permissões flexível", included: true },
               { text: "ROI e análises completas", included: true },
-              { text: "Hierarquia de permissões", included: true },
               { text: "Resposta em até 24h (WhatsApp/Discord)", included: true },
             ]}
             highlighted={true}
@@ -166,7 +166,7 @@ const Index = () => {
             name="Advanced"
             price="R$ 597"
             period="/mês"
-            description="Para grandes operações"
+            description="Para estruturas profissionais"
             maxPartners="20+ parceiros ativos"
             features={[
               { text: "Tudo do Pro", included: true },
@@ -174,7 +174,7 @@ const Index = () => {
               { text: "10 usuários", included: true },
               { text: "Relatórios customizados", included: true },
               { text: "Onboarding personalizado", included: true },
-              { text: "Suporte prioritário dedicado", included: true },
+              { text: "Suporte prioritário com SLA", included: true },
             ]}
             highlighted={false}
           />
@@ -185,7 +185,7 @@ const Index = () => {
       <section className="border-y border-border bg-card/30 py-16">
         <div className="container mx-auto px-4">
           <div className="grid gap-8 sm:grid-cols-3">
-            <StatCard number="10+" label="Escritórios gerindo operações com a Labbet One" />
+            <StatCard number="10+" label="Operações profissionais gerenciadas" />
             <StatCard number="500+" label="Parceiros gerenciados" />
             <StatCard number="150+" label="Usuários Free e Starter ativos" />
           </div>
@@ -202,7 +202,7 @@ const Index = () => {
               Pronto para otimizar suas operações?
             </h2>
             <p className="mb-8 text-lg text-muted-foreground">
-              Comece gratuitamente e escale conforme seu escritório cresce.
+              Comece gratuitamente e escale conforme sua operação cresce.
             </p>
             <Button size="lg" className="h-12 gap-2 px-8 shadow-glow">
               Criar Conta Grátis
