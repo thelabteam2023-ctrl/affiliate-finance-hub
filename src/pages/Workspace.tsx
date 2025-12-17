@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Users, Settings, UserPlus, Shield, DollarSign, Gamepad2, Eye, Check, X, Info } from "lucide-react";
 import { MemberList } from "@/components/workspace/MemberList";
 import { InviteMemberDialog } from "@/components/workspace/InviteMemberDialog";
+import { PlanUsageCard } from "@/components/workspace/PlanUsageCard";
 import { Database } from "@/integrations/supabase/types";
 import {
   Accordion,
@@ -274,6 +275,9 @@ export default function Workspace() {
           Gerencie seu workspace e membros da equipe.
         </p>
       </div>
+
+      {/* Plan Usage Card */}
+      <PlanUsageCard />
 
       {/* Workspace Settings */}
       <Card>
