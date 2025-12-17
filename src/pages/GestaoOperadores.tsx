@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { 
-  Plus, 
   Search, 
   User, 
   Calendar, 
@@ -21,10 +20,13 @@ import {
   Edit,
   Eye,
   BarChart3,
-  Users
+  Users,
+  UserPlus,
+  AlertTriangle
 } from "lucide-react";
 import { OperadorDialog } from "@/components/operadores/OperadorDialog";
 import { OperadorDashboard } from "@/components/operadores/OperadorDashboard";
+import { InviteMemberDialog } from "@/components/workspace/InviteMemberDialog";
 import {
   Select,
   SelectContent,
@@ -34,52 +36,73 @@ import {
 } from "@/components/ui/select";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-interface Operador {
+interface OperadorWorkspace {
+  workspace_member_id: string;
+  workspace_id: string;
+  user_id: string;
+  role: string;
+  is_active: boolean;
+  joined_at: string | null;
+  profile_id: string;
+  email: string | null;
+  nome: string | null;
+  cpf: string | null;
+  telefone: string | null;
+  data_nascimento: string | null;
+  tipo_contrato: string | null;
+  data_admissao: string | null;
+  data_desligamento: string | null;
+  observacoes: string | null;
+  operador_id: string | null;
+  projetos_ativos: number;
+  total_pago: number;
+  total_pendente: number;
+}
+
+interface LegacyOperador {
   id: string;
-  operador_id?: string;
   nome: string;
   cpf: string;
-  email?: string | null;
-  telefone?: string | null;
+  email: string | null;
   status: string;
   tipo_contrato: string;
   data_admissao: string;
-  projetos_ativos?: number;
-  total_pago?: number;
-  total_pendente?: number;
 }
 
 export default function GestaoOperadores() {
-  const [operadores, setOperadores] = useState<Operador[]>([]);
+  const { workspace } = useWorkspace();
+  const [operadores, setOperadores] = useState<OperadorWorkspace[]>([]);
+  const [legacyOperadores, setLegacyOperadores] = useState<LegacyOperador[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [contratoFilter, setContratoFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedOperador, setSelectedOperador] = useState<Operador | null>(null);
-  const [dialogMode, setDialogMode] = useState<"view" | "edit" | "create">("create");
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [selectedOperador, setSelectedOperador] = useState<OperadorWorkspace | null>(null);
+  const [dialogMode, setDialogMode] = useState<"view" | "edit">("view");
   const [activeTab, setActiveTab] = useState("lista");
 
   useEffect(() => {
-    fetchOperadores();
-  }, []);
+    if (workspace?.id) {
+      fetchOperadores();
+      fetchLegacyOperadores();
+    }
+  }, [workspace?.id]);
 
   const fetchOperadores = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from("v_operador_performance")
-        .select("*");
+        .from("v_operadores_workspace")
+        .select("*")
+        .eq("workspace_id", workspace?.id);
 
       if (error) throw error;
-      // Map operador_id to id for consistency
-      const mapped = (data || []).map((op: any) => ({
-        ...op,
-        id: op.operador_id || op.id,
-      }));
-      setOperadores(mapped);
+      setOperadores(data || []);
     } catch (error: any) {
       toast.error("Erro ao carregar operadores: " + error.message);
     } finally {
@@ -87,16 +110,33 @@ export default function GestaoOperadores() {
     }
   };
 
+  const fetchLegacyOperadores = async () => {
+    try {
+      // Buscar operadores legados (sem auth_user_id vinculado)
+      const { data, error } = await supabase
+        .from("operadores")
+        .select("id, nome, cpf, email, status, tipo_contrato, data_admissao")
+        .is("auth_user_id", null)
+        .eq("workspace_id", workspace?.id);
+
+      if (error) throw error;
+      setLegacyOperadores(data || []);
+    } catch (error: any) {
+      console.error("Erro ao carregar operadores legados:", error);
+    }
+  };
+
   const filteredOperadores = operadores.filter((op) => {
+    const nome = op.nome || "";
+    const cpf = op.cpf || "";
     const matchesSearch = 
-      op.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      op.cpf.includes(searchTerm);
-    const matchesStatus = statusFilter === "all" || op.status === statusFilter;
+      nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cpf.includes(searchTerm);
     const matchesContrato = contratoFilter === "all" || op.tipo_contrato === contratoFilter;
-    return matchesSearch && matchesStatus && matchesContrato;
+    return matchesSearch && matchesContrato;
   });
 
-  const handleOpenDialog = (operador: Operador | null, mode: "view" | "edit" | "create") => {
+  const handleOpenDialog = (operador: OperadorWorkspace, mode: "view" | "edit") => {
     setSelectedOperador(operador);
     setDialogMode(mode);
     setDialogOpen(true);
@@ -109,16 +149,8 @@ export default function GestaoOperadores() {
     }).format(value);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "ATIVO": return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
-      case "INATIVO": return "bg-gray-500/20 text-gray-400 border-gray-500/30";
-      case "BLOQUEADO": return "bg-red-500/20 text-red-400 border-red-500/30";
-      default: return "bg-gray-500/20 text-gray-400 border-gray-500/30";
-    }
-  };
-
-  const getContratoLabel = (tipo: string) => {
+  const getContratoLabel = (tipo: string | null) => {
+    if (!tipo) return "Não definido";
     switch (tipo) {
       case "CLT": return "CLT";
       case "PJ": return "PJ";
@@ -132,16 +164,38 @@ export default function GestaoOperadores() {
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <PageHeader
         title="Operadores"
-        description="Gerencie seus operadores e acompanhe o desempenho"
+        description="Gerencie os operadores vinculados ao workspace"
         pagePath="/operadores"
         pageIcon="Briefcase"
         actions={
-          <Button onClick={() => handleOpenDialog(null, "create")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Operador
+          <Button onClick={() => setInviteDialogOpen(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Convidar Operador
           </Button>
         }
       />
+
+      {/* Alerta de operadores legados pendentes de migração */}
+      {legacyOperadores.length > 0 && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Operadores pendentes de migração</AlertTitle>
+          <AlertDescription>
+            Existem {legacyOperadores.length} operador(es) cadastrados no modelo antigo que precisam ser migrados. 
+            Convide-os como usuários do workspace para vincular seus dados.
+            <div className="mt-2 flex flex-wrap gap-2">
+              {legacyOperadores.slice(0, 5).map((op) => (
+                <Badge key={op.id} variant="outline" className="text-destructive border-destructive">
+                  {op.nome}
+                </Badge>
+              ))}
+              {legacyOperadores.length > 5 && (
+                <Badge variant="outline">+{legacyOperadores.length - 5} mais</Badge>
+              )}
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -170,17 +224,6 @@ export default function GestaoOperadores() {
                     className="pl-10"
                   />
                 </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos Status</SelectItem>
-                    <SelectItem value="ATIVO">Ativo</SelectItem>
-                    <SelectItem value="INATIVO">Inativo</SelectItem>
-                    <SelectItem value="BLOQUEADO">Bloqueado</SelectItem>
-                  </SelectContent>
-                </Select>
                 <Select value={contratoFilter} onValueChange={setContratoFilter}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Contrato" />
@@ -231,10 +274,17 @@ export default function GestaoOperadores() {
                   <User className="mx-auto h-12 w-12 text-muted-foreground/50" />
                   <h3 className="mt-4 text-lg font-semibold">Nenhum operador encontrado</h3>
                   <p className="text-muted-foreground">
-                    {searchTerm || statusFilter !== "all" || contratoFilter !== "all"
+                    {searchTerm || contratoFilter !== "all"
                       ? "Tente ajustar os filtros"
-                      : "Comece cadastrando seu primeiro operador"}
+                      : "Convide um membro com função de Operador via Workspace"}
                   </p>
+                  <Button 
+                    className="mt-4" 
+                    onClick={() => setInviteDialogOpen(true)}
+                  >
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Convidar Operador
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -242,7 +292,7 @@ export default function GestaoOperadores() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {filteredOperadores.map((operador) => (
                 <Card 
-                  key={operador.id} 
+                  key={operador.workspace_member_id} 
                   className="cursor-pointer hover:border-primary/50 transition-colors"
                   onClick={() => handleOpenDialog(operador, "view")}
                 >
@@ -253,12 +303,12 @@ export default function GestaoOperadores() {
                           <User className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <CardTitle className="text-base">{operador.nome}</CardTitle>
-                          <p className="text-sm text-muted-foreground">{operador.cpf}</p>
+                          <CardTitle className="text-base">{operador.nome || "Sem nome"}</CardTitle>
+                          <p className="text-sm text-muted-foreground">{operador.email}</p>
                         </div>
                       </div>
-                      <Badge className={getStatusColor(operador.status)}>
-                        {operador.status}
+                      <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                        ATIVO
                       </Badge>
                     </div>
                   </CardHeader>
@@ -268,12 +318,14 @@ export default function GestaoOperadores() {
                         <Briefcase className="h-4 w-4" />
                         <span>{getContratoLabel(operador.tipo_contrato)}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4" />
-                        <span>
-                          Desde {format(new Date(operador.data_admissao), "dd/MM/yyyy", { locale: ptBR })}
-                        </span>
-                      </div>
+                      {operador.data_admissao && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          <span>
+                            Desde {format(new Date(operador.data_admissao), "dd/MM/yyyy", { locale: ptBR })}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 text-sm">
                         <DollarSign className="h-4 w-4 text-emerald-500" />
                         <span className="text-emerald-500">
@@ -322,7 +374,7 @@ export default function GestaoOperadores() {
                 <div className="divide-y">
                   {filteredOperadores.map((operador) => (
                     <div
-                      key={operador.id}
+                      key={operador.workspace_member_id}
                       className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer"
                       onClick={() => handleOpenDialog(operador, "view")}
                     >
@@ -331,8 +383,8 @@ export default function GestaoOperadores() {
                           <User className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <p className="font-medium">{operador.nome}</p>
-                          <p className="text-sm text-muted-foreground">{operador.cpf}</p>
+                          <p className="font-medium">{operador.nome || "Sem nome"}</p>
+                          <p className="text-sm text-muted-foreground">{operador.email}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
@@ -344,8 +396,8 @@ export default function GestaoOperadores() {
                             {formatCurrency(operador.total_pago || 0)}
                           </p>
                         </div>
-                        <Badge className={getStatusColor(operador.status)}>
-                          {operador.status}
+                        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                          ATIVO
                         </Badge>
                         <div className="flex gap-1">
                           <Button 
@@ -383,6 +435,7 @@ export default function GestaoOperadores() {
         </TabsContent>
       </Tabs>
 
+      {/* Dialog de detalhes/edição do operador */}
       <OperadorDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -390,6 +443,19 @@ export default function GestaoOperadores() {
         mode={dialogMode}
         onSuccess={fetchOperadores}
       />
+
+      {/* Dialog para convidar novo operador */}
+      {workspace?.id && (
+        <InviteMemberDialog
+          open={inviteDialogOpen}
+          onOpenChange={setInviteDialogOpen}
+          workspaceId={workspace.id}
+          onMemberInvited={() => {
+            fetchOperadores();
+            setInviteDialogOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

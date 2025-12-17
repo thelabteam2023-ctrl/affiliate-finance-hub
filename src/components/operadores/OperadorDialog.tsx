@@ -32,31 +32,39 @@ import {
   Briefcase, 
   DollarSign, 
   FolderKanban,
-  Clock,
-  CheckCircle,
-  AlertCircle,
   Plus,
   Wallet,
   Gift,
   Banknote,
   ArrowUpDown,
-  ReceiptText
+  ReceiptText,
+  Mail,
+  Phone
 } from "lucide-react";
 import { PagamentoOperadorDialog } from "./PagamentoOperadorDialog";
 import { VincularProjetoDialog } from "./VincularProjetoDialog";
 
-interface Operador {
-  id?: string;
-  nome: string;
-  cpf: string;
-  email?: string | null;
-  telefone?: string | null;
-  status: string;
-  tipo_contrato: string;
-  data_admissao: string;
-  data_nascimento?: string | null;
-  data_desligamento?: string | null;
-  observacoes?: string | null;
+interface OperadorWorkspace {
+  workspace_member_id: string;
+  workspace_id: string;
+  user_id: string;
+  role: string;
+  is_active: boolean;
+  joined_at: string | null;
+  profile_id: string;
+  email: string | null;
+  nome: string | null;
+  cpf: string | null;
+  telefone: string | null;
+  data_nascimento: string | null;
+  tipo_contrato: string | null;
+  data_admissao: string | null;
+  data_desligamento: string | null;
+  observacoes: string | null;
+  operador_id: string | null;
+  projetos_ativos: number;
+  total_pago: number;
+  total_pendente: number;
 }
 
 interface OperadorProjeto {
@@ -87,7 +95,7 @@ const BASES_CALCULO_LABELS: Record<string, string> = {
   RESULTADO_OPERACAO: "Resultado da Operação",
 };
 
-interface PagamentoOperador {
+interface PagamentoOperadorDisplay {
   id: string;
   tipo_pagamento: string;
   valor: number;
@@ -96,14 +104,28 @@ interface PagamentoOperador {
   descricao: string | null;
   status: string;
   projeto_nome?: string | null;
+  operador_id: string;
+  projeto_id: string | null;
+  data_competencia: string | null;
 }
 
 interface OperadorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  operador: Operador | null;
-  mode: "view" | "edit" | "create";
+  operador: OperadorWorkspace | null;
+  mode: "view" | "edit";
   onSuccess: () => void;
+}
+
+interface ProfileFormData {
+  full_name: string;
+  cpf: string;
+  telefone: string;
+  data_nascimento: string | null;
+  tipo_contrato: string;
+  data_admissao: string | null;
+  data_desligamento: string | null;
+  observacoes_operador: string;
 }
 
 export function OperadorDialog({
@@ -116,78 +138,48 @@ export function OperadorDialog({
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("dados");
   const [projetos, setProjetos] = useState<OperadorProjeto[]>([]);
-  const [pagamentos, setPagamentos] = useState<PagamentoOperador[]>([]);
+  const [pagamentos, setPagamentos] = useState<PagamentoOperadorDisplay[]>([]);
   const [cpfError, setCpfError] = useState<string | null>(null);
   const [pagamentoDialogOpen, setPagamentoDialogOpen] = useState(false);
   const [vincularProjetoDialogOpen, setVincularProjetoDialogOpen] = useState(false);
-  const [selectedPagamentoEdit, setSelectedPagamentoEdit] = useState<PagamentoOperador | null>(null);
+  const [selectedPagamentoEdit, setSelectedPagamentoEdit] = useState<PagamentoOperadorDisplay | null>(null);
   
-  const [formData, setFormData] = useState<Operador>({
-    nome: "",
+  const [formData, setFormData] = useState<ProfileFormData>({
+    full_name: "",
     cpf: "",
-    email: null,
-    telefone: null,
-    status: "ATIVO",
-    tipo_contrato: "CLT",
-    data_admissao: new Date().toISOString().split("T")[0],
+    telefone: "",
     data_nascimento: null,
+    tipo_contrato: "FREELANCER",
+    data_admissao: null,
     data_desligamento: null,
-    observacoes: null,
+    observacoes_operador: "",
   });
 
-  const fetchOperadorCompleto = async (operadorId: string) => {
-    const { data, error } = await supabase
-      .from("operadores")
-      .select("*")
-      .eq("id", operadorId)
-      .single();
-
-    if (!error && data) {
-      setFormData({
-        id: data.id,
-        nome: data.nome,
-        cpf: data.cpf,
-        email: data.email || null,
-        telefone: data.telefone || null,
-        status: data.status,
-        tipo_contrato: data.tipo_contrato,
-        data_admissao: data.data_admissao,
-        data_nascimento: data.data_nascimento || null,
-        data_desligamento: data.data_desligamento || null,
-        observacoes: data.observacoes || null,
-      });
-    }
-  };
-
   useEffect(() => {
-    if (open) {
-      if (operador && mode !== "create") {
-        // Fetch complete operator data from the table (view doesn't have all fields)
-        if (operador.id) {
-          fetchOperadorCompleto(operador.id);
-          fetchProjetosOperador(operador.id);
-          fetchPagamentosOperador(operador.id);
-        }
+    if (open && operador) {
+      setFormData({
+        full_name: operador.nome || "",
+        cpf: operador.cpf || "",
+        telefone: operador.telefone || "",
+        data_nascimento: operador.data_nascimento || null,
+        tipo_contrato: operador.tipo_contrato || "FREELANCER",
+        data_admissao: operador.data_admissao || null,
+        data_desligamento: operador.data_desligamento || null,
+        observacoes_operador: operador.observacoes || "",
+      });
+      
+      if (operador.operador_id) {
+        fetchProjetosOperador(operador.operador_id);
+        fetchPagamentosOperador(operador.operador_id);
       } else {
-        setFormData({
-          nome: "",
-          cpf: "",
-          email: null,
-          telefone: null,
-          status: "ATIVO",
-          tipo_contrato: "CLT",
-          data_admissao: new Date().toISOString().split("T")[0],
-          data_nascimento: null,
-          data_desligamento: null,
-          observacoes: null,
-        });
         setProjetos([]);
         setPagamentos([]);
       }
+      
       setActiveTab("dados");
       setCpfError(null);
     }
-  }, [open, operador, mode]);
+  }, [open, operador]);
 
   const fetchProjetosOperador = async (operadorId: string) => {
     const { data, error } = await supabase
@@ -232,10 +224,13 @@ export function OperadorDialog({
       .from("pagamentos_operador")
       .select(`
         id,
+        operador_id,
+        projeto_id,
         tipo_pagamento,
         valor,
         moeda,
         data_pagamento,
+        data_competencia,
         descricao,
         status,
         projetos(nome)
@@ -253,7 +248,7 @@ export function OperadorDialog({
     }
   };
 
-  const validateCPFUnique = async (cpf: string) => {
+  const validateCPFInput = async (cpf: string) => {
     if (!cpf || cpf.length < 11) return;
     
     const cleanCPF = cpf.replace(/\D/g, "");
@@ -262,20 +257,13 @@ export function OperadorDialog({
       return;
     }
 
-    const { data: session } = await supabase.auth.getSession();
-    if (!session.session) return;
-
-    let query = supabase
-      .from("operadores")
+    // Check uniqueness in profiles (excluding current user)
+    const { data } = await supabase
+      .from("profiles")
       .select("id")
       .eq("cpf", cleanCPF)
-      .eq("user_id", session.session.user.id);
+      .neq("id", operador?.profile_id || "");
 
-    if (operador?.id) {
-      query = query.neq("id", operador.id);
-    }
-
-    const { data } = await query;
     if (data && data.length > 0) {
       setCpfError("CPF já cadastrado");
     } else {
@@ -284,56 +272,44 @@ export function OperadorDialog({
   };
 
   const handleSave = async () => {
-    if (!formData.nome.trim()) {
+    if (!operador) return;
+    
+    if (!formData.full_name.trim()) {
       toast.error("Nome é obrigatório");
       return;
     }
-    if (!formData.cpf || cpfError) {
-      toast.error(cpfError || "CPF inválido");
+    if (formData.cpf && cpfError) {
+      toast.error(cpfError);
       return;
     }
 
     setLoading(true);
     try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) {
-        toast.error("Usuário não autenticado");
-        return;
-      }
+      const cleanCPF = formData.cpf ? formData.cpf.replace(/\D/g, "") : null;
+      
+      // Update profile with operator data
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: formData.full_name.trim(),
+          cpf: cleanCPF,
+          telefone: formData.telefone || null,
+          data_nascimento: formData.data_nascimento || null,
+          tipo_contrato: formData.tipo_contrato,
+          data_admissao: formData.data_admissao || null,
+          data_desligamento: formData.data_desligamento || null,
+          observacoes_operador: formData.observacoes_operador || null,
+        })
+        .eq("id", operador.profile_id);
 
-      const cleanCPF = formData.cpf.replace(/\D/g, "");
-      const payload = {
-        nome: formData.nome.trim(),
-        cpf: cleanCPF,
-        email: formData.email || null,
-        telefone: formData.telefone || null,
-        status: formData.status,
-        tipo_contrato: formData.tipo_contrato,
-        data_admissao: formData.data_admissao,
-        data_nascimento: formData.data_nascimento || null,
-        data_desligamento: formData.data_desligamento || null,
-        observacoes: formData.observacoes || null,
-        user_id: session.session.user.id,
-      };
-
-      if (mode === "create") {
-        const { error } = await supabase.from("operadores").insert(payload);
-        if (error) throw error;
-        toast.success("Operador criado com sucesso");
-      } else {
-        const { error } = await supabase
-          .from("operadores")
-          .update(payload)
-          .eq("id", operador!.id);
-        if (error) throw error;
-        toast.success("Operador atualizado com sucesso");
-      }
-
+      if (error) throw error;
+      
+      toast.success("Dados do operador atualizados");
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
       if (error.code === "23505") {
-        toast.error("CPF já cadastrado para outro operador");
+        toast.error("CPF já cadastrado para outro usuário");
       } else {
         toast.error("Erro ao salvar: " + error.message);
       }
@@ -381,7 +357,6 @@ export function OperadorDialog({
     }
   };
 
-  // Breakdown por tipo de pagamento
   const getBreakdownByTipo = () => {
     const breakdown: Record<string, number> = {};
     pagamentos
@@ -393,19 +368,16 @@ export function OperadorDialog({
   };
 
   const breakdown = getBreakdownByTipo();
-
   const isViewMode = mode === "view";
+
+  if (!operador) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>
-            {mode === "create" 
-              ? "Novo Operador" 
-              : mode === "edit" 
-                ? "Editar Operador" 
-                : "Detalhes do Operador"}
+            {mode === "edit" ? "Editar Operador" : "Detalhes do Operador"}
           </DialogTitle>
         </DialogHeader>
 
@@ -415,11 +387,11 @@ export function OperadorDialog({
               <User className="h-4 w-4 mr-2" />
               Dados
             </TabsTrigger>
-            <TabsTrigger value="projetos" disabled={mode === "create"}>
+            <TabsTrigger value="projetos">
               <FolderKanban className="h-4 w-4 mr-2" />
               Projetos
             </TabsTrigger>
-            <TabsTrigger value="financeiro" disabled={mode === "create"}>
+            <TabsTrigger value="financeiro">
               <DollarSign className="h-4 w-4 mr-2" />
               Financeiro
             </TabsTrigger>
@@ -427,25 +399,41 @@ export function OperadorDialog({
 
           <ScrollArea className="h-[500px] mt-4">
             <TabsContent value="dados" className="space-y-4 px-1">
+              {/* Email (readonly) */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email
+                </Label>
+                <Input
+                  value={operador.email || ""}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">
+                  O email é vinculado à conta do usuário e não pode ser alterado aqui
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Nome *</Label>
+                  <Label>Nome Completo *</Label>
                   <Input
-                    value={formData.nome}
-                    onChange={(e) => setFormData({ ...formData, nome: e.target.value.toUpperCase() })}
+                    value={formData.full_name}
+                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value.toUpperCase() })}
                     disabled={isViewMode}
                     placeholder="Nome completo"
                     className="uppercase"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>CPF *</Label>
+                  <Label>CPF</Label>
                   <Input
                     value={formatCPF(formData.cpf)}
                     onChange={(e) => {
                       const value = e.target.value.replace(/\D/g, "").slice(0, 11);
                       setFormData({ ...formData, cpf: value });
-                      validateCPFUnique(value);
+                      validateCPFInput(value);
                     }}
                     disabled={isViewMode}
                     placeholder="000.000.000-00"
@@ -457,40 +445,22 @@ export function OperadorDialog({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Email</Label>
+                  <Label className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Telefone
+                  </Label>
                   <Input
-                    type="email"
-                    value={formData.email || ""}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value || null })}
-                    disabled={isViewMode}
-                    placeholder="email@exemplo.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Telefone</Label>
-                  <Input
-                    value={formData.telefone || ""}
-                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value || null })}
+                    value={formData.telefone}
+                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
                     disabled={isViewMode}
                     placeholder="(00) 00000-0000"
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Data de Nascimento</Label>
                   <DatePicker
                     value={formData.data_nascimento || ""}
                     onChange={(date) => setFormData({ ...formData, data_nascimento: date })}
-                    disabled={isViewMode}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Data de Admissão *</Label>
-                  <DatePicker
-                    value={formData.data_admissao}
-                    onChange={(date) => setFormData({ ...formData, data_admissao: date })}
                     disabled={isViewMode}
                   />
                 </div>
@@ -516,132 +486,94 @@ export function OperadorDialog({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => setFormData({ ...formData, status: value })}
-                    disabled={isViewMode}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ATIVO">Ativo</SelectItem>
-                      <SelectItem value="INATIVO">Inativo</SelectItem>
-                      <SelectItem value="BLOQUEADO">Bloqueado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {formData.status !== "ATIVO" && (
-                <div className="space-y-2">
-                  <Label>Data de Desligamento</Label>
+                  <Label>Data de Admissão</Label>
                   <DatePicker
-                    value={formData.data_desligamento || ""}
-                    onChange={(date) => setFormData({ ...formData, data_desligamento: date })}
+                    value={formData.data_admissao || ""}
+                    onChange={(date) => setFormData({ ...formData, data_admissao: date })}
                     disabled={isViewMode}
                   />
                 </div>
-              )}
+              </div>
 
               <div className="space-y-2">
                 <Label>Observações</Label>
                 <Textarea
-                  value={formData.observacoes || ""}
-                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value || null })}
+                  value={formData.observacoes_operador}
+                  onChange={(e) => setFormData({ ...formData, observacoes_operador: e.target.value })}
                   disabled={isViewMode}
                   placeholder="Observações sobre o operador..."
                   rows={3}
                 />
               </div>
+
+              {!isViewMode && (
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button variant="outline" onClick={() => onOpenChange(false)}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSave} disabled={loading}>
+                    {loading ? "Salvando..." : "Salvar"}
+                  </Button>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="projetos" className="space-y-4 px-1">
-              {/* Botão Vincular Projeto */}
-              <div className="flex justify-end">
-                <Button 
-                  onClick={() => setVincularProjetoDialogOpen(true)}
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Vincular Projeto
-                </Button>
+              <div className="flex justify-between items-center">
+                <h3 className="font-semibold">Projetos Vinculados</h3>
+                {operador.operador_id && (
+                  <Button 
+                    size="sm" 
+                    onClick={() => setVincularProjetoDialogOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Vincular Projeto
+                  </Button>
+                )}
               </div>
 
-              {projetos.length === 0 ? (
+              {!operador.operador_id ? (
                 <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center py-8">
-                      <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                      <p className="mt-4 text-muted-foreground">
-                        Nenhum projeto vinculado a este operador
-                      </p>
-                    </div>
+                  <CardContent className="py-8 text-center">
+                    <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                    <p className="mt-4 text-muted-foreground">
+                      Este operador ainda não possui um registro de operador vinculado.
+                      Vincule-o a um projeto para criar o registro automaticamente.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : projetos.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                    <p className="mt-4 text-muted-foreground">
+                      Nenhum projeto vinculado
+                    </p>
                   </CardContent>
                 </Card>
               ) : (
                 <div className="space-y-3">
                   {projetos.map((projeto) => (
                     <Card key={projeto.id}>
-                      <CardContent className="pt-4">
+                      <CardContent className="py-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-medium">{projeto.projeto_nome}</p>
-                            {projeto.funcao && (
-                              <p className="text-sm text-muted-foreground">{projeto.funcao}</p>
-                            )}
+                            <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {format(new Date(projeto.data_entrada), "dd/MM/yyyy", { locale: ptBR })}
+                              </span>
+                              <span>{MODELOS_PAGAMENTO_LABELS[projeto.modelo_pagamento] || projeto.modelo_pagamento}</span>
+                            </div>
                           </div>
-                          <Badge 
-                            className={
-                              projeto.status === "ATIVO" 
-                                ? "bg-emerald-500/20 text-emerald-400" 
-                                : "bg-gray-500/20 text-gray-400"
-                            }
-                          >
+                          <Badge className={
+                            projeto.status === "ATIVO" 
+                              ? "bg-emerald-500/20 text-emerald-400" 
+                              : "bg-gray-500/20 text-gray-400"
+                          }>
                             {projeto.status}
                           </Badge>
-                        </div>
-                        
-                        {/* Modelo de Pagamento */}
-                        <div className="mt-3 p-2 bg-muted/30 rounded-md">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">Modelo:</span>
-                            <span className="text-sm font-medium">
-                              {MODELOS_PAGAMENTO_LABELS[projeto.modelo_pagamento] || projeto.modelo_pagamento}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-4 mt-1">
-                            {projeto.valor_fixo > 0 && (
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs text-muted-foreground">Fixo:</span>
-                                <span className="text-sm">{formatCurrency(projeto.valor_fixo)}</span>
-                              </div>
-                            )}
-                            {projeto.percentual > 0 && (
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs text-muted-foreground">%:</span>
-                                <span className="text-sm">{projeto.percentual}%</span>
-                                <span className="text-xs text-muted-foreground">
-                                  ({BASES_CALCULO_LABELS[projeto.base_calculo] || projeto.base_calculo})
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            <span>
-                              {format(new Date(projeto.data_entrada), "dd/MM/yyyy", { locale: ptBR })}
-                            </span>
-                          </div>
-                          {projeto.data_saida && (
-                            <span>
-                              até {format(new Date(projeto.data_saida), "dd/MM/yyyy", { locale: ptBR })}
-                            </span>
-                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -651,83 +583,47 @@ export function OperadorDialog({
             </TabsContent>
 
             <TabsContent value="financeiro" className="space-y-4 px-1">
-              {/* Botão Novo Pagamento */}
-              <div className="flex justify-end">
-                <Button 
-                  onClick={() => setPagamentoDialogOpen(true)}
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Pagamento
-                </Button>
-              </div>
-
               {/* Resumo Financeiro */}
               <div className="grid grid-cols-3 gap-4">
                 <Card>
                   <CardContent className="pt-4">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-500" />
-                      <span className="text-sm text-muted-foreground">Pagos</span>
-                    </div>
-                    <p className="text-xl font-bold text-emerald-500 mt-1">
-                      {formatCurrency(
-                        pagamentos
-                          .filter((p) => p.status === "CONFIRMADO")
-                          .reduce((acc, p) => acc + p.valor, 0)
-                      )}
+                    <p className="text-sm text-muted-foreground">Total Pago</p>
+                    <p className="text-2xl font-bold text-emerald-500">
+                      {formatCurrency(operador.total_pago || 0)}
                     </p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="pt-4">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-yellow-500" />
-                      <span className="text-sm text-muted-foreground">Pendentes</span>
-                    </div>
-                    <p className="text-xl font-bold text-yellow-500 mt-1">
-                      {formatCurrency(
-                        pagamentos
-                          .filter((p) => p.status === "PENDENTE")
-                          .reduce((acc, p) => acc + p.valor, 0)
-                      )}
+                    <p className="text-sm text-muted-foreground">Pendente</p>
+                    <p className="text-2xl font-bold text-yellow-500">
+                      {formatCurrency(operador.total_pendente || 0)}
                     </p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="pt-4">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Total</span>
-                    </div>
-                    <p className="text-xl font-bold mt-1">
-                      {formatCurrency(
-                        pagamentos
-                          .filter((p) => p.status !== "CANCELADO")
-                          .reduce((acc, p) => acc + p.valor, 0)
-                      )}
-                    </p>
+                    <p className="text-sm text-muted-foreground">Projetos Ativos</p>
+                    <p className="text-2xl font-bold">{operador.projetos_ativos || 0}</p>
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Breakdown por Tipo */}
+              {/* Breakdown por tipo */}
               {Object.keys(breakdown).length > 0 && (
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Distribuição por Tipo
-                    </CardTitle>
+                    <CardTitle className="text-sm">Distribuição por Tipo</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-2">
                       {Object.entries(breakdown).map(([tipo, valor]) => (
-                        <div key={tipo} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                        <div key={tipo} className="flex items-center justify-between p-2 bg-muted/50 rounded">
                           <div className="flex items-center gap-2">
                             {getTipoPagamentoIcon(tipo)}
                             <span className="text-sm">{getTipoPagamentoLabel(tipo)}</span>
                           </div>
-                          <span className="text-sm font-medium">{formatCurrency(valor)}</span>
+                          <span className="font-medium">{formatCurrency(valor)}</span>
                         </div>
                       ))}
                     </div>
@@ -735,137 +631,105 @@ export function OperadorDialog({
                 </Card>
               )}
 
-              {/* Lista de Pagamentos */}
+              {/* Histórico de Pagamentos */}
+              <div className="flex justify-between items-center">
+                <h3 className="font-semibold">Histórico de Pagamentos</h3>
+                {operador.operador_id && (
+                  <Button 
+                    size="sm" 
+                    onClick={() => {
+                      setSelectedPagamentoEdit(null);
+                      setPagamentoDialogOpen(true);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Novo Pagamento
+                  </Button>
+                )}
+              </div>
+
               {pagamentos.length === 0 ? (
                 <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center py-8">
-                      <DollarSign className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                      <p className="mt-4 text-muted-foreground">
-                        Nenhum pagamento registrado
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-4"
-                        onClick={() => setPagamentoDialogOpen(true)}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Registrar Pagamento
-                      </Button>
-                    </div>
+                  <CardContent className="py-8 text-center">
+                    <DollarSign className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                    <p className="mt-4 text-muted-foreground">
+                      Nenhum pagamento registrado
+                    </p>
                   </CardContent>
                 </Card>
               ) : (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Histórico de Pagamentos</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {pagamentos.map((pagamento) => (
-                        <div 
-                          key={pagamento.id}
-                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                        >
+                <div className="space-y-2">
+                  {pagamentos.map((pagamento) => (
+                    <Card 
+                      key={pagamento.id} 
+                      className="cursor-pointer hover:border-primary/50 transition-colors"
+                      onClick={() => {
+                        setSelectedPagamentoEdit(pagamento);
+                        setPagamentoDialogOpen(true);
+                      }}
+                    >
+                      <CardContent className="py-3">
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="p-2 bg-muted rounded-md">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                               {getTipoPagamentoIcon(pagamento.tipo_pagamento)}
                             </div>
                             <div>
-                              <p className="font-medium">
-                                {getTipoPagamentoLabel(pagamento.tipo_pagamento)}
-                              </p>
+                              <p className="font-medium">{getTipoPagamentoLabel(pagamento.tipo_pagamento)}</p>
                               <p className="text-sm text-muted-foreground">
                                 {format(new Date(pagamento.data_pagamento), "dd/MM/yyyy", { locale: ptBR })}
                                 {pagamento.projeto_nome && ` • ${pagamento.projeto_nome}`}
                               </p>
-                              {pagamento.descricao && (
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {pagamento.descricao}
-                                </p>
-                              )}
                             </div>
-                            {pagamento.status === "PENDENTE" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setSelectedPagamentoEdit(pagamento);
-                                  setPagamentoDialogOpen(true);
-                                }}
-                              >
-                                <DollarSign className="h-3 w-3 mr-1" />
-                                Pagar
-                              </Button>
-                            )}
                           </div>
-                          <div className="text-right">
-                            <p className="font-semibold">{formatCurrency(pagamento.valor)}</p>
+                          <div className="flex items-center gap-3">
+                            <span className="font-bold">{formatCurrency(pagamento.valor)}</span>
                             <Badge className={getStatusPagamentoColor(pagamento.status)}>
                               {pagamento.status}
                             </Badge>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               )}
             </TabsContent>
           </ScrollArea>
         </Tabs>
-
-        {!isViewMode && (
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={loading}>
-              {loading ? "Salvando..." : mode === "create" ? "Criar Operador" : "Salvar Alterações"}
-            </Button>
-          </div>
-        )}
       </DialogContent>
 
-      {/* Dialog para novo/editar pagamento */}
-      <PagamentoOperadorDialog
-        open={pagamentoDialogOpen}
-        onOpenChange={(open) => {
-          setPagamentoDialogOpen(open);
-          if (!open) setSelectedPagamentoEdit(null);
-        }}
-        defaultOperadorId={operador?.id}
-        pagamento={selectedPagamentoEdit ? {
-          id: selectedPagamentoEdit.id,
-          operador_id: operador?.id || "",
-          projeto_id: null,
-          tipo_pagamento: selectedPagamentoEdit.tipo_pagamento,
-          valor: selectedPagamentoEdit.valor,
-          moeda: selectedPagamentoEdit.moeda,
-          data_pagamento: selectedPagamentoEdit.data_pagamento,
-          data_competencia: null,
-          descricao: selectedPagamentoEdit.descricao,
-          status: selectedPagamentoEdit.status,
-        } : undefined}
-        onSuccess={() => {
-          if (operador?.id) {
-            fetchPagamentosOperador(operador.id);
-          }
-          setSelectedPagamentoEdit(null);
-        }}
-      />
-
-      {/* Dialog para vincular projeto */}
-      {operador?.id && (
-        <VincularProjetoDialog
-          open={vincularProjetoDialogOpen}
-          onOpenChange={setVincularProjetoDialogOpen}
-          operadorId={operador.id}
-          onSuccess={() => {
-            fetchProjetosOperador(operador.id!);
-          }}
-        />
+      {/* Dialogs auxiliares */}
+      {operador.operador_id && (
+        <>
+          <PagamentoOperadorDialog
+            open={pagamentoDialogOpen}
+            onOpenChange={setPagamentoDialogOpen}
+            defaultOperadorId={operador.operador_id}
+            pagamento={selectedPagamentoEdit ? {
+              id: selectedPagamentoEdit.id,
+              operador_id: selectedPagamentoEdit.operador_id,
+              projeto_id: selectedPagamentoEdit.projeto_id,
+              tipo_pagamento: selectedPagamentoEdit.tipo_pagamento,
+              valor: selectedPagamentoEdit.valor,
+              moeda: selectedPagamentoEdit.moeda,
+              data_pagamento: selectedPagamentoEdit.data_pagamento,
+              data_competencia: selectedPagamentoEdit.data_competencia,
+              descricao: selectedPagamentoEdit.descricao,
+              status: selectedPagamentoEdit.status,
+            } : undefined}
+            onSuccess={() => {
+              fetchPagamentosOperador(operador.operador_id!);
+              onSuccess();
+            }}
+          />
+          <VincularProjetoDialog
+            open={vincularProjetoDialogOpen}
+            onOpenChange={setVincularProjetoDialogOpen}
+            operadorId={operador.operador_id}
+            onSuccess={() => fetchProjetosOperador(operador.operador_id!)}
+          />
+        </>
       )}
     </Dialog>
   );
