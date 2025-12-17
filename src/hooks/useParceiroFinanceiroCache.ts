@@ -658,6 +658,17 @@ export function useParceiroFinanceiroCache() {
     invalidateCache(currentParceiroId, [activeTab]);
   }, [currentParceiroId, activeTab, invalidateCache]);
 
+  const invalidateTab = useCallback((tab: TabKey) => {
+    if (!currentParceiroId) return;
+    invalidateCache(currentParceiroId, [tab]);
+  }, [currentParceiroId, invalidateCache]);
+
+  const prefetchTab = useCallback((parceiroId: string, tab: TabKey) => {
+    if (tab === "resumo") loadResumo(parceiroId);
+    else if (tab === "movimentacoes") loadMovimentacoes(parceiroId);
+    else loadBookmakers(parceiroId);
+  }, [loadResumo, loadMovimentacoes, loadBookmakers]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
