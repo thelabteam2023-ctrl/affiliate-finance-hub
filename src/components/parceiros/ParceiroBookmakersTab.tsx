@@ -93,10 +93,11 @@ export function ParceiroBookmakersTab({
         logo_url: b.bookmaker_catalogo_id ? logosMap.get(b.bookmaker_catalogo_id) : undefined,
       })) || [];
 
+      // Buscar catálogo de bookmakers (RLS já filtra por visibilidade)
       const { data: catalogoData, error: catalogoError } = await supabase
         .from("bookmakers_catalogo")
         .select("id, nome, logo_url, status")
-        .eq("status", "REGULAMENTADA");
+        .order("nome");
 
       if (catalogoError) throw catalogoError;
 
