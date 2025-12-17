@@ -125,7 +125,7 @@ const Index = () => {
             price="R$ 89"
             period="/mês"
             description="Para quem já opera"
-            maxPartners="Até 10 parceiros ativos"
+            maxPartners="Até 6 parceiros ativos"
             features={[
               { text: "1 usuário", included: true },
               { text: "Dashboards completos", included: true },
@@ -161,12 +161,11 @@ const Index = () => {
             description="Liberdade total"
             maxPartners="Parceiros ilimitados"
             features={[
-              { text: "Usuários ilimitados", included: true },
+              { text: "Até 10 usuários", included: true },
               { text: "Permissões customizadas ilimitadas", included: true },
               { text: "Personalização avançada", included: true },
               { text: "Atendimento personalizado", included: true },
               { text: "Chamadas de alinhamento", included: true },
-              { text: "Sem contrato, sem SLA formal", included: true },
             ]}
             highlighted={false}
             ctaText="Ir além do Pro"
