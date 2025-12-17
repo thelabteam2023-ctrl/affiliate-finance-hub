@@ -1,160 +1,27 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, AlertCircle } from "lucide-react";
-
-interface Transacao {
-  id: string;
-  tipo_transacao: string;
-  valor: number;
-  moeda: string;
-  data_transacao: string;
-  status: string;
-  descricao: string | null;
-  origem_bookmaker_id: string | null;
-  destino_bookmaker_id: string | null;
-  origem_tipo: string | null;
-  destino_tipo: string | null;
-  origem_parceiro_id: string | null;
-  destino_parceiro_id: string | null;
-  origem_conta_bancaria_id: string | null;
-  destino_conta_bancaria_id: string | null;
-  origem_wallet_id: string | null;
-  destino_wallet_id: string | null;
-  nome_investidor: string | null;
-}
+import { ArrowRight, AlertCircle, RefreshCw } from "lucide-react";
+import { MovimentacoesData, Transacao } from "@/hooks/useParceiroFinanceiroCache";
 
 interface ParceiroMovimentacoesTabProps {
   parceiroId: string;
   showSensitiveData: boolean;
+  data: MovimentacoesData | null;
+  loading: boolean;
+  error: string | null;
+  isRevalidating: boolean;
 }
 
 export function ParceiroMovimentacoesTab({ 
   parceiroId, 
-  showSensitiveData 
+  showSensitiveData,
+  data,
+  loading,
+  error,
+  isRevalidating
 }: ParceiroMovimentacoesTabProps) {
-  const [transacoes, setTransacoes] = useState<Transacao[]>([]);
-  const [bookmakerNames, setBookmakerNames] = useState<Map<string, string>>(new Map());
-  const [parceiroNames, setParceiroNames] = useState<Map<string, string>>(new Map());
-  const [contasBancarias, setContasBancarias] = useState<Array<{ id: string; banco: string; titular: string; parceiro_id: string }>>([]);
-  const [walletsCrypto, setWalletsCrypto] = useState<Array<{ id: string; exchange: string; endereco: string; parceiro_id: string }>>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchData();
-  }, [parceiroId]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Buscar contas e wallets do parceiro
-      const { data: contasDoParceiroData } = await supabase
-        .from("contas_bancarias")
-        .select("id")
-        .eq("parceiro_id", parceiroId);
-
-      const { data: walletsDoParceiroData } = await supabase
-        .from("wallets_crypto")
-        .select("id")
-        .eq("parceiro_id", parceiroId);
-
-      const contasIds = contasDoParceiroData?.map(c => c.id) || [];
-      const walletsIds = walletsDoParceiroData?.map(w => w.id) || [];
-
-      let orConditions = [
-        `origem_parceiro_id.eq.${parceiroId}`,
-        `destino_parceiro_id.eq.${parceiroId}`
-      ];
-
-      if (contasIds.length > 0) {
-        orConditions.push(`origem_conta_bancaria_id.in.(${contasIds.join(',')})`);
-        orConditions.push(`destino_conta_bancaria_id.in.(${contasIds.join(',')})`);
-      }
-
-      if (walletsIds.length > 0) {
-        orConditions.push(`origem_wallet_id.in.(${walletsIds.join(',')})`);
-        orConditions.push(`destino_wallet_id.in.(${walletsIds.join(',')})`);
-      }
-
-      const { data: transacoesData, error: transacoesError } = await supabase
-        .from("cash_ledger")
-        .select("*")
-        .or(orConditions.join(','))
-        .order("data_transacao", { ascending: false });
-
-      if (transacoesError) throw transacoesError;
-
-      // Coletar IDs para buscar nomes
-      const bookmakerIds = new Set<string>();
-      const parceiroIds = new Set<string>();
-      const contaIdsSet = new Set<string>();
-      const walletIdsSet = new Set<string>();
-      
-      transacoesData?.forEach((t) => {
-        if (t.origem_bookmaker_id) bookmakerIds.add(t.origem_bookmaker_id);
-        if (t.destino_bookmaker_id) bookmakerIds.add(t.destino_bookmaker_id);
-        if (t.origem_parceiro_id) parceiroIds.add(t.origem_parceiro_id);
-        if (t.destino_parceiro_id) parceiroIds.add(t.destino_parceiro_id);
-        if (t.origem_conta_bancaria_id) contaIdsSet.add(t.origem_conta_bancaria_id);
-        if (t.destino_conta_bancaria_id) contaIdsSet.add(t.destino_conta_bancaria_id);
-        if (t.origem_wallet_id) walletIdsSet.add(t.origem_wallet_id);
-        if (t.destino_wallet_id) walletIdsSet.add(t.destino_wallet_id);
-      });
-
-      // Buscar nomes dos bookmakers
-      const bmNames = new Map<string, string>();
-      if (bookmakerIds.size > 0) {
-        const { data: bookmakersData } = await supabase
-          .from("bookmakers")
-          .select("id, nome")
-          .in("id", Array.from(bookmakerIds));
-        bookmakersData?.forEach((b) => bmNames.set(b.id, b.nome));
-      }
-      setBookmakerNames(bmNames);
-
-      // Buscar nomes dos parceiros
-      const pNames = new Map<string, string>();
-      if (parceiroIds.size > 0) {
-        const { data: parceirosData } = await supabase
-          .from("parceiros")
-          .select("id, nome")
-          .in("id", Array.from(parceiroIds));
-        parceirosData?.forEach((p) => pNames.set(p.id, p.nome));
-      }
-      setParceiroNames(pNames);
-
-      // Buscar contas bancárias
-      if (contaIdsSet.size > 0) {
-        const { data: contasData } = await supabase
-          .from("contas_bancarias")
-          .select("id, banco, titular, parceiro_id")
-          .in("id", Array.from(contaIdsSet));
-        setContasBancarias(contasData || []);
-      }
-
-      // Buscar wallets
-      if (walletIdsSet.size > 0) {
-        const { data: walletsData } = await supabase
-          .from("wallets_crypto")
-          .select("id, exchange, endereco, parceiro_id")
-          .in("id", Array.from(walletIdsSet));
-        setWalletsCrypto(walletsData || []);
-      }
-
-      setTransacoes(transacoesData || []);
-    } catch (err: any) {
-      console.error("Erro ao carregar movimentações:", err);
-      setError(err.message || "Erro ao carregar dados");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -217,35 +84,35 @@ export function ParceiroMovimentacoesTab({
   const getOrigemLabel = (transacao: Transacao) => {
     if (transacao.origem_tipo === "CAIXA_OPERACIONAL") return "Caixa Operacional";
     if (transacao.origem_tipo === "INVESTIDOR" && transacao.nome_investidor) return `Investidor: ${transacao.nome_investidor}`;
-    if (transacao.origem_bookmaker_id) return `Casa: ${bookmakerNames.get(transacao.origem_bookmaker_id) || "..."}`;
+    if (transacao.origem_bookmaker_id) return `Casa: ${data?.bookmakerNames.get(transacao.origem_bookmaker_id) || "..."}`;
     if (transacao.origem_conta_bancaria_id) {
-      const conta = contasBancarias.find(c => c.id === transacao.origem_conta_bancaria_id);
+      const conta = data?.contasBancarias.find(c => c.id === transacao.origem_conta_bancaria_id);
       return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
     }
     if (transacao.origem_wallet_id) {
-      const wallet = walletsCrypto.find(w => w.id === transacao.origem_wallet_id);
+      const wallet = data?.walletsCrypto.find(w => w.id === transacao.origem_wallet_id);
       return wallet ? `${wallet.exchange}` : "Wallet Crypto";
     }
-    if (transacao.origem_parceiro_id) return parceiroNames.get(transacao.origem_parceiro_id) || "Parceiro";
+    if (transacao.origem_parceiro_id) return data?.parceiroNames.get(transacao.origem_parceiro_id) || "Parceiro";
     return "-";
   };
 
   const getDestinoLabel = (transacao: Transacao) => {
     if (transacao.destino_tipo === "CAIXA_OPERACIONAL") return "Caixa Operacional";
-    if (transacao.destino_bookmaker_id) return `Casa: ${bookmakerNames.get(transacao.destino_bookmaker_id) || "..."}`;
+    if (transacao.destino_bookmaker_id) return `Casa: ${data?.bookmakerNames.get(transacao.destino_bookmaker_id) || "..."}`;
     if (transacao.destino_conta_bancaria_id) {
-      const conta = contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id);
+      const conta = data?.contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id);
       return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
     }
     if (transacao.destino_wallet_id) {
-      const wallet = walletsCrypto.find(w => w.id === transacao.destino_wallet_id);
+      const wallet = data?.walletsCrypto.find(w => w.id === transacao.destino_wallet_id);
       return wallet ? `${wallet.exchange}` : "Wallet Crypto";
     }
-    if (transacao.destino_parceiro_id) return parceiroNames.get(transacao.destino_parceiro_id) || "Parceiro";
+    if (transacao.destino_parceiro_id) return data?.parceiroNames.get(transacao.destino_parceiro_id) || "Parceiro";
     return "-";
   };
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="space-y-2 p-2">
         {[...Array(5)].map((_, i) => (
@@ -255,7 +122,7 @@ export function ParceiroMovimentacoesTab({
     );
   }
 
-  if (error) {
+  if (error && !data) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-destructive">
         <AlertCircle className="h-8 w-8 mb-2 opacity-50" />
@@ -263,6 +130,8 @@ export function ParceiroMovimentacoesTab({
       </div>
     );
   }
+
+  const transacoes = data?.transacoes || [];
 
   if (transacoes.length === 0) {
     return (
@@ -276,6 +145,14 @@ export function ParceiroMovimentacoesTab({
   return (
     <ScrollArea className="h-[400px]">
       <div className="space-y-2 p-2">
+        {/* Indicator for revalidating */}
+        {isRevalidating && (
+          <div className="flex items-center justify-center gap-2 py-1 text-xs text-muted-foreground">
+            <RefreshCw className="h-3 w-3 animate-spin" />
+            Atualizando...
+          </div>
+        )}
+        
         {transacoes.map((transacao) => (
           <div
             key={transacao.id}

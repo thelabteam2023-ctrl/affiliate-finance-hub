@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,28 +6,10 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Building2, Search, Plus, ShieldCheck, ShieldAlert, AlertCircle, ChevronDown, ChevronUp, IdCard, Copy, Check } from "lucide-react";
+import { Building2, Search, Plus, ShieldCheck, ShieldAlert, AlertCircle, ChevronDown, ChevronUp, IdCard, Copy, Check, RefreshCw } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-
-interface BookmakerVinculado {
-  id: string;
-  nome: string;
-  saldo_atual: number;
-  status: string;
-  moeda: string;
-  login_username: string;
-  login_password_encrypted: string;
-  bookmaker_catalogo_id: string | null;
-  logo_url?: string;
-}
-
-interface BookmakerCatalogo {
-  id: string;
-  nome: string;
-  logo_url: string | null;
-  status: string;
-}
+import { BookmakersData, BookmakerVinculado, BookmakerCatalogo } from "@/hooks/useParceiroFinanceiroCache";
 
 interface ParceiroBookmakersTabProps {
   parceiroId: string;
@@ -35,6 +17,10 @@ interface ParceiroBookmakersTabProps {
   diasRestantes?: number | null;
   onCreateVinculo?: (parceiroId: string, bookmakerId: string) => void;
   onDataChange?: () => void;
+  data: BookmakersData | null;
+  loading: boolean;
+  error: string | null;
+  isRevalidating: boolean;
 }
 
 export function ParceiroBookmakersTab({ 
@@ -42,12 +28,12 @@ export function ParceiroBookmakersTab({
   showSensitiveData, 
   diasRestantes, 
   onCreateVinculo, 
-  onDataChange
+  onDataChange,
+  data,
+  loading,
+  error,
+  isRevalidating
 }: ParceiroBookmakersTabProps) {
-  const [bookmakersVinculados, setBookmakersVinculados] = useState<BookmakerVinculado[]>([]);
-  const [bookmakersDisponiveis, setBookmakersDisponiveis] = useState<BookmakerCatalogo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchVinculados, setSearchVinculados] = useState("");
   const [searchDisponiveis, setSearchDisponiveis] = useState("");
   const [editingStatus, setEditingStatus] = useState<string | null>(null);
@@ -55,72 +41,6 @@ export function ParceiroBookmakersTab({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
   const { toast } = useToast();
-
-  useEffect(() => {
-    fetchData();
-  }, [parceiroId]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Buscar bookmakers vinculados
-      const { data: vinculadosData, error: vinculadosError } = await supabase
-        .from("bookmakers")
-        .select("id, nome, saldo_atual, status, moeda, login_username, login_password_encrypted, bookmaker_catalogo_id")
-        .eq("parceiro_id", parceiroId);
-
-      if (vinculadosError) throw vinculadosError;
-
-      // Buscar logos do catálogo
-      const catalogoIds = vinculadosData
-        ?.filter(b => b.bookmaker_catalogo_id)
-        .map(b => b.bookmaker_catalogo_id as string) || [];
-
-      let logosMap = new Map<string, string>();
-      if (catalogoIds.length > 0) {
-        const { data: catalogoData } = await supabase
-          .from("bookmakers_catalogo")
-          .select("id, logo_url")
-          .in("id", catalogoIds);
-        catalogoData?.forEach((c) => {
-          if (c.logo_url) logosMap.set(c.id, c.logo_url);
-        });
-      }
-
-      const vinculadosComLogo = vinculadosData?.map(b => ({
-        ...b,
-        logo_url: b.bookmaker_catalogo_id ? logosMap.get(b.bookmaker_catalogo_id) : undefined,
-      })) || [];
-
-      setBookmakersVinculados(vinculadosComLogo);
-
-      // Buscar catálogo disponível
-      const { data: catalogoData, error: catalogoError } = await supabase
-        .from("bookmakers_catalogo")
-        .select("id, nome, logo_url, status")
-        .eq("status", "REGULAMENTADA");
-
-      if (catalogoError) throw catalogoError;
-
-      // Filtrar casas já vinculadas
-      const vinculadosCatalogoIds = new Set(
-        vinculadosData?.map(b => b.bookmaker_catalogo_id).filter(Boolean) || []
-      );
-
-      const disponiveis = catalogoData?.filter(
-        c => !vinculadosCatalogoIds.has(c.id)
-      ) || [];
-
-      setBookmakersDisponiveis(disponiveis);
-    } catch (err: any) {
-      console.error("Erro ao carregar bookmakers:", err);
-      setError(err.message || "Erro ao carregar dados");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleToggleStatus = async (bookmakerId: string, currentStatus: string) => {
     setEditingStatus(bookmakerId);
@@ -139,8 +59,7 @@ export function ParceiroBookmakersTab({
         description: `Status alterado para ${newStatus.toUpperCase()}`,
       });
 
-      // Recarregar dados e notificar parent
-      fetchData();
+      // Notify parent to invalidate cache
       onDataChange?.();
     } catch (error: any) {
       toast({
@@ -206,7 +125,7 @@ export function ParceiroBookmakersTab({
     return bm.login_username && bm.login_username.trim();
   };
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="grid grid-cols-2 gap-3 p-2">
         <div className="space-y-2">
@@ -223,7 +142,7 @@ export function ParceiroBookmakersTab({
     );
   }
 
-  if (error) {
+  if (error && !data) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-destructive">
         <AlertCircle className="h-8 w-8 mb-2 opacity-50" />
@@ -232,7 +151,10 @@ export function ParceiroBookmakersTab({
     );
   }
 
-  // Filtrar e ordenar bookmakers vinculados por saldo
+  const bookmakersVinculados = data?.vinculados || [];
+  const bookmakersDisponiveis = data?.disponiveis || [];
+
+  // Filter and sort
   const filteredVinculados = bookmakersVinculados
     .filter((b) => b.nome.toLowerCase().includes(searchVinculados.toLowerCase()))
     .sort((a, b) => b.saldo_atual - a.saldo_atual);
@@ -247,6 +169,14 @@ export function ParceiroBookmakersTab({
   return (
     <TooltipProvider>
       <div className="grid grid-cols-2 gap-3 p-2">
+        {/* Revalidating indicator */}
+        {isRevalidating && (
+          <div className="col-span-2 flex items-center justify-center gap-2 py-1 text-xs text-muted-foreground">
+            <RefreshCw className="h-3 w-3 animate-spin" />
+            Atualizando...
+          </div>
+        )}
+        
         {/* Coluna: Casas Vinculadas */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -451,9 +381,9 @@ export function ParceiroBookmakersTab({
         {/* Coluna: Casas Disponíveis */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <Plus className="h-4 w-4 text-primary" />
+            <Plus className="h-4 w-4 text-muted-foreground" />
             <h4 className="text-sm font-medium">Casas Disponíveis</h4>
-            <Badge variant="secondary" className="text-xs ml-auto">
+            <Badge variant="outline" className="text-xs ml-auto">
               {bookmakersDisponiveis.length}
             </Badge>
           </div>
@@ -473,7 +403,9 @@ export function ParceiroBookmakersTab({
               {filteredDisponiveis.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground text-xs">
                   <AlertCircle className="h-6 w-6 mx-auto mb-1 opacity-30" />
-                  Nenhuma casa disponível
+                  {bookmakersDisponiveis.length === 0
+                    ? "Todas as casas já estão vinculadas"
+                    : "Nenhuma casa encontrada"}
                 </div>
               ) : (
                 filteredDisponiveis.map((bm) => (
@@ -495,6 +427,12 @@ export function ParceiroBookmakersTab({
                     
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium truncate">{bm.nome}</p>
+                      <Badge
+                        variant="outline"
+                        className="text-[9px] px-1 py-0 h-4 border-success/50 text-success"
+                      >
+                        {bm.status}
+                      </Badge>
                     </div>
 
                     <Tooltip>
@@ -502,14 +440,14 @@ export function ParceiroBookmakersTab({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 w-6 p-0"
+                          className="h-6 w-6 p-0 shrink-0"
                           onClick={() => handleCreateVinculo(bm.id)}
                         >
                           <Plus className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Vincular casa</p>
+                        <p>Vincular ao parceiro</p>
                       </TooltipContent>
                     </Tooltip>
                   </div>
