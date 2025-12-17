@@ -1757,6 +1757,33 @@ export type Database = {
           },
         ]
       }
+      login_attempts: {
+        Row: {
+          attempted_at: string
+          blocked_until: string | null
+          email: string
+          id: string
+          ip_address: string | null
+          success: boolean
+        }
+        Insert: {
+          attempted_at?: string
+          blocked_until?: string | null
+          email: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+        }
+        Update: {
+          attempted_at?: string
+          blocked_until?: string | null
+          email?: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+        }
+        Relationships: []
+      }
       matched_betting_pernas: {
         Row: {
           bookmaker_id: string
@@ -5458,6 +5485,14 @@ export type Database = {
         }
         Returns: string
       }
+      check_login_blocked: {
+        Args: { p_email: string }
+        Returns: {
+          blocked_until: string
+          failed_attempts: number
+          is_blocked: boolean
+        }[]
+      }
       create_audit_log: {
         Args: {
           _action: Database["public"]["Enums"]["audit_action"]
@@ -5492,6 +5527,10 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      record_login_attempt: {
+        Args: { p_email: string; p_ip_address?: string; p_success: boolean }
+        Returns: undefined
+      }
       update_parcerias_em_encerramento: { Args: never; Returns: undefined }
     }
     Enums: {
@@ -5518,6 +5557,10 @@ export type Database = {
         | "LOGOUT"
         | "PERMISSION_CHANGE"
         | "ROLE_CHANGE"
+        | "login_failed"
+        | "login_success"
+        | "login_blocked"
+        | "password_reset_requested"
       bookmaker_visibility:
         | "GLOBAL_REGULATED"
         | "GLOBAL_RESTRICTED"
@@ -5675,6 +5718,10 @@ export const Constants = {
         "LOGOUT",
         "PERMISSION_CHANGE",
         "ROLE_CHANGE",
+        "login_failed",
+        "login_success",
+        "login_blocked",
+        "password_reset_requested",
       ],
       bookmaker_visibility: [
         "GLOBAL_REGULATED",
