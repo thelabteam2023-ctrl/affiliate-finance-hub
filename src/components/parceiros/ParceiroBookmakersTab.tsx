@@ -21,6 +21,7 @@ interface ParceiroBookmakersTabProps {
   loading: boolean;
   error: string | null;
   isRevalidating: boolean;
+  onRetry?: () => void;
 }
 
 export function ParceiroBookmakersTab({ 
@@ -32,7 +33,8 @@ export function ParceiroBookmakersTab({
   data,
   loading,
   error,
-  isRevalidating
+  isRevalidating,
+  onRetry,
 }: ParceiroBookmakersTabProps) {
   const [searchVinculados, setSearchVinculados] = useState("");
   const [searchDisponiveis, setSearchDisponiveis] = useState("");
@@ -144,9 +146,16 @@ export function ParceiroBookmakersTab({
 
   if (error && !data) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-destructive">
-        <AlertCircle className="h-8 w-8 mb-2 opacity-50" />
-        <p className="text-sm">Erro ao carregar bookmakers</p>
+      <div className="flex flex-col items-center justify-center py-12 text-destructive gap-3">
+        <div className="flex flex-col items-center">
+          <AlertCircle className="h-8 w-8 mb-2 opacity-50" />
+          <p className="text-sm">Erro ao carregar bookmakers</p>
+        </div>
+        {onRetry && (
+          <Button variant="outline" size="sm" onClick={onRetry}>
+            Tentar novamente
+          </Button>
+        )}
       </div>
     );
   }

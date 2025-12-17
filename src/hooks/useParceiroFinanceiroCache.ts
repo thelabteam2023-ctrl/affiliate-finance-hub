@@ -1,18 +1,20 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { BookmakerFinanceiro, ParceiroFinanceiroConsolidado } from "./useParceiroFinanceiroConsolidado";
+import type { BookmakerFinanceiro, ParceiroFinanceiroConsolidado } from "./useParceiroFinanceiroConsolidado";
 
 // ============== CONSTANTS ==============
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const MAX_CACHED_PARTNERS = 30; // LRU limit
-const REVALIDATE_STALE = true; // Enable stale-while-revalidate
+const MAX_CACHED_PARTNERS = 30;
+const TABS_PER_PARTNER = 3;
+const MAX_CACHE_ENTRIES = MAX_CACHED_PARTNERS * TABS_PER_PARTNER;
+const REVALIDATE_STALE = true; // stale-while-revalidate
 
 // ============== TYPES ==============
 
-type TabKey = "resumo" | "movimentacoes" | "bookmakers";
+export type TabKey = "resumo" | "movimentacoes" | "bookmakers";
 
-interface Transacao {
+export interface Transacao {
   id: string;
   tipo_transacao: string;
   valor: number;
@@ -33,7 +35,7 @@ interface Transacao {
   nome_investidor: string | null;
 }
 
-interface MovimentacoesData {
+export interface MovimentacoesData {
   transacoes: Transacao[];
   bookmakerNames: Map<string, string>;
   parceiroNames: Map<string, string>;
@@ -41,7 +43,7 @@ interface MovimentacoesData {
   walletsCrypto: Array<{ id: string; exchange: string; endereco: string; parceiro_id: string }>;
 }
 
-interface BookmakerVinculado {
+export interface BookmakerVinculado {
   id: string;
   nome: string;
   saldo_atual: number;
@@ -53,51 +55,40 @@ interface BookmakerVinculado {
   logo_url?: string;
 }
 
-interface BookmakerCatalogo {
+export interface BookmakerCatalogo {
   id: string;
   nome: string;
   logo_url: string | null;
   status: string;
 }
 
-interface BookmakersData {
+export interface BookmakersData {
   vinculados: BookmakerVinculado[];
   disponiveis: BookmakerCatalogo[];
 }
 
-interface TabCacheEntry<T> {
-  data: T;
-  timestamp: number;
-  status: "fresh" | "stale" | "revalidating";
-}
+type CacheStatus = "idle" | "loading" | "success" | "error";
 
-interface PartnerCache {
-  resumo?: TabCacheEntry<ParceiroFinanceiroConsolidado>;
-  movimentacoes?: TabCacheEntry<MovimentacoesData>;
-  bookmakers?: TabCacheEntry<BookmakersData>;
-  lastAccessed: number;
-}
+type CacheEntry<T> = {
+  status: CacheStatus;
+  data?: T;
+  error?: string | null;
+  updatedAt?: number;
+  requestId: number;
+  controller?: AbortController;
+  inFlightPromise?: Promise<T>;
+};
 
-interface TabState {
-  loading: boolean;
-  error: string | null;
-  isRevalidating: boolean;
-}
-
-// ============== LRU CACHE CLASS ==============
+// ============== LRU CACHE ==============
 
 class LRUCache<K, V> {
   private cache = new Map<K, V>();
-  private maxSize: number;
 
-  constructor(maxSize: number) {
-    this.maxSize = maxSize;
-  }
+  constructor(private maxSize: number) {}
 
   get(key: K): V | undefined {
     const value = this.cache.get(key);
     if (value !== undefined) {
-      // Move to end (most recently used)
       this.cache.delete(key);
       this.cache.set(key, value);
     }
@@ -108,11 +99,8 @@ class LRUCache<K, V> {
     if (this.cache.has(key)) {
       this.cache.delete(key);
     } else if (this.cache.size >= this.maxSize) {
-      // Remove oldest (first) entry
-      const firstKey = this.cache.keys().next().value;
-      if (firstKey !== undefined) {
-        this.cache.delete(firstKey);
-      }
+      const firstKey = this.cache.keys().next().value as K | undefined;
+      if (firstKey !== undefined) this.cache.delete(firstKey);
     }
     this.cache.set(key, value);
   }
@@ -125,77 +113,94 @@ class LRUCache<K, V> {
     this.cache.clear();
   }
 
-  has(key: K): boolean {
-    return this.cache.has(key);
+  keys(): K[] {
+    return Array.from(this.cache.keys());
   }
+}
+
+// ============== HELPERS ==============
+
+function stableStringify(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value !== "object") return String(value);
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  const obj = value as Record<string, unknown>;
+  const keys = Object.keys(obj).sort();
+  return `{${keys.map((k) => `${k}:${stableStringify(obj[k])}`).join(",")}}`;
+}
+
+function isFresh(updatedAt: number | undefined): boolean {
+  if (!updatedAt) return false;
+  return Date.now() - updatedAt < CACHE_TTL;
+}
+
+function makeKey(parceiroId: string, tab: TabKey, paramsHash: string): string {
+  // Contract: key = partnerId|tab|paramsHash (stable)
+  return `${parceiroId}|${tab}|${paramsHash}`;
+}
+
+function defaultEntry<T>(): CacheEntry<T> {
+  return {
+    status: "idle",
+    requestId: 0,
+    data: undefined,
+    error: null,
+    updatedAt: undefined,
+    controller: undefined,
+    inFlightPromise: undefined,
+  };
 }
 
 // ============== HOOK ==============
 
 export function useParceiroFinanceiroCache() {
-  // Cache store using LRU
-  const cacheRef = useRef(new LRUCache<string, PartnerCache>(MAX_CACHED_PARTNERS));
-  
-  // Active requests tracking for deduplication
-  const activeRequestsRef = useRef<Map<string, Promise<any>>>(new Map());
-  
-  // Abort controllers for race condition prevention
-  const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
-  
-  // Current state
+  const cacheRef = useRef(new LRUCache<string, CacheEntry<any>>(MAX_CACHE_ENTRIES));
+  const keysByPartnerRef = useRef<Map<string, Set<string>>>(new Map());
+
+  // Force re-render when cache entries change
+  const [, bump] = useState(0);
+  const bumpRender = useCallback(() => bump((x) => x + 1), []);
+
   const [currentParceiroId, setCurrentParceiroId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("resumo");
-  
-  // Per-tab states
-  const [tabStates, setTabStates] = useState<Record<TabKey, TabState>>({
-    resumo: { loading: false, error: null, isRevalidating: false },
-    movimentacoes: { loading: false, error: null, isRevalidating: false },
-    bookmakers: { loading: false, error: null, isRevalidating: false },
-  });
-  
-  // Current data
-  const [resumoData, setResumoData] = useState<ParceiroFinanceiroConsolidado | null>(null);
-  const [movimentacoesData, setMovimentacoesData] = useState<MovimentacoesData | null>(null);
-  const [bookmakersData, setBookmakersData] = useState<BookmakersData | null>(null);
 
-  // ============== HELPERS ==============
-
-  const getCacheKey = (parceiroId: string, tab: TabKey): string => {
-    return `${parceiroId}|${tab}`;
-  };
-
-  const isCacheValid = (entry: TabCacheEntry<any> | undefined): boolean => {
-    if (!entry) return false;
-    return Date.now() - entry.timestamp < CACHE_TTL;
-  };
-
-  const isCacheStale = (entry: TabCacheEntry<any> | undefined): boolean => {
-    if (!entry) return true;
-    return Date.now() - entry.timestamp >= CACHE_TTL;
-  };
-
-  const updateTabState = useCallback((tab: TabKey, updates: Partial<TabState>) => {
-    setTabStates(prev => ({
-      ...prev,
-      [tab]: { ...prev[tab], ...updates }
-    }));
+  const getParamsHash = useCallback((params?: Record<string, unknown>) => {
+    return params ? stableStringify(params) : "";
   }, []);
 
-  const cancelPendingRequests = useCallback((parceiroId: string) => {
-    // Cancel all tabs for this partner
-    (["resumo", "movimentacoes", "bookmakers"] as TabKey[]).forEach(tab => {
-      const key = getCacheKey(parceiroId, tab);
-      const controller = abortControllersRef.current.get(key);
-      if (controller) {
-        controller.abort();
-        abortControllersRef.current.delete(key);
-      }
-    });
+  const getEntry = useCallback(<T,>(key: string): CacheEntry<T> => {
+    const existing = cacheRef.current.get(key);
+    if (existing) return existing as CacheEntry<T>;
+    const created = defaultEntry<T>();
+    cacheRef.current.set(key, created);
+    return created;
   }, []);
+
+  const trackKeyForPartner = useCallback((parceiroId: string, key: string) => {
+    const set = keysByPartnerRef.current.get(parceiroId) || new Set<string>();
+    set.add(key);
+    keysByPartnerRef.current.set(parceiroId, set);
+  }, []);
+
+  const cancelKey = useCallback((key: string) => {
+    const entry = cacheRef.current.get(key) as CacheEntry<any> | undefined;
+    if (entry?.controller) {
+      entry.controller.abort();
+    }
+  }, []);
+
+  const cancelPartner = useCallback(
+    (parceiroId: string) => {
+      const keys = keysByPartnerRef.current.get(parceiroId);
+      if (!keys) return;
+      keys.forEach((k) => cancelKey(k));
+    },
+    [cancelKey]
+  );
 
   // ============== FETCH FUNCTIONS ==============
 
-  const fetchResumoData = async (parceiroId: string, signal?: AbortSignal): Promise<ParceiroFinanceiroConsolidado> => {
+  const fetchResumoData = useCallback(async (parceiroId: string, signal?: AbortSignal): Promise<ParceiroFinanceiroConsolidado> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuário não autenticado");
 
@@ -219,11 +224,9 @@ export function useParceiroFinanceiroCache() {
     if (bookmakersError) throw bookmakersError;
     if (signal?.aborted) throw new Error("Aborted");
 
-    const catalogoIds = [...new Set((bookmakers || [])
-      .map(b => b.bookmaker_catalogo_id)
-      .filter(Boolean))];
-    
-    let logosMap = new Map<string, string>();
+    const catalogoIds = [...new Set((bookmakers || []).map((b) => b.bookmaker_catalogo_id).filter(Boolean))];
+
+    const logosMap = new Map<string, string>();
     if (catalogoIds.length > 0) {
       const { data: catalogoData } = await supabase
         .from("bookmakers_catalogo")
@@ -237,9 +240,9 @@ export function useParceiroFinanceiroCache() {
 
     if (signal?.aborted) throw new Error("Aborted");
 
-    const bookmakerIds = (bookmakers || []).map(b => b.id);
-    let depositosMap = new Map<string, number>();
-    let saquesMap = new Map<string, number>();
+    const bookmakerIds = (bookmakers || []).map((b) => b.id);
+    const depositosMap = new Map<string, number>();
+    const saquesMap = new Map<string, number>();
 
     if (bookmakerIds.length > 0) {
       const { data: depositos } = await supabase
@@ -273,7 +276,7 @@ export function useParceiroFinanceiroCache() {
 
     if (signal?.aborted) throw new Error("Aborted");
 
-    let apostasMap = new Map<string, number>();
+    const apostasMap = new Map<string, number>();
     if (bookmakerIds.length > 0) {
       const { data: apostasSimples } = await supabase
         .from("apostas")
@@ -296,7 +299,7 @@ export function useParceiroFinanceiroCache() {
       });
     }
 
-    const bookmakersFinanceiro: BookmakerFinanceiro[] = (bookmakers || []).map(bm => {
+    const bookmakersFinanceiro: BookmakerFinanceiro[] = (bookmakers || []).map((bm) => {
       const depositado = depositosMap.get(bm.id) || 0;
       const sacado = saquesMap.get(bm.id) || 0;
       const saldoAtual = Number(bm.saldo_atual) || 0;
@@ -333,9 +336,9 @@ export function useParceiroFinanceiroCache() {
       qtd_apostas_total: qtdApostasTotal,
       bookmakers: bookmakersFinanceiro.sort((a, b) => b.lucro_prejuizo - a.lucro_prejuizo),
     };
-  };
+  }, []);
 
-  const fetchMovimentacoesData = async (parceiroId: string, signal?: AbortSignal): Promise<MovimentacoesData> => {
+  const fetchMovimentacoesData = useCallback(async (parceiroId: string, signal?: AbortSignal): Promise<MovimentacoesData> => {
     const { data: contasDoParceiroData } = await supabase
       .from("contas_bancarias")
       .select("id")
@@ -348,28 +351,25 @@ export function useParceiroFinanceiroCache() {
 
     if (signal?.aborted) throw new Error("Aborted");
 
-    const contasIds = contasDoParceiroData?.map(c => c.id) || [];
-    const walletsIds = walletsDoParceiroData?.map(w => w.id) || [];
+    const contasIds = contasDoParceiroData?.map((c) => c.id) || [];
+    const walletsIds = walletsDoParceiroData?.map((w) => w.id) || [];
 
-    let orConditions = [
-      `origem_parceiro_id.eq.${parceiroId}`,
-      `destino_parceiro_id.eq.${parceiroId}`
-    ];
+    const orConditions: string[] = [`origem_parceiro_id.eq.${parceiroId}`, `destino_parceiro_id.eq.${parceiroId}`];
 
     if (contasIds.length > 0) {
-      orConditions.push(`origem_conta_bancaria_id.in.(${contasIds.join(',')})`);
-      orConditions.push(`destino_conta_bancaria_id.in.(${contasIds.join(',')})`);
+      orConditions.push(`origem_conta_bancaria_id.in.(${contasIds.join(",")})`);
+      orConditions.push(`destino_conta_bancaria_id.in.(${contasIds.join(",")})`);
     }
 
     if (walletsIds.length > 0) {
-      orConditions.push(`origem_wallet_id.in.(${walletsIds.join(',')})`);
-      orConditions.push(`destino_wallet_id.in.(${walletsIds.join(',')})`);
+      orConditions.push(`origem_wallet_id.in.(${walletsIds.join(",")})`);
+      orConditions.push(`destino_wallet_id.in.(${walletsIds.join(",")})`);
     }
 
     const { data: transacoesData, error: transacoesError } = await supabase
       .from("cash_ledger")
       .select("*")
-      .or(orConditions.join(','))
+      .or(orConditions.join(","))
       .order("data_transacao", { ascending: false });
 
     if (transacoesError) throw transacoesError;
@@ -379,7 +379,7 @@ export function useParceiroFinanceiroCache() {
     const parceiroIds = new Set<string>();
     const contaIdsSet = new Set<string>();
     const walletIdsSet = new Set<string>();
-    
+
     transacoesData?.forEach((t) => {
       if (t.origem_bookmaker_id) bookmakerIds.add(t.origem_bookmaker_id);
       if (t.destino_bookmaker_id) bookmakerIds.add(t.destino_bookmaker_id);
@@ -436,9 +436,9 @@ export function useParceiroFinanceiroCache() {
       contasBancarias: contasBancariasResult,
       walletsCrypto: walletsCryptoResult,
     };
-  };
+  }, []);
 
-  const fetchBookmakersData = async (parceiroId: string, signal?: AbortSignal): Promise<BookmakersData> => {
+  const fetchBookmakersData = useCallback(async (parceiroId: string, signal?: AbortSignal): Promise<BookmakersData> => {
     const { data: vinculadosData, error: vinculadosError } = await supabase
       .from("bookmakers")
       .select("id, nome, saldo_atual, status, moeda, login_username, login_password_encrypted, bookmaker_catalogo_id")
@@ -447,16 +447,16 @@ export function useParceiroFinanceiroCache() {
     if (vinculadosError) throw vinculadosError;
     if (signal?.aborted) throw new Error("Aborted");
 
-    const catalogoIds = vinculadosData
-      ?.filter(b => b.bookmaker_catalogo_id)
-      .map(b => b.bookmaker_catalogo_id as string) || [];
+    const catalogoIds =
+      vinculadosData?.filter((b) => b.bookmaker_catalogo_id).map((b) => b.bookmaker_catalogo_id as string) || [];
 
-    let logosMap = new Map<string, string>();
+    const logosMap = new Map<string, string>();
     if (catalogoIds.length > 0) {
       const { data: catalogoData } = await supabase
         .from("bookmakers_catalogo")
         .select("id, logo_url")
         .in("id", catalogoIds);
+
       catalogoData?.forEach((c) => {
         if (c.logo_url) logosMap.set(c.id, c.logo_url);
       });
@@ -464,10 +464,11 @@ export function useParceiroFinanceiroCache() {
 
     if (signal?.aborted) throw new Error("Aborted");
 
-    const vinculadosComLogo = vinculadosData?.map(b => ({
-      ...b,
-      logo_url: b.bookmaker_catalogo_id ? logosMap.get(b.bookmaker_catalogo_id) : undefined,
-    })) || [];
+    const vinculadosComLogo =
+      vinculadosData?.map((b) => ({
+        ...b,
+        logo_url: b.bookmaker_catalogo_id ? logosMap.get(b.bookmaker_catalogo_id) : undefined,
+      })) || [];
 
     const { data: catalogoData, error: catalogoError } = await supabase
       .from("bookmakers_catalogo")
@@ -476,285 +477,316 @@ export function useParceiroFinanceiroCache() {
 
     if (catalogoError) throw catalogoError;
 
-    const vinculadosCatalogoIds = new Set(
-      vinculadosData?.map(b => b.bookmaker_catalogo_id).filter(Boolean) || []
-    );
+    const vinculadosCatalogoIds = new Set(vinculadosData?.map((b) => b.bookmaker_catalogo_id).filter(Boolean) || []);
 
-    const disponiveis = catalogoData?.filter(
-      c => !vinculadosCatalogoIds.has(c.id)
-    ) || [];
+    const disponiveis = catalogoData?.filter((c) => !vinculadosCatalogoIds.has(c.id)) || [];
 
     return {
       vinculados: vinculadosComLogo,
       disponiveis,
     };
-  };
+  }, []);
 
-  // ============== CORE LOAD FUNCTION ==============
+  // ============== CORE LOAD (per key) ==============
 
-  const loadTabData = useCallback(async <T>(
-    parceiroId: string,
-    tab: TabKey,
-    fetchFn: (parceiroId: string, signal?: AbortSignal) => Promise<T>,
-    setData: (data: T | null) => void,
-    forceRefresh = false
-  ) => {
-    const cacheKey = getCacheKey(parceiroId, tab);
-    const partnerCache = cacheRef.current.get(parceiroId);
-    const tabCache = partnerCache?.[tab] as TabCacheEntry<T> | undefined;
+  const load = useCallback(
+    async <T,>(
+      parceiroId: string,
+      tab: TabKey,
+      fetchFn: (parceiroId: string, signal?: AbortSignal) => Promise<T>,
+      options?: { force?: boolean; params?: Record<string, unknown> }
+    ): Promise<T> => {
+      const force = options?.force === true;
+      const paramsHash = getParamsHash(options?.params);
+      const key = makeKey(parceiroId, tab, paramsHash);
 
-    // Check for valid cache
-    if (!forceRefresh && isCacheValid(tabCache)) {
-      setData(tabCache!.data);
-      return;
-    }
+      trackKeyForPartner(parceiroId, key);
 
-    // Show stale data immediately while revalidating
-    if (tabCache?.data && REVALIDATE_STALE) {
-      setData(tabCache.data);
-      if (!forceRefresh && !isCacheStale(tabCache)) {
-        return; // Cache is still valid, no need to refresh
+      const entry = getEntry<T>(key);
+
+      // Cache-first
+      if (!force && entry.status === "success" && isFresh(entry.updatedAt)) {
+        if (entry.data === undefined) {
+          // Never allow "success" without data
+          entry.status = "error";
+          entry.error = "Cache inválido";
+          bumpRender();
+        } else {
+          return entry.data;
+        }
       }
-      updateTabState(tab, { isRevalidating: true });
-    } else {
-      updateTabState(tab, { loading: true });
-    }
 
-    // Check for existing request (deduplication)
-    const existingRequest = activeRequestsRef.current.get(cacheKey);
-    if (existingRequest) {
+      // Dedup: if already loading, reuse promise
+      if (entry.status === "loading" && entry.inFlightPromise) {
+        return entry.inFlightPromise;
+      }
+
+      const hadData = entry.data !== undefined;
+      const shouldSWR = !force && REVALIDATE_STALE && hadData && entry.status === "success" && !isFresh(entry.updatedAt);
+
+      // Cancel previous controller for this key
+      if (entry.controller) {
+        entry.controller.abort();
+      }
+
+      const controller = new AbortController();
+      const requestId = entry.requestId + 1;
+
+      entry.status = "loading";
+      entry.error = null;
+      entry.requestId = requestId;
+      entry.controller = controller;
+
+      const promise = (async () => {
+        const data = await fetchFn(parceiroId, controller.signal);
+        if (data === null || data === undefined) {
+          throw new Error("Dados vazios");
+        }
+        return data;
+      })();
+
+      entry.inFlightPromise = promise;
+
+      // If no SWR and no data, UI should show skeleton
+      // If SWR (stale exists), UI can show old data + "Atualizando..." (derived below)
+      bumpRender();
+
       try {
-        const data = await existingRequest;
-        setData(data);
-        return;
-      } catch {
-        // Request failed, continue with new request
+        const data = await promise;
+
+        const current = getEntry<T>(key);
+        if (current.requestId !== requestId) {
+          // Stale response, ignore
+          return data;
+        }
+
+        current.status = "success";
+        current.data = data;
+        current.updatedAt = Date.now();
+        current.error = null;
+
+        return data;
+      } catch (err: any) {
+        const current = getEntry<T>(key);
+
+        // Ignore outdated errors
+        if (current.requestId !== requestId) {
+          throw err;
+        }
+
+        if (err?.message === "Aborted" || controller.signal.aborted) {
+          // Cancellation: keep previous usable data if exists
+          if (current.data !== undefined) {
+            current.status = "success";
+            current.error = null;
+          } else {
+            current.status = "idle";
+            current.error = null;
+          }
+          throw err;
+        }
+
+        current.status = "error";
+        current.error = err?.message || "Erro ao carregar dados";
+
+        throw err;
+      } finally {
+        const current = getEntry<T>(key);
+        if (current.requestId === requestId) {
+          current.inFlightPromise = undefined;
+          current.controller = undefined;
+          // If we were loading without data (no SWR), keep loading state handled by status
+          // If SWR, we still keep status="loading" only while promise is pending; reaching finally means done.
+          if (current.status === "loading") {
+            // Safety: never leave "loading" forever
+            if (current.data !== undefined) current.status = "success";
+            else if (current.error) current.status = "error";
+            else current.status = "idle";
+          }
+        }
+        bumpRender();
       }
-    }
+    },
+    [bumpRender, getEntry, getParamsHash, trackKeyForPartner]
+  );
 
-    // Cancel previous request for this key
-    const existingController = abortControllersRef.current.get(cacheKey);
-    if (existingController) {
-      existingController.abort();
-    }
+  // ============== SELECT / TAB FLOW ==============
 
-    // Create new abort controller
-    const controller = new AbortController();
-    abortControllersRef.current.set(cacheKey, controller);
+  const loadResumo = useCallback(
+    (parceiroId: string, force = false) => {
+      void load(parceiroId, "resumo", fetchResumoData, { force });
+    },
+    [fetchResumoData, load]
+  );
 
-    // Create and track request
-    const request = fetchFn(parceiroId, controller.signal);
-    activeRequestsRef.current.set(cacheKey, request);
+  const loadMovimentacoes = useCallback(
+    (parceiroId: string, force = false) => {
+      void load(parceiroId, "movimentacoes", fetchMovimentacoesData, { force });
+    },
+    [fetchMovimentacoesData, load]
+  );
 
-    try {
-      const data = await request;
-      
-      // Update cache
-      const existingPartnerCache = cacheRef.current.get(parceiroId) || { lastAccessed: Date.now() };
-      existingPartnerCache[tab] = {
-        data,
-        timestamp: Date.now(),
-        status: "fresh",
-      } as any;
-      existingPartnerCache.lastAccessed = Date.now();
-      cacheRef.current.set(parceiroId, existingPartnerCache);
-      
-      // Update state if this is still the current partner
-      if (currentParceiroId === parceiroId) {
-        setData(data);
+  const loadBookmakers = useCallback(
+    (parceiroId: string, force = false) => {
+      void load(parceiroId, "bookmakers", fetchBookmakersData, { force });
+    },
+    [fetchBookmakersData, load]
+  );
+
+  const selectParceiro = useCallback(
+    (parceiroId: string | null) => {
+      // Cancel in-flight requests of previous partner to avoid wasted work
+      if (currentParceiroId && currentParceiroId !== parceiroId) {
+        cancelPartner(currentParceiroId);
       }
-      
-      updateTabState(tab, { loading: false, error: null, isRevalidating: false });
-    } catch (error: any) {
-      if (error.message === "Aborted") {
-        // Request was cancelled, do nothing
-        return;
-      }
-      console.error(`Erro ao carregar ${tab}:`, error);
-      updateTabState(tab, { loading: false, error: error.message || "Erro ao carregar dados", isRevalidating: false });
-    } finally {
-      activeRequestsRef.current.delete(cacheKey);
-      abortControllersRef.current.delete(cacheKey);
-    }
-  }, [currentParceiroId, updateTabState]);
 
-  // ============== PUBLIC API ==============
+      setCurrentParceiroId(parceiroId);
 
-  const loadResumo = useCallback((parceiroId: string, force = false) => {
-    loadTabData(parceiroId, "resumo", fetchResumoData, setResumoData, force);
-  }, [loadTabData]);
+      if (!parceiroId) return;
 
-  const loadMovimentacoes = useCallback((parceiroId: string, force = false) => {
-    loadTabData(parceiroId, "movimentacoes", fetchMovimentacoesData, setMovimentacoesData, force);
-  }, [loadTabData]);
+      // IMPORTANT: header depends on Resumo data, so always load Resumo
+      loadResumo(parceiroId);
 
-  const loadBookmakers = useCallback((parceiroId: string, force = false) => {
-    loadTabData(parceiroId, "bookmakers", fetchBookmakersData, setBookmakersData, force);
-  }, [loadTabData]);
+      // Load the active tab too (if different)
+      if (activeTab === "movimentacoes") loadMovimentacoes(parceiroId);
+      if (activeTab === "bookmakers") loadBookmakers(parceiroId);
+    },
+    [activeTab, cancelPartner, currentParceiroId, loadBookmakers, loadMovimentacoes, loadResumo]
+  );
 
-  const selectParceiro = useCallback((parceiroId: string | null) => {
-    if (currentParceiroId && currentParceiroId !== parceiroId) {
-      cancelPendingRequests(currentParceiroId);
-    }
+  const changeTab = useCallback(
+    (tab: TabKey) => {
+      setActiveTab(tab);
 
-    setCurrentParceiroId(parceiroId);
+      if (!currentParceiroId) return;
 
-    if (!parceiroId) {
-      setResumoData(null);
-      setMovimentacoesData(null);
-      setBookmakersData(null);
-      setTabStates({
-        resumo: { loading: false, error: null, isRevalidating: false },
-        movimentacoes: { loading: false, error: null, isRevalidating: false },
-        bookmakers: { loading: false, error: null, isRevalidating: false },
+      if (tab === "resumo") loadResumo(currentParceiroId);
+      else if (tab === "movimentacoes") loadMovimentacoes(currentParceiroId);
+      else loadBookmakers(currentParceiroId);
+    },
+    [currentParceiroId, loadBookmakers, loadMovimentacoes, loadResumo]
+  );
+
+  const invalidateCache = useCallback(
+    (parceiroId: string, tabs?: TabKey[]) => {
+      const paramsHash = "";
+      const targetTabs: TabKey[] = tabs ?? ["resumo", "movimentacoes", "bookmakers"];
+
+      targetTabs.forEach((tab) => {
+        const key = makeKey(parceiroId, tab, paramsHash);
+        const entry = cacheRef.current.get(key) as CacheEntry<any> | undefined;
+        if (entry?.controller) entry.controller.abort();
+        cacheRef.current.delete(key);
       });
-      return;
-    }
 
-    // Helper to check cache and get data
-    const getTabCache = <T>(tab: TabKey): { data: T | null; hasValidCache: boolean } => {
-      const partnerCache = cacheRef.current.get(parceiroId);
-      const tabCache = partnerCache?.[tab] as TabCacheEntry<T> | undefined;
-      if (tabCache && isCacheValid(tabCache)) {
-        return { data: tabCache.data, hasValidCache: true };
+      bumpRender();
+
+      // If current partner, reload relevant tabs
+      if (currentParceiroId === parceiroId) {
+        // Always ensure Resumo is present for header
+        loadResumo(parceiroId, true);
+
+        if (activeTab === "movimentacoes") loadMovimentacoes(parceiroId, true);
+        if (activeTab === "bookmakers") loadBookmakers(parceiroId, true);
       }
-      return { data: null, hasValidCache: false };
-    };
-
-    const resumoCache = getTabCache<ParceiroFinanceiroConsolidado>("resumo");
-    const movCache = getTabCache<MovimentacoesData>("movimentacoes");
-    const bmCache = getTabCache<BookmakersData>("bookmakers");
-
-    // Set states FIRST: loading=true if no cache, isRevalidating=true if has cache
-    setTabStates({
-      resumo: { 
-        loading: !resumoCache.hasValidCache, 
-        error: null, 
-        isRevalidating: resumoCache.hasValidCache 
-      },
-      movimentacoes: { 
-        loading: !movCache.hasValidCache, 
-        error: null, 
-        isRevalidating: movCache.hasValidCache 
-      },
-      bookmakers: { 
-        loading: !bmCache.hasValidCache, 
-        error: null, 
-        isRevalidating: bmCache.hasValidCache 
-      },
-    });
-
-    // Set cached data immediately (or null if no cache - but loading is already true)
-    setResumoData(resumoCache.data);
-    setMovimentacoesData(movCache.data);
-    setBookmakersData(bmCache.data);
-
-    // Load/revalidate the active tab
-    if (activeTab === "resumo") loadResumo(parceiroId);
-    else if (activeTab === "movimentacoes") loadMovimentacoes(parceiroId);
-    else loadBookmakers(parceiroId);
-  }, [currentParceiroId, activeTab, cancelPendingRequests, loadResumo, loadMovimentacoes, loadBookmakers]);
-
-  const changeTab = useCallback((tab: TabKey) => {
-    setActiveTab(tab);
-    
-    if (!currentParceiroId) return;
-
-    // Check cache for instant data display
-    const partnerCache = cacheRef.current.get(currentParceiroId);
-    const tabCache = partnerCache?.[tab];
-    
-    if (tabCache && isCacheValid(tabCache)) {
-      // Show cached data immediately
-      if (tab === "resumo") setResumoData(tabCache.data as ParceiroFinanceiroConsolidado);
-      else if (tab === "movimentacoes") setMovimentacoesData(tabCache.data as MovimentacoesData);
-      else setBookmakersData(tabCache.data as BookmakersData);
-    }
-
-    // Load data (will use cache if valid via loadTabData, or fetch if needed)
-    if (tab === "resumo") loadResumo(currentParceiroId);
-    else if (tab === "movimentacoes") loadMovimentacoes(currentParceiroId);
-    else loadBookmakers(currentParceiroId);
-  }, [currentParceiroId, loadResumo, loadMovimentacoes, loadBookmakers]);
-
-  const invalidateCache = useCallback((parceiroId: string, tabs?: TabKey[]) => {
-    const partnerCache = cacheRef.current.get(parceiroId);
-    if (partnerCache) {
-      if (tabs) {
-        tabs.forEach(tab => delete partnerCache[tab]);
-      } else {
-        delete partnerCache.resumo;
-        delete partnerCache.movimentacoes;
-        delete partnerCache.bookmakers;
-      }
-      cacheRef.current.set(parceiroId, partnerCache);
-    }
-    
-    if (currentParceiroId === parceiroId) {
-      if (activeTab === "resumo") loadResumo(parceiroId, true);
-      else if (activeTab === "movimentacoes") loadMovimentacoes(parceiroId, true);
-      else loadBookmakers(parceiroId, true);
-    }
-  }, [currentParceiroId, activeTab, loadResumo, loadMovimentacoes, loadBookmakers]);
+    },
+    [activeTab, bumpRender, currentParceiroId, loadBookmakers, loadMovimentacoes, loadResumo]
+  );
 
   const invalidateAllCache = useCallback(() => {
+    cacheRef.current.keys().forEach((key) => cancelKey(key));
     cacheRef.current.clear();
-    if (currentParceiroId) {
-      if (activeTab === "resumo") loadResumo(currentParceiroId, true);
-      else if (activeTab === "movimentacoes") loadMovimentacoes(currentParceiroId, true);
-      else loadBookmakers(currentParceiroId, true);
-    }
-  }, [currentParceiroId, activeTab, loadResumo, loadMovimentacoes, loadBookmakers]);
+    keysByPartnerRef.current.clear();
+    bumpRender();
+
+    if (!currentParceiroId) return;
+
+    loadResumo(currentParceiroId, true);
+    if (activeTab === "movimentacoes") loadMovimentacoes(currentParceiroId, true);
+    if (activeTab === "bookmakers") loadBookmakers(currentParceiroId, true);
+  }, [activeTab, bumpRender, cancelKey, currentParceiroId, loadBookmakers, loadMovimentacoes, loadResumo]);
 
   const refreshCurrent = useCallback(() => {
     if (!currentParceiroId) return;
-    invalidateCache(currentParceiroId, [activeTab]);
-  }, [currentParceiroId, activeTab, invalidateCache]);
 
-  const invalidateTab = useCallback((tab: TabKey) => {
-    if (!currentParceiroId) return;
-    invalidateCache(currentParceiroId, [tab]);
-  }, [currentParceiroId, invalidateCache]);
+    if (activeTab === "resumo") loadResumo(currentParceiroId, true);
+    else if (activeTab === "movimentacoes") loadMovimentacoes(currentParceiroId, true);
+    else loadBookmakers(currentParceiroId, true);
+  }, [activeTab, currentParceiroId, loadBookmakers, loadMovimentacoes, loadResumo]);
 
-  const prefetchTab = useCallback((parceiroId: string, tab: TabKey) => {
-    if (tab === "resumo") loadResumo(parceiroId);
-    else if (tab === "movimentacoes") loadMovimentacoes(parceiroId);
-    else loadBookmakers(parceiroId);
-  }, [loadResumo, loadMovimentacoes, loadBookmakers]);
+  const invalidateTab = useCallback(
+    (tab: TabKey) => {
+      if (!currentParceiroId) return;
+      invalidateCache(currentParceiroId, [tab]);
+    },
+    [currentParceiroId, invalidateCache]
+  );
 
-  // Cleanup on unmount
+  const prefetchTab = useCallback(
+    (parceiroId: string, tab: TabKey) => {
+      if (tab === "resumo") loadResumo(parceiroId);
+      else if (tab === "movimentacoes") loadMovimentacoes(parceiroId);
+      else loadBookmakers(parceiroId);
+    },
+    [loadBookmakers, loadMovimentacoes, loadResumo]
+  );
+
+  // ============== DERIVED UI STATE (per tab) ==============
+
+  const derive = useCallback(
+    <T,>(parceiroId: string | null, tab: TabKey): { data: T | null; loading: boolean; error: string | null; isRevalidating: boolean } => {
+      if (!parceiroId) {
+        return { data: null, loading: false, error: null, isRevalidating: false };
+      }
+      const key = makeKey(parceiroId, tab, "");
+      const entry = cacheRef.current.get(key) as CacheEntry<T> | undefined;
+
+      const data = (entry?.data ?? null) as T | null;
+      const status = entry?.status ?? "idle";
+      const error = status === "error" ? (entry?.error ?? "Erro ao carregar dados") : null;
+      const isRevalidating = status === "loading" && data !== null;
+      const loading = status === "loading" && data === null;
+
+      return { data, loading, error, isRevalidating };
+    },
+    []
+  );
+
+  const resumo = useMemo(() => derive<ParceiroFinanceiroConsolidado>(currentParceiroId, "resumo"), [currentParceiroId, derive]);
+  const movimentacoes = useMemo(() => derive<MovimentacoesData>(currentParceiroId, "movimentacoes"), [currentParceiroId, derive]);
+  const bookmakers = useMemo(() => derive<BookmakersData>(currentParceiroId, "bookmakers"), [currentParceiroId, derive]);
+
+  // ============== CLEANUP ==============
+
   useEffect(() => {
     return () => {
-      // Cancel all pending requests
-      abortControllersRef.current.forEach(controller => controller.abort());
-      abortControllersRef.current.clear();
-      activeRequestsRef.current.clear();
+      cacheRef.current.keys().forEach((key) => cancelKey(key));
+      cacheRef.current.clear();
+      keysByPartnerRef.current.clear();
     };
-  }, []);
+  }, [cancelKey]);
 
   return {
     // State
     currentParceiroId,
     activeTab,
-    
-    // Data
-    resumoData,
-    movimentacoesData,
-    bookmakersData,
-    
-    // Tab states
-    resumoLoading: tabStates.resumo.loading,
-    resumoError: tabStates.resumo.error,
-    resumoIsRevalidating: tabStates.resumo.isRevalidating,
-    
-    movimentacoesLoading: tabStates.movimentacoes.loading,
-    movimentacoesError: tabStates.movimentacoes.error,
-    movimentacoesIsRevalidating: tabStates.movimentacoes.isRevalidating,
-    
-    bookmakersLoading: tabStates.bookmakers.loading,
-    bookmakersError: tabStates.bookmakers.error,
-    bookmakersIsRevalidating: tabStates.bookmakers.isRevalidating,
-    
+
+    // Data + tab states
+    resumoData: resumo.data,
+    resumoLoading: resumo.loading,
+    resumoError: resumo.error,
+    resumoIsRevalidating: resumo.isRevalidating,
+
+    movimentacoesData: movimentacoes.data,
+    movimentacoesLoading: movimentacoes.loading,
+    movimentacoesError: movimentacoes.error,
+    movimentacoesIsRevalidating: movimentacoes.isRevalidating,
+
+    bookmakersData: bookmakers.data,
+    bookmakersLoading: bookmakers.loading,
+    bookmakersError: bookmakers.error,
+    bookmakersIsRevalidating: bookmakers.isRevalidating,
+
     // Actions
     selectParceiro,
     changeTab,
@@ -765,6 +797,3 @@ export function useParceiroFinanceiroCache() {
     prefetchTab,
   };
 }
-
-// Export types for components
-export type { TabKey, MovimentacoesData, BookmakersData, BookmakerVinculado, BookmakerCatalogo, Transacao };
