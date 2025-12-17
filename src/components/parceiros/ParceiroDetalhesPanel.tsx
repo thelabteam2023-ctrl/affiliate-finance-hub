@@ -12,12 +12,30 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
 import { ParceiroBookmakersTab } from "./ParceiroBookmakersTab";
 import { useToast } from "@/hooks/use-toast";
+import { MovimentacoesData, BookmakersData, TabKey } from "@/hooks/useParceiroFinanceiroCache";
 
 interface ParceiroCache {
+  // Resumo
   resumoData: ParceiroFinanceiroConsolidado | null;
   resumoLoading: boolean;
   resumoError: string | null;
-  invalidateCache: (parceiroId: string) => void;
+  resumoIsRevalidating: boolean;
+  
+  // Movimentacoes
+  movimentacoesData: MovimentacoesData | null;
+  movimentacoesLoading: boolean;
+  movimentacoesError: string | null;
+  movimentacoesIsRevalidating: boolean;
+  
+  // Bookmakers
+  bookmakersData: BookmakersData | null;
+  bookmakersLoading: boolean;
+  bookmakersError: string | null;
+  bookmakersIsRevalidating: boolean;
+  
+  // Actions
+  changeTab: (tab: TabKey) => void;
+  invalidateCache: (parceiroId: string, tabs?: TabKey[]) => void;
   refreshCurrent: () => void;
 }
 
@@ -254,7 +272,7 @@ export function ParceiroDetalhesPanel({
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="resumo" className="flex-1 flex flex-col">
+        <Tabs defaultValue="resumo" className="flex-1 flex flex-col" onValueChange={(value) => parceiroCache.changeTab(value as TabKey)}>
           <div className="px-4 pt-2">
             <TabsList className="grid w-full grid-cols-3 h-8">
               <TabsTrigger value="resumo" className="text-xs gap-1">
@@ -502,7 +520,11 @@ export function ParceiroDetalhesPanel({
           <TabsContent value="movimentacoes" className="flex-1 mt-0">
             <ParceiroMovimentacoesTab 
               parceiroId={parceiroId} 
-              showSensitiveData={showSensitiveData} 
+              showSensitiveData={showSensitiveData}
+              data={parceiroCache.movimentacoesData}
+              loading={parceiroCache.movimentacoesLoading}
+              error={parceiroCache.movimentacoesError}
+              isRevalidating={parceiroCache.movimentacoesIsRevalidating}
             />
           </TabsContent>
 
@@ -514,6 +536,10 @@ export function ParceiroDetalhesPanel({
               diasRestantes={diasRestantes}
               onCreateVinculo={onCreateVinculo}
               onDataChange={handleBookmakersDataChange}
+              data={parceiroCache.bookmakersData}
+              loading={parceiroCache.bookmakersLoading}
+              error={parceiroCache.bookmakersError}
+              isRevalidating={parceiroCache.bookmakersIsRevalidating}
             />
           </TabsContent>
         </Tabs>
