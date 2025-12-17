@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/PageHeader";
 import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -420,21 +421,21 @@ export default function Caixa() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Caixa Operacional</h1>
-          <p className="text-muted-foreground">
-            Gestão centralizada de movimentações financeiras
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <SaldosParceirosSheet />
-          <Button onClick={() => setDialogOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Nova Transação
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Caixa Operacional"
+        description="Gestão centralizada de movimentações financeiras"
+        pagePath="/caixa"
+        pageIcon="Wallet"
+        actions={
+          <div className="flex items-center gap-2">
+            <SaldosParceirosSheet />
+            <Button onClick={() => setDialogOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nova Transação
+            </Button>
+          </div>
+        }
+      />
 
       {/* KPIs */}
       <div className="grid gap-4 md:grid-cols-2">

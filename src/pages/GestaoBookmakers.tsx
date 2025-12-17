@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { PageHeader } from "@/components/PageHeader";
 import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check } from "lucide-react";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
@@ -303,14 +304,13 @@ export default function GestaoBookmakers() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold">Gestão de Bookmakers</h1>
-            <p className="text-muted-foreground mt-2">
-              Bookmakers disponíveis e vínculos gerenciados
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          title="Gestão de Bookmakers"
+          description="Bookmakers disponíveis e vínculos gerenciados"
+          pagePath="/bookmakers"
+          pageIcon="Building2"
+          className="mb-8"
+        />
 
         <Tabs defaultValue="contas" className="space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-2">

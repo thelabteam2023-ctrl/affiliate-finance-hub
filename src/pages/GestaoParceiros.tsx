@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import { PageHeader } from "@/components/PageHeader";
 import { Plus, Search, Eye, EyeOff, Edit, Trash2, LayoutGrid, List, Users } from "lucide-react";
 import { ParceiroStatusIcon } from "@/components/parceiros/ParceiroStatusIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -568,12 +569,13 @@ export default function GestaoParceiros() {
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
               <Users className="h-6 w-6 text-primary" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold">Gestão de Parceiros</h1>
-              <p className="text-sm text-muted-foreground">
-                Gerencie seus parceiros e analise performance financeira
-              </p>
-            </div>
+            <PageHeader
+              title="Gestão de Parceiros"
+              description="Gerencie seus parceiros e analise performance financeira"
+              pagePath="/parceiros"
+              pageIcon="Users"
+              className="flex-1"
+            />
           </div>
 
           {/* Partner Details Layout */}
