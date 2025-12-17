@@ -28,9 +28,9 @@ import {
 } from "@/components/ui/collapsible";
 
 interface Operador {
-  id: string;
+  operador_id: string;
   nome: string;
-  cpf: string;
+  cpf: string | null;
 }
 
 interface VincularOperadorDialogProps {
@@ -97,13 +97,14 @@ export function VincularOperadorDialog({
 
   const fetchOperadores = async () => {
     const { data, error } = await supabase
-      .from("operadores")
-      .select("id, nome, cpf")
-      .eq("status", "ATIVO")
+      .from("v_operadores_workspace")
+      .select("operador_id, nome, cpf")
+      .eq("is_active", true)
+      .not("operador_id", "is", null)
       .order("nome");
 
     if (!error && data) {
-      setOperadores(data);
+      setOperadores(data.filter(op => op.operador_id) as Operador[]);
     }
   };
 
@@ -167,7 +168,7 @@ export function VincularOperadorDialog({
   };
 
   const operadoresDisponiveis = operadores.filter(
-    op => !operadoresVinculados.includes(op.id)
+    op => op.operador_id && !operadoresVinculados.includes(op.operador_id)
   );
 
   const showValorFixo = ["FIXO_MENSAL", "HIBRIDO"].includes(formData.modelo_pagamento);
@@ -202,7 +203,7 @@ export function VincularOperadorDialog({
                     </SelectItem>
                   ) : (
                     operadoresDisponiveis.map((op) => (
-                      <SelectItem key={op.id} value={op.id}>
+                      <SelectItem key={op.operador_id} value={op.operador_id}>
                         {op.nome}
                       </SelectItem>
                     ))

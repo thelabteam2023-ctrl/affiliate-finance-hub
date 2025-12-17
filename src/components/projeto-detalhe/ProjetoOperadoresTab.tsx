@@ -43,8 +43,10 @@ interface OperadorProjeto {
   status: string;
   meta_volume: number | null;
   operador?: {
+    id: string;
     nome: string;
     cpf: string;
+    auth_user_id?: string | null;
   };
   entregas_count?: number;
   has_active_entrega?: boolean;
@@ -69,7 +71,12 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
         .from("operador_projetos")
         .select(`
           *,
-          operador:operadores (nome, cpf)
+          operador:operadores (
+            id,
+            nome,
+            cpf,
+            auth_user_id
+          )
         `)
         .eq("projeto_id", projetoId)
         .order("data_entrada", { ascending: false });
