@@ -24,7 +24,7 @@ import { Loader2, AlertTriangle } from "lucide-react";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 
 interface Operador {
-  id: string;
+  operador_id: string;
   nome: string;
 }
 
@@ -129,13 +129,14 @@ export function PagamentoOperadorDialog({
 
   const fetchOperadores = async () => {
     const { data, error } = await supabase
-      .from("operadores")
-      .select("id, nome")
-      .eq("status", "ATIVO")
+      .from("v_operadores_workspace")
+      .select("operador_id, nome")
+      .eq("is_active", true)
+      .not("operador_id", "is", null)
       .order("nome");
 
     if (!error && data) {
-      setOperadores(data);
+      setOperadores(data.filter(op => op.operador_id) as Operador[]);
     }
   };
 
@@ -199,7 +200,7 @@ export function PagamentoOperadorDialog({
         const qtdCoin = isCrypto && valorUSD ? valorUSD / coinPriceUSD : null;
 
         // Buscar nome do operador para descrição
-        const operadorSelecionado = operadores.find(op => op.id === formData.operador_id);
+        const operadorSelecionado = operadores.find(op => op.operador_id === formData.operador_id);
         const nomeOperador = operadorSelecionado?.nome || "Operador";
 
         const ledgerPayload: any = {
@@ -273,7 +274,7 @@ export function PagamentoOperadorDialog({
         
         if (needsLedgerEntry) {
           // Criar registro no cash_ledger para o pagamento que está sendo confirmado
-          const operadorSelecionado = operadores.find(op => op.id === formData.operador_id);
+          const operadorSelecionado = operadores.find(op => op.operador_id === formData.operador_id);
           const nomeOperador = operadorSelecionado?.nome || "Operador";
           const cotacaoUSD = origemData.cotacao || 5.40;
           const coinPriceUSD = origemData.coinPriceUSD || 1;
@@ -372,7 +373,7 @@ export function PagamentoOperadorDialog({
               </SelectTrigger>
               <SelectContent>
                 {operadores.map((op) => (
-                  <SelectItem key={op.id} value={op.id}>
+                  <SelectItem key={op.operador_id} value={op.operador_id}>
                     {op.nome}
                   </SelectItem>
                 ))}
