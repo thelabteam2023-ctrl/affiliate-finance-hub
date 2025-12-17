@@ -66,6 +66,14 @@ export function useParceiroFinanceiroCache() {
   const [currentParceiroId, setCurrentParceiroId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("resumo");
   
+  // Ref to track current partner ID (avoids stale closure)
+  const currentParceiroIdRef = useRef<string | null>(null);
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    currentParceiroIdRef.current = currentParceiroId;
+  }, [currentParceiroId]);
+  
   // Resumo state
   const [resumoData, setResumoData] = useState<ParceiroFinanceiroConsolidado | null>(null);
   const [resumoLoading, setResumoLoading] = useState(false);
@@ -240,8 +248,8 @@ export function useParceiroFinanceiroCache() {
         timestamp: Date.now(),
       });
       
-      // Only update state if still the current partner
-      if (parceiroId === currentParceiroId) {
+      // Use ref to check current partner (avoids stale closure)
+      if (parceiroId === currentParceiroIdRef.current) {
         setResumoData(data);
       }
     } catch (error: any) {
@@ -250,11 +258,13 @@ export function useParceiroFinanceiroCache() {
     } finally {
       setResumoLoading(false);
     }
-  }, [currentParceiroId]);
+  }, []); // No dependencies - uses ref instead
 
   // ============== PUBLIC API ==============
 
   const selectParceiro = useCallback((parceiroId: string | null) => {
+    // Update ref immediately for consistency
+    currentParceiroIdRef.current = parceiroId;
     setCurrentParceiroId(parceiroId);
     setActiveTab("resumo");
     
@@ -277,24 +287,26 @@ export function useParceiroFinanceiroCache() {
   const invalidateCache = useCallback((parceiroId: string) => {
     resumoCacheRef.current.delete(parceiroId);
     
-    // If current partner, reload
-    if (currentParceiroId === parceiroId) {
+    // If current partner, reload (use ref for current value)
+    if (currentParceiroIdRef.current === parceiroId) {
       loadResumo(parceiroId, true);
     }
-  }, [currentParceiroId, loadResumo]);
+  }, [loadResumo]);
 
   const invalidateAllCache = useCallback(() => {
     resumoCacheRef.current.clear();
     
-    if (currentParceiroId) {
-      loadResumo(currentParceiroId, true);
+    const currentId = currentParceiroIdRef.current;
+    if (currentId) {
+      loadResumo(currentId, true);
     }
-  }, [currentParceiroId, loadResumo]);
+  }, [loadResumo]);
 
   const refreshCurrent = useCallback(() => {
-    if (!currentParceiroId) return;
-    loadResumo(currentParceiroId, true);
-  }, [currentParceiroId, loadResumo]);
+    const currentId = currentParceiroIdRef.current;
+    if (!currentId) return;
+    loadResumo(currentId, true);
+  }, [loadResumo]);
 
   return {
     // State
