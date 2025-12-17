@@ -13,13 +13,14 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Loader2, Info, Shield, Trash2, Users, DollarSign, Building, FolderOpen, TrendingUp } from "lucide-react";
+import { Loader2, Info, Shield, Trash2, Users, DollarSign, Building, FolderOpen, TrendingUp, Lock, AlertCircle } from "lucide-react";
 
 interface MemberPermissionsDialogProps {
   open: boolean;
@@ -85,6 +86,14 @@ const actionLabels: Record<string, string> = {
   execute: "Executar",
 };
 
+const planLabels: Record<string, string> = {
+  free: "Gratuito",
+  starter: "Starter",
+  pro: "Pro",
+  advanced: "Advanced",
+  enterprise: "Enterprise",
+};
+
 export function MemberPermissionsDialog({
   open,
   onOpenChange,
@@ -99,6 +108,10 @@ export function MemberPermissionsDialog({
     toggleOverride,
     clearAllOverrides,
     overrideCount,
+    canUseCustomPermissions,
+    hasLimitedPermissions,
+    maxOverrides,
+    workspacePlan,
   } = usePermissionOverrides(member.user_id);
 
   const [saving, setSaving] = useState<string | null>(null);
@@ -108,12 +121,26 @@ export function MemberPermissionsDialog({
     try {
       await toggleOverride(permissionCode, !currentState);
       onPermissionsChanged?.();
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível alterar a permissão.",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      if (error.message === 'PLAN_NOT_ALLOWED') {
+        toast({
+          title: "Plano não permite",
+          description: "Seu plano atual não permite permissões customizadas. Faça upgrade para Pro ou superior.",
+          variant: "destructive",
+        });
+      } else if (error.message === 'LIMIT_REACHED') {
+        toast({
+          title: "Limite atingido",
+          description: `Seu plano permite no máximo ${maxOverrides} permissões customizadas.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível alterar a permissão.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setSaving(null);
     }
@@ -157,6 +184,38 @@ export function MemberPermissionsDialog({
     );
   }
 
+  // Plan doesn't allow custom permissions
+  if (!canUseCustomPermissions) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Permissões Adicionais
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-6">
+            <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-700 dark:text-amber-400">
+                <p className="font-medium mb-2">
+                  Plano {planLabels[workspacePlan] || workspacePlan} não suporta permissões customizadas
+                </p>
+                <p className="text-sm">
+                  Para habilitar permissões adicionais por membro, faça upgrade para o plano Pro ou superior.
+                </p>
+              </AlertDescription>
+            </Alert>
+            <div className="mt-4 text-center text-sm text-muted-foreground">
+              <p>Permissões customizadas permitem que operadores executem tarefas administrativas ou financeiras sem alterar a função base.</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh]">
@@ -180,12 +239,17 @@ export function MemberPermissionsDialog({
           </div>
         ) : (
           <>
-            {/* Header with count and clear button */}
+            {/* Header with count, limit info, and clear button */}
             <div className="flex items-center justify-between pb-2">
               <div className="flex items-center gap-2">
                 {overrideCount > 0 && (
                   <Badge variant="secondary" className="bg-primary/10 text-primary">
                     {overrideCount} permissão(ões) ativa(s)
+                  </Badge>
+                )}
+                {hasLimitedPermissions && (
+                  <Badge variant="outline" className="text-muted-foreground">
+                    Limite: {overrideCount}/{maxOverrides}
                   </Badge>
                 )}
               </div>
@@ -201,6 +265,16 @@ export function MemberPermissionsDialog({
                 </Button>
               )}
             </div>
+
+            {/* Limit warning */}
+            {hasLimitedPermissions && overrideCount >= maxOverrides && (
+              <Alert variant="default" className="border-amber-500/50 bg-amber-500/10 mb-4">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-700 dark:text-amber-400 text-sm">
+                  Limite de {maxOverrides} permissões atingido. Remova uma permissão para adicionar outra, ou faça upgrade para o plano Advanced.
+                </AlertDescription>
+              </Alert>
+            )}
 
             <ScrollArea className="h-[400px] pr-4">
               <div className="space-y-6">
@@ -236,11 +310,12 @@ export function MemberPermissionsDialog({
                           const isEnabled = hasOverride(perm.code);
                           const isSaving = saving === perm.code;
                           const actionLabel = actionLabels[perm.action] || perm.action;
+                          const isAtLimit = hasLimitedPermissions && overrideCount >= maxOverrides && !isEnabled;
 
                           return (
                             <div
                               key={perm.code}
-                              className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent/50 transition-colors"
+                              className={`flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent/50 transition-colors ${isAtLimit ? 'opacity-50' : ''}`}
                             >
                               <div className="flex flex-col">
                                 <span className="text-sm font-medium">
@@ -257,7 +332,7 @@ export function MemberPermissionsDialog({
                                 <Switch
                                   checked={isEnabled}
                                   onCheckedChange={() => handleToggle(perm.code, isEnabled)}
-                                  disabled={isSaving}
+                                  disabled={isSaving || isAtLimit}
                                 />
                               </div>
                             </div>
