@@ -3897,6 +3897,33 @@ export type Database = {
           },
         ]
       }
+      user_favorites: {
+        Row: {
+          created_at: string
+          id: string
+          page_icon: string
+          page_path: string
+          page_title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          page_icon: string
+          page_path: string
+          page_title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          page_icon?: string
+          page_path?: string
+          page_title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_permission_overrides: {
         Row: {
           created_at: string
