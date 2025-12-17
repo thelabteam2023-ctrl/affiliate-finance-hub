@@ -509,9 +509,13 @@ export function ParceiroBookmakersTab({
                       <p className="text-xs font-medium truncate">{bm.nome}</p>
                       <Badge
                         variant="outline"
-                        className="text-[10px] px-1 py-0 h-4 border-green-500/30 text-green-500"
+                        className={`text-[10px] px-1 py-0 h-4 ${
+                          bm.status === 'REGULAMENTADA' 
+                            ? 'border-green-500/30 text-green-500' 
+                            : 'border-amber-500/30 text-amber-500'
+                        }`}
                       >
-                        Regulamentada
+                        {bm.status === 'REGULAMENTADA' ? 'Regulamentada' : 'Não Regulamentada'}
                       </Badge>
                     </div>
 
