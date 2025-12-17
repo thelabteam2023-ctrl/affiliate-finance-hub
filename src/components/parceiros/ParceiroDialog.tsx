@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, User, Landmark, Wallet, Copy, Check } from "lucide-react";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { Loader2, Plus, Trash2, User, Landmark, Wallet, Copy, Check, AlertTriangle, Zap } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -73,6 +74,7 @@ interface ParceiroDialogProps {
 }
 
 export default function ParceiroDialog({ open, onClose, parceiro, viewMode = false, initialTab = "dados" }: ParceiroDialogProps) {
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
@@ -99,6 +101,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [copiedField, setCopiedField] = useState<string>("");
   const [initialState, setInitialState] = useState<any>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [planLimitError, setPlanLimitError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const copyToClipboard = async (text: string, fieldName: string) => {
@@ -500,10 +503,32 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   
   const saveData = async () => {
     setLoading(true);
+    setPlanLimitError(null);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
+
+      const isNewPartner = !parceiroId && !parceiro?.id;
+      const isActivating = status === 'ativo' && parceiro?.status !== 'ativo';
+
+      // Check partner limit for new active partners or when activating
+      if ((isNewPartner && status === 'ativo') || isActivating) {
+        if (workspaceId) {
+          const { data: limitCheck, error: limitError } = await supabase.rpc('check_partner_limit', {
+            workspace_uuid: workspaceId
+          });
+
+          if (limitError) throw limitError;
+
+          const result = limitCheck as unknown as { allowed: boolean; current: number; limit: number; plan: string };
+          if (!result.allowed) {
+            setPlanLimitError(`Limite atingido: ${result.current}/${result.limit} parceiros ativos no plano ${result.plan.toUpperCase()}. Faça upgrade para adicionar mais.`);
+            setLoading(false);
+            return;
+          }
+        }
+      }
 
       const parceiroData = {
         user_id: user.id,

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { usePlanEntitlements } from "@/hooks/usePlanEntitlements";
 import { Database } from "@/integrations/supabase/types";
 import {
   Dialog,
@@ -14,7 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, UserPlus, Shield, DollarSign, Gamepad2, Eye } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, UserPlus, Shield, DollarSign, Gamepad2, Eye, AlertTriangle, Zap } from "lucide-react";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -59,13 +61,38 @@ export function InviteMemberDialog({
   onMemberInvited 
 }: InviteMemberDialogProps) {
   const { toast } = useToast();
+  const { checkUserLimit, getPlanLabel } = usePlanEntitlements();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<AppRole>("viewer");
   const [loading, setLoading] = useState(false);
+  const [limitCheck, setLimitCheck] = useState<{ allowed: boolean; current: number; limit: number; plan: string } | null>(null);
+  const [checkingLimit, setCheckingLimit] = useState(false);
+
+  // Check limit when dialog opens
+  useEffect(() => {
+    if (open && workspaceId) {
+      setCheckingLimit(true);
+      checkUserLimit().then(result => {
+        setLimitCheck(result);
+        setCheckingLimit(false);
+      });
+    }
+  }, [open, workspaceId, checkUserLimit]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check limit again before submitting
+    const currentLimit = await checkUserLimit();
+    if (!currentLimit.allowed) {
+      toast({
+        title: "Limite atingido",
+        description: `Seu plano ${getPlanLabel()} permite até ${currentLimit.limit} usuário(s). Faça upgrade para adicionar mais membros.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!email.trim() || !workspaceId) return;
 
     try {
@@ -160,6 +187,28 @@ export function InviteMemberDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Limit Warning */}
+          {limitCheck && !limitCheck.allowed && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="flex items-center justify-between">
+                <span>
+                  Limite atingido: {limitCheck.current}/{limitCheck.limit} usuários no plano {getPlanLabel()}.
+                </span>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => onOpenChange(false)}
+                  className="ml-2"
+                >
+                  <Zap className="h-3 w-3 mr-1" />
+                  Ver planos
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="email">Email do usuário</Label>
             <Input
@@ -169,13 +218,17 @@ export function InviteMemberDialog({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="usuario@exemplo.com"
               required
-              disabled={loading}
+              disabled={loading || (limitCheck && !limitCheck.allowed)}
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="role">Função</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as AppRole)} disabled={loading}>
+            <Select 
+              value={role} 
+              onValueChange={(v) => setRole(v as AppRole)} 
+              disabled={loading || (limitCheck && !limitCheck.allowed)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione uma função" />
               </SelectTrigger>
@@ -209,8 +262,11 @@ export function InviteMemberDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || !email.trim()}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button 
+              type="submit" 
+              disabled={loading || !email.trim() || checkingLimit || (limitCheck && !limitCheck.allowed)}
+            >
+              {(loading || checkingLimit) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Convidar
             </Button>
           </DialogFooter>

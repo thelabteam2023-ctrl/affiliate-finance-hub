@@ -4262,6 +4262,7 @@ export type Database = {
           created_at: string
           id: string
           max_active_partners: number
+          max_users: number
           name: string
           plan: string
           settings: Json | null
@@ -4272,6 +4273,7 @@ export type Database = {
           created_at?: string
           id?: string
           max_active_partners?: number
+          max_users?: number
           name: string
           plan?: string
           settings?: Json | null
@@ -4282,6 +4284,7 @@ export type Database = {
           created_at?: string
           id?: string
           max_active_partners?: number
+          max_users?: number
           name?: string
           plan?: string
           settings?: Json | null
@@ -5485,6 +5488,10 @@ export type Database = {
         }
         Returns: string
       }
+      check_custom_permissions_limit: {
+        Args: { workspace_uuid: string }
+        Returns: Json
+      }
       check_login_blocked: {
         Args: { p_email: string }
         Returns: {
@@ -5493,6 +5500,8 @@ export type Database = {
           is_blocked: boolean
         }[]
       }
+      check_partner_limit: { Args: { workspace_uuid: string }; Returns: Json }
+      check_user_limit: { Args: { workspace_uuid: string }; Returns: Json }
       create_audit_log: {
         Args: {
           _action: Database["public"]["Enums"]["audit_action"]
@@ -5505,11 +5514,13 @@ export type Database = {
         }
         Returns: string
       }
+      get_plan_entitlements: { Args: { plan_name: string }; Returns: Json }
       get_user_role: {
         Args: { _user_id: string; _workspace_id?: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
       get_user_workspace: { Args: { _user_id: string }; Returns: string }
+      get_workspace_usage: { Args: { workspace_uuid: string }; Returns: Json }
       has_permission: {
         Args: {
           _permission_code: string
