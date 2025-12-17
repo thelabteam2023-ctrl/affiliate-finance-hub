@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "./useWorkspace";
+import { useAuth } from "./useAuth";
 
 interface Permission {
   code: string;
@@ -20,11 +21,25 @@ interface PermissionsByModule {
   [module: string]: Permission[];
 }
 
+// Plans that allow custom permissions
+const PLANS_WITH_CUSTOM_PERMISSIONS = ['pro', 'advanced', 'enterprise'];
+
+// Plans with limited custom permissions (max 5)
+const PLANS_WITH_LIMITED_PERMISSIONS = ['pro'];
+const LIMITED_PERMISSIONS_MAX = 5;
+
 export function usePermissionOverrides(userId?: string) {
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, workspace } = useWorkspace();
+  const { user } = useAuth();
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [overrides, setOverrides] = useState<PermissionOverride[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Plan validation
+  const workspacePlan = workspace?.plan || 'free';
+  const canUseCustomPermissions = PLANS_WITH_CUSTOM_PERMISSIONS.includes(workspacePlan);
+  const hasLimitedPermissions = PLANS_WITH_LIMITED_PERMISSIONS.includes(workspacePlan);
+  const maxOverrides = hasLimitedPermissions ? LIMITED_PERMISSIONS_MAX : Infinity;
 
   const fetchPermissions = useCallback(async () => {
     try {
@@ -79,8 +94,52 @@ export function usePermissionOverrides(userId?: string) {
     return overrides.some(o => o.permission_code === permissionCode && o.granted);
   };
 
+  // Create audit log for permission changes
+  const createAuditLog = async (
+    action: 'PERMISSION_CHANGE',
+    targetUserId: string,
+    permissionCode: string,
+    granted: boolean,
+    isBulkClear: boolean = false
+  ) => {
+    if (!user || !workspaceId) return;
+
+    try {
+      await supabase.from('audit_logs').insert({
+        workspace_id: workspaceId,
+        actor_user_id: user.id,
+        action: action,
+        entity_type: 'permission_override',
+        entity_id: null,
+        entity_name: permissionCode,
+        before_data: isBulkClear ? null : { granted: !granted },
+        after_data: isBulkClear ? { cleared: true } : { granted },
+        metadata: {
+          target_user_id: targetUserId,
+          permission_code: permissionCode,
+          operation: granted ? 'grant' : 'revoke',
+          bulk_clear: isBulkClear,
+        },
+      });
+    } catch (error) {
+      console.error('Error creating audit log:', error);
+      // Don't throw - audit log failure shouldn't block the operation
+    }
+  };
+
   const toggleOverride = async (permissionCode: string, granted: boolean) => {
     if (!userId || !workspaceId) return;
+
+    // Plan validation - block if plan doesn't allow custom permissions
+    if (!canUseCustomPermissions) {
+      throw new Error('PLAN_NOT_ALLOWED');
+    }
+
+    // Check limit for limited plans
+    const currentCount = overrides.filter(o => o.granted).length;
+    if (granted && hasLimitedPermissions && currentCount >= maxOverrides) {
+      throw new Error('LIMIT_REACHED');
+    }
 
     try {
       const existingOverride = overrides.find(o => o.permission_code === permissionCode);
@@ -112,10 +171,14 @@ export function usePermissionOverrides(userId?: string) {
             user_id: userId,
             permission_code: permissionCode,
             granted: true,
+            granted_by: user?.id,
           });
 
         if (error) throw error;
       }
+
+      // Create audit log
+      await createAuditLog('PERMISSION_CHANGE', userId, permissionCode, granted);
 
       await fetchOverrides();
     } catch (error) {
@@ -127,7 +190,15 @@ export function usePermissionOverrides(userId?: string) {
   const clearAllOverrides = async () => {
     if (!userId || !workspaceId) return;
 
+    // Plan validation
+    if (!canUseCustomPermissions && overrides.length > 0) {
+      // Allow clearing even if plan doesn't support - this is a cleanup operation
+    }
+
     try {
+      // Get current overrides for audit
+      const currentOverrides = [...overrides];
+
       const { error } = await supabase
         .from('user_permission_overrides')
         .delete()
@@ -135,6 +206,18 @@ export function usePermissionOverrides(userId?: string) {
         .eq('workspace_id', workspaceId);
 
       if (error) throw error;
+
+      // Create audit log for bulk clear
+      if (currentOverrides.length > 0) {
+        await createAuditLog(
+          'PERMISSION_CHANGE',
+          userId,
+          `bulk_clear:${currentOverrides.length}_permissions`,
+          false,
+          true
+        );
+      }
+
       setOverrides([]);
     } catch (error) {
       console.error('Error clearing overrides:', error);
@@ -152,5 +235,10 @@ export function usePermissionOverrides(userId?: string) {
     clearAllOverrides,
     overrideCount: overrides.filter(o => o.granted).length,
     refresh: fetchOverrides,
+    // Plan-related exports
+    canUseCustomPermissions,
+    hasLimitedPermissions,
+    maxOverrides,
+    workspacePlan,
   };
 }

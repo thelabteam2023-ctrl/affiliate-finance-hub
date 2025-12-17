@@ -8,6 +8,7 @@ export function useWorkspace() {
     workspaceId,
     workspaceName: workspace?.name ?? null,
     workspaceSlug: workspace?.slug ?? null,
+    workspacePlan: workspace?.plan ?? 'free',
     refreshWorkspace,
     hasWorkspace: !!workspace,
   };

@@ -9,6 +9,7 @@ interface Workspace {
   id: string;
   name: string;
   slug: string;
+  plan: string;
 }
 
 interface AuthContextType {
@@ -53,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Fetch workspace details
         const { data: workspaceData, error: wsError } = await supabase
           .from('workspaces')
-          .select('id, name, slug')
+          .select('id, name, slug, plan')
           .eq('id', workspaceId)
           .single();
 
