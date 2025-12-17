@@ -4,7 +4,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { useRole } from "@/hooks/useRole";
-import { usePermission } from "@/hooks/usePermission";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -17,7 +16,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
@@ -30,36 +28,60 @@ interface MenuItem {
   roles?: string[];
 }
 
-// Menu principal - Operações
-const mainMenuItems: MenuItem[] = [
-  { title: "Central", url: "/", icon: Bell },
-  { title: "Parceiros", url: "/parceiros", icon: Users, permission: "partners:view" },
-  { title: "Investidores", url: "/investidores", icon: TrendingUp, permission: "investors:view" },
-  { title: "Bancos", url: "/bancos", icon: Landmark, permission: "finance:view" },
-  { title: "Caixa", url: "/caixa", icon: Wallet, permission: "cash:view" },
-  { title: "Casas", url: "/bookmakers", icon: Building2, permission: "bookmakers:view" },
-  { title: "Financeiro", url: "/financeiro", icon: PieChart, permission: "finance:view" },
-];
+interface MenuGroup {
+  label: string;
+  items: MenuItem[];
+}
 
-// Menu de Operadores e Projetos
-const operacoesMenuItems: MenuItem[] = [
-  { title: "Operadores", url: "/operadores", icon: Briefcase, permission: "operators:view" },
-  { title: "Projetos", url: "/projetos", icon: FolderKanban, permission: "projects:view" },
-];
-
-// Menu de Captação
-const captacaoMenuItems: MenuItem[] = [
-  { title: "Captação de Parceiros", url: "/programa-indicacao", icon: UserPlus, permission: "acquisition:view" },
-];
-
-// Menu de Administração
-const adminMenuItems: MenuItem[] = [
-  { title: "Workspace", url: "/workspace", icon: Settings, roles: ["owner", "admin", "master"] },
-];
-
-// Menu de Desenvolvimento
-const devMenuItems: MenuItem[] = [
-  { title: "Testes", url: "/testes", icon: FlaskConical, roles: ["owner", "master"] },
+// Menu structure organized by functional domain
+const menuGroups: MenuGroup[] = [
+  {
+    label: "VISÃO GERAL",
+    items: [
+      { title: "Central", url: "/", icon: Bell },
+    ],
+  },
+  {
+    label: "OPERAÇÃO",
+    items: [
+      { title: "Projetos", url: "/projetos", icon: FolderKanban, permission: "projects:view" },
+      { title: "Casas", url: "/bookmakers", icon: Building2, permission: "bookmakers:view" },
+    ],
+  },
+  {
+    label: "FINANCEIRO",
+    items: [
+      { title: "Caixa", url: "/caixa", icon: Wallet, permission: "cash:view" },
+      { title: "Financeiro", url: "/financeiro", icon: PieChart, permission: "finance:view" },
+      { title: "Bancos", url: "/bancos", icon: Landmark, permission: "finance:view" },
+      { title: "Investidores", url: "/investidores", icon: TrendingUp, permission: "investors:view" },
+    ],
+  },
+  {
+    label: "RELACIONAMENTOS",
+    items: [
+      { title: "Parceiros", url: "/parceiros", icon: Users, permission: "partners:view" },
+      { title: "Operadores", url: "/operadores", icon: Briefcase, permission: "operators:view" },
+    ],
+  },
+  {
+    label: "CRESCIMENTO",
+    items: [
+      { title: "Captação", url: "/programa-indicacao", icon: UserPlus, permission: "acquisition:view" },
+    ],
+  },
+  {
+    label: "ADMINISTRAÇÃO",
+    items: [
+      { title: "Workspace", url: "/workspace", icon: Settings, roles: ["owner", "admin", "master"] },
+    ],
+  },
+  {
+    label: "DESENVOLVIMENTO",
+    items: [
+      { title: "Testes", url: "/testes", icon: FlaskConical, roles: ["owner", "master"] },
+    ],
+  },
 ];
 
 export function AppSidebar() {
@@ -67,7 +89,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut, role } = useAuth();
-  const { canManageWorkspace, isMaster, isOwner } = useRole();
+  const { canManageWorkspace } = useRole();
   const currentPath = location.pathname;
   
   const isCollapsed = state === "collapsed";
@@ -75,22 +97,12 @@ export function AppSidebar() {
 
   // Function to check if user can see a menu item
   const canSeeItem = (item: MenuItem): boolean => {
-    // If no restrictions, show to all
     if (!item.permission && !item.roles) return true;
-
-    // Owner and master can see everything
     if (role === 'owner' || role === 'master') return true;
-
-    // Check role restriction
     if (item.roles && item.roles.length > 0) {
       if (!role || !item.roles.includes(role)) return false;
     }
-
-    // For permission-based items, admin can see everything
     if (item.permission && role === 'admin') return true;
-
-    // For specific permissions, we'd need async check
-    // For now, show all permission-based items and let the route handle it
     return true;
   };
 
@@ -116,8 +128,8 @@ export function AppSidebar() {
                 <NavLink 
                   to={item.url} 
                   end 
-                  className="hover:bg-accent/50 transition-colors"
-                  activeClassName="bg-primary/10 text-primary font-medium border-l-2 border-primary"
+                  className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-accent/50"
+                  activeClassName="bg-primary/10 text-primary"
                 >
                   <item.icon className="h-4 w-4" />
                 </NavLink>
@@ -132,11 +144,11 @@ export function AppSidebar() {
             <NavLink 
               to={item.url} 
               end 
-              className="hover:bg-accent/50 transition-colors"
-              activeClassName="bg-primary/10 text-primary font-medium border-l-2 border-primary"
+              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-accent/50"
+              activeClassName="bg-primary/10 text-primary font-medium"
             >
-              <item.icon className="h-4 w-4 mr-2" />
-              <span>{item.title}</span>
+              <item.icon className="h-4 w-4 shrink-0" />
+              <span className="text-sm">{item.title}</span>
             </NavLink>
           </SidebarMenuButton>
         )}
@@ -144,145 +156,92 @@ export function AppSidebar() {
     );
   };
 
-  const filteredMainMenu = mainMenuItems.filter(canSeeItem);
-  const filteredOperacoesMenu = operacoesMenuItems.filter(canSeeItem);
-  const filteredCaptacaoMenu = captacaoMenuItems.filter(canSeeItem);
-  const filteredAdminMenu = adminMenuItems.filter(canSeeItem);
-  const filteredDevMenu = devMenuItems.filter(canSeeItem);
+  const renderMenuGroup = (group: MenuGroup, index: number) => {
+    const visibleItems = group.items.filter(canSeeItem);
+    if (visibleItems.length === 0) return null;
+
+    return (
+      <SidebarGroup key={group.label} className={index > 0 ? "mt-6" : ""}>
+        <SidebarGroupLabel 
+          className={`
+            text-[10px] font-semibold tracking-widest text-muted-foreground/70 
+            uppercase mb-2 px-3
+            ${isCollapsed ? 'sr-only' : ''}
+          `}
+        >
+          {group.label}
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu className="space-y-0.5">
+            {visibleItems.map(renderMenuItem)}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  };
 
   return (
     <Sidebar
-      className={isCollapsed ? "w-14" : "w-60"}
+      className={isCollapsed ? "w-14" : "w-56"}
       collapsible="icon"
     >
-      <SidebarContent>
+      <SidebarContent className="py-4">
         {/* Logo/Brand Section */}
-        <div className={`flex items-center gap-3 px-4 py-6 ${isCollapsed ? 'justify-center' : ''}`}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
-            <Wallet className="h-5 w-5 text-white" />
+        <div className={`flex items-center gap-3 px-4 pb-6 ${isCollapsed ? 'justify-center' : ''}`}>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
+            <Wallet className="h-4 w-4 text-white" />
           </div>
           {!isCollapsed && (
-            <span className="text-lg font-bold tracking-tight">Labbet One</span>
+            <span className="text-base font-bold tracking-tight">Labbet One</span>
           )}
         </div>
 
-        {/* Menu Principal */}
-        {filteredMainMenu.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel className={isCollapsed ? 'sr-only' : ''}>
-              Menu Principal
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {filteredMainMenu.map(renderMenuItem)}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {filteredOperacoesMenu.length > 0 && (
-          <>
-            <SidebarSeparator />
-            <SidebarGroup>
-              <SidebarGroupLabel className={isCollapsed ? 'sr-only' : ''}>
-                Operações
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {filteredOperacoesMenu.map(renderMenuItem)}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </>
-        )}
-
-        {filteredCaptacaoMenu.length > 0 && (
-          <>
-            <SidebarSeparator />
-            <SidebarGroup>
-              <SidebarGroupLabel className={isCollapsed ? 'sr-only' : ''}>
-                Captação
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {filteredCaptacaoMenu.map(renderMenuItem)}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </>
-        )}
-
-        {filteredAdminMenu.length > 0 && (
-          <>
-            <SidebarSeparator />
-            <SidebarGroup>
-              <SidebarGroupLabel className={isCollapsed ? 'sr-only' : ''}>
-                Administração
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {filteredAdminMenu.map(renderMenuItem)}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </>
-        )}
-
-        {filteredDevMenu.length > 0 && (
-          <>
-            <SidebarSeparator />
-            <SidebarGroup>
-              <SidebarGroupLabel className={isCollapsed ? 'sr-only' : ''}>
-                Desenvolvimento
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {filteredDevMenu.map(renderMenuItem)}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </>
-        )}
+        {/* Menu Groups */}
+        <div className="flex-1 px-2">
+          {menuGroups.map((group, index) => renderMenuGroup(group, index))}
+        </div>
       </SidebarContent>
 
       {/* User footer */}
-      <SidebarFooter className="border-t border-border">
-        <div className={`p-2 ${isCollapsed ? 'flex justify-center' : ''}`}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className={`flex items-center gap-3 w-full p-2 rounded-lg hover:bg-accent/50 transition-colors ${isCollapsed ? 'justify-center' : ''}`}>
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                    {getUserInitials()}
-                  </AvatarFallback>
-                </Avatar>
-                {!isCollapsed && (
-                  <div className="flex-1 text-left overflow-hidden">
-                    <p className="text-sm font-medium truncate">{user?.email}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{role || 'usuário'}</p>
-                  </div>
-                )}
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <div className="px-2 py-1.5">
-                <p className="text-sm font-medium">{user?.email}</p>
-                <p className="text-xs text-muted-foreground capitalize">Role: {role || 'usuário'}</p>
-              </div>
-              <DropdownMenuSeparator />
-              {canManageWorkspace && (
-                <DropdownMenuItem onClick={() => navigate("/workspace")}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Configurações
-                </DropdownMenuItem>
+      <SidebarFooter className="border-t border-border/50 p-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className={`
+              flex items-center gap-3 w-full p-2 rounded-lg 
+              hover:bg-accent/50 transition-colors
+              ${isCollapsed ? 'justify-center' : ''}
+            `}>
+              <Avatar className="h-7 w-7">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                  {getUserInitials()}
+                </AvatarFallback>
+              </Avatar>
+              {!isCollapsed && (
+                <div className="flex-1 text-left overflow-hidden">
+                  <p className="text-xs font-medium truncate">{user?.email}</p>
+                  <p className="text-[10px] text-muted-foreground capitalize">{role || 'usuário'}</p>
+                </div>
               )}
-              <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="px-2 py-1.5">
+              <p className="text-sm font-medium truncate">{user?.email}</p>
+              <p className="text-xs text-muted-foreground capitalize">Role: {role || 'usuário'}</p>
+            </div>
+            <DropdownMenuSeparator />
+            {canManageWorkspace && (
+              <DropdownMenuItem onClick={() => navigate("/workspace")}>
+                <Settings className="mr-2 h-4 w-4" />
+                Configurações
               </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+            )}
+            <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
   );
