@@ -574,6 +574,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bookmakers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_workspace"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "bookmakers_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -2353,6 +2360,55 @@ export type Database = {
           },
         ]
       }
+      operadores_legado_pendente: {
+        Row: {
+          created_at: string | null
+          id: string
+          migrated_at: string | null
+          migrated_to_user_id: string | null
+          operador_id: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          migrated_at?: string | null
+          migrated_to_user_id?: string | null
+          operador_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          migrated_at?: string | null
+          migrated_to_user_id?: string | null
+          operador_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operadores_legado_pendente_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "operadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operadores_legado_pendente_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "operadores_legado_pendente_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_performance"
+            referencedColumns: ["operador_id"]
+          },
+        ]
+      }
       pagamentos_operador: {
         Row: {
           cash_ledger_id: string | null
@@ -2749,6 +2805,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "parceiros_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_workspace"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "parceiros_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -3044,24 +3107,45 @@ export type Database = {
       }
       profiles: {
         Row: {
+          cpf: string | null
           created_at: string
+          data_admissao: string | null
+          data_desligamento: string | null
+          data_nascimento: string | null
           email: string | null
           full_name: string | null
           id: string
+          observacoes_operador: string | null
+          telefone: string | null
+          tipo_contrato: string | null
           updated_at: string
         }
         Insert: {
+          cpf?: string | null
           created_at?: string
+          data_admissao?: string | null
+          data_desligamento?: string | null
+          data_nascimento?: string | null
           email?: string | null
           full_name?: string | null
           id: string
+          observacoes_operador?: string | null
+          telefone?: string | null
+          tipo_contrato?: string | null
           updated_at?: string
         }
         Update: {
+          cpf?: string | null
           created_at?: string
+          data_admissao?: string | null
+          data_desligamento?: string | null
+          data_nascimento?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
+          observacoes_operador?: string | null
+          telefone?: string | null
+          tipo_contrato?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -4231,6 +4315,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bookmakers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_workspace"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       v_bookmaker_saldo_disponivel: {
@@ -4304,6 +4395,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bookmakers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_workspace"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       v_bookmakers_aguardando_saque: {
@@ -4376,6 +4474,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmakers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_workspace"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -4865,6 +4970,38 @@ export type Database = {
           },
         ]
       }
+      v_operadores_workspace: {
+        Row: {
+          cpf: string | null
+          data_admissao: string | null
+          data_desligamento: string | null
+          data_nascimento: string | null
+          email: string | null
+          is_active: boolean | null
+          joined_at: string | null
+          nome: string | null
+          observacoes: string | null
+          profile_id: string | null
+          projetos_ativos: number | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          telefone: string | null
+          tipo_contrato: string | null
+          total_pago: number | null
+          total_pendente: number | null
+          user_id: string | null
+          workspace_id: string | null
+          workspace_member_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_painel_operacional: {
         Row: {
           created_at: string | null
@@ -4931,6 +5068,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parceiros_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_workspace"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -5200,6 +5344,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "parceiros_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_workspace"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       v_saldo_parceiro_wallets: {
@@ -5221,6 +5372,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parceiros_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_workspace"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
