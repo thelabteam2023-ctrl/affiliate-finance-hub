@@ -581,13 +581,6 @@ export type Database = {
             referencedColumns: ["profile_id"]
           },
           {
-            foreignKeyName: "bookmakers_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_lucro_operador"
-            referencedColumns: ["profile_id"]
-          },
-          {
             foreignKeyName: "bookmakers_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -2854,13 +2847,6 @@ export type Database = {
             referencedColumns: ["profile_id"]
           },
           {
-            foreignKeyName: "parceiros_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_lucro_operador"
-            referencedColumns: ["profile_id"]
-          },
-          {
             foreignKeyName: "parceiros_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -4371,13 +4357,6 @@ export type Database = {
             referencedRelation: "v_operadores_workspace"
             referencedColumns: ["profile_id"]
           },
-          {
-            foreignKeyName: "bookmakers_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_lucro_operador"
-            referencedColumns: ["profile_id"]
-          },
         ]
       }
       v_bookmaker_saldo_disponivel: {
@@ -4458,13 +4437,6 @@ export type Database = {
             referencedRelation: "v_operadores_workspace"
             referencedColumns: ["profile_id"]
           },
-          {
-            foreignKeyName: "bookmakers_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_lucro_operador"
-            referencedColumns: ["profile_id"]
-          },
         ]
       }
       v_bookmakers_aguardando_saque: {
@@ -4543,13 +4515,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "v_operadores_workspace"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "bookmakers_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_lucro_operador"
             referencedColumns: ["profile_id"]
           },
         ]
@@ -5168,13 +5133,6 @@ export type Database = {
             referencedRelation: "v_operadores_workspace"
             referencedColumns: ["profile_id"]
           },
-          {
-            foreignKeyName: "parceiros_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_lucro_operador"
-            referencedColumns: ["profile_id"]
-          },
         ]
       }
       v_parcerias_alerta: {
@@ -5458,13 +5416,6 @@ export type Database = {
             referencedRelation: "v_operadores_workspace"
             referencedColumns: ["profile_id"]
           },
-          {
-            foreignKeyName: "parceiros_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_lucro_operador"
-            referencedColumns: ["profile_id"]
-          },
         ]
       }
       v_saldo_parceiro_wallets: {
@@ -5492,13 +5443,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "v_operadores_workspace"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "parceiros_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_lucro_operador"
             referencedColumns: ["profile_id"]
           },
         ]
