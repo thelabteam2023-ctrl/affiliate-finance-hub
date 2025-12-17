@@ -4804,7 +4804,14 @@ export type Database = {
       update_parcerias_em_encerramento: { Args: never; Returns: undefined }
     }
     Enums: {
-      app_role: "master" | "user" | "finance" | "operator" | "viewer" | "owner"
+      app_role:
+        | "master"
+        | "user"
+        | "finance"
+        | "operator"
+        | "viewer"
+        | "owner"
+        | "admin"
       audit_action:
         | "CREATE"
         | "UPDATE"
@@ -4953,7 +4960,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["master", "user", "finance", "operator", "viewer", "owner"],
+      app_role: [
+        "master",
+        "user",
+        "finance",
+        "operator",
+        "viewer",
+        "owner",
+        "admin",
+      ],
       audit_action: [
         "CREATE",
         "UPDATE",
