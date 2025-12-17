@@ -12,31 +12,17 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
 import { ParceiroBookmakersTab } from "./ParceiroBookmakersTab";
 import { useToast } from "@/hooks/use-toast";
-import { MovimentacoesData, BookmakersData, TabKey } from "@/hooks/useParceiroFinanceiroCache";
+import { TabKey } from "@/hooks/useParceiroFinanceiroCache";
 
 interface ParceiroCache {
-  // Resumo
+  // Resumo only
   resumoData: ParceiroFinanceiroConsolidado | null;
   resumoLoading: boolean;
   resumoError: string | null;
-  resumoIsRevalidating: boolean;
-
-  // Movimentacoes
-  movimentacoesData: MovimentacoesData | null;
-  movimentacoesLoading: boolean;
-  movimentacoesError: string | null;
-  movimentacoesIsRevalidating: boolean;
-
-  // Bookmakers
-  bookmakersData: BookmakersData | null;
-  bookmakersLoading: boolean;
-  bookmakersError: string | null;
-  bookmakersIsRevalidating: boolean;
-
+  
   // Actions
   changeTab: (tab: TabKey) => void;
-  invalidateTab: (tab: TabKey) => void;
-  invalidateCache: (parceiroId: string, tabs?: TabKey[]) => void;
+  invalidateCache: (parceiroId: string) => void;
   refreshCurrent: () => void;
 }
 
@@ -127,8 +113,7 @@ export function ParceiroDetalhesPanel({
     );
   }
 
-  // Show loading skeleton when loading AND no data
-  if (loading && !data) {
+  if (loading) {
     return (
       <div className="p-4 space-y-3">
         <div className="grid gap-2 grid-cols-2 lg:grid-cols-4">
@@ -141,31 +126,15 @@ export function ParceiroDetalhesPanel({
     );
   }
 
-  // Show error only when there's an actual error AND no data to display
-  if (error && !data) {
+  if (error || !data) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-destructive text-sm gap-3">
-        <div className="flex items-center">
-          <AlertCircle className="h-4 w-4 mr-2" />
-          Erro ao carregar dados
-        </div>
-        <Button variant="outline" size="sm" onClick={() => parceiroCache.invalidateTab("resumo")}>
+        <AlertCircle className="h-6 w-6" />
+        <p>Erro ao carregar dados</p>
+        <Button variant="outline" size="sm" onClick={() => parceiroCache.refreshCurrent()}>
+          <RefreshCw className="h-3 w-3 mr-2" />
           Tentar novamente
         </Button>
-      </div>
-    );
-  }
-
-  // If we have no data but also no loading/error, show skeleton (transient state)
-  if (!data) {
-    return (
-      <div className="p-4 space-y-3">
-        <div className="grid gap-2 grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-14" />
-          ))}
-        </div>
-        <Skeleton className="h-[300px]" />
       </div>
     );
   }
@@ -432,20 +401,9 @@ export function ParceiroDetalhesPanel({
                                 <Building2 className="h-5 w-5 text-muted-foreground" />
                               </div>
                             )}
-                            <div className="min-w-0 flex-1">
-                              <p className="font-medium text-xs truncate">{bm.bookmaker_nome}</p>
+                            <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    "text-[9px] px-1 py-0 h-4",
-                                    bm.status === "ativo"
-                                      ? "border-success/50 text-success"
-                                      : "border-warning/50 text-warning"
-                                  )}
-                                >
-                                  {bm.status === "ativo" ? "Ativa" : "Limitada"}
-                                </Badge>
+                                <p className="text-xs font-medium truncate">{bm.bookmaker_nome}</p>
                                 {bm.has_credentials && (
                                   <Popover
                                     open={credentialsPopoverOpen === bm.bookmaker_id}
@@ -474,7 +432,7 @@ export function ParceiroDetalhesPanel({
                                             <Button
                                               variant="ghost"
                                               size="sm"
-                                              onClick={() => copyToClipboard(bm.login_username || "", "Usuário")}
+                                              onClick={() => bm.login_username && copyToClipboard(bm.login_username, "Usuário")}
                                               className="h-6 w-6 p-0 shrink-0"
                                             >
                                               {copiedField === "Usuário" ? (
@@ -489,12 +447,12 @@ export function ParceiroDetalhesPanel({
                                           <label className="text-[10px] text-muted-foreground">Senha</label>
                                           <div className="flex items-center gap-1 mt-0.5">
                                             <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
-                                              {showSensitiveData ? decryptPassword(bm.login_password_encrypted || "") : "••••••"}
+                                              {showSensitiveData && bm.login_password_encrypted ? decryptPassword(bm.login_password_encrypted) : "••••••"}
                                             </code>
                                             <Button
                                               variant="ghost"
                                               size="sm"
-                                              onClick={() => copyToClipboard(decryptPassword(bm.login_password_encrypted || ""), "Senha")}
+                                              onClick={() => bm.login_password_encrypted && copyToClipboard(decryptPassword(bm.login_password_encrypted), "Senha")}
                                               className="h-6 w-6 p-0 shrink-0"
                                             >
                                               {copiedField === "Senha" ? (
@@ -509,6 +467,22 @@ export function ParceiroDetalhesPanel({
                                     </PopoverContent>
                                   </Popover>
                                 )}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "text-[9px] px-1 py-0 h-4",
+                                    bm.status === "ativo"
+                                      ? "border-success/50 text-success"
+                                      : "border-warning/50 text-warning"
+                                  )}
+                                >
+                                  {bm.status === "ativo" ? "Ativa" : "Limitada"}
+                                </Badge>
+                                <span className="text-[10px] text-muted-foreground">
+                                  {maskCurrency(bm.saldo_atual)}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -538,20 +512,15 @@ export function ParceiroDetalhesPanel({
             </ScrollArea>
           </TabsContent>
 
-          {/* Aba Movimentações */}
+          {/* Aba Movimentações - fetches its own data */}
           <TabsContent value="movimentacoes" className="flex-1 mt-0">
             <ParceiroMovimentacoesTab 
               parceiroId={parceiroId} 
               showSensitiveData={showSensitiveData}
-              data={parceiroCache.movimentacoesData}
-              loading={parceiroCache.movimentacoesLoading}
-              error={parceiroCache.movimentacoesError}
-              isRevalidating={parceiroCache.movimentacoesIsRevalidating}
-              onRetry={() => parceiroCache.invalidateTab("movimentacoes")}
             />
           </TabsContent>
 
-          {/* Aba Bookmakers */}
+          {/* Aba Bookmakers - fetches its own data */}
           <TabsContent value="bookmakers" className="flex-1 mt-0">
             <ParceiroBookmakersTab
               parceiroId={parceiroId}
@@ -559,11 +528,6 @@ export function ParceiroDetalhesPanel({
               diasRestantes={diasRestantes}
               onCreateVinculo={onCreateVinculo}
               onDataChange={handleBookmakersDataChange}
-              data={parceiroCache.bookmakersData}
-              loading={parceiroCache.bookmakersLoading}
-              error={parceiroCache.bookmakersError}
-              isRevalidating={parceiroCache.bookmakersIsRevalidating}
-              onRetry={() => parceiroCache.invalidateTab("bookmakers")}
             />
           </TabsContent>
         </Tabs>
