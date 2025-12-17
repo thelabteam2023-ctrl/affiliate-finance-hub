@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, ShieldCheck, AlertTriangle, LayoutGrid, List, Info } from "lucide-react";
+import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, ShieldCheck, AlertTriangle, LayoutGrid, List, Info, Globe, Lock, Users, Settings2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +20,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import BookmakerCatalogoDialog from "./BookmakerCatalogoDialog";
+import BookmakerAccessDialog from "./BookmakerAccessDialog";
+import { useRole } from "@/hooks/useRole";
 
 interface BookmakerCatalogo {
   id: string;
@@ -34,6 +36,7 @@ interface BookmakerCatalogo {
   bonus_simples_json: any;
   bonus_multiplos_json: any;
   observacoes: string | null;
+  visibility: string | null;
 }
 
 export default function CatalogoBookmakers() {
@@ -54,7 +57,11 @@ export default function CatalogoBookmakers() {
   const [viewType, setViewType] = useState<"cards" | "list">("cards");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [bookmakerToDelete, setBookmakerToDelete] = useState<string | null>(null);
+  const [accessDialogOpen, setAccessDialogOpen] = useState(false);
+  const [selectedAccessBookmaker, setSelectedAccessBookmaker] = useState<BookmakerCatalogo | null>(null);
   const { toast } = useToast();
+  const { isOwnerOrAdmin, isMaster } = useRole();
+  const canManageAccess = isOwnerOrAdmin || isMaster;
 
   useEffect(() => {
     fetchBookmakers();
@@ -151,6 +158,24 @@ export default function CatalogoBookmakers() {
       "DEPOSITO": "Depósito",
     };
     return bases[rolloverBase] || rolloverBase;
+  };
+
+  const getVisibilityInfo = (visibility: string | null) => {
+    switch (visibility) {
+      case "GLOBAL_REGULATED":
+        return { icon: Globe, label: "Global", color: "text-emerald-500", bgColor: "bg-emerald-500/10" };
+      case "GLOBAL_RESTRICTED":
+        return { icon: Users, label: "Restrita", color: "text-amber-500", bgColor: "bg-amber-500/10" };
+      case "WORKSPACE_PRIVATE":
+        return { icon: Lock, label: "Privada", color: "text-muted-foreground", bgColor: "bg-muted" };
+      default:
+        return { icon: Globe, label: "Global", color: "text-emerald-500", bgColor: "bg-emerald-500/10" };
+    }
+  };
+
+  const handleAccessClick = (bookmaker: BookmakerCatalogo) => {
+    setSelectedAccessBookmaker(bookmaker);
+    setAccessDialogOpen(true);
   };
 
   const clearAllFilters = () => {
@@ -543,7 +568,40 @@ export default function CatalogoBookmakers() {
                         </div>
                       )}
 
+                      {/* Visibility Badge */}
+                      {(() => {
+                        const visInfo = getVisibilityInfo(bookmaker.visibility);
+                        const VisIcon = visInfo.icon;
+                        return (
+                          <div className="flex items-center gap-1.5 pt-2 border-t">
+                            <Badge variant="secondary" className={`text-[10px] ${visInfo.bgColor} ${visInfo.color} border-0`}>
+                              <VisIcon className="h-3 w-3 mr-1" />
+                              {visInfo.label}
+                            </Badge>
+                          </div>
+                        );
+                      })()}
+
                       <div className="flex gap-2 pt-2">
+                        {canManageAccess && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="px-2"
+                                  onClick={() => handleAccessClick(bookmaker)}
+                                >
+                                  <Settings2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Gerenciar Acesso</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -677,6 +735,17 @@ export default function CatalogoBookmakers() {
                                 </TooltipProvider>
                               )}
                             </div>
+                            {/* Visibility Badge in List View */}
+                            {(() => {
+                              const visInfo = getVisibilityInfo(bookmaker.visibility);
+                              const VisIcon = visInfo.icon;
+                              return (
+                                <Badge variant="secondary" className={`text-[10px] ${visInfo.bgColor} ${visInfo.color} border-0`}>
+                                  <VisIcon className="h-3 w-3 mr-1" />
+                                  {visInfo.label}
+                                </Badge>
+                              );
+                            })()}
                             <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">Verificação:</span>
@@ -719,6 +788,24 @@ export default function CatalogoBookmakers() {
                           </div>
                         </div>
                         <div className="flex gap-2">
+                          {canManageAccess && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleAccessClick(bookmaker)}
+                                  >
+                                    <Settings2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Gerenciar Acesso</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -855,6 +942,14 @@ export default function CatalogoBookmakers() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog de Gerenciar Acesso */}
+      <BookmakerAccessDialog
+        open={accessDialogOpen}
+        onOpenChange={setAccessDialogOpen}
+        bookmaker={selectedAccessBookmaker}
+        onSaved={fetchBookmakers}
+      />
     </div>
   );
 }
