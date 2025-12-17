@@ -126,7 +126,8 @@ export function ParceiroDetalhesPanel({
     );
   }
 
-  if (loading) {
+  // Show loading skeleton when loading AND no data
+  if (loading && !data) {
     return (
       <div className="p-4 space-y-3">
         <div className="grid gap-2 grid-cols-2 lg:grid-cols-4">
@@ -139,11 +140,26 @@ export function ParceiroDetalhesPanel({
     );
   }
 
-  if (error || !data) {
+  // Show error only when there's an actual error AND no data to display
+  if (error && !data) {
     return (
       <div className="flex items-center justify-center h-full text-destructive text-sm">
         <AlertCircle className="h-4 w-4 mr-2" />
         Erro ao carregar dados
+      </div>
+    );
+  }
+
+  // If we have no data but also no loading/error, show skeleton (transient state)
+  if (!data) {
+    return (
+      <div className="p-4 space-y-3">
+        <div className="grid gap-2 grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-14" />
+          ))}
+        </div>
+        <Skeleton className="h-[300px]" />
       </div>
     );
   }

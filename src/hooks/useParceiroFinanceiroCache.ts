@@ -598,18 +598,58 @@ export function useParceiroFinanceiroCache() {
     }
 
     setCurrentParceiroId(parceiroId);
-    setResumoData(null);
-    setMovimentacoesData(null);
-    setBookmakersData(null);
-    
+
+    if (!parceiroId) {
+      setResumoData(null);
+      setMovimentacoesData(null);
+      setBookmakersData(null);
+      setTabStates({
+        resumo: { loading: false, error: null, isRevalidating: false },
+        movimentacoes: { loading: false, error: null, isRevalidating: false },
+        bookmakers: { loading: false, error: null, isRevalidating: false },
+      });
+      return;
+    }
+
+    // Helper to check cache and get data
+    const getTabCache = <T>(tab: TabKey): { data: T | null; hasValidCache: boolean } => {
+      const partnerCache = cacheRef.current.get(parceiroId);
+      const tabCache = partnerCache?.[tab] as TabCacheEntry<T> | undefined;
+      if (tabCache && isCacheValid(tabCache)) {
+        return { data: tabCache.data, hasValidCache: true };
+      }
+      return { data: null, hasValidCache: false };
+    };
+
+    const resumoCache = getTabCache<ParceiroFinanceiroConsolidado>("resumo");
+    const movCache = getTabCache<MovimentacoesData>("movimentacoes");
+    const bmCache = getTabCache<BookmakersData>("bookmakers");
+
+    // Set states FIRST: loading=true if no cache, isRevalidating=true if has cache
     setTabStates({
-      resumo: { loading: false, error: null, isRevalidating: false },
-      movimentacoes: { loading: false, error: null, isRevalidating: false },
-      bookmakers: { loading: false, error: null, isRevalidating: false },
+      resumo: { 
+        loading: !resumoCache.hasValidCache, 
+        error: null, 
+        isRevalidating: resumoCache.hasValidCache 
+      },
+      movimentacoes: { 
+        loading: !movCache.hasValidCache, 
+        error: null, 
+        isRevalidating: movCache.hasValidCache 
+      },
+      bookmakers: { 
+        loading: !bmCache.hasValidCache, 
+        error: null, 
+        isRevalidating: bmCache.hasValidCache 
+      },
     });
 
-    if (!parceiroId) return;
+    // Set cached data immediately (or null if no cache - but loading is already true)
+    setResumoData(resumoCache.data);
+    setMovimentacoesData(movCache.data);
+    setBookmakersData(bmCache.data);
 
+    // Load/revalidate the active tab
     if (activeTab === "resumo") loadResumo(parceiroId);
     else if (activeTab === "movimentacoes") loadMovimentacoes(parceiroId);
     else loadBookmakers(parceiroId);
@@ -619,6 +659,19 @@ export function useParceiroFinanceiroCache() {
     setActiveTab(tab);
     
     if (!currentParceiroId) return;
+
+    // Check cache for instant data display
+    const partnerCache = cacheRef.current.get(currentParceiroId);
+    const tabCache = partnerCache?.[tab];
+    
+    if (tabCache && isCacheValid(tabCache)) {
+      // Show cached data immediately
+      if (tab === "resumo") setResumoData(tabCache.data as ParceiroFinanceiroConsolidado);
+      else if (tab === "movimentacoes") setMovimentacoesData(tabCache.data as MovimentacoesData);
+      else setBookmakersData(tabCache.data as BookmakersData);
+    }
+
+    // Load data (will use cache if valid via loadTabData, or fetch if needed)
     if (tab === "resumo") loadResumo(currentParceiroId);
     else if (tab === "movimentacoes") loadMovimentacoes(currentParceiroId);
     else loadBookmakers(currentParceiroId);
