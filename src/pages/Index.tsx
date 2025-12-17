@@ -139,7 +139,7 @@ const Index = () => {
           />
           <PricingCard
             name="Pro"
-            price="R$ 167"
+            price="R$ 197"
             period="/mês"
             description="Para operações sérias"
             maxPartners="Até 20 parceiros ativos"
