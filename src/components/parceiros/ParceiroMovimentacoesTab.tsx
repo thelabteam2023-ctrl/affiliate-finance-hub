@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight, AlertCircle, RefreshCw } from "lucide-react";
@@ -11,6 +12,7 @@ interface ParceiroMovimentacoesTabProps {
   loading: boolean;
   error: string | null;
   isRevalidating: boolean;
+  onRetry?: () => void;
 }
 
 export function ParceiroMovimentacoesTab({ 
@@ -19,7 +21,8 @@ export function ParceiroMovimentacoesTab({
   data,
   loading,
   error,
-  isRevalidating
+  isRevalidating,
+  onRetry,
 }: ParceiroMovimentacoesTabProps) {
   
   const formatCurrency = (value: number) => {
@@ -124,9 +127,16 @@ export function ParceiroMovimentacoesTab({
 
   if (error && !data) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-destructive">
-        <AlertCircle className="h-8 w-8 mb-2 opacity-50" />
-        <p className="text-sm">Erro ao carregar movimentações</p>
+      <div className="flex flex-col items-center justify-center py-12 text-destructive gap-3">
+        <div className="flex flex-col items-center">
+          <AlertCircle className="h-8 w-8 mb-2 opacity-50" />
+          <p className="text-sm">Erro ao carregar movimentações</p>
+        </div>
+        {onRetry && (
+          <Button variant="outline" size="sm" onClick={onRetry}>
+            Tentar novamente
+          </Button>
+        )}
       </div>
     );
   }

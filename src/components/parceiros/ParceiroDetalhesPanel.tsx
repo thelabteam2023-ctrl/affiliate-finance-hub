@@ -20,21 +20,22 @@ interface ParceiroCache {
   resumoLoading: boolean;
   resumoError: string | null;
   resumoIsRevalidating: boolean;
-  
+
   // Movimentacoes
   movimentacoesData: MovimentacoesData | null;
   movimentacoesLoading: boolean;
   movimentacoesError: string | null;
   movimentacoesIsRevalidating: boolean;
-  
+
   // Bookmakers
   bookmakersData: BookmakersData | null;
   bookmakersLoading: boolean;
   bookmakersError: string | null;
   bookmakersIsRevalidating: boolean;
-  
+
   // Actions
   changeTab: (tab: TabKey) => void;
+  invalidateTab: (tab: TabKey) => void;
   invalidateCache: (parceiroId: string, tabs?: TabKey[]) => void;
   refreshCurrent: () => void;
 }
@@ -143,9 +144,14 @@ export function ParceiroDetalhesPanel({
   // Show error only when there's an actual error AND no data to display
   if (error && !data) {
     return (
-      <div className="flex items-center justify-center h-full text-destructive text-sm">
-        <AlertCircle className="h-4 w-4 mr-2" />
-        Erro ao carregar dados
+      <div className="flex flex-col items-center justify-center h-full text-destructive text-sm gap-3">
+        <div className="flex items-center">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          Erro ao carregar dados
+        </div>
+        <Button variant="outline" size="sm" onClick={() => parceiroCache.invalidateTab("resumo")}>
+          Tentar novamente
+        </Button>
       </div>
     );
   }
@@ -541,6 +547,7 @@ export function ParceiroDetalhesPanel({
               loading={parceiroCache.movimentacoesLoading}
               error={parceiroCache.movimentacoesError}
               isRevalidating={parceiroCache.movimentacoesIsRevalidating}
+              onRetry={() => parceiroCache.invalidateTab("movimentacoes")}
             />
           </TabsContent>
 
@@ -556,6 +563,7 @@ export function ParceiroDetalhesPanel({
               loading={parceiroCache.bookmakersLoading}
               error={parceiroCache.bookmakersError}
               isRevalidating={parceiroCache.bookmakersIsRevalidating}
+              onRetry={() => parceiroCache.invalidateTab("bookmakers")}
             />
           </TabsContent>
         </Tabs>
