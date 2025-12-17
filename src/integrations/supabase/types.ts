@@ -20,6 +20,9 @@ export type Database = {
           back_comissao: number | null
           back_em_exchange: boolean | null
           bookmaker_id: string
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           created_at: string
           data_aposta: string
           esporte: string
@@ -54,6 +57,9 @@ export type Database = {
           back_comissao?: number | null
           back_em_exchange?: boolean | null
           bookmaker_id: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string
           data_aposta?: string
           esporte: string
@@ -88,6 +94,9 @@ export type Database = {
           back_comissao?: number | null
           back_em_exchange?: boolean | null
           bookmaker_id?: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string
           data_aposta?: string
           esporte?: string
@@ -186,6 +195,9 @@ export type Database = {
       apostas_multiplas: {
         Row: {
           bookmaker_id: string
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           created_at: string
           data_aposta: string
           gerou_freebet: boolean | null
@@ -208,6 +220,9 @@ export type Database = {
         }
         Insert: {
           bookmaker_id: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string
           data_aposta?: string
           gerou_freebet?: boolean | null
@@ -230,6 +245,9 @@ export type Database = {
         }
         Update: {
           bookmaker_id?: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string
           data_aposta?: string
           gerou_freebet?: boolean | null
@@ -302,6 +320,62 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: Database["public"]["Enums"]["audit_action"]
+          actor_user_id: string
+          after_data: Json | null
+          before_data: Json | null
+          created_at: string
+          entity_id: string | null
+          entity_name: string | null
+          entity_type: string
+          id: string
+          ip_address: unknown
+          metadata: Json | null
+          user_agent: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["audit_action"]
+          actor_user_id: string
+          after_data?: Json | null
+          before_data?: Json | null
+          created_at?: string
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+          user_agent?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["audit_action"]
+          actor_user_id?: string
+          after_data?: Json | null
+          before_data?: Json | null
+          created_at?: string
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+          user_agent?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bancos: {
         Row: {
           codigo: string
@@ -332,6 +406,45 @@ export type Database = {
         }
         Relationships: []
       }
+      bookmaker_workspace_access: {
+        Row: {
+          bookmaker_catalogo_id: string
+          granted_at: string
+          granted_by: string | null
+          id: string
+          workspace_id: string
+        }
+        Insert: {
+          bookmaker_catalogo_id: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          workspace_id: string
+        }
+        Update: {
+          bookmaker_catalogo_id?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmaker_workspace_access_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_workspace_access_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookmakers: {
         Row: {
           bookmaker_catalogo_id: string | null
@@ -352,6 +465,7 @@ export type Database = {
           updated_at: string
           url: string | null
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           bookmaker_catalogo_id?: string | null
@@ -372,6 +486,7 @@ export type Database = {
           updated_at?: string
           url?: string | null
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           bookmaker_catalogo_id?: string | null
@@ -392,6 +507,7 @@ export type Database = {
           updated_at?: string
           url?: string | null
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -457,6 +573,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bookmakers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
         ]
       }
       bookmakers_catalogo: {
@@ -477,6 +600,7 @@ export type Database = {
           updated_at: string
           user_id: string | null
           verificacao: string
+          visibility: Database["public"]["Enums"]["bookmaker_visibility"] | null
         }
         Insert: {
           bonus_enabled?: boolean
@@ -495,6 +619,9 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           verificacao?: string
+          visibility?:
+            | Database["public"]["Enums"]["bookmaker_visibility"]
+            | null
         }
         Update: {
           bonus_enabled?: boolean
@@ -513,6 +640,9 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           verificacao?: string
+          visibility?:
+            | Database["public"]["Enums"]["bookmaker_visibility"]
+            | null
         }
         Relationships: []
       }
@@ -546,6 +676,7 @@ export type Database = {
           user_id: string
           valor: number
           valor_usd: number | null
+          workspace_id: string | null
         }
         Insert: {
           coin?: string | null
@@ -576,6 +707,7 @@ export type Database = {
           user_id: string
           valor: number
           valor_usd?: number | null
+          workspace_id?: string | null
         }
         Update: {
           coin?: string | null
@@ -606,6 +738,7 @@ export type Database = {
           user_id?: string
           valor?: number
           valor_usd?: number | null
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -811,6 +944,13 @@ export type Database = {
             referencedRelation: "wallets_crypto"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cash_ledger_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
         ]
       }
       contas_bancarias: {
@@ -915,6 +1055,7 @@ export type Database = {
           updated_at: string
           user_id: string
           valor: number
+          workspace_id: string | null
         }
         Insert: {
           categoria: string
@@ -936,6 +1077,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           valor: number
+          workspace_id?: string | null
         }
         Update: {
           categoria?: string
@@ -957,6 +1099,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valor?: number
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -1013,6 +1156,13 @@ export type Database = {
             columns: ["origem_wallet_id"]
             isOneToOne: false
             referencedRelation: "wallets_crypto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despesas_administrativas_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -1145,6 +1295,7 @@ export type Database = {
           tipo_documento: string | null
           updated_at: string | null
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -1158,6 +1309,7 @@ export type Database = {
           tipo_documento?: string | null
           updated_at?: string | null
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -1171,8 +1323,17 @@ export type Database = {
           tipo_documento?: string | null
           updated_at?: string | null
           user_id?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fornecedores_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       freebets_recebidas: {
         Row: {
@@ -1440,6 +1601,7 @@ export type Database = {
           telefone: string | null
           updated_at: string | null
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           cpf: string
@@ -1452,6 +1614,7 @@ export type Database = {
           telefone?: string | null
           updated_at?: string | null
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           cpf?: string
@@ -1464,8 +1627,17 @@ export type Database = {
           telefone?: string | null
           updated_at?: string | null
           user_id?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "indicadores_referral_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       investidor_deals: {
         Row: {
@@ -1537,6 +1709,7 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           cpf: string
@@ -1547,6 +1720,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           cpf?: string
@@ -1557,8 +1731,17 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "investidores_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       matched_betting_pernas: {
         Row: {
@@ -2107,6 +2290,7 @@ export type Database = {
       }
       operadores: {
         Row: {
+          auth_user_id: string | null
           cpf: string
           created_at: string
           data_admissao: string
@@ -2121,8 +2305,10 @@ export type Database = {
           tipo_contrato: string
           updated_at: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
+          auth_user_id?: string | null
           cpf: string
           created_at?: string
           data_admissao?: string
@@ -2137,8 +2323,10 @@ export type Database = {
           tipo_contrato?: string
           updated_at?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
+          auth_user_id?: string | null
           cpf?: string
           created_at?: string
           data_admissao?: string
@@ -2153,8 +2341,17 @@ export type Database = {
           tipo_contrato?: string
           updated_at?: string
           user_id?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "operadores_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pagamentos_operador: {
         Row: {
@@ -2507,6 +2704,7 @@ export type Database = {
           telefone: string | null
           updated_at: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           cep?: string | null
@@ -2523,6 +2721,7 @@ export type Database = {
           telefone?: string | null
           updated_at?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           cep?: string | null
@@ -2539,6 +2738,7 @@ export type Database = {
           telefone?: string | null
           updated_at?: string
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -2546,6 +2746,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parceiros_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -2574,6 +2781,7 @@ export type Database = {
           valor_fornecedor: number | null
           valor_indicador: number | null
           valor_parceiro: number | null
+          workspace_id: string | null
         }
         Insert: {
           comissao_paga?: boolean | null
@@ -2598,6 +2806,7 @@ export type Database = {
           valor_fornecedor?: number | null
           valor_indicador?: number | null
           valor_parceiro?: number | null
+          workspace_id?: string | null
         }
         Update: {
           comissao_paga?: boolean | null
@@ -2622,6 +2831,7 @@ export type Database = {
           valor_fornecedor?: number | null
           valor_indicador?: number | null
           valor_parceiro?: number | null
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -2665,6 +2875,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
             referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parcerias_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2794,6 +3011,36 @@ export type Database = {
             referencedColumns: ["projeto_id"]
           },
         ]
+      }
+      permissions: {
+        Row: {
+          action: string
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          module: string
+          scope: string
+        }
+        Insert: {
+          action: string
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module: string
+          scope?: string
+        }
+        Update: {
+          action?: string
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module?: string
+          scope?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -3248,6 +3495,7 @@ export type Database = {
       }
       projetos: {
         Row: {
+          archived_at: string | null
           base_calculo_investidor: string | null
           conciliado: boolean
           created_at: string
@@ -3255,6 +3503,7 @@ export type Database = {
           data_fim_real: string | null
           data_inicio: string | null
           descricao: string | null
+          first_operation_at: string | null
           id: string
           investidor_id: string | null
           modelo_absorcao_taxas: string
@@ -3267,8 +3516,10 @@ export type Database = {
           tipo_projeto: string | null
           updated_at: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
+          archived_at?: string | null
           base_calculo_investidor?: string | null
           conciliado?: boolean
           created_at?: string
@@ -3276,6 +3527,7 @@ export type Database = {
           data_fim_real?: string | null
           data_inicio?: string | null
           descricao?: string | null
+          first_operation_at?: string | null
           id?: string
           investidor_id?: string | null
           modelo_absorcao_taxas?: string
@@ -3288,8 +3540,10 @@ export type Database = {
           tipo_projeto?: string | null
           updated_at?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
+          archived_at?: string | null
           base_calculo_investidor?: string | null
           conciliado?: boolean
           created_at?: string
@@ -3297,6 +3551,7 @@ export type Database = {
           data_fim_real?: string | null
           data_inicio?: string | null
           descricao?: string | null
+          first_operation_at?: string | null
           id?: string
           investidor_id?: string | null
           modelo_absorcao_taxas?: string
@@ -3309,6 +3564,7 @@ export type Database = {
           tipo_projeto?: string | null
           updated_at?: string
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -3324,6 +3580,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_roi_investidores"
             referencedColumns: ["investidor_id"]
+          },
+          {
+            foreignKeyName: "projetos_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3454,6 +3717,27 @@ export type Database = {
           is_system?: boolean | null
           nome?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      role_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          permission_code: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission_code: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission_code?: string
+          role?: Database["public"]["Enums"]["app_role"]
         }
         Relationships: []
       }
@@ -3613,6 +3897,50 @@ export type Database = {
           },
         ]
       }
+      user_permission_overrides: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          granted: boolean
+          granted_by: string | null
+          id: string
+          permission_code: string
+          reason: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          granted?: boolean
+          granted_by?: string | null
+          id?: string
+          permission_code: string
+          reason?: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          granted?: boolean
+          granted_by?: string | null
+          id?: string
+          permission_code?: string
+          reason?: string | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permission_overrides_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -3708,6 +4036,86 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      workspace_members: {
+        Row: {
+          created_at: string
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          is_active: boolean
+          joined_at: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean
+          joined_at?: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean
+          joined_at?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          created_at: string
+          id: string
+          max_active_partners: number
+          name: string
+          plan: string
+          settings: Json | null
+          slug: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_active_partners?: number
+          name: string
+          plan?: string
+          settings?: Json | null
+          slug?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_active_partners?: number
+          name?: string
+          plan?: string
+          settings?: Json | null
+          slug?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {
@@ -4800,7 +5208,40 @@ export type Database = {
         }
         Returns: string
       }
+      create_audit_log: {
+        Args: {
+          _action: Database["public"]["Enums"]["audit_action"]
+          _after_data?: Json
+          _before_data?: Json
+          _entity_id?: string
+          _entity_name?: string
+          _entity_type: string
+          _metadata?: Json
+        }
+        Returns: string
+      }
+      get_user_role: {
+        Args: { _user_id: string; _workspace_id?: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      get_user_workspace: { Args: { _user_id: string }; Returns: string }
+      has_permission: {
+        Args: {
+          _permission_code: string
+          _user_id: string
+          _workspace_id?: string
+        }
+        Returns: boolean
+      }
       is_master: { Args: { _user_id: string }; Returns: boolean }
+      is_owner_or_admin: {
+        Args: { _user_id: string; _workspace_id?: string }
+        Returns: boolean
+      }
+      operator_has_project_access: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       update_parcerias_em_encerramento: { Args: never; Returns: undefined }
     }
     Enums: {
