@@ -4804,7 +4804,26 @@ export type Database = {
       update_parcerias_em_encerramento: { Args: never; Returns: undefined }
     }
     Enums: {
-      app_role: "master" | "user"
+      app_role: "master" | "user" | "finance" | "operator" | "viewer" | "owner"
+      audit_action:
+        | "CREATE"
+        | "UPDATE"
+        | "DELETE"
+        | "ARCHIVE"
+        | "CANCEL"
+        | "CONFIRM"
+        | "APPROVE"
+        | "REJECT"
+        | "LINK"
+        | "UNLINK"
+        | "LOGIN"
+        | "LOGOUT"
+        | "PERMISSION_CHANGE"
+        | "ROLE_CHANGE"
+      bookmaker_visibility:
+        | "GLOBAL_REGULATED"
+        | "GLOBAL_RESTRICTED"
+        | "WORKSPACE_PRIVATE"
       indicador_status: "ATIVO" | "TOP_VIP" | "EM_OBSERVACAO" | "INATIVO"
       parceria_status: "ATIVA" | "EM_ENCERRAMENTO" | "ENCERRADA" | "RENOVADA"
     }
@@ -4934,7 +4953,28 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["master", "user"],
+      app_role: ["master", "user", "finance", "operator", "viewer", "owner"],
+      audit_action: [
+        "CREATE",
+        "UPDATE",
+        "DELETE",
+        "ARCHIVE",
+        "CANCEL",
+        "CONFIRM",
+        "APPROVE",
+        "REJECT",
+        "LINK",
+        "UNLINK",
+        "LOGIN",
+        "LOGOUT",
+        "PERMISSION_CHANGE",
+        "ROLE_CHANGE",
+      ],
+      bookmaker_visibility: [
+        "GLOBAL_REGULATED",
+        "GLOBAL_RESTRICTED",
+        "WORKSPACE_PRIVATE",
+      ],
       indicador_status: ["ATIVO", "TOP_VIP", "EM_OBSERVACAO", "INATIVO"],
       parceria_status: ["ATIVA", "EM_ENCERRAMENTO", "ENCERRADA", "RENOVADA"],
     },
