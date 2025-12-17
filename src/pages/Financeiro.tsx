@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatePicker } from "@/components/ui/date-picker";
+import { PageHeader } from "@/components/PageHeader";
 import {
   Loader2,
   BarChart3,
@@ -981,12 +982,12 @@ export default function Financeiro() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard Financeiro</h1>
-        <p className="text-muted-foreground">
-          Visão financeira estratégica: Liquidez, Custos e Sustentabilidade
-        </p>
-      </div>
+      <PageHeader
+        title="Dashboard Financeiro"
+        description="Visão financeira estratégica: Liquidez, Custos e Sustentabilidade"
+        pagePath="/financeiro"
+        pageIcon="PieChart"
+      />
 
       {/* Filtros de Período - Compacto */}
       <div className="flex items-center gap-2 flex-wrap">

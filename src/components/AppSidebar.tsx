@@ -7,7 +7,6 @@ import { useRole } from "@/hooks/useRole";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { FavoriteButton } from "@/components/FavoriteButton";
 
 import {
   Sidebar,
@@ -102,7 +101,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { user, signOut, role } = useAuth();
   const { canManageWorkspace } = useRole();
-  const { favorites, isFavorite } = useFavorites();
+  const { favorites } = useFavorites();
   const currentPath = location.pathname;
   
   const isCollapsed = state === "collapsed";
@@ -135,7 +134,7 @@ export function AppSidebar() {
     return menuItem ? canSeeItem(menuItem) : false;
   });
 
-  const renderMenuItem = (item: MenuItem, showFavoriteButton: boolean = true) => {
+  const renderMenuItem = (item: MenuItem) => {
     if (!canSeeItem(item)) return null;
 
     return (
@@ -159,28 +158,17 @@ export function AppSidebar() {
             </TooltipContent>
           </Tooltip>
         ) : (
-          <div className="flex items-center group">
-            <SidebarMenuButton asChild isActive={isActive(item.url)} className="flex-1">
-              <NavLink 
-                to={item.url} 
-                end 
-                className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-accent/50"
-                activeClassName="bg-primary/10 text-primary font-medium"
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                <span className="text-sm">{item.title}</span>
-              </NavLink>
-            </SidebarMenuButton>
-            {showFavoriteButton && (
-              <FavoriteButton
-                pagePath={item.url}
-                pageTitle={item.title}
-                pageIcon={item.iconName}
-                size="sm"
-                className="opacity-0 group-hover:opacity-100 transition-opacity mr-1"
-              />
-            )}
-          </div>
+          <SidebarMenuButton asChild isActive={isActive(item.url)}>
+            <NavLink 
+              to={item.url} 
+              end 
+              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-accent/50"
+              activeClassName="bg-primary/10 text-primary font-medium"
+            >
+              <item.icon className="h-4 w-4 shrink-0" />
+              <span className="text-sm">{item.title}</span>
+            </NavLink>
+          </SidebarMenuButton>
         )}
       </SidebarMenuItem>
     );
@@ -210,26 +198,17 @@ export function AppSidebar() {
             </TooltipContent>
           </Tooltip>
         ) : (
-          <div className="flex items-center group">
-            <SidebarMenuButton asChild isActive={isActive(favorite.page_path)} className="flex-1">
-              <NavLink 
-                to={favorite.page_path} 
-                end 
-                className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-accent/50"
-                activeClassName="bg-primary/10 text-primary font-medium"
-              >
-                <IconComponent className="h-4 w-4 shrink-0" />
-                <span className="text-sm">{favorite.page_title}</span>
-              </NavLink>
-            </SidebarMenuButton>
-            <FavoriteButton
-              pagePath={favorite.page_path}
-              pageTitle={favorite.page_title}
-              pageIcon={favorite.page_icon}
-              size="sm"
-              className="opacity-0 group-hover:opacity-100 transition-opacity mr-1"
-            />
-          </div>
+          <SidebarMenuButton asChild isActive={isActive(favorite.page_path)}>
+            <NavLink 
+              to={favorite.page_path} 
+              end 
+              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-accent/50"
+              activeClassName="bg-primary/10 text-primary font-medium"
+            >
+              <IconComponent className="h-4 w-4 shrink-0" />
+              <span className="text-sm">{favorite.page_title}</span>
+            </NavLink>
+          </SidebarMenuButton>
         )}
       </SidebarMenuItem>
     );
@@ -280,12 +259,11 @@ export function AppSidebar() {
           <SidebarGroup>
             <SidebarGroupLabel 
               className={`
-                text-[10px] font-semibold tracking-widest text-yellow-500/80 
-                uppercase mb-2 px-3 flex items-center gap-1.5
+                text-[10px] font-semibold tracking-widest text-muted-foreground/70 
+                uppercase mb-2 px-3
                 ${isCollapsed ? 'sr-only' : ''}
               `}
             >
-              <Star className="h-3 w-3 fill-current" />
               ATALHOS
             </SidebarGroupLabel>
             <SidebarGroupContent>

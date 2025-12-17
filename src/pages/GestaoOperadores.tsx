@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/PageHeader";
 import { 
   Plus, 
   Search, 
@@ -129,18 +130,18 @@ export default function GestaoOperadores() {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Operadores</h2>
-          <p className="text-muted-foreground">
-            Gerencie seus operadores e acompanhe o desempenho
-          </p>
-        </div>
-        <Button onClick={() => handleOpenDialog(null, "create")}>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Operador
-        </Button>
-      </div>
+      <PageHeader
+        title="Operadores"
+        description="Gerencie seus operadores e acompanhe o desempenho"
+        pagePath="/operadores"
+        pageIcon="Briefcase"
+        actions={
+          <Button onClick={() => handleOpenDialog(null, "create")}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Operador
+          </Button>
+        }
+      />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>

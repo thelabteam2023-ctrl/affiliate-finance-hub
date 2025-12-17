@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/PageHeader";
 import { DashboardTab } from "@/components/programa-indicacao/DashboardTab";
 import { IndicadoresTab } from "@/components/programa-indicacao/IndicadoresTab";
 import { FornecedoresTab } from "@/components/programa-indicacao/FornecedoresTab";
@@ -38,12 +39,12 @@ export default function ProgramaIndicacao() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Captação de Parceiros</h1>
-        <p className="text-muted-foreground">
-          Gerencie indicadores, fornecedores e parcerias de aquisição
-        </p>
-      </div>
+      <PageHeader
+        title="Captação de Parceiros"
+        description="Gerencie indicadores, fornecedores e parcerias de aquisição"
+        pagePath="/programa-indicacao"
+        pageIcon="UserPlus"
+      />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
