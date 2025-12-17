@@ -1,4 +1,4 @@
-import { ArrowRight, TrendingUp, Users, Wallet, BarChart3, FileSpreadsheet, Zap, UserCog, Check, X } from "lucide-react";
+import { ArrowRight, Users, FolderKanban, Wallet, Shield, BarChart3, Building2, Check, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,40 +15,27 @@ const Index = () => {
         
         <div className="container relative mx-auto px-4 py-20 sm:py-32">
           <div className="mx-auto max-w-4xl text-center">
-            {/* Badge */}
-            <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-4 py-2 backdrop-blur-sm">
-              <Zap className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-muted-foreground">
-                ERP para Operações de Apostas Esportivas
-              </span>
-            </div>
-
             {/* Heading */}
-            <h1 className="mb-6 text-5xl font-bold leading-tight tracking-tight sm:text-6xl lg:text-7xl">
-              Gestão Profissional de{" "}
-              <span className="text-gradient">Operações & Apostas</span>
+            <h1 className="mb-6 text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+              Controle profissional para quem{" "}
+              <span className="text-gradient">leva apostas a sério</span>
             </h1>
 
-            <p className="mb-10 text-lg text-muted-foreground sm:text-xl">
-              Controle total sobre parceiros, fluxo de caixa multi-moeda e análise de ROI.
+            <p className="mb-10 text-lg text-muted-foreground sm:text-xl max-w-3xl mx-auto">
+              Organize parceiros, projetos, operadores, apostas e financeiro em um único sistema.
               <br className="hidden sm:block" />
-              Do apostador organizado ao escritório profissional.
+              Sem planilhas, sem improviso, com controle real e visão clara do resultado.
             </p>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button
-                size="lg"
-                className="group h-12 gap-2 px-8 shadow-glow"
-                onClick={() => navigate("/auth")}
-              >
-                Acessar Sistema
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-              <Button size="lg" variant="outline" className="h-12 px-8">
-                Ver Demonstração
-              </Button>
-            </div>
+            {/* CTA único */}
+            <Button
+              size="lg"
+              className="group h-14 gap-2 px-10 text-base shadow-glow"
+              onClick={() => navigate("/auth")}
+            >
+              Criar conta gratuita
+              <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+            </Button>
           </div>
         </div>
       </section>
@@ -57,43 +44,49 @@ const Index = () => {
       <section className="container mx-auto px-4 py-20">
         <div className="mb-16 text-center">
           <h2 className="mb-4 text-3xl font-bold sm:text-4xl">
-            Tudo que você precisa em um só lugar
+            Um sistema pensado para operações reais
           </h2>
           <p className="text-lg text-muted-foreground">
-            Ferramentas profissionais para escalar suas operações
+            Cada funcionalidade resolve um problema concreto do dia a dia
           </p>
         </div>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <FeatureCard
             icon={<Users className="h-6 w-6" />}
-            title="Gestão de Parcerias"
-            description="Cadastro completo de afiliados com CPF, contas bancárias, wallets e contratos personalizados."
+            title="Gestão real de parceiros e contas"
+            description="Centralize parceiros, casas vinculadas, saldos e movimentações, com histórico completo e visão clara de cada relação operacional."
+            color="emerald"
+          />
+          <FeatureCard
+            icon={<FolderKanban className="h-6 w-6" />}
+            title="Projetos, estratégias e execução organizada"
+            description="Separe operações por projeto, vincule operadores e casas, acompanhe apostas, ciclos e desempenho de forma estruturada."
+            color="blue"
           />
           <FeatureCard
             icon={<Wallet className="h-6 w-6" />}
-            title="Controle Financeiro"
-            description="Acompanhe entradas, saídas e lucros em tempo real com múltiplas moedas (BRL, USD, EUR, crypto)."
+            title="Controle total do capital em uso"
+            description="Visualize entradas, saídas, transferências, caixas, bancos, wallets e saldos em bookmakers, tudo em tempo real e multi-moeda."
+            color="violet"
+          />
+          <FeatureCard
+            icon={<Shield className="h-6 w-6" />}
+            title="Delegue sem perder controle"
+            description="Defina exatamente quem pode ver e executar cada ação, com permissões customizadas e auditoria de operações sensíveis."
+            color="amber"
           />
           <FeatureCard
             icon={<BarChart3 className="h-6 w-6" />}
-            title="Dashboard Inteligente"
-            description="Visualize métricas e KPIs importantes com gráficos e relatórios detalhados para tomar decisões baseadas em dados."
+            title="Indicadores que mostram a verdade"
+            description="Acompanhe lucro, exposição, custos, desempenho por projeto e eficiência operacional com dados confiáveis."
+            color="rose"
           />
           <FeatureCard
-            icon={<UserCog className="h-6 w-6" />}
-            title="Delegue com Segurança"
-            description="Cresça seu time sem medo: dê acesso controlado para cada função e evite erros humanos com permissões inteligentes."
-          />
-          <FeatureCard
-            icon={<TrendingUp className="h-6 w-6" />}
-            title="Estratégias de Apostas"
-            description="Registro de arbitragem, surebet e cálculo automático de proteção com métricas em tempo real."
-          />
-          <FeatureCard
-            icon={<FileSpreadsheet className="h-6 w-6" />}
-            title="Adeus às Planilhas"
-            description="Automatize fluxos que hoje você faz manualmente. Menos erro humano, mais tempo para estratégia e escala."
+            icon={<Building2 className="h-6 w-6" />}
+            title="Sistema no lugar do improviso"
+            description="Substitua planilhas e controles paralelos por uma estrutura pensada para crescer com segurança."
+            color="slate"
           />
         </div>
       </section>
@@ -102,13 +95,10 @@ const Index = () => {
       <section className="container mx-auto px-4 py-20">
         <div className="mb-16 text-center">
           <h2 className="mb-4 text-3xl font-bold sm:text-4xl">
-            Planos que crescem com você
+            Planos que acompanham sua evolução
           </h2>
           <p className="text-lg text-muted-foreground">
-            Escolha o plano ideal para o tamanho da sua operação
-          </p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Valores válidos para pagamento no cartão de crédito à vista
+            Da organização inicial à estrutura profissional completa
           </p>
         </div>
 
@@ -117,33 +107,35 @@ const Index = () => {
             name="Free"
             price="R$ 0"
             period="/mês"
-            description="Para organizar o começo"
+            description="Para começar com controle"
             maxPartners="Até 3 parceiros ativos"
             features={[
-              { text: "Gestão de parcerias", included: true },
-              { text: "Controle financeiro básico", included: true },
               { text: "1 usuário", included: true },
-              { text: "Suporte via email", included: true },
-              { text: "Dashboard limitado", included: false },
-              { text: "Estratégias de apostas", included: false },
+              { text: "Organização básica da operação", included: true },
+              { text: "Registro simples de apostas", included: true },
+              { text: "Ideal para sair das planilhas", included: true },
+              { text: "Dashboard completo", included: false },
+              { text: "Operação por projetos", included: false },
             ]}
             highlighted={false}
+            ctaText="Criar conta gratuita"
           />
           <PricingCard
             name="Starter"
             price="R$ 89"
             period="/mês"
-            description="Para operar com consistência"
+            description="Para quem já opera"
             maxPartners="Até 10 parceiros ativos"
             features={[
-              { text: "Tudo do Free", included: true },
-              { text: "Dashboard completo", included: true },
               { text: "1 usuário", included: true },
-              { text: "Inserção de apostas padrão", included: true },
-              { text: "Resposta em até 24h (WhatsApp/Discord)", included: true },
+              { text: "Dashboards completos", included: true },
+              { text: "Controle financeiro estruturado", included: true },
+              { text: "Organização por projetos simples", included: true },
+              { text: "Suporte via WhatsApp/Discord", included: true },
               { text: "Acesso à comunidade Labbet One", included: true },
             ]}
             highlighted={false}
+            ctaText="Começar agora"
           />
           <PricingCard
             name="Pro"
@@ -152,42 +144,47 @@ const Index = () => {
             description="Para operações sérias"
             maxPartners="Até 20 parceiros ativos"
             features={[
-              { text: "Tudo do Starter", included: true },
-              { text: "Sistemas de entrada por estratégia", included: true },
-              { text: "2 usuários (times pequenos)", included: true },
-              { text: "Operação por projetos", included: true },
-              { text: "Hierarquia de permissões flexível", included: true },
-              { text: "ROI e análises completas", included: true },
-              { text: "Resposta em até 24h (WhatsApp/Discord)", included: true },
+              { text: "2 usuários", included: true },
+              { text: "Permissões customizadas (até 5)", included: true },
+              { text: "Operação completa por projetos", included: true },
+              { text: "KPIs e visão real de desempenho", included: true },
+              { text: "Estratégias de entrada avançadas", included: true },
+              { text: "Ideal para apostadores profissionais", included: true },
             ]}
             highlighted={true}
+            ctaText="Escalar minha operação"
           />
           <PricingCard
             name="Advanced"
-            price="R$ 597"
+            price="R$ 697"
             period="/mês"
-            description="Para estruturas profissionais"
-            maxPartners="20+ parceiros ativos"
+            description="Liberdade total"
+            maxPartners="Parceiros ilimitados"
             features={[
-              { text: "Tudo do Pro", included: true },
-              { text: "Parceiros ilimitados", included: true },
-              { text: "10 usuários", included: true },
-              { text: "Relatórios customizados", included: true },
-              { text: "Onboarding personalizado", included: true },
-              { text: "Suporte prioritário com SLA", included: true },
+              { text: "Usuários ilimitados", included: true },
+              { text: "Permissões customizadas ilimitadas", included: true },
+              { text: "Personalização avançada", included: true },
+              { text: "Atendimento personalizado", included: true },
+              { text: "Chamadas de alinhamento", included: true },
+              { text: "Sem contrato, sem SLA formal", included: true },
             ]}
             highlighted={false}
+            ctaText="Ir além do Pro"
           />
         </div>
+
+        <p className="mt-8 text-center text-sm text-muted-foreground">
+          Valores válidos para pagamento no cartão de crédito à vista
+        </p>
       </section>
 
       {/* Stats Section */}
       <section className="border-y border-border bg-card/30 py-16">
         <div className="container mx-auto px-4">
           <div className="grid gap-8 sm:grid-cols-3">
-            <StatCard number="10+" label="Operações profissionais gerenciadas" />
+            <StatCard number="10+" label="Operações profissionais ativas" />
             <StatCard number="500+" label="Parceiros gerenciados" />
-            <StatCard number="150+" label="Usuários Free e Starter ativos" />
+            <StatCard number="R$ 2M+" label="Em capital controlado" />
           </div>
         </div>
       </section>
@@ -199,13 +196,17 @@ const Index = () => {
           
           <div className="relative z-10 mx-auto max-w-2xl text-center">
             <h2 className="mb-4 text-3xl font-bold sm:text-4xl">
-              Pronto para otimizar suas operações?
+              Pronto para organizar sua operação?
             </h2>
             <p className="mb-8 text-lg text-muted-foreground">
-              Comece gratuitamente e escale conforme sua operação cresce.
+              Comece gratuitamente. Escale quando fizer sentido.
             </p>
-            <Button size="lg" className="h-12 gap-2 px-8 shadow-glow">
-              Criar Conta Grátis
+            <Button 
+              size="lg" 
+              className="h-12 gap-2 px-8 shadow-glow"
+              onClick={() => navigate("/auth")}
+            >
+              Criar conta gratuita
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
@@ -215,7 +216,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-border py-12">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© 2025 Labbet One. One platform, all your betting operations.</p>
+          <p>© 2025 Labbet One. Controle profissional para operações de apostas.</p>
         </div>
       </footer>
     </div>
@@ -226,14 +227,25 @@ const FeatureCard = ({
   icon,
   title,
   description,
+  color,
 }: {
   icon: React.ReactNode;
   title: string;
   description: string;
+  color: "emerald" | "blue" | "violet" | "amber" | "rose" | "slate";
 }) => {
+  const colorClasses = {
+    emerald: "bg-emerald-500/10 text-emerald-500",
+    blue: "bg-blue-500/10 text-blue-500",
+    violet: "bg-violet-500/10 text-violet-500",
+    amber: "bg-amber-500/10 text-amber-500",
+    rose: "bg-rose-500/10 text-rose-500",
+    slate: "bg-slate-500/10 text-slate-400",
+  };
+
   return (
     <Card className="group relative overflow-hidden border-border bg-gradient-surface p-6 shadow-soft transition-all hover:shadow-medium hover:border-primary/50">
-      <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-110">
+      <div className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl transition-transform group-hover:scale-110 ${colorClasses[color]}`}>
         {icon}
       </div>
       <h3 className="mb-2 text-xl font-semibold">{title}</h3>
@@ -259,6 +271,7 @@ const PricingCard = ({
   maxPartners,
   features,
   highlighted,
+  ctaText,
 }: {
   name: string;
   price: string;
@@ -267,7 +280,10 @@ const PricingCard = ({
   maxPartners: string;
   features: { text: string; included: boolean }[];
   highlighted: boolean;
+  ctaText: string;
 }) => {
+  const navigate = useNavigate();
+  
   return (
     <Card
       className={`relative overflow-hidden border-border bg-gradient-surface p-6 shadow-soft transition-all hover:shadow-medium ${
@@ -311,8 +327,9 @@ const PricingCard = ({
       <Button
         className={`w-full ${highlighted ? "shadow-glow" : ""}`}
         variant={highlighted ? "default" : "outline"}
+        onClick={() => navigate("/auth")}
       >
-        Começar Agora
+        {ctaText}
       </Button>
     </Card>
   );
