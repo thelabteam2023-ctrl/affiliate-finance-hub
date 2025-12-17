@@ -1,9 +1,12 @@
+import { useState, useEffect } from "react";
 import { Database } from "@/integrations/supabase/types";
+import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Crown, Shield, User, DollarSign, Gamepad2, Eye } from "lucide-react";
+import { Trash2, Crown, Shield, User, DollarSign, Gamepad2, Eye, Settings2, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -17,6 +20,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { MemberPermissionsDialog } from "./MemberPermissionsDialog";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -51,11 +61,65 @@ const roleConfig: Record<AppRole, { label: string; icon: any; color: string }> =
 const availableRoles: AppRole[] = ['admin', 'finance', 'operator', 'viewer'];
 
 export function MemberList({ members, currentUserId, onRoleChange, onRemove, canEdit }: MemberListProps) {
+  const { workspaceId } = useWorkspace();
+  const [permissionsDialogMember, setPermissionsDialogMember] = useState<Member | null>(null);
+  const [memberOverrideCounts, setMemberOverrideCounts] = useState<Record<string, number>>({});
+
+  // Fetch override counts for all members
+  useEffect(() => {
+    const fetchOverrideCounts = async () => {
+      if (!workspaceId || members.length === 0) return;
+
+      const userIds = members.map(m => m.user_id);
+      
+      const { data, error } = await supabase
+        .from('user_permission_overrides')
+        .select('user_id')
+        .eq('workspace_id', workspaceId)
+        .eq('granted', true)
+        .in('user_id', userIds);
+
+      if (error) {
+        console.error('Error fetching override counts:', error);
+        return;
+      }
+
+      // Count overrides per user
+      const counts: Record<string, number> = {};
+      data?.forEach(override => {
+        counts[override.user_id] = (counts[override.user_id] || 0) + 1;
+      });
+      setMemberOverrideCounts(counts);
+    };
+
+    fetchOverrideCounts();
+  }, [workspaceId, members]);
+
   const getInitials = (email?: string, fullName?: string) => {
     if (fullName) {
       return fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     }
     return email?.charAt(0).toUpperCase() || 'U';
+  };
+
+  const handlePermissionsChanged = async () => {
+    // Refresh override counts
+    if (!workspaceId || members.length === 0) return;
+
+    const userIds = members.map(m => m.user_id);
+    
+    const { data } = await supabase
+      .from('user_permission_overrides')
+      .select('user_id')
+      .eq('workspace_id', workspaceId)
+      .eq('granted', true)
+      .in('user_id', userIds);
+
+    const counts: Record<string, number> = {};
+    data?.forEach(override => {
+      counts[override.user_id] = (counts[override.user_id] || 0) + 1;
+    });
+    setMemberOverrideCounts(counts);
   };
 
   if (members.length === 0) {
@@ -67,105 +131,154 @@ export function MemberList({ members, currentUserId, onRoleChange, onRemove, can
   }
 
   return (
-    <div className="space-y-2">
-      {members.map((member) => {
-        const roleInfo = roleConfig[member.role];
-        const RoleIcon = roleInfo.icon;
-        const isCurrentUser = member.user_id === currentUserId;
-        const isOwnerOrMaster = member.role === 'owner' || member.role === 'master';
-        const canEditMember = canEdit && !isCurrentUser && !isOwnerOrMaster;
+    <>
+      <div className="space-y-2">
+        {members.map((member) => {
+          const roleInfo = roleConfig[member.role];
+          const RoleIcon = roleInfo.icon;
+          const isCurrentUser = member.user_id === currentUserId;
+          const isOwnerOrMaster = member.role === 'owner' || member.role === 'master';
+          const canEditMember = canEdit && !isCurrentUser && !isOwnerOrMaster;
+          const overrideCount = memberOverrideCounts[member.user_id] || 0;
+          const canHaveOverrides = member.role !== 'viewer' && member.role !== 'owner' && member.role !== 'master';
 
-        return (
-          <div
-            key={member.id}
-            className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
-          >
-            <div className="flex items-center gap-4">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-primary/10 text-primary">
-                  {getInitials(member.email, member.full_name)}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">
-                    {member.full_name || member.email}
-                  </span>
-                  {isCurrentUser && (
-                    <Badge variant="outline" className="text-xs">
-                      Você
-                    </Badge>
-                  )}
+          return (
+            <div
+              key={member.id}
+              className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {getInitials(member.email, member.full_name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">
+                      {member.full_name || member.email}
+                    </span>
+                    {isCurrentUser && (
+                      <Badge variant="outline" className="text-xs">
+                        Você
+                      </Badge>
+                    )}
+                    {overrideCount > 0 && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Badge variant="secondary" className="text-xs bg-primary/10 text-primary gap-1">
+                              <Sparkles className="h-3 w-3" />
+                              +{overrideCount}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{overrideCount} permissão(ões) customizada(s)</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">{member.email}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Desde {format(new Date(member.joined_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">{member.email}</p>
-                <p className="text-xs text-muted-foreground">
-                  Desde {format(new Date(member.joined_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {canEditMember ? (
+                  <Select
+                    value={member.role}
+                    onValueChange={(value) => onRoleChange(member.id, value as AppRole)}
+                  >
+                    <SelectTrigger className="w-[160px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableRoles.map((role) => {
+                        const config = roleConfig[role];
+                        const Icon = config.icon;
+                        return (
+                          <SelectItem key={role} value={role}>
+                            <div className="flex items-center gap-2">
+                              <Icon className="h-4 w-4" />
+                              <span>{config.label}</span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Badge variant="outline" className={roleInfo.color}>
+                    <RoleIcon className="h-3 w-3 mr-1" />
+                    {roleInfo.label}
+                  </Badge>
+                )}
+
+                {canEdit && canHaveOverrides && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => setPermissionsDialogMember(member)}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <Settings2 className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Gerenciar permissões adicionais</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+
+                {canEditMember && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remover membro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja remover {member.full_name || member.email} do workspace?
+                          Esta ação pode ser revertida convidando o usuário novamente.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => onRemove(member.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Remover
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </div>
             </div>
+          );
+        })}
+      </div>
 
-            <div className="flex items-center gap-3">
-              {canEditMember ? (
-                <Select
-                  value={member.role}
-                  onValueChange={(value) => onRoleChange(member.id, value as AppRole)}
-                >
-                  <SelectTrigger className="w-[160px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableRoles.map((role) => {
-                      const config = roleConfig[role];
-                      const Icon = config.icon;
-                      return (
-                        <SelectItem key={role} value={role}>
-                          <div className="flex items-center gap-2">
-                            <Icon className="h-4 w-4" />
-                            <span>{config.label}</span>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Badge variant="outline" className={roleInfo.color}>
-                  <RoleIcon className="h-3 w-3 mr-1" />
-                  {roleInfo.label}
-                </Badge>
-              )}
-
-              {canEditMember && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Remover membro?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Tem certeza que deseja remover {member.full_name || member.email} do workspace?
-                        Esta ação pode ser revertida convidando o usuário novamente.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => onRemove(member.id)}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        Remover
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
+      {/* Permissions Dialog */}
+      {permissionsDialogMember && (
+        <MemberPermissionsDialog
+          open={!!permissionsDialogMember}
+          onOpenChange={(open) => !open && setPermissionsDialogMember(null)}
+          member={permissionsDialogMember}
+          onPermissionsChanged={handlePermissionsChanged}
+        />
+      )}
+    </>
   );
 }
