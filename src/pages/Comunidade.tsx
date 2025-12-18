@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCommunityAccess } from '@/hooks/useCommunityAccess';
-import { Search, Star, AlertTriangle, MessageSquare, Lock, Users } from 'lucide-react';
+import { Search, Star, MessageSquare, Lock, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { CommunityRadar } from '@/components/comunidade/CommunityRadar';
 
 interface BookmakerStats {
   bookmaker_catalogo_id: string;
@@ -18,8 +19,6 @@ interface BookmakerStats {
   visibility: string;
   total_avaliacoes: number;
   nota_media_geral: number | null;
-  bloqueios_apos_ganhos: number;
-  bloqueios_recorrentes: number;
   total_topicos: number;
   ultimo_topico_data: string | null;
 }
@@ -54,9 +53,6 @@ export default function Comunidade() {
   const filteredBookmakers = bookmakers.filter(bm =>
     bm.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const getTotalBloqueios = (bm: BookmakerStats) => 
-    bm.bloqueios_apos_ganhos + bm.bloqueios_recorrentes;
 
   const renderStars = (rating: number | null) => {
     if (!rating) return <span className="text-muted-foreground text-sm">Sem avaliações</span>;
@@ -113,10 +109,6 @@ export default function Comunidade() {
                 <MessageSquare className="h-4 w-4 text-blue-500" />
                 <span>Tópicos e discussões por bookmaker</span>
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <span>Alertas de bloqueios e limitações</span>
-              </div>
             </div>
             <Button onClick={() => navigate('/workspace')} size="lg">
               Fazer Upgrade para PRO
@@ -144,119 +136,123 @@ export default function Comunidade() {
         <strong>Aviso:</strong> As informações compartilhadas refletem experiências individuais dos usuários e não representam uma posição oficial da plataforma.
       </div>
 
-      {/* Search */}
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar casa de apostas..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar casa de apostas..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
 
-      {/* Stats Summary */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">{bookmakers.length}</p>
-            <p className="text-sm text-muted-foreground">Casas Globais</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">
-              {bookmakers.reduce((sum, bm) => sum + bm.total_avaliacoes, 0)}
-            </p>
-            <p className="text-sm text-muted-foreground">Avaliações</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">
-              {bookmakers.reduce((sum, bm) => sum + bm.total_topicos, 0)}
-            </p>
-            <p className="text-sm text-muted-foreground">Tópicos</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Bookmakers Grid */}
-      {loading || accessLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-40" />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredBookmakers.map((bm) => (
-            <Card 
-              key={bm.bookmaker_catalogo_id}
-              className="cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => navigate(`/comunidade/${bm.bookmaker_catalogo_id}`)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  {/* Logo */}
-                  <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
-                    {bm.logo_url ? (
-                      <img src={bm.logo_url} alt={bm.nome} className="h-10 w-10 object-contain" />
-                    ) : (
-                      <span className="text-lg font-bold text-muted-foreground">
-                        {bm.nome.charAt(0)}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold truncate">{bm.nome}</h3>
-                      <Badge 
-                        variant="outline" 
-                        className={`text-[10px] shrink-0 ${
-                          bm.regulamentacao_status === 'REGULAMENTADA'
-                            ? 'border-green-500/30 text-green-500'
-                            : 'border-amber-500/30 text-amber-500'
-                        }`}
-                      >
-                        {bm.regulamentacao_status === 'REGULAMENTADA' ? 'Reg.' : 'Não Reg.'}
-                      </Badge>
-                    </div>
-                    
-                    {/* Rating */}
-                    {renderStars(bm.nota_media_geral)}
-                  </div>
-                </div>
-
-                {/* Stats Row */}
-                <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Star className="h-3.5 w-3.5" />
-                    <span>{bm.total_avaliacoes}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <MessageSquare className="h-3.5 w-3.5" />
-                    <span>{bm.total_topicos}</span>
-                  </div>
-                  {getTotalBloqueios(bm) > 0 && (
-                    <div className="flex items-center gap-1 text-sm text-amber-500">
-                      <AlertTriangle className="h-3.5 w-3.5" />
-                      <span>{getTotalBloqueios(bm)}</span>
-                    </div>
-                  )}
-                </div>
+          {/* Stats Summary */}
+          <div className="grid grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold">{bookmakers.length}</p>
+                <p className="text-sm text-muted-foreground">Casas Globais</p>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold">
+                  {bookmakers.reduce((sum, bm) => sum + bm.total_avaliacoes, 0)}
+                </p>
+                <p className="text-sm text-muted-foreground">Avaliações</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold">
+                  {bookmakers.reduce((sum, bm) => sum + bm.total_topicos, 0)}
+                </p>
+                <p className="text-sm text-muted-foreground">Tópicos</p>
+              </CardContent>
+            </Card>
+          </div>
 
-      {filteredBookmakers.length === 0 && !loading && (
-        <div className="text-center py-12 text-muted-foreground">
-          Nenhuma casa encontrada com "{searchTerm}"
+          {/* Bookmakers Grid */}
+          {loading || accessLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-40" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredBookmakers.map((bm) => (
+                <Card 
+                  key={bm.bookmaker_catalogo_id}
+                  className="cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => navigate(`/comunidade/${bm.bookmaker_catalogo_id}`)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      {/* Logo */}
+                      <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                        {bm.logo_url ? (
+                          <img src={bm.logo_url} alt={bm.nome} className="h-10 w-10 object-contain" />
+                        ) : (
+                          <span className="text-lg font-bold text-muted-foreground">
+                            {bm.nome.charAt(0)}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold truncate">{bm.nome}</h3>
+                          <Badge 
+                            variant="outline" 
+                            className={`text-[10px] shrink-0 ${
+                              bm.regulamentacao_status === 'REGULAMENTADA'
+                                ? 'border-green-500/30 text-green-500'
+                                : 'border-amber-500/30 text-amber-500'
+                            }`}
+                          >
+                            {bm.regulamentacao_status === 'REGULAMENTADA' ? 'Reg.' : 'Não Reg.'}
+                          </Badge>
+                        </div>
+                        
+                        {/* Rating */}
+                        {renderStars(bm.nota_media_geral)}
+                      </div>
+                    </div>
+
+                    {/* Stats Row */}
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Star className="h-3.5 w-3.5" />
+                        <span>{bm.total_avaliacoes}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        <span>{bm.total_topicos}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {filteredBookmakers.length === 0 && !loading && (
+            <div className="text-center py-12 text-muted-foreground">
+              Nenhuma casa encontrada com "{searchTerm}"
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Sidebar - Radar */}
+        <div className="lg:col-span-1">
+          <CommunityRadar />
+        </div>
+      </div>
     </div>
   );
 }

@@ -8,10 +8,12 @@ interface CommunityAccess {
   plan: string | null;
   role: string | null;
   isOwner: boolean;
+  isAdmin: boolean; // OWNER, MASTER ou ADMIN
   canEvaluate: boolean;
   canCreateTopics: boolean;
   canComment: boolean;
   canViewContent: boolean;
+  canEditAny: boolean; // Pode editar qualquer mensagem (admin)
 }
 
 export function useCommunityAccess(): CommunityAccess {
@@ -21,6 +23,7 @@ export function useCommunityAccess(): CommunityAccess {
   const [plan, setPlan] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const checkAccess = useCallback(async () => {
     if (!user?.id) {
@@ -45,6 +48,10 @@ export function useCommunityAccess(): CommunityAccess {
 
       const userRole = memberData.role;
       setRole(userRole);
+
+      // Check if user is admin (can edit any message)
+      const isAdminRole = userRole === 'owner' || userRole === 'master' || userRole === 'admin';
+      setIsAdmin(isAdminRole);
 
       // REGRA FUNDAMENTAL: OWNER tem acesso total, independente do plano
       if (userRole === 'owner' || userRole === 'master') {
@@ -101,9 +108,11 @@ export function useCommunityAccess(): CommunityAccess {
     plan,
     role,
     isOwner,
+    isAdmin,
     canEvaluate: hasFullAccess,
     canCreateTopics: hasFullAccess,
     canComment: hasFullAccess,
     canViewContent: true, // Todos podem ver estrutura
+    canEditAny: isAdmin, // Owner/Master/Admin podem editar qualquer mensagem
   };
 }

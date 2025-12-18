@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { MessageSquare, User, Flag, Plus, Send, ChevronDown, ChevronUp } from 'lucide-react';
+import { MessageSquare, User, Flag, Plus, Send, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { CommunityEditDialog } from './CommunityEditDialog';
 
 interface Topic {
   id: string;
@@ -36,6 +37,7 @@ interface Topic {
   is_anonymous: boolean;
   status: string;
   created_at: string;
+  edited_at: string | null;
   profiles?: { full_name: string; email: string } | null;
   comments?: Comment[];
 }
@@ -47,6 +49,7 @@ interface Comment {
   is_anonymous: boolean;
   status: string;
   created_at: string;
+  edited_at: string | null;
   profiles?: { full_name: string; email: string } | null;
 }
 
@@ -57,7 +60,7 @@ interface CommunityTopicsListProps {
 
 export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTopicsListProps) {
   const { user } = useAuth();
-  const { hasFullAccess } = useCommunityAccess();
+  const { hasFullAccess, canEditAny } = useCommunityAccess();
   const { toast } = useToast();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +73,13 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
   const [reportType, setReportType] = useState<'topic' | 'comment'>('topic');
   const [reportingId, setReportingId] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState('');
+
+  // Edit state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editType, setEditType] = useState<'topic' | 'comment'>('topic');
+  const [editId, setEditId] = useState<string>('');
+  const [editTitle, setEditTitle] = useState<string>('');
+  const [editContent, setEditContent] = useState<string>('');
 
   useEffect(() => {
     fetchTopics();
@@ -146,14 +156,14 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
         user_id: user.id,
         topic_id: topicId,
         conteudo: newComment[topicId].trim(),
-        is_anonymous: false, // Could add toggle for this
+        is_anonymous: false,
       });
 
       if (error) throw error;
 
       toast({ title: 'Comentário adicionado!' });
       setNewComment(prev => ({ ...prev, [topicId]: '' }));
-      fetchTopics(); // Refresh
+      fetchTopics();
     } catch (error: any) {
       console.error('Error adding comment:', error);
       toast({ title: 'Erro ao adicionar comentário', variant: 'destructive' });
@@ -190,11 +200,33 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
     }
   };
 
+  const handleOpenEdit = (type: 'topic' | 'comment', id: string, title: string, content: string) => {
+    setEditType(type);
+    setEditId(id);
+    setEditTitle(title);
+    setEditContent(content);
+    setEditDialogOpen(true);
+  };
+
+  const canEdit = (authorId: string) => {
+    // User can edit if they are the author OR if they are admin
+    return user?.id === authorId || canEditAny;
+  };
+
   const getAuthorName = (item: { is_anonymous: boolean; profiles?: { full_name: string; email: string } | null }) => {
     if (item.is_anonymous) return 'Usuário Anônimo';
     if (item.profiles?.full_name) return item.profiles.full_name;
     if (item.profiles?.email) return item.profiles.email.split('@')[0];
     return 'Usuário PRO';
+  };
+
+  const renderEditedBadge = (editedAt: string | null) => {
+    if (!editedAt) return null;
+    return (
+      <Badge variant="outline" className="text-[10px] border-muted-foreground/30 text-muted-foreground">
+        Editado {format(new Date(editedAt), "d MMM, HH:mm", { locale: ptBR })}
+      </Badge>
+    );
   };
 
   if (loading) {
@@ -251,7 +283,7 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
                           <CardTitle className="text-base group-hover:text-primary transition-colors">
                             {topic.titulo}
                           </CardTitle>
-                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
                             <User className="h-3 w-3" />
                             <span>{getAuthorName(topic)}</span>
                             <span>•</span>
@@ -262,6 +294,7 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
                                 <span>{commentCount} comentário(s)</span>
                               </>
                             )}
+                            {renderEditedBadge(topic.edited_at)}
                           </div>
                         </div>
                         {isExpanded ? (
@@ -272,9 +305,22 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
                       </CollapsibleTrigger>
                     </div>
                     
-                    <div className="flex items-center gap-2 ml-2">
+                    <div className="flex items-center gap-1 ml-2">
                       {isOwnTopic && (
                         <Badge variant="outline" className="text-[10px]">Você</Badge>
+                      )}
+                      {canEdit(topic.user_id) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEdit('topic', topic.id, topic.titulo, topic.conteudo);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                       )}
                       {!isOwnTopic && hasFullAccess && (
                         <Button
@@ -311,7 +357,7 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
                           return (
                             <div key={comment.id} className="flex gap-3 pl-4 border-l-2 border-border">
                               <div className="flex-1">
-                                <div className="flex items-center gap-2 text-xs">
+                                <div className="flex items-center gap-2 text-xs flex-wrap">
                                   <span className="font-medium">{getAuthorName(comment)}</span>
                                   {isOwnComment && (
                                     <Badge variant="outline" className="text-[10px]">Você</Badge>
@@ -319,23 +365,36 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
                                   <span className="text-muted-foreground">
                                     {format(new Date(comment.created_at), "d MMM yyyy, HH:mm", { locale: ptBR })}
                                   </span>
+                                  {renderEditedBadge(comment.edited_at)}
                                 </div>
                                 <p className="text-sm mt-1">{comment.conteudo}</p>
                               </div>
-                              {!isOwnComment && hasFullAccess && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0"
-                                  onClick={() => {
-                                    setReportType('comment');
-                                    setReportingId(comment.id);
-                                    setReportDialogOpen(true);
-                                  }}
-                                >
-                                  <Flag className="h-3 w-3" />
-                                </Button>
-                              )}
+                              <div className="flex items-start gap-1 shrink-0">
+                                {canEdit(comment.user_id) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                    onClick={() => handleOpenEdit('comment', comment.id, '', comment.conteudo)}
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                )}
+                                {!isOwnComment && hasFullAccess && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                    onClick={() => {
+                                      setReportType('comment');
+                                      setReportingId(comment.id);
+                                      setReportDialogOpen(true);
+                                    }}
+                                  >
+                                    <Flag className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           );
                         })}
@@ -398,6 +457,17 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Dialog */}
+      <CommunityEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        type={editType}
+        id={editId}
+        initialTitle={editTitle}
+        initialContent={editContent}
+        onSuccess={fetchTopics}
+      />
     </>
   );
 }
