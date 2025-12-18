@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Loader2, Users, UserCheck, Shield, Zap, Crown, Infinity } from "lucide-react";
+import { Loader2, Users, UserCheck, Shield, Zap, Crown, Infinity, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const PLAN_COLORS: Record<string, string> = {
@@ -28,6 +28,7 @@ export function PlanUsageCard() {
     usage,
     loading,
     error,
+    isOwner,
     getPlanLabel,
     getPartnerUsagePercent,
     getUserUsagePercent,
@@ -49,6 +50,85 @@ export function PlanUsageCard() {
     return null;
   }
 
+  // OWNER tem acesso total - exibir visão especial
+  if (isOwner) {
+    return (
+      <Card className="border-primary/30 bg-primary/5">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                Acesso Total
+              </CardTitle>
+              <CardDescription>
+                Proprietário do workspace
+              </CardDescription>
+            </div>
+            <Badge className="bg-primary/20 text-primary border-primary/30">
+              <Crown className="h-3 w-3 mr-1" />
+              OWNER
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-background/80 rounded-lg p-4 border border-border/50">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Como <span className="font-semibold text-foreground">proprietário do workspace</span>, você possui 
+              <span className="font-semibold text-primary"> acesso total </span> 
+              e não está sujeito a limites de plano.
+            </p>
+          </div>
+
+          {/* Visão informativa dos recursos (sem limites) */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-4 w-4 text-muted-foreground" />
+                <span>Parceiros Ativos</span>
+              </div>
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <span className="font-medium text-foreground">{usage.active_partners}</span>
+                <Infinity className="h-3 w-3 ml-1" />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <span>Usuários</span>
+              </div>
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <span className="font-medium text-foreground">{usage.active_users}</span>
+                <Infinity className="h-3 w-3 ml-1" />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-muted-foreground" />
+                <span>Permissões Customizadas</span>
+              </div>
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <span className="font-medium text-foreground">{usage.custom_permissions}</span>
+                <Infinity className="h-3 w-3 ml-1" />
+              </div>
+            </div>
+          </div>
+
+          {/* Info sobre plano da equipe */}
+          <div className="pt-3 border-t text-xs text-muted-foreground">
+            <p>
+              Plano do workspace: <span className="font-medium">{getPlanLabel()}</span>
+              <span className="ml-1">(aplica-se apenas aos membros convidados)</span>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Visão padrão para não-owners
   const PlanIcon = PLAN_ICONS[plan || 'free'] || Users;
   const planColor = PLAN_COLORS[plan || 'free'] || PLAN_COLORS.free;
 
