@@ -8,16 +8,16 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageSquare, ExternalLink, Loader2, Globe, Building2 } from 'lucide-react';
+import { MessageSquare, ExternalLink, Loader2, Globe, Building2, ChevronUp } from 'lucide-react';
 import { CommunityChatConvertDialog } from './CommunityChatConvertDialog';
 import { ChatMessageItem, ChatMessage } from './ChatMessageItem';
 import { ChatInput } from './ChatInput';
+import { ChatSettingsPopover } from './ChatSettingsPopover';
 
 interface CommunityChatFullProps {
   isPopout?: boolean;
-  isEmbedded?: boolean; // When embedded in drawer/modal, header is handled externally
+  isEmbedded?: boolean;
   onGoToERP?: () => void;
   initialContextType?: 'general' | 'bookmaker';
   initialContextId?: string | null;
@@ -25,6 +25,7 @@ interface CommunityChatFullProps {
 }
 
 const MESSAGES_PER_PAGE = 50;
+const HISTORY_DAYS = 3; // visible history
 
 export function CommunityChatFull({ 
   isPopout = false, 
@@ -52,7 +53,14 @@ export function CommunityChatFull({
   const scrollRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
 
-  const fetchMessages = useCallback(async (before?: string) => {
+  // Calculate the cutoff date for default visible history (3 days)
+  const getHistoryCutoff = useCallback(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - HISTORY_DAYS);
+    return cutoff.toISOString();
+  }, []);
+
+  const fetchMessages = useCallback(async (before?: string, loadOlder?: boolean) => {
     if (!workspaceId) return;
 
     try {
@@ -75,7 +83,11 @@ export function CommunityChatFull({
         .order('created_at', { ascending: false })
         .limit(MESSAGES_PER_PAGE);
 
-      // Filter by context_id for bookmaker chats
+      // Apply history cutoff only for initial load, not when loading older
+      if (!loadOlder && !before) {
+        query = query.gt('created_at', getHistoryCutoff());
+      }
+
       if (contextType === 'bookmaker' && contextId) {
         query = query.eq('context_id', contextId);
       } else if (contextType === 'general') {
@@ -90,7 +102,6 @@ export function CommunityChatFull({
 
       if (error) throw error;
 
-      // Fetch profiles
       const userIds = [...new Set((data || []).map(m => m.user_id))];
       const { data: profiles } = await supabase
         .from('profiles')
@@ -106,7 +117,6 @@ export function CommunityChatFull({
         profile: profileMap.get(m.user_id) as ChatMessage['profile'],
       }));
 
-      // Reverse to show oldest first
       const orderedMessages = messagesWithProfiles.reverse();
 
       if (before) {
@@ -122,7 +132,7 @@ export function CommunityChatFull({
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [workspaceId, contextType, contextId]);
+  }, [workspaceId, contextType, contextId, getHistoryCutoff]);
 
   useEffect(() => {
     if (workspaceId) {
@@ -150,12 +160,10 @@ export function CommunityChatFull({
           if (payload.eventType === 'INSERT') {
             const newMsg = payload.new as any;
             
-            // Only add if matches current context
             if (newMsg.context_type !== contextType) return;
             if (contextType === 'bookmaker' && newMsg.context_id !== contextId) return;
             if (contextType === 'general' && newMsg.context_id !== null) return;
 
-            // Fetch profile for new message
             const { data: profile } = await supabase
               .from('profiles')
               .select('id, full_name, email')
@@ -171,12 +179,10 @@ export function CommunityChatFull({
 
             setMessages(prev => [...prev, formattedMsg]);
             
-            // Update new message count if not at bottom
             if (!isAtBottomRef.current && newMsg.user_id !== user?.id) {
               setNewMessageCount(prev => prev + 1);
             }
             
-            // Auto-scroll if at bottom
             if (isAtBottomRef.current) {
               setTimeout(() => {
                 scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -201,14 +207,13 @@ export function CommunityChatFull({
     };
   }, [workspaceId, user?.id, contextType, contextId]);
 
-  // Listen for broadcast messages from other tabs
+  // Listen for broadcast messages
   useEffect(() => {
     const unsubscribe = subscribe((msg) => {
       if (msg.type === 'MESSAGE_SENT' || msg.type === 'MESSAGE_UPDATED') {
         fetchMessages();
       }
     });
-    
     return unsubscribe;
   }, [subscribe, fetchMessages]);
 
@@ -221,7 +226,6 @@ export function CommunityChatFull({
     }
   }, [loading]);
 
-  // Track scroll position
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
     const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 50;
@@ -230,11 +234,12 @@ export function CommunityChatFull({
     if (isAtBottom) {
       setNewMessageCount(0);
     }
-    
-    // Load more when scrolling to top
-    if (target.scrollTop < 100 && hasMore && !loadingMore && messages.length > 0) {
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && messages.length > 0 && hasMore) {
       setLoadingMore(true);
-      fetchMessages(messages[0].created_at);
+      fetchMessages(messages[0].created_at, true);
     }
   };
 
@@ -352,6 +357,7 @@ export function CommunityChatFull({
               </h1>
             </div>
             <div className="flex items-center gap-2">
+              <ChatSettingsPopover />
               {onGoToERP && (
                 <Button variant="outline" size="sm" onClick={onGoToERP}>
                   <ExternalLink className="h-4 w-4 mr-1" />
@@ -362,7 +368,18 @@ export function CommunityChatFull({
           </div>
         )}
 
-        {/* Context Tabs - only show in general mode without fixed bookmaker */}
+        {/* Embedded header with settings only */}
+        {isEmbedded && (
+          <div className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Chat</span>
+            </div>
+            <ChatSettingsPopover />
+          </div>
+        )}
+
+        {/* Context Tabs */}
         {!initialContextId && (
           <div className="px-4 py-2 border-b border-border">
             <Tabs 
@@ -397,10 +414,23 @@ export function CommunityChatFull({
           className="flex-1 px-4"
           onScroll={handleScroll}
         >
-          {/* Load More Indicator */}
-          {loadingMore && (
-            <div className="flex justify-center py-4">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          {/* Load More Button */}
+          {hasMore && !loading && messages.length > 0 && (
+            <div className="flex justify-center py-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                {loadingMore ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : (
+                  <ChevronUp className="h-4 w-4 mr-1" />
+                )}
+                Carregar mensagens anteriores
+              </Button>
             </div>
           )}
           
