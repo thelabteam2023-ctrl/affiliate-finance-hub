@@ -17,6 +17,7 @@ import { ChatInput } from './ChatInput';
 
 interface CommunityChatFullProps {
   isPopout?: boolean;
+  isEmbedded?: boolean; // When embedded in drawer/modal, header is handled externally
   onGoToERP?: () => void;
   initialContextType?: 'general' | 'bookmaker';
   initialContextId?: string | null;
@@ -27,6 +28,7 @@ const MESSAGES_PER_PAGE = 50;
 
 export function CommunityChatFull({ 
   isPopout = false, 
+  isEmbedded = false,
   onGoToERP,
   initialContextType = 'general',
   initialContextId = null,
@@ -337,29 +339,28 @@ export function CommunityChatFull({
   return (
     <>
       <div className="flex flex-col h-full">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-primary" />
-            <h1 className="font-semibold">
-              {contextType === 'bookmaker' && bookmakerName 
-                ? `Chat - ${bookmakerName}`
-                : 'Chat da Comunidade'
-              }
-            </h1>
+        {/* Header - only show when in popout mode */}
+        {isPopout && (
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              <h1 className="font-semibold">
+                {contextType === 'bookmaker' && bookmakerName 
+                  ? `Chat - ${bookmakerName}`
+                  : 'Chat da Comunidade'
+                }
+              </h1>
+            </div>
+            <div className="flex items-center gap-2">
+              {onGoToERP && (
+                <Button variant="outline" size="sm" onClick={onGoToERP}>
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  Voltar para ERP
+                </Button>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              Histórico: 3 dias
-            </Badge>
-            {isPopout && onGoToERP && (
-              <Button variant="outline" size="sm" onClick={onGoToERP}>
-                <ExternalLink className="h-4 w-4 mr-1" />
-                Voltar para ERP
-              </Button>
-            )}
-          </div>
-        </div>
+        )}
 
         {/* Context Tabs - only show in general mode without fixed bookmaker */}
         {!initialContextId && (

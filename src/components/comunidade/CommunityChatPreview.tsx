@@ -225,9 +225,6 @@ export function CommunityChatPreview() {
         <CardTitle className="text-base flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
           Chat da Comunidade
-          <span className="text-xs font-normal text-muted-foreground ml-auto">
-            3 dias
-          </span>
         </CardTitle>
       </CardHeader>
       
