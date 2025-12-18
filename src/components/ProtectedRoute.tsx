@@ -29,11 +29,19 @@ export function ProtectedRoute({
 
   useEffect(() => {
     const checkAccess = async () => {
+      // Wait until fully initialized
       if (!user || !initialized) return;
 
-      // System owner requirement
+      // SYSTEM OWNER has full access to everything
+      if (isSystemOwner) {
+        setHasAccess(true);
+        setPermissionChecked(true);
+        return;
+      }
+
+      // System owner requirement - only system owners can access
       if (requireSystemOwner) {
-        setHasAccess(isSystemOwner);
+        setHasAccess(false);
         setPermissionChecked(true);
         return;
       }
@@ -91,8 +99,8 @@ export function ProtectedRoute({
     return <BlockedUserScreen />;
   }
 
-  // Check if user has no workspace (unless they're system owner accessing admin)
-  if (!workspace && !isSystemOwner && !requireSystemOwner) {
+  // Check if user has no workspace (system owner bypasses this requirement)
+  if (!workspace && !isSystemOwner) {
     return <NoWorkspaceScreen />;
   }
 
