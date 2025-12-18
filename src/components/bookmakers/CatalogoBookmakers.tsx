@@ -22,6 +22,7 @@ import {
 import BookmakerCatalogoDialog from "./BookmakerCatalogoDialog";
 import BookmakerAccessDialog from "./BookmakerAccessDialog";
 import { useRole } from "@/hooks/useRole";
+import { useAuth } from "@/hooks/useAuth";
 
 interface BookmakerCatalogo {
   id: string;
@@ -37,6 +38,8 @@ interface BookmakerCatalogo {
   bonus_multiplos_json: any;
   observacoes: string | null;
   visibility: string | null;
+  user_id: string | null;
+  is_system: boolean | null;
 }
 
 export default function CatalogoBookmakers() {
@@ -61,7 +64,9 @@ export default function CatalogoBookmakers() {
   const [selectedAccessBookmaker, setSelectedAccessBookmaker] = useState<BookmakerCatalogo | null>(null);
   const { toast } = useToast();
   const { isOwnerOrAdmin, isMaster } = useRole();
-  const canManageAccess = isOwnerOrAdmin || isMaster;
+  const { isSystemOwner, user } = useAuth();
+  const canManageAccess = isOwnerOrAdmin || isMaster || isSystemOwner;
+  const canManageGlobal = isMaster || isSystemOwner;
 
   useEffect(() => {
     fetchBookmakers();
@@ -176,6 +181,27 @@ export default function CatalogoBookmakers() {
   const handleAccessClick = (bookmaker: BookmakerCatalogo) => {
     setSelectedAccessBookmaker(bookmaker);
     setAccessDialogOpen(true);
+  };
+
+  // Helper to check if current user can edit/delete a specific bookmaker
+  const canEditBookmaker = (bookmaker: BookmakerCatalogo): boolean => {
+    // System Owner can edit anything
+    if (isSystemOwner) return true;
+    // Master can edit non-system bookmakers
+    if (isMaster && !bookmaker.is_system) return true;
+    // User can edit their own private bookmakers
+    if (user && bookmaker.user_id === user.id && bookmaker.visibility === 'WORKSPACE_PRIVATE' && !bookmaker.is_system) return true;
+    return false;
+  };
+
+  const canDeleteBookmaker = (bookmaker: BookmakerCatalogo): boolean => {
+    // System Owner can delete anything
+    if (isSystemOwner) return true;
+    // Master can delete non-system bookmakers
+    if (isMaster && !bookmaker.is_system) return true;
+    // User can delete their own private bookmakers
+    if (user && bookmaker.user_id === user.id && bookmaker.visibility === 'WORKSPACE_PRIVATE' && !bookmaker.is_system) return true;
+    return false;
   };
 
   const clearAllFilters = () => {
@@ -602,24 +628,28 @@ export default function CatalogoBookmakers() {
                             </Tooltip>
                           </TooltipProvider>
                         )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => handleEdit(bookmaker)}
-                        >
-                          <Edit className="mr-1 h-4 w-4" />
-                          Editar
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 text-red-600 hover:text-red-700"
-                          onClick={() => handleDeleteClick(bookmaker.id)}
-                        >
-                          <Trash2 className="mr-1 h-4 w-4" />
-                          Excluir
-                        </Button>
+                        {canEditBookmaker(bookmaker) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleEdit(bookmaker)}
+                          >
+                            <Edit className="mr-1 h-4 w-4" />
+                            Editar
+                          </Button>
+                        )}
+                        {canDeleteBookmaker(bookmaker) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 text-red-600 hover:text-red-700"
+                            onClick={() => handleDeleteClick(bookmaker.id)}
+                          >
+                            <Trash2 className="mr-1 h-4 w-4" />
+                            Excluir
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -806,21 +836,25 @@ export default function CatalogoBookmakers() {
                               </Tooltip>
                             </TooltipProvider>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(bookmaker)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteClick(bookmaker.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {canEditBookmaker(bookmaker) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(bookmaker)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canDeleteBookmaker(bookmaker) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteClick(bookmaker.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
