@@ -63,6 +63,10 @@ export function CleanupTab() {
   };
 
   const handleProceedToCleanup = () => {
+    // Só permite prosseguir se dry-run foi validado
+    if (!dryRunResult?.validated) {
+      return;
+    }
     setShowDryRunDialog(false);
     setShowConfirmDialog(true);
     setConfirmationPhrase('');
@@ -278,11 +282,14 @@ export function CleanupTab() {
                 </ScrollArea>
               </div>
 
-              <Alert variant="destructive">
+              <Alert variant={dryRunResult.validated ? "destructive" : "default"} className={!dryRunResult.validated ? "border-amber-500/50 bg-amber-500/10" : ""}>
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Atenção</AlertTitle>
+                <AlertTitle>{dryRunResult.validated ? "Atenção" : "Validação OK"}</AlertTitle>
                 <AlertDescription>
-                  Esta operação é irreversível. Os dados serão permanentemente removidos.
+                  {dryRunResult.validated 
+                    ? "Esta operação é irreversível. Os dados serão permanentemente removidos."
+                    : "Todas as queries foram validadas. A limpeza pode prosseguir com segurança."
+                  }
                 </AlertDescription>
               </Alert>
             </div>
@@ -292,7 +299,11 @@ export function CleanupTab() {
             <Button variant="outline" onClick={() => setShowDryRunDialog(false)}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleProceedToCleanup}>
+            <Button 
+              variant="destructive" 
+              onClick={handleProceedToCleanup}
+              disabled={!dryRunResult?.validated}
+            >
               <Play className="h-4 w-4 mr-2" />
               Prosseguir para Limpeza
             </Button>

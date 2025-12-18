@@ -5930,6 +5930,10 @@ export type Database = {
       check_partner_limit: { Args: { workspace_uuid: string }; Returns: Json }
       check_user_limit: { Args: { workspace_uuid: string }; Returns: Json }
       cleanup_expired_chat_messages: { Args: never; Returns: number }
+      column_exists: {
+        Args: { _column_name: string; _table_name: string }
+        Returns: boolean
+      }
       create_audit_log: {
         Args: {
           _action: Database["public"]["Enums"]["audit_action"]
