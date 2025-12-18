@@ -40,7 +40,7 @@ export default function ComunidadeChatPopout() {
 
   // Set window title
   useEffect(() => {
-    document.title = bookmakerName ? `Chat - ${bookmakerName}` : 'Chat da Comunidade';
+    document.title = bookmakerName ? `Chat - ${bookmakerName}` : 'Chat Geral';
   }, [bookmakerName]);
 
   const handleGoToERP = () => {

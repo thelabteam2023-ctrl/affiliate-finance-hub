@@ -242,7 +242,7 @@ export function CommunityChat() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
-            Chat da Comunidade
+            Chat Geral
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center h-[300px] text-center">
@@ -263,10 +263,7 @@ export function CommunityChat() {
         <CardHeader className="pb-3 shrink-0">
           <CardTitle className="text-base flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
-            Chat da Comunidade
-            <span className="text-xs font-normal text-muted-foreground ml-auto">
-              Histórico: 7 dias
-            </span>
+            Chat Geral
           </CardTitle>
         </CardHeader>
         

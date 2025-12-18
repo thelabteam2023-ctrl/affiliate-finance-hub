@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useCommunityAccess } from '@/hooks/useCommunityAccess';
 import { useChatBroadcast } from '@/hooks/useChatBroadcast';
+import { useChatPresence } from '@/hooks/useChatPresence';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { MessageSquare, Lock, ExternalLink, Maximize2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { OnlineIndicator } from './OnlineIndicator';
 
 interface ChatMessage {
   id: string;
@@ -30,6 +32,7 @@ export function CommunityChatPreview() {
   const { workspaceId } = useWorkspace();
   const { hasFullAccess, loading: accessLoading } = useCommunityAccess();
   const { isPopoutOpen, newMessageCount, subscribe } = useChatBroadcast();
+  const { onlineCount, isConnected } = useChatPresence('general');
   const { toast } = useToast();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -173,7 +176,7 @@ export function CommunityChatPreview() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
-            Chat da Comunidade
+            Chat Geral
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center h-[200px] text-center">
@@ -195,7 +198,7 @@ export function CommunityChatPreview() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
-            Chat da Comunidade
+            Chat Geral
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center py-6 text-center">
@@ -220,12 +223,13 @@ export function CommunityChatPreview() {
   }
 
   return (
-    <Card className="h-[350px] flex flex-col">
-      <CardHeader className="pb-3 shrink-0">
+    <Card className="h-[380px] flex flex-col">
+      <CardHeader className="pb-2 shrink-0">
         <CardTitle className="text-base flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
-          Chat da Comunidade
+          Chat Geral
         </CardTitle>
+        <OnlineIndicator count={onlineCount} isConnected={isConnected} className="mt-1" />
       </CardHeader>
       
       <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">

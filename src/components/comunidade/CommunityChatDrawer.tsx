@@ -36,7 +36,7 @@ export function CommunityChatDrawer({ open, onOpenChange }: CommunityChatDrawerP
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" showClose={false} className="w-full sm:w-[480px] p-0 flex flex-col">
         <SheetHeader className="p-4 border-b border-border flex-row items-center justify-between space-y-0">
-          <SheetTitle className="text-base">Chat da Comunidade</SheetTitle>
+          <SheetTitle className="text-base">Chat Geral</SheetTitle>
           <div className="flex items-center gap-2">
             {!isPopoutOpen && (
               <Button variant="ghost" size="sm" onClick={openPopout}>
