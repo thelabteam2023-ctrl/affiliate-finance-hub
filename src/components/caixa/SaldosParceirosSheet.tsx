@@ -13,7 +13,6 @@ interface SaldoContaParceiro {
   parceiro_id: string;
   parceiro_nome: string;
   banco: string;
-  titular: string;
   moeda: string;
   saldo: number;
 }

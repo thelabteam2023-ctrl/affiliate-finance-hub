@@ -76,16 +76,17 @@ export function DashboardTab() {
       setLoading(true);
       
       // Fetch custos, acordos, bonus pagos, and movimentacoes in parallel
+      // Use workspace-scoped views to prevent data leakage
       const [custosResult, acordosResult, bonusResult, movResult] = await Promise.all([
         supabase.from("v_custos_aquisicao").select("*"),
         supabase.from("indicador_acordos").select("indicador_id, meta_parceiros, valor_bonus, ativo").eq("ativo", true),
-        // Count bonus already paid per indicador
-        supabase.from("movimentacoes_indicacao")
+        // Count bonus already paid per indicador - use workspace-scoped view
+        supabase.from("v_movimentacoes_indicacao_workspace")
           .select("indicador_id")
           .eq("tipo", "BONUS_INDICADOR")
           .eq("status", "CONFIRMADO"),
-        // Fetch all movimentacoes for total investment calculation
-        supabase.from("movimentacoes_indicacao")
+        // Fetch all movimentacoes for total investment calculation - use workspace-scoped view
+        supabase.from("v_movimentacoes_indicacao_workspace")
           .select("id, tipo, valor, status, data_movimentacao")
       ]);
 

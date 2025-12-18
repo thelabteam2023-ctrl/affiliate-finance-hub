@@ -90,15 +90,16 @@ export function FinanceiroTab() {
     try {
       setLoading(true);
 
-      // Fetch all data in parallel
+      // Fetch all data in parallel - use workspace-scoped views to prevent data leakage
       const [movResult, custosResult, acordosResult, parceriasResult, indicacoesResult, indicadoresResult, parceirosResult] = await Promise.all([
+        // Use workspace-scoped view for movimentacoes
         supabase
-          .from("movimentacoes_indicacao")
+          .from("v_movimentacoes_indicacao_workspace")
           .select("*")
           .order("data_movimentacao", { ascending: false }),
         supabase.from("v_custos_aquisicao").select("*"),
         supabase.from("indicador_acordos").select("*").eq("ativo", true),
-        // Fetch parcerias with comissão pendente
+        // Fetch parcerias with comissão pendente (parcerias table has workspace RLS)
         supabase
           .from("parcerias")
           .select(`
@@ -112,15 +113,15 @@ export function FinanceiroTab() {
           .eq("comissao_paga", false)
           .not("valor_comissao_indicador", "is", null)
           .gt("valor_comissao_indicador", 0),
-        // Fetch all indicacoes to map parceiro -> indicador
+        // Use workspace-scoped view for indicacoes
         supabase
-          .from("indicacoes")
+          .from("v_indicacoes_workspace")
           .select("id, parceiro_id, indicador_id"),
-        // Fetch all indicadores for mapping
+        // indicadores_referral has workspace RLS
         supabase
           .from("indicadores_referral")
           .select("id, nome"),
-        // Fetch parcerias with valor_parceiro that haven't been paid (exclude exempt)
+        // parcerias table has workspace RLS
         supabase
           .from("parcerias")
           .select(`
