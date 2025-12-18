@@ -3456,6 +3456,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          blocked_at: string | null
+          blocked_reason: string | null
           cpf: string | null
           created_at: string
           data_admissao: string | null
@@ -3464,12 +3466,16 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          is_blocked: boolean | null
+          is_system_owner: boolean | null
           observacoes_operador: string | null
           telefone: string | null
           tipo_contrato: string | null
           updated_at: string
         }
         Insert: {
+          blocked_at?: string | null
+          blocked_reason?: string | null
           cpf?: string | null
           created_at?: string
           data_admissao?: string | null
@@ -3478,12 +3484,16 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          is_blocked?: boolean | null
+          is_system_owner?: boolean | null
           observacoes_operador?: string | null
           telefone?: string | null
           tipo_contrato?: string | null
           updated_at?: string
         }
         Update: {
+          blocked_at?: string | null
+          blocked_reason?: string | null
           cpf?: string | null
           created_at?: string
           data_admissao?: string | null
@@ -3492,6 +3502,8 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_blocked?: boolean | null
+          is_system_owner?: boolean | null
           observacoes_operador?: string | null
           telefone?: string | null
           tipo_contrato?: string | null
@@ -4547,7 +4559,10 @@ export type Database = {
       workspaces: {
         Row: {
           created_at: string
+          deactivated_at: string | null
+          deactivation_reason: string | null
           id: string
+          is_active: boolean | null
           max_active_partners: number
           max_users: number
           name: string
@@ -4558,7 +4573,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deactivated_at?: string | null
+          deactivation_reason?: string | null
           id?: string
+          is_active?: boolean | null
           max_active_partners?: number
           max_users?: number
           name: string
@@ -4569,7 +4587,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deactivated_at?: string | null
+          deactivation_reason?: string | null
           id?: string
+          is_active?: boolean | null
           max_active_partners?: number
           max_users?: number
           name?: string
@@ -5787,6 +5808,78 @@ export type Database = {
       }
     }
     Functions: {
+      admin_add_user_to_workspace: {
+        Args: {
+          _role?: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+          _workspace_id: string
+        }
+        Returns: undefined
+      }
+      admin_create_workspace_for_user: {
+        Args: {
+          _plan?: string
+          _role?: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+          _workspace_name: string
+        }
+        Returns: string
+      }
+      admin_get_all_users: {
+        Args: never
+        Returns: {
+          blocked_at: string
+          blocked_reason: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          is_blocked: boolean
+          workspace_id: string
+          workspace_name: string
+          workspace_role: Database["public"]["Enums"]["app_role"]
+        }[]
+      }
+      admin_get_all_workspaces: {
+        Args: never
+        Returns: {
+          created_at: string
+          deactivated_at: string
+          deactivation_reason: string
+          id: string
+          is_active: boolean
+          member_count: number
+          name: string
+          owner_email: string
+          owner_id: string
+          owner_name: string
+          plan: string
+          slug: string
+        }[]
+      }
+      admin_get_workspace_members: {
+        Args: { _workspace_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          is_active: boolean
+          joined_at: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }[]
+      }
+      admin_set_user_blocked: {
+        Args: { _blocked: boolean; _reason?: string; _user_id: string }
+        Returns: undefined
+      }
+      admin_set_workspace_active: {
+        Args: { _active: boolean; _reason?: string; _workspace_id: string }
+        Returns: undefined
+      }
+      admin_update_workspace_plan: {
+        Args: { _plan: string; _workspace_id: string }
+        Returns: undefined
+      }
       calcular_proxima_conciliacao: {
         Args: {
           p_data_entrada: string
@@ -5843,6 +5936,7 @@ export type Database = {
         Args: { _user_id: string; _workspace_id?: string }
         Returns: boolean
       }
+      is_system_owner: { Args: { _user_id: string }; Returns: boolean }
       operator_has_project_access: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean

@@ -4,11 +4,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loader2, ShieldX } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { NoWorkspaceScreen } from "@/components/NoWorkspaceScreen";
+import { BlockedUserScreen } from "@/components/BlockedUserScreen";
 
 interface ProtectedRouteProps {
   children: ReactNode;
   requiredPermission?: string;
   requiredRole?: string[];
+  requireSystemOwner?: boolean;
   fallback?: ReactNode;
 }
 
@@ -16,9 +19,10 @@ export function ProtectedRoute({
   children, 
   requiredPermission,
   requiredRole,
+  requireSystemOwner,
   fallback 
 }: ProtectedRouteProps) {
-  const { user, loading, initialized, role, hasPermission } = useAuth();
+  const { user, loading, initialized, role, hasPermission, workspace, isSystemOwner, isBlocked } = useAuth();
   const location = useLocation();
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [hasAccess, setHasAccess] = useState(true);
@@ -26,6 +30,13 @@ export function ProtectedRoute({
   useEffect(() => {
     const checkAccess = async () => {
       if (!user || !initialized) return;
+
+      // System owner requirement
+      if (requireSystemOwner) {
+        setHasAccess(isSystemOwner);
+        setPermissionChecked(true);
+        return;
+      }
 
       // Check role requirement
       if (requiredRole && requiredRole.length > 0) {
@@ -56,7 +67,7 @@ export function ProtectedRoute({
     };
 
     checkAccess();
-  }, [user, initialized, role, requiredPermission, requiredRole, hasPermission]);
+  }, [user, initialized, role, requiredPermission, requiredRole, requireSystemOwner, hasPermission, isSystemOwner]);
 
   // Show loading while checking auth
   if (loading || !initialized) {
@@ -75,8 +86,18 @@ export function ProtectedRoute({
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
+  // Check if user is blocked
+  if (isBlocked) {
+    return <BlockedUserScreen />;
+  }
+
+  // Check if user has no workspace (unless they're system owner accessing admin)
+  if (!workspace && !isSystemOwner && !requireSystemOwner) {
+    return <NoWorkspaceScreen />;
+  }
+
   // Show loading while checking permissions
-  if ((requiredPermission || requiredRole) && !permissionChecked) {
+  if ((requiredPermission || requiredRole || requireSystemOwner) && !permissionChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
