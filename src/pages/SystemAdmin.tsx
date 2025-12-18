@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSystemAdmin, isDeletedUser } from '@/hooks/useSystemAdmin';
 import { CleanupTab } from '@/components/system-admin/CleanupTab';
+import { CommunityResetTab } from '@/components/system-admin/CommunityResetTab';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Users, Building2, Shield, Ban, Check, Plus, UserPlus, Settings2, 
-  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive
+  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -225,6 +226,10 @@ export default function SystemAdmin() {
           <TabsTrigger value="cleanup" className="gap-2">
             <Trash2 className="h-4 w-4" />
             Limpeza de Testes
+          </TabsTrigger>
+          <TabsTrigger value="community-reset" className="gap-2">
+            <MessagesSquare className="h-4 w-4" />
+            Reset Comunidade
           </TabsTrigger>
         </TabsList>
 
@@ -470,6 +475,11 @@ export default function SystemAdmin() {
         {/* Cleanup Tab */}
         <TabsContent value="cleanup">
           <CleanupTab />
+        </TabsContent>
+
+        {/* Community Reset Tab */}
+        <TabsContent value="community-reset">
+          <CommunityResetTab />
         </TabsContent>
       </Tabs>
 

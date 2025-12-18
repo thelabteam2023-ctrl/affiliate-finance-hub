@@ -6508,6 +6508,10 @@ export type Database = {
         }[]
       }
       admin_hard_delete_users: { Args: { _user_ids: string[] }; Returns: Json }
+      admin_reset_community: {
+        Args: { _confirmation_phrase?: string; _dry_run?: boolean }
+        Returns: Json
+      }
       admin_set_test_user: {
         Args: { _is_test: boolean; _user_id: string }
         Returns: undefined
