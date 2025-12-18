@@ -1,4 +1,4 @@
-import { Bell, Users, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -37,7 +37,7 @@ interface MenuGroup {
 
 // Icon mapping for favorites
 const iconMap: Record<string, any> = {
-  Bell, Users, Landmark, Wallet, Building2, TrendingUp, 
+  Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, 
   UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, Star
 };
 
@@ -76,6 +76,12 @@ const menuGroups: MenuGroup[] = [
     label: "CRESCIMENTO",
     items: [
       { title: "Captação", url: "/programa-indicacao", icon: UserPlus, iconName: "UserPlus", permission: "acquisition:view" },
+    ],
+  },
+  {
+    label: "COMUNIDADE",
+    items: [
+      { title: "Comunidade", url: "/comunidade", icon: Users2, iconName: "Users2" },
     ],
   },
   {

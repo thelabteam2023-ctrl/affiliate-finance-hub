@@ -22,6 +22,8 @@ import Financeiro from "./pages/Financeiro";
 import CentralOperacoes from "./pages/CentralOperacoes";
 import Testes from "./pages/Testes";
 import Workspace from "./pages/Workspace";
+import Comunidade from "./pages/Comunidade";
+import ComunidadeDetalhe from "./pages/ComunidadeDetalhe";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -164,6 +166,22 @@ const App = () => (
               <ProtectedRoute requiredRole={['owner', 'master']}>
                 <AuthenticatedLayout>
                   <Testes />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/comunidade" element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  <Comunidade />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/comunidade/:id" element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  <ComunidadeDetalhe />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
