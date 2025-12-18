@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/PageHeader';
@@ -7,11 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCommunityAccess } from '@/hooks/useCommunityAccess';
-import { Search, Star, MessageSquare, Lock } from 'lucide-react';
+import { Search, Star, MessageSquare, Lock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CommunityRadar } from '@/components/comunidade/CommunityRadar';
 import { CommunityChatPreview } from '@/components/comunidade/CommunityChatPreview';
 import { CommunityChatDrawer } from '@/components/comunidade/CommunityChatDrawer';
+
+const INITIAL_VISIBLE_COUNT = 9;
 
 interface BookmakerStats {
   bookmaker_catalogo_id: string;
@@ -32,6 +34,7 @@ export default function Comunidade() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   // Listen for event to open chat drawer
   useEffect(() => {
@@ -60,9 +63,27 @@ export default function Comunidade() {
     }
   };
 
-  const filteredBookmakers = bookmakers.filter(bm =>
-    bm.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter bookmakers based on search - searches ALL bookmakers
+  const filteredBookmakers = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return bookmakers;
+    }
+    return bookmakers.filter(bm =>
+      bm.nome.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [bookmakers, searchTerm]);
+
+  // Determine which bookmakers to display
+  const displayedBookmakers = useMemo(() => {
+    // When searching, show all matches
+    if (searchTerm.trim()) {
+      return filteredBookmakers;
+    }
+    // When not searching, respect showAll toggle
+    return showAll ? filteredBookmakers : filteredBookmakers.slice(0, INITIAL_VISIBLE_COUNT);
+  }, [filteredBookmakers, showAll, searchTerm]);
+
+  const hasMoreToShow = !searchTerm.trim() && filteredBookmakers.length > INITIAL_VISIBLE_COUNT;
 
   const renderStars = (rating: number | null) => {
     if (!rating) return <span className="text-muted-foreground text-sm">Sem avaliações</span>;
@@ -194,64 +215,89 @@ export default function Comunidade() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-              {filteredBookmakers.map((bm) => (
-                <Card 
-                  key={bm.bookmaker_catalogo_id}
-                  className="cursor-pointer hover:border-primary/50 transition-colors"
-                  onClick={() => navigate(`/comunidade/${bm.bookmaker_catalogo_id}`)}
-                >
-                  <CardContent className="p-3">
-                    <div className="flex items-start gap-2.5">
-                      {/* Logo */}
-                      <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
-                        {bm.logo_url ? (
-                          <img src={bm.logo_url} alt={bm.nome} className="h-8 w-8 object-contain" />
-                        ) : (
-                          <span className="text-base font-bold text-muted-foreground">
-                            {bm.nome.charAt(0)}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold truncate">{bm.nome}</h3>
-                          <Badge 
-                            variant="outline" 
-                            className={`text-[10px] shrink-0 ${
-                              bm.regulamentacao_status === 'REGULAMENTADA'
-                                ? 'border-green-500/30 text-green-500'
-                                : 'border-amber-500/30 text-amber-500'
-                            }`}
-                          >
-                            {bm.regulamentacao_status === 'REGULAMENTADA' ? 'Reg.' : 'Não Reg.'}
-                          </Badge>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                {displayedBookmakers.map((bm) => (
+                  <Card 
+                    key={bm.bookmaker_catalogo_id}
+                    className="cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => navigate(`/comunidade/${bm.bookmaker_catalogo_id}`)}
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex items-start gap-2.5">
+                        {/* Logo */}
+                        <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                          {bm.logo_url ? (
+                            <img src={bm.logo_url} alt={bm.nome} className="h-8 w-8 object-contain" />
+                          ) : (
+                            <span className="text-base font-bold text-muted-foreground">
+                              {bm.nome.charAt(0)}
+                            </span>
+                          )}
                         </div>
-                        
-                        {/* Rating */}
-                        {renderStars(bm.nota_media_geral)}
-                      </div>
-                    </div>
 
-                    {/* Stats Row */}
-                    <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-border">
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Star className="h-3.5 w-3.5" />
-                        <span>{bm.total_avaliacoes}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold truncate">{bm.nome}</h3>
+                            <Badge 
+                              variant="outline" 
+                              className={`text-[10px] shrink-0 ${
+                                bm.regulamentacao_status === 'REGULAMENTADA'
+                                  ? 'border-green-500/30 text-green-500'
+                                  : 'border-amber-500/30 text-amber-500'
+                              }`}
+                            >
+                              {bm.regulamentacao_status === 'REGULAMENTADA' ? 'Reg.' : 'Não Reg.'}
+                            </Badge>
+                          </div>
+                          
+                          {/* Rating */}
+                          {renderStars(bm.nota_media_geral)}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        <span>{bm.total_topicos}</span>
+
+                      {/* Stats Row */}
+                      <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-border">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Star className="h-3.5 w-3.5" />
+                          <span>{bm.total_avaliacoes}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          <span>{bm.total_topicos}</span>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Ver mais / Ver menos button */}
+              {hasMoreToShow && (
+                <div className="flex justify-center mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAll(!showAll)}
+                    className="gap-2"
+                  >
+                    {showAll ? (
+                      <>
+                        <ChevronUp className="h-4 w-4" />
+                        Ver menos
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-4 w-4" />
+                        Ver mais casas ({filteredBookmakers.length - INITIAL_VISIBLE_COUNT})
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
 
-          {filteredBookmakers.length === 0 && !loading && (
+          {displayedBookmakers.length === 0 && !loading && (
             <div className="text-center py-12 text-muted-foreground">
               Nenhuma casa encontrada com "{searchTerm}"
             </div>

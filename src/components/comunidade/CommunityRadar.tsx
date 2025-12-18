@@ -22,7 +22,7 @@ interface RadarItem {
   engagement_score: number;
 }
 
-const RADAR_LIMIT = 8;
+const RADAR_LIMIT = 10;
 
 export function CommunityRadar() {
   const navigate = useNavigate();
