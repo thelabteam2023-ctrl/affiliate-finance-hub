@@ -48,9 +48,9 @@ interface MemberListProps {
   canEdit: boolean;
 }
 
-const roleConfig: Record<AppRole, { label: string; icon: any; color: string }> = {
+// Roles disponíveis para seleção (excluindo owner que é fixo)
+const roleConfig: Record<string, { label: string; icon: any; color: string }> = {
   owner: { label: "Proprietário", icon: Crown, color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" },
-  master: { label: "Master", icon: Shield, color: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
   admin: { label: "Administrador", icon: Shield, color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
   finance: { label: "Financeiro", icon: DollarSign, color: "bg-green-500/10 text-green-600 border-green-500/20" },
   operator: { label: "Operador", icon: Gamepad2, color: "bg-orange-500/10 text-orange-600 border-orange-500/20" },
@@ -134,13 +134,13 @@ export function MemberList({ members, currentUserId, onRoleChange, onRemove, can
     <>
       <div className="space-y-2">
         {members.map((member) => {
-          const roleInfo = roleConfig[member.role];
+          const roleInfo = roleConfig[member.role] || roleConfig['user'];
           const RoleIcon = roleInfo.icon;
           const isCurrentUser = member.user_id === currentUserId;
-          const isOwnerOrMaster = member.role === 'owner' || member.role === 'master';
-          const canEditMember = canEdit && !isCurrentUser && !isOwnerOrMaster;
+          const isOwner = member.role === 'owner';
+          const canEditMember = canEdit && !isCurrentUser && !isOwner;
           const overrideCount = memberOverrideCounts[member.user_id] || 0;
-          const canHaveOverrides = member.role !== 'viewer' && member.role !== 'owner' && member.role !== 'master';
+          const canHaveOverrides = member.role !== 'viewer' && member.role !== 'owner';
 
           return (
             <div
@@ -198,6 +198,7 @@ export function MemberList({ members, currentUserId, onRoleChange, onRemove, can
                     <SelectContent>
                       {availableRoles.map((role) => {
                         const config = roleConfig[role];
+                        if (!config) return null;
                         const Icon = config.icon;
                         return (
                           <SelectItem key={role} value={role}>

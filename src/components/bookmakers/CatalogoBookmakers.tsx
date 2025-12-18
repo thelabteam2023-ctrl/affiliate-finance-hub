@@ -63,10 +63,10 @@ export default function CatalogoBookmakers() {
   const [accessDialogOpen, setAccessDialogOpen] = useState(false);
   const [selectedAccessBookmaker, setSelectedAccessBookmaker] = useState<BookmakerCatalogo | null>(null);
   const { toast } = useToast();
-  const { isOwnerOrAdmin, isMaster } = useRole();
+  const { isOwnerOrAdmin } = useRole();
   const { isSystemOwner, user } = useAuth();
-  const canManageAccess = isOwnerOrAdmin || isMaster || isSystemOwner;
-  const canManageGlobal = isMaster || isSystemOwner;
+  const canManageAccess = isOwnerOrAdmin || isSystemOwner;
+  const canManageGlobal = isSystemOwner; // Apenas System Owner pode gerenciar bookmakers globais
 
   useEffect(() => {
     fetchBookmakers();
@@ -185,22 +185,18 @@ export default function CatalogoBookmakers() {
 
   // Helper to check if current user can edit/delete a specific bookmaker
   const canEditBookmaker = (bookmaker: BookmakerCatalogo): boolean => {
-    // System Owner can edit anything
+    // System Owner can edit anything (global or sistema)
     if (isSystemOwner) return true;
-    // Master can edit non-system bookmakers
-    if (isMaster && !bookmaker.is_system) return true;
-    // User can edit their own private bookmakers
-    if (user && bookmaker.user_id === user.id && bookmaker.visibility === 'WORKSPACE_PRIVATE' && !bookmaker.is_system) return true;
+    // Owner/Admin can edit their own private bookmakers (never global)
+    if (isOwnerOrAdmin && user && bookmaker.user_id === user.id && bookmaker.visibility === 'WORKSPACE_PRIVATE' && !bookmaker.is_system) return true;
     return false;
   };
 
   const canDeleteBookmaker = (bookmaker: BookmakerCatalogo): boolean => {
-    // System Owner can delete anything
+    // System Owner can delete anything (global or sistema)
     if (isSystemOwner) return true;
-    // Master can delete non-system bookmakers
-    if (isMaster && !bookmaker.is_system) return true;
-    // User can delete their own private bookmakers
-    if (user && bookmaker.user_id === user.id && bookmaker.visibility === 'WORKSPACE_PRIVATE' && !bookmaker.is_system) return true;
+    // Owner/Admin can delete their own private bookmakers (never global)
+    if (isOwnerOrAdmin && user && bookmaker.user_id === user.id && bookmaker.visibility === 'WORKSPACE_PRIVATE' && !bookmaker.is_system) return true;
     return false;
   };
 

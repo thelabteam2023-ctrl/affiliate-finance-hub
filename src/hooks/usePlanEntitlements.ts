@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "./useWorkspace";
 import { useRole } from "./useRole";
+import { useAuth } from "./useAuth";
 
 export interface PlanEntitlements {
   max_active_partners: number;
@@ -70,15 +71,16 @@ const UNLIMITED_THRESHOLD = 9999;
 
 export function usePlanEntitlements(): UsePlanEntitlementsReturn {
   const { workspaceId } = useWorkspace();
-  const { isOwner, isMaster } = useRole();
+  const { isOwner } = useRole();
+  const { isSystemOwner } = useAuth();
   const [plan, setPlan] = useState<string | null>(null);
   const [entitlements, setEntitlements] = useState<PlanEntitlements | null>(null);
   const [usage, setUsage] = useState<WorkspaceUsage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // OWNER/MASTER tem acesso total - ignora limites de plano
-  const hasUnlimitedAccess = isOwner || isMaster;
+  // OWNER do workspace ou System Owner tem acesso total - ignora limites de plano
+  const hasUnlimitedAccess = isOwner || isSystemOwner;
 
   const fetchWorkspaceUsage = useCallback(async () => {
     if (!workspaceId) {
