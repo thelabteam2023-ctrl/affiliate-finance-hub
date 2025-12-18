@@ -25,6 +25,7 @@ import Workspace from "./pages/Workspace";
 import Comunidade from "./pages/Comunidade";
 import ComunidadeDetalhe from "./pages/ComunidadeDetalhe";
 import ComunidadeChatPopout from "./pages/ComunidadeChatPopout";
+import SystemAdmin from "./pages/SystemAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -167,6 +168,14 @@ const App = () => (
               <ProtectedRoute requiredRole={['owner', 'master']}>
                 <AuthenticatedLayout>
                   <Testes />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin" element={
+              <ProtectedRoute requireSystemOwner>
+                <AuthenticatedLayout>
+                  <SystemAdmin />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />

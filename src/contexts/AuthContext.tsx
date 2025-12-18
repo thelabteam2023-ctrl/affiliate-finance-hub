@@ -20,6 +20,8 @@ interface AuthContextType {
   role: AppRole | null;
   loading: boolean;
   initialized: boolean;
+  isSystemOwner: boolean;
+  isBlocked: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -38,9 +40,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const [isSystemOwner, setIsSystemOwner] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
 
   const fetchWorkspaceAndRole = useCallback(async (userId: string) => {
     try {
+      // Check if user is system owner or blocked
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('is_system_owner, is_blocked')
+        .eq('id', userId)
+        .single();
+      
+      if (!profileError && profileData) {
+        setIsSystemOwner(profileData.is_system_owner || false);
+        setIsBlocked(profileData.is_blocked || false);
+      }
+
       // Get user's workspace
       const { data: workspaceId, error: workspaceError } = await supabase
         .rpc('get_user_workspace', { _user_id: userId });
@@ -117,6 +133,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (event === 'SIGNED_OUT') {
           setWorkspace(null);
           setRole(null);
+          setIsSystemOwner(false);
+          setIsBlocked(false);
         }
       }
     );
@@ -155,6 +173,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setWorkspace(null);
     setRole(null);
+    setIsSystemOwner(false);
+    setIsBlocked(false);
   };
 
   const refreshWorkspace = async () => {
@@ -202,6 +222,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     role,
     loading,
     initialized,
+    isSystemOwner,
+    isBlocked,
     signIn,
     signUp,
     signOut,
