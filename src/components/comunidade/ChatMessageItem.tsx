@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Edit2, FileText, X, Check, Play, Pause } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { AudioWaveform, useAudioWaveform } from './AudioWaveform';
 
 export interface ChatMessage {
   id: string;
@@ -39,7 +40,43 @@ export function ChatMessageItem({
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [showLightbox, setShowLightbox] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Get waveform levels for audio
+  const waveformLevels = useAudioWaveform(
+    message.message_type === 'audio' ? message.content : null
+  );
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleLoadedMetadata = () => setDuration(audio.duration);
+    const handleEnded = () => {
+      setPlaying(false);
+      setCurrentTime(0);
+    };
+    const handleError = () => {
+      console.error('Audio playback error');
+    };
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('error', handleError);
+
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError);
+    };
+  }, []);
 
   const handleSaveEdit = () => {
     if (editContent.trim()) {
@@ -48,15 +85,27 @@ export function ChatMessageItem({
     }
   };
 
-  const toggleAudio = () => {
+  const toggleAudio = async () => {
     if (!audioRef.current) return;
     
-    if (playing) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
+    try {
+      if (playing) {
+        audioRef.current.pause();
+        setPlaying(false);
+      } else {
+        await audioRef.current.play();
+        setPlaying(true);
+      }
+    } catch (error) {
+      console.error('Error playing audio:', error);
     }
-    setPlaying(!playing);
+  };
+
+  const formatTime = (seconds: number) => {
+    if (!isFinite(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const renderContent = () => {
@@ -96,43 +145,90 @@ export function ChatMessageItem({
     switch (message.message_type) {
       case 'image':
         return (
-          <img
-            src={message.content}
-            alt="Imagem compartilhada"
-            className="max-w-full rounded-md cursor-pointer hover:opacity-90 transition-opacity"
-            style={{ maxHeight: '300px' }}
-            onClick={() => window.open(message.content, '_blank')}
-          />
+          <>
+            <div 
+              className="relative cursor-pointer rounded-md overflow-hidden"
+              onClick={() => setShowLightbox(true)}
+            >
+              {!imageLoaded && (
+                <div className="w-48 h-32 bg-muted animate-pulse rounded-md" />
+              )}
+              <img
+                src={message.content}
+                alt="Imagem compartilhada"
+                className={`max-w-full rounded-md hover:opacity-90 transition-opacity ${
+                  !imageLoaded ? 'hidden' : ''
+                }`}
+                style={{ maxHeight: '300px', maxWidth: '280px' }}
+                onLoad={() => setImageLoaded(true)}
+                onError={() => setImageLoaded(true)}
+              />
+            </div>
+            {/* Lightbox */}
+            {showLightbox && (
+              <div 
+                className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+                onClick={() => setShowLightbox(false)}
+              >
+                <img
+                  src={message.content}
+                  alt="Imagem"
+                  className="max-w-full max-h-full object-contain rounded-lg"
+                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="absolute top-4 right-4 text-white hover:bg-white/20"
+                  onClick={() => setShowLightbox(false)}
+                >
+                  <X className="h-6 w-6" />
+                </Button>
+              </div>
+            )}
+          </>
         );
       
       case 'audio':
         return (
-          <div className="flex items-center gap-2 min-w-[180px]">
+          <div className="min-w-[200px] max-w-[280px]">
             <audio
               ref={audioRef}
               src={message.content}
-              onEnded={() => setPlaying(false)}
+              preload="metadata"
               className="hidden"
             />
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8 shrink-0"
-              onClick={toggleAudio}
-            >
-              {playing ? (
-                <Pause className="h-4 w-4" />
-              ) : (
-                <Play className="h-4 w-4" />
-              )}
-            </Button>
-            <div className="flex-1 h-1 bg-muted-foreground/20 rounded-full overflow-hidden">
-              <div 
-                className={`h-full bg-primary transition-all duration-200 ${
-                  playing ? 'animate-pulse' : ''
-                }`}
-                style={{ width: playing ? '100%' : '0%' }}
-              />
+            
+            <div className="flex items-center gap-2">
+              {/* Play/Pause button */}
+              <Button
+                size="icon"
+                variant={isOwnMessage ? 'secondary' : 'ghost'}
+                className="h-9 w-9 shrink-0"
+                onClick={toggleAudio}
+              >
+                {playing ? (
+                  <Pause className="h-4 w-4" />
+                ) : (
+                  <Play className="h-4 w-4 ml-0.5" />
+                )}
+              </Button>
+
+              {/* Waveform and time */}
+              <div className="flex-1 min-w-0">
+                <AudioWaveform
+                  levels={waveformLevels.length > 0 ? waveformLevels : Array(30).fill(0.3)}
+                  isPlaying={playing}
+                  progress={duration > 0 ? currentTime / duration : 0}
+                  className="h-8"
+                  barColor={isOwnMessage ? 'hsl(var(--primary-foreground) / 0.4)' : 'hsl(var(--muted-foreground) / 0.4)'}
+                  activeColor={isOwnMessage ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary))'}
+                />
+                <div className={`text-[10px] mt-0.5 tabular-nums ${
+                  isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                }`}>
+                  {formatTime(playing ? currentTime : duration)}
+                </div>
+              </div>
             </div>
           </div>
         );
