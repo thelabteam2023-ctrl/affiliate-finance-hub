@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Star, User, Flag, AlertCircle } from 'lucide-react';
+import { Star, User, Flag } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -31,7 +31,6 @@ interface Evaluation {
   qualidade_suporte: number;
   confiabilidade_geral: number;
   nota_media: number;
-  status_bloqueio: string;
   comentario: string | null;
   is_anonymous: boolean;
   created_at: string;
@@ -43,12 +42,6 @@ interface CommunityEvaluationsListProps {
   onRefresh?: () => void;
 }
 
-const STATUS_BLOQUEIO_LABELS: Record<string, { label: string; color: string }> = {
-  'NAO_INFORMADO': { label: 'Não informado', color: 'text-muted-foreground' },
-  'NUNCA_BLOQUEOU': { label: 'Nunca bloqueou', color: 'text-green-500' },
-  'BLOQUEOU_APOS_GANHOS': { label: 'Bloqueou após ganhos', color: 'text-amber-500' },
-  'BLOQUEIO_RECORRENTE': { label: 'Bloqueio recorrente', color: 'text-red-500' },
-};
 
 export function CommunityEvaluationsList({ bookmakerId, onRefresh }: CommunityEvaluationsListProps) {
   const { user } = useAuth();
@@ -149,7 +142,6 @@ export function CommunityEvaluationsList({ bookmakerId, onRefresh }: CommunityEv
     <>
       <div className="space-y-4">
         {evaluations.map((evaluation) => {
-          const bloqueioInfo = STATUS_BLOQUEIO_LABELS[evaluation.status_bloqueio] || STATUS_BLOQUEIO_LABELS['NAO_INFORMADO'];
           const isOwnEvaluation = evaluation.user_id === user?.id;
 
           return (
@@ -220,13 +212,6 @@ export function CommunityEvaluationsList({ bookmakerId, onRefresh }: CommunityEv
                   </div>
                 </div>
 
-                {/* Block Status */}
-                {evaluation.status_bloqueio !== 'NAO_INFORMADO' && (
-                  <div className="mt-3 flex items-center gap-2">
-                    <AlertCircle className={`h-4 w-4 ${bloqueioInfo.color}`} />
-                    <span className={`text-sm ${bloqueioInfo.color}`}>{bloqueioInfo.label}</span>
-                  </div>
-                )}
 
                 {/* Comment */}
                 {evaluation.comentario && (

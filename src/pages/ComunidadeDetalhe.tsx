@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Star, AlertTriangle, MessageSquare, Users, Clock, Shield, Zap, HeartHandshake, Building2 } from 'lucide-react';
+import { ArrowLeft, Star, MessageSquare, Users, Clock, Shield, Zap, HeartHandshake, Building2 } from 'lucide-react';
 import { CommunityEvaluationDialog } from '@/components/comunidade/CommunityEvaluationDialog';
 import { CommunityTopicDialog } from '@/components/comunidade/CommunityTopicDialog';
 import { CommunityEvaluationsList } from '@/components/comunidade/CommunityEvaluationsList';
@@ -32,16 +32,9 @@ interface BookmakerStats {
   media_estabilidade_conta: number | null;
   media_qualidade_suporte: number | null;
   media_confiabilidade_geral: number | null;
-  bloqueios_apos_ganhos: number;
-  bloqueios_recorrentes: number;
   total_topicos: number;
 }
 
-const STATUS_BLOQUEIO_LABELS: Record<string, { label: string; color: string }> = {
-  'NUNCA_BLOQUEOU': { label: 'Nunca bloqueou', color: 'text-green-500' },
-  'BLOQUEOU_APOS_GANHOS': { label: 'Bloqueou após ganhos', color: 'text-amber-500' },
-  'BLOQUEIO_RECORRENTE': { label: 'Bloqueio recorrente', color: 'text-red-500' },
-};
 
 export default function ComunidadeDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -93,8 +86,6 @@ export default function ComunidadeDetalhe() {
           media_estabilidade_conta: statsData.media_estabilidade_conta,
           media_qualidade_suporte: statsData.media_qualidade_suporte,
           media_confiabilidade_geral: statsData.media_confiabilidade_geral,
-          bloqueios_apos_ganhos: statsData.bloqueios_apos_ganhos || 0,
-          bloqueios_recorrentes: statsData.bloqueios_recorrentes || 0,
           total_topicos: statsData.total_topicos || 0,
         });
       }
@@ -154,10 +145,6 @@ export default function ComunidadeDetalhe() {
     );
   };
 
-  const getTotalBloqueios = () => {
-    if (!stats) return 0;
-    return stats.bloqueios_apos_ganhos + stats.bloqueios_recorrentes;
-  };
 
   if (loading) {
     return (
@@ -238,21 +225,6 @@ export default function ComunidadeDetalhe() {
         )}
       </div>
 
-      {/* Alert for blocks */}
-      {getTotalBloqueios() > 0 && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-6 flex items-center gap-3">
-          <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
-              Atenção: Relatos de bloqueio
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {stats?.bloqueios_apos_ganhos || 0} usuário(s) reportaram bloqueio após ganhos • 
-              {stats?.bloqueios_recorrentes || 0} reportaram bloqueio recorrente
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Legal Disclaimer */}
       <div className="bg-muted/50 border border-border rounded-lg p-3 mb-6 text-xs text-muted-foreground">
@@ -318,60 +290,6 @@ export default function ComunidadeDetalhe() {
               </CardContent>
             </Card>
 
-            {/* Block Status Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5" />
-                  Status de Bloqueio
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {stats && stats.total_avaliacoes > 0 ? (
-                  <div className="space-y-4">
-                    {/* Visual Summary */}
-                    <div className="grid grid-cols-3 gap-3 text-center">
-                      <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                        <p className="text-2xl font-bold text-green-600">
-                          {stats.total_avaliacoes - stats.bloqueios_apos_ganhos - stats.bloqueios_recorrentes}
-                        </p>
-                        <p className="text-xs text-green-600">Sem bloqueio</p>
-                      </div>
-                      <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                        <p className="text-2xl font-bold text-amber-600">{stats.bloqueios_apos_ganhos}</p>
-                        <p className="text-xs text-amber-600">Após ganhos</p>
-                      </div>
-                      <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                        <p className="text-2xl font-bold text-red-600">{stats.bloqueios_recorrentes}</p>
-                        <p className="text-xs text-red-600">Recorrente</p>
-                      </div>
-                    </div>
-
-                    {/* Legend */}
-                    <div className="space-y-2 pt-4 border-t text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                        <span className="text-muted-foreground">Nunca bloqueou - Conta estável</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full bg-amber-500"></div>
-                        <span className="text-muted-foreground">Bloqueou após ganhos - Atenção ao operar</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full bg-red-500"></div>
-                        <span className="text-muted-foreground">Bloqueio recorrente - Alto risco</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <AlertTriangle className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>Sem dados de bloqueio disponíveis</p>
-                    <p className="text-xs mt-1">Avalie esta casa para contribuir com a comunidade</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
 
             {/* Recent Activity */}
             <Card className="lg:col-span-2">
