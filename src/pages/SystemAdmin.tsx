@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSystemAdmin } from '@/hooks/useSystemAdmin';
-import { PageHeader } from '@/components/PageHeader';
+import { CleanupTab } from '@/components/system-admin/CleanupTab';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Users, Building2, Shield, Ban, Check, Plus, UserPlus, Settings2, 
-  Eye, RefreshCw, Crown, AlertTriangle 
+  Eye, RefreshCw, Crown, AlertTriangle, Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -208,6 +208,10 @@ export default function SystemAdmin() {
           <TabsTrigger value="workspaces" className="gap-2">
             <Building2 className="h-4 w-4" />
             Workspaces
+          </TabsTrigger>
+          <TabsTrigger value="cleanup" className="gap-2">
+            <Trash2 className="h-4 w-4" />
+            Limpeza
           </TabsTrigger>
         </TabsList>
 
@@ -424,6 +428,11 @@ export default function SystemAdmin() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Cleanup Tab */}
+        <TabsContent value="cleanup">
+          <CleanupTab />
         </TabsContent>
       </Tabs>
 

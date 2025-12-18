@@ -207,11 +207,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isOwnerOrAdmin = (): boolean => {
-    return role === 'owner' || role === 'admin' || role === 'master';
+    return role === 'owner' || role === 'admin';
   };
 
+  // DEPRECATED: Master role is obsolete. Use isSystemOwner for global privileges.
   const isMaster = (): boolean => {
-    return role === 'master';
+    return false;
   };
 
   const value: AuthContextType = {

@@ -3468,6 +3468,7 @@ export type Database = {
           id: string
           is_blocked: boolean | null
           is_system_owner: boolean | null
+          is_test_user: boolean | null
           observacoes_operador: string | null
           telefone: string | null
           tipo_contrato: string | null
@@ -3486,6 +3487,7 @@ export type Database = {
           id: string
           is_blocked?: boolean | null
           is_system_owner?: boolean | null
+          is_test_user?: boolean | null
           observacoes_operador?: string | null
           telefone?: string | null
           tipo_contrato?: string | null
@@ -3504,6 +3506,7 @@ export type Database = {
           id?: string
           is_blocked?: boolean | null
           is_system_owner?: boolean | null
+          is_test_user?: boolean | null
           observacoes_operador?: string | null
           telefone?: string | null
           tipo_contrato?: string | null
@@ -5816,6 +5819,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_cleanup_dry_run: { Args: { _user_ids: string[] }; Returns: Json }
       admin_create_workspace_for_user: {
         Args: {
           _plan?: string
@@ -5824,6 +5828,10 @@ export type Database = {
           _workspace_name: string
         }
         Returns: string
+      }
+      admin_execute_cleanup: {
+        Args: { _confirmation_phrase: string; _user_ids: string[] }
+        Returns: Json
       }
       admin_get_all_users: {
         Args: never
@@ -5858,6 +5866,19 @@ export type Database = {
           slug: string
         }[]
       }
+      admin_get_cleanup_candidates: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          is_system_owner: boolean
+          is_test_user: boolean
+          workspace_id: string
+          workspace_name: string
+        }[]
+      }
       admin_get_workspace_members: {
         Args: { _workspace_id: string }
         Returns: {
@@ -5868,6 +5889,10 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }[]
+      }
+      admin_set_test_user: {
+        Args: { _is_test: boolean; _user_id: string }
+        Returns: undefined
       }
       admin_set_user_blocked: {
         Args: { _blocked: boolean; _reason?: string; _user_id: string }
