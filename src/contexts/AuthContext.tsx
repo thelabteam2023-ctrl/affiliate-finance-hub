@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
+import { useQueryClient } from "@tanstack/react-query";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -34,6 +35,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
@@ -131,6 +133,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (event === 'SIGNED_OUT') {
+          // CRITICAL: Limpar cache ao deslogar
+          queryClient.clear();
+          console.log('[Auth] SIGNED_OUT event, cleared React Query cache');
           setWorkspace(null);
           setRole(null);
           setIsSystemOwner(false);
@@ -170,6 +175,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // CRITICAL: Limpar cache do React Query ao fazer logout
+    queryClient.clear();
+    console.log('[Auth] Signed out, cleared React Query cache');
+    
     await supabase.auth.signOut();
     setWorkspace(null);
     setRole(null);

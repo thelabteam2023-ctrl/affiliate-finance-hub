@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PerformanceMetrics, PeriodoAnalise } from '@/types/performance';
+import { useWorkspace } from './useWorkspace';
 
 interface UseProjetoPerformanceProps {
   projetoId?: string;
@@ -18,6 +19,7 @@ export function useProjetoPerformance({
   projetoId, 
   periodo 
 }: UseProjetoPerformanceProps): UseProjetoPerformanceReturn {
+  const { workspaceId } = useWorkspace();
   const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -135,15 +137,25 @@ export function useProjetoPerformance({
   }, [projetoId, periodo]);
 
   const fetchSaldoBookmakers = useCallback(async (): Promise<number> => {
-    // Buscar apenas bookmakers ATUALMENTE vinculados ao projeto
-    let query = supabase.from('bookmakers').select('saldo_atual');
+    // CRITICAL: Sempre filtrar por workspace
+    if (!workspaceId) return 0;
+    
+    // Buscar apenas bookmakers ATUALMENTE vinculados ao projeto E ao workspace
+    let query = supabase.from('bookmakers').select('saldo_atual').eq('workspace_id', workspaceId);
     if (projetoId) query = query.eq('projeto_id', projetoId);
 
     const { data } = await query;
     return data?.reduce((acc, b) => acc + Number(b.saldo_atual || 0), 0) || 0;
-  }, [projetoId]);
+  }, [projetoId, workspaceId]);
 
   const calculateMetrics = useCallback(async () => {
+    // CRITICAL: Não calcular métricas sem workspace
+    if (!workspaceId) {
+      setMetrics(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -183,7 +195,7 @@ export function useProjetoPerformance({
     } finally {
       setLoading(false);
     }
-  }, [fetchHistoricalBookmakerIds, fetchLucroApostas, fetchCashFlow, fetchSaldoBookmakers]);
+  }, [fetchHistoricalBookmakerIds, fetchLucroApostas, fetchCashFlow, fetchSaldoBookmakers, workspaceId]);
 
   useEffect(() => {
     calculateMetrics();

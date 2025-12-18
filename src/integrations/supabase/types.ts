@@ -5957,6 +5957,7 @@ export type Database = {
         }
         Returns: string
       }
+      get_current_workspace: { Args: never; Returns: string }
       get_plan_entitlements: { Args: { plan_name: string }; Returns: Json }
       get_user_role: {
         Args: { _user_id: string; _workspace_id?: string }
@@ -5987,6 +5988,10 @@ export type Database = {
         Returns: undefined
       }
       update_parcerias_em_encerramento: { Args: never; Returns: undefined }
+      user_belongs_to_workspace: {
+        Args: { _workspace_id: string }
+        Returns: boolean
+      }
       user_has_pro_access: { Args: { _user_id: string }; Returns: boolean }
       user_is_owner_or_admin: {
         Args: { check_user_id: string }
