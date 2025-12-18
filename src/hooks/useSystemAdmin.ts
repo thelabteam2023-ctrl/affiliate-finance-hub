@@ -14,6 +14,7 @@ interface AdminUser {
   workspace_id: string | null;
   workspace_name: string | null;
   workspace_role: string | null;
+  is_system_owner: boolean;
 }
 
 interface AdminWorkspace {
