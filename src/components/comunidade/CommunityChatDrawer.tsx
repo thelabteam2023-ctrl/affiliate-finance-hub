@@ -51,7 +51,7 @@ export function CommunityChatDrawer({ open, onOpenChange }: CommunityChatDrawerP
         </SheetHeader>
         
         <div className="flex-1 overflow-hidden">
-          <CommunityChatFull isPopout={false} />
+          <CommunityChatFull isPopout={false} isEmbedded={true} />
         </div>
       </SheetContent>
     </Sheet>
