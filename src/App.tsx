@@ -24,6 +24,7 @@ import Testes from "./pages/Testes";
 import Workspace from "./pages/Workspace";
 import Comunidade from "./pages/Comunidade";
 import ComunidadeDetalhe from "./pages/ComunidadeDetalhe";
+import ComunidadeChatPopout from "./pages/ComunidadeChatPopout";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -183,6 +184,13 @@ const App = () => (
                 <AuthenticatedLayout>
                   <ComunidadeDetalhe />
                 </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+            
+            {/* Pop-out chat - no layout, standalone */}
+            <Route path="/comunidade/chat" element={
+              <ProtectedRoute>
+                <ComunidadeChatPopout />
               </ProtectedRoute>
             } />
             

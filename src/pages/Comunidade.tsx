@@ -7,10 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCommunityAccess } from '@/hooks/useCommunityAccess';
-import { Search, Star, MessageSquare, Lock, Users } from 'lucide-react';
+import { Search, Star, MessageSquare, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CommunityRadar } from '@/components/comunidade/CommunityRadar';
-import { CommunityChat } from '@/components/comunidade/CommunityChat';
+import { CommunityChatPreview } from '@/components/comunidade/CommunityChatPreview';
+import { CommunityChatDrawer } from '@/components/comunidade/CommunityChatDrawer';
 
 interface BookmakerStats {
   bookmaker_catalogo_id: string;
@@ -30,6 +31,14 @@ export default function Comunidade() {
   const [bookmakers, setBookmakers] = useState<BookmakerStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
+
+  // Listen for event to open chat drawer
+  useEffect(() => {
+    const handleOpenChat = () => setChatDrawerOpen(true);
+    window.addEventListener('open-community-chat', handleOpenChat);
+    return () => window.removeEventListener('open-community-chat', handleOpenChat);
+  }, []);
 
   useEffect(() => {
     fetchBookmakers();
@@ -254,10 +263,16 @@ export default function Comunidade() {
           {/* Radar */}
           <CommunityRadar />
           
-          {/* Chat */}
-          <CommunityChat />
+          {/* Chat Preview */}
+          <CommunityChatPreview />
         </div>
       </div>
+
+      {/* Chat Drawer (internal fallback) */}
+      <CommunityChatDrawer 
+        open={chatDrawerOpen} 
+        onOpenChange={setChatDrawerOpen} 
+      />
     </div>
   );
 }
