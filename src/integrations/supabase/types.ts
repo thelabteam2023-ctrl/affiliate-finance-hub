@@ -437,6 +437,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bookmaker_workspace_access_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
+          },
+          {
             foreignKeyName: "bookmaker_workspace_access_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -516,6 +523,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "bookmakers_catalogo"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmakers_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
           },
           {
             foreignKeyName: "bookmakers_parceiro_id_fkey"
@@ -964,6 +978,219 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_comments: {
+        Row: {
+          conteudo: string
+          created_at: string
+          id: string
+          is_anonymous: boolean | null
+          status: string
+          topic_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conteudo: string
+          created_at?: string
+          id?: string
+          is_anonymous?: boolean | null
+          status?: string
+          topic_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          conteudo?: string
+          created_at?: string
+          id?: string
+          is_anonymous?: boolean | null
+          status?: string
+          topic_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_comments_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "community_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_evaluations: {
+        Row: {
+          bookmaker_catalogo_id: string
+          comentario: string | null
+          confiabilidade_geral: number | null
+          created_at: string
+          estabilidade_conta: number | null
+          facilidade_verificacao: number | null
+          id: string
+          is_anonymous: boolean | null
+          nota_media: number | null
+          qualidade_suporte: number | null
+          status_bloqueio: string | null
+          updated_at: string
+          user_id: string
+          velocidade_pagamento: number | null
+        }
+        Insert: {
+          bookmaker_catalogo_id: string
+          comentario?: string | null
+          confiabilidade_geral?: number | null
+          created_at?: string
+          estabilidade_conta?: number | null
+          facilidade_verificacao?: number | null
+          id?: string
+          is_anonymous?: boolean | null
+          nota_media?: number | null
+          qualidade_suporte?: number | null
+          status_bloqueio?: string | null
+          updated_at?: string
+          user_id: string
+          velocidade_pagamento?: number | null
+        }
+        Update: {
+          bookmaker_catalogo_id?: string
+          comentario?: string | null
+          confiabilidade_geral?: number | null
+          created_at?: string
+          estabilidade_conta?: number | null
+          facilidade_verificacao?: number | null
+          id?: string
+          is_anonymous?: boolean | null
+          nota_media?: number | null
+          qualidade_suporte?: number | null
+          status_bloqueio?: string | null
+          updated_at?: string
+          user_id?: string
+          velocidade_pagamento?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_evaluations_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_evaluations_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
+          },
+        ]
+      }
+      community_reports: {
+        Row: {
+          comment_id: string | null
+          created_at: string
+          evaluation_id: string | null
+          id: string
+          reason: string
+          reporter_user_id: string
+          status: string
+          topic_id: string | null
+        }
+        Insert: {
+          comment_id?: string | null
+          created_at?: string
+          evaluation_id?: string | null
+          id?: string
+          reason: string
+          reporter_user_id: string
+          status?: string
+          topic_id?: string | null
+        }
+        Update: {
+          comment_id?: string | null
+          created_at?: string
+          evaluation_id?: string | null
+          id?: string
+          reason?: string
+          reporter_user_id?: string
+          status?: string
+          topic_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_reports_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "community_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_reports_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "community_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_reports_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "community_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_topics: {
+        Row: {
+          bookmaker_catalogo_id: string
+          conteudo: string
+          created_at: string
+          id: string
+          is_anonymous: boolean | null
+          status: string
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bookmaker_catalogo_id: string
+          conteudo: string
+          created_at?: string
+          id?: string
+          is_anonymous?: boolean | null
+          status?: string
+          titulo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bookmaker_catalogo_id?: string
+          conteudo?: string
+          created_at?: string
+          id?: string
+          is_anonymous?: boolean | null
+          status?: string
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_topics_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_topics_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
           },
         ]
       }
@@ -1933,6 +2160,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "bookmakers_catalogo"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matched_betting_promocoes_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
           },
         ]
       }
@@ -4643,6 +4877,27 @@ export type Database = {
           },
         ]
       }
+      v_community_bookmaker_stats: {
+        Row: {
+          bloqueios_apos_ganhos: number | null
+          bloqueios_recorrentes: number | null
+          bookmaker_catalogo_id: string | null
+          logo_url: string | null
+          media_confiabilidade_geral: number | null
+          media_estabilidade_conta: number | null
+          media_facilidade_verificacao: number | null
+          media_qualidade_suporte: number | null
+          media_velocidade_pagamento: number | null
+          nome: string | null
+          nota_media_geral: number | null
+          regulamentacao_status: string | null
+          total_avaliacoes: number | null
+          total_topicos: number | null
+          ultimo_topico_data: string | null
+          visibility: Database["public"]["Enums"]["bookmaker_visibility"] | null
+        }
+        Relationships: []
+      }
       v_custos_aquisicao: {
         Row: {
           custo_total: number | null
@@ -5543,6 +5798,7 @@ export type Database = {
         Returns: undefined
       }
       update_parcerias_em_encerramento: { Args: never; Returns: undefined }
+      user_has_pro_access: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role:
