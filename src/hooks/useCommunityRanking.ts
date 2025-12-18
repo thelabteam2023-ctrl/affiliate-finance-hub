@@ -20,11 +20,13 @@ export interface RankedBookmaker {
 interface UseCommunityRankingOptions {
   limit?: number;
   periodDays?: number;
+  recentActivityLimit?: number; // Items with recent activity outside top N
 }
 
 export function useCommunityRanking(options: UseCommunityRankingOptions = {}) {
-  const { limit, periodDays = 30 } = options;
+  const { limit, periodDays = 30, recentActivityLimit = 6 } = options;
   const [rankedItems, setRankedItems] = useState<RankedBookmaker[]>([]);
+  const [recentActivityItems, setRecentActivityItems] = useState<RankedBookmaker[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchRankingData = useCallback(async () => {
@@ -149,18 +151,35 @@ export function useCommunityRanking(options: UseCommunityRankingOptions = {}) {
           return 0;
         });
 
-      // Apply limit if specified
+      // Apply limit if specified and separate recent activity items
       if (limit) {
-        rankedItems = rankedItems.slice(0, limit);
+        const topItems = rankedItems.slice(0, limit);
+        const topIds = new Set(topItems.map(item => item.bookmaker_catalogo_id));
+        
+        // Get items with recent activity that are NOT in top N
+        // Sort by ultima_atividade (most recent first)
+        const recentOutsideTop = rankedItems
+          .filter(item => !topIds.has(item.bookmaker_catalogo_id) && item.ultima_atividade)
+          .sort((a, b) => {
+            if (a.ultima_atividade && b.ultima_atividade) {
+              return new Date(b.ultima_atividade).getTime() - new Date(a.ultima_atividade).getTime();
+            }
+            return 0;
+          })
+          .slice(0, recentActivityLimit);
+        
+        setRankedItems(topItems);
+        setRecentActivityItems(recentOutsideTop);
+      } else {
+        setRankedItems(rankedItems);
+        setRecentActivityItems([]);
       }
-
-      setRankedItems(rankedItems);
     } catch (error) {
       console.error('Error fetching community ranking:', error);
     } finally {
       setLoading(false);
     }
-  }, [limit, periodDays]);
+  }, [limit, periodDays, recentActivityLimit]);
 
   useEffect(() => {
     fetchRankingData();
@@ -171,5 +190,5 @@ export function useCommunityRanking(options: UseCommunityRankingOptions = {}) {
     fetchRankingData();
   }, [fetchRankingData]);
 
-  return { rankedItems, loading, refetch };
+  return { rankedItems, recentActivityItems, loading, refetch };
 }
