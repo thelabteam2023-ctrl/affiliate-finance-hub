@@ -47,7 +47,7 @@ export default function ComunidadeDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { hasProAccess } = useCommunityAccess();
+  const { hasFullAccess } = useCommunityAccess();
   
   const [bookmaker, setBookmaker] = useState<BookmakerDetails | null>(null);
   const [stats, setStats] = useState<BookmakerStats | null>(null);
@@ -221,7 +221,7 @@ export default function ComunidadeDetalhe() {
         </div>
         
         {/* Action Buttons */}
-        {hasProAccess && (
+        {hasFullAccess && (
           <div className="flex gap-2">
             <Button 
               variant="outline"
@@ -303,7 +303,7 @@ export default function ComunidadeDetalhe() {
                   <div className="text-center py-8 text-muted-foreground">
                     <Star className="h-12 w-12 mx-auto mb-3 opacity-30" />
                     <p>Nenhuma avaliação ainda</p>
-                    {hasProAccess && (
+                    {hasFullAccess && (
                       <Button 
                         variant="outline" 
                         size="sm" 
@@ -390,7 +390,7 @@ export default function ComunidadeDetalhe() {
                   <div className="text-center py-8 text-muted-foreground">
                     <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
                     <p>Nenhum tópico de discussão ainda</p>
-                    {hasProAccess && (
+                    {hasFullAccess && (
                       <Button 
                         variant="outline" 
                         size="sm" 
