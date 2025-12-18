@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Edit2, FileText, X, Check, Play, Pause } from 'lucide-react';
@@ -30,6 +31,13 @@ interface ChatMessageItemProps {
   onConvert: (message: ChatMessage) => void;
 }
 
+function extractChatMediaPath(content: string) {
+  const marker = '/storage/v1/object/public/chat-media/';
+  const idx = content.indexOf(marker);
+  if (idx === -1) return null;
+  return content.substring(idx + marker.length);
+}
+
 export function ChatMessageItem({
   message,
   isOwnMessage,
@@ -44,12 +52,62 @@ export function ChatMessageItem({
   const [duration, setDuration] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [mediaError, setMediaError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const mediaPath = useMemo(() => {
+    // New format: content = storage path (e.g. userId/workspaceId/ts.webm)
+    if (!message.content.startsWith('http')) return message.content;
+
+    // Legacy format: content = public url (bucket is private, so this must be signed at runtime)
+    const extracted = extractChatMediaPath(message.content);
+    return extracted ?? null;
+  }, [message.content]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolveMedia = async () => {
+      if (message.message_type === 'text') return;
+
+      // If it's already a normal http url not from our storage, use it directly
+      if (message.content.startsWith('http') && !message.content.includes('/storage/v1/object/public/chat-media/')) {
+        setMediaUrl(message.content);
+        return;
+      }
+
+      if (!mediaPath) {
+        setMediaError('Mídia indisponível');
+        return;
+      }
+
+      const { data, error } = await supabase.storage
+        .from('chat-media')
+        .createSignedUrl(mediaPath, 60 * 60); // 1h
+
+      if (cancelled) return;
+
+      if (error || !data?.signedUrl) {
+        console.error('[chat-media] signedUrl:error', { error, mediaPath, messageId: message.id });
+        setMediaError('Falha ao carregar mídia');
+        setMediaUrl(null);
+        return;
+      }
+
+      setMediaError(null);
+      setMediaUrl(data.signedUrl);
+    };
+
+    resolveMedia();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [message.id, message.message_type, message.content, mediaPath]);
+
   // Get waveform levels for audio
-  const waveformLevels = useAudioWaveform(
-    message.message_type === 'audio' ? message.content : null
-  );
+  const waveformLevels = useAudioWaveform(message.message_type === 'audio' ? mediaUrl : null);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -62,7 +120,14 @@ export function ChatMessageItem({
       setCurrentTime(0);
     };
     const handleError = () => {
-      console.error('Audio playback error');
+      console.error('[chat-media] playback:error', {
+        messageId: message.id,
+        src: audio.currentSrc,
+        networkState: audio.networkState,
+        readyState: audio.readyState,
+        error: audio.error?.code,
+      });
+      setMediaError('Falha ao tocar áudio');
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
@@ -76,7 +141,7 @@ export function ChatMessageItem({
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
     };
-  }, []);
+  }, [message.id]);
 
   const handleSaveEdit = () => {
     if (editContent.trim()) {
@@ -142,36 +207,48 @@ export function ChatMessageItem({
       );
     }
 
+    const resolvedSrc = mediaUrl;
+
     switch (message.message_type) {
       case 'image':
         return (
           <>
             <div 
               className="relative cursor-pointer rounded-md overflow-hidden"
-              onClick={() => setShowLightbox(true)}
+              onClick={() => resolvedSrc && setShowLightbox(true)}
             >
               {!imageLoaded && (
                 <div className="w-48 h-32 bg-muted animate-pulse rounded-md" />
               )}
-              <img
-                src={message.content}
-                alt="Imagem compartilhada"
-                className={`max-w-full rounded-md hover:opacity-90 transition-opacity ${
-                  !imageLoaded ? 'hidden' : ''
-                }`}
-                style={{ maxHeight: '300px', maxWidth: '280px' }}
-                onLoad={() => setImageLoaded(true)}
-                onError={() => setImageLoaded(true)}
-              />
+              {mediaError ? (
+                <div className="w-48 h-32 bg-muted rounded-md flex items-center justify-center">
+                  <span className="text-xs text-muted-foreground">{mediaError}</span>
+                </div>
+              ) : (
+                <img
+                  src={resolvedSrc || undefined}
+                  alt="Imagem compartilhada"
+                  className={`max-w-full rounded-md hover:opacity-90 transition-opacity ${
+                    !imageLoaded ? 'hidden' : ''
+                  }`}
+                  style={{ maxHeight: '300px', maxWidth: '280px' }}
+                  onLoad={() => setImageLoaded(true)}
+                  onError={() => {
+                    setImageLoaded(true);
+                    setMediaError('Falha ao carregar imagem');
+                  }}
+                  loading="lazy"
+                />
+              )}
             </div>
             {/* Lightbox */}
-            {showLightbox && (
+            {showLightbox && resolvedSrc && (
               <div 
                 className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
                 onClick={() => setShowLightbox(false)}
               >
                 <img
-                  src={message.content}
+                  src={resolvedSrc}
                   alt="Imagem"
                   className="max-w-full max-h-full object-contain rounded-lg"
                 />
@@ -187,17 +264,17 @@ export function ChatMessageItem({
             )}
           </>
         );
-      
+
       case 'audio':
         return (
           <div className="min-w-[200px] max-w-[280px]">
             <audio
               ref={audioRef}
-              src={message.content}
+              src={resolvedSrc || undefined}
               preload="metadata"
               className="hidden"
             />
-            
+
             <div className="flex items-center gap-2">
               {/* Play/Pause button */}
               <Button
@@ -205,6 +282,8 @@ export function ChatMessageItem({
                 variant={isOwnMessage ? 'secondary' : 'ghost'}
                 className="h-9 w-9 shrink-0"
                 onClick={toggleAudio}
+                disabled={!resolvedSrc || !!mediaError}
+                title={mediaError || undefined}
               >
                 {playing ? (
                   <Pause className="h-4 w-4" />
@@ -226,13 +305,13 @@ export function ChatMessageItem({
                 <div className={`text-[10px] mt-0.5 tabular-nums ${
                   isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
                 }`}>
-                  {formatTime(playing ? currentTime : duration)}
+                  {mediaError ? mediaError : formatTime(playing ? currentTime : duration)}
                 </div>
               </div>
             </div>
           </div>
         );
-      
+
       default:
         return (
           <p className="text-sm whitespace-pre-wrap break-words">

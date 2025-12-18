@@ -9,7 +9,7 @@ interface ChatInputProps {
   workspaceId: string | null;
   userId: string | null;
   onSendText: (content: string) => Promise<void>;
-  onSendMedia: (type: 'image' | 'audio', url: string) => Promise<void>;
+  onSendMedia: (type: 'image' | 'audio', storagePath: string) => Promise<void>;
   disabled?: boolean;
 }
 
@@ -87,10 +87,12 @@ export function ChatInput({
 
   const handleConfirmMedia = async () => {
     if (!mediaPreview) return;
-    
+
+    const type = mediaPreview.type;
     const result = await confirmAndSend();
+
     if (result) {
-      await onSendMedia(mediaPreview.type, result.url);
+      await onSendMedia(type, result.path);
     }
   };
 
