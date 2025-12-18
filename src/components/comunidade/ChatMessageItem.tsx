@@ -2,10 +2,12 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Edit2, FileText, X, Check, Play, Pause } from 'lucide-react';
+import { Edit2, FileText, X, Check, Play, Pause, ImageIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AudioWaveform, useAudioWaveform } from './AudioWaveform';
+import { CollapsedImageCard, ImageLightbox } from './CollapsedImageCard';
+import { useChatMediaPreferences, ImageDisplayMode } from '@/hooks/useChatMediaPreferences';
 
 export interface ChatMessage {
   id: string;
@@ -45,22 +47,22 @@ export function ChatMessageItem({
   onEdit,
   onConvert,
 }: ChatMessageItemProps) {
+  const { imageDisplayMode } = useChatMediaPreferences();
+  
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageExpanded, setImageExpanded] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const mediaPath = useMemo(() => {
-    // New format: content = storage path (e.g. userId/workspaceId/ts.webm)
     if (!message.content.startsWith('http')) return message.content;
-
-    // Legacy format: content = public url (bucket is private, so this must be signed at runtime)
     const extracted = extractChatMediaPath(message.content);
     return extracted ?? null;
   }, [message.content]);
@@ -71,7 +73,6 @@ export function ChatMessageItem({
     const resolveMedia = async () => {
       if (message.message_type === 'text') return;
 
-      // If it's already a normal http url not from our storage, use it directly
       if (message.content.startsWith('http') && !message.content.includes('/storage/v1/object/public/chat-media/')) {
         setMediaUrl(message.content);
         return;
@@ -84,7 +85,7 @@ export function ChatMessageItem({
 
       const { data, error } = await supabase.storage
         .from('chat-media')
-        .createSignedUrl(mediaPath, 60 * 60); // 1h
+        .createSignedUrl(mediaPath, 60 * 60);
 
       if (cancelled) return;
 
@@ -106,7 +107,7 @@ export function ChatMessageItem({
     };
   }, [message.id, message.message_type, message.content, mediaPath]);
 
-  // Get waveform levels for audio
+  // Waveform for audio
   const waveformLevels = useAudioWaveform(message.message_type === 'audio' ? mediaUrl : null);
 
   useEffect(() => {
@@ -173,6 +174,14 @@ export function ChatMessageItem({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Determine if image should be shown based on preference
+  const shouldShowImage = () => {
+    if (imageDisplayMode === 'auto') return true;
+    if (imageDisplayMode === 'hidden') return false;
+    // collapsed mode - show only if manually expanded
+    return imageExpanded;
+  };
+
   const renderContent = () => {
     if (editing) {
       return (
@@ -187,37 +196,48 @@ export function ChatMessageItem({
               if (e.key === 'Escape') setEditing(false);
             }}
           />
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-6 w-6"
-            onClick={handleSaveEdit}
-          >
+          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleSaveEdit}>
             <Check className="h-3 w-3" />
           </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-6 w-6"
-            onClick={() => setEditing(false)}
-          >
+          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditing(false)}>
             <X className="h-3 w-3" />
           </Button>
         </div>
       );
     }
 
-    const resolvedSrc = mediaUrl;
-
     switch (message.message_type) {
       case 'image':
+        // Hidden mode - just show text
+        if (imageDisplayMode === 'hidden') {
+          return (
+            <div className={`flex items-center gap-2 text-sm opacity-70`}>
+              <ImageIcon className="h-4 w-4" />
+              <span>Imagem compartilhada</span>
+            </div>
+          );
+        }
+
+        // Collapsed mode (default) - show card until clicked
+        if (!shouldShowImage()) {
+          return (
+            <CollapsedImageCard
+              mediaUrl={mediaUrl}
+              isOwnMessage={isOwnMessage}
+              onExpand={() => setImageExpanded(true)}
+              mediaError={mediaError}
+            />
+          );
+        }
+
+        // Expanded or auto mode - show image
         return (
           <>
             <div 
               className="relative cursor-pointer rounded-md overflow-hidden"
-              onClick={() => resolvedSrc && setShowLightbox(true)}
+              onClick={() => mediaUrl && setShowLightbox(true)}
             >
-              {!imageLoaded && (
+              {!imageLoaded && !mediaError && (
                 <div className="w-48 h-32 bg-muted animate-pulse rounded-md" />
               )}
               {mediaError ? (
@@ -226,12 +246,12 @@ export function ChatMessageItem({
                 </div>
               ) : (
                 <img
-                  src={resolvedSrc || undefined}
+                  src={mediaUrl || undefined}
                   alt="Imagem compartilhada"
                   className={`max-w-full rounded-md hover:opacity-90 transition-opacity ${
                     !imageLoaded ? 'hidden' : ''
                   }`}
-                  style={{ maxHeight: '300px', maxWidth: '280px' }}
+                  style={{ maxHeight: '200px', maxWidth: '240px' }}
                   onLoad={() => setImageLoaded(true)}
                   onError={() => {
                     setImageLoaded(true);
@@ -240,27 +260,25 @@ export function ChatMessageItem({
                   loading="lazy"
                 />
               )}
-            </div>
-            {/* Lightbox */}
-            {showLightbox && resolvedSrc && (
-              <div 
-                className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-                onClick={() => setShowLightbox(false)}
-              >
-                <img
-                  src={resolvedSrc}
-                  alt="Imagem"
-                  className="max-w-full max-h-full object-contain rounded-lg"
-                />
+              {/* Collapse button */}
+              {imageDisplayMode === 'collapsed' && imageExpanded && !mediaError && (
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="absolute top-4 right-4 text-white hover:bg-white/20"
-                  onClick={() => setShowLightbox(false)}
+                  className="absolute top-1 right-1 h-6 w-6 bg-black/50 hover:bg-black/70 text-white"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setImageExpanded(false);
+                  }}
+                  title="Colapsar"
                 >
-                  <X className="h-6 w-6" />
+                  <X className="h-3 w-3" />
                 </Button>
-              </div>
+              )}
+            </div>
+            {/* Lightbox */}
+            {showLightbox && mediaUrl && (
+              <ImageLightbox src={mediaUrl} onClose={() => setShowLightbox(false)} />
             )}
           </>
         );
@@ -270,19 +288,18 @@ export function ChatMessageItem({
           <div className="min-w-[200px] max-w-[280px]">
             <audio
               ref={audioRef}
-              src={resolvedSrc || undefined}
+              src={mediaUrl || undefined}
               preload="metadata"
               className="hidden"
             />
 
             <div className="flex items-center gap-2">
-              {/* Play/Pause button */}
               <Button
                 size="icon"
                 variant={isOwnMessage ? 'secondary' : 'ghost'}
                 className="h-9 w-9 shrink-0"
                 onClick={toggleAudio}
-                disabled={!resolvedSrc || !!mediaError}
+                disabled={!mediaUrl || !!mediaError}
                 title={mediaError || undefined}
               >
                 {playing ? (
@@ -292,7 +309,6 @@ export function ChatMessageItem({
                 )}
               </Button>
 
-              {/* Waveform and time */}
               <div className="flex-1 min-w-0">
                 <AudioWaveform
                   levels={waveformLevels.length > 0 ? waveformLevels : Array(30).fill(0.3)}
@@ -327,7 +343,6 @@ export function ChatMessageItem({
         isOwnMessage ? 'items-end' : 'items-start'
       }`}
     >
-      {/* Author name */}
       <span className="text-[10px] text-muted-foreground mb-0.5 px-1">
         {message.profile?.full_name || message.profile?.email?.split('@')[0] || 'Usuário'}
       </span>
@@ -366,7 +381,6 @@ export function ChatMessageItem({
         )}
       </div>
 
-      {/* Actions */}
       {canEdit && !editing && message.message_type === 'text' && (
         <div className="flex gap-1 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button
@@ -393,7 +407,6 @@ export function ChatMessageItem({
         </div>
       )}
       
-      {/* Convert only for media */}
       {canEdit && !editing && message.message_type !== 'text' && (
         <div className="flex gap-1 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button

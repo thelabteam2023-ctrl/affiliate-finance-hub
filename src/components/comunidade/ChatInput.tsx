@@ -3,7 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, Image, Mic, Loader2 } from 'lucide-react';
 import { useChatMedia } from '@/hooks/useChatMedia';
+import { useChatMediaRateLimit } from '@/hooks/useChatMediaPreferences';
 import { ChatMediaPreview, ChatRecordingUI } from './ChatMediaPreview';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChatInputProps {
   workspaceId: string | null;
@@ -20,6 +22,7 @@ export function ChatInput({
   onSendMedia,
   disabled = false,
 }: ChatInputProps) {
+  const { toast } = useToast();
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -42,9 +45,22 @@ export function ChatInput({
     reRecord,
   } = useChatMedia(workspaceId, userId);
 
+  const { checkImageRateLimit, recordImageSent, getRemainingImages } = useChatMediaRateLimit();
+
   // Handle paste event for images
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
+      // Check rate limit before processing
+      const rateCheck = checkImageRateLimit();
+      if (!rateCheck.allowed) {
+        e.preventDefault();
+        toast({
+          title: 'Limite de imagens atingido',
+          description: rateCheck.reason,
+          variant: 'destructive',
+        });
+        return;
+      }
       await handleImagePaste(e);
     };
 
@@ -53,7 +69,7 @@ export function ChatInput({
       input.addEventListener('paste', handlePaste as any);
       return () => input.removeEventListener('paste', handlePaste as any);
     }
-  }, [handleImagePaste]);
+  }, [handleImagePaste, checkImageRateLimit, toast]);
 
   const handleSend = async () => {
     if (!message.trim() || sending || disabled) return;
@@ -79,16 +95,45 @@ export function ChatInput({
     const file = e.target.files?.[0];
     if (!file) return;
     
-    await setImagePreview(file);
+    // Check rate limit
+    const rateCheck = checkImageRateLimit();
+    if (!rateCheck.allowed) {
+      toast({
+        title: 'Limite de imagens atingido',
+        description: rateCheck.reason,
+        variant: 'destructive',
+      });
+      e.target.value = '';
+      return;
+    }
     
-    // Reset input
+    await setImagePreview(file);
     e.target.value = '';
+  };
+
+  const handleImageButtonClick = () => {
+    const rateCheck = checkImageRateLimit();
+    if (!rateCheck.allowed) {
+      toast({
+        title: 'Limite de imagens atingido',
+        description: rateCheck.reason,
+        variant: 'destructive',
+      });
+      return;
+    }
+    fileInputRef.current?.click();
   };
 
   const handleConfirmMedia = async () => {
     if (!mediaPreview) return;
 
     const type = mediaPreview.type;
+    
+    // Record image usage for rate limiting
+    if (type === 'image') {
+      recordImageSent();
+    }
+    
     const result = await confirmAndSend();
 
     if (result) {
@@ -123,11 +168,12 @@ export function ChatInput({
     );
   }
 
-  // Normal input state
+  // Get remaining for tooltip
+  const remaining = getRemainingImages();
+
   return (
     <div className="p-4 border-t border-border shrink-0">
       <div className="flex gap-2">
-        {/* Hidden file input */}
         <input
           ref={fileInputRef}
           type="file"
@@ -136,13 +182,13 @@ export function ChatInput({
           onChange={handleFileSelect}
         />
         
-        {/* Image button */}
+        {/* Image button with rate limit info */}
         <Button
           size="icon"
           variant="ghost"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={handleImageButtonClick}
           disabled={uploading || disabled || state !== 'idle'}
-          title="Enviar imagem (ou CTRL+V)"
+          title={`Enviar imagem (CTRL+V)\n${remaining.intervalRemaining}/${3} restantes (10 min)\n${remaining.dailyRemaining}/${10} restantes (dia)`}
         >
           {uploading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -165,7 +211,7 @@ export function ChatInput({
         {/* Text input */}
         <Input
           ref={inputRef}
-          placeholder="Digite sua mensagem... (CTRL+V para colar imagem)"
+          placeholder="Digite sua mensagem... (CTRL+V para imagem)"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
