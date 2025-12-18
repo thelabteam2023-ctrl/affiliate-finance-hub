@@ -10,6 +10,7 @@ import { useCommunityAccess } from '@/hooks/useCommunityAccess';
 import { Search, Star, MessageSquare, Lock, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CommunityRadar } from '@/components/comunidade/CommunityRadar';
+import { CommunityChat } from '@/components/comunidade/CommunityChat';
 
 interface BookmakerStats {
   bookmaker_catalogo_id: string;
@@ -123,7 +124,7 @@ export default function Comunidade() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
+    <div className="container mx-auto p-6 max-w-7xl">
       <PageHeader 
         title="Comunidade" 
         description="Avaliações e discussões sobre casas de apostas"
@@ -136,9 +137,9 @@ export default function Comunidade() {
         <strong>Aviso:</strong> As informações compartilhadas refletem experiências individuais dos usuários e não representam uma posição oficial da plataforma.
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Main Content */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-8 space-y-6">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -248,9 +249,13 @@ export default function Comunidade() {
           )}
         </div>
 
-        {/* Sidebar - Radar */}
-        <div className="lg:col-span-1">
+        {/* Sidebar */}
+        <div className="lg:col-span-4 space-y-6">
+          {/* Radar */}
           <CommunityRadar />
+          
+          {/* Chat */}
+          <CommunityChat />
         </div>
       </div>
     </div>

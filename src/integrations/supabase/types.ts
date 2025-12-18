@@ -981,6 +981,44 @@ export type Database = {
           },
         ]
       }
+      community_chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          edited_at: string | null
+          expires_at: string
+          id: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          edited_at?: string | null
+          expires_at?: string
+          id?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          edited_at?: string | null
+          expires_at?: string
+          id?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_chat_messages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_comments: {
         Row: {
           conteudo: string
@@ -5763,6 +5801,7 @@ export type Database = {
       }
       check_partner_limit: { Args: { workspace_uuid: string }; Returns: Json }
       check_user_limit: { Args: { workspace_uuid: string }; Returns: Json }
+      cleanup_expired_chat_messages: { Args: never; Returns: number }
       create_audit_log: {
         Args: {
           _action: Database["public"]["Enums"]["audit_action"]
