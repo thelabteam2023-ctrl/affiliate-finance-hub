@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useSystemAdmin } from '@/hooks/useSystemAdmin';
+import { useSystemAdmin, isDeletedUser } from '@/hooks/useSystemAdmin';
 import { CleanupTab } from '@/components/system-admin/CleanupTab';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Users, Building2, Shield, Ban, Check, Plus, UserPlus, Settings2, 
-  Eye, RefreshCw, Crown, AlertTriangle, Trash2
+  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -41,6 +41,7 @@ export default function SystemAdmin() {
   const {
     loading,
     users,
+    deletedUsers,
     workspaces,
     fetchUsers,
     fetchWorkspaces,
@@ -54,6 +55,7 @@ export default function SystemAdmin() {
 
   const [searchUsers, setSearchUsers] = useState('');
   const [searchWorkspaces, setSearchWorkspaces] = useState('');
+  const [showArchivedUsers, setShowArchivedUsers] = useState(false);
   
   // Dialogs
   const [createWorkspaceDialog, setCreateWorkspaceDialog] = useState<{ open: boolean; userId: string; userName: string }>({ open: false, userId: '', userName: '' });
@@ -76,7 +78,10 @@ export default function SystemAdmin() {
     fetchWorkspaces();
   }, [fetchUsers, fetchWorkspaces]);
 
-  const filteredUsers = users.filter(u => 
+  // Filtrar baseado na aba ativa (ativos vs arquivados)
+  const displayUsers = showArchivedUsers ? deletedUsers : users;
+  
+  const filteredUsers = displayUsers.filter(u => 
     u.email?.toLowerCase().includes(searchUsers.toLowerCase()) ||
     u.full_name?.toLowerCase().includes(searchUsers.toLowerCase())
   );
@@ -85,6 +90,11 @@ export default function SystemAdmin() {
     w.name?.toLowerCase().includes(searchWorkspaces.toLowerCase()) ||
     w.owner_email?.toLowerCase().includes(searchWorkspaces.toLowerCase())
   );
+  
+  // Contadores para stats
+  const activeUsersCount = users.length;
+  const blockedUsersCount = users.filter(u => u.is_blocked).length;
+  const archivedUsersCount = deletedUsers.length;
 
   const handleCreateWorkspace = async () => {
     if (!newWorkspaceName.trim()) return;
@@ -127,6 +137,9 @@ export default function SystemAdmin() {
   };
 
   const getUserStatus = (user: any) => {
+    if (user.is_deleted) {
+      return <Badge variant="outline" className="gap-1 text-muted-foreground border-muted-foreground/30"><Archive className="h-3 w-3" /> Removido</Badge>;
+    }
     if (user.is_system_owner) {
       return <Badge className="gap-1 bg-primary/20 text-primary border-primary/30"><Crown className="h-3 w-3" /> System Owner</Badge>;
     }
@@ -155,13 +168,13 @@ export default function SystemAdmin() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Usuários</CardTitle>
+            <CardTitle className="text-sm font-medium">Usuários Ativos</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{users.length}</div>
+            <div className="text-2xl font-bold">{activeUsersCount}</div>
             <p className="text-xs text-muted-foreground">
-              {users.filter(u => !u.workspace_id).length} sem workspace
+              {archivedUsersCount > 0 && <span className="text-muted-foreground">{archivedUsersCount} arquivados</span>}
             </p>
           </CardContent>
         </Card>
@@ -179,11 +192,11 @@ export default function SystemAdmin() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Usuários Bloqueados</CardTitle>
+            <CardTitle className="text-sm font-medium">Bloqueados</CardTitle>
             <Ban className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{users.filter(u => u.is_blocked).length}</div>
+            <div className="text-2xl font-bold">{blockedUsersCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -231,12 +244,35 @@ export default function SystemAdmin() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="mb-4">
-                <SearchInput
-                  placeholder="Buscar por nome ou email..."
-                  value={searchUsers}
-                  onChange={(e) => setSearchUsers(e.target.value)}
-                />
+              {/* Toggle Ativos / Arquivados */}
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex rounded-lg border p-1 bg-muted/30">
+                  <Button
+                    variant={!showArchivedUsers ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setShowArchivedUsers(false)}
+                    className="gap-1"
+                  >
+                    <Users className="h-3.5 w-3.5" />
+                    Ativos ({activeUsersCount})
+                  </Button>
+                  <Button
+                    variant={showArchivedUsers ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setShowArchivedUsers(true)}
+                    className="gap-1"
+                  >
+                    <Archive className="h-3.5 w-3.5" />
+                    Arquivados ({archivedUsersCount})
+                  </Button>
+                </div>
+                <div className="flex-1">
+                  <SearchInput
+                    placeholder="Buscar por nome ou email..."
+                    value={searchUsers}
+                    onChange={(e) => setSearchUsers(e.target.value)}
+                  />
+                </div>
               </div>
               <div className="rounded-md border">
                 <Table>
@@ -275,7 +311,8 @@ export default function SystemAdmin() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            {!u.workspace_id && (
+                            {/* Botões desabilitados para usuários removidos */}
+                            {!u.workspace_id && !u.is_deleted && (
                               <>
                                 <Button
                                   variant="outline"
@@ -295,7 +332,7 @@ export default function SystemAdmin() {
                                 </Button>
                               </>
                             )}
-                            {!u.is_system_owner && (
+                            {!u.is_system_owner && !u.is_deleted && (
                               <Button
                                 variant={u.is_blocked ? 'default' : 'destructive'}
                                 size="sm"

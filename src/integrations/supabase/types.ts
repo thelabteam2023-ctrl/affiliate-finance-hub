@@ -5834,7 +5834,7 @@ export type Database = {
         Returns: Json
       }
       admin_get_all_users: {
-        Args: never
+        Args: { _include_deleted?: boolean }
         Returns: {
           blocked_at: string
           blocked_reason: string
@@ -5843,6 +5843,7 @@ export type Database = {
           full_name: string
           id: string
           is_blocked: boolean
+          is_deleted: boolean
           is_system_owner: boolean
           workspace_id: string
           workspace_name: string

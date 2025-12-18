@@ -15,6 +15,12 @@ interface AdminUser {
   workspace_name: string | null;
   workspace_role: string | null;
   is_system_owner: boolean;
+  is_deleted: boolean;
+}
+
+// Helper para identificar usuário removido
+export function isDeletedUser(email: string): boolean {
+  return email?.includes('@removed.local') ?? false;
 }
 
 interface AdminWorkspace {
@@ -45,14 +51,27 @@ export function useSystemAdmin() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [deletedUsers, setDeletedUsers] = useState<AdminUser[]>([]);
   const [workspaces, setWorkspaces] = useState<AdminWorkspace[]>([]);
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = useCallback(async (includeDeleted: boolean = false) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('admin_get_all_users');
-      if (error) throw error;
-      setUsers(data || []);
+      // Buscar usuários ativos
+      const { data: activeData, error: activeError } = await supabase.rpc('admin_get_all_users', {
+        _include_deleted: false
+      });
+      if (activeError) throw activeError;
+      setUsers(activeData || []);
+
+      // Buscar todos (incluindo deletados) para extrair apenas os deletados
+      const { data: allData, error: allError } = await supabase.rpc('admin_get_all_users', {
+        _include_deleted: true
+      });
+      if (allError) throw allError;
+      
+      const deleted = (allData || []).filter((u: AdminUser) => u.is_deleted);
+      setDeletedUsers(deleted);
     } catch (error: any) {
       console.error('Error fetching users:', error);
       toast.error(error.message || 'Erro ao carregar usuários');
@@ -199,6 +218,7 @@ export function useSystemAdmin() {
   return {
     loading,
     users,
+    deletedUsers,
     workspaces,
     fetchUsers,
     fetchWorkspaces,
