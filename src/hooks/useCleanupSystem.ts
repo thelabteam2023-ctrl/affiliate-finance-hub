@@ -15,11 +15,14 @@ interface CleanupCandidate {
 
 interface DryRunResult {
   success: boolean;
+  validated: boolean;
+  validation_errors: string[];
   summary: {
     users_to_remove: number;
     workspaces_to_remove: number;
   };
   workspace_ids: string[];
+  user_ids: string[];
   record_counts: Record<string, number>;
 }
 
