@@ -127,6 +127,9 @@ export default function SystemAdmin() {
   };
 
   const getUserStatus = (user: any) => {
+    if (user.is_system_owner) {
+      return <Badge className="gap-1 bg-primary/20 text-primary border-primary/30"><Crown className="h-3 w-3" /> System Owner</Badge>;
+    }
     if (user.is_blocked) {
       return <Badge variant="destructive" className="gap-1"><Ban className="h-3 w-3" /> Bloqueado</Badge>;
     }
@@ -288,18 +291,20 @@ export default function SystemAdmin() {
                                 </Button>
                               </>
                             )}
-                            <Button
-                              variant={u.is_blocked ? 'default' : 'destructive'}
-                              size="sm"
-                              onClick={() => setBlockUserDialog({ 
-                                open: true, 
-                                userId: u.id, 
-                                userName: u.full_name || u.email,
-                                currentlyBlocked: u.is_blocked 
-                              })}
-                            >
-                              {u.is_blocked ? <Check className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
-                            </Button>
+                            {!u.is_system_owner && (
+                              <Button
+                                variant={u.is_blocked ? 'default' : 'destructive'}
+                                size="sm"
+                                onClick={() => setBlockUserDialog({ 
+                                  open: true, 
+                                  userId: u.id, 
+                                  userName: u.full_name || u.email,
+                                  currentlyBlocked: u.is_blocked 
+                                })}
+                              >
+                                {u.is_blocked ? <Check className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

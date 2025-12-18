@@ -5835,6 +5835,7 @@ export type Database = {
           full_name: string
           id: string
           is_blocked: boolean
+          is_system_owner: boolean
           workspace_id: string
           workspace_name: string
           workspace_role: Database["public"]["Enums"]["app_role"]
