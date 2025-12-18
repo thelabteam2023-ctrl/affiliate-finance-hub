@@ -277,7 +277,7 @@ export function CommunityChatFull({
     }, 100);
   };
 
-  const handleSendMedia = async (type: 'image' | 'audio', url: string) => {
+  const handleSendMedia = async (type: 'image' | 'audio', storagePath: string) => {
     if (!user?.id || !workspaceId) return;
 
     const { data, error } = await supabase
@@ -285,7 +285,7 @@ export function CommunityChatFull({
       .insert({
         workspace_id: workspaceId,
         user_id: user.id,
-        content: url,
+        content: storagePath,
         message_type: type,
         context_type: contextType,
         context_id: contextType === 'bookmaker' ? contextId : null,
@@ -301,11 +301,11 @@ export function CommunityChatFull({
       });
       throw error;
     }
-    
+
     if (data) {
       notifyMessageSent(data.id);
     }
-    
+
     setTimeout(() => {
       scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     }, 100);

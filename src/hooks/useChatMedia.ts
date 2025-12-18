@@ -14,8 +14,8 @@ export type MediaState =
   | 'error';
 
 interface UploadResult {
-  url: string;
   path: string;
+  contentType: string;
 }
 
 interface MediaPreview {
@@ -79,31 +79,47 @@ export function useChatMedia(workspaceId: string | null, userId: string | null) 
 
     setState('uploading');
     try {
-      // Use mp4 for audio (better browser support) and webp for images
-      const extension = type === 'image' ? 'webp' : 'mp4';
-      const contentType = type === 'image' ? 'image/webp' : 'audio/mp4';
+      const contentType = type === 'image'
+        ? 'image/webp'
+        : (file.type || 'audio/webm');
+
+      const extension = type === 'image'
+        ? 'webp'
+        : getExtensionFromMime(contentType);
+
       const fileName = `${userId}/${workspaceId}/${Date.now()}.${extension}`;
-      
+
+      console.debug('[chat-media] upload:start', {
+        type,
+        size: file.size,
+        contentType,
+        path: fileName,
+      });
+
       const { data, error } = await supabase.storage
         .from('chat-media')
         .upload(fileName, file, {
           contentType,
           cacheControl: '3600',
+          upsert: false,
         });
 
       if (error) throw error;
 
-      const { data: urlData } = supabase.storage
-        .from('chat-media')
-        .getPublicUrl(data.path);
+      console.debug('[chat-media] upload:ok', {
+        type,
+        size: file.size,
+        contentType,
+        path: data.path,
+      });
 
       setState('idle');
       return {
-        url: urlData.publicUrl,
         path: data.path,
+        contentType,
       };
     } catch (error: any) {
-      console.error('Upload error:', error);
+      console.error('[chat-media] upload:error', error);
       setState('error');
       toast({
         title: 'Erro no upload',
@@ -342,16 +358,16 @@ export function useChatMedia(workspaceId: string | null, userId: string | null) 
 
   const confirmAndSend = useCallback(async (): Promise<UploadResult | null> => {
     if (!mediaPreview) return null;
-    
+
     const result = await uploadFile(mediaPreview.blob, mediaPreview.type);
-    
+
     if (result) {
       // Cleanup preview
       URL.revokeObjectURL(mediaPreview.url);
       setMediaPreview(null);
       setState('idle');
     }
-    
+
     return result;
   }, [mediaPreview, uploadFile]);
 
@@ -394,6 +410,15 @@ export function useChatMedia(workspaceId: string | null, userId: string | null) 
   };
 }
 
+function getExtensionFromMime(mime: string) {
+  const m = mime.toLowerCase();
+  if (m.includes('webm')) return 'webm';
+  if (m.includes('mp4') || m.includes('m4a')) return 'm4a';
+  if (m.includes('ogg')) return 'ogg';
+  // Fallback
+  return 'bin';
+}
+
 async function convertToWebP(file: File | Blob): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
@@ -404,7 +429,7 @@ async function convertToWebP(file: File | Blob): Promise<Blob> {
       // Limit dimensions
       const maxDim = 1920;
       let { width, height } = img;
-      
+
       if (width > maxDim || height > maxDim) {
         if (width > height) {
           height = (height / width) * maxDim;
@@ -434,7 +459,7 @@ async function convertToWebP(file: File | Blob): Promise<Blob> {
       URL.revokeObjectURL(img.src);
       reject(new Error('Failed to load image'));
     };
-    
+
     img.src = URL.createObjectURL(file);
   });
 }

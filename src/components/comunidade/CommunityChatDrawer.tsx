@@ -34,7 +34,7 @@ export function CommunityChatDrawer({ open, onOpenChange }: CommunityChatDrawerP
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:w-[480px] p-0 flex flex-col">
+      <SheetContent side="right" showClose={false} className="w-full sm:w-[480px] p-0 flex flex-col">
         <SheetHeader className="p-4 border-b border-border flex-row items-center justify-between space-y-0">
           <SheetTitle className="text-base">Chat da Comunidade</SheetTitle>
           <div className="flex items-center gap-2">
