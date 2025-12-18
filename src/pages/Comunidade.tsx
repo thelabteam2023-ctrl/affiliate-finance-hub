@@ -7,13 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCommunityAccess } from '@/hooks/useCommunityAccess';
-import { Search, Star, MessageSquare, Lock, ChevronDown, ChevronUp } from 'lucide-react';
+import { useCommunityRanking, RankedBookmaker } from '@/hooks/useCommunityRanking';
+import { Search, Star, MessageSquare, Lock, ChevronDown, ChevronUp, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CommunityRadar } from '@/components/comunidade/CommunityRadar';
 import { CommunityChatPreview } from '@/components/comunidade/CommunityChatPreview';
 import { CommunityChatDrawer } from '@/components/comunidade/CommunityChatDrawer';
 
-const INITIAL_VISIBLE_COUNT = 9;
+const TOP_GRID_COUNT = 9;
 
 interface BookmakerStats {
   bookmaker_catalogo_id: string;
@@ -30,8 +31,14 @@ interface BookmakerStats {
 export default function Comunidade() {
   const navigate = useNavigate();
   const { hasFullAccess, loading: accessLoading, plan, isOwner } = useCommunityAccess();
-  const [bookmakers, setBookmakers] = useState<BookmakerStats[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Ranked bookmakers for Top 9 grid (uses same logic as Radar)
+  const { rankedItems: top9Ranked, loading: rankingLoading } = useCommunityRanking({ limit: TOP_GRID_COUNT });
+  
+  // All bookmakers for "Ver mais" and search
+  const [allBookmakers, setAllBookmakers] = useState<BookmakerStats[]>([]);
+  const [loadingAll, setLoadingAll] = useState(true);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -43,11 +50,21 @@ export default function Comunidade() {
     return () => window.removeEventListener('open-community-chat', handleOpenChat);
   }, []);
 
+  // Fetch all bookmakers for stats (lightweight, runs on mount)
   useEffect(() => {
-    fetchBookmakers();
+    fetchAllBookmakers();
   }, []);
 
-  const fetchBookmakers = async () => {
+  // Also fetch when expanded or searching
+  useEffect(() => {
+    if (showAll || searchTerm.trim()) {
+      fetchAllBookmakers();
+    }
+  }, [showAll, searchTerm]);
+
+  const fetchAllBookmakers = async () => {
+    if (allBookmakers.length > 0) return; // Already loaded
+    
     try {
       const { data, error } = await supabase
         .from('v_community_bookmaker_stats')
@@ -55,35 +72,43 @@ export default function Comunidade() {
         .order('nome');
 
       if (error) throw error;
-      setBookmakers(data || []);
+      setAllBookmakers(data || []);
     } catch (error) {
       console.error('Error fetching bookmakers:', error);
     } finally {
-      setLoading(false);
+      setLoadingAll(false);
     }
   };
 
-  // Filter bookmakers based on search - searches ALL bookmakers
-  const filteredBookmakers = useMemo(() => {
+  // Filter all bookmakers based on search
+  const filteredAllBookmakers = useMemo(() => {
     if (!searchTerm.trim()) {
-      return bookmakers;
+      return allBookmakers;
     }
-    return bookmakers.filter(bm =>
+    return allBookmakers.filter(bm =>
       bm.nome.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [bookmakers, searchTerm]);
+  }, [allBookmakers, searchTerm]);
 
   // Determine which bookmakers to display
   const displayedBookmakers = useMemo(() => {
-    // When searching, show all matches
+    // When searching, search ALL bookmakers
     if (searchTerm.trim()) {
-      return filteredBookmakers;
+      return filteredAllBookmakers;
     }
-    // When not searching, respect showAll toggle
-    return showAll ? filteredBookmakers : filteredBookmakers.slice(0, INITIAL_VISIBLE_COUNT);
-  }, [filteredBookmakers, showAll, searchTerm]);
+    // When expanded, show all
+    if (showAll) {
+      return allBookmakers;
+    }
+    // Default: show Top 9 ranked (dynamic based on engagement)
+    return top9Ranked;
+  }, [searchTerm, showAll, filteredAllBookmakers, allBookmakers, top9Ranked]);
 
-  const hasMoreToShow = !searchTerm.trim() && filteredBookmakers.length > INITIAL_VISIBLE_COUNT;
+  const hasMoreToShow = !searchTerm.trim() && allBookmakers.length > TOP_GRID_COUNT;
+  const isSearching = !!searchTerm.trim();
+  const isShowingRanked = !isSearching && !showAll;
+
+  const loading = rankingLoading || (showAll && loadingAll);
 
   const renderStars = (rating: number | null) => {
     if (!rating) return <span className="text-muted-foreground text-sm">Sem avaliações</span>;
@@ -181,31 +206,41 @@ export default function Comunidade() {
             />
           </div>
 
-          {/* Stats Summary */}
-          <div className="grid grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold">{bookmakers.length}</p>
-                <p className="text-sm text-muted-foreground">Casas Globais</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold">
-                  {bookmakers.reduce((sum, bm) => sum + bm.total_avaliacoes, 0)}
-                </p>
-                <p className="text-sm text-muted-foreground">Avaliações</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold">
-                  {bookmakers.reduce((sum, bm) => sum + bm.total_topicos, 0)}
-                </p>
-                <p className="text-sm text-muted-foreground">Tópicos</p>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Stats Summary - only shows when allBookmakers is loaded */}
+          {allBookmakers.length > 0 && (
+            <div className="grid grid-cols-3 gap-4">
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <p className="text-2xl font-bold">{allBookmakers.length}</p>
+                  <p className="text-sm text-muted-foreground">Casas Globais</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <p className="text-2xl font-bold">
+                    {allBookmakers.reduce((sum, bm) => sum + bm.total_avaliacoes, 0)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Avaliações</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <p className="text-2xl font-bold">
+                    {allBookmakers.reduce((sum, bm) => sum + bm.total_topicos, 0)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Tópicos</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Section Title */}
+          {isShowingRanked && top9Ranked.length > 0 && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <span>Casas em destaque (mais discutidas nos últimos 30 dias)</span>
+            </div>
+          )}
 
           {/* Bookmakers Grid */}
           {loading || accessLoading ? (
@@ -288,7 +323,7 @@ export default function Comunidade() {
                     ) : (
                       <>
                         <ChevronDown className="h-4 w-4" />
-                        Ver mais casas ({filteredBookmakers.length - INITIAL_VISIBLE_COUNT})
+                        Ver mais casas ({allBookmakers.length - TOP_GRID_COUNT})
                       </>
                     )}
                   </Button>
