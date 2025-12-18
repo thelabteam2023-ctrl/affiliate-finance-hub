@@ -57,7 +57,7 @@ interface CommunityTopicsListProps {
 
 export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTopicsListProps) {
   const { user } = useAuth();
-  const { hasProAccess } = useCommunityAccess();
+  const { hasFullAccess } = useCommunityAccess();
   const { toast } = useToast();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
@@ -212,7 +212,7 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
       <div className="text-center py-12">
         <MessageSquare className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
         <p className="text-muted-foreground">Nenhum tópico de discussão ainda</p>
-        {hasProAccess && onCreateTopic && (
+        {hasFullAccess && onCreateTopic && (
           <Button variant="outline" size="sm" className="mt-3" onClick={onCreateTopic}>
             <Plus className="h-4 w-4 mr-2" />
             Criar primeiro tópico
@@ -225,7 +225,7 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
   return (
     <>
       {/* Create Topic Button */}
-      {hasProAccess && onCreateTopic && (
+      {hasFullAccess && onCreateTopic && (
         <div className="mb-4">
           <Button onClick={onCreateTopic}>
             <Plus className="h-4 w-4 mr-2" />
@@ -276,7 +276,7 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
                       {isOwnTopic && (
                         <Badge variant="outline" className="text-[10px]">Você</Badge>
                       )}
-                      {!isOwnTopic && hasProAccess && (
+                      {!isOwnTopic && hasFullAccess && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -322,7 +322,7 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
                                 </div>
                                 <p className="text-sm mt-1">{comment.conteudo}</p>
                               </div>
-                              {!isOwnComment && hasProAccess && (
+                              {!isOwnComment && hasFullAccess && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -343,7 +343,7 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
                     )}
 
                     {/* Add Comment */}
-                    {hasProAccess && (
+                    {hasFullAccess && (
                       <div className="flex gap-2">
                         <Input
                           placeholder="Adicionar comentário..."

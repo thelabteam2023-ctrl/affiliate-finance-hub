@@ -3,20 +3,24 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 interface CommunityAccess {
-  hasProAccess: boolean;
+  hasFullAccess: boolean; // PRO+ ou OWNER
   loading: boolean;
   plan: string | null;
+  role: string | null;
+  isOwner: boolean;
   canEvaluate: boolean;
   canCreateTopics: boolean;
   canComment: boolean;
-  canViewContent: boolean; // Free/Starter can see structure but not full content
+  canViewContent: boolean;
 }
 
 export function useCommunityAccess(): CommunityAccess {
   const { user } = useAuth();
-  const [hasProAccess, setHasProAccess] = useState(false);
+  const [hasFullAccess, setHasFullAccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [plan, setPlan] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
 
   const checkAccess = useCallback(async () => {
     if (!user?.id) {
@@ -25,21 +29,41 @@ export function useCommunityAccess(): CommunityAccess {
     }
 
     try {
-      // Get user's workspace
+      // Get user's workspace membership (includes role)
       const { data: memberData, error: memberError } = await supabase
         .from('workspace_members')
-        .select('workspace_id')
+        .select('workspace_id, role')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .single();
 
       if (memberError || !memberData) {
-        setHasProAccess(false);
+        setHasFullAccess(false);
         setLoading(false);
         return;
       }
 
-      // Get workspace plan
+      const userRole = memberData.role;
+      setRole(userRole);
+
+      // REGRA FUNDAMENTAL: OWNER tem acesso total, independente do plano
+      if (userRole === 'owner' || userRole === 'master') {
+        setIsOwner(true);
+        setHasFullAccess(true);
+        
+        // Buscar plano apenas para referência, não para bloqueio
+        const { data: workspaceData } = await supabase
+          .from('workspaces')
+          .select('plan')
+          .eq('id', memberData.workspace_id)
+          .single();
+        
+        setPlan(workspaceData?.plan || null);
+        setLoading(false);
+        return;
+      }
+
+      // Para não-owners, verificar o plano
       const { data: workspaceData, error: workspaceError } = await supabase
         .from('workspaces')
         .select('plan')
@@ -47,17 +71,21 @@ export function useCommunityAccess(): CommunityAccess {
         .single();
 
       if (workspaceError || !workspaceData) {
-        setHasProAccess(false);
+        setHasFullAccess(false);
         setLoading(false);
         return;
       }
 
       const userPlan = workspaceData.plan;
       setPlan(userPlan);
-      setHasProAccess(userPlan === 'pro' || userPlan === 'advanced');
+      
+      // PRO e Advanced têm acesso completo
+      const hasPlanAccess = userPlan === 'pro' || userPlan === 'advanced';
+      setHasFullAccess(hasPlanAccess);
+      
     } catch (error) {
       console.error('Error checking community access:', error);
-      setHasProAccess(false);
+      setHasFullAccess(false);
     } finally {
       setLoading(false);
     }
@@ -68,12 +96,14 @@ export function useCommunityAccess(): CommunityAccess {
   }, [checkAccess]);
 
   return {
-    hasProAccess,
+    hasFullAccess,
     loading,
     plan,
-    canEvaluate: hasProAccess,
-    canCreateTopics: hasProAccess,
-    canComment: hasProAccess,
-    canViewContent: true, // All can view, but Free/Starter see limited content
+    role,
+    isOwner,
+    canEvaluate: hasFullAccess,
+    canCreateTopics: hasFullAccess,
+    canComment: hasFullAccess,
+    canViewContent: true, // Todos podem ver estrutura
   };
 }

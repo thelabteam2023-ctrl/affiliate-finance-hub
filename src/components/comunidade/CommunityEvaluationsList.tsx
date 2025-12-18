@@ -52,7 +52,7 @@ const STATUS_BLOQUEIO_LABELS: Record<string, { label: string; color: string }> =
 
 export function CommunityEvaluationsList({ bookmakerId, onRefresh }: CommunityEvaluationsListProps) {
   const { user } = useAuth();
-  const { hasProAccess } = useCommunityAccess();
+  const { hasFullAccess } = useCommunityAccess();
   const { toast } = useToast();
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -180,7 +180,7 @@ export function CommunityEvaluationsList({ bookmakerId, onRefresh }: CommunityEv
                         <span className="text-sm font-medium ml-1">{evaluation.nota_media.toFixed(1)}</span>
                       </div>
                     </div>
-                    {!isOwnEvaluation && hasProAccess && (
+                    {!isOwnEvaluation && hasFullAccess && (
                       <Button
                         variant="ghost"
                         size="icon"

@@ -26,7 +26,7 @@ interface BookmakerStats {
 
 export default function Comunidade() {
   const navigate = useNavigate();
-  const { hasProAccess, loading: accessLoading, plan } = useCommunityAccess();
+  const { hasFullAccess, loading: accessLoading, plan, isOwner } = useCommunityAccess();
   const [bookmakers, setBookmakers] = useState<BookmakerStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,8 +83,8 @@ export default function Comunidade() {
     );
   };
 
-  // Upgrade prompt for Free/Starter users
-  if (!accessLoading && !hasProAccess) {
+  // Upgrade prompt for Free/Starter users (OWNER ignora restrição de plano)
+  if (!accessLoading && !hasFullAccess) {
     return (
       <div className="container mx-auto p-6 max-w-6xl">
         <PageHeader 
