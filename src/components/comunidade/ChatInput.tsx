@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Image, Mic, Square, Loader2 } from 'lucide-react';
+import { Send, Image, Mic, Loader2 } from 'lucide-react';
 import { useChatMedia } from '@/hooks/useChatMedia';
+import { ChatMediaPreview, ChatRecordingUI } from './ChatMediaPreview';
 
 interface ChatInputProps {
   workspaceId: string | null;
@@ -25,24 +26,26 @@ export function ChatInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
-    uploading,
-    recording,
+    state,
+    mediaPreview,
     recordingTime,
+    audioLevels,
     maxAudioDuration,
-    handleImagePaste,
+    uploading,
     startRecording,
     stopRecording,
     cancelRecording,
-    uploadFile,
+    setImagePreview,
+    handleImagePaste,
+    confirmAndSend,
+    cancelPreview,
+    reRecord,
   } = useChatMedia(workspaceId, userId);
 
   // Handle paste event for images
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
-      const result = await handleImagePaste(e);
-      if (result) {
-        await onSendMedia('image', result.url);
-      }
+      await handleImagePaste(e);
     };
 
     const input = inputRef.current;
@@ -50,7 +53,7 @@ export function ChatInput({
       input.addEventListener('paste', handlePaste as any);
       return () => input.removeEventListener('paste', handlePaste as any);
     }
-  }, [handleImagePaste, onSendMedia]);
+  }, [handleImagePaste]);
 
   const handleSend = async () => {
     if (!message.trim() || sending || disabled) return;
@@ -75,96 +78,50 @@ export function ChatInput({
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 3 * 1024 * 1024) {
-      return; // useChatMedia already shows toast
-    }
-
-    // Convert to WebP
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new window.Image();
-
-    img.onload = async () => {
-      const maxDim = 1920;
-      let { width, height } = img;
-      
-      if (width > maxDim || height > maxDim) {
-        if (width > height) {
-          height = (height / width) * maxDim;
-          width = maxDim;
-        } else {
-          width = (width / height) * maxDim;
-          height = maxDim;
-        }
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-      ctx?.drawImage(img, 0, 0, width, height);
-
-      canvas.toBlob(
-        async (blob) => {
-          if (blob) {
-            const result = await uploadFile(blob, 'image');
-            if (result) {
-              await onSendMedia('image', result.url);
-            }
-          }
-        },
-        'image/webp',
-        0.85
-      );
-    };
-
-    img.src = URL.createObjectURL(file);
+    
+    await setImagePreview(file);
     
     // Reset input
     e.target.value = '';
   };
 
-  const handleStopRecording = async () => {
-    const result = await stopRecording();
+  const handleConfirmMedia = async () => {
+    if (!mediaPreview) return;
+    
+    const result = await confirmAndSend();
     if (result) {
-      await onSendMedia('audio', result.url);
+      await onSendMedia(mediaPreview.type, result.url);
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  if (recording) {
+  // Show recording UI
+  if (state === 'recording_audio') {
     return (
-      <div className="p-4 border-t border-border shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="flex-1 flex items-center gap-2">
-            <div className="w-3 h-3 bg-destructive rounded-full animate-pulse" />
-            <span className="text-sm font-medium">
-              Gravando... {formatTime(recordingTime)} / {formatTime(maxAudioDuration)}
-            </span>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={cancelRecording}
-          >
-            Cancelar
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleStopRecording}
-          >
-            <Square className="h-4 w-4 mr-1" />
-            Parar
-          </Button>
-        </div>
-      </div>
+      <ChatRecordingUI
+        recordingTime={recordingTime}
+        maxDuration={maxAudioDuration}
+        audioLevels={audioLevels}
+        onStop={stopRecording}
+        onCancel={cancelRecording}
+      />
     );
   }
 
+  // Show preview UI
+  if ((state === 'preview_audio' || state === 'preview_image') && mediaPreview) {
+    return (
+      <ChatMediaPreview
+        preview={mediaPreview}
+        audioLevels={audioLevels}
+        uploading={uploading}
+        onConfirm={handleConfirmMedia}
+        onCancel={cancelPreview}
+        onReRecord={mediaPreview.type === 'audio' ? reRecord : undefined}
+      />
+    );
+  }
+
+  // Normal input state
   return (
     <div className="p-4 border-t border-border shrink-0">
       <div className="flex gap-2">
@@ -182,7 +139,7 @@ export function ChatInput({
           size="icon"
           variant="ghost"
           onClick={() => fileInputRef.current?.click()}
-          disabled={uploading || disabled}
+          disabled={uploading || disabled || state !== 'idle'}
           title="Enviar imagem (ou CTRL+V)"
         >
           {uploading ? (
@@ -197,7 +154,7 @@ export function ChatInput({
           size="icon"
           variant="ghost"
           onClick={startRecording}
-          disabled={uploading || disabled}
+          disabled={uploading || disabled || state !== 'idle'}
           title="Gravar áudio (máx. 30s)"
         >
           <Mic className="h-4 w-4" />
@@ -210,7 +167,7 @@ export function ChatInput({
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          disabled={sending || uploading || disabled}
+          disabled={sending || uploading || disabled || state !== 'idle'}
           maxLength={500}
           className="flex-1"
         />
@@ -219,7 +176,7 @@ export function ChatInput({
         <Button 
           size="icon" 
           onClick={handleSend}
-          disabled={!message.trim() || sending || uploading || disabled}
+          disabled={!message.trim() || sending || uploading || disabled || state !== 'idle'}
         >
           {sending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
