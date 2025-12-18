@@ -15,6 +15,7 @@ interface ChatMessage {
   id: string;
   user_id: string;
   content: string;
+  message_type: string;
   created_at: string;
   profile?: {
     full_name: string | null;
@@ -44,9 +45,11 @@ export function CommunityChatPreview() {
           id,
           user_id,
           content,
+          message_type,
           created_at
         `)
         .eq('workspace_id', workspaceId)
+        .eq('context_type', 'general')
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(PREVIEW_MESSAGES_COUNT);
@@ -223,7 +226,7 @@ export function CommunityChatPreview() {
           <MessageSquare className="h-4 w-4" />
           Chat da Comunidade
           <span className="text-xs font-normal text-muted-foreground ml-auto">
-            7 dias
+            3 dias
           </span>
         </CardTitle>
       </CardHeader>
@@ -252,7 +255,9 @@ export function CommunityChatPreview() {
                     {msg.profile?.full_name || msg.profile?.email?.split('@')[0] || 'Usuário'}:
                   </span>{' '}
                   <span className="text-muted-foreground line-clamp-1">
-                    {msg.content}
+                    {msg.message_type === 'image' ? '📷 Imagem' : 
+                     msg.message_type === 'audio' ? '🎙️ Áudio' : 
+                     msg.content}
                   </span>
                   <span className="text-muted-foreground/60 text-[10px] ml-1">
                     {formatDistanceToNow(new Date(msg.created_at), { 
