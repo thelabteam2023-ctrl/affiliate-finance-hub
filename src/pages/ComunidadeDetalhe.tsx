@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCommunityAccess } from '@/hooks/useCommunityAccess';
+import { useChatPresence } from '@/hooks/useChatPresence';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,11 +11,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Star, MessageSquare, Users, Clock, Shield, Zap, HeartHandshake, Building2 } from 'lucide-react';
+import { ArrowLeft, Star, MessageSquare, Users, Clock, Shield, Zap, HeartHandshake, Building2, ExternalLink } from 'lucide-react';
 import { CommunityEvaluationDialog } from '@/components/comunidade/CommunityEvaluationDialog';
 import { CommunityTopicDialog } from '@/components/comunidade/CommunityTopicDialog';
 import { CommunityEvaluationsList } from '@/components/comunidade/CommunityEvaluationsList';
 import { CommunityTopicsList } from '@/components/comunidade/CommunityTopicsList';
+import { OnlineIndicator } from '@/components/comunidade/OnlineIndicator';
 
 interface BookmakerDetails {
   id: string;
@@ -41,6 +43,7 @@ export default function ComunidadeDetalhe() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { hasFullAccess } = useCommunityAccess();
+  const { onlineCount, isConnected } = useChatPresence('bookmaker', id);
   
   const [bookmaker, setBookmaker] = useState<BookmakerDetails | null>(null);
   const [stats, setStats] = useState<BookmakerStats | null>(null);
@@ -49,6 +52,11 @@ export default function ComunidadeDetalhe() {
   const [evaluationDialogOpen, setEvaluationDialogOpen] = useState(false);
   const [topicDialogOpen, setTopicDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('visao-geral');
+
+  const openBookmakerChat = () => {
+    const popoutUrl = `/comunidade/chat?mode=popout&context=bookmaker&contextId=${id}&name=${encodeURIComponent(bookmaker?.nome || '')}`;
+    window.open(popoutUrl, 'community-chat-bookmaker', 'width=480,height=800,scrollbars=yes,resizable=yes');
+  };
 
   useEffect(() => {
     if (id) {
@@ -205,21 +213,30 @@ export default function ComunidadeDetalhe() {
             <span>{stats?.total_avaliacoes || 0} avaliações</span>
             <span>{stats?.total_topicos || 0} tópicos</span>
           </div>
+          
+          {/* Online indicator for this bookmaker */}
+          <OnlineIndicator count={onlineCount} isConnected={isConnected} className="mt-2" />
         </div>
         
         {/* Action Buttons */}
         {hasFullAccess && (
-          <div className="flex gap-2">
-            <Button 
-              variant="outline"
-              onClick={() => setEvaluationDialogOpen(true)}
-            >
-              <Star className="h-4 w-4 mr-2" />
-              {userEvaluation ? 'Editar Avaliação' : 'Avaliar'}
-            </Button>
-            <Button onClick={() => setTopicDialogOpen(true)}>
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Novo Tópico
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => setEvaluationDialogOpen(true)}
+              >
+                <Star className="h-4 w-4 mr-2" />
+                {userEvaluation ? 'Editar Avaliação' : 'Avaliar'}
+              </Button>
+              <Button variant="outline" onClick={() => setTopicDialogOpen(true)}>
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Novo Tópico
+              </Button>
+            </div>
+            <Button onClick={openBookmakerChat} className="w-full">
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Abrir Chat · {bookmaker.nome}
             </Button>
           </div>
         )}

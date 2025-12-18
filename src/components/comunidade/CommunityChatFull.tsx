@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useCommunityAccess } from '@/hooks/useCommunityAccess';
 import { useChatBroadcast } from '@/hooks/useChatBroadcast';
+import { useChatPresence } from '@/hooks/useChatPresence';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,6 +15,7 @@ import { CommunityChatConvertDialog } from './CommunityChatConvertDialog';
 import { ChatMessageItem, ChatMessage } from './ChatMessageItem';
 import { ChatInput } from './ChatInput';
 import { ChatSettingsPopover } from './ChatSettingsPopover';
+import { OnlineIndicator } from './OnlineIndicator';
 
 interface CommunityChatFullProps {
   isPopout?: boolean;
@@ -22,6 +24,7 @@ interface CommunityChatFullProps {
   initialContextType?: 'general' | 'bookmaker';
   initialContextId?: string | null;
   bookmakerName?: string;
+  bookmakerLogo?: string | null;
 }
 
 const MESSAGES_PER_PAGE = 50;
@@ -34,6 +37,7 @@ export function CommunityChatFull({
   initialContextType = 'general',
   initialContextId = null,
   bookmakerName,
+  bookmakerLogo,
 }: CommunityChatFullProps) {
   const { user } = useAuth();
   const { workspaceId } = useWorkspace();
@@ -50,6 +54,8 @@ export function CommunityChatFull({
   const [hasMore, setHasMore] = useState(true);
   const [newMessageCount, setNewMessageCount] = useState(0);
   
+  // Real-time presence tracking
+  const { onlineCount, isConnected } = useChatPresence(contextType, contextId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
 
@@ -346,40 +352,64 @@ export function CommunityChatFull({
       <div className="flex flex-col h-full">
         {/* Header - only show when in popout mode */}
         {isPopout && (
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-primary" />
-              <h1 className="font-semibold">
-                {contextType === 'bookmaker' && bookmakerName 
-                  ? `Chat - ${bookmakerName}`
-                  : 'Chat da Comunidade'
-                }
-              </h1>
+          <div className="flex flex-col px-4 py-3 border-b border-border shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {contextType === 'bookmaker' && bookmakerLogo ? (
+                  <img src={bookmakerLogo} alt={bookmakerName} className="h-6 w-6 object-contain rounded" />
+                ) : (
+                  <MessageSquare className="h-5 w-5 text-primary" />
+                )}
+                <div>
+                  <h1 className="font-semibold">
+                    {contextType === 'bookmaker' && bookmakerName 
+                      ? bookmakerName
+                      : 'Chat Geral'
+                    }
+                  </h1>
+                  {contextType === 'bookmaker' && (
+                    <span className="text-xs text-muted-foreground">Chat por Bookmaker</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <ChatSettingsPopover />
+                {onGoToERP && (
+                  <Button variant="outline" size="sm" onClick={onGoToERP}>
+                    <ExternalLink className="h-4 w-4 mr-1" />
+                    Voltar para ERP
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <ChatSettingsPopover />
-              {onGoToERP && (
-                <Button variant="outline" size="sm" onClick={onGoToERP}>
-                  <ExternalLink className="h-4 w-4 mr-1" />
-                  Voltar para ERP
-                </Button>
-              )}
-            </div>
+            <OnlineIndicator count={onlineCount} isConnected={isConnected} className="mt-2" />
           </div>
         )}
 
         {/* Embedded header with settings only */}
         {isEmbedded && (
-          <div className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Chat</span>
+          <div className="flex flex-col px-4 py-2 border-b border-border shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {contextType === 'bookmaker' && bookmakerLogo ? (
+                  <img src={bookmakerLogo} alt={bookmakerName} className="h-5 w-5 object-contain rounded" />
+                ) : (
+                  <MessageSquare className="h-4 w-4 text-primary" />
+                )}
+                <span className="text-sm font-medium">
+                  {contextType === 'bookmaker' && bookmakerName 
+                    ? `${bookmakerName} · Chat`
+                    : 'Chat Geral'
+                  }
+                </span>
+              </div>
+              <ChatSettingsPopover />
             </div>
-            <ChatSettingsPopover />
+            <OnlineIndicator count={onlineCount} isConnected={isConnected} className="mt-1.5" />
           </div>
         )}
 
-        {/* Context Tabs */}
+        {/* Context Tabs - only show when no specific bookmaker context */}
         {!initialContextId && (
           <div className="px-4 py-2 border-b border-border">
             <Tabs 
@@ -390,20 +420,31 @@ export function CommunityChatFull({
               }}
             >
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="general" className="flex items-center gap-1">
-                  <Globe className="h-3 w-3" />
+                <TabsTrigger value="general" className="flex items-center gap-1.5">
+                  <Globe className="h-3.5 w-3.5" />
                   Geral
                 </TabsTrigger>
-                <TabsTrigger value="bookmaker" className="flex items-center gap-1" disabled>
-                  <Building2 className="h-3 w-3" />
-                  Por Casa
+                <TabsTrigger value="bookmaker" className="flex items-center gap-1.5">
+                  <Building2 className="h-3.5 w-3.5" />
+                  Por Bookmaker
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+            
+            {/* Contextual guidance for bookmaker tab */}
             {contextType === 'bookmaker' && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Acesse o chat por casa na página de cada bookmaker
-              </p>
+              <div className="mt-3 p-3 bg-muted/50 rounded-lg text-center">
+                <Building2 className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                <p className="text-sm font-medium">Selecione uma Bookmaker</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Acesse o chat específico de uma casa pela página da Comunidade ou pelo card de cada bookmaker.
+                </p>
+              </div>
+            )}
+            
+            {/* Online indicator for general chat */}
+            {contextType === 'general' && (
+              <OnlineIndicator count={onlineCount} isConnected={isConnected} className="mt-2" />
             )}
           </div>
         )}
@@ -443,12 +484,16 @@ export function CommunityChatFull({
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full py-8 text-center">
               <MessageSquare className="h-12 w-12 text-muted-foreground/30 mb-3" />
-              <p className="text-sm text-muted-foreground">
-                Nenhuma mensagem ainda
+              <p className="text-sm font-medium mb-1">
+                {contextType === 'bookmaker' && bookmakerName 
+                  ? `Ainda não há mensagens sobre ${bookmakerName}`
+                  : 'Nenhuma mensagem ainda'
+                }
               </p>
-              <p className="text-xs text-muted-foreground">
-                Seja o primeiro a iniciar a conversa!
+              <p className="text-xs text-muted-foreground mb-3">
+                Seja o primeiro a iniciar uma conversa!
               </p>
+              <OnlineIndicator count={onlineCount} isConnected={isConnected} />
             </div>
           ) : (
             <div className="space-y-3 py-4">
