@@ -3303,6 +3303,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "parcerias_indicacao_id_fkey"
+            columns: ["indicacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_indicacoes_workspace"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "parcerias_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
@@ -5087,6 +5094,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "parcerias_indicacao_id_fkey"
+            columns: ["indicacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_indicacoes_workspace"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "parcerias_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
@@ -5217,6 +5231,62 @@ export type Database = {
           },
         ]
       }
+      v_indicacoes_workspace: {
+        Row: {
+          created_at: string | null
+          data_indicacao: string | null
+          id: string | null
+          indicador_id: string | null
+          observacoes: string | null
+          origem: string | null
+          parceiro_id: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indicacoes_indicador_id_fkey"
+            columns: ["indicador_id"]
+            isOneToOne: false
+            referencedRelation: "indicadores_referral"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicacoes_indicador_id_fkey"
+            columns: ["indicador_id"]
+            isOneToOne: false
+            referencedRelation: "v_indicador_performance"
+            referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "indicacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "indicacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "indicacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+        ]
+      }
       v_indicador_performance: {
         Row: {
           cpf: string | null
@@ -5295,6 +5365,130 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
+          },
+        ]
+      }
+      v_movimentacoes_indicacao_workspace: {
+        Row: {
+          coin: string | null
+          cotacao: number | null
+          created_at: string | null
+          data_movimentacao: string | null
+          descricao: string | null
+          id: string | null
+          indicador_id: string | null
+          moeda: string | null
+          origem_caixa_operacional: boolean | null
+          origem_conta_bancaria_id: string | null
+          origem_parceiro_id: string | null
+          origem_tipo: string | null
+          origem_wallet_id: string | null
+          parceria_id: string | null
+          qtd_coin: number | null
+          status: string | null
+          tipo: string | null
+          tipo_moeda: string | null
+          user_id: string | null
+          valor: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimentacoes_indicacao_indicador_id_fkey"
+            columns: ["indicador_id"]
+            isOneToOne: false
+            referencedRelation: "indicadores_referral"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_indicador_id_fkey"
+            columns: ["indicador_id"]
+            isOneToOne: false
+            referencedRelation: "v_indicador_performance"
+            referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_conta_bancaria_id_fkey"
+            columns: ["origem_conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_conta_bancaria_id_fkey"
+            columns: ["origem_conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["conta_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_wallet_id_fkey"
+            columns: ["origem_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_wallet_id_fkey"
+            columns: ["origem_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets_crypto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_parceria_id_fkey"
+            columns: ["parceria_id"]
+            isOneToOne: false
+            referencedRelation: "parcerias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_parceria_id_fkey"
+            columns: ["parceria_id"]
+            isOneToOne: false
+            referencedRelation: "v_alertas_parcerias"
+            referencedColumns: ["parceria_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_parceria_id_fkey"
+            columns: ["parceria_id"]
+            isOneToOne: false
+            referencedRelation: "v_custos_aquisicao"
+            referencedColumns: ["parceria_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_parceria_id_fkey"
+            columns: ["parceria_id"]
+            isOneToOne: false
+            referencedRelation: "v_parcerias_alerta"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -5689,6 +5883,13 @@ export type Database = {
             columns: ["indicacao_id"]
             isOneToOne: false
             referencedRelation: "indicacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcerias_indicacao_id_fkey"
+            columns: ["indicacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_indicacoes_workspace"
             referencedColumns: ["id"]
           },
           {
