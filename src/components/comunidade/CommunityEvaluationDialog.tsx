@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Star, Zap, Shield, Clock, HeartHandshake, Building2 } from 'lucide-react';
 
 interface CommunityEvaluationDialogProps {
@@ -34,12 +33,6 @@ const CRITERIA = [
   { key: 'confiabilidade_geral', label: 'Confiabilidade Geral', icon: Building2, description: 'Confiança geral na casa' },
 ];
 
-const BLOQUEIO_OPTIONS = [
-  { value: 'NAO_INFORMADO', label: 'Não informar' },
-  { value: 'NUNCA_BLOQUEOU', label: 'Nunca bloqueou' },
-  { value: 'BLOQUEOU_APOS_GANHOS', label: 'Bloqueou após ganhos' },
-  { value: 'BLOQUEIO_RECORRENTE', label: 'Bloqueio recorrente' },
-];
 
 export function CommunityEvaluationDialog({
   open,
@@ -72,9 +65,6 @@ export function CommunityEvaluationDialog({
     };
   });
   
-  const [statusBloqueio, setStatusBloqueio] = useState(
-    existingEvaluation?.status_bloqueio || 'NAO_INFORMADO'
-  );
   const [comentario, setComentario] = useState(existingEvaluation?.comentario || '');
   const [isAnonymous, setIsAnonymous] = useState(existingEvaluation?.is_anonymous || false);
 
@@ -136,7 +126,6 @@ export function CommunityEvaluationDialog({
         estabilidade_conta: ratings.estabilidade_conta,
         qualidade_suporte: ratings.qualidade_suporte,
         confiabilidade_geral: ratings.confiabilidade_geral,
-        status_bloqueio: statusBloqueio,
         comentario: comentario || null,
         is_anonymous: isAnonymous,
       };
@@ -203,20 +192,6 @@ export function CommunityEvaluationDialog({
             })}
           </div>
 
-          {/* Block Status */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Status de Bloqueio</Label>
-            <RadioGroup value={statusBloqueio} onValueChange={setStatusBloqueio}>
-              {BLOQUEIO_OPTIONS.map((option) => (
-                <div key={option.value} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option.value} id={option.value} />
-                  <Label htmlFor={option.value} className="text-sm font-normal cursor-pointer">
-                    {option.label}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </div>
 
           {/* Comment */}
           <div className="space-y-2">
