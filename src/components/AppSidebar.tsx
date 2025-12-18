@@ -87,14 +87,14 @@ const menuGroups: MenuGroup[] = [
   {
     label: "ADMINISTRAÇÃO",
     items: [
-      { title: "Workspace", url: "/workspace", icon: Settings, iconName: "Settings", roles: ["owner", "admin", "master"] },
+      { title: "Workspace", url: "/workspace", icon: Settings, iconName: "Settings", roles: ["owner", "admin"] },
       { title: "Admin Sistema", url: "/admin", icon: Shield, iconName: "Shield", roles: [] }, // System Owner only - handled separately
     ],
   },
   {
     label: "DESENVOLVIMENTO",
     items: [
-      { title: "Testes", url: "/testes", icon: FlaskConical, iconName: "FlaskConical", roles: ["owner", "master"] },
+      { title: "Testes", url: "/testes", icon: FlaskConical, iconName: "FlaskConical", roles: ["owner"] },
     ],
   },
 ];
@@ -121,7 +121,10 @@ export function AppSidebar() {
       return isSystemOwner === true;
     }
     if (!item.permission && !item.roles) return true;
-    if (role === 'owner' || role === 'master') return true;
+    // System Owner can see everything
+    if (isSystemOwner) return true;
+    // Owner can see everything in their workspace
+    if (role === 'owner') return true;
     if (item.roles && item.roles.length > 0) {
       if (!role || !item.roles.includes(role)) return false;
     }

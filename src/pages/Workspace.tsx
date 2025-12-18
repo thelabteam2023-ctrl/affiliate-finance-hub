@@ -97,7 +97,7 @@ const rolePermissions = [
 export default function Workspace() {
   const { user } = useAuth();
   const { workspace, workspaceId, refreshWorkspace } = useWorkspace();
-  const { canManageWorkspace, isOwner, isMaster } = useRole();
+  const { canManageWorkspace, isOwner, isSystemOwner } = useRole();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -299,10 +299,10 @@ export default function Workspace() {
                 value={workspaceName}
                 onChange={(e) => setWorkspaceName(e.target.value)}
                 placeholder="Nome do workspace"
-                disabled={!isOwner && !isMaster}
+                disabled={!isOwner && !isSystemOwner}
               />
             </div>
-            {(isOwner || isMaster) && (
+            {(isOwner || isSystemOwner) && (
               <Button 
                 onClick={handleSaveWorkspace} 
                 disabled={saving || !workspaceName.trim()}
@@ -344,7 +344,7 @@ export default function Workspace() {
               currentUserId={user?.id || ''}
               onRoleChange={handleRoleChange}
               onRemove={handleRemoveMember}
-              canEdit={isOwner || isMaster}
+              canEdit={isOwner || isSystemOwner}
             />
           )}
         </CardContent>

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "./useAuth";
 
 export function usePermission(permissionCode: string) {
-  const { hasPermission, user, role } = useAuth();
+  const { hasPermission, user, role, isSystemOwner } = useAuth();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -14,8 +14,15 @@ export function usePermission(permissionCode: string) {
         return;
       }
 
-      // Owner, admin, and master always have all permissions
-      if (role === 'owner' || role === 'admin' || role === 'master') {
+      // System Owner has all permissions globally
+      if (isSystemOwner) {
+        setAllowed(true);
+        setLoading(false);
+        return;
+      }
+
+      // Owner and admin always have all workspace permissions
+      if (role === 'owner' || role === 'admin') {
         setAllowed(true);
         setLoading(false);
         return;
@@ -33,14 +40,14 @@ export function usePermission(permissionCode: string) {
     };
 
     checkPermission();
-  }, [permissionCode, user, role, hasPermission]);
+  }, [permissionCode, user, role, isSystemOwner, hasPermission]);
 
   return { allowed, loading };
 }
 
 // Hook for checking multiple permissions at once
 export function usePermissions(permissionCodes: string[]) {
-  const { hasPermission, user, role } = useAuth();
+  const { hasPermission, user, role, isSystemOwner } = useAuth();
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
@@ -53,8 +60,16 @@ export function usePermissions(permissionCodes: string[]) {
         return;
       }
 
-      // Owner, admin, and master always have all permissions
-      if (role === 'owner' || role === 'admin' || role === 'master') {
+      // System Owner has all permissions globally
+      if (isSystemOwner) {
+        const allAllowed = permissionCodes.reduce((acc, code) => ({ ...acc, [code]: true }), {});
+        setPermissions(allAllowed);
+        setLoading(false);
+        return;
+      }
+
+      // Owner and admin always have all workspace permissions
+      if (role === 'owner' || role === 'admin') {
         const allAllowed = permissionCodes.reduce((acc, code) => ({ ...acc, [code]: true }), {});
         setPermissions(allAllowed);
         setLoading(false);
@@ -77,7 +92,7 @@ export function usePermissions(permissionCodes: string[]) {
     };
 
     checkPermissions();
-  }, [permissionCodes.join(','), user, role, hasPermission]);
+  }, [permissionCodes.join(','), user, role, isSystemOwner, hasPermission]);
 
   return { permissions, loading };
 }

@@ -8,7 +8,7 @@ interface CommunityAccess {
   plan: string | null;
   role: string | null;
   isOwner: boolean;
-  isAdmin: boolean; // OWNER, MASTER ou ADMIN
+  isAdmin: boolean; // OWNER ou ADMIN do workspace
   canEvaluate: boolean;
   canCreateTopics: boolean;
   canComment: boolean;
@@ -17,7 +17,7 @@ interface CommunityAccess {
 }
 
 export function useCommunityAccess(): CommunityAccess {
-  const { user } = useAuth();
+  const { user, isSystemOwner } = useAuth();
   const [hasFullAccess, setHasFullAccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [plan, setPlan] = useState<string | null>(null);
@@ -32,6 +32,15 @@ export function useCommunityAccess(): CommunityAccess {
     }
 
     try {
+      // System Owner tem acesso total
+      if (isSystemOwner) {
+        setIsOwner(true);
+        setIsAdmin(true);
+        setHasFullAccess(true);
+        setLoading(false);
+        return;
+      }
+
       // Get user's workspace membership (includes role)
       const { data: memberData, error: memberError } = await supabase
         .from('workspace_members')
@@ -50,11 +59,11 @@ export function useCommunityAccess(): CommunityAccess {
       setRole(userRole);
 
       // Check if user is admin (can edit any message)
-      const isAdminRole = userRole === 'owner' || userRole === 'master' || userRole === 'admin';
+      const isAdminRole = userRole === 'owner' || userRole === 'admin';
       setIsAdmin(isAdminRole);
 
-      // REGRA FUNDAMENTAL: OWNER tem acesso total, independente do plano
-      if (userRole === 'owner' || userRole === 'master') {
+      // REGRA FUNDAMENTAL: OWNER do workspace tem acesso total
+      if (userRole === 'owner') {
         setIsOwner(true);
         setHasFullAccess(true);
         
@@ -96,7 +105,7 @@ export function useCommunityAccess(): CommunityAccess {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, isSystemOwner]);
 
   useEffect(() => {
     checkAccess();
@@ -113,6 +122,6 @@ export function useCommunityAccess(): CommunityAccess {
     canCreateTopics: hasFullAccess,
     canComment: hasFullAccess,
     canViewContent: true, // Todos podem ver estrutura
-    canEditAny: isAdmin, // Owner/Master/Admin podem editar qualquer mensagem
+    canEditAny: isAdmin, // Owner/Admin podem editar qualquer mensagem
   };
 }
