@@ -34,8 +34,9 @@ interface CommunityChatConvertDialogProps {
   message: {
     id: string;
     content: string;
+    message_type?: 'text' | 'image' | 'audio';
     user_id: string;
-  };
+  } | null;
   onSuccess: () => void;
 }
 
@@ -52,8 +53,9 @@ export function CommunityChatConvertDialog({
   const [loadingBookmakers, setLoadingBookmakers] = useState(true);
 
   const [titulo, setTitulo] = useState('');
-  const [conteudo, setConteudo] = useState(message.content);
+  const [conteudo, setConteudo] = useState('');
   const [selectedBookmaker, setSelectedBookmaker] = useState<string>('');
+  const isMediaMessage = message?.message_type && message.message_type !== 'text';
 
   useEffect(() => {
     const fetchBookmakers = async () => {
@@ -73,13 +75,20 @@ export function CommunityChatConvertDialog({
       }
     };
 
-    if (open) {
+    if (open && message) {
       fetchBookmakers();
-      setConteudo(message.content);
+      // For media messages, set placeholder content
+      if (message.message_type === 'image') {
+        setConteudo(`[Imagem]\n${message.content}`);
+      } else if (message.message_type === 'audio') {
+        setConteudo(`[Áudio]\n${message.content}`);
+      } else {
+        setConteudo(message.content);
+      }
       setTitulo('');
       setSelectedBookmaker('');
     }
-  }, [open, message.content]);
+  }, [open, message]);
 
   const handleSubmit = async () => {
     if (!user?.id) {

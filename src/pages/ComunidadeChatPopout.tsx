@@ -15,6 +15,9 @@ export default function ComunidadeChatPopout() {
   const { notifyWindowOpened, notifyWindowClosed } = useChatBroadcast();
   
   const isPopoutMode = searchParams.get('mode') === 'popout';
+  const contextType = (searchParams.get('context') as 'general' | 'bookmaker') || 'general';
+  const contextId = searchParams.get('contextId') || null;
+  const bookmakerName = searchParams.get('name') || undefined;
 
   // Notify other tabs that this window is open
   useEffect(() => {
@@ -37,8 +40,8 @@ export default function ComunidadeChatPopout() {
 
   // Set window title
   useEffect(() => {
-    document.title = 'Chat da Comunidade';
-  }, []);
+    document.title = bookmakerName ? `Chat - ${bookmakerName}` : 'Chat da Comunidade';
+  }, [bookmakerName]);
 
   const handleGoToERP = () => {
     window.open('/comunidade', '_blank');
@@ -94,6 +97,9 @@ export default function ComunidadeChatPopout() {
       <CommunityChatFull 
         isPopout={isPopoutMode}
         onGoToERP={handleGoToERP}
+        initialContextType={contextType}
+        initialContextId={contextId}
+        bookmakerName={bookmakerName}
       />
     </div>
   );

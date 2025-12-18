@@ -6,55 +6,48 @@ import { useCommunityAccess } from '@/hooks/useCommunityAccess';
 import { useChatBroadcast } from '@/hooks/useChatBroadcast';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, Send, Edit2, FileText, X, Check, ExternalLink, Loader2 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MessageSquare, ExternalLink, Loader2, Globe, Building2 } from 'lucide-react';
 import { CommunityChatConvertDialog } from './CommunityChatConvertDialog';
-
-interface ChatMessage {
-  id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-  edited_at: string | null;
-  expires_at: string;
-  profile?: {
-    full_name: string | null;
-    email: string | null;
-  };
-}
+import { ChatMessageItem, ChatMessage } from './ChatMessageItem';
+import { ChatInput } from './ChatInput';
 
 interface CommunityChatFullProps {
   isPopout?: boolean;
   onGoToERP?: () => void;
+  initialContextType?: 'general' | 'bookmaker';
+  initialContextId?: string | null;
+  bookmakerName?: string;
 }
 
 const MESSAGES_PER_PAGE = 50;
 
-export function CommunityChatFull({ isPopout = false, onGoToERP }: CommunityChatFullProps) {
+export function CommunityChatFull({ 
+  isPopout = false, 
+  onGoToERP,
+  initialContextType = 'general',
+  initialContextId = null,
+  bookmakerName,
+}: CommunityChatFullProps) {
   const { user } = useAuth();
   const { workspaceId } = useWorkspace();
   const { isOwner, isAdmin } = useCommunityAccess();
   const { toast } = useToast();
   const { notifyMessageSent, subscribe } = useChatBroadcast();
 
+  const [contextType, setContextType] = useState<'general' | 'bookmaker'>(initialContextType);
+  const [contextId, setContextId] = useState<string | null>(initialContextId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [newMessage, setNewMessage] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState('');
   const [convertMessage, setConvertMessage] = useState<ChatMessage | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [newMessageCount, setNewMessageCount] = useState(0);
   
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const isAtBottomRef = useRef(true);
 
   const fetchMessages = useCallback(async (before?: string) => {
@@ -67,14 +60,25 @@ export function CommunityChatFull({ isPopout = false, onGoToERP }: CommunityChat
           id,
           user_id,
           content,
+          message_type,
+          context_type,
+          context_id,
           created_at,
           edited_at,
           expires_at
         `)
         .eq('workspace_id', workspaceId)
+        .eq('context_type', contextType)
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(MESSAGES_PER_PAGE);
+
+      // Filter by context_id for bookmaker chats
+      if (contextType === 'bookmaker' && contextId) {
+        query = query.eq('context_id', contextId);
+      } else if (contextType === 'general') {
+        query = query.is('context_id', null);
+      }
 
       if (before) {
         query = query.lt('created_at', before);
@@ -95,6 +99,8 @@ export function CommunityChatFull({ isPopout = false, onGoToERP }: CommunityChat
 
       const messagesWithProfiles = (data || []).map(m => ({
         ...m,
+        message_type: m.message_type as 'text' | 'image' | 'audio',
+        context_type: m.context_type as 'general' | 'bookmaker',
         profile: profileMap.get(m.user_id) as ChatMessage['profile'],
       }));
 
@@ -114,20 +120,22 @@ export function CommunityChatFull({ isPopout = false, onGoToERP }: CommunityChat
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [workspaceId]);
+  }, [workspaceId, contextType, contextId]);
 
   useEffect(() => {
     if (workspaceId) {
+      setLoading(true);
+      setMessages([]);
       fetchMessages();
     }
-  }, [workspaceId, fetchMessages]);
+  }, [workspaceId, fetchMessages, contextType, contextId]);
 
   // Real-time subscription
   useEffect(() => {
     if (!workspaceId) return;
 
     const channel = supabase
-      .channel(`chat-full-${workspaceId}`)
+      .channel(`chat-full-${workspaceId}-${contextType}-${contextId || 'general'}`)
       .on(
         'postgres_changes',
         {
@@ -139,6 +147,12 @@ export function CommunityChatFull({ isPopout = false, onGoToERP }: CommunityChat
         async (payload) => {
           if (payload.eventType === 'INSERT') {
             const newMsg = payload.new as any;
+            
+            // Only add if matches current context
+            if (newMsg.context_type !== contextType) return;
+            if (contextType === 'bookmaker' && newMsg.context_id !== contextId) return;
+            if (contextType === 'general' && newMsg.context_id !== null) return;
+
             // Fetch profile for new message
             const { data: profile } = await supabase
               .from('profiles')
@@ -146,7 +160,14 @@ export function CommunityChatFull({ isPopout = false, onGoToERP }: CommunityChat
               .eq('id', newMsg.user_id)
               .single();
 
-            setMessages(prev => [...prev, { ...newMsg, profile }]);
+            const formattedMsg: ChatMessage = {
+              ...newMsg,
+              message_type: newMsg.message_type as 'text' | 'image' | 'audio',
+              context_type: newMsg.context_type as 'general' | 'bookmaker',
+              profile,
+            };
+
+            setMessages(prev => [...prev, formattedMsg]);
             
             // Update new message count if not at bottom
             if (!isAtBottomRef.current && newMsg.user_id !== user?.id) {
@@ -161,7 +182,12 @@ export function CommunityChatFull({ isPopout = false, onGoToERP }: CommunityChat
             }
           } else if (payload.eventType === 'UPDATE') {
             setMessages(prev => prev.map(m => 
-              m.id === payload.new.id ? { ...m, ...payload.new } : m
+              m.id === payload.new.id ? { 
+                ...m, 
+                ...payload.new,
+                message_type: (payload.new as any).message_type as 'text' | 'image' | 'audio',
+                context_type: (payload.new as any).context_type as 'general' | 'bookmaker',
+              } : m
             ));
           }
         }
@@ -171,13 +197,12 @@ export function CommunityChatFull({ isPopout = false, onGoToERP }: CommunityChat
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [workspaceId, user?.id]);
+  }, [workspaceId, user?.id, contextType, contextId]);
 
   // Listen for broadcast messages from other tabs
   useEffect(() => {
     const unsubscribe = subscribe((msg) => {
       if (msg.type === 'MESSAGE_SENT' || msg.type === 'MESSAGE_UPDATED') {
-        // Refresh messages when notified from another tab
         fetchMessages();
       }
     });
@@ -216,89 +241,97 @@ export function CommunityChatFull({ isPopout = false, onGoToERP }: CommunityChat
     setNewMessageCount(0);
   };
 
-  const handleSend = async () => {
-    if (!newMessage.trim() || !user?.id || !workspaceId) return;
+  const handleSendText = async (content: string) => {
+    if (!user?.id || !workspaceId) return;
 
-    setSending(true);
-    try {
-      const { data, error } = await supabase
-        .from('community_chat_messages')
-        .insert({
-          workspace_id: workspaceId,
-          user_id: user.id,
-          content: newMessage.trim(),
-        })
-        .select()
-        .single();
+    const { data, error } = await supabase
+      .from('community_chat_messages')
+      .insert({
+        workspace_id: workspaceId,
+        user_id: user.id,
+        content,
+        message_type: 'text',
+        context_type: contextType,
+        context_id: contextType === 'bookmaker' ? contextId : null,
+      })
+      .select()
+      .single();
 
-      if (error) throw error;
-      
-      setNewMessage('');
-      inputRef.current?.focus();
-      
-      // Notify other tabs
-      if (data) {
-        notifyMessageSent(data.id);
-      }
-      
-      // Scroll to bottom
-      setTimeout(() => {
-        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-      }, 100);
-    } catch (error: any) {
-      console.error('Error sending message:', error);
+    if (error) {
       toast({
         title: 'Erro ao enviar mensagem',
         description: error.message,
         variant: 'destructive',
       });
-    } finally {
-      setSending(false);
+      throw error;
     }
+    
+    if (data) {
+      notifyMessageSent(data.id);
+    }
+    
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    }, 100);
   };
 
-  const handleEdit = async (messageId: string) => {
-    if (!editContent.trim()) return;
+  const handleSendMedia = async (type: 'image' | 'audio', url: string) => {
+    if (!user?.id || !workspaceId) return;
 
-    try {
-      const { error } = await supabase
-        .from('community_chat_messages')
-        .update({
-          content: editContent.trim(),
-          edited_at: new Date().toISOString(),
-        })
-        .eq('id', messageId);
+    const { data, error } = await supabase
+      .from('community_chat_messages')
+      .insert({
+        workspace_id: workspaceId,
+        user_id: user.id,
+        content: url,
+        message_type: type,
+        context_type: contextType,
+        context_id: contextType === 'bookmaker' ? contextId : null,
+      })
+      .select()
+      .single();
 
-      if (error) throw error;
-      
-      setEditingId(null);
-      setEditContent('');
-      toast({ title: 'Mensagem editada!' });
-    } catch (error: any) {
-      console.error('Error editing message:', error);
+    if (error) {
+      toast({
+        title: 'Erro ao enviar mídia',
+        description: error.message,
+        variant: 'destructive',
+      });
+      throw error;
+    }
+    
+    if (data) {
+      notifyMessageSent(data.id);
+    }
+    
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    }, 100);
+  };
+
+  const handleEditMessage = async (messageId: string, newContent: string) => {
+    const { error } = await supabase
+      .from('community_chat_messages')
+      .update({
+        content: newContent,
+        edited_at: new Date().toISOString(),
+      })
+      .eq('id', messageId);
+
+    if (error) {
       toast({
         title: 'Erro ao editar',
         description: error.message,
         variant: 'destructive',
       });
+    } else {
+      toast({ title: 'Mensagem editada!' });
     }
-  };
-
-  const startEditing = (message: ChatMessage) => {
-    setEditingId(message.id);
-    setEditContent(message.content);
   };
 
   const canEditMessage = (message: ChatMessage) => {
     if (!user?.id) return false;
     return user.id === message.user_id || isOwner || isAdmin;
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
   };
 
   return (
@@ -308,11 +341,16 @@ export function CommunityChatFull({ isPopout = false, onGoToERP }: CommunityChat
         <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-primary" />
-            <h1 className="font-semibold">Chat da Comunidade</h1>
+            <h1 className="font-semibold">
+              {contextType === 'bookmaker' && bookmakerName 
+                ? `Chat - ${bookmakerName}`
+                : 'Chat da Comunidade'
+              }
+            </h1>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs">
-              Histórico: 7 dias
+              Histórico: 3 dias
             </Badge>
             {isPopout && onGoToERP && (
               <Button variant="outline" size="sm" onClick={onGoToERP}>
@@ -322,6 +360,35 @@ export function CommunityChatFull({ isPopout = false, onGoToERP }: CommunityChat
             )}
           </div>
         </div>
+
+        {/* Context Tabs - only show in general mode without fixed bookmaker */}
+        {!initialContextId && (
+          <div className="px-4 py-2 border-b border-border">
+            <Tabs 
+              value={contextType} 
+              onValueChange={(v) => {
+                setContextType(v as 'general' | 'bookmaker');
+                setContextId(null);
+              }}
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="general" className="flex items-center gap-1">
+                  <Globe className="h-3 w-3" />
+                  Geral
+                </TabsTrigger>
+                <TabsTrigger value="bookmaker" className="flex items-center gap-1" disabled>
+                  <Building2 className="h-3 w-3" />
+                  Por Casa
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            {contextType === 'bookmaker' && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Acesse o chat por casa na página de cada bookmaker
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Messages Area */}
         <ScrollArea 
@@ -355,107 +422,14 @@ export function CommunityChatFull({ isPopout = false, onGoToERP }: CommunityChat
           ) : (
             <div className="space-y-3 py-4">
               {messages.map((msg) => (
-                <div
+                <ChatMessageItem
                   key={msg.id}
-                  className={`group flex flex-col ${
-                    msg.user_id === user?.id ? 'items-end' : 'items-start'
-                  }`}
-                >
-                  {/* Author name */}
-                  <span className="text-[10px] text-muted-foreground mb-0.5 px-1">
-                    {msg.profile?.full_name || msg.profile?.email?.split('@')[0] || 'Usuário'}
-                  </span>
-                  
-                  <div
-                    className={`max-w-[85%] rounded-lg px-3 py-2 ${
-                      msg.user_id === user?.id
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
-                    }`}
-                  >
-                    {editingId === msg.id ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          className="h-7 text-sm bg-background text-foreground"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleEdit(msg.id);
-                            if (e.key === 'Escape') setEditingId(null);
-                          }}
-                        />
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6"
-                          onClick={() => handleEdit(msg.id)}
-                        >
-                          <Check className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6"
-                          onClick={() => setEditingId(null)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <p className="text-sm whitespace-pre-wrap break-words">
-                          {msg.content}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-[10px] ${
-                            msg.user_id === user?.id 
-                              ? 'text-primary-foreground/70' 
-                              : 'text-muted-foreground'
-                          }`}>
-                            {formatDistanceToNow(new Date(msg.created_at), { 
-                              addSuffix: true, 
-                              locale: ptBR 
-                            })}
-                          </span>
-                          {msg.edited_at && (
-                            <span className={`text-[10px] italic ${
-                              msg.user_id === user?.id 
-                                ? 'text-primary-foreground/70' 
-                                : 'text-muted-foreground'
-                            }`}>
-                              • Editado
-                            </span>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  {canEditMessage(msg) && editingId !== msg.id && (
-                    <div className="flex gap-1 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-5 w-5"
-                        onClick={() => startEditing(msg)}
-                        title="Editar"
-                      >
-                        <Edit2 className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-5 w-5"
-                        onClick={() => setConvertMessage(msg)}
-                        title="Converter em tópico"
-                      >
-                        <FileText className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                  message={msg}
+                  isOwnMessage={msg.user_id === user?.id}
+                  canEdit={canEditMessage(msg)}
+                  onEdit={handleEditMessage}
+                  onConvert={setConvertMessage}
+                />
               ))}
             </div>
           )}
@@ -475,38 +449,23 @@ export function CommunityChatFull({ isPopout = false, onGoToERP }: CommunityChat
         )}
 
         {/* Input Area */}
-        <div className="p-4 border-t border-border shrink-0">
-          <div className="flex gap-2">
-            <Input
-              ref={inputRef}
-              placeholder="Digite sua mensagem..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={sending}
-              maxLength={500}
-              className="flex-1"
-            />
-            <Button 
-              size="icon" 
-              onClick={handleSend}
-              disabled={!newMessage.trim() || sending}
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <ChatInput
+          workspaceId={workspaceId}
+          userId={user?.id || null}
+          onSendText={handleSendText}
+          onSendMedia={handleSendMedia}
+        />
       </div>
 
-      {/* Convert to Topic Dialog */}
+      {/* Convert Dialog */}
       {convertMessage && (
         <CommunityChatConvertDialog
-          open={!!convertMessage}
+          open={true}
           onOpenChange={(open) => !open && setConvertMessage(null)}
           message={convertMessage}
           onSuccess={() => {
+            toast({ title: 'Tópico criado com sucesso!' });
             setConvertMessage(null);
-            toast({ title: 'Tópico criado a partir da mensagem!' });
           }}
         />
       )}

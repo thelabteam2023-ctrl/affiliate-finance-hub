@@ -984,28 +984,37 @@ export type Database = {
       community_chat_messages: {
         Row: {
           content: string
+          context_id: string | null
+          context_type: string
           created_at: string
           edited_at: string | null
           expires_at: string
           id: string
+          message_type: string
           user_id: string
           workspace_id: string
         }
         Insert: {
           content: string
+          context_id?: string | null
+          context_type?: string
           created_at?: string
           edited_at?: string | null
           expires_at?: string
           id?: string
+          message_type?: string
           user_id: string
           workspace_id: string
         }
         Update: {
           content?: string
+          context_id?: string | null
+          context_type?: string
           created_at?: string
           edited_at?: string | null
           expires_at?: string
           id?: string
+          message_type?: string
           user_id?: string
           workspace_id?: string
         }

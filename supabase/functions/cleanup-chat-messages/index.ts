@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Delete messages older than 14 days
+    // Delete messages older than 7 days (visibility is 3 days, cleanup after 7)
     const { data, error } = await supabase.rpc('cleanup_expired_chat_messages');
 
     if (error) {
