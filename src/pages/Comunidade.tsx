@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCommunityAccess } from '@/hooks/useCommunityAccess';
 import { useCommunityRanking, RankedBookmaker } from '@/hooks/useCommunityRanking';
-import { Search, Star, MessageSquare, Lock, ChevronDown, ChevronUp, TrendingUp } from 'lucide-react';
+import { Search, Star, MessageSquare, Lock, ChevronDown, ChevronUp, TrendingUp, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CommunityRadar } from '@/components/comunidade/CommunityRadar';
 import { CommunityChatPreview } from '@/components/comunidade/CommunityChatPreview';
@@ -32,8 +32,11 @@ export default function Comunidade() {
   const navigate = useNavigate();
   const { hasFullAccess, loading: accessLoading, plan, isOwner } = useCommunityAccess();
   
-  // Ranked bookmakers for Top 9 grid (uses same logic as Radar)
-  const { rankedItems: top9Ranked, loading: rankingLoading } = useCommunityRanking({ limit: TOP_GRID_COUNT });
+  // Ranked bookmakers for Top 9 grid (uses same logic as Radar) + recent activity outside top 9
+  const { rankedItems: top9Ranked, recentActivityItems, loading: rankingLoading } = useCommunityRanking({ 
+    limit: TOP_GRID_COUNT,
+    recentActivityLimit: 6
+  });
   
   // All bookmakers for "Ver mais" and search
   const [allBookmakers, setAllBookmakers] = useState<BookmakerStats[]>([]);
@@ -306,6 +309,65 @@ export default function Comunidade() {
                   </Card>
                 ))}
               </div>
+
+              {/* Recent Activity Section - only when showing ranked (not searching or expanded) */}
+              {isShowingRanked && recentActivityItems.length > 0 && (
+                <div className="mt-6 space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4 text-blue-500" />
+                    <span>Atividade recente</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {recentActivityItems.map((bm) => (
+                      <Card 
+                        key={bm.bookmaker_catalogo_id}
+                        className="cursor-pointer hover:border-primary/50 transition-colors border-dashed"
+                        onClick={() => navigate(`/comunidade/${bm.bookmaker_catalogo_id}`)}
+                      >
+                        <CardContent className="p-3">
+                          <div className="flex items-start gap-2.5">
+                            <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                              {bm.logo_url ? (
+                                <img src={bm.logo_url} alt={bm.nome} className="h-8 w-8 object-contain" />
+                              ) : (
+                                <span className="text-base font-bold text-muted-foreground">
+                                  {bm.nome.charAt(0)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold truncate">{bm.nome}</h3>
+                                <Badge 
+                                  variant="outline" 
+                                  className={`text-[10px] shrink-0 ${
+                                    bm.regulamentacao_status === 'REGULAMENTADA'
+                                      ? 'border-green-500/30 text-green-500'
+                                      : 'border-amber-500/30 text-amber-500'
+                                  }`}
+                                >
+                                  {bm.regulamentacao_status === 'REGULAMENTADA' ? 'Reg.' : 'Não Reg.'}
+                                </Badge>
+                              </div>
+                              {renderStars(bm.nota_media_geral)}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-border">
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Star className="h-3.5 w-3.5" />
+                              <span>{bm.total_avaliacoes}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <MessageSquare className="h-3.5 w-3.5" />
+                              <span>{bm.total_topicos + bm.total_comentarios}</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Ver mais / Ver menos button */}
               {hasMoreToShow && (
