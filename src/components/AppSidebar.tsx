@@ -88,6 +88,7 @@ const menuGroups: MenuGroup[] = [
     label: "ADMINISTRAÇÃO",
     items: [
       { title: "Workspace", url: "/workspace", icon: Settings, iconName: "Settings", roles: ["owner", "admin", "master"] },
+      { title: "Admin Sistema", url: "/admin", icon: Shield, iconName: "Shield", roles: [] }, // System Owner only - handled separately
     ],
   },
   {
@@ -115,6 +116,10 @@ export function AppSidebar() {
 
   // Function to check if user can see a menu item
   const canSeeItem = (item: MenuItem): boolean => {
+    // Admin Sistema is only for System Owner
+    if (item.url === '/admin') {
+      return isSystemOwner === true;
+    }
     if (!item.permission && !item.roles) return true;
     if (role === 'owner' || role === 'master') return true;
     if (item.roles && item.roles.length > 0) {
@@ -288,58 +293,6 @@ export function AppSidebar() {
         {/* Menu Groups */}
         <div className="flex-1 px-2">
           {menuGroups.map((group, index) => renderMenuGroup(group, index))}
-          
-          {/* System Admin - Only visible for System Owner */}
-          {isSystemOwner && (
-            <SidebarGroup className="mt-6">
-              <SidebarGroupLabel 
-                className={`
-                  text-[10px] font-semibold tracking-widest text-muted-foreground/70 
-                  uppercase mb-2 px-3
-                  ${isCollapsed ? 'sr-only' : ''}
-                `}
-              >
-                SISTEMA
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu className="space-y-0.5">
-                  <SidebarMenuItem>
-                    {isCollapsed ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <SidebarMenuButton asChild isActive={isActive("/admin")}>
-                            <NavLink 
-                              to="/admin" 
-                              end 
-                              className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-accent/50"
-                              activeClassName="bg-primary/10 text-primary"
-                            >
-                              <Shield className="h-4 w-4" />
-                            </NavLink>
-                          </SidebarMenuButton>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="font-medium">
-                          Administração do Sistema
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      <SidebarMenuButton asChild isActive={isActive("/admin")}>
-                        <NavLink 
-                          to="/admin" 
-                          end 
-                          className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-accent/50"
-                          activeClassName="bg-primary/10 text-primary font-medium"
-                        >
-                          <Shield className="h-4 w-4 shrink-0" />
-                          <span className="text-sm">Admin Sistema</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    )}
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
         </div>
       </SidebarContent>
 
