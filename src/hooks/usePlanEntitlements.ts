@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "./useWorkspace";
+import { useRole } from "./useRole";
 
 export interface PlanEntitlements {
   max_active_partners: number;
@@ -31,6 +32,9 @@ export interface UsePlanEntitlementsReturn {
   usage: WorkspaceUsage | null;
   loading: boolean;
   error: string | null;
+  
+  // OWNER bypass
+  isOwner: boolean;
   
   // Limit checks
   checkPartnerLimit: () => Promise<PlanLimitCheck>;
@@ -66,11 +70,15 @@ const UNLIMITED_THRESHOLD = 9999;
 
 export function usePlanEntitlements(): UsePlanEntitlementsReturn {
   const { workspaceId } = useWorkspace();
+  const { isOwner, isMaster } = useRole();
   const [plan, setPlan] = useState<string | null>(null);
   const [entitlements, setEntitlements] = useState<PlanEntitlements | null>(null);
   const [usage, setUsage] = useState<WorkspaceUsage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // OWNER/MASTER tem acesso total - ignora limites de plano
+  const hasUnlimitedAccess = isOwner || isMaster;
 
   const fetchWorkspaceUsage = useCallback(async () => {
     if (!workspaceId) {
@@ -115,6 +123,11 @@ export function usePlanEntitlements(): UsePlanEntitlementsReturn {
   }, [fetchWorkspaceUsage]);
 
   const checkPartnerLimit = useCallback(async (): Promise<PlanLimitCheck> => {
+    // OWNER ignora limites
+    if (hasUnlimitedAccess) {
+      return { allowed: true, current: usage?.active_partners || 0, limit: 9999, plan: 'owner' };
+    }
+    
     if (!workspaceId) {
       return { allowed: false, current: 0, limit: 0, plan: '', error: 'Workspace não encontrado' };
     }
@@ -130,9 +143,14 @@ export function usePlanEntitlements(): UsePlanEntitlementsReturn {
       console.error('Error checking partner limit:', err);
       return { allowed: false, current: 0, limit: 0, plan: '', error: 'Erro ao verificar limite' };
     }
-  }, [workspaceId]);
+  }, [workspaceId, hasUnlimitedAccess, usage]);
 
   const checkUserLimit = useCallback(async (): Promise<PlanLimitCheck> => {
+    // OWNER ignora limites
+    if (hasUnlimitedAccess) {
+      return { allowed: true, current: usage?.active_users || 0, limit: 9999, plan: 'owner' };
+    }
+    
     if (!workspaceId) {
       return { allowed: false, current: 0, limit: 0, plan: '', error: 'Workspace não encontrado' };
     }
@@ -148,9 +166,14 @@ export function usePlanEntitlements(): UsePlanEntitlementsReturn {
       console.error('Error checking user limit:', err);
       return { allowed: false, current: 0, limit: 0, plan: '', error: 'Erro ao verificar limite' };
     }
-  }, [workspaceId]);
+  }, [workspaceId, hasUnlimitedAccess, usage]);
 
   const checkCustomPermissionsLimit = useCallback(async (): Promise<PlanLimitCheck> => {
+    // OWNER ignora limites
+    if (hasUnlimitedAccess) {
+      return { allowed: true, current: usage?.custom_permissions || 0, limit: 9999, plan: 'owner', enabled: true };
+    }
+    
     if (!workspaceId) {
       return { allowed: false, current: 0, limit: 0, plan: '', enabled: false, error: 'Workspace não encontrado' };
     }
@@ -166,7 +189,7 @@ export function usePlanEntitlements(): UsePlanEntitlementsReturn {
       console.error('Error checking custom permissions limit:', err);
       return { allowed: false, current: 0, limit: 0, plan: '', enabled: false, error: 'Erro ao verificar limite' };
     }
-  }, [workspaceId]);
+  }, [workspaceId, hasUnlimitedAccess, usage]);
 
   const canAddPartner = useCallback(async (): Promise<boolean> => {
     const result = await checkPartnerLimit();
@@ -216,6 +239,7 @@ export function usePlanEntitlements(): UsePlanEntitlementsReturn {
     usage,
     loading,
     error,
+    isOwner: hasUnlimitedAccess,
     checkPartnerLimit,
     checkUserLimit,
     checkCustomPermissionsLimit,
