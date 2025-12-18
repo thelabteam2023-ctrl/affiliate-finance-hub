@@ -1,0 +1,293 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import { useCommunityAccess } from '@/hooks/useCommunityAccess';
+import { useChatBroadcast } from '@/hooks/useChatBroadcast';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { MessageSquare, Lock, ExternalLink, Maximize2 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+interface ChatMessage {
+  id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  profile?: {
+    full_name: string | null;
+    email: string | null;
+  };
+}
+
+const PREVIEW_MESSAGES_COUNT = 5;
+const POPOUT_WINDOW_FEATURES = 'width=480,height=800,scrollbars=yes,resizable=yes';
+
+export function CommunityChatPreview() {
+  const { workspaceId } = useWorkspace();
+  const { hasFullAccess, loading: accessLoading } = useCommunityAccess();
+  const { isPopoutOpen, newMessageCount, subscribe } = useChatBroadcast();
+  const { toast } = useToast();
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPreviewMessages = useCallback(async () => {
+    if (!workspaceId || !hasFullAccess) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('community_chat_messages')
+        .select(`
+          id,
+          user_id,
+          content,
+          created_at
+        `)
+        .eq('workspace_id', workspaceId)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(PREVIEW_MESSAGES_COUNT);
+
+      if (error) throw error;
+
+      // Fetch profiles
+      const userIds = [...new Set((data || []).map(m => m.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+      const messagesWithProfiles = (data || []).map(m => ({
+        ...m,
+        profile: profileMap.get(m.user_id) as ChatMessage['profile'],
+      }));
+
+      setMessages(messagesWithProfiles.reverse());
+    } catch (error) {
+      console.error('Error fetching preview messages:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [workspaceId, hasFullAccess]);
+
+  useEffect(() => {
+    if (hasFullAccess && workspaceId && !isPopoutOpen) {
+      fetchPreviewMessages();
+    }
+  }, [hasFullAccess, workspaceId, isPopoutOpen, fetchPreviewMessages]);
+
+  // Listen for new messages from broadcast
+  useEffect(() => {
+    const unsubscribe = subscribe((msg) => {
+      if (msg.type === 'MESSAGE_SENT') {
+        fetchPreviewMessages();
+      }
+    });
+    
+    return unsubscribe;
+  }, [subscribe, fetchPreviewMessages]);
+
+  // Minimal realtime for preview (only new inserts)
+  useEffect(() => {
+    if (!hasFullAccess || !workspaceId || isPopoutOpen) return;
+
+    const channel = supabase
+      .channel(`chat-preview-${workspaceId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'community_chat_messages',
+          filter: `workspace_id=eq.${workspaceId}`,
+        },
+        () => {
+          // Just refresh preview on new message
+          fetchPreviewMessages();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [hasFullAccess, workspaceId, isPopoutOpen, fetchPreviewMessages]);
+
+  const openPopout = () => {
+    const popoutUrl = `/comunidade/chat?mode=popout`;
+    const popupWindow = window.open(popoutUrl, 'community-chat', POPOUT_WINDOW_FEATURES);
+    
+    if (!popupWindow || popupWindow.closed || typeof popupWindow.closed === 'undefined') {
+      // Popup was blocked
+      toast({
+        title: 'Pop-up bloqueado',
+        description: 'Seu navegador bloqueou o pop-up. Abrindo o chat interno...',
+        variant: 'default',
+      });
+      // Fallback: open as internal drawer/panel
+      openInternalChat();
+    }
+  };
+
+  const openInternalChat = () => {
+    // Navigate to internal chat view or dispatch an event to open drawer
+    window.dispatchEvent(new CustomEvent('open-community-chat'));
+  };
+
+  const focusPopout = () => {
+    // Try to focus existing window
+    const popupWindow = window.open('', 'community-chat');
+    if (popupWindow && !popupWindow.closed) {
+      popupWindow.focus();
+    } else {
+      // Window doesn't exist, open new one
+      openPopout();
+    }
+  };
+
+  // Access control
+  if (accessLoading) {
+    return (
+      <Card className="h-[300px]">
+        <CardHeader className="pb-3">
+          <Skeleton className="h-6 w-32" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-[200px]" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!hasFullAccess) {
+    return (
+      <Card className="h-[300px]">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Chat da Comunidade
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center justify-center h-[200px] text-center">
+          <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+            <Lock className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Chat exclusivo para usuários PRO+
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // When popout is open, show minimal status
+  if (isPopoutOpen) {
+    return (
+      <Card className="h-auto">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Chat da Comunidade
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center justify-center py-6 text-center">
+          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+            <ExternalLink className="h-5 w-5 text-primary" />
+          </div>
+          <p className="text-sm text-muted-foreground mb-3">
+            Chat aberto em janela
+          </p>
+          {newMessageCount > 0 && (
+            <p className="text-xs text-primary mb-3">
+              {newMessageCount} {newMessageCount === 1 ? 'nova mensagem' : 'novas mensagens'}
+            </p>
+          )}
+          <Button variant="outline" size="sm" onClick={focusPopout}>
+            <Maximize2 className="h-4 w-4 mr-1" />
+            Focar Janela
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="h-[350px] flex flex-col">
+      <CardHeader className="pb-3 shrink-0">
+        <CardTitle className="text-base flex items-center gap-2">
+          <MessageSquare className="h-4 w-4" />
+          Chat da Comunidade
+          <span className="text-xs font-normal text-muted-foreground ml-auto">
+            7 dias
+          </span>
+        </CardTitle>
+      </CardHeader>
+      
+      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+        {/* Preview Messages */}
+        <div className="flex-1 px-4 py-2 overflow-hidden">
+          {loading ? (
+            <div className="space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <MessageSquare className="h-6 w-6 text-muted-foreground/30 mb-2" />
+              <p className="text-xs text-muted-foreground">
+                Nenhuma mensagem ainda
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {messages.map((msg) => (
+                <div key={msg.id} className="text-xs">
+                  <span className="font-medium text-foreground">
+                    {msg.profile?.full_name || msg.profile?.email?.split('@')[0] || 'Usuário'}:
+                  </span>{' '}
+                  <span className="text-muted-foreground line-clamp-1">
+                    {msg.content}
+                  </span>
+                  <span className="text-muted-foreground/60 text-[10px] ml-1">
+                    {formatDistanceToNow(new Date(msg.created_at), { 
+                      addSuffix: false, 
+                      locale: ptBR 
+                    })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="p-3 border-t border-border shrink-0 space-y-2">
+          <Button 
+            variant="default" 
+            size="sm" 
+            className="w-full"
+            onClick={openInternalChat}
+          >
+            <MessageSquare className="h-4 w-4 mr-1" />
+            Abrir Chat
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full"
+            onClick={openPopout}
+          >
+            <ExternalLink className="h-4 w-4 mr-1" />
+            Abrir em Janela
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
