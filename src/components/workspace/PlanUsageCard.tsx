@@ -116,13 +116,6 @@ export function PlanUsageCard() {
             </div>
           </div>
 
-          {/* Info sobre plano da equipe */}
-          <div className="pt-3 border-t text-xs text-muted-foreground">
-            <p>
-              Plano do workspace: <span className="font-medium">{getPlanLabel()}</span>
-              <span className="ml-1">(aplica-se apenas aos membros convidados)</span>
-            </p>
-          </div>
         </CardContent>
       </Card>
     );
