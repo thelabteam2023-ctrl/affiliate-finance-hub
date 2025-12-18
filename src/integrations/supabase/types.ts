@@ -5867,6 +5867,15 @@ export type Database = {
           slug: string
         }[]
       }
+      admin_get_archived_users: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+        }[]
+      }
       admin_get_cleanup_candidates: {
         Args: never
         Returns: {
@@ -5891,6 +5900,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_hard_delete_users: { Args: { _user_ids: string[] }; Returns: Json }
       admin_set_test_user: {
         Args: { _is_test: boolean; _user_id: string }
         Returns: undefined

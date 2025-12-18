@@ -13,6 +13,13 @@ interface CleanupCandidate {
   is_system_owner: boolean;
 }
 
+interface ArchivedUser {
+  id: string;
+  email: string;
+  full_name: string;
+  created_at: string;
+}
+
 interface DryRunResult {
   success: boolean;
   validated: boolean;
@@ -34,11 +41,19 @@ interface CleanupResult {
   workspace_ids_removed: string[];
 }
 
+interface HardDeleteResult {
+  success: boolean;
+  deleted_profiles: number;
+  deleted_auth_users: number;
+}
+
 export function useCleanupSystem() {
   const [loading, setLoading] = useState(false);
   const [candidates, setCandidates] = useState<CleanupCandidate[]>([]);
+  const [archivedUsers, setArchivedUsers] = useState<ArchivedUser[]>([]);
   const [dryRunResult, setDryRunResult] = useState<DryRunResult | null>(null);
   const [cleanupResult, setCleanupResult] = useState<CleanupResult | null>(null);
+  const [hardDeleteResult, setHardDeleteResult] = useState<HardDeleteResult | null>(null);
 
   const fetchCandidates = useCallback(async () => {
     setLoading(true);
@@ -49,6 +64,20 @@ export function useCleanupSystem() {
     } catch (error: any) {
       console.error('Error fetching candidates:', error);
       toast.error(error.message || 'Erro ao carregar candidatos');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchArchivedUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('admin_get_archived_users');
+      if (error) throw error;
+      setArchivedUsers(data || []);
+    } catch (error: any) {
+      console.error('Error fetching archived users:', error);
+      toast.error(error.message || 'Erro ao carregar usuários arquivados');
     } finally {
       setLoading(false);
     }
@@ -127,20 +156,57 @@ export function useCleanupSystem() {
     }
   }, [fetchCandidates]);
 
+  const executeHardDelete = useCallback(async (userIds: string[], confirmationPhrase: string) => {
+    if (userIds.length === 0) {
+      toast.error('Selecione pelo menos um usuário');
+      return null;
+    }
+
+    if (confirmationPhrase !== 'EXCLUIR PERMANENTEMENTE') {
+      toast.error('Frase de confirmação incorreta');
+      return null;
+    }
+
+    setLoading(true);
+    setHardDeleteResult(null);
+    try {
+      const { data, error } = await supabase.rpc('admin_hard_delete_users', {
+        _user_ids: userIds
+      });
+      if (error) throw error;
+      const result = data as unknown as HardDeleteResult;
+      setHardDeleteResult(result);
+      toast.success(`${result.deleted_profiles} usuário(s) excluído(s) permanentemente`);
+      await fetchArchivedUsers();
+      return result;
+    } catch (error: any) {
+      console.error('Error executing hard delete:', error);
+      toast.error(error.message || 'Erro ao excluir usuários');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchArchivedUsers]);
+
   const clearResults = useCallback(() => {
     setDryRunResult(null);
     setCleanupResult(null);
+    setHardDeleteResult(null);
   }, []);
 
   return {
     loading,
     candidates,
+    archivedUsers,
     dryRunResult,
     cleanupResult,
+    hardDeleteResult,
     fetchCandidates,
+    fetchArchivedUsers,
     setTestUser,
     runDryRun,
     executeCleanup,
+    executeHardDelete,
     clearResults,
   };
 }

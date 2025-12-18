@@ -10,9 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Trash2, AlertTriangle, RefreshCw, TestTube, Play, 
-  CheckCircle2, XCircle, Eye, Shield
+  CheckCircle2, XCircle, Eye, Shield, Flame, Archive
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -21,23 +22,31 @@ export function CleanupTab() {
   const {
     loading,
     candidates,
+    archivedUsers,
     dryRunResult,
     cleanupResult,
+    hardDeleteResult,
     fetchCandidates,
+    fetchArchivedUsers,
     setTestUser,
     runDryRun,
     executeCleanup,
+    executeHardDelete,
     clearResults,
   } = useCleanupSystem();
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedArchivedIds, setSelectedArchivedIds] = useState<string[]>([]);
   const [showDryRunDialog, setShowDryRunDialog] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showHardDeleteDialog, setShowHardDeleteDialog] = useState(false);
   const [confirmationPhrase, setConfirmationPhrase] = useState('');
+  const [activeTab, setActiveTab] = useState('candidates');
 
   useEffect(() => {
     fetchCandidates();
-  }, [fetchCandidates]);
+    fetchArchivedUsers();
+  }, [fetchCandidates, fetchArchivedUsers]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -55,6 +64,22 @@ export function CleanupTab() {
     }
   };
 
+  const handleSelectAllArchived = (checked: boolean) => {
+    if (checked) {
+      setSelectedArchivedIds(archivedUsers.map(u => u.id));
+    } else {
+      setSelectedArchivedIds([]);
+    }
+  };
+
+  const handleSelectOneArchived = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedArchivedIds(prev => [...prev, id]);
+    } else {
+      setSelectedArchivedIds(prev => prev.filter(x => x !== id));
+    }
+  };
+
   const handleDryRun = async () => {
     const result = await runDryRun(selectedIds);
     if (result) {
@@ -63,7 +88,6 @@ export function CleanupTab() {
   };
 
   const handleProceedToCleanup = () => {
-    // Só permite prosseguir se dry-run foi validado
     if (!dryRunResult?.validated) {
       return;
     }
@@ -78,11 +102,25 @@ export function CleanupTab() {
       setShowConfirmDialog(false);
       setSelectedIds([]);
       setConfirmationPhrase('');
+      fetchArchivedUsers();
+    }
+  };
+
+  const handleOpenHardDelete = () => {
+    setShowHardDeleteDialog(true);
+    setConfirmationPhrase('');
+  };
+
+  const handleExecuteHardDelete = async () => {
+    const result = await executeHardDelete(selectedArchivedIds, confirmationPhrase);
+    if (result) {
+      setShowHardDeleteDialog(false);
+      setSelectedArchivedIds([]);
+      setConfirmationPhrase('');
     }
   };
 
   const testUsers = candidates.filter(c => c.is_test_user);
-  const regularUsers = candidates.filter(c => !c.is_test_user);
 
   return (
     <div className="space-y-6">
@@ -111,124 +149,252 @@ export function CleanupTab() {
         </Alert>
       )}
 
-      {/* Main Card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Trash2 className="h-5 w-5" />
-                Limpeza de Contas de Teste
-              </CardTitle>
-              <CardDescription>
-                Selecione os usuários que deseja remover. O System Owner nunca aparece nesta lista.
-              </CardDescription>
-            </div>
-            <Button variant="outline" size="sm" onClick={fetchCandidates} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Atualizar
+      {/* Hard Delete Result */}
+      {hardDeleteResult && (
+        <Alert className="border-emerald-500/50 bg-emerald-500/10">
+          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          <AlertTitle className="text-emerald-500">Exclusão Permanente Concluída</AlertTitle>
+          <AlertDescription>
+            <p>Profiles excluídos: <strong>{hardDeleteResult.deleted_profiles}</strong></p>
+            <p>Auth users excluídos: <strong>{hardDeleteResult.deleted_auth_users}</strong></p>
+            <Button variant="link" size="sm" className="p-0 h-auto" onClick={clearResults}>
+              Fechar
             </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Actions Bar */}
-          <div className="flex items-center justify-between mb-4 p-3 bg-muted/50 rounded-lg">
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
-                {selectedIds.length} de {candidates.length} selecionados
-              </span>
-              {selectedIds.length > 0 && (
-                <Badge variant="secondary">{testUsers.filter(u => selectedIds.includes(u.id)).length} marcados como teste</Badge>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDryRun}
-                disabled={loading || selectedIds.length === 0}
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                Dry-Run (Simular)
-              </Button>
-            </div>
-          </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
-          {/* Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedIds.length === candidates.length && candidates.length > 0}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Workspace</TableHead>
-                  <TableHead>Cadastro</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {candidates.map((c) => (
-                  <TableRow key={c.id} className={c.is_test_user ? 'bg-amber-500/5' : ''}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.includes(c.id)}
-                        onCheckedChange={(checked) => handleSelectOne(c.id, checked as boolean)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{c.full_name || 'Sem nome'}</div>
-                        <div className="text-sm text-muted-foreground">{c.email}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {c.workspace_name || <span className="text-muted-foreground">-</span>}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {format(new Date(c.created_at), 'dd/MM/yyyy', { locale: ptBR })}
-                    </TableCell>
-                    <TableCell>
-                      {c.is_test_user ? (
-                        <Badge className="bg-amber-500/20 text-amber-400 gap-1">
-                          <TestTube className="h-3 w-3" /> Teste
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary">Normal</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setTestUser(c.id, !c.is_test_user)}
-                      >
-                        {c.is_test_user ? (
-                          <XCircle className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <TestTube className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {candidates.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      Nenhum candidato à limpeza encontrado
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="candidates" className="gap-2">
+            <TestTube className="h-4 w-4" />
+            Candidatos ({candidates.length})
+          </TabsTrigger>
+          <TabsTrigger value="archived" className="gap-2">
+            <Archive className="h-4 w-4" />
+            Arquivados ({archivedUsers.length})
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Candidates Tab */}
+        <TabsContent value="candidates">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Trash2 className="h-5 w-5" />
+                    Limpeza de Contas de Teste
+                  </CardTitle>
+                  <CardDescription>
+                    Selecione os usuários que deseja remover. O System Owner nunca aparece nesta lista.
+                  </CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={fetchCandidates} disabled={loading}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Atualizar
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Actions Bar */}
+              <div className="flex items-center justify-between mb-4 p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-muted-foreground">
+                    {selectedIds.length} de {candidates.length} selecionados
+                  </span>
+                  {selectedIds.length > 0 && (
+                    <Badge variant="secondary">{testUsers.filter(u => selectedIds.includes(u.id)).length} marcados como teste</Badge>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDryRun}
+                    disabled={loading || selectedIds.length === 0}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Dry-Run (Simular)
+                  </Button>
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedIds.length === candidates.length && candidates.length > 0}
+                          onCheckedChange={handleSelectAll}
+                        />
+                      </TableHead>
+                      <TableHead>Usuário</TableHead>
+                      <TableHead>Workspace</TableHead>
+                      <TableHead>Cadastro</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {candidates.map((c) => (
+                      <TableRow key={c.id} className={c.is_test_user ? 'bg-amber-500/5' : ''}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedIds.includes(c.id)}
+                            onCheckedChange={(checked) => handleSelectOne(c.id, checked as boolean)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{c.full_name || 'Sem nome'}</div>
+                            <div className="text-sm text-muted-foreground">{c.email}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {c.workspace_name || <span className="text-muted-foreground">-</span>}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {format(new Date(c.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                        </TableCell>
+                        <TableCell>
+                          {c.is_test_user ? (
+                            <Badge className="bg-amber-500/20 text-amber-400 gap-1">
+                              <TestTube className="h-3 w-3" /> Teste
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">Normal</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setTestUser(c.id, !c.is_test_user)}
+                          >
+                            {c.is_test_user ? (
+                              <XCircle className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <TestTube className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {candidates.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          Nenhum candidato à limpeza encontrado
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Archived Tab */}
+        <TabsContent value="archived">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Archive className="h-5 w-5" />
+                    Usuários Arquivados (Anonimizados)
+                  </CardTitle>
+                  <CardDescription>
+                    Estes usuários já foram anonimizados e podem ser excluídos permanentemente.
+                  </CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={fetchArchivedUsers} disabled={loading}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Atualizar
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Actions Bar */}
+              <div className="flex items-center justify-between mb-4 p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-muted-foreground">
+                    {selectedArchivedIds.length} de {archivedUsers.length} selecionados
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleOpenHardDelete}
+                    disabled={loading || selectedArchivedIds.length === 0}
+                  >
+                    <Flame className="h-4 w-4 mr-2" />
+                    Excluir Permanentemente
+                  </Button>
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedArchivedIds.length === archivedUsers.length && archivedUsers.length > 0}
+                          onCheckedChange={handleSelectAllArchived}
+                        />
+                      </TableHead>
+                      <TableHead>Email (Anonimizado)</TableHead>
+                      <TableHead>Nome Original</TableHead>
+                      <TableHead>Data Cadastro</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {archivedUsers.map((u) => (
+                      <TableRow key={u.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedArchivedIds.includes(u.id)}
+                            onCheckedChange={(checked) => handleSelectOneArchived(u.id, checked as boolean)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-mono text-sm text-muted-foreground">
+                          {u.email}
+                        </TableCell>
+                        <TableCell>
+                          {u.full_name || <span className="text-muted-foreground">-</span>}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {format(new Date(u.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="gap-1 text-muted-foreground">
+                            <Archive className="h-3 w-3" /> Anonimizado
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {archivedUsers.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                          Nenhum usuário arquivado encontrado
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Dry Run Dialog */}
       <Dialog open={showDryRunDialog} onOpenChange={setShowDryRunDialog}>
@@ -357,6 +523,69 @@ export function CleanupTab() {
                 <>
                   <Trash2 className="h-4 w-4 mr-2" />
                   Executar Limpeza
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hard Delete Dialog */}
+      <Dialog open={showHardDeleteDialog} onOpenChange={setShowHardDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Flame className="h-5 w-5" />
+              Exclusão Permanente
+            </DialogTitle>
+            <DialogDescription>
+              Esta ação irá excluir <strong>{selectedArchivedIds.length}</strong> usuário(s) permanentemente 
+              do banco de dados, incluindo <code>profiles</code> e <code>auth.users</code>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Ação Irreversível</AlertTitle>
+            <AlertDescription>
+              Estes usuários serão completamente removidos do sistema. 
+              Não será possível recuperar estes dados.
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-4 py-4">
+            <div className="p-3 bg-muted rounded-lg text-center font-mono">
+              EXCLUIR PERMANENTEMENTE
+            </div>
+            <div className="space-y-2">
+              <Label>Digite a frase de confirmação:</Label>
+              <Input
+                value={confirmationPhrase}
+                onChange={(e) => setConfirmationPhrase(e.target.value)}
+                placeholder="Digite aqui..."
+                className="font-mono"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowHardDeleteDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleExecuteHardDelete}
+              disabled={confirmationPhrase !== 'EXCLUIR PERMANENTEMENTE' || loading}
+            >
+              {loading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Flame className="h-4 w-4 mr-2" />
+                  Excluir Permanentemente
                 </>
               )}
             </Button>
