@@ -188,27 +188,27 @@ export default function Comunidade() {
 
           {/* Bookmakers Grid */}
           {loading || accessLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[...Array(6)].map((_, i) => (
-                <Skeleton key={i} className="h-40" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              {[...Array(9)].map((_, i) => (
+                <Skeleton key={i} className="h-36" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
               {filteredBookmakers.map((bm) => (
                 <Card 
                   key={bm.bookmaker_catalogo_id}
                   className="cursor-pointer hover:border-primary/50 transition-colors"
                   onClick={() => navigate(`/comunidade/${bm.bookmaker_catalogo_id}`)}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-2.5">
                       {/* Logo */}
-                      <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                      <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
                         {bm.logo_url ? (
-                          <img src={bm.logo_url} alt={bm.nome} className="h-10 w-10 object-contain" />
+                          <img src={bm.logo_url} alt={bm.nome} className="h-8 w-8 object-contain" />
                         ) : (
-                          <span className="text-lg font-bold text-muted-foreground">
+                          <span className="text-base font-bold text-muted-foreground">
                             {bm.nome.charAt(0)}
                           </span>
                         )}
@@ -235,7 +235,7 @@ export default function Comunidade() {
                     </div>
 
                     {/* Stats Row */}
-                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+                    <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-border">
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Star className="h-3.5 w-3.5" />
                         <span>{bm.total_avaliacoes}</span>
