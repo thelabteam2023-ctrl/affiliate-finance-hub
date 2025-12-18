@@ -985,6 +985,7 @@ export type Database = {
         Row: {
           conteudo: string
           created_at: string
+          edited_at: string | null
           id: string
           is_anonymous: boolean | null
           status: string
@@ -995,6 +996,7 @@ export type Database = {
         Insert: {
           conteudo: string
           created_at?: string
+          edited_at?: string | null
           id?: string
           is_anonymous?: boolean | null
           status?: string
@@ -1005,6 +1007,7 @@ export type Database = {
         Update: {
           conteudo?: string
           created_at?: string
+          edited_at?: string | null
           id?: string
           is_anonymous?: boolean | null
           status?: string
@@ -1148,6 +1151,7 @@ export type Database = {
           bookmaker_catalogo_id: string
           conteudo: string
           created_at: string
+          edited_at: string | null
           id: string
           is_anonymous: boolean | null
           status: string
@@ -1159,6 +1163,7 @@ export type Database = {
           bookmaker_catalogo_id: string
           conteudo: string
           created_at?: string
+          edited_at?: string | null
           id?: string
           is_anonymous?: boolean | null
           status?: string
@@ -1170,6 +1175,7 @@ export type Database = {
           bookmaker_catalogo_id?: string
           conteudo?: string
           created_at?: string
+          edited_at?: string | null
           id?: string
           is_anonymous?: boolean | null
           status?: string
@@ -5799,6 +5805,10 @@ export type Database = {
       }
       update_parcerias_em_encerramento: { Args: never; Returns: undefined }
       user_has_pro_access: { Args: { _user_id: string }; Returns: boolean }
+      user_is_owner_or_admin: {
+        Args: { check_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
