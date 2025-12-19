@@ -31,13 +31,15 @@ const PLANS = [
   { value: 'advanced', label: 'Advanced', color: 'bg-amber-500/20 text-amber-400' },
 ];
 
+import { getRoleLabel } from '@/lib/roleLabels';
+
 const ROLES = [
-  { value: 'owner', label: 'Owner' },
-  { value: 'admin', label: 'Admin' },
-  { value: 'user', label: 'Usuário' },
-  { value: 'finance', label: 'Financeiro' },
-  { value: 'operator', label: 'Operador' },
-  { value: 'viewer', label: 'Visualizador' },
+  { value: 'owner', label: getRoleLabel('owner') },
+  { value: 'admin', label: getRoleLabel('admin') },
+  { value: 'user', label: getRoleLabel('user') },
+  { value: 'finance', label: getRoleLabel('finance') },
+  { value: 'operator', label: getRoleLabel('operator') },
+  { value: 'viewer', label: getRoleLabel('viewer') },
 ];
 
 export default function SystemAdmin() {
@@ -87,7 +89,8 @@ export default function SystemAdmin() {
   
   const filteredUsers = displayUsers.filter(u => 
     u.email?.toLowerCase().includes(searchUsers.toLowerCase()) ||
-    u.full_name?.toLowerCase().includes(searchUsers.toLowerCase())
+    u.full_name?.toLowerCase().includes(searchUsers.toLowerCase()) ||
+    u.public_id?.toLowerCase().includes(searchUsers.toLowerCase())
   );
 
   const filteredWorkspaces = workspaces.filter(w =>
@@ -298,6 +301,7 @@ export default function SystemAdmin() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>ID</TableHead>
                       <TableHead>Usuário</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Workspace</TableHead>
@@ -310,6 +314,11 @@ export default function SystemAdmin() {
                     {filteredUsers.map((u) => (
                       <TableRow key={u.id}>
                         <TableCell>
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {u.public_id || '-'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
                           <div>
                             <div className="font-medium">{u.full_name || 'Sem nome'}</div>
                             <div className="text-sm text-muted-foreground">{u.email}</div>
@@ -321,7 +330,7 @@ export default function SystemAdmin() {
                         </TableCell>
                         <TableCell>
                           {u.workspace_role ? (
-                            <Badge variant="outline">{u.workspace_role}</Badge>
+                            <Badge variant="outline">{getRoleLabel(u.workspace_role)}</Badge>
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}
@@ -372,7 +381,7 @@ export default function SystemAdmin() {
                     ))}
                     {filteredUsers.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                           Nenhum usuário encontrado
                         </TableCell>
                       </TableRow>
