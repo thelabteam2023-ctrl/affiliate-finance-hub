@@ -126,33 +126,13 @@ export default function Workspace() {
     try {
       setLoading(true);
       
+      // Usar RPC que retorna dados enriquecidos com email e nome
       const { data: membersData, error: membersError } = await supabase
-        .from('workspace_members')
-        .select('id, user_id, role, is_active, joined_at')
-        .eq('workspace_id', workspaceId)
-        .eq('is_active', true)
-        .order('joined_at', { ascending: true });
+        .rpc('get_workspace_members_enriched', { _workspace_id: workspaceId });
 
       if (membersError) throw membersError;
 
-      // Fetch profile info for each member
-      const membersWithProfiles: WorkspaceMember[] = [];
-      
-      for (const member of membersData || []) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('email, full_name')
-          .eq('id', member.user_id)
-          .single();
-
-        membersWithProfiles.push({
-          ...member,
-          email: profile?.email || 'Email não disponível',
-          full_name: profile?.full_name || '',
-        });
-      }
-
-      setMembers(membersWithProfiles);
+      setMembers(membersData || []);
     } catch (error) {
       console.error("Error fetching members:", error);
       toast({

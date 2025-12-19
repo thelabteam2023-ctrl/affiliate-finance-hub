@@ -7595,6 +7595,18 @@ export type Database = {
           token: string
         }[]
       }
+      get_workspace_members_enriched: {
+        Args: { _workspace_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          id: string
+          is_active: boolean
+          joined_at: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }[]
+      }
       get_workspace_usage: { Args: { workspace_uuid: string }; Returns: Json }
       has_permission: {
         Args: {
