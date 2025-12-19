@@ -14,6 +14,16 @@ interface ProtectedRouteProps {
   fallback?: ReactNode;
 }
 
+/**
+ * Logs access denial for debugging
+ */
+function logAccessDenial(reason: string, details: Record<string, any>) {
+  console.warn('[ProtectedRoute] Access Denied:', reason, {
+    timestamp: new Date().toISOString(),
+    ...details,
+  });
+}
+
 export function ProtectedRoute({ 
   children, 
   requiredPermission,
@@ -26,15 +36,27 @@ export function ProtectedRoute({
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [hasAccess, setHasAccess] = useState(true);
   const [denyReason, setDenyReason] = useState<string | null>(null);
+  const [denyCode, setDenyCode] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAccess = async () => {
       // Wait until fully initialized
       if (!user || !initialized) return;
 
+      const debugInfo = {
+        route: location.pathname,
+        user_id: user.id,
+        workspace_id: workspace?.id,
+        role: role,
+        is_system_owner: isSystemOwner,
+        required_permission: requiredPermission,
+        required_roles: requiredRole,
+        require_system_owner: requireSystemOwner,
+      };
+
       // SYSTEM OWNER has full access to everything
       if (isSystemOwner) {
-        console.log('[ProtectedRoute] System owner - full access granted');
+        console.log('[ProtectedRoute] System owner - full access granted', debugInfo);
         setHasAccess(true);
         setPermissionChecked(true);
         return;
@@ -42,7 +64,8 @@ export function ProtectedRoute({
 
       // System owner requirement - only system owners can access
       if (requireSystemOwner) {
-        console.log('[ProtectedRoute] Denied: requires system owner');
+        logAccessDenial('REQUIRES_SYSTEM_OWNER', debugInfo);
+        setDenyCode('REQUIRES_SYSTEM_OWNER');
         setDenyReason('Acesso restrito ao administrador do sistema.');
         setHasAccess(false);
         setPermissionChecked(true);
@@ -54,10 +77,12 @@ export function ProtectedRoute({
         if (!role || !requiredRole.includes(role)) {
           // Owner bypasses role checks
           if (role !== 'owner') {
-            console.log('[ProtectedRoute] Denied: role not in required list', { 
-              userRole: role, 
-              requiredRoles: requiredRole 
+            logAccessDenial('ROLE_INSUFFICIENT', {
+              ...debugInfo,
+              user_role: role,
+              required_roles: requiredRole,
             });
+            setDenyCode('ROLE_INSUFFICIENT');
             setDenyReason(`Acesso restrito para: ${requiredRole.join(', ')}`);
             setHasAccess(false);
             setPermissionChecked(true);
@@ -70,7 +95,7 @@ export function ProtectedRoute({
       if (requiredPermission) {
         // Owner and admin bypass permission checks
         if (role === 'owner' || role === 'admin') {
-          console.log('[ProtectedRoute] Owner/Admin - permission check bypassed');
+          console.log('[ProtectedRoute] Owner/Admin - permission check bypassed', debugInfo);
           setHasAccess(true);
           setPermissionChecked(true);
           return;
@@ -85,11 +110,14 @@ export function ProtectedRoute({
         const allowed = await hasPermission(requiredPermission);
         
         if (!allowed) {
-          console.log('[ProtectedRoute] Denied: permission not granted', {
-            permission: requiredPermission,
-            role: role
+          logAccessDenial('PERMISSION_MISSING', {
+            ...debugInfo,
+            required_permission: requiredPermission,
           });
+          setDenyCode('PERMISSION_MISSING');
           setDenyReason(`Permissão necessária: ${requiredPermission}`);
+        } else {
+          console.log('[ProtectedRoute] Permission granted:', requiredPermission);
         }
         
         setHasAccess(allowed);
@@ -99,7 +127,7 @@ export function ProtectedRoute({
     };
 
     checkAccess();
-  }, [user, initialized, role, requiredPermission, requiredRole, requireSystemOwner, hasPermission, isSystemOwner, workspace?.id]);
+  }, [user, initialized, role, requiredPermission, requiredRole, requireSystemOwner, hasPermission, isSystemOwner, workspace?.id, location.pathname]);
 
   // Show loading while checking auth
   if (loading || !initialized) {

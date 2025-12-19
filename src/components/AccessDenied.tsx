@@ -1,12 +1,15 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useEffect } from "react";
 import { ShieldX, Home, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SAFE_ROUTE } from "@/lib/routes";
+import { useAuth } from "@/hooks/useAuth";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 interface AccessDeniedProps {
   message?: string;
+  denyCode?: string;
 }
 
 interface LocationState {
@@ -14,10 +17,29 @@ interface LocationState {
   deniedPath?: string;
 }
 
-export function AccessDenied({ message }: AccessDeniedProps) {
+export function AccessDenied({ message, denyCode }: AccessDeniedProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState | null;
+  const { user, role, isSystemOwner } = useAuth();
+  const { workspaceId, workspaceName } = useWorkspace();
+  
+  // Log access denial for debugging
+  useEffect(() => {
+    console.warn('[AccessDenied] Access denied displayed', {
+      timestamp: new Date().toISOString(),
+      denied_path: location.pathname,
+      deny_code: denyCode,
+      deny_message: message,
+      user_id: user?.id,
+      workspace_id: workspaceId,
+      workspace_name: workspaceName,
+      role: role,
+      is_system_owner: isSystemOwner,
+      from_state: state?.from,
+      referrer: document.referrer,
+    });
+  }, [location.pathname, denyCode, message, user, workspaceId, workspaceName, role, isSystemOwner, state]);
   
   // Determina se podemos usar o histórico de forma segura
   const canGoBack = useMemo(() => {
@@ -53,6 +75,26 @@ export function AccessDenied({ message }: AccessDeniedProps) {
     navigate(SAFE_ROUTE, { replace: true });
   }, [navigate]);
 
+  // Determine display message based on deny code
+  const displayMessage = useMemo(() => {
+    if (message) return message;
+    
+    switch (denyCode) {
+      case 'REQUIRES_SYSTEM_OWNER':
+        return 'Esta área é restrita ao administrador do sistema.';
+      case 'ROLE_INSUFFICIENT':
+        return 'Sua função não tem acesso a esta área.';
+      case 'PERMISSION_MISSING':
+        return 'Você não tem a permissão necessária para acessar esta página.';
+      case 'NO_WORKSPACE':
+        return 'Você não está associado a nenhum workspace.';
+      case 'NO_MEMBERSHIP':
+        return 'Você não é membro deste workspace.';
+      default:
+        return 'Você não tem permissão para acessar esta página.';
+    }
+  }, [message, denyCode]);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -62,7 +104,7 @@ export function AccessDenied({ message }: AccessDeniedProps) {
           </div>
           <CardTitle className="text-2xl">Acesso Negado</CardTitle>
           <CardDescription>
-            {message || "Você não tem permissão para acessar esta página."}
+            {displayMessage}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -70,6 +112,17 @@ export function AccessDenied({ message }: AccessDeniedProps) {
             Você foi redirecionado para uma área sem permissão. 
             Entre em contato com o administrador do workspace para solicitar acesso.
           </p>
+          
+          {/* Debug info in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="bg-muted/50 rounded-lg p-3 text-xs font-mono">
+              <p className="text-muted-foreground mb-1">Debug Info:</p>
+              <p>Role: {role || 'N/A'}</p>
+              <p>Workspace: {workspaceName || 'N/A'}</p>
+              <p>Path: {location.pathname}</p>
+              {denyCode && <p>Code: {denyCode}</p>}
+            </div>
+          )}
           
           <div className="flex flex-col gap-2">
             <Button 

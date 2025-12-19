@@ -7531,6 +7531,10 @@ export type Database = {
       expire_old_invites: { Args: never; Returns: number }
       generate_public_id: { Args: never; Returns: string }
       get_current_workspace: { Args: never; Returns: string }
+      get_effective_access: {
+        Args: { _user_id: string; _workspace_id?: string }
+        Returns: Json
+      }
       get_invite_by_token: { Args: { _token: string }; Returns: Json }
       get_my_pending_invites: {
         Args: never
@@ -7622,6 +7626,10 @@ export type Database = {
           _workspace_id?: string
         }
         Returns: boolean
+      }
+      has_route_access: {
+        Args: { _route: string; _user_id: string; _workspace_id?: string }
+        Returns: Json
       }
       is_master: { Args: { _user_id: string }; Returns: boolean }
       is_owner_or_admin: {
