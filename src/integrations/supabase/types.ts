@@ -4669,7 +4669,7 @@ export type Database = {
           tipo_projeto: string | null
           updated_at: string
           user_id: string
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           archived_at?: string | null
@@ -4693,7 +4693,7 @@ export type Database = {
           tipo_projeto?: string | null
           updated_at?: string
           user_id: string
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           archived_at?: string | null
@@ -4717,7 +4717,7 @@ export type Database = {
           tipo_projeto?: string | null
           updated_at?: string
           user_id?: string
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import {
   Dialog,
   DialogContent,
@@ -120,6 +121,7 @@ export function ProjetoDialog({
   onCreatedOpenEdit,
   initialTab,
 }: ProjetoDialogProps) {
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(initialTab || "dados");
   const [operadores, setOperadores] = useState<OperadorVinculado[]>([]);
@@ -324,6 +326,7 @@ export function ProjetoDialog({
         modelo_absorcao_taxas: formData.tem_investimento_crypto ? formData.modelo_absorcao_taxas : "EMPRESA_100",
         tipo_projeto: "INTERNO",
         user_id: session.session.user.id,
+        workspace_id: workspaceId!,
         investidor_id: formData.investidor_id || null,
         percentual_investidor: formData.percentual_investidor || 0,
         base_calculo_investidor: formData.base_calculo_investidor || "LUCRO_LIQUIDO",
@@ -332,8 +335,8 @@ export function ProjetoDialog({
       if (mode === "create") {
         const { data: newProjeto, error } = await supabase.from("projetos").insert(payload).select("id").single();
         if (error) {
-          if (error.code === "23505" && error.message.includes("idx_projetos_nome_user_unique")) {
-            toast.error("Já existe um projeto com este nome");
+          if (error.code === "23505") {
+            toast.error("Já existe um projeto ativo com este nome neste workspace");
             return;
           }
           throw error;
@@ -351,8 +354,8 @@ export function ProjetoDialog({
           .update(payload)
           .eq("id", projeto!.id);
         if (error) {
-          if (error.code === "23505" && error.message.includes("idx_projetos_nome_user_unique")) {
-            toast.error("Já existe um projeto com este nome");
+          if (error.code === "23505") {
+            toast.error("Já existe um projeto ativo com este nome neste workspace");
             return;
           }
           throw error;
