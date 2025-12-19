@@ -36,7 +36,7 @@ import { ProjetoVinculosTab } from "@/components/projeto-detalhe/ProjetoVinculos
 import { ProjetoPerdasTab } from "@/components/projeto-detalhe/ProjetoPerdasTab";
 import { ProjetoFreebetsTab } from "@/components/projeto-detalhe/ProjetoFreebetsTab";
 import { ProjetoCiclosTab } from "@/components/projeto-detalhe/ProjetoCiclosTab";
-// ProjetoSurebetTab removida - Surebets agora são exibidas na aba "Apostas Livres" unificada
+import { ProjetoBonusTab } from "@/components/projeto-detalhe/ProjetoBonusTab";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { DateRange } from "react-day-picker";
 
@@ -541,6 +541,10 @@ export default function ProjetoDetalhe() {
             <Gift className="h-4 w-4" />
             Freebets
           </TabsTrigger>
+          <TabsTrigger value="bonus" className="flex items-center gap-2">
+            <Coins className="h-4 w-4" />
+            Bônus
+          </TabsTrigger>
           <TabsTrigger value="perdas" className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4" />
             Perdas
@@ -574,6 +578,10 @@ export default function ProjetoDetalhe() {
 
         <TabsContent value="freebets">
           <ProjetoFreebetsTab projetoId={id!} />
+        </TabsContent>
+
+        <TabsContent value="bonus">
+          <ProjetoBonusTab projetoId={id!} />
         </TabsContent>
 
         <TabsContent value="perdas">

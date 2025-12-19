@@ -4165,6 +4165,124 @@ export type Database = {
           },
         ]
       }
+      project_bookmaker_link_bonuses: {
+        Row: {
+          bonus_amount: number
+          bookmaker_id: string
+          created_at: string
+          created_by: string
+          credited_at: string | null
+          currency: string
+          expires_at: string | null
+          id: string
+          notes: string | null
+          project_id: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          bonus_amount?: number
+          bookmaker_id: string
+          created_at?: string
+          created_by: string
+          credited_at?: string | null
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          project_id: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          bonus_amount?: number
+          bookmaker_id?: string
+          created_at?: string
+          created_by?: string
+          credited_at?: string | null
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          project_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_disponivel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_painel_operacional"
+            referencedColumns: ["entidade_id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projeto_bookmaker_historico: {
         Row: {
           bookmaker_id: string

@@ -1,0 +1,290 @@
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+export type BonusStatus = "pending" | "credited" | "failed" | "expired" | "reversed";
+
+export interface ProjectBonus {
+  id: string;
+  workspace_id: string | null;
+  project_id: string;
+  bookmaker_id: string;
+  title: string;
+  bonus_amount: number;
+  currency: string;
+  status: BonusStatus;
+  credited_at: string | null;
+  expires_at: string | null;
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  bookmaker_nome?: string;
+  bookmaker_login?: string;
+  bookmaker_logo_url?: string | null;
+  parceiro_nome?: string | null;
+}
+
+export interface BonusFormData {
+  bookmaker_id: string;
+  title: string;
+  bonus_amount: number;
+  currency: string;
+  status: BonusStatus;
+  credited_at?: string | null;
+  expires_at?: string | null;
+  notes?: string | null;
+}
+
+export interface BonusSummary {
+  total_credited: number;
+  total_pending: number;
+  total_failed: number;
+  total_expired: number;
+  total_reversed: number;
+  count_credited: number;
+  count_pending: number;
+  count_failed: number;
+  count_expired: number;
+  count_reversed: number;
+}
+
+interface UseProjectBonusesProps {
+  projectId: string;
+  bookmakerId?: string; // Optional: filter by specific bookmaker
+}
+
+export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesProps) {
+  const [bonuses, setBonuses] = useState<ProjectBonus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const fetchBonuses = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      let query = supabase
+        .from("project_bookmaker_link_bonuses")
+        .select(`
+          *,
+          bookmakers!project_bookmaker_link_bonuses_bookmaker_id_fkey (
+            nome,
+            login_username,
+            parceiro_id,
+            bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url),
+            parceiros!bookmakers_parceiro_id_fkey (nome)
+          )
+        `)
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false });
+
+      if (bookmakerId) {
+        query = query.eq("bookmaker_id", bookmakerId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      const mapped: ProjectBonus[] = (data || []).map((b: any) => ({
+        id: b.id,
+        workspace_id: b.workspace_id,
+        project_id: b.project_id,
+        bookmaker_id: b.bookmaker_id,
+        title: b.title,
+        bonus_amount: Number(b.bonus_amount),
+        currency: b.currency,
+        status: b.status as BonusStatus,
+        credited_at: b.credited_at,
+        expires_at: b.expires_at,
+        notes: b.notes,
+        created_by: b.created_by,
+        created_at: b.created_at,
+        updated_at: b.updated_at,
+        bookmaker_nome: b.bookmakers?.nome,
+        bookmaker_login: b.bookmakers?.login_username,
+        bookmaker_logo_url: b.bookmakers?.bookmakers_catalogo?.logo_url,
+        parceiro_nome: b.bookmakers?.parceiros?.nome,
+      }));
+
+      setBonuses(mapped);
+    } catch (error: any) {
+      console.error("Erro ao carregar bônus:", error.message);
+      toast.error("Erro ao carregar bônus");
+    } finally {
+      setLoading(false);
+    }
+  }, [projectId, bookmakerId]);
+
+  useEffect(() => {
+    if (projectId) {
+      fetchBonuses();
+    }
+  }, [fetchBonuses, projectId]);
+
+  const getSummary = useCallback((): BonusSummary => {
+    const summary: BonusSummary = {
+      total_credited: 0,
+      total_pending: 0,
+      total_failed: 0,
+      total_expired: 0,
+      total_reversed: 0,
+      count_credited: 0,
+      count_pending: 0,
+      count_failed: 0,
+      count_expired: 0,
+      count_reversed: 0,
+    };
+
+    bonuses.forEach((b) => {
+      switch (b.status) {
+        case "credited":
+          summary.total_credited += b.bonus_amount;
+          summary.count_credited++;
+          break;
+        case "pending":
+          summary.total_pending += b.bonus_amount;
+          summary.count_pending++;
+          break;
+        case "failed":
+          summary.total_failed += b.bonus_amount;
+          summary.count_failed++;
+          break;
+        case "expired":
+          summary.total_expired += b.bonus_amount;
+          summary.count_expired++;
+          break;
+        case "reversed":
+          summary.total_reversed += b.bonus_amount;
+          summary.count_reversed++;
+          break;
+      }
+    });
+
+    return summary;
+  }, [bonuses]);
+
+  const createBonus = async (data: BonusFormData): Promise<boolean> => {
+    try {
+      setSaving(true);
+
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Usuário não autenticado");
+
+      // Get workspace_id from project
+      const { data: projectData } = await supabase
+        .from("projetos")
+        .select("workspace_id")
+        .eq("id", projectId)
+        .single();
+
+      const bonusData = {
+        project_id: projectId,
+        bookmaker_id: data.bookmaker_id,
+        title: data.title || "",
+        bonus_amount: data.bonus_amount,
+        currency: data.currency,
+        status: data.status,
+        credited_at: data.status === "credited" ? (data.credited_at || new Date().toISOString()) : null,
+        expires_at: data.expires_at || null,
+        notes: data.notes || null,
+        created_by: userData.user.id,
+        user_id: userData.user.id,
+        workspace_id: projectData?.workspace_id || null,
+      };
+
+      const { error } = await supabase
+        .from("project_bookmaker_link_bonuses")
+        .insert(bonusData);
+
+      if (error) throw error;
+
+      toast.success("Bônus registrado com sucesso");
+      await fetchBonuses();
+      return true;
+    } catch (error: any) {
+      console.error("Erro ao criar bônus:", error.message);
+      toast.error("Erro ao registrar bônus: " + error.message);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateBonus = async (id: string, data: Partial<BonusFormData>): Promise<boolean> => {
+    try {
+      setSaving(true);
+
+      const updateData: any = { ...data };
+      
+      // If status changed to credited and no credited_at, set it
+      if (data.status === "credited" && !data.credited_at) {
+        updateData.credited_at = new Date().toISOString();
+      }
+
+      const { error } = await supabase
+        .from("project_bookmaker_link_bonuses")
+        .update(updateData)
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Bônus atualizado com sucesso");
+      await fetchBonuses();
+      return true;
+    } catch (error: any) {
+      console.error("Erro ao atualizar bônus:", error.message);
+      toast.error("Erro ao atualizar bônus: " + error.message);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteBonus = async (id: string): Promise<boolean> => {
+    try {
+      setSaving(true);
+
+      const { error } = await supabase
+        .from("project_bookmaker_link_bonuses")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Bônus excluído com sucesso");
+      await fetchBonuses();
+      return true;
+    } catch (error: any) {
+      console.error("Erro ao excluir bônus:", error.message);
+      toast.error("Erro ao excluir bônus: " + error.message);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getBonusesByBookmaker = useCallback((bkId: string): ProjectBonus[] => {
+    return bonuses.filter((b) => b.bookmaker_id === bkId);
+  }, [bonuses]);
+
+  const getTotalCreditedByBookmaker = useCallback((bkId: string): number => {
+    return bonuses
+      .filter((b) => b.bookmaker_id === bkId && b.status === "credited")
+      .reduce((acc, b) => acc + b.bonus_amount, 0);
+  }, [bonuses]);
+
+  return {
+    bonuses,
+    loading,
+    saving,
+    fetchBonuses,
+    getSummary,
+    createBonus,
+    updateBonus,
+    deleteBonus,
+    getBonusesByBookmaker,
+    getTotalCreditedByBookmaker,
+  };
+}
