@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Loader2, AlertTriangle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 export default function Auth() {
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -22,15 +23,24 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Capturar o redirect da URL (para convites)
+  const redirectTo = searchParams.get("redirect");
+
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate("/parceiros");
+        // Se tiver redirect pendente, ir para lá
+        if (redirectTo) {
+          console.log("[Auth] Usuário logado, redirecionando para:", redirectTo);
+          navigate(redirectTo);
+        } else {
+          navigate("/parceiros");
+        }
       }
     };
     checkSession();
-  }, [navigate]);
+  }, [navigate, redirectTo]);
 
   // Check if account is blocked before attempting login
   const checkIfBlocked = async (emailToCheck: string): Promise<boolean> => {
@@ -75,10 +85,13 @@ export default function Auth() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
+      // Determinar para onde redirecionar após login
+      const finalRedirect = redirectTo || '/parceiros';
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/parceiros`,
+          redirectTo: `${window.location.origin}${finalRedirect}`,
         }
       });
 
@@ -160,7 +173,11 @@ export default function Auth() {
           title: "Login realizado!",
           description: "Bem-vindo de volta.",
         });
-        navigate("/parceiros");
+        
+        // Redirecionar para o destino correto
+        const destination = redirectTo || "/parceiros";
+        console.log("[Auth] Login bem-sucedido, redirecionando para:", destination);
+        navigate(destination);
       } else {
         const { error } = await supabase.auth.signUp({
           email,

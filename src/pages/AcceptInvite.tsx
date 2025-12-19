@@ -99,31 +99,43 @@ export default function AcceptInvite() {
   // Se usuário logado e convite válido, tentar aceitar automaticamente
   useEffect(() => {
     const autoAccept = async () => {
-      if (user && session && inviteInfo?.status === 'pending' && inviteInfo?.email) {
-        // Verificar se o email do usuário logado é o do convite
-        const userEmail = user.email?.toLowerCase();
-        const inviteEmail = inviteInfo.email.toLowerCase();
-        
-        if (userEmail === inviteEmail) {
-          await handleAcceptInvite();
-        }
+      if (!user || !session || !inviteInfo?.found || inviteInfo.status !== 'pending') {
+        return;
+      }
+
+      console.log("[AcceptInvite] Usuário logado, tentando auto-aceitar...");
+      console.log("[AcceptInvite] Email user:", user.email);
+      console.log("[AcceptInvite] Email convite:", inviteInfo.email);
+
+      const userEmail = user.email?.toLowerCase();
+      const inviteEmail = inviteInfo.email?.toLowerCase();
+      
+      // Se os emails correspondem, aceitar automaticamente
+      if (userEmail === inviteEmail) {
+        console.log("[AcceptInvite] Emails correspondem, aceitando...");
+        await handleAcceptInvite();
+      } else {
+        console.log("[AcceptInvite] Emails não correspondem");
       }
     };
 
-    if (!loading && inviteInfo?.found) {
+    if (!loading && inviteInfo?.found && !accepting) {
       autoAccept();
     }
-  }, [user, session, inviteInfo, loading]);
+  }, [user, session, inviteInfo, loading, accepting]);
 
   const handleAcceptInvite = async () => {
-    if (!token) return;
+    if (!token || accepting) return;
 
     try {
       setAccepting(true);
+      console.log("[AcceptInvite] Chamando RPC accept_workspace_invite...");
       
       const { data, error } = await supabase.rpc('accept_workspace_invite', {
         _token: token
       });
+
+      console.log("[AcceptInvite] Resposta:", { data, error });
 
       if (error) throw error;
       
@@ -138,17 +150,17 @@ export default function AcceptInvite() {
         description: `Você agora faz parte do workspace ${inviteInfo?.workspace_name}.`,
       });
 
-      // Recarregar workspace e redirecionar
-      await refreshWorkspace();
-      navigate("/");
+      console.log("[AcceptInvite] Sucesso! Recarregando workspace...");
+      
+      // Forçar reload completo para garantir estado correto
+      window.location.href = '/';
     } catch (error: any) {
-      console.error("Error accepting invite:", error);
+      console.error("[AcceptInvite] Error accepting invite:", error);
       toast({
         title: "Erro",
         description: error.message || "Não foi possível aceitar o convite.",
         variant: "destructive",
       });
-    } finally {
       setAccepting(false);
     }
   };
