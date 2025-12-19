@@ -289,7 +289,9 @@ export default function AccessGroupWorkspacesDialog({ open, onOpenChange, group 
                           )}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {ws.workspace?.owner_email || "Email não encontrado"}
+                          {ws.workspace?.owner_email || (
+                            <span className="text-amber-600 dark:text-amber-400">Owner não vinculado</span>
+                          )}
                         </div>
                       </div>
                     </div>

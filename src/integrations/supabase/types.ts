@@ -7187,6 +7187,21 @@ export type Database = {
           sales_count: number
         }[]
       }
+      admin_get_group_workspaces: {
+        Args: { p_group_id: string }
+        Returns: {
+          added_at: string
+          added_by: string
+          group_id: string
+          id: string
+          owner_email: string
+          owner_public_id: string
+          owner_user_id: string
+          workspace_id: string
+          workspace_name: string
+          workspace_plan: string
+        }[]
+      }
       admin_get_revenue_by_plan: {
         Args: never
         Returns: {

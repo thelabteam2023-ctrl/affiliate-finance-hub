@@ -180,46 +180,29 @@ export function useAccessGroups() {
 
   // Workspaces in group
   const fetchGroupWorkspaces = async (groupId: string): Promise<GroupWorkspace[]> => {
+    // Use RPC for reliable owner data access (bypasses RLS issues)
     const { data, error } = await supabase
-      .from("access_group_workspaces")
-      .select(`
-        *,
-        workspace:workspaces(id, name)
-      `)
-      .eq("group_id", groupId);
+      .rpc('admin_get_group_workspaces', { p_group_id: groupId });
 
-    if (error) throw error;
+    if (error) {
+      console.error('[fetchGroupWorkspaces] RPC error:', error);
+      throw error;
+    }
 
-    // Fetch owner emails separately
-    const workspaceIds = data?.map(d => d.workspace_id) || [];
-    const { data: membersData } = await supabase
-      .from("workspace_members")
-      .select(`
-        workspace_id,
-        user_id,
-        role,
-        profile:profiles(email, public_id)
-      `)
-      .in("workspace_id", workspaceIds)
-      .eq("role", "owner");
-
-    const ownerMap = new Map<string, { email: string; public_id: string }>();
-    membersData?.forEach((m: any) => {
-      if (m.profile?.email) {
-        ownerMap.set(m.workspace_id, {
-          email: m.profile.email,
-          public_id: m.profile.public_id || "",
-        });
-      }
-    });
+    console.log('[fetchGroupWorkspaces] RPC result:', data);
 
     return (data || []).map((d: any) => ({
-      ...d,
-      workspace: d.workspace ? {
-        ...d.workspace,
-        owner_email: ownerMap.get(d.workspace_id)?.email || "",
-        owner_public_id: ownerMap.get(d.workspace_id)?.public_id || "",
-      } : undefined,
+      id: d.id,
+      group_id: d.group_id,
+      workspace_id: d.workspace_id,
+      added_at: d.added_at,
+      added_by: d.added_by,
+      workspace: {
+        id: d.workspace_id,
+        name: d.workspace_name || "—",
+        owner_email: d.owner_email || "",
+        owner_public_id: d.owner_public_id || "",
+      },
     }));
   };
 
