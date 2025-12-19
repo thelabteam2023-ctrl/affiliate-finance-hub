@@ -5,6 +5,7 @@ import { CleanupTab } from '@/components/system-admin/CleanupTab';
 import { CommunityResetTab } from '@/components/system-admin/CommunityResetTab';
 import { PlansTab } from '@/components/system-admin/PlansTab';
 import { BillingDashboardTab } from '@/components/system-admin/BillingDashboardTab';
+import { SubscriptionsTab } from '@/components/system-admin/SubscriptionsTab';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -216,7 +217,7 @@ export default function SystemAdmin() {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="users" className="gap-2">
             <Users className="h-4 w-4" />
             Usuários
@@ -225,12 +226,16 @@ export default function SystemAdmin() {
             <Building2 className="h-4 w-4" />
             Workspaces
           </TabsTrigger>
+          <TabsTrigger value="subscriptions" className="gap-2">
+            <CreditCard className="h-4 w-4" />
+            Assinaturas
+          </TabsTrigger>
           <TabsTrigger value="plans" className="gap-2">
             <Crown className="h-4 w-4" />
             Planos & Preços
           </TabsTrigger>
           <TabsTrigger value="billing" className="gap-2">
-            <CreditCard className="h-4 w-4" />
+            <DollarSign className="h-4 w-4" />
             Billing & Growth
           </TabsTrigger>
           <TabsTrigger value="cleanup" className="gap-2">
@@ -480,6 +485,11 @@ export default function SystemAdmin() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Subscriptions Tab */}
+        <TabsContent value="subscriptions">
+          <SubscriptionsTab />
         </TabsContent>
 
         {/* Plans Tab */}

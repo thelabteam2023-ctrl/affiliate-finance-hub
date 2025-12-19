@@ -22,9 +22,11 @@ const STATUS_LABELS = {
   legacy: { label: 'Legado', class: 'bg-muted text-muted-foreground' },
 };
 
-const PERIOD_LABELS = {
+const PERIOD_LABELS: Record<string, string> = {
   monthly: 'Mensal',
+  semiannual: 'Semestral',
   yearly: 'Anual',
+  annual: 'Anual',
   lifetime: 'Vitalício',
 };
 
@@ -494,6 +496,7 @@ export function PlansTab() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="monthly">Mensal</SelectItem>
+                    <SelectItem value="semiannual">Semestral</SelectItem>
                     <SelectItem value="yearly">Anual</SelectItem>
                     <SelectItem value="lifetime">Vitalício</SelectItem>
                   </SelectContent>
