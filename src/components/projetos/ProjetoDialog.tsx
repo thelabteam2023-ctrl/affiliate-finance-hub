@@ -59,7 +59,7 @@ import { EditarAcordoOperadorDialog } from "@/components/projetos/EditarAcordoOp
 import { ProjetoConciliacaoDialog } from "@/components/projetos/ProjetoConciliacaoDialog";
 import { ConfirmacaoSenhaDialog } from "@/components/ui/confirmacao-senha-dialog";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
-import { CicloDialog } from "@/components/projeto-detalhe/CicloDialog";
+import { ProjectPostCreateWizard } from "@/components/projetos/ProjectPostCreateWizard";
 
 interface Projeto {
   id?: string;
@@ -132,9 +132,9 @@ export function ProjetoDialog({
   const [temConciliacao, setTemConciliacao] = useState(false);
   const [showVincularPrompt, setShowVincularPrompt] = useState(false);
   const [novoprojetoId, setNovoProjetoId] = useState<string | null>(null);
+  const [novoProjetoNome, setNovoProjetoNome] = useState<string>("");
   const [confirmacaoDialogOpen, setConfirmacaoDialogOpen] = useState(false);
   const [operadorParaDesvincular, setOperadorParaDesvincular] = useState<string | null>(null);
-  const [cicloDialogOpen, setCicloDialogOpen] = useState(false);
   
   const [formData, setFormData] = useState<Projeto>({
     nome: "",
@@ -344,6 +344,7 @@ export function ProjetoDialog({
         
         // Perguntar se deseja vincular operador
         setNovoProjetoId(newProjeto.id);
+        setNovoProjetoNome(formData.nome);
         setShowVincularPrompt(true);
         onSuccess();
         onOpenChange(false);
@@ -906,63 +907,18 @@ export function ProjetoDialog({
         </>
       )}
 
-      {/* Prompt para vincular operador ou criar ciclo após criar projeto */}
-      <AlertDialog open={showVincularPrompt} onOpenChange={setShowVincularPrompt}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-success" />
-              Projeto criado com sucesso!
-            </AlertDialogTitle>
-            <AlertDialogDescription className="pt-2">
-              <p className="mb-3">O que você gostaria de fazer agora?</p>
-              <div className="space-y-2">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start gap-2"
-                  onClick={() => {
-                    setShowVincularPrompt(false);
-                    if (novoprojetoId && onCreatedOpenEdit) {
-                      onCreatedOpenEdit(novoprojetoId, "operadores");
-                    }
-                  }}
-                >
-                  <Users className="h-4 w-4" />
-                  Vincular Operador
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start gap-2"
-                  onClick={() => {
-                    setShowVincularPrompt(false);
-                    setCicloDialogOpen(true);
-                  }}
-                >
-                  <Calendar className="h-4 w-4" />
-                  Criar Primeiro Ciclo
-                </Button>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowVincularPrompt(false)}>
-              Fazer Depois
-            </AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Dialog para criar ciclo após criação do projeto */}
+      {/* Wizard pós-criação do projeto */}
       {novoprojetoId && (
-        <CicloDialog
-          open={cicloDialogOpen}
-          onOpenChange={setCicloDialogOpen}
-          projetoId={novoprojetoId}
-          ciclo={null}
-          proximoNumero={1}
-          onSuccess={() => {
-            setCicloDialogOpen(false);
-            toast.success("Ciclo criado com sucesso!");
+        <ProjectPostCreateWizard
+          open={showVincularPrompt}
+          onOpenChange={setShowVincularPrompt}
+          projectId={novoprojetoId}
+          projectName={novoProjetoNome}
+          onFinish={() => {
+            setShowVincularPrompt(false);
+            if (novoprojetoId && onCreatedOpenEdit) {
+              onCreatedOpenEdit(novoprojetoId);
+            }
           }}
         />
       )}
