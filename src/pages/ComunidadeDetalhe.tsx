@@ -52,6 +52,7 @@ export default function ComunidadeDetalhe() {
   const [evaluationDialogOpen, setEvaluationDialogOpen] = useState(false);
   const [topicDialogOpen, setTopicDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('visao-geral');
+  const [topicsRefreshKey, setTopicsRefreshKey] = useState(0);
 
   const openBookmakerChat = () => {
     const popoutUrl = `/comunidade/chat?mode=popout&context=bookmaker&contextId=${id}&name=${encodeURIComponent(bookmaker?.nome || '')}`;
@@ -355,6 +356,7 @@ export default function ComunidadeDetalhe() {
           <CommunityTopicsList 
             bookmakerId={id!}
             onCreateTopic={() => setTopicDialogOpen(true)}
+            refreshKey={topicsRefreshKey}
           />
         </TabsContent>
       </Tabs>
@@ -381,6 +383,7 @@ export default function ComunidadeDetalhe() {
           fetchData();
           setTopicDialogOpen(false);
           setActiveTab('topicos');
+          setTopicsRefreshKey(prev => prev + 1);
         }}
       />
     </div>
