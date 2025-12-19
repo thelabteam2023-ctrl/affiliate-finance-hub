@@ -275,24 +275,24 @@ export function BillingDashboardTab() {
         <CardContent>
           {/* Filters */}
           <div className="flex gap-4 mb-4">
-            <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: v })}>
+            <Select value={filters.status || "all"} onValueChange={(v) => setFilters({ ...filters, status: v === "all" ? "" : v })}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="paid">Pago</SelectItem>
                 <SelectItem value="pending">Pendente</SelectItem>
                 <SelectItem value="refunded">Reembolsado</SelectItem>
                 <SelectItem value="canceled">Cancelado</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={filters.plan_code} onValueChange={(v) => setFilters({ ...filters, plan_code: v })}>
+            <Select value={filters.plan_code || "all"} onValueChange={(v) => setFilters({ ...filters, plan_code: v === "all" ? "" : v })}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Plano" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 {plans.map((p) => (
                   <SelectItem key={p.code} value={p.code}>{p.name}</SelectItem>
                 ))}
