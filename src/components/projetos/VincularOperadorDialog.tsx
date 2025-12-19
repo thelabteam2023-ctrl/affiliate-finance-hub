@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import {
   Dialog,
   DialogContent,
@@ -20,17 +21,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { ChevronDown, ChevronUp, FileText } from "lucide-react";
+import { ChevronDown, ChevronUp, FileText, User, Shield } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Badge } from "@/components/ui/badge";
 
-interface Operador {
-  operador_id: string;
-  nome: string;
+interface EligibleUser {
+  user_id: string;
+  display_name: string;
+  email: string | null;
   cpf: string | null;
+  role_base: string;
+  eligible_by_role: boolean;
+  eligible_by_extra: boolean;
+  operador_id: string | null;
 }
 
 interface VincularOperadorDialogProps {
@@ -55,22 +62,30 @@ const BASES_CALCULO = [
   { value: "RESULTADO_OPERACAO", label: "Resultado da Operação" },
 ];
 
+const ROLE_LABELS: Record<string, string> = {
+  owner: "Proprietário",
+  admin: "Administrador",
+  finance: "Financeiro",
+  operator: "Operador",
+  viewer: "Visualizador",
+};
+
 export function VincularOperadorDialog({
   open,
   onOpenChange,
   projetoId,
   onSuccess,
 }: VincularOperadorDialogProps) {
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
-  const [operadores, setOperadores] = useState<Operador[]>([]);
-  const [operadoresVinculados, setOperadoresVinculados] = useState<string[]>([]);
+  const [eligibleUsers, setEligibleUsers] = useState<EligibleUser[]>([]);
+  const [usersVinculados, setUsersVinculados] = useState<string[]>([]);
   const [acordoExpanded, setAcordoExpanded] = useState(false);
   const [formData, setFormData] = useState({
-    operador_id: "",
+    selected_user_id: "",
     funcao: "",
     data_entrada: new Date().toISOString().split("T")[0],
     resumo_acordo: "",
-    // Campos de referência do acordo (opcionais)
     modelo_pagamento: "FIXO_MENSAL",
     valor_fixo: "",
     percentual: "",
@@ -78,11 +93,11 @@ export function VincularOperadorDialog({
   });
 
   useEffect(() => {
-    if (open) {
-      fetchOperadores();
-      fetchOperadoresVinculados();
+    if (open && workspaceId) {
+      fetchEligibleUsers();
+      fetchUsersVinculados();
       setFormData({
-        operador_id: "",
+        selected_user_id: "",
         funcao: "",
         data_entrada: new Date().toISOString().split("T")[0],
         resumo_acordo: "",
@@ -93,36 +108,47 @@ export function VincularOperadorDialog({
       });
       setAcordoExpanded(false);
     }
-  }, [open, projetoId]);
+  }, [open, projetoId, workspaceId]);
 
-  const fetchOperadores = async () => {
+  const fetchEligibleUsers = async () => {
+    if (!workspaceId) return;
+    
     const { data, error } = await supabase
-      .from("v_operadores_workspace")
-      .select("operador_id, nome, cpf")
-      .eq("is_active", true)
-      .not("operador_id", "is", null)
-      .order("nome");
+      .rpc("get_project_operator_candidates", { _workspace_id: workspaceId });
 
-    if (!error && data) {
-      setOperadores(data.filter(op => op.operador_id) as Operador[]);
+    if (error) {
+      console.error("Erro ao buscar usuários elegíveis:", error);
+      toast.error("Erro ao carregar usuários elegíveis");
+      return;
     }
+    
+    setEligibleUsers(data || []);
   };
 
-  const fetchOperadoresVinculados = async () => {
+  const fetchUsersVinculados = async () => {
+    // Buscar user_ids que já estão vinculados ao projeto via operador_projetos
     const { data, error } = await supabase
       .from("operador_projetos")
-      .select("operador_id")
+      .select("operador_id, operadores!inner(auth_user_id)")
       .eq("projeto_id", projetoId)
       .eq("status", "ATIVO");
 
     if (!error && data) {
-      setOperadoresVinculados(data.map(d => d.operador_id));
+      const vinculados = data
+        .map((d: any) => d.operadores?.auth_user_id)
+        .filter(Boolean);
+      setUsersVinculados(vinculados);
     }
   };
 
   const handleSave = async () => {
-    if (!formData.operador_id) {
-      toast.error("Selecione um operador");
+    if (!formData.selected_user_id) {
+      toast.error("Selecione um usuário");
+      return;
+    }
+
+    if (!workspaceId) {
+      toast.error("Workspace não identificado");
       return;
     }
 
@@ -134,15 +160,55 @@ export function VincularOperadorDialog({
         return;
       }
 
-      const insertData: any = {
-        operador_id: formData.operador_id,
+      // Validar elegibilidade no backend
+      const { data: isEligible, error: eligibleError } = await supabase
+        .rpc("validate_operator_eligibility", {
+          _user_id: formData.selected_user_id,
+          _workspace_id: workspaceId
+        });
+
+      if (eligibleError || !isEligible) {
+        toast.error("Usuário não está elegível para vínculo em projetos");
+        return;
+      }
+
+      // Buscar ou criar registro do operador
+      const selectedUser = eligibleUsers.find(u => u.user_id === formData.selected_user_id);
+      let operadorId = selectedUser?.operador_id;
+
+      if (!operadorId) {
+        // Criar registro na tabela operadores
+        const { data: novoOperador, error: opError } = await supabase
+          .from("operadores")
+          .insert({
+            auth_user_id: formData.selected_user_id,
+            workspace_id: workspaceId,
+            user_id: session.session.user.id,
+            nome: selectedUser?.display_name || "Operador",
+            email: selectedUser?.email,
+            cpf: selectedUser?.cpf,
+            status: "ATIVO",
+          })
+          .select("id")
+          .single();
+
+        if (opError) {
+          console.error("Erro ao criar operador:", opError);
+          toast.error("Erro ao criar registro de operador");
+          return;
+        }
+        operadorId = novoOperador.id;
+      }
+
+      // Criar vínculo com projeto
+      const insertData = {
+        operador_id: operadorId,
         projeto_id: projetoId,
         funcao: formData.funcao || null,
         data_entrada: formData.data_entrada,
         status: "ATIVO",
         user_id: session.session.user.id,
         resumo_acordo: formData.resumo_acordo || null,
-        // Campos de referência (opcionais - não usados para cálculo automático)
         modelo_pagamento: formData.modelo_pagamento,
         valor_fixo: formData.valor_fixo ? parseFloat(formData.valor_fixo) : 0,
         percentual: formData.percentual ? parseFloat(formData.percentual) : 0,
@@ -153,12 +219,12 @@ export function VincularOperadorDialog({
 
       if (error) throw error;
       
-      toast.success("Operador vinculado com sucesso");
+      toast.success("Usuário vinculado ao projeto com sucesso");
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
       if (error.code === "23505") {
-        toast.error("Este operador já está vinculado ao projeto");
+        toast.error("Este usuário já está vinculado ao projeto");
       } else {
         toast.error("Erro ao vincular: " + error.message);
       }
@@ -167,20 +233,41 @@ export function VincularOperadorDialog({
     }
   };
 
-  const operadoresDisponiveis = operadores.filter(
-    op => op.operador_id && !operadoresVinculados.includes(op.operador_id)
+  // Filtrar usuários que ainda não estão vinculados
+  const usersDisponiveis = eligibleUsers.filter(
+    user => !usersVinculados.includes(user.user_id)
   );
 
   const showValorFixo = ["FIXO_MENSAL", "HIBRIDO"].includes(formData.modelo_pagamento);
   const showPercentual = ["PORCENTAGEM", "HIBRIDO", "PROPORCIONAL_LUCRO", "COMISSAO_ESCALONADA"].includes(formData.modelo_pagamento);
 
+  const getEligibilityBadge = (user: EligibleUser) => {
+    if (user.eligible_by_role) {
+      return (
+        <Badge variant="outline" className="text-xs ml-2">
+          <User className="h-3 w-3 mr-1" />
+          {ROLE_LABELS[user.role_base] || user.role_base}
+        </Badge>
+      );
+    }
+    if (user.eligible_by_extra) {
+      return (
+        <Badge variant="secondary" className="text-xs ml-2">
+          <Shield className="h-3 w-3 mr-1" />
+          Permissão Extra
+        </Badge>
+      );
+    }
+    return null;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Vincular Operador ao Projeto</DialogTitle>
+          <DialogTitle>Vincular Usuário ao Projeto</DialogTitle>
           <DialogDescription>
-            Configure o vínculo do operador. Os campos de acordo são apenas para referência.
+            Selecione um usuário elegível para vincular ao projeto. Usuários podem ser elegíveis por função ou permissões adicionais.
           </DialogDescription>
         </DialogHeader>
 
@@ -188,28 +275,34 @@ export function VincularOperadorDialog({
           {/* Seção Obrigatória */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Operador *</Label>
+              <Label>Usuário Elegível *</Label>
               <Select
-                value={formData.operador_id}
-                onValueChange={(value) => setFormData({ ...formData, operador_id: value })}
+                value={formData.selected_user_id}
+                onValueChange={(value) => setFormData({ ...formData, selected_user_id: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione um operador" />
+                  <SelectValue placeholder="Selecione um usuário elegível" />
                 </SelectTrigger>
                 <SelectContent>
-                  {operadoresDisponiveis.length === 0 ? (
+                  {usersDisponiveis.length === 0 ? (
                     <SelectItem value="none" disabled>
-                      Nenhum operador disponível
+                      Nenhum usuário elegível disponível
                     </SelectItem>
                   ) : (
-                    operadoresDisponiveis.map((op) => (
-                      <SelectItem key={op.operador_id} value={op.operador_id}>
-                        {op.nome}
+                    usersDisponiveis.map((user) => (
+                      <SelectItem key={user.user_id} value={user.user_id}>
+                        <div className="flex items-center">
+                          <span>{user.display_name}</span>
+                          {getEligibilityBadge(user)}
+                        </div>
                       </SelectItem>
                     ))
                   )}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                Lista inclui usuários com função de operador ou permissões adicionais de projeto
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -344,7 +437,7 @@ export function VincularOperadorDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={loading || !formData.operador_id}>
+          <Button onClick={handleSave} disabled={loading || !formData.selected_user_id}>
             {loading ? "Vinculando..." : "Vincular"}
           </Button>
         </div>

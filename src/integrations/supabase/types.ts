@@ -7549,6 +7549,19 @@ export type Database = {
         }[]
       }
       get_plan_entitlements: { Args: { plan_name: string }; Returns: Json }
+      get_project_operator_candidates: {
+        Args: { _workspace_id: string }
+        Returns: {
+          cpf: string
+          display_name: string
+          eligible_by_extra: boolean
+          eligible_by_role: boolean
+          email: string
+          operador_id: string
+          role_base: string
+          user_id: string
+        }[]
+      }
       get_public_plans: { Args: never; Returns: Json }
       get_remaining_days: { Args: { p_expires_at: string }; Returns: number }
       get_subscription_details: {
@@ -7690,6 +7703,10 @@ export type Database = {
       user_has_pro_access: { Args: { _user_id: string }; Returns: boolean }
       user_is_owner_or_admin: {
         Args: { check_user_id: string }
+        Returns: boolean
+      }
+      validate_operator_eligibility: {
+        Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
       workspace_has_group_access: {
