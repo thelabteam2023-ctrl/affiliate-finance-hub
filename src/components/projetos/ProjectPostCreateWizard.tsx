@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import {
@@ -40,14 +40,16 @@ import {
   Shield,
   Check,
   Sparkles,
-  SkipForward
+  SkipForward,
+  Plus,
+  RotateCcw
 } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { addMonths, addDays } from "date-fns";
+import { addMonths, addDays, format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface ProjectPostCreateWizardProps {
@@ -190,6 +192,16 @@ function getEligibilityBadge(user: EligibleUser) {
   return null;
 }
 
+// Created cycle info for success screen
+interface CreatedCycleInfo {
+  numero_ciclo: number;
+  data_inicio: string;
+  data_fim_prevista: string;
+  tipo_gatilho: string;
+  meta_volume: number | null;
+  metrica_acumuladora: string;
+}
+
 export function ProjectPostCreateWizard({
   open,
   onOpenChange,
@@ -199,11 +211,20 @@ export function ProjectPostCreateWizard({
 }: ProjectPostCreateWizardProps) {
   const { workspaceId } = useWorkspace();
   
+  // Stable "today" value to avoid re-renders - computed once on mount
+  const todayRef = useRef(new Date().toISOString().split("T")[0]);
+  const defaultEndDateRef = useRef(addMonths(new Date(), 1).toISOString().split("T")[0]);
+  
   // Wizard state
   const [step, setStep] = useState<WizardStep>("choose");
   const [hasOperatorLinked, setHasOperatorLinked] = useState(false);
   const [hasCycle, setHasCycle] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Cycle success state (for "create another?" flow)
+  const [cycleCreatedSuccess, setCycleCreatedSuccess] = useState(false);
+  const [createdCycleInfo, setCreatedCycleInfo] = useState<CreatedCycleInfo | null>(null);
+  const [isSubmittingCycle, setIsSubmittingCycle] = useState(false);
   
   // Operator form state
   const [eligibleUsers, setEligibleUsers] = useState<EligibleUser[]>([]);
@@ -213,7 +234,7 @@ export function ProjectPostCreateWizard({
   // Separate state for each field to avoid re-renders
   const [opSelectedUserId, setOpSelectedUserId] = useState("");
   const [opFuncao, setOpFuncao] = useState("");
-  const [opDataEntrada, setOpDataEntrada] = useState(new Date().toISOString().split("T")[0]);
+  const [opDataEntrada, setOpDataEntrada] = useState(todayRef.current);
   const [opResumoAcordo, setOpResumoAcordo] = useState("");
   const [opModeloPagamento, setOpModeloPagamento] = useState("FIXO_MENSAL");
   const [opValorFixo, setOpValorFixo] = useState("");
@@ -223,8 +244,8 @@ export function ProjectPostCreateWizard({
   // Cycle form state
   const [operadoresProjeto, setOperadoresProjeto] = useState<OperadorProjeto[]>([]);
   const [cicloOperadorProjetoId, setCicloOperadorProjetoId] = useState("");
-  const [cicloDataInicio, setCicloDataInicio] = useState(new Date().toISOString().split("T")[0]);
-  const [cicloDataFimPrevista, setCicloDataFimPrevista] = useState(addMonths(new Date(), 1).toISOString().split("T")[0]);
+  const [cicloDataInicio, setCicloDataInicio] = useState(todayRef.current);
+  const [cicloDataFimPrevista, setCicloDataFimPrevista] = useState(defaultEndDateRef.current);
   const [cicloTipoGatilho, setCicloTipoGatilho] = useState("TEMPO");
   const [cicloMetaVolume, setCicloMetaVolume] = useState("");
   const [cicloMetricaAcumuladora, setCicloMetricaAcumuladora] = useState("LUCRO");
@@ -312,8 +333,18 @@ export function ProjectPostCreateWizard({
     }
   }, [projectId]);
 
-  const fetchCicloData = useCallback(async () => {
+  // Fetch cycle data - use today as default, or sequential dates if cycles exist
+  const fetchCicloData = useCallback(async (forceToday = false) => {
     if (!projectId) return;
+    
+    // When forceToday is true, we're resetting for a new cycle after success
+    if (forceToday) {
+      const today = new Date();
+      const endDate = addMonths(today, 1);
+      setCicloDataInicio(today.toISOString().split("T")[0]);
+      setCicloDataFimPrevista(endDate.toISOString().split("T")[0]);
+      return;
+    }
     
     const { data: lastCycle } = await supabase
       .from("projeto_ciclos")
@@ -324,23 +355,17 @@ export function ProjectPostCreateWizard({
       .maybeSingle();
 
     if (lastCycle) {
+      // Sequential dates based on last cycle
       const novaDataInicio = addDays(new Date(lastCycle.data_fim_prevista), 1);
       const novaDataFim = addMonths(novaDataInicio, 1);
       setCicloDataInicio(novaDataInicio.toISOString().split("T")[0]);
       setCicloDataFimPrevista(novaDataFim.toISOString().split("T")[0]);
     } else {
-      const { data: projeto } = await supabase
-        .from("projetos")
-        .select("data_inicio")
-        .eq("id", projectId)
-        .maybeSingle();
-
-      if (projeto?.data_inicio) {
-        const dataInicio = new Date(projeto.data_inicio);
-        const dataFim = addMonths(dataInicio, 1);
-        setCicloDataInicio(projeto.data_inicio);
-        setCicloDataFimPrevista(dataFim.toISOString().split("T")[0]);
-      }
+      // First cycle: default to TODAY (not project start date)
+      const today = new Date();
+      const dataFim = addMonths(today, 1);
+      setCicloDataInicio(today.toISOString().split("T")[0]);
+      setCicloDataFimPrevista(dataFim.toISOString().split("T")[0]);
     }
   }, [projectId]);
 
@@ -348,7 +373,7 @@ export function ProjectPostCreateWizard({
   const resetOperatorForm = useCallback(() => {
     setOpSelectedUserId("");
     setOpFuncao("");
-    setOpDataEntrada(new Date().toISOString().split("T")[0]);
+    setOpDataEntrada(todayRef.current);
     setOpResumoAcordo("");
     setOpModeloPagamento("FIXO_MENSAL");
     setOpValorFixo("");
@@ -357,24 +382,37 @@ export function ProjectPostCreateWizard({
     setAcordoExpanded(false);
   }, []);
 
+  // Reset cycle form for "create another" flow
+  const resetCycleForm = useCallback(() => {
+    setCicloOperadorProjetoId("");
+    setCicloTipoGatilho("TEMPO");
+    setCicloMetaVolume("");
+    setCicloMetricaAcumuladora("LUCRO");
+    setCicloObservacoes("");
+    setCycleCreatedSuccess(false);
+    setCreatedCycleInfo(null);
+  }, []);
+
   useEffect(() => {
     if (open && projectId) {
       setStep("choose");
+      setCycleCreatedSuccess(false);
+      setCreatedCycleInfo(null);
       fetchProjectStatus();
       fetchEligibleUsers();
       fetchUsersVinculados();
       fetchOperadoresProjeto();
       fetchCicloData();
       resetOperatorForm();
+      resetCycleForm();
     }
-  }, [open, projectId, fetchProjectStatus, fetchEligibleUsers, fetchUsersVinculados, fetchOperadoresProjeto, fetchCicloData, resetOperatorForm]);
+  }, [open, projectId, fetchProjectStatus, fetchEligibleUsers, fetchUsersVinculados, fetchOperadoresProjeto, fetchCicloData, resetOperatorForm, resetCycleForm]);
 
   const refetchAll = async () => {
     await Promise.all([
       fetchProjectStatus(),
       fetchUsersVinculados(),
       fetchOperadoresProjeto(),
-      fetchCicloData(),
     ]);
   };
 
@@ -481,8 +519,11 @@ export function ProjectPostCreateWizard({
     }
   };
 
-  // Save cycle
+  // Save cycle with duplicate prevention
   const handleSaveCycle = async () => {
+    // Prevent double submit
+    if (isSubmittingCycle || loading) return;
+    
     if (!cicloDataInicio || !cicloDataFimPrevista) {
       toast.error("Preencha as datas do ciclo");
       return;
@@ -500,11 +541,30 @@ export function ProjectPostCreateWizard({
       return;
     }
 
+    setIsSubmittingCycle(true);
     setLoading(true);
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
         toast.error("Usuário não autenticado");
+        return;
+      }
+
+      // Backend duplicate check: prevent creating identical cycle in the last 60 seconds
+      const sixtySecondsAgo = new Date(Date.now() - 60000).toISOString();
+      const { data: recentDuplicate } = await supabase
+        .from("projeto_ciclos")
+        .select("id, numero_ciclo")
+        .eq("projeto_id", projectId)
+        .eq("data_inicio", cicloDataInicio)
+        .eq("data_fim_prevista", cicloDataFimPrevista)
+        .eq("tipo_gatilho", cicloTipoGatilho)
+        .gte("created_at", sixtySecondsAgo)
+        .limit(1)
+        .maybeSingle();
+
+      if (recentDuplicate) {
+        toast.error("Ciclo idêntico já foi criado recentemente. Use 'Criar outro ciclo' para adicionar um novo.");
         return;
       }
 
@@ -566,13 +626,33 @@ export function ProjectPostCreateWizard({
           });
       }
 
-      toast.success("Ciclo criado com sucesso!");
+      // Show success state with cycle info
+      setCreatedCycleInfo({
+        numero_ciclo: proximoNumero,
+        data_inicio: cicloDataInicio,
+        data_fim_prevista: cicloDataFimPrevista,
+        tipo_gatilho: cicloTipoGatilho,
+        meta_volume: cicloMetaVolume ? parseFloat(cicloMetaVolume) : null,
+        metrica_acumuladora: cicloMetricaAcumuladora,
+      });
+      setCycleCreatedSuccess(true);
+      
+      toast.success(`Ciclo ${proximoNumero} criado com sucesso!`);
       await refetchAll();
+      await fetchProjectStatus(); // Update hasCycle
     } catch (error: any) {
       toast.error("Erro ao salvar: " + error.message);
     } finally {
       setLoading(false);
+      setIsSubmittingCycle(false);
     }
+  };
+
+  // Handle "Create another cycle"
+  const handleCreateAnotherCycle = async () => {
+    resetCycleForm();
+    // Fetch new sequential dates based on the cycle we just created
+    await fetchCicloData();
   };
 
   const handleClose = () => {
@@ -856,125 +936,174 @@ export function ProjectPostCreateWizard({
 
           {step === "createCycle" && (
             <div className="space-y-5">
-              {hasCycle && (
-                <div className="p-3 rounded-lg bg-success/10 border border-success/20 flex items-center gap-2">
-                  <Check className="h-4 w-4 text-success shrink-0" />
-                  <span className="text-sm text-success">Já existe um ciclo criado</span>
-                </div>
-              )}
+              {/* Success state after creating a cycle */}
+              {cycleCreatedSuccess && createdCycleInfo ? (
+                <div className="space-y-6">
+                  <div className="text-center space-y-3">
+                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-success/10">
+                      <CheckCircle2 className="h-7 w-7 text-success" />
+                    </div>
+                    <h3 className="text-lg font-semibold">Ciclo {createdCycleInfo.numero_ciclo} criado com sucesso!</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Deseja criar outro ciclo agora?
+                    </p>
+                  </div>
 
-              {operadoresProjeto.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Operador Vinculado (opcional)</Label>
-                  <Select value={cicloOperadorProjetoId} onValueChange={handleOperadorChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Ciclo geral do projeto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Ciclo geral do projeto</SelectItem>
-                      {operadoresProjeto.map((op) => (
-                        <SelectItem key={op.id} value={op.id}>
-                          {op.operador?.nome} - {TIPOS_GATILHO.find(t => t.value === op.tipo_gatilho)?.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label>Tipo de Gatilho *</Label>
-                <Select value={cicloTipoGatilho} onValueChange={setCicloTipoGatilho}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TIPOS_GATILHO.map((tipo) => (
-                      <SelectItem key={tipo.value} value={tipo.value}>
-                        <div className="flex items-center gap-2">
-                          <tipo.icon className="h-4 w-4" />
-                          {tipo.label}
+                  {/* Cycle summary */}
+                  <div className="space-y-3 p-4 rounded-lg bg-muted/50 border">
+                    <h4 className="font-medium text-sm">Resumo do Ciclo Criado</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Período</span>
+                        <span className="font-medium">
+                          {format(new Date(createdCycleInfo.data_inicio), "dd/MM/yyyy")} - {format(new Date(createdCycleInfo.data_fim_prevista), "dd/MM/yyyy")}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Gatilho</span>
+                        <span className="font-medium">
+                          {TIPOS_GATILHO.find(t => t.value === createdCycleInfo.tipo_gatilho)?.label}
+                        </span>
+                      </div>
+                      {createdCycleInfo.meta_volume && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Meta</span>
+                          <span className="font-medium">
+                            R$ {createdCycleInfo.meta_volume.toLocaleString("pt-BR")} ({METRICAS.find(m => m.value === createdCycleInfo.metrica_acumuladora)?.label})
+                          </span>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                      )}
+                    </div>
+                  </div>
 
-              {showVolumeFields && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Action buttons */}
+                  <div className="flex flex-col gap-2">
+                    <Button onClick={handleCreateAnotherCycle} variant="outline" className="w-full gap-2">
+                      <Plus className="h-4 w-4" />
+                      Criar outro ciclo
+                    </Button>
+                    {!hasOperatorLinked && (
+                      <Button 
+                        variant="outline" 
+                        className="w-full gap-2" 
+                        onClick={() => {
+                          setCycleCreatedSuccess(false);
+                          setStep("linkOperator");
+                        }}
+                      >
+                        <Users className="h-4 w-4" />
+                        Vincular Operador
+                      </Button>
+                    )}
+                    <Button onClick={() => setStep("done")} className="w-full gap-2">
+                      Concluir
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                /* Form state - creating a new cycle */
+                <>
+                  {hasCycle && !cycleCreatedSuccess && (
+                    <div className="p-3 rounded-lg bg-muted/50 border flex items-center gap-2">
+                      <Check className="h-4 w-4 text-success shrink-0" />
+                      <span className="text-sm text-muted-foreground">Já existe um ciclo criado. Você pode criar outro abaixo.</span>
+                    </div>
+                  )}
+
+                  {operadoresProjeto.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Operador Vinculado (opcional)</Label>
+                      <Select value={cicloOperadorProjetoId} onValueChange={handleOperadorChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Ciclo geral do projeto" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Ciclo geral do projeto</SelectItem>
+                          {operadoresProjeto.map((op) => (
+                            <SelectItem key={op.id} value={op.id}>
+                              {op.operador?.nome} - {TIPOS_GATILHO.find(t => t.value === op.tipo_gatilho)?.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <Separator />
+
                   <div className="space-y-2">
-                    <Label>Métrica Acumuladora *</Label>
-                    <Select value={cicloMetricaAcumuladora} onValueChange={setCicloMetricaAcumuladora}>
+                    <Label>Tipo de Gatilho *</Label>
+                    <Select value={cicloTipoGatilho} onValueChange={setCicloTipoGatilho}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {METRICAS.map((m) => (
-                          <SelectItem key={m.value} value={m.value}>
-                            {m.label}
+                        {TIPOS_GATILHO.map((tipo) => (
+                          <SelectItem key={tipo.value} value={tipo.value}>
+                            <div className="flex items-center gap-2">
+                              <tipo.icon className="h-4 w-4" />
+                              {tipo.label}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>
-                      {cicloMetricaAcumuladora === "LUCRO" ? "Meta de Lucro (R$)" : "Meta de Volume (R$)"} *
-                    </Label>
-                    <Input
-                      type="number"
-                      step="100"
-                      min="0"
-                      value={cicloMetaVolume}
-                      onChange={(e) => setCicloMetaVolume(e.target.value)}
-                      placeholder={cicloMetricaAcumuladora === "LUCRO" ? "5000" : "150000"}
-                    />
-                  </div>
-                </div>
-              )}
+                  {showVolumeFields && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Métrica Acumuladora *</Label>
+                        <Select value={cicloMetricaAcumuladora} onValueChange={setCicloMetricaAcumuladora}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {METRICAS.map((m) => (
+                              <SelectItem key={m.value} value={m.value}>
+                                {m.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Data Início *</Label>
-                  <DatePicker value={cicloDataInicio} onChange={setCicloDataInicio} />
-                </div>
-                <div className="space-y-2">
-                  <Label>{cicloTipoGatilho === "VOLUME" ? "Data Limite" : "Data Fim Prevista"} *</Label>
-                  <DatePicker value={cicloDataFimPrevista} onChange={setCicloDataFimPrevista} />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Observações</Label>
-                <Textarea
-                  value={cicloObservacoes}
-                  onChange={(e) => setCicloObservacoes(e.target.value)}
-                  placeholder="Notas sobre este ciclo..."
-                  rows={2}
-                />
-              </div>
-
-              {hasCycle && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground text-center">Próximos passos:</p>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      {!hasOperatorLinked && (
-                        <Button variant="outline" className="flex-1 gap-2" onClick={() => setStep("linkOperator")}>
-                          <Users className="h-4 w-4" />
-                          Vincular Operador
-                        </Button>
-                      )}
-                      <Button variant="default" className="flex-1 gap-2" onClick={() => setStep("done")}>
-                        Concluir
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
+                      <div className="space-y-2">
+                        <Label>
+                          {cicloMetricaAcumuladora === "LUCRO" ? "Meta de Lucro (R$)" : "Meta de Volume (R$)"} *
+                        </Label>
+                        <Input
+                          type="number"
+                          step="100"
+                          min="0"
+                          value={cicloMetaVolume}
+                          onChange={(e) => setCicloMetaVolume(e.target.value)}
+                          placeholder={cicloMetricaAcumuladora === "LUCRO" ? "5000" : "150000"}
+                        />
+                      </div>
                     </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Data Início *</Label>
+                      <DatePicker value={cicloDataInicio} onChange={setCicloDataInicio} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{cicloTipoGatilho === "VOLUME" ? "Data Limite" : "Data Fim Prevista"} *</Label>
+                      <DatePicker value={cicloDataFimPrevista} onChange={setCicloDataFimPrevista} />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Observações</Label>
+                    <Textarea
+                      value={cicloObservacoes}
+                      onChange={(e) => setCicloObservacoes(e.target.value)}
+                      placeholder="Notas sobre este ciclo..."
+                      rows={2}
+                    />
                   </div>
                 </>
               )}
@@ -1027,10 +1156,19 @@ export function ProjectPostCreateWizard({
           )}
         </div>
 
-        {/* Footer - fixed */}
-        {step !== "done" && step !== "choose" && (
+        {/* Footer - fixed (hide when in cycle success state) */}
+        {step !== "done" && step !== "choose" && !(step === "createCycle" && cycleCreatedSuccess) && (
           <div className="px-6 py-4 border-t bg-muted/30 backdrop-blur-sm flex justify-between items-center">
-            <Button variant="outline" onClick={() => setStep("choose")} className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                if (step === "createCycle") {
+                  setCycleCreatedSuccess(false);
+                }
+                setStep("choose");
+              }} 
+              className="gap-2"
+            >
               <ChevronLeft className="h-4 w-4" />
               Voltar
             </Button>
@@ -1042,8 +1180,11 @@ export function ProjectPostCreateWizard({
                 {loading ? "Vinculando..." : "Vincular Operador"}
               </Button>
             )}
-            {step === "createCycle" && (
-              <Button onClick={handleSaveCycle} disabled={loading}>
+            {step === "createCycle" && !cycleCreatedSuccess && (
+              <Button 
+                onClick={handleSaveCycle} 
+                disabled={loading || isSubmittingCycle}
+              >
                 {loading ? "Criando..." : "Criar Ciclo"}
               </Button>
             )}
