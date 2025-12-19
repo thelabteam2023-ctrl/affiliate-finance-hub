@@ -10,10 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell, Legend
-} from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { ModernBarChart } from '@/components/ui/modern-bar-chart';
 import { 
   RefreshCw, TrendingUp, DollarSign, CreditCard, Users, 
   XCircle, RotateCcw, Plus, MoreHorizontal, ArrowUpRight, ArrowDownRight
@@ -219,35 +217,24 @@ export function BillingDashboardTab() {
             <CardDescription>Distribuição de receita</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={revenueByPlan} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    type="number" 
-                    tickFormatter={(value) => formatShortCurrency(value)}
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                  />
-                  <YAxis 
-                    type="category" 
-                    dataKey="plan_name" 
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    width={80}
-                  />
-                  <Tooltip 
-                    formatter={(value: number) => [formatCurrency(value), 'Receita']}
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))', 
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px'
-                    }}
-                  />
-                  <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <ModernBarChart
+              data={revenueByPlan.map(item => ({
+                plan: item.plan_name,
+                receita: item.revenue,
+              }))}
+              categoryKey="plan"
+              bars={[
+                {
+                  dataKey: 'receita',
+                  label: 'Receita',
+                  gradientStart: 'hsl(var(--primary))',
+                  gradientEnd: 'hsl(142, 71%, 45%)',
+                },
+              ]}
+              height={300}
+              showLabels
+              formatValue={(value) => formatCurrency(value)}
+            />
           </CardContent>
         </Card>
       </div>
