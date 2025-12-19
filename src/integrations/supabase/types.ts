@@ -7265,6 +7265,20 @@ export type Database = {
         Args: { _confirmation_phrase?: string; _dry_run?: boolean }
         Returns: Json
       }
+      admin_resolve_workspaces_by_owner_identifiers: {
+        Args: { p_tokens: string[] }
+        Returns: {
+          owner_email: string
+          owner_id: string
+          owner_public_id: string
+          status: string
+          token: string
+          token_type: string
+          workspace_id: string
+          workspace_name: string
+          workspace_plan: string
+        }[]
+      }
       admin_set_test_user: {
         Args: { _is_test: boolean; _user_id: string }
         Returns: undefined
