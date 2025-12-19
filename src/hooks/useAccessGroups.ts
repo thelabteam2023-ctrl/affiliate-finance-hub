@@ -26,6 +26,7 @@ export interface GroupWorkspace {
     id: string;
     name: string;
     owner_email?: string;
+    owner_public_id?: string;
   };
 }
 
@@ -41,6 +42,26 @@ export interface GroupBookmaker {
     logo_url: string | null;
     visibility: string | null;
   };
+}
+
+export interface ResolvedWorkspace {
+  token: string;
+  token_type: 'id' | 'email' | 'invalid';
+  status: 'found' | 'not_found' | 'no_workspace' | 'invalid_format';
+  owner_id: string | null;
+  owner_public_id: string | null;
+  owner_email: string | null;
+  workspace_id: string | null;
+  workspace_name: string | null;
+  workspace_plan: string | null;
+  selected?: boolean;
+}
+
+export interface BatchResolveResult {
+  found: ResolvedWorkspace[];
+  notFound: ResolvedWorkspace[];
+  noWorkspace: ResolvedWorkspace[];
+  invalid: ResolvedWorkspace[];
 }
 
 export function useAccessGroups() {
@@ -177,15 +198,18 @@ export function useAccessGroups() {
         workspace_id,
         user_id,
         role,
-        profile:profiles(email)
+        profile:profiles(email, public_id)
       `)
       .in("workspace_id", workspaceIds)
       .eq("role", "owner");
 
-    const ownerMap = new Map<string, string>();
+    const ownerMap = new Map<string, { email: string; public_id: string }>();
     membersData?.forEach((m: any) => {
       if (m.profile?.email) {
-        ownerMap.set(m.workspace_id, m.profile.email);
+        ownerMap.set(m.workspace_id, {
+          email: m.profile.email,
+          public_id: m.profile.public_id || "",
+        });
       }
     });
 
@@ -193,7 +217,8 @@ export function useAccessGroups() {
       ...d,
       workspace: d.workspace ? {
         ...d.workspace,
-        owner_email: ownerMap.get(d.workspace_id) || "",
+        owner_email: ownerMap.get(d.workspace_id)?.email || "",
+        owner_public_id: ownerMap.get(d.workspace_id)?.public_id || "",
       } : undefined,
     }));
   };
@@ -230,67 +255,111 @@ export function useAccessGroups() {
     await fetchGroups();
   };
 
-  // Find workspaces by owner email using server-side RPC
+  // Parse and classify tokens from input
+  const parseTokens = (input: string): string[] => {
+    return [...new Set(
+      input
+        .toLowerCase()
+        .trim()
+        .split(/[\s,;\n]+/)
+        .map(t => t.trim())
+        .filter(t => t.length > 0)
+    )];
+  };
+
+  // Resolve workspaces by owner identifiers (IDs or emails)
+  const resolveWorkspacesByOwnerIdentifiers = async (tokens: string[]): Promise<BatchResolveResult> => {
+    if (tokens.length === 0) {
+      return { found: [], notFound: [], noWorkspace: [], invalid: [] };
+    }
+
+    console.log('[resolveWorkspacesByOwnerIdentifiers] Tokens:', tokens);
+
+    const { data, error } = await supabase
+      .rpc('admin_resolve_workspaces_by_owner_identifiers', { p_tokens: tokens });
+
+    if (error) {
+      console.error('[resolveWorkspacesByOwnerIdentifiers] RPC error:', error);
+      throw error;
+    }
+
+    console.log('[resolveWorkspacesByOwnerIdentifiers] RPC result:', data);
+
+    const found: ResolvedWorkspace[] = [];
+    const notFound: ResolvedWorkspace[] = [];
+    const noWorkspace: ResolvedWorkspace[] = [];
+    const invalid: ResolvedWorkspace[] = [];
+
+    // Track unique tokens for each category
+    const processedTokens = new Map<string, boolean>();
+
+    (data || []).forEach((row: any) => {
+      const item: ResolvedWorkspace = {
+        token: row.token,
+        token_type: row.token_type as 'id' | 'email' | 'invalid',
+        status: row.status as 'found' | 'not_found' | 'no_workspace' | 'invalid_format',
+        owner_id: row.owner_id,
+        owner_public_id: row.owner_public_id,
+        owner_email: row.owner_email,
+        workspace_id: row.workspace_id,
+        workspace_name: row.workspace_name,
+        workspace_plan: row.workspace_plan,
+        selected: row.status === 'found',
+      };
+
+      switch (row.status) {
+        case 'found':
+          found.push(item);
+          break;
+        case 'not_found':
+          if (!processedTokens.has(row.token)) {
+            notFound.push(item);
+            processedTokens.set(row.token, true);
+          }
+          break;
+        case 'no_workspace':
+          if (!processedTokens.has(row.token)) {
+            noWorkspace.push(item);
+            processedTokens.set(row.token, true);
+          }
+          break;
+        case 'invalid_format':
+          if (!processedTokens.has(row.token)) {
+            invalid.push(item);
+            processedTokens.set(row.token, true);
+          }
+          break;
+      }
+    });
+
+    console.log('[resolveWorkspacesByOwnerIdentifiers] Result:', {
+      found: found.length,
+      notFound: notFound.length,
+      noWorkspace: noWorkspace.length,
+      invalid: invalid.length,
+    });
+
+    return { found, notFound, noWorkspace, invalid };
+  };
+
+  // Legacy function for backward compatibility
   const findWorkspacesByEmails = async (emails: string[]): Promise<{ 
     found: Array<{ workspace_id: string; workspace_name: string; email: string }>; 
     notFound: string[];
     membersNotOwners: Array<{ email: string; workspaces: string[] }>;
   }> => {
-    // Normalize: lowercase, trim, split by comma/semicolon/newlines, remove empty and duplicates
-    const normalizedEmails = [...new Set(
-      emails
-        .flatMap(e => e.split(/[\n,;]+/))
-        .map(e => e.toLowerCase().trim())
-        .filter(e => e.length > 0 && e.includes('@'))
-    )];
-
-    console.log('[findWorkspacesByEmails] Normalized emails:', normalizedEmails);
-
-    if (normalizedEmails.length === 0) {
-      return { found: [], notFound: [], membersNotOwners: [] };
-    }
-
-    // Call server-side RPC function
-    const { data, error } = await supabase
-      .rpc('admin_find_workspaces_by_owner_emails', { p_emails: normalizedEmails });
-
-    console.log('[findWorkspacesByEmails] RPC result:', { data, error });
-
-    if (error) {
-      console.error('[findWorkspacesByEmails] RPC error:', error);
-      throw error;
-    }
-
-    const found: Array<{ workspace_id: string; workspace_name: string; email: string }> = [];
-    const foundEmails = new Set<string>();
-    const membersNotOwners: Array<{ email: string; workspaces: string[] }> = [];
-
-    (data || []).forEach((row: any) => {
-      if (row.is_owner && row.workspace_id) {
-        found.push({
-          workspace_id: row.workspace_id,
-          workspace_name: row.workspace_name,
-          email: row.owner_email,
-        });
-        foundEmails.add(row.owner_email.toLowerCase());
-      } else if (row.is_member && !row.is_owner && row.member_workspaces) {
-        membersNotOwners.push({
-          email: row.owner_email,
-          workspaces: row.member_workspaces,
-        });
-        foundEmails.add(row.owner_email.toLowerCase());
-      }
-    });
-
-    const notFound = normalizedEmails.filter(e => !foundEmails.has(e));
-
-    console.log('[findWorkspacesByEmails] Final result:', { 
-      found: found.length, 
-      notFound: notFound.length, 
-      membersNotOwners: membersNotOwners.length 
-    });
-
-    return { found, notFound, membersNotOwners };
+    const tokens = parseTokens(emails.join('\n'));
+    const result = await resolveWorkspacesByOwnerIdentifiers(tokens);
+    
+    return {
+      found: result.found.map(f => ({
+        workspace_id: f.workspace_id!,
+        workspace_name: f.workspace_name!,
+        email: f.owner_email!,
+      })),
+      notFound: result.notFound.map(n => n.token),
+      membersNotOwners: [],
+    };
   };
 
   // Bookmakers in group
@@ -365,6 +434,8 @@ export function useAccessGroups() {
     addWorkspacesToGroup,
     removeWorkspacesFromGroup,
     findWorkspacesByEmails,
+    parseTokens,
+    resolveWorkspacesByOwnerIdentifiers,
     fetchGroupBookmakers,
     addBookmakersToGroup,
     removeBookmakersFromGroup,

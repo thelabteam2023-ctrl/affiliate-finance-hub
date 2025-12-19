@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAccessGroups, AccessGroup, GroupWorkspace } from "@/hooks/useAccessGroups";
+import { useAccessGroups, AccessGroup, GroupWorkspace, ResolvedWorkspace } from "@/hooks/useAccessGroups";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Search, Building2, Trash2, Upload, CheckCircle, XCircle, Loader2, AlertTriangle } from "lucide-react";
+import { Search, Building2, Trash2, Upload, CheckCircle, XCircle, Loader2, AlertTriangle, User } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -28,7 +28,8 @@ export default function AccessGroupWorkspacesDialog({ open, onOpenChange, group 
     fetchGroupWorkspaces,
     addWorkspacesToGroup,
     removeWorkspacesFromGroup,
-    findWorkspacesByEmails,
+    parseTokens,
+    resolveWorkspacesByOwnerIdentifiers,
     fetchGroups,
   } = useAccessGroups();
   const { toast } = useToast();
@@ -41,13 +42,15 @@ export default function AccessGroupWorkspacesDialog({ open, onOpenChange, group 
 
   // Batch import
   const [activeTab, setActiveTab] = useState<string>("list");
-  const [emailsText, setEmailsText] = useState("");
+  const [inputText, setInputText] = useState("");
   const [batchResult, setBatchResult] = useState<{
-    found: Array<{ workspace_id: string; workspace_name: string; email: string }>;
-    notFound: string[];
-    membersNotOwners: Array<{ email: string; workspaces: string[] }>;
+    found: ResolvedWorkspace[];
+    notFound: ResolvedWorkspace[];
+    noWorkspace: ResolvedWorkspace[];
+    invalid: ResolvedWorkspace[];
   } | null>(null);
   const [batchLoading, setBatchLoading] = useState(false);
+  const [selectedForAdd, setSelectedForAdd] = useState<Set<string>>(new Set());
 
   const loadWorkspaces = async () => {
     try {
@@ -69,8 +72,9 @@ export default function AccessGroupWorkspacesDialog({ open, onOpenChange, group 
     if (open) {
       loadWorkspaces();
       setSelectedIds(new Set());
-      setEmailsText("");
+      setInputText("");
       setBatchResult(null);
+      setSelectedForAdd(new Set());
       setActiveTab("list");
     }
   }, [open, group.id]);
@@ -105,15 +109,12 @@ export default function AccessGroupWorkspacesDialog({ open, onOpenChange, group 
     }
   };
 
-  const handleSearchEmails = async () => {
-    const emails = emailsText
-      .split(/[\n,;]+/)
-      .map((e) => e.trim())
-      .filter((e) => e.length > 0);
+  const handleSearchTokens = async () => {
+    const tokens = parseTokens(inputText);
 
-    if (emails.length === 0) {
+    if (tokens.length === 0) {
       toast({
-        title: "Nenhum email informado",
+        title: "Nenhum ID ou email informado",
         variant: "destructive",
       });
       return;
@@ -121,8 +122,18 @@ export default function AccessGroupWorkspacesDialog({ open, onOpenChange, group 
 
     try {
       setBatchLoading(true);
-      const result = await findWorkspacesByEmails(emails);
+      const result = await resolveWorkspacesByOwnerIdentifiers(tokens);
       setBatchResult(result);
+      
+      // Pre-select all found workspaces that are not already in the group
+      const existingIds = new Set(workspaces.map((w) => w.workspace_id));
+      const newSelection = new Set<string>();
+      result.found.forEach(f => {
+        if (f.workspace_id && !existingIds.has(f.workspace_id)) {
+          newSelection.add(f.workspace_id);
+        }
+      });
+      setSelectedForAdd(newSelection);
     } catch (error: any) {
       toast({
         title: "Erro na busca",
@@ -134,30 +145,56 @@ export default function AccessGroupWorkspacesDialog({ open, onOpenChange, group 
     }
   };
 
-  const handleAddFromBatch = async () => {
-    if (!batchResult || batchResult.found.length === 0) return;
+  const handleToggleSelectForAdd = (workspaceId: string) => {
+    const newSet = new Set(selectedForAdd);
+    if (newSet.has(workspaceId)) {
+      newSet.delete(workspaceId);
+    } else {
+      newSet.add(workspaceId);
+    }
+    setSelectedForAdd(newSet);
+  };
 
-    // Filter out workspaces already in the group
+  const handleSelectAll = () => {
+    if (!batchResult) return;
     const existingIds = new Set(workspaces.map((w) => w.workspace_id));
-    const newWorkspaceIds = batchResult.found
-      .filter((f) => !existingIds.has(f.workspace_id))
-      .map((f) => f.workspace_id);
+    const allNewIds = batchResult.found
+      .filter(f => f.workspace_id && !existingIds.has(f.workspace_id))
+      .map(f => f.workspace_id!);
+    setSelectedForAdd(new Set(allNewIds));
+  };
 
-    if (newWorkspaceIds.length === 0) {
+  const handleDeselectAll = () => {
+    setSelectedForAdd(new Set());
+  };
+
+  const handleAddFromBatch = async () => {
+    if (selectedForAdd.size === 0) {
       toast({
-        title: "Todos já estão no grupo",
-        description: "Os workspaces encontrados já fazem parte deste grupo.",
+        title: "Nenhum workspace selecionado",
+        variant: "destructive",
       });
       return;
     }
 
     try {
       setSaving(true);
-      await addWorkspacesToGroup(group.id, newWorkspaceIds);
-      toast({ title: `${newWorkspaceIds.length} workspace(s) adicionado(s)` });
+      const workspaceIds = Array.from(selectedForAdd);
+      await addWorkspacesToGroup(group.id, workspaceIds);
+      
+      const alreadyExisting = batchResult?.found.filter(
+        f => f.workspace_id && !selectedForAdd.has(f.workspace_id)
+      ).length || 0;
+      
+      toast({ 
+        title: "Workspaces adicionados",
+        description: `${workspaceIds.length} adicionado(s)${alreadyExisting > 0 ? `, ${alreadyExisting} já existia(m)` : ''}`,
+      });
+      
       await loadWorkspaces();
       setBatchResult(null);
-      setEmailsText("");
+      setInputText("");
+      setSelectedForAdd(new Set());
       setActiveTab("list");
     } catch (error: any) {
       toast({
@@ -173,29 +210,35 @@ export default function AccessGroupWorkspacesDialog({ open, onOpenChange, group 
   const filteredWorkspaces = workspaces.filter((ws) => {
     const name = ws.workspace?.name?.toLowerCase() || "";
     const email = ws.workspace?.owner_email?.toLowerCase() || "";
+    const publicId = ws.workspace?.owner_public_id?.toLowerCase() || "";
     const term = searchTerm.toLowerCase();
-    return name.includes(term) || email.includes(term);
+    return name.includes(term) || email.includes(term) || publicId.includes(term);
   });
+
+  // Calculate counts for batch result
+  const existingIds = new Set(workspaces.map((w) => w.workspace_id));
+  const newWorkspaces = batchResult?.found.filter(f => f.workspace_id && !existingIds.has(f.workspace_id)) || [];
+  const alreadyInGroup = batchResult?.found.filter(f => f.workspace_id && existingIds.has(f.workspace_id)) || [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Workspaces do Grupo: {group.name}</DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="list">Lista Atual</TabsTrigger>
+            <TabsTrigger value="list">Lista Atual ({workspaces.length})</TabsTrigger>
             <TabsTrigger value="batch">Adicionar em Lote</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="list" className="space-y-4">
+          <TabsContent value="list" className="space-y-4 flex-1 min-h-0">
             <div className="flex items-center gap-2">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
-                  placeholder="Buscar por nome ou email..."
+                  placeholder="Buscar por nome, email ou ID..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -237,7 +280,14 @@ export default function AccessGroupWorkspacesDialog({ open, onOpenChange, group 
                         onCheckedChange={() => handleToggle(ws.workspace_id)}
                       />
                       <div className="flex-1">
-                        <div className="font-medium">{ws.workspace?.name || "—"}</div>
+                        <div className="font-medium flex items-center gap-2">
+                          {ws.workspace?.name || "—"}
+                          {ws.workspace?.owner_public_id && (
+                            <Badge variant="outline" className="text-xs">
+                              #{ws.workspace.owner_public_id}
+                            </Badge>
+                          )}
+                        </div>
                         <div className="text-sm text-muted-foreground">
                           {ws.workspace?.owner_email || "Email não encontrado"}
                         </div>
@@ -249,26 +299,29 @@ export default function AccessGroupWorkspacesDialog({ open, onOpenChange, group 
             )}
           </TabsContent>
 
-          <TabsContent value="batch" className="space-y-4">
+          <TabsContent value="batch" className="space-y-4 flex-1 min-h-0 overflow-auto">
             <div>
               <label className="text-sm font-medium">
-                Cole os emails dos owners (um por linha ou separados por vírgula)
+                Cole IDs (4 dígitos) ou emails dos owners (um por linha ou separados por vírgula/espaço)
               </label>
               <Textarea
-                value={emailsText}
+                value={inputText}
                 onChange={(e) => {
-                  setEmailsText(e.target.value);
+                  setInputText(e.target.value);
                   setBatchResult(null);
                 }}
-                placeholder="owner1@email.com&#10;owner2@email.com&#10;owner3@email.com"
-                rows={5}
-                className="mt-2"
+                placeholder="0257, 0310&#10;owner@email.com&#10;0123 outro@email.com"
+                rows={4}
+                className="mt-2 font-mono text-sm"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Aceita IDs de 4 dígitos e emails misturados. Separadores: vírgula, espaço, ponto-e-vírgula ou nova linha.
+              </p>
             </div>
 
             <Button
-              onClick={handleSearchEmails}
-              disabled={batchLoading || !emailsText.trim()}
+              onClick={handleSearchTokens}
+              disabled={batchLoading || !inputText.trim()}
             >
               {batchLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -280,53 +333,104 @@ export default function AccessGroupWorkspacesDialog({ open, onOpenChange, group 
 
             {batchResult && (
               <div className="space-y-4">
-                {batchResult.found.length > 0 && (
+                {/* Found workspaces - new */}
+                {newWorkspaces.length > 0 && (
                   <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-500" />
-                      <span className="font-medium text-emerald-600">
-                        Encontrados ({batchResult.found.length})
-                      </span>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-emerald-500" />
+                        <span className="font-medium text-emerald-600">
+                          Encontrados ({newWorkspaces.length})
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={handleSelectAll}>
+                          Selecionar todos
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={handleDeselectAll}>
+                          Limpar seleção
+                        </Button>
+                      </div>
                     </div>
-                    <ScrollArea className="h-[150px] border rounded-md">
+                    <ScrollArea className="h-[180px] border rounded-md">
                       <div className="divide-y">
-                        {batchResult.found.map((f, i) => (
-                          <div key={i} className="p-2 text-sm">
-                            <span className="font-medium">{f.workspace_name}</span>
-                            <span className="text-muted-foreground ml-2">({f.email})</span>
+                        {newWorkspaces.map((f, i) => (
+                          <div 
+                            key={`${f.workspace_id}-${i}`} 
+                            className="flex items-center gap-3 p-2 hover:bg-accent/50"
+                          >
+                            <Checkbox
+                              checked={f.workspace_id ? selectedForAdd.has(f.workspace_id) : false}
+                              onCheckedChange={() => f.workspace_id && handleToggleSelectForAdd(f.workspace_id)}
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm">{f.workspace_name}</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {f.workspace_plan}
+                                </Badge>
+                              </div>
+                              <div className="text-xs text-muted-foreground flex items-center gap-2">
+                                <span>#{f.owner_public_id}</span>
+                                <span>•</span>
+                                <span>{f.owner_email}</span>
+                                <span className="text-muted-foreground/60">← {f.token}</span>
+                              </div>
+                            </div>
                           </div>
                         ))}
                       </div>
                     </ScrollArea>
                     <Button
-                      className="mt-2"
+                      className="mt-2 w-full"
                       onClick={handleAddFromBatch}
-                      disabled={saving}
+                      disabled={saving || selectedForAdd.size === 0}
                     >
                       {saving ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
                         <Upload className="mr-2 h-4 w-4" />
                       )}
-                      Adicionar {batchResult.found.length} ao Grupo
+                      Adicionar {selectedForAdd.size} ao Grupo
                     </Button>
                   </div>
                 )}
 
-                {batchResult.membersNotOwners && batchResult.membersNotOwners.length > 0 && (
+                {/* Already in group */}
+                {alreadyInGroup.length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      <CheckCircle className="h-4 w-4 text-blue-500" />
+                      <span className="font-medium text-blue-600">
+                        Já no grupo ({alreadyInGroup.length})
+                      </span>
+                    </div>
+                    <div className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950/30 p-2 rounded-md space-y-1 max-h-[100px] overflow-auto">
+                      {alreadyInGroup.map((f, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="font-medium">{f.workspace_name}</span>
+                          <span className="text-xs">({f.token})</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* User exists but no workspace */}
+                {batchResult.noWorkspace.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <User className="h-4 w-4 text-amber-500" />
                       <span className="font-medium text-amber-600">
-                        Membros (não owners) ({batchResult.membersNotOwners.length})
+                        Usuário sem workspace como owner ({batchResult.noWorkspace.length})
                       </span>
                     </div>
                     <div className="text-sm text-muted-foreground bg-amber-50 dark:bg-amber-950/30 p-2 rounded-md space-y-1">
-                      {batchResult.membersNotOwners.map((m, i) => (
+                      {batchResult.noWorkspace.map((n, i) => (
                         <div key={i}>
-                          <span className="font-medium">{m.email}</span>
-                          <span className="text-xs ml-1">
-                            → membro em: {m.workspaces.join(", ")}
+                          <span className="font-medium">{n.token}</span>
+                          <span className="text-xs ml-2">
+                            (encontrado: #{n.owner_public_id} - {n.owner_email})
                           </span>
                         </div>
                       ))}
@@ -334,6 +438,7 @@ export default function AccessGroupWorkspacesDialog({ open, onOpenChange, group 
                   </div>
                 )}
 
+                {/* Not found */}
                 {batchResult.notFound.length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-2">
@@ -343,8 +448,33 @@ export default function AccessGroupWorkspacesDialog({ open, onOpenChange, group 
                       </span>
                     </div>
                     <div className="text-sm text-muted-foreground bg-muted p-2 rounded-md">
-                      {batchResult.notFound.join(", ")}
+                      {batchResult.notFound.map(n => n.token).join(", ")}
                     </div>
+                  </div>
+                )}
+
+                {/* Invalid format */}
+                {batchResult.invalid.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="h-4 w-4 text-orange-500" />
+                      <span className="font-medium text-orange-600">
+                        Formato inválido ({batchResult.invalid.length})
+                      </span>
+                    </div>
+                    <div className="text-sm text-muted-foreground bg-orange-50 dark:bg-orange-950/30 p-2 rounded-md">
+                      {batchResult.invalid.map(n => n.token).join(", ")}
+                    </div>
+                  </div>
+                )}
+
+                {/* No results at all */}
+                {batchResult.found.length === 0 && 
+                 batchResult.notFound.length === 0 && 
+                 batchResult.noWorkspace.length === 0 && 
+                 batchResult.invalid.length === 0 && (
+                  <div className="py-4 text-center text-muted-foreground">
+                    Nenhum resultado encontrado.
                   </div>
                 )}
               </div>
