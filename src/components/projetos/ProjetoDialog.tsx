@@ -916,9 +916,8 @@ export function ProjetoDialog({
           projectName={novoProjetoNome}
           onFinish={() => {
             setShowVincularPrompt(false);
-            if (novoprojetoId && onCreatedOpenEdit) {
-              onCreatedOpenEdit(novoprojetoId);
-            }
+            // Navigate directly to the project page instead of opening edit dialog
+            window.location.href = `/projeto/${novoprojetoId}`;
           }}
         />
       )}
