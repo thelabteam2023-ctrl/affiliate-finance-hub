@@ -54,7 +54,7 @@ const menuGroups: MenuGroup[] = [
     label: "OPERAÇÃO",
     items: [
       { title: "Projetos", url: "/projetos", icon: FolderKanban, iconName: "FolderKanban", moduleKey: "projetos" },
-      { title: "Casas", url: "/bookmakers", icon: Building2, iconName: "Building2", moduleKey: "bookmakers" },
+      { title: "Bookmakers", url: "/bookmakers", icon: Building2, iconName: "Building2", moduleKey: "bookmakers" },
     ],
   },
   {
