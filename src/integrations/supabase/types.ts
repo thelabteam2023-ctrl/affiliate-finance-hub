@@ -440,6 +440,69 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_events: {
+        Row: {
+          amount: number | null
+          created_at: string
+          currency: string | null
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json | null
+          processed: boolean | null
+          processed_at: string | null
+          provider: string | null
+          provider_event_id: string | null
+          subscription_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          currency?: string | null
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload?: Json | null
+          processed?: boolean | null
+          processed_at?: string | null
+          provider?: string | null
+          provider_event_id?: string | null
+          subscription_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          currency?: string | null
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json | null
+          processed?: boolean | null
+          processed_at?: string | null
+          provider?: string | null
+          provider_event_id?: string | null
+          subscription_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_events_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookmaker_workspace_access: {
         Row: {
           bookmaker_catalogo_id: string
@@ -4743,6 +4806,100 @@ export type Database = {
           },
         ]
       }
+      subscription_changes: {
+        Row: {
+          change_type: string
+          created_at: string
+          effective_at: string
+          from_plan_id: string | null
+          from_price_id: string | null
+          id: string
+          metadata: Json | null
+          performed_by: string | null
+          reason: string | null
+          scheduled_for: string | null
+          subscription_id: string | null
+          to_plan_id: string | null
+          to_price_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          change_type: string
+          created_at?: string
+          effective_at?: string
+          from_plan_id?: string | null
+          from_price_id?: string | null
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          reason?: string | null
+          scheduled_for?: string | null
+          subscription_id?: string | null
+          to_plan_id?: string | null
+          to_price_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          change_type?: string
+          created_at?: string
+          effective_at?: string
+          from_plan_id?: string | null
+          from_price_id?: string | null
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          reason?: string | null
+          scheduled_for?: string | null
+          subscription_id?: string | null
+          to_plan_id?: string | null
+          to_price_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_changes_from_plan_id_fkey"
+            columns: ["from_plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_changes_from_price_id_fkey"
+            columns: ["from_price_id"]
+            isOneToOne: false
+            referencedRelation: "plan_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_changes_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_changes_to_plan_id_fkey"
+            columns: ["to_plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_changes_to_price_id_fkey"
+            columns: ["to_price_id"]
+            isOneToOne: false
+            referencedRelation: "plan_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_changes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       surebets: {
         Row: {
           created_at: string
@@ -5146,6 +5303,100 @@ export type Database = {
             foreignKeyName: "workspace_members_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_subscriptions: {
+        Row: {
+          auto_renew: boolean
+          cancel_at_period_end: boolean
+          canceled_at: string | null
+          created_at: string
+          created_by: string | null
+          current_period: Database["public"]["Enums"]["billing_period"]
+          expires_at: string | null
+          grace_period_days: number
+          id: string
+          metadata: Json | null
+          plan_id: string
+          price_id: string | null
+          provider: string | null
+          provider_customer_id: string | null
+          provider_subscription_id: string | null
+          renews_at: string | null
+          started_at: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+          updated_by: string | null
+          workspace_id: string
+        }
+        Insert: {
+          auto_renew?: boolean
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_period?: Database["public"]["Enums"]["billing_period"]
+          expires_at?: string | null
+          grace_period_days?: number
+          id?: string
+          metadata?: Json | null
+          plan_id: string
+          price_id?: string | null
+          provider?: string | null
+          provider_customer_id?: string | null
+          provider_subscription_id?: string | null
+          renews_at?: string | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          updated_by?: string | null
+          workspace_id: string
+        }
+        Update: {
+          auto_renew?: boolean
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_period?: Database["public"]["Enums"]["billing_period"]
+          expires_at?: string | null
+          grace_period_days?: number
+          id?: string
+          metadata?: Json | null
+          plan_id?: string
+          price_id?: string | null
+          provider?: string | null
+          provider_customer_id?: string | null
+          provider_subscription_id?: string | null
+          renews_at?: string | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          updated_by?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_subscriptions_price_id_fkey"
+            columns: ["price_id"]
+            isOneToOne: false
+            referencedRelation: "plan_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_subscriptions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -6849,6 +7100,29 @@ export type Database = {
         }[]
       }
       admin_hard_delete_users: { Args: { _user_ids: string[] }; Returns: Json }
+      admin_list_subscriptions: {
+        Args: {
+          p_expiring_in_days?: number
+          p_status?: Database["public"]["Enums"]["subscription_status"]
+        }
+        Returns: {
+          cancel_at_period_end: boolean
+          computed_status: Database["public"]["Enums"]["subscription_status"]
+          created_at: string
+          current_period: Database["public"]["Enums"]["billing_period"]
+          expires_at: string
+          is_expiring: boolean
+          plan_code: string
+          plan_name: string
+          price_amount: number
+          remaining_days: number
+          started_at: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          subscription_id: string
+          workspace_id: string
+          workspace_name: string
+        }[]
+      }
       admin_reset_community: {
         Args: { _confirmation_phrase?: string; _dry_run?: boolean }
         Returns: Json
@@ -6873,12 +7147,27 @@ export type Database = {
         Args: { _plan: string; _workspace_id: string }
         Returns: undefined
       }
+      apply_immediate_downgrade: {
+        Args: {
+          p_reason?: string
+          p_target_price_id: string
+          p_workspace_id: string
+        }
+        Returns: string
+      }
       calcular_proxima_conciliacao: {
         Args: {
           p_data_entrada: string
           p_dias_intervalo?: number
           p_frequencia: string
           p_ultima_conciliacao: string
+        }
+        Returns: string
+      }
+      calculate_expires_at: {
+        Args: {
+          p_period: Database["public"]["Enums"]["billing_period"]
+          p_started_at?: string
         }
         Returns: string
       }
@@ -6902,6 +7191,14 @@ export type Database = {
         Args: { _column_name: string; _table_name: string }
         Returns: boolean
       }
+      compute_subscription_status: {
+        Args: {
+          p_current_status: Database["public"]["Enums"]["subscription_status"]
+          p_expires_at: string
+          p_grace_period_days?: number
+        }
+        Returns: Database["public"]["Enums"]["subscription_status"]
+      }
       create_audit_log: {
         Args: {
           _action: Database["public"]["Enums"]["audit_action"]
@@ -6914,9 +7211,44 @@ export type Database = {
         }
         Returns: string
       }
+      create_subscription: {
+        Args: {
+          p_created_by?: string
+          p_price_id: string
+          p_started_at?: string
+          p_workspace_id: string
+        }
+        Returns: string
+      }
       get_current_workspace: { Args: never; Returns: string }
       get_plan_entitlements: { Args: { plan_name: string }; Returns: Json }
       get_public_plans: { Args: never; Returns: Json }
+      get_remaining_days: { Args: { p_expires_at: string }; Returns: number }
+      get_subscription_details: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          cancel_at_period_end: boolean
+          computed_status: Database["public"]["Enums"]["subscription_status"]
+          created_at: string
+          current_period: Database["public"]["Enums"]["billing_period"]
+          expires_at: string
+          is_expired: boolean
+          is_expiring: boolean
+          is_in_grace_period: boolean
+          plan_code: string
+          plan_id: string
+          plan_name: string
+          price_amount: number
+          price_currency: string
+          price_id: string
+          remaining_days: number
+          scheduled_downgrade: Json
+          started_at: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          subscription_id: string
+          workspace_id: string
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string; _workspace_id?: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -6965,6 +7297,18 @@ export type Database = {
         Args: { p_email: string; p_ip_address?: string; p_success: boolean }
         Returns: undefined
       }
+      renew_subscription: {
+        Args: { p_new_price_id?: string; p_workspace_id: string }
+        Returns: string
+      }
+      schedule_downgrade: {
+        Args: {
+          p_reason?: string
+          p_target_price_id: string
+          p_workspace_id: string
+        }
+        Returns: string
+      }
       update_parcerias_em_encerramento: { Args: never; Returns: undefined }
       user_belongs_to_workspace: {
         Args: { _workspace_id: string }
@@ -7004,12 +7348,20 @@ export type Database = {
         | "login_success"
         | "login_blocked"
         | "password_reset_requested"
+      billing_period: "monthly" | "semiannual" | "annual" | "lifetime"
       bookmaker_visibility:
         | "GLOBAL_REGULATED"
         | "GLOBAL_RESTRICTED"
         | "WORKSPACE_PRIVATE"
       indicador_status: "ATIVO" | "TOP_VIP" | "EM_OBSERVACAO" | "INATIVO"
       parceria_status: "ATIVA" | "EM_ENCERRAMENTO" | "ENCERRADA" | "RENOVADA"
+      subscription_status:
+        | "active"
+        | "trialing"
+        | "past_due"
+        | "canceled"
+        | "expired"
+        | "grace_period"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -7166,6 +7518,7 @@ export const Constants = {
         "login_blocked",
         "password_reset_requested",
       ],
+      billing_period: ["monthly", "semiannual", "annual", "lifetime"],
       bookmaker_visibility: [
         "GLOBAL_REGULATED",
         "GLOBAL_RESTRICTED",
@@ -7173,6 +7526,14 @@ export const Constants = {
       ],
       indicador_status: ["ATIVO", "TOP_VIP", "EM_OBSERVACAO", "INATIVO"],
       parceria_status: ["ATIVA", "EM_ENCERRAMENTO", "ENCERRADA", "RENOVADA"],
+      subscription_status: [
+        "active",
+        "trialing",
+        "past_due",
+        "canceled",
+        "expired",
+        "grace_period",
+      ],
     },
   },
 } as const

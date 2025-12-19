@@ -29,7 +29,7 @@ export interface PlanEntitlement {
 export interface PlanPrice {
   id: string;
   plan_id: string;
-  billing_period: 'monthly' | 'yearly' | 'lifetime';
+  billing_period: 'monthly' | 'semiannual' | 'yearly' | 'annual' | 'lifetime';
   currency: string;
   amount: number;
   is_active: boolean;

@@ -13,6 +13,7 @@ import { Loader2, Users, Settings, UserPlus, Shield, DollarSign, Gamepad2, Eye, 
 import { MemberList } from "@/components/workspace/MemberList";
 import { InviteMemberDialog } from "@/components/workspace/InviteMemberDialog";
 import { PlanUsageCard } from "@/components/workspace/PlanUsageCard";
+import { SubscriptionInfoCard } from "@/components/workspace/SubscriptionInfoCard";
 import { Database } from "@/integrations/supabase/types";
 import {
   Accordion,
@@ -277,7 +278,10 @@ export default function Workspace() {
       </div>
 
       {/* Plan Usage Card */}
-      <PlanUsageCard />
+      <div className="grid gap-6 md:grid-cols-2">
+        <PlanUsageCard />
+        <SubscriptionInfoCard />
+      </div>
 
       {/* Workspace Settings */}
       <Card>
