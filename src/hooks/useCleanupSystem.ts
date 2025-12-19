@@ -47,6 +47,17 @@ interface HardDeleteResult {
   deleted_auth_users: number;
 }
 
+interface SystemOwnerPreview {
+  workspace_id: string;
+  counts: Record<string, number>;
+}
+
+interface SystemOwnerCleanupResult {
+  success: boolean;
+  workspace_id: string;
+  deleted_counts: Record<string, number>;
+}
+
 export function useCleanupSystem() {
   const [loading, setLoading] = useState(false);
   const [candidates, setCandidates] = useState<CleanupCandidate[]>([]);
@@ -54,6 +65,8 @@ export function useCleanupSystem() {
   const [dryRunResult, setDryRunResult] = useState<DryRunResult | null>(null);
   const [cleanupResult, setCleanupResult] = useState<CleanupResult | null>(null);
   const [hardDeleteResult, setHardDeleteResult] = useState<HardDeleteResult | null>(null);
+  const [systemOwnerPreview, setSystemOwnerPreview] = useState<SystemOwnerPreview | null>(null);
+  const [systemOwnerCleanupResult, setSystemOwnerCleanupResult] = useState<SystemOwnerCleanupResult | null>(null);
 
   const fetchCandidates = useCallback(async () => {
     setLoading(true);
@@ -192,6 +205,52 @@ export function useCleanupSystem() {
     setDryRunResult(null);
     setCleanupResult(null);
     setHardDeleteResult(null);
+    setSystemOwnerPreview(null);
+    setSystemOwnerCleanupResult(null);
+  }, []);
+
+  const fetchSystemOwnerPreview = useCallback(async () => {
+    setLoading(true);
+    setSystemOwnerPreview(null);
+    try {
+      const { data, error } = await supabase.rpc('admin_preview_system_owner_cleanup');
+      if (error) throw error;
+      const result = data as unknown as SystemOwnerPreview;
+      setSystemOwnerPreview(result);
+      return result;
+    } catch (error: any) {
+      console.error('Error fetching system owner preview:', error);
+      toast.error(error.message || 'Erro ao carregar preview');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const executeSystemOwnerCleanup = useCallback(async (confirmationPhrase: string) => {
+    if (confirmationPhrase !== 'LIMPAR DADOS OPERACIONAIS') {
+      toast.error('Frase de confirmação incorreta');
+      return null;
+    }
+
+    setLoading(true);
+    setSystemOwnerCleanupResult(null);
+    try {
+      const { data, error } = await supabase.rpc('admin_cleanup_system_owner_operational_data', {
+        p_confirmation_phrase: confirmationPhrase
+      });
+      if (error) throw error;
+      const result = data as unknown as SystemOwnerCleanupResult;
+      setSystemOwnerCleanupResult(result);
+      toast.success('Limpeza do System Owner executada com sucesso');
+      return result;
+    } catch (error: any) {
+      console.error('Error executing system owner cleanup:', error);
+      toast.error(error.message || 'Erro ao executar limpeza');
+      return null;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   return {
@@ -201,6 +260,8 @@ export function useCleanupSystem() {
     dryRunResult,
     cleanupResult,
     hardDeleteResult,
+    systemOwnerPreview,
+    systemOwnerCleanupResult,
     fetchCandidates,
     fetchArchivedUsers,
     setTestUser,
@@ -208,5 +269,7 @@ export function useCleanupSystem() {
     executeCleanup,
     executeHardDelete,
     clearResults,
+    fetchSystemOwnerPreview,
+    executeSystemOwnerCleanup,
   };
 }
