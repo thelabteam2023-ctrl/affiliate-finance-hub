@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCommunityAccess } from '@/hooks/useCommunityAccess';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ModerationResult {
   success: boolean;
@@ -14,6 +15,7 @@ export function useCommunityModeration() {
   const { user, isSystemOwner } = useAuth();
   const { isOwner, isAdmin } = useCommunityAccess();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
 
   // Check if user can moderate
@@ -36,6 +38,10 @@ export function useCommunityModeration() {
 
       if (error) throw error;
 
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ['community-topics'] });
+      queryClient.invalidateQueries({ queryKey: ['community-bookmaker-stats'] });
+
       toast({ title: 'Tópico removido com sucesso' });
       return { success: true };
     } catch (error: any) {
@@ -49,9 +55,10 @@ export function useCommunityModeration() {
     } finally {
       setLoading(false);
     }
-  }, [canModerate, toast]);
+  }, [canModerate, toast, queryClient]);
 
   const deleteComment = useCallback(async (
+    topicId: string,
     commentId: string,
     reason: string = 'Removido pelo moderador'
   ): Promise<ModerationResult> => {
@@ -68,6 +75,9 @@ export function useCommunityModeration() {
 
       if (error) throw error;
 
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ['community-comments', topicId] });
+
       toast({ title: 'Comentário removido com sucesso' });
       return { success: true };
     } catch (error: any) {
@@ -81,7 +91,7 @@ export function useCommunityModeration() {
     } finally {
       setLoading(false);
     }
-  }, [canModerate, toast]);
+  }, [canModerate, toast, queryClient]);
 
   const deleteChatMessage = useCallback(async (
     messageId: string,
