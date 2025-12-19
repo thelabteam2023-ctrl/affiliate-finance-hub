@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useCommunityAccess } from './useCommunityAccess';
 
@@ -7,7 +7,8 @@ import { useCommunityAccess } from './useCommunityAccess';
  * key: identificador do módulo (usado internamente)
  * permission: código da permissão necessária (null = sem restrição)
  * roles: roles permitidos (vazio = todos, null = verificar permission)
- * requiresPlan: plano mínimo necessário (opcional)
+ * 
+ * IMPORTANTE: As permission keys DEVEM corresponder às keys no banco (role_permissions)
  */
 interface ModuleConfig {
   permission: string | null;
@@ -20,26 +21,26 @@ const MODULE_ACCESS_MAP: Record<string, ModuleConfig> = {
   // VISÃO GERAL - Todos podem ver
   'central': { permission: null, roles: null },
   
-  // OPERAÇÃO
+  // OPERAÇÃO - Usa permission keys do banco
   'projetos': { permission: 'projetos.read', roles: null },
   'bookmakers': { permission: 'bookmakers.catalog.read', roles: null },
   
-  // FINANCEIRO
+  // FINANCEIRO - Usa permission keys do banco
   'caixa': { permission: 'caixa.read', roles: null },
   'financeiro': { permission: 'financeiro.read', roles: null },
   'bancos': { permission: 'financeiro.read', roles: null },
   'investidores': { permission: 'investidores.read', roles: null },
   
-  // RELACIONAMENTOS
+  // RELACIONAMENTOS - Usa permission keys do banco
   'parceiros': { permission: 'parceiros.read', roles: null },
   'operadores': { permission: 'operadores.read', roles: null },
   
-  // CRESCIMENTO
+  // CRESCIMENTO - Usa permission keys do banco
   'captacao': { permission: 'captacao.read', roles: null },
   
   // COMUNIDADE - Requer plano PRO+ OU ser owner
   'comunidade': { 
-    permission: 'community.read', 
+    permission: null, // Verificado por plano
     roles: null,
     requiresPlan: ['pro', 'advanced']
   },
@@ -52,14 +53,105 @@ const MODULE_ACCESS_MAP: Record<string, ModuleConfig> = {
   'testes': { permission: null, roles: ['owner'] },
 };
 
+// Role base permissions - cached for quick lookup
+// These MUST match the role_permissions table in the database
+const ROLE_BASE_PERMISSIONS: Record<string, string[]> = {
+  owner: ['*'], // Owner has all permissions
+  admin: ['*'], // Admin has all permissions
+  finance: [
+    'bookmakers.accounts.read',
+    'bookmakers.catalog.read',
+    'bookmakers.transactions.create',
+    'bookmakers.transactions.read',
+    'caixa.read',
+    'caixa.reports.read',
+    'caixa.transactions.confirm',
+    'caixa.transactions.create',
+    'captacao.pagamentos.create',
+    'captacao.read',
+    'financeiro.despesas.create',
+    'financeiro.despesas.edit',
+    'financeiro.participacoes.read',
+    'financeiro.read',
+    'investidores.deals.manage',
+    'investidores.participacoes.pay',
+    'investidores.read',
+    'operadores.pagamentos.create',
+    'operadores.pagamentos.read',
+    'operadores.read',
+    'parceiros.read',
+    'parceiros.view_financeiro',
+    'projeto.ciclos.close',
+    'projeto.ciclos.read',
+    'projeto.dashboard.read',
+    'projeto.perdas.confirm',
+    'projeto.perdas.read',
+    'projetos.read',
+  ],
+  operator: [
+    'bookmakers.accounts.read_project',
+    'operadores.pagamentos.read_self',
+    'operadores.read_self',
+    'projeto.apostas.cancel',
+    'projeto.apostas.create',
+    'projeto.apostas.edit',
+    'projeto.apostas.read',
+    'projeto.ciclos.read',
+    'projeto.dashboard.read',
+    'projeto.perdas.create',
+    'projeto.perdas.read',
+    'projeto.vinculos.read',
+    'projetos.read_vinculados',
+  ],
+  viewer: [
+    'bookmakers.accounts.read',
+    'bookmakers.catalog.read',
+    'bookmakers.transactions.read',
+    'caixa.read',
+    'caixa.reports.read',
+    'captacao.read',
+    'financeiro.participacoes.read',
+    'financeiro.read',
+    'investidores.read',
+    'operadores.pagamentos.read',
+    'operadores.read',
+    'parceiros.read',
+    'parceiros.view_financeiro',
+    'projeto.apostas.read',
+    'projeto.ciclos.read',
+    'projeto.dashboard.read',
+    'projeto.perdas.read',
+    'projeto.vinculos.read',
+    'projetos.read',
+  ],
+};
+
 export interface ModuleAccessResult {
   canAccess: (moduleKey: string) => boolean;
+  hasPermission: (permissionCode: string) => boolean;
   loading: boolean;
 }
 
 export function useModuleAccess(): ModuleAccessResult {
   const { role, isSystemOwner, workspace } = useAuth();
   const { hasFullAccess: hasCommunityAccess, loading: communityLoading } = useCommunityAccess();
+
+  /**
+   * Check if the current role has a specific permission
+   */
+  const hasPermission = useCallback((permissionCode: string): boolean => {
+    // System Owner has all permissions
+    if (isSystemOwner) return true;
+    
+    // Owner and Admin have all permissions
+    if (role === 'owner' || role === 'admin') return true;
+    
+    // Get base permissions for role
+    const basePerms = ROLE_BASE_PERMISSIONS[role || ''] || [];
+    
+    // Check if permission is in base permissions
+    return basePerms.includes(permissionCode);
+  }, [role, isSystemOwner]);
 
   const canAccess = useMemo(() => {
     return (moduleKey: string): boolean => {
@@ -76,7 +168,7 @@ export function useModuleAccess(): ModuleAccessResult {
         return isSystemOwner === true;
       }
       
-      // Check role restriction
+      // Check role restriction first
       if (config.roles !== null && config.roles.length > 0) {
         if (!role || !config.roles.includes(role)) {
           // Owner bypasses role checks
@@ -87,7 +179,7 @@ export function useModuleAccess(): ModuleAccessResult {
       }
       
       // Empty roles array means no one can access (except system owner)
-      if (config.roles !== null && config.roles.length === 0) {
+      if (config.roles !== null && config.roles.length === 0 && !config.requiresSystemOwner) {
         return false;
       }
       
@@ -115,14 +207,19 @@ export function useModuleAccess(): ModuleAccessResult {
         return true;
       }
       
-      // For other roles, we trust the menu filtering
-      // The actual permission check happens at the route level
+      // Check permission requirement
+      if (config.permission) {
+        return hasPermission(config.permission);
+      }
+      
+      // No specific requirement - allow
       return true;
     };
-  }, [role, isSystemOwner, workspace?.plan, hasCommunityAccess]);
+  }, [role, isSystemOwner, workspace?.plan, hasCommunityAccess, hasPermission]);
 
   return {
     canAccess,
+    hasPermission,
     loading: communityLoading,
   };
 }
@@ -134,9 +231,10 @@ export function useModuleAccess(): ModuleAccessResult {
 export function useActionAccess() {
   const { role, isSystemOwner } = useAuth();
   const { canWrite: canWriteCommunity } = useCommunityAccess();
+  const { hasPermission } = useModuleAccess();
 
   const canCreate = useMemo(() => {
-    return (moduleKey: string): boolean => {
+    return (moduleKey: string, permissionCode?: string): boolean => {
       // System Owner can do everything
       if (isSystemOwner) return true;
       
@@ -151,31 +249,36 @@ export function useActionAccess() {
         return canWriteCommunity;
       }
       
+      // If specific permission code provided, check it
+      if (permissionCode) {
+        return hasPermission(permissionCode);
+      }
+      
       // Finance and Operator have limited create permissions
-      // This is handled by specific permission checks
       return true;
     };
-  }, [role, isSystemOwner, canWriteCommunity]);
+  }, [role, isSystemOwner, canWriteCommunity, hasPermission]);
 
   const canEdit = useMemo(() => {
-    return (moduleKey: string): boolean => {
-      // Same logic as canCreate for now
+    return (moduleKey: string, permissionCode?: string): boolean => {
       if (isSystemOwner) return true;
       if (role === 'owner' || role === 'admin') return true;
       if (role === 'viewer') return false;
       if (moduleKey === 'comunidade') return canWriteCommunity;
+      if (permissionCode) return hasPermission(permissionCode);
       return true;
     };
-  }, [role, isSystemOwner, canWriteCommunity]);
+  }, [role, isSystemOwner, canWriteCommunity, hasPermission]);
 
   const canDelete = useMemo(() => {
-    return (moduleKey: string): boolean => {
+    return (moduleKey: string, permissionCode?: string): boolean => {
       // Only owner and admin can delete
       if (isSystemOwner) return true;
       if (role === 'owner' || role === 'admin') return true;
+      if (permissionCode) return hasPermission(permissionCode);
       return false;
     };
-  }, [role, isSystemOwner]);
+  }, [role, isSystemOwner, hasPermission]);
 
   return {
     canCreate,
@@ -183,4 +286,29 @@ export function useActionAccess() {
     canDelete,
     isViewer: role === 'viewer',
   };
+}
+
+/**
+ * Get the list of available additional permissions for a role
+ * (permissions that can be granted beyond the base role)
+ */
+export function getAvailableAdditionalPermissions(role: string | null): string[] {
+  if (!role) return [];
+  
+  // Owner and admin have all permissions - nothing to add
+  if (role === 'owner' || role === 'admin') return [];
+  
+  // Get base permissions for the role
+  const basePerms = new Set(ROLE_BASE_PERMISSIONS[role] || []);
+  
+  // Get all possible permissions
+  const allPerms = new Set<string>();
+  Object.values(ROLE_BASE_PERMISSIONS).forEach(perms => {
+    perms.forEach(p => {
+      if (p !== '*') allPerms.add(p);
+    });
+  });
+  
+  // Return permissions not in base role
+  return Array.from(allPerms).filter(p => !basePerms.has(p)).sort();
 }
