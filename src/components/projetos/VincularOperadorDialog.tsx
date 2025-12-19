@@ -244,7 +244,7 @@ export function VincularOperadorDialog({
   const getEligibilityBadge = (user: EligibleUser) => {
     if (user.eligible_by_role) {
       return (
-        <Badge variant="outline" className="text-xs ml-2">
+        <Badge variant="outline" className="text-xs flex-shrink-0 whitespace-nowrap px-1.5 py-0.5">
           <User className="h-3 w-3 mr-1" />
           {ROLE_LABELS[user.role_base] || user.role_base}
         </Badge>
@@ -252,9 +252,9 @@ export function VincularOperadorDialog({
     }
     if (user.eligible_by_extra) {
       return (
-        <Badge variant="secondary" className="text-xs ml-2">
+        <Badge variant="secondary" className="text-xs flex-shrink-0 whitespace-nowrap px-1.5 py-0.5">
           <Shield className="h-3 w-3 mr-1" />
-          Permissão Extra
+          Extra
         </Badge>
       );
     }
@@ -280,32 +280,29 @@ export function VincularOperadorDialog({
                 value={formData.selected_user_id}
                 onValueChange={(value) => setFormData({ ...formData, selected_user_id: value })}
               >
-                <SelectTrigger className="relative">
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none pr-8">
-                    {formData.selected_user_id ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <span className="truncate max-w-[180px]">
-                          {usersDisponiveis.find(u => u.user_id === formData.selected_user_id)?.display_name}
-                        </span>
-                        {usersDisponiveis.find(u => u.user_id === formData.selected_user_id) && 
-                          getEligibilityBadge(usersDisponiveis.find(u => u.user_id === formData.selected_user_id)!)}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">Selecione um usuário elegível</span>
-                    )}
-                  </div>
-                  <SelectValue className="opacity-0" />
+                <SelectTrigger className="h-11 min-h-[44px]">
+                  {formData.selected_user_id ? (
+                    <div className="flex items-center justify-center gap-2 w-full max-w-[calc(100%-24px)] mx-auto">
+                      <span className="truncate min-w-0">
+                        {usersDisponiveis.find(u => u.user_id === formData.selected_user_id)?.display_name}
+                      </span>
+                      {usersDisponiveis.find(u => u.user_id === formData.selected_user_id) && 
+                        getEligibilityBadge(usersDisponiveis.find(u => u.user_id === formData.selected_user_id)!)}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground text-center w-full">Selecione um usuário elegível</span>
+                  )}
                 </SelectTrigger>
                 <SelectContent>
                   {usersDisponiveis.length === 0 ? (
-                    <SelectItem value="none" disabled className="justify-center">
-                      Nenhum usuário elegível disponível
+                    <SelectItem value="none" disabled>
+                      <span className="w-full text-center">Nenhum usuário elegível disponível</span>
                     </SelectItem>
                   ) : (
                     usersDisponiveis.map((user) => (
-                      <SelectItem key={user.user_id} value={user.user_id} className="justify-center">
+                      <SelectItem key={user.user_id} value={user.user_id}>
                         <div className="flex items-center justify-center gap-2 w-full">
-                          <span className="truncate max-w-[180px]">{user.display_name}</span>
+                          <span className="truncate min-w-0 max-w-[160px]">{user.display_name}</span>
                           {getEligibilityBadge(user)}
                         </div>
                       </SelectItem>
