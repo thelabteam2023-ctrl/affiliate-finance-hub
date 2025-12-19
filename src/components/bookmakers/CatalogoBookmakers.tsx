@@ -65,8 +65,9 @@ export default function CatalogoBookmakers() {
   const { toast } = useToast();
   const { isOwnerOrAdmin } = useRole();
   const { isSystemOwner, user } = useAuth();
-  const canManageAccess = isOwnerOrAdmin || isSystemOwner;
-  const canManageGlobal = isSystemOwner; // Apenas System Owner pode gerenciar bookmakers globais
+  // CRITICAL: Apenas System Owner pode gerenciar acesso/visibilidade de bookmakers
+  const canManageAccess = isSystemOwner;
+  const canManageGlobal = isSystemOwner;
 
   useEffect(() => {
     fetchBookmakers();

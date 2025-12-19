@@ -57,22 +57,36 @@ export default function BookmakerAccessDialog({
     
     setLoading(true);
     try {
-      // Buscar todos os workspaces
+      // Buscar todos os workspaces - query separada para evitar erro de relacionamento
       const { data: workspacesData, error: workspacesError } = await supabase
         .from("workspaces")
-        .select(`
-          id,
-          name,
-          workspace_members!inner (
-            user_id,
-            role,
-            profiles:user_id (
-              full_name
-            )
-          )
-        `);
+        .select("id, name")
+        .order("name");
 
       if (workspacesError) throw workspacesError;
+
+      // Buscar membros owners separadamente para evitar erro de FK
+      const { data: membersData, error: membersError } = await supabase
+        .from("workspace_members")
+        .select("workspace_id, role, user_id")
+        .eq("role", "owner");
+
+      if (membersError) throw membersError;
+
+      // Buscar profiles dos owners
+      const ownerUserIds = membersData?.map(m => m.user_id).filter(Boolean) || [];
+      let profilesMap: Record<string, string> = {};
+      
+      if (ownerUserIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", ownerUserIds);
+        
+        profilesData?.forEach(p => {
+          profilesMap[p.id] = p.full_name || "Proprietário";
+        });
+      }
 
       // Buscar acessos existentes para este bookmaker
       const { data: accessData, error: accessError } = await supabase
@@ -84,15 +98,20 @@ export default function BookmakerAccessDialog({
 
       const accessSet = new Set(accessData?.map(a => a.workspace_id) || []);
 
-      const formattedWorkspaces: Workspace[] = (workspacesData || []).map((ws: any) => {
-        const owner = ws.workspace_members?.find((m: any) => m.role === "owner");
-        return {
-          id: ws.id,
-          name: ws.name,
-          owner_name: owner?.profiles?.full_name || "Proprietário",
-          has_access: accessSet.has(ws.id),
-        };
+      // Mapear owners para workspaces
+      const workspaceOwnerMap: Record<string, string> = {};
+      membersData?.forEach(m => {
+        if (m.workspace_id && m.user_id) {
+          workspaceOwnerMap[m.workspace_id] = profilesMap[m.user_id] || "Proprietário";
+        }
       });
+
+      const formattedWorkspaces: Workspace[] = (workspacesData || []).map((ws: any) => ({
+        id: ws.id,
+        name: ws.name,
+        owner_name: workspaceOwnerMap[ws.id] || "Proprietário",
+        has_access: accessSet.has(ws.id),
+      }));
 
       setWorkspaces(formattedWorkspaces);
       setSelectedWorkspaces(accessSet);
