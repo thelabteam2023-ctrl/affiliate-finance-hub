@@ -31,6 +31,13 @@ const LIMITED_PERMISSIONS_MAX = 5;
 // Modules to exclude from additional permissions (internal use only)
 const EXCLUDED_MODULES = ['community', 'projeto'];
 
+// Permissions that are subsets of global permissions
+// If user has the global version, hide the _self version
+const SELF_TO_GLOBAL_MAP: Record<string, string> = {
+  'operadores.read_self': 'operadores.read',
+  'operadores.pagamentos.read_self': 'operadores.pagamentos.read',
+};
+
 export function usePermissionOverrides(userId?: string, userRole?: string) {
   const { workspaceId, workspace } = useWorkspace();
   const { user } = useAuth();
@@ -105,6 +112,7 @@ export function usePermissionOverrides(userId?: string, userRole?: string) {
 
   // Filter permissions to only show those NOT included in base role
   // and NOT in excluded modules
+  // Also hide _self permissions if user already has the global version
   const availablePermissions = useMemo(() => {
     return permissions.filter(perm => {
       // Exclude internal modules
@@ -112,6 +120,12 @@ export function usePermissionOverrides(userId?: string, userRole?: string) {
       
       // Exclude permissions already in base role
       if (roleBasePermissions.includes(perm.code)) return false;
+      
+      // Hide _self permissions if user has the global version
+      const globalEquivalent = SELF_TO_GLOBAL_MAP[perm.code];
+      if (globalEquivalent && roleBasePermissions.includes(globalEquivalent)) {
+        return false;
+      }
       
       return true;
     });
