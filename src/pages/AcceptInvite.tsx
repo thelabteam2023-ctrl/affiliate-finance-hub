@@ -55,27 +55,39 @@ export default function AcceptInvite() {
   useEffect(() => {
     const fetchInviteInfo = async () => {
       if (!token) {
-        setInviteInfo({ found: false, error: "Token não fornecido" });
+        console.log("[AcceptInvite] Token ausente na URL");
+        setInviteInfo({ found: false, error: "Token não fornecido na URL" });
         setLoading(false);
         return;
       }
+
+      console.log("[AcceptInvite] Buscando convite com token:", token);
 
       try {
         const { data, error } = await supabase.rpc('get_invite_by_token', {
           _token: token
         });
 
-        if (error) throw error;
+        console.log("[AcceptInvite] Resposta RPC:", { data, error });
+
+        if (error) {
+          console.error("[AcceptInvite] Erro RPC:", error);
+          throw error;
+        }
         
         const info = data as unknown as InviteInfo;
+        console.log("[AcceptInvite] Info processada:", info);
         setInviteInfo(info);
         
         if (info.email) {
           setEmail(info.email);
         }
-      } catch (error) {
-        console.error("Error fetching invite:", error);
-        setInviteInfo({ found: false, error: "Erro ao buscar convite" });
+      } catch (error: any) {
+        console.error("[AcceptInvite] Error fetching invite:", error);
+        setInviteInfo({ 
+          found: false, 
+          error: error.message || "Erro ao buscar convite" 
+        });
       } finally {
         setLoading(false);
       }
@@ -200,8 +212,11 @@ export default function AcceptInvite() {
     );
   }
 
-  // Convite não encontrado
+  // Convite não encontrado ou erro
   if (!inviteInfo?.found) {
+    const errorMessage = inviteInfo?.error || "Este link de convite é inválido ou foi removido.";
+    const isTokenMissing = !token;
+    
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="max-w-md w-full">
@@ -209,9 +224,14 @@ export default function AcceptInvite() {
             <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
               <XCircle className="h-8 w-8 text-destructive" />
             </div>
-            <CardTitle>Convite não encontrado</CardTitle>
+            <CardTitle>
+              {isTokenMissing ? "Link inválido" : "Convite não encontrado"}
+            </CardTitle>
             <CardDescription>
-              Este link de convite é inválido ou foi removido.
+              {isTokenMissing 
+                ? "O link do convite está incompleto. Verifique se você copiou o link corretamente."
+                : errorMessage
+              }
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">

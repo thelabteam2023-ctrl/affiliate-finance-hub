@@ -7592,6 +7592,7 @@ export type Database = {
           id: string
           role: Database["public"]["Enums"]["app_role"]
           status: string
+          token: string
         }[]
       }
       get_workspace_usage: { Args: { workspace_uuid: string }; Returns: Json }
