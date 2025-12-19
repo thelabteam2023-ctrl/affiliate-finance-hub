@@ -6678,12 +6678,12 @@ export type Database = {
         Returns: boolean
       }
       moderate_delete_comment: {
-        Args: { _comment_id: string; _reason?: string }
-        Returns: boolean
+        Args: { p_comment_id: string; p_reason?: string }
+        Returns: Json
       }
       moderate_delete_topic: {
-        Args: { _reason?: string; _topic_id: string }
-        Returns: boolean
+        Args: { p_reason?: string; p_topic_id: string }
+        Returns: Json
       }
       operator_has_project_access: {
         Args: { _project_id: string; _user_id: string }
