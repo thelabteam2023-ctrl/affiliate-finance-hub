@@ -14,6 +14,124 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_group_bookmakers: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          bookmaker_catalogo_id: string
+          group_id: string
+          id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          bookmaker_catalogo_id: string
+          group_id: string
+          id?: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          bookmaker_catalogo_id?: string
+          group_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_group_bookmakers_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_group_bookmakers_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
+          },
+          {
+            foreignKeyName: "access_group_bookmakers_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "access_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      access_group_workspaces: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          group_id: string
+          id: string
+          workspace_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          group_id: string
+          id?: string
+          workspace_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          group_id?: string
+          id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_group_workspaces_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "access_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_group_workspaces_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      access_groups: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       apostas: {
         Row: {
           aposta_relacionada_id: string | null
@@ -7322,6 +7440,10 @@ export type Database = {
       user_has_pro_access: { Args: { _user_id: string }; Returns: boolean }
       user_is_owner_or_admin: {
         Args: { check_user_id: string }
+        Returns: boolean
+      }
+      workspace_has_group_access: {
+        Args: { _bookmaker_catalogo_id: string; _workspace_id: string }
         Returns: boolean
       }
     }
