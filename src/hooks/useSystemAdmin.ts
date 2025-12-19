@@ -7,6 +7,7 @@ interface AdminUser {
   id: string;
   email: string;
   full_name: string;
+  public_id: string | null;
   created_at: string;
   is_blocked: boolean;
   blocked_at: string | null;
