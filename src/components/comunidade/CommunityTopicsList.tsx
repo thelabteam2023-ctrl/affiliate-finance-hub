@@ -62,7 +62,7 @@ interface CommunityTopicsListProps {
 
 export function CommunityTopicsList({ bookmakerId, onCreateTopic, refreshKey = 0 }: CommunityTopicsListProps) {
   const { user } = useAuth();
-  const { hasFullAccess, canEditAny } = useCommunityAccess();
+  const { hasFullAccess, canWrite, canEditAny } = useCommunityAccess();
   const { toast } = useToast();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
@@ -246,7 +246,7 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic, refreshKey = 0
       <div className="text-center py-12">
         <MessageSquare className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
         <p className="text-muted-foreground">Nenhum tópico de discussão ainda</p>
-        {hasFullAccess && onCreateTopic && (
+        {canWrite && onCreateTopic && (
           <Button variant="outline" size="sm" className="mt-3" onClick={onCreateTopic}>
             <Plus className="h-4 w-4 mr-2" />
             Criar primeiro tópico
@@ -258,8 +258,8 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic, refreshKey = 0
 
   return (
     <>
-      {/* Create Topic Button */}
-      {hasFullAccess && onCreateTopic && (
+      {/* Create Topic Button - Only for users who can write */}
+      {canWrite && onCreateTopic && (
         <div className="mb-4">
           <Button onClick={onCreateTopic}>
             <Plus className="h-4 w-4 mr-2" />
@@ -324,7 +324,7 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic, refreshKey = 0
                           <Pencil className="h-4 w-4" />
                         </Button>
                       )}
-                      {!isOwnTopic && hasFullAccess && (
+                      {!isOwnTopic && canWrite && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -389,7 +389,7 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic, refreshKey = 0
                                     <Pencil className="h-3 w-3" />
                                   </Button>
                                 )}
-                                {!isOwnComment && hasFullAccess && (
+                                {!isOwnComment && canWrite && (
                                   <Button
                                     variant="ghost"
                                     size="icon"
@@ -417,8 +417,8 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic, refreshKey = 0
                       </div>
                     )}
 
-                    {/* Add Comment */}
-                    {hasFullAccess && (
+                    {/* Add Comment - Only for users who can write */}
+                    {canWrite && (
                       <div className="flex gap-2">
                         <Input
                           placeholder="Adicionar comentário..."

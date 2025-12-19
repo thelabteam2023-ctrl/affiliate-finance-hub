@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "./useWorkspace";
 import { useAuth } from "./useAuth";
@@ -28,10 +28,14 @@ const PLANS_WITH_CUSTOM_PERMISSIONS = ['pro', 'advanced', 'enterprise'];
 const PLANS_WITH_LIMITED_PERMISSIONS = ['pro'];
 const LIMITED_PERMISSIONS_MAX = 5;
 
-export function usePermissionOverrides(userId?: string) {
+// Modules to exclude from additional permissions (internal use only)
+const EXCLUDED_MODULES = ['community', 'projeto'];
+
+export function usePermissionOverrides(userId?: string, userRole?: string) {
   const { workspaceId, workspace } = useWorkspace();
   const { user } = useAuth();
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [roleBasePermissions, setRoleBasePermissions] = useState<string[]>([]);
   const [overrides, setOverrides] = useState<PermissionOverride[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,6 +60,23 @@ export function usePermissionOverrides(userId?: string) {
     }
   }, []);
 
+  // Fetch base permissions for the user's role
+  const fetchRoleBasePermissions = useCallback(async () => {
+    if (!userRole) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('role_permissions')
+        .select('permission_code')
+        .eq('role', userRole as any); // Cast to any to handle role type
+
+      if (error) throw error;
+      setRoleBasePermissions((data || []).map(p => p.permission_code));
+    } catch (error) {
+      console.error('Error fetching role base permissions:', error);
+    }
+  }, [userRole]);
+
   const fetchOverrides = useCallback(async () => {
     if (!userId || !workspaceId) return;
 
@@ -76,19 +97,36 @@ export function usePermissionOverrides(userId?: string) {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      await Promise.all([fetchPermissions(), fetchOverrides()]);
+      await Promise.all([fetchPermissions(), fetchRoleBasePermissions(), fetchOverrides()]);
       setLoading(false);
     };
     load();
-  }, [fetchPermissions, fetchOverrides]);
+  }, [fetchPermissions, fetchRoleBasePermissions, fetchOverrides]);
 
-  const permissionsByModule: PermissionsByModule = permissions.reduce((acc, perm) => {
-    if (!acc[perm.module]) {
-      acc[perm.module] = [];
-    }
-    acc[perm.module].push(perm);
-    return acc;
-  }, {} as PermissionsByModule);
+  // Filter permissions to only show those NOT included in base role
+  // and NOT in excluded modules
+  const availablePermissions = useMemo(() => {
+    return permissions.filter(perm => {
+      // Exclude internal modules
+      if (EXCLUDED_MODULES.includes(perm.module)) return false;
+      
+      // Exclude permissions already in base role
+      if (roleBasePermissions.includes(perm.code)) return false;
+      
+      return true;
+    });
+  }, [permissions, roleBasePermissions]);
+
+  // Group available permissions by module
+  const permissionsByModule: PermissionsByModule = useMemo(() => {
+    return availablePermissions.reduce((acc, perm) => {
+      if (!acc[perm.module]) {
+        acc[perm.module] = [];
+      }
+      acc[perm.module].push(perm);
+      return acc;
+    }, {} as PermissionsByModule);
+  }, [availablePermissions]);
 
   const hasOverride = (permissionCode: string): boolean => {
     return overrides.some(o => o.permission_code === permissionCode && o.granted);

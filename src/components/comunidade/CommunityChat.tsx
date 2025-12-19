@@ -32,7 +32,7 @@ const MAX_MESSAGES_DISPLAY = 100;
 export function CommunityChat() {
   const { user } = useAuth();
   const { workspaceId } = useWorkspace();
-  const { hasFullAccess, isOwner, isAdmin, loading: accessLoading } = useCommunityAccess();
+  const { hasFullAccess, canWrite, isOwner, isAdmin, loading: accessLoading } = useCommunityAccess();
   const { toast } = useToast();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -210,8 +210,9 @@ export function CommunityChat() {
     setEditContent(message.content);
   };
 
+  // Check if user can edit a message (own message or admin, AND can write)
   const canEditMessage = (message: ChatMessage) => {
-    if (!user?.id) return false;
+    if (!user?.id || !canWrite) return false;
     return user.id === message.user_id || isOwner || isAdmin;
   };
 
@@ -395,27 +396,33 @@ export function CommunityChat() {
             )}
           </ScrollArea>
 
-          {/* Input Area */}
-          <div className="p-3 border-t border-border shrink-0">
-            <div className="flex gap-2">
-              <Input
-                ref={inputRef}
-                placeholder="Digite sua mensagem..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                disabled={sending}
-                maxLength={500}
-              />
-              <Button 
-                size="icon" 
-                onClick={handleSend}
-                disabled={!newMessage.trim() || sending}
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+          {/* Input Area - Only for users who can write */}
+          {canWrite ? (
+            <div className="p-3 border-t border-border shrink-0">
+              <div className="flex gap-2">
+                <Input
+                  ref={inputRef}
+                  placeholder="Digite sua mensagem..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  disabled={sending}
+                  maxLength={500}
+                />
+                <Button 
+                  size="icon" 
+                  onClick={handleSend}
+                  disabled={!newMessage.trim() || sending}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-3 border-t border-border shrink-0 text-center text-sm text-muted-foreground">
+              Modo somente leitura
+            </div>
+          )}
         </CardContent>
       </Card>
 
