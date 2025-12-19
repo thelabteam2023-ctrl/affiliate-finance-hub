@@ -3083,7 +3083,7 @@ export type Database = {
       operadores: {
         Row: {
           auth_user_id: string | null
-          cpf: string
+          cpf: string | null
           created_at: string
           data_admissao: string
           data_desligamento: string | null
@@ -3101,7 +3101,7 @@ export type Database = {
         }
         Insert: {
           auth_user_id?: string | null
-          cpf: string
+          cpf?: string | null
           created_at?: string
           data_admissao?: string
           data_desligamento?: string | null
@@ -3119,7 +3119,7 @@ export type Database = {
         }
         Update: {
           auth_user_id?: string | null
-          cpf?: string
+          cpf?: string | null
           created_at?: string
           data_admissao?: string
           data_desligamento?: string | null
