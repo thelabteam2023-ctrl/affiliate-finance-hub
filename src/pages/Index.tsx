@@ -2,10 +2,27 @@ import { ArrowRight, Users, FolderKanban, Wallet, Shield, BarChart3, Building2, 
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { usePublicPlans } from "@/hooks/usePublicPlans";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { plans, loading, getMonthlyPrice } = usePublicPlans();
 
+  // Map plan codes to display data
+  const getPlanDisplayData = (planCode: string) => {
+    const plan = plans.find(p => p.code === planCode);
+    if (!plan) return null;
+    
+    const price = getMonthlyPrice(planCode);
+    const priceDisplay = price === 0 ? 'R$ 0' : price ? `R$ ${price}` : 'R$ 0';
+    
+    return {
+      ...plan,
+      priceDisplay,
+      period: '/mês',
+    };
+  };
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -103,73 +120,91 @@ const Index = () => {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <PricingCard
-            name="Free"
-            price="R$ 0"
-            period="/mês"
-            description="Para começar com controle"
-            maxPartners="Até 3 parceiros ativos"
-            features={[
-              { text: "1 usuário", included: true },
-              { text: "Organização básica da operação", included: true },
-              { text: "Registro simples de apostas", included: true },
-              { text: "Ideal para sair das planilhas", included: true },
-              { text: "Dashboard completo", included: false },
-              { text: "Operação por projetos", included: false },
-            ]}
-            highlighted={false}
-            ctaText="Criar conta gratuita"
-          />
-          <PricingCard
-            name="Starter"
-            price="R$ 89"
-            period="/mês"
-            description="Para quem já opera"
-            maxPartners="Até 6 parceiros ativos"
-            features={[
-              { text: "1 usuário", included: true },
-              { text: "Dashboards completos", included: true },
-              { text: "Controle financeiro estruturado", included: true },
-              { text: "Organização por projetos simples", included: true },
-              { text: "Suporte via WhatsApp/Discord", included: true },
-              { text: "Acesso à comunidade Labbet One", included: true },
-            ]}
-            highlighted={false}
-            ctaText="Começar agora"
-          />
-          <PricingCard
-            name="Pro"
-            price="R$ 197"
-            period="/mês"
-            description="Para operações sérias"
-            maxPartners="Até 20 parceiros ativos"
-            features={[
-              { text: "2 usuários", included: true },
-              { text: "Permissões customizadas (até 5)", included: true },
-              { text: "Operação completa por projetos", included: true },
-              { text: "KPIs e visão real de desempenho", included: true },
-              { text: "Estratégias de entrada avançadas", included: true },
-              { text: "Ideal para apostadores profissionais", included: true },
-            ]}
-            highlighted={true}
-            ctaText="Escalar minha operação"
-          />
-          <PricingCard
-            name="Advanced"
-            price="R$ 697"
-            period="/mês"
-            description="Liberdade total"
-            maxPartners="Parceiros ilimitados"
-            features={[
-              { text: "Até 10 usuários", included: true },
-              { text: "Permissões customizadas ilimitadas", included: true },
-              { text: "Personalização avançada", included: true },
-              { text: "Atendimento personalizado", included: true },
-              { text: "Chamadas de alinhamento", included: true },
-            ]}
-            highlighted={false}
-            ctaText="Ir além do Pro"
-          />
+          {loading ? (
+            // Loading skeleton
+            Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="p-6">
+                <Skeleton className="h-8 w-24 mb-4" />
+                <Skeleton className="h-4 w-32 mb-4" />
+                <Skeleton className="h-10 w-20 mb-6" />
+                <div className="space-y-3">
+                  {Array.from({ length: 5 }).map((_, j) => (
+                    <Skeleton key={j} className="h-4 w-full" />
+                  ))}
+                </div>
+              </Card>
+            ))
+          ) : (
+            <>
+              <PricingCard
+                name={getPlanDisplayData('free')?.name || 'Free'}
+                price={getPlanDisplayData('free')?.priceDisplay || 'R$ 0'}
+                period="/mês"
+                description={getPlanDisplayData('free')?.description || 'Para começar com controle'}
+                maxPartners={`Até ${getPlanDisplayData('free')?.entitlements?.max_partners || 3} parceiros ativos`}
+                features={[
+                  { text: `${getPlanDisplayData('free')?.entitlements?.max_users || 1} usuário`, included: true },
+                  { text: "Organização básica da operação", included: true },
+                  { text: "Registro simples de apostas", included: true },
+                  { text: "Ideal para sair das planilhas", included: true },
+                  { text: "Dashboard completo", included: false },
+                  { text: "Operação por projetos", included: false },
+                ]}
+                highlighted={false}
+                ctaText="Criar conta gratuita"
+              />
+              <PricingCard
+                name={getPlanDisplayData('starter')?.name || 'Starter'}
+                price={getPlanDisplayData('starter')?.priceDisplay || 'R$ 89'}
+                period="/mês"
+                description={getPlanDisplayData('starter')?.description || 'Para quem já opera'}
+                maxPartners={`Até ${getPlanDisplayData('starter')?.entitlements?.max_partners || 6} parceiros ativos`}
+                features={[
+                  { text: `${getPlanDisplayData('starter')?.entitlements?.max_users || 1} usuário`, included: true },
+                  { text: "Dashboards completos", included: true },
+                  { text: "Controle financeiro estruturado", included: true },
+                  { text: "Organização por projetos simples", included: true },
+                  { text: "Suporte via WhatsApp/Discord", included: true },
+                  { text: "Acesso à comunidade Labbet One", included: true },
+                ]}
+                highlighted={false}
+                ctaText="Começar agora"
+              />
+              <PricingCard
+                name={getPlanDisplayData('pro')?.name || 'Pro'}
+                price={getPlanDisplayData('pro')?.priceDisplay || 'R$ 197'}
+                period="/mês"
+                description={getPlanDisplayData('pro')?.description || 'Para operações sérias'}
+                maxPartners={`Até ${getPlanDisplayData('pro')?.entitlements?.max_partners || 20} parceiros ativos`}
+                features={[
+                  { text: `${getPlanDisplayData('pro')?.entitlements?.max_users || 2} usuários`, included: true },
+                  { text: `Permissões customizadas (até ${getPlanDisplayData('pro')?.entitlements?.max_custom_permissions || 5})`, included: true },
+                  { text: "Operação completa por projetos", included: true },
+                  { text: "KPIs e visão real de desempenho", included: true },
+                  { text: "Estratégias de entrada avançadas", included: true },
+                  { text: "Ideal para apostadores profissionais", included: true },
+                ]}
+                highlighted={true}
+                ctaText="Escalar minha operação"
+              />
+              <PricingCard
+                name={getPlanDisplayData('advanced')?.name || 'Advanced'}
+                price={getPlanDisplayData('advanced')?.priceDisplay || 'R$ 697'}
+                period="/mês"
+                description={getPlanDisplayData('advanced')?.description || 'Liberdade total'}
+                maxPartners="Parceiros ilimitados"
+                features={[
+                  { text: `Até ${getPlanDisplayData('advanced')?.entitlements?.max_users || 10} usuários`, included: true },
+                  { text: "Permissões customizadas ilimitadas", included: true },
+                  { text: "Personalização avançada", included: true },
+                  { text: "Atendimento personalizado", included: true },
+                  { text: "Chamadas de alinhamento", included: true },
+                ]}
+                highlighted={false}
+                ctaText="Ir além do Pro"
+              />
+            </>
+          )}
         </div>
 
         <p className="mt-8 text-center text-sm text-muted-foreground">

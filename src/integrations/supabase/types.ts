@@ -3727,6 +3727,139 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_entitlements: {
+        Row: {
+          created_at: string
+          custom_permissions_enabled: boolean | null
+          extra_features: Json | null
+          id: string
+          max_active_partners: number | null
+          max_custom_permissions: number | null
+          max_users: number | null
+          personalized_support: boolean | null
+          plan_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_permissions_enabled?: boolean | null
+          extra_features?: Json | null
+          id?: string
+          max_active_partners?: number | null
+          max_custom_permissions?: number | null
+          max_users?: number | null
+          personalized_support?: boolean | null
+          plan_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_permissions_enabled?: boolean | null
+          extra_features?: Json | null
+          id?: string
+          max_active_partners?: number | null
+          max_custom_permissions?: number | null
+          max_users?: number | null
+          personalized_support?: boolean | null
+          plan_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_entitlements_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: true
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_prices: {
+        Row: {
+          amount: number
+          billing_period: string
+          created_at: string
+          currency: string
+          id: string
+          is_active: boolean | null
+          plan_id: string
+          provider: string | null
+          provider_price_id: string | null
+          updated_at: string
+          valid_from: string | null
+          valid_to: string | null
+        }
+        Insert: {
+          amount: number
+          billing_period: string
+          created_at?: string
+          currency?: string
+          id?: string
+          is_active?: boolean | null
+          plan_id: string
+          provider?: string | null
+          provider_price_id?: string | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Update: {
+          amount?: number
+          billing_period?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          is_active?: boolean | null
+          plan_id?: string
+          provider?: string | null
+          provider_price_id?: string | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_prices_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           blocked_at: string | null
@@ -4536,6 +4669,79 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
         }
         Relationships: []
+      }
+      sales_events: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          customer_email: string | null
+          customer_name: string | null
+          id: string
+          metadata: Json | null
+          plan_id: string
+          price_id: string | null
+          provider: string | null
+          provider_event_id: string | null
+          source: string
+          status: string
+          workspace_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          id?: string
+          metadata?: Json | null
+          plan_id: string
+          price_id?: string | null
+          provider?: string | null
+          provider_event_id?: string | null
+          source?: string
+          status: string
+          workspace_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          id?: string
+          metadata?: Json | null
+          plan_id?: string
+          price_id?: string | null
+          provider?: string | null
+          provider_event_id?: string | null
+          source?: string
+          status?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_events_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_events_price_id_fkey"
+            columns: ["price_id"]
+            isOneToOne: false
+            referencedRelation: "plan_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       surebets: {
         Row: {
@@ -6501,6 +6707,20 @@ export type Database = {
         Returns: undefined
       }
       admin_cleanup_dry_run: { Args: { _user_ids: string[] }; Returns: Json }
+      admin_create_sale: {
+        Args: {
+          _amount: number
+          _currency?: string
+          _customer_email?: string
+          _customer_name?: string
+          _metadata?: Json
+          _plan_code: string
+          _source?: string
+          _status?: string
+          _workspace_id?: string
+        }
+        Returns: string
+      }
       admin_create_workspace_for_user: {
         Args: {
           _plan?: string
@@ -6557,6 +6777,7 @@ export type Database = {
           id: string
         }[]
       }
+      admin_get_billing_kpis: { Args: never; Returns: Json }
       admin_get_cleanup_candidates: {
         Args: never
         Returns: {
@@ -6566,6 +6787,52 @@ export type Database = {
           id: string
           is_system_owner: boolean
           is_test_user: boolean
+          workspace_id: string
+          workspace_name: string
+        }[]
+      }
+      admin_get_daily_revenue: {
+        Args: { _days?: number }
+        Returns: {
+          date: string
+          revenue: number
+          sales_count: number
+        }[]
+      }
+      admin_get_revenue_by_plan: {
+        Args: never
+        Returns: {
+          plan_code: string
+          plan_name: string
+          revenue: number
+          sales_count: number
+        }[]
+      }
+      admin_get_sales: {
+        Args: {
+          _from_date?: string
+          _limit?: number
+          _offset?: number
+          _plan_code?: string
+          _status?: string
+          _to_date?: string
+        }
+        Returns: {
+          amount: number
+          created_at: string
+          currency: string
+          customer_email: string
+          customer_name: string
+          id: string
+          metadata: Json
+          plan_code: string
+          plan_id: string
+          plan_name: string
+          price_id: string
+          provider: string
+          provider_event_id: string
+          source: string
+          status: string
           workspace_id: string
           workspace_name: string
         }[]
@@ -6596,6 +6863,10 @@ export type Database = {
       }
       admin_set_workspace_active: {
         Args: { _active: boolean; _reason?: string; _workspace_id: string }
+        Returns: undefined
+      }
+      admin_update_sale_status: {
+        Args: { _new_status: string; _sale_id: string }
         Returns: undefined
       }
       admin_update_workspace_plan: {
@@ -6645,6 +6916,7 @@ export type Database = {
       }
       get_current_workspace: { Args: never; Returns: string }
       get_plan_entitlements: { Args: { plan_name: string }; Returns: Json }
+      get_public_plans: { Args: never; Returns: Json }
       get_user_role: {
         Args: { _user_id: string; _workspace_id?: string }
         Returns: Database["public"]["Enums"]["app_role"]
