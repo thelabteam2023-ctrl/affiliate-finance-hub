@@ -9,11 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Users, Settings, UserPlus, Shield, DollarSign, Gamepad2, Eye, Check, X, Info } from "lucide-react";
+import { Loader2, Users, Settings, UserPlus, Shield, DollarSign, Gamepad2, Eye, Check, X, Info, Mail } from "lucide-react";
 import { MemberList } from "@/components/workspace/MemberList";
 import { InviteMemberDialog } from "@/components/workspace/InviteMemberDialog";
 import { PendingInvitesList } from "@/components/workspace/PendingInvitesList";
-import { InviteMemberDialog } from "@/components/workspace/InviteMemberDialog";
 import { PlanUsageCard } from "@/components/workspace/PlanUsageCard";
 import { SubscriptionInfoCard } from "@/components/workspace/SubscriptionInfoCard";
 import { Database } from "@/integrations/supabase/types";
@@ -353,6 +352,22 @@ export default function Workspace() {
               canEdit={isOwner || isSystemOwner}
             />
           )}
+        </CardContent>
+      </Card>
+
+      {/* Pending Invites */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Convites Enviados
+          </CardTitle>
+          <CardDescription>
+            Gerencie os convites pendentes e histórico.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PendingInvitesList workspaceId={workspaceId || ''} />
         </CardContent>
       </Card>
 
