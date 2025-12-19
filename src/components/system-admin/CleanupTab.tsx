@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Trash2, AlertTriangle, RefreshCw, TestTube, Play, 
-  CheckCircle2, XCircle, Eye, Shield, Flame, Archive
+  CheckCircle2, XCircle, Eye, Shield, Flame, Archive, Crown
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -26,6 +26,8 @@ export function CleanupTab() {
     dryRunResult,
     cleanupResult,
     hardDeleteResult,
+    systemOwnerPreview,
+    systemOwnerCleanupResult,
     fetchCandidates,
     fetchArchivedUsers,
     setTestUser,
@@ -33,6 +35,8 @@ export function CleanupTab() {
     executeCleanup,
     executeHardDelete,
     clearResults,
+    fetchSystemOwnerPreview,
+    executeSystemOwnerCleanup,
   } = useCleanupSystem();
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -40,6 +44,7 @@ export function CleanupTab() {
   const [showDryRunDialog, setShowDryRunDialog] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showHardDeleteDialog, setShowHardDeleteDialog] = useState(false);
+  const [showSystemOwnerCleanupDialog, setShowSystemOwnerCleanupDialog] = useState(false);
   const [confirmationPhrase, setConfirmationPhrase] = useState('');
   const [activeTab, setActiveTab] = useState('candidates');
 
@@ -120,7 +125,25 @@ export function CleanupTab() {
     }
   };
 
+  const handleOpenSystemOwnerCleanup = async () => {
+    await fetchSystemOwnerPreview();
+    setShowSystemOwnerCleanupDialog(true);
+    setConfirmationPhrase('');
+  };
+
+  const handleExecuteSystemOwnerCleanup = async () => {
+    const result = await executeSystemOwnerCleanup(confirmationPhrase);
+    if (result) {
+      setShowSystemOwnerCleanupDialog(false);
+      setConfirmationPhrase('');
+    }
+  };
+
   const testUsers = candidates.filter(c => c.is_test_user);
+
+  const totalSystemOwnerRecords = systemOwnerPreview 
+    ? Object.values(systemOwnerPreview.counts).reduce((a, b) => a + b, 0)
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -164,6 +187,22 @@ export function CleanupTab() {
         </Alert>
       )}
 
+      {/* System Owner Cleanup Result */}
+      {systemOwnerCleanupResult && (
+        <Alert className="border-emerald-500/50 bg-emerald-500/10">
+          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          <AlertTitle className="text-emerald-500">Limpeza do System Owner Concluída</AlertTitle>
+          <AlertDescription>
+            <p>Total de registros removidos: <strong>
+              {Object.values(systemOwnerCleanupResult.deleted_counts).reduce((a, b) => a + b, 0)}
+            </strong></p>
+            <Button variant="link" size="sm" className="p-0 h-auto" onClick={clearResults}>
+              Fechar
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
@@ -174,6 +213,10 @@ export function CleanupTab() {
           <TabsTrigger value="archived" className="gap-2">
             <Archive className="h-4 w-4" />
             Arquivados ({archivedUsers.length})
+          </TabsTrigger>
+          <TabsTrigger value="system-owner" className="gap-2">
+            <Crown className="h-4 w-4" />
+            System Owner
           </TabsTrigger>
         </TabsList>
 
@@ -394,6 +437,49 @@ export function CleanupTab() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* System Owner Tab */}
+        <TabsContent value="system-owner">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Crown className="h-5 w-5" />
+                    Limpeza de Dados Operacionais (System Owner)
+                  </CardTitle>
+                  <CardDescription>
+                    Remove todos os dados operacionais do workspace do System Owner, mantendo apenas a estrutura administrativa.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Atenção</AlertTitle>
+                <AlertDescription>
+                  Esta operação remove permanentemente todos os dados operacionais (parceiros, projetos, bookmakers, 
+                  apostas, caixa, etc.) do workspace do System Owner. Use apenas quando precisar "zerar" 
+                  o ambiente administrativo.
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex justify-center">
+                <Button
+                  variant="destructive"
+                  size="lg"
+                  onClick={handleOpenSystemOwnerCleanup}
+                  disabled={loading}
+                  className="gap-2"
+                >
+                  <Trash2 className="h-5 w-5" />
+                  Limpar Dados Operacionais
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Dry Run Dialog */}
@@ -586,6 +672,101 @@ export function CleanupTab() {
                 <>
                   <Flame className="h-4 w-4 mr-2" />
                   Excluir Permanentemente
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* System Owner Cleanup Dialog */}
+      <Dialog open={showSystemOwnerCleanupDialog} onOpenChange={setShowSystemOwnerCleanupDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Crown className="h-5 w-5" />
+              Limpeza de Dados Operacionais do System Owner
+            </DialogTitle>
+            <DialogDescription>
+              Esta ação irá remover todos os dados operacionais do workspace do System Owner.
+            </DialogDescription>
+          </DialogHeader>
+
+          {systemOwnerPreview && (
+            <div className="space-y-4">
+              {/* Summary */}
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="text-2xl font-bold">{totalSystemOwnerRecords}</div>
+                  <p className="text-sm text-muted-foreground">Total de registros a remover</p>
+                </CardContent>
+              </Card>
+
+              {/* Record Counts */}
+              <div>
+                <h4 className="font-medium mb-2">Registros por tabela:</h4>
+                <ScrollArea className="h-48 rounded-md border p-4">
+                  <div className="space-y-2">
+                    {Object.entries(systemOwnerPreview.counts)
+                      .filter(([_, count]) => count > 0)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([table, count]) => (
+                        <div key={table} className="flex justify-between items-center py-1 border-b last:border-0">
+                          <span className="text-sm">{table}</span>
+                          <Badge variant="secondary">{count}</Badge>
+                        </div>
+                      ))}
+                    {Object.values(systemOwnerPreview.counts).every(c => c === 0) && (
+                      <p className="text-muted-foreground text-sm">Nenhum registro operacional encontrado</p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
+          )}
+
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Ação Irreversível</AlertTitle>
+            <AlertDescription>
+              Todos os dados operacionais serão permanentemente removidos. 
+              O profile, workspace e estrutura administrativa serão preservados.
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-4 py-4">
+            <div className="p-3 bg-muted rounded-lg text-center font-mono">
+              LIMPAR DADOS OPERACIONAIS
+            </div>
+            <div className="space-y-2">
+              <Label>Digite a frase de confirmação:</Label>
+              <Input
+                value={confirmationPhrase}
+                onChange={(e) => setConfirmationPhrase(e.target.value)}
+                placeholder="Digite aqui..."
+                className="font-mono"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSystemOwnerCleanupDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleExecuteSystemOwnerCleanup}
+              disabled={confirmationPhrase !== 'LIMPAR DADOS OPERACIONAIS' || loading || totalSystemOwnerRecords === 0}
+            >
+              {loading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Executando...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Executar Limpeza
                 </>
               )}
             </Button>

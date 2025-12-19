@@ -6958,6 +6958,10 @@ export type Database = {
         Returns: undefined
       }
       admin_cleanup_dry_run: { Args: { _user_ids: string[] }; Returns: Json }
+      admin_cleanup_system_owner_operational_data: {
+        Args: { p_confirmation_phrase: string }
+        Returns: Json
+      }
       admin_create_sale: {
         Args: {
           _amount: number
@@ -7123,6 +7127,7 @@ export type Database = {
           workspace_name: string
         }[]
       }
+      admin_preview_system_owner_cleanup: { Args: never; Returns: Json }
       admin_reset_community: {
         Args: { _confirmation_phrase?: string; _dry_run?: boolean }
         Returns: Json
