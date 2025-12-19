@@ -591,8 +591,8 @@ export default function CatalogoBookmakers() {
                         </div>
                       )}
 
-                      {/* Visibility Badge */}
-                      {(() => {
+                      {/* Visibility Badge - Only for System Owner */}
+                      {isSystemOwner && (() => {
                         const visInfo = getVisibilityInfo(bookmaker.visibility);
                         const VisIcon = visInfo.icon;
                         return (
@@ -762,8 +762,8 @@ export default function CatalogoBookmakers() {
                                 </TooltipProvider>
                               )}
                             </div>
-                            {/* Visibility Badge in List View */}
-                            {(() => {
+                            {/* Visibility Badge in List View - Only for System Owner */}
+                            {isSystemOwner && (() => {
                               const visInfo = getVisibilityInfo(bookmaker.visibility);
                               const VisIcon = visInfo.icon;
                               return (
