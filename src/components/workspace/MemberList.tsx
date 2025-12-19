@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { Database } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Crown, Shield, User, DollarSign, Gamepad2, Eye, Settings2, Sparkles } from "lucide-react";
+import { Trash2, Crown, Shield, User, DollarSign, Gamepad2, Eye, Settings2, Sparkles, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getRoleLabel } from "@/lib/roleLabels";
@@ -28,6 +29,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { MemberPermissionsDialog } from "./MemberPermissionsDialog";
+import { RoleChangeConfirmDialog } from "./RoleChangeConfirmDialog";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -39,6 +41,12 @@ interface Member {
   joined_at: string;
   email?: string;
   full_name?: string;
+}
+
+interface PendingRoleChange {
+  memberId: string;
+  member: Member;
+  newRole: AppRole;
 }
 
 interface MemberListProps {
@@ -63,8 +71,21 @@ const availableRoles: AppRole[] = ['admin', 'finance', 'operator', 'viewer'];
 
 export function MemberList({ members, currentUserId, onRoleChange, onRemove, canEdit }: MemberListProps) {
   const { workspaceId } = useWorkspace();
+  const { toast } = useToast();
   const [permissionsDialogMember, setPermissionsDialogMember] = useState<Member | null>(null);
   const [memberOverrideCounts, setMemberOverrideCounts] = useState<Record<string, number>>({});
+  const [pendingRoleChange, setPendingRoleChange] = useState<PendingRoleChange | null>(null);
+  const [isChangingRole, setIsChangingRole] = useState(false);
+  const [localRoles, setLocalRoles] = useState<Record<string, AppRole>>({});
+
+  // Inicializar roles locais quando members mudar
+  useEffect(() => {
+    const roles: Record<string, AppRole> = {};
+    members.forEach(m => {
+      roles[m.id] = m.role;
+    });
+    setLocalRoles(roles);
+  }, [members]);
 
   // Fetch override counts for all members
   useEffect(() => {
@@ -123,6 +144,67 @@ export function MemberList({ members, currentUserId, onRoleChange, onRemove, can
     setMemberOverrideCounts(counts);
   };
 
+  // Handler para quando usuário seleciona uma nova role no dropdown
+  const handleRoleSelect = (memberId: string, newRole: AppRole) => {
+    const member = members.find(m => m.id === memberId);
+    if (!member || member.role === newRole) return;
+    
+    // Abrir dialog de confirmação
+    setPendingRoleChange({ memberId, member, newRole });
+  };
+
+  // Handler para confirmar a mudança de role
+  const handleConfirmRoleChange = async () => {
+    if (!pendingRoleChange) return;
+    
+    setIsChangingRole(true);
+    try {
+      const { data, error } = await supabase.rpc('change_member_role', {
+        _member_id: pendingRoleChange.memberId,
+        _new_role: pendingRoleChange.newRole,
+      });
+
+      if (error) throw error;
+      
+      const result = data as { success: boolean; error?: string; old_role?: string; new_role?: string };
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao alterar permissão');
+      }
+
+      // Atualizar estado local
+      setLocalRoles(prev => ({
+        ...prev,
+        [pendingRoleChange.memberId]: pendingRoleChange.newRole,
+      }));
+      
+      // Notificar componente pai
+      onRoleChange(pendingRoleChange.memberId, pendingRoleChange.newRole);
+      
+      toast({
+        title: "Permissão alterada",
+        description: `${pendingRoleChange.member.full_name || pendingRoleChange.member.email} agora é ${getRoleLabel(pendingRoleChange.newRole)}.`,
+      });
+      
+      setPendingRoleChange(null);
+    } catch (error: any) {
+      console.error("Error changing role:", error);
+      toast({
+        title: "Erro ao alterar permissão",
+        description: error.message || "Não foi possível alterar a permissão.",
+        variant: "destructive",
+      });
+      // Reverter o dropdown pro valor anterior (já está correto pois usamos localRoles)
+    } finally {
+      setIsChangingRole(false);
+    }
+  };
+
+  // Handler para cancelar mudança de role
+  const handleCancelRoleChange = () => {
+    setPendingRoleChange(null);
+  };
+
   if (members.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -135,13 +217,15 @@ export function MemberList({ members, currentUserId, onRoleChange, onRemove, can
     <>
       <div className="space-y-2">
         {members.map((member) => {
-          const roleInfo = roleConfig[member.role] || roleConfig['user'];
+          const currentRole = localRoles[member.id] || member.role;
+          const roleInfo = roleConfig[currentRole] || roleConfig['user'];
           const RoleIcon = roleInfo.icon;
           const isCurrentUser = member.user_id === currentUserId;
-          const isOwner = member.role === 'owner';
+          const isOwner = currentRole === 'owner';
           const canEditMember = canEdit && !isCurrentUser && !isOwner;
           const overrideCount = memberOverrideCounts[member.user_id] || 0;
-          const canHaveOverrides = member.role !== 'viewer' && member.role !== 'owner';
+          const canHaveOverrides = currentRole !== 'viewer' && currentRole !== 'owner';
+          const isChangingThisMember = pendingRoleChange?.memberId === member.id && isChangingRole;
 
           return (
             <div
@@ -190,11 +274,19 @@ export function MemberList({ members, currentUserId, onRoleChange, onRemove, can
               <div className="flex items-center gap-3">
                 {canEditMember ? (
                   <Select
-                    value={member.role}
-                    onValueChange={(value) => onRoleChange(member.id, value as AppRole)}
+                    value={currentRole}
+                    onValueChange={(value) => handleRoleSelect(member.id, value as AppRole)}
+                    disabled={isChangingThisMember}
                   >
                     <SelectTrigger className="w-[160px]">
-                      <SelectValue />
+                      {isChangingThisMember ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Alterando...</span>
+                        </div>
+                      ) : (
+                        <SelectValue />
+                      )}
                     </SelectTrigger>
                     <SelectContent>
                       {availableRoles.map((role) => {
@@ -215,7 +307,7 @@ export function MemberList({ members, currentUserId, onRoleChange, onRemove, can
                 ) : (
                   <Badge variant="outline" className={roleInfo.color}>
                     <RoleIcon className="h-3 w-3 mr-1" />
-                    {getRoleLabel(member.role)}
+                    {getRoleLabel(currentRole)}
                   </Badge>
                 )}
 
@@ -279,6 +371,20 @@ export function MemberList({ members, currentUserId, onRoleChange, onRemove, can
           onOpenChange={(open) => !open && setPermissionsDialogMember(null)}
           member={permissionsDialogMember}
           onPermissionsChanged={handlePermissionsChanged}
+        />
+      )}
+
+      {/* Role Change Confirmation Dialog */}
+      {pendingRoleChange && (
+        <RoleChangeConfirmDialog
+          open={!!pendingRoleChange}
+          onOpenChange={(open) => !open && handleCancelRoleChange()}
+          memberName={pendingRoleChange.member.full_name || ''}
+          memberEmail={pendingRoleChange.member.email || ''}
+          currentRole={pendingRoleChange.member.role}
+          newRole={pendingRoleChange.newRole}
+          onConfirm={handleConfirmRoleChange}
+          isLoading={isChangingRole}
         />
       )}
     </>

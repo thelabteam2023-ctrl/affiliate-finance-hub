@@ -7465,6 +7465,13 @@ export type Database = {
       }
       can_moderate_community: { Args: { _user_id: string }; Returns: boolean }
       cancel_workspace_invite: { Args: { _invite_id: string }; Returns: Json }
+      change_member_role: {
+        Args: {
+          _member_id: string
+          _new_role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: Json
+      }
       check_custom_permissions_limit: {
         Args: { workspace_uuid: string }
         Returns: Json
