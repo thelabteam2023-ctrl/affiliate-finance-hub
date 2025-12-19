@@ -4057,6 +4057,7 @@ export type Database = {
           is_system_owner: boolean | null
           is_test_user: boolean | null
           observacoes_operador: string | null
+          public_id: string | null
           telefone: string | null
           tipo_contrato: string | null
           updated_at: string
@@ -4076,6 +4077,7 @@ export type Database = {
           is_system_owner?: boolean | null
           is_test_user?: boolean | null
           observacoes_operador?: string | null
+          public_id?: string | null
           telefone?: string | null
           tipo_contrato?: string | null
           updated_at?: string
@@ -4095,6 +4097,7 @@ export type Database = {
           is_system_owner?: boolean | null
           is_test_user?: boolean | null
           observacoes_operador?: string | null
+          public_id?: string | null
           telefone?: string | null
           tipo_contrato?: string | null
           updated_at?: string
@@ -7107,6 +7110,17 @@ export type Database = {
         Args: { _confirmation_phrase: string; _user_ids: string[] }
         Returns: Json
       }
+      admin_find_workspaces_by_owner_emails: {
+        Args: { p_emails: string[] }
+        Returns: {
+          is_member: boolean
+          is_owner: boolean
+          member_workspaces: string[]
+          owner_email: string
+          workspace_id: string
+          workspace_name: string
+        }[]
+      }
       admin_get_all_users: {
         Args: { _include_deleted?: boolean }
         Returns: {
@@ -7343,6 +7357,7 @@ export type Database = {
         }
         Returns: string
       }
+      generate_public_id: { Args: never; Returns: string }
       get_current_workspace: { Args: never; Returns: string }
       get_plan_entitlements: { Args: { plan_name: string }; Returns: Json }
       get_public_plans: { Args: never; Returns: Json }

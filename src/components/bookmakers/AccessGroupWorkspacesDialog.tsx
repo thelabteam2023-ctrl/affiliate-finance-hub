@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Search, Building2, Trash2, Upload, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Search, Building2, Trash2, Upload, CheckCircle, XCircle, Loader2, AlertTriangle } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -45,6 +45,7 @@ export default function AccessGroupWorkspacesDialog({ open, onOpenChange, group 
   const [batchResult, setBatchResult] = useState<{
     found: Array<{ workspace_id: string; workspace_name: string; email: string }>;
     notFound: string[];
+    membersNotOwners: Array<{ email: string; workspaces: string[] }>;
   } | null>(null);
   const [batchLoading, setBatchLoading] = useState(false);
 
@@ -309,6 +310,27 @@ export default function AccessGroupWorkspacesDialog({ open, onOpenChange, group 
                       )}
                       Adicionar {batchResult.found.length} ao Grupo
                     </Button>
+                  </div>
+                )}
+
+                {batchResult.membersNotOwners && batchResult.membersNotOwners.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      <span className="font-medium text-amber-600">
+                        Membros (não owners) ({batchResult.membersNotOwners.length})
+                      </span>
+                    </div>
+                    <div className="text-sm text-muted-foreground bg-amber-50 dark:bg-amber-950/30 p-2 rounded-md space-y-1">
+                      {batchResult.membersNotOwners.map((m, i) => (
+                        <div key={i}>
+                          <span className="font-medium">{m.email}</span>
+                          <span className="text-xs ml-1">
+                            → membro em: {m.workspaces.join(", ")}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 

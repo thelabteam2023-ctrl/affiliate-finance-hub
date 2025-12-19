@@ -230,50 +230,67 @@ export function useAccessGroups() {
     await fetchGroups();
   };
 
-  // Find workspaces by owner email
-  const findWorkspacesByEmails = async (emails: string[]): Promise<{ found: Array<{ workspace_id: string; workspace_name: string; email: string }>; notFound: string[] }> => {
-    const normalizedEmails = emails.map((e) => e.toLowerCase().trim()).filter((e) => e.length > 0);
-    
-    // Find profiles with these emails
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, email")
-      .in("email", normalizedEmails);
+  // Find workspaces by owner email using server-side RPC
+  const findWorkspacesByEmails = async (emails: string[]): Promise<{ 
+    found: Array<{ workspace_id: string; workspace_name: string; email: string }>; 
+    notFound: string[];
+    membersNotOwners: Array<{ email: string; workspaces: string[] }>;
+  }> => {
+    // Normalize: lowercase, trim, split by comma/semicolon/newlines, remove empty and duplicates
+    const normalizedEmails = [...new Set(
+      emails
+        .flatMap(e => e.split(/[\n,;]+/))
+        .map(e => e.toLowerCase().trim())
+        .filter(e => e.length > 0 && e.includes('@'))
+    )];
 
-    if (!profiles || profiles.length === 0) {
-      return { found: [], notFound: normalizedEmails };
+    console.log('[findWorkspacesByEmails] Normalized emails:', normalizedEmails);
+
+    if (normalizedEmails.length === 0) {
+      return { found: [], notFound: [], membersNotOwners: [] };
     }
 
-    // Find workspaces where these profiles are owners
-    const profileIds = profiles.map((p) => p.id);
-    const { data: members } = await supabase
-      .from("workspace_members")
-      .select(`
-        workspace_id,
-        user_id,
-        workspace:workspaces(id, name)
-      `)
-      .in("user_id", profileIds)
-      .eq("role", "owner");
+    // Call server-side RPC function
+    const { data, error } = await supabase
+      .rpc('admin_find_workspaces_by_owner_emails', { p_emails: normalizedEmails });
+
+    console.log('[findWorkspacesByEmails] RPC result:', { data, error });
+
+    if (error) {
+      console.error('[findWorkspacesByEmails] RPC error:', error);
+      throw error;
+    }
 
     const found: Array<{ workspace_id: string; workspace_name: string; email: string }> = [];
     const foundEmails = new Set<string>();
+    const membersNotOwners: Array<{ email: string; workspaces: string[] }> = [];
 
-    members?.forEach((m: any) => {
-      const profile = profiles.find((p) => p.id === m.user_id);
-      if (profile && m.workspace) {
+    (data || []).forEach((row: any) => {
+      if (row.is_owner && row.workspace_id) {
         found.push({
-          workspace_id: m.workspace.id,
-          workspace_name: m.workspace.name,
-          email: profile.email,
+          workspace_id: row.workspace_id,
+          workspace_name: row.workspace_name,
+          email: row.owner_email,
         });
-        foundEmails.add(profile.email.toLowerCase());
+        foundEmails.add(row.owner_email.toLowerCase());
+      } else if (row.is_member && !row.is_owner && row.member_workspaces) {
+        membersNotOwners.push({
+          email: row.owner_email,
+          workspaces: row.member_workspaces,
+        });
+        foundEmails.add(row.owner_email.toLowerCase());
       }
     });
 
-    const notFound = normalizedEmails.filter((e) => !foundEmails.has(e));
+    const notFound = normalizedEmails.filter(e => !foundEmails.has(e));
 
-    return { found, notFound };
+    console.log('[findWorkspacesByEmails] Final result:', { 
+      found: found.length, 
+      notFound: notFound.length, 
+      membersNotOwners: membersNotOwners.length 
+    });
+
+    return { found, notFound, membersNotOwners };
   };
 
   // Bookmakers in group
