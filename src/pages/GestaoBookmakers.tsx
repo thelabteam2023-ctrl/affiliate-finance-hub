@@ -8,11 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/PageHeader";
-import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check } from "lucide-react";
+import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check, FolderOpen } from "lucide-react";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
 import HistoricoTransacoes from "@/components/bookmakers/HistoricoTransacoes";
 import CatalogoBookmakers from "@/components/bookmakers/CatalogoBookmakers";
+import AccessGroupsManager from "@/components/bookmakers/AccessGroupsManager";
+import { useAuth } from "@/hooks/useAuth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Tooltip,
@@ -68,6 +70,7 @@ export default function GestaoBookmakers() {
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isSystemOwner } = useAuth();
 
   useEffect(() => {
     checkAuth();
@@ -313,7 +316,7 @@ export default function GestaoBookmakers() {
         />
 
         <Tabs defaultValue="contas" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className={`grid w-full max-w-md ${isSystemOwner ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <TabsTrigger value="contas" className="flex items-center gap-2">
               <Wallet className="h-4 w-4" />
               Vínculos
@@ -322,11 +325,23 @@ export default function GestaoBookmakers() {
               <BookOpen className="h-4 w-4" />
               Bookmakers
             </TabsTrigger>
+            {isSystemOwner && (
+              <TabsTrigger value="grupos" className="flex items-center gap-2">
+                <FolderOpen className="h-4 w-4" />
+                Grupos
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="catalogo">
             <CatalogoBookmakers />
           </TabsContent>
+
+          {isSystemOwner && (
+            <TabsContent value="grupos">
+              <AccessGroupsManager />
+            </TabsContent>
+          )}
 
           <TabsContent value="contas" className="space-y-6">
 
