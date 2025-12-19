@@ -3,6 +3,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSystemAdmin, isDeletedUser } from '@/hooks/useSystemAdmin';
 import { CleanupTab } from '@/components/system-admin/CleanupTab';
 import { CommunityResetTab } from '@/components/system-admin/CommunityResetTab';
+import { PlansTab } from '@/components/system-admin/PlansTab';
+import { BillingDashboardTab } from '@/components/system-admin/BillingDashboardTab';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Users, Building2, Shield, Ban, Check, Plus, UserPlus, Settings2, 
-  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare
+  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -222,6 +224,14 @@ export default function SystemAdmin() {
           <TabsTrigger value="workspaces" className="gap-2">
             <Building2 className="h-4 w-4" />
             Workspaces
+          </TabsTrigger>
+          <TabsTrigger value="plans" className="gap-2">
+            <Crown className="h-4 w-4" />
+            Planos & Preços
+          </TabsTrigger>
+          <TabsTrigger value="billing" className="gap-2">
+            <CreditCard className="h-4 w-4" />
+            Billing & Growth
           </TabsTrigger>
           <TabsTrigger value="cleanup" className="gap-2">
             <Trash2 className="h-4 w-4" />
@@ -470,6 +480,16 @@ export default function SystemAdmin() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Plans Tab */}
+        <TabsContent value="plans">
+          <PlansTab />
+        </TabsContent>
+
+        {/* Billing Tab */}
+        <TabsContent value="billing">
+          <BillingDashboardTab />
         </TabsContent>
 
         {/* Cleanup Tab */}
