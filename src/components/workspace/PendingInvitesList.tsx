@@ -22,7 +22,9 @@ import {
   Mail, 
   Clock, 
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Copy,
+  Check
 } from "lucide-react";
 import {
   AlertDialog,
@@ -42,6 +44,7 @@ interface Invite {
   email: string;
   role: AppRole;
   status: string;
+  token: string;
   expires_at: string;
   created_at: string;
   created_by_email: string | null;
@@ -57,8 +60,32 @@ export function PendingInvitesList({ workspaceId }: PendingInvitesListProps) {
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [inviteToCancel, setInviteToCancel] = useState<string | null>(null);
+
+  const handleCopyLink = async (invite: Invite) => {
+    const link = `${window.location.origin}/accept-invite?token=${invite.token}`;
+    
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedId(invite.id);
+      
+      toast({
+        title: "Link copiado!",
+        description: "O link do convite foi copiado para a área de transferência.",
+      });
+
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      console.error("Error copying link:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível copiar o link.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchInvites = async () => {
     if (!workspaceId) return;
@@ -258,12 +285,26 @@ export function PendingInvitesList({ workspaceId }: PendingInvitesListProps) {
                     {invite.created_by_name || invite.created_by_email || "—"}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCopyLink(invite)}
+                        title="Copiar link do convite"
+                      >
+                        {copiedId === invite.id ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                        <span className="ml-1 hidden sm:inline">Copiar Link</span>
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleResend(invite.id)}
                         disabled={actionLoading === invite.id}
+                        title="Reenviar e-mail"
                       >
                         {actionLoading === invite.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -281,6 +322,7 @@ export function PendingInvitesList({ workspaceId }: PendingInvitesListProps) {
                           setCancelDialogOpen(true);
                         }}
                         disabled={actionLoading === invite.id}
+                        title="Cancelar convite"
                       >
                         <XCircle className="h-4 w-4" />
                         <span className="ml-1 hidden sm:inline">Cancelar</span>
