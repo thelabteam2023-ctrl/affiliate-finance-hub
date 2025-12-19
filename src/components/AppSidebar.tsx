@@ -106,7 +106,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, signOut, role, isSystemOwner } = useAuth();
+  const { user, signOut, role, isSystemOwner, publicId } = useAuth();
   const { canManageWorkspace } = useRole();
   const { favorites } = useFavorites();
   const currentPath = location.pathname;
@@ -316,7 +316,10 @@ export function AppSidebar() {
               {!isCollapsed && (
                 <div className="flex-1 text-left overflow-hidden">
                   <p className="text-xs font-medium truncate">{user?.email}</p>
-                  <p className="text-[10px] text-muted-foreground capitalize">{role || 'usuário'}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {publicId && <span>ID: {publicId} • </span>}
+                    <span className="capitalize">{role || 'usuário'}</span>
+                  </p>
                 </div>
               )}
             </button>
@@ -324,7 +327,11 @@ export function AppSidebar() {
           <DropdownMenuContent align="end" className="w-56">
             <div className="px-2 py-1.5">
               <p className="text-sm font-medium truncate">{user?.email}</p>
-              <p className="text-xs text-muted-foreground capitalize">Role: {role || 'usuário'}</p>
+              <p className="text-xs text-muted-foreground">
+                {publicId && <span className="font-mono">ID: {publicId}</span>}
+                {publicId && " • "}
+                <span className="capitalize">Role: {role || 'usuário'}</span>
+              </p>
             </div>
             <DropdownMenuSeparator />
             {canManageWorkspace && (

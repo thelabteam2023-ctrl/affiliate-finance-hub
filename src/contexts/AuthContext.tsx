@@ -23,6 +23,7 @@ interface AuthContextType {
   initialized: boolean;
   isSystemOwner: boolean;
   isBlocked: boolean;
+  publicId: string | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -44,19 +45,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [initialized, setInitialized] = useState(false);
   const [isSystemOwner, setIsSystemOwner] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [publicId, setPublicId] = useState<string | null>(null);
 
   const fetchWorkspaceAndRole = useCallback(async (userId: string) => {
     try {
-      // Check if user is system owner or blocked
+      // Check if user is system owner or blocked, and get public_id
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('is_system_owner, is_blocked')
+        .select('is_system_owner, is_blocked, public_id')
         .eq('id', userId)
         .single();
       
       if (!profileError && profileData) {
         setIsSystemOwner(profileData.is_system_owner || false);
         setIsBlocked(profileData.is_blocked || false);
+        setPublicId(profileData.public_id || null);
       }
 
       // Get user's workspace
@@ -140,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setRole(null);
           setIsSystemOwner(false);
           setIsBlocked(false);
+          setPublicId(null);
         }
       }
     );
@@ -184,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRole(null);
     setIsSystemOwner(false);
     setIsBlocked(false);
+    setPublicId(null);
   };
 
   const refreshWorkspace = async () => {
@@ -234,6 +239,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initialized,
     isSystemOwner,
     isBlocked,
+    publicId,
     signIn,
     signUp,
     signOut,
