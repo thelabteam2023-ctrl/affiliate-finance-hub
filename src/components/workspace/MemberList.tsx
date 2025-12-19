@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Trash2, Crown, Shield, User, DollarSign, Gamepad2, Eye, Settings2, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getRoleLabel } from "@/lib/roleLabels";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,13 +50,13 @@ interface MemberListProps {
 }
 
 // Roles disponíveis para seleção (excluindo owner que é fixo)
-const roleConfig: Record<string, { label: string; icon: any; color: string }> = {
-  owner: { label: "Proprietário", icon: Crown, color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" },
-  admin: { label: "Administrador", icon: Shield, color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
-  finance: { label: "Financeiro", icon: DollarSign, color: "bg-green-500/10 text-green-600 border-green-500/20" },
-  operator: { label: "Operador", icon: Gamepad2, color: "bg-orange-500/10 text-orange-600 border-orange-500/20" },
-  user: { label: "Usuário", icon: User, color: "bg-slate-500/10 text-slate-600 border-slate-500/20" },
-  viewer: { label: "Visualizador", icon: Eye, color: "bg-gray-500/10 text-gray-600 border-gray-500/20" },
+const roleConfig: Record<string, { icon: any; color: string }> = {
+  owner: { icon: Crown, color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" },
+  admin: { icon: Shield, color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
+  finance: { icon: DollarSign, color: "bg-green-500/10 text-green-600 border-green-500/20" },
+  operator: { icon: Gamepad2, color: "bg-orange-500/10 text-orange-600 border-orange-500/20" },
+  user: { icon: User, color: "bg-slate-500/10 text-slate-600 border-slate-500/20" },
+  viewer: { icon: Eye, color: "bg-gray-500/10 text-gray-600 border-gray-500/20" },
 };
 
 const availableRoles: AppRole[] = ['admin', 'finance', 'operator', 'viewer'];
@@ -204,7 +205,7 @@ export function MemberList({ members, currentUserId, onRoleChange, onRemove, can
                           <SelectItem key={role} value={role}>
                             <div className="flex items-center gap-2">
                               <Icon className="h-4 w-4" />
-                              <span>{config.label}</span>
+                              <span>{getRoleLabel(role)}</span>
                             </div>
                           </SelectItem>
                         );
@@ -214,7 +215,7 @@ export function MemberList({ members, currentUserId, onRoleChange, onRemove, can
                 ) : (
                   <Badge variant="outline" className={roleInfo.color}>
                     <RoleIcon className="h-3 w-3 mr-1" />
-                    {roleInfo.label}
+                    {getRoleLabel(member.role)}
                   </Badge>
                 )}
 

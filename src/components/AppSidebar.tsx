@@ -7,7 +7,7 @@ import { useRole } from "@/hooks/useRole";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-
+import { getRoleLabel } from "@/lib/roleLabels";
 import {
   Sidebar,
   SidebarContent,
@@ -318,7 +318,7 @@ export function AppSidebar() {
                   <p className="text-xs font-medium truncate">{user?.email}</p>
                   <p className="text-[10px] text-muted-foreground">
                     {publicId && <span>ID: {publicId} • </span>}
-                    <span className="capitalize">{role || 'usuário'}</span>
+                    <span>{isSystemOwner ? getRoleLabel('system_owner') : getRoleLabel(role)}</span>
                   </p>
                 </div>
               )}
@@ -330,7 +330,7 @@ export function AppSidebar() {
               <p className="text-xs text-muted-foreground">
                 {publicId && <span className="font-mono">ID: {publicId}</span>}
                 {publicId && " • "}
-                <span className="capitalize">Role: {role || 'usuário'}</span>
+                <span>{isSystemOwner ? getRoleLabel('system_owner') : getRoleLabel(role)}</span>
               </p>
             </div>
             <DropdownMenuSeparator />
