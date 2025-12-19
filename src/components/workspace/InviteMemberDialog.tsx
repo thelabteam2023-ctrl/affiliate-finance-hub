@@ -98,74 +98,50 @@ export function InviteMemberDialog({
     try {
       setLoading(true);
 
-      // First, check if user exists by email
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email.trim().toLowerCase())
-        .single();
+      // Usar a nova função RPC para criar convite
+      const { data, error } = await supabase.rpc('create_workspace_invite', {
+        _email: email.trim().toLowerCase(),
+        _workspace_id: workspaceId,
+        _role: role
+      });
 
-      if (profileError || !profile) {
-        toast({
-          title: "Usuário não encontrado",
-          description: "O email informado não está cadastrado no sistema. O usuário precisa criar uma conta primeiro.",
-          variant: "destructive",
-        });
-        return;
-      }
+      if (error) throw error;
+      
+      const result = data as unknown as { 
+        success: boolean; 
+        error?: string; 
+        already_member?: boolean;
+        renewed?: boolean;
+        token?: string;
+      };
 
-      // Check if user is already a member
-      const { data: existingMember } = await supabase
-        .from('workspace_members')
-        .select('id, is_active')
-        .eq('workspace_id', workspaceId)
-        .eq('user_id', profile.id)
-        .single();
-
-      if (existingMember) {
-        if (existingMember.is_active) {
+      if (!result.success) {
+        if (result.already_member) {
           toast({
             title: "Usuário já é membro",
             description: "Este usuário já faz parte do workspace.",
             variant: "destructive",
           });
-          return;
+        } else {
+          throw new Error(result.error || 'Erro ao criar convite');
         }
-
-        // Reactivate inactive member
-        const { error: updateError } = await supabase
-          .from('workspace_members')
-          .update({ is_active: true, role })
-          .eq('id', existingMember.id);
-
-        if (updateError) throw updateError;
-      } else {
-        // Add new member
-        const { error: insertError } = await supabase
-          .from('workspace_members')
-          .insert({
-            workspace_id: workspaceId,
-            user_id: profile.id,
-            role,
-            is_active: true,
-          });
-
-        if (insertError) throw insertError;
+        return;
       }
 
+      // Sucesso - convite criado ou renovado
       toast({
-        title: "Sucesso",
-        description: `${email} foi adicionado ao workspace como ${roleOptions.find(r => r.value === role)?.label}.`,
+        title: result.renewed ? "Convite reenviado" : "Convite enviado",
+        description: `Um convite foi enviado para ${email}. O acesso será liberado após o aceite.`,
       });
 
       setEmail("");
       setRole("viewer");
       onMemberInvited();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error inviting member:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível adicionar o membro. Tente novamente.",
+        description: error.message || "Não foi possível enviar o convite. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -182,7 +158,7 @@ export function InviteMemberDialog({
             Convidar Membro
           </DialogTitle>
           <DialogDescription>
-            Adicione um novo membro ao seu workspace. O usuário precisa ter uma conta no sistema.
+            Envie um convite por email. O usuário receberá um link para aceitar e entrar no workspace.
           </DialogDescription>
         </DialogHeader>
 

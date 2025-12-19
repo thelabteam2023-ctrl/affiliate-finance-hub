@@ -4100,6 +4100,7 @@ export type Database = {
           data_admissao: string | null
           data_desligamento: string | null
           data_nascimento: string | null
+          default_workspace_id: string | null
           email: string | null
           full_name: string | null
           id: string
@@ -4120,6 +4121,7 @@ export type Database = {
           data_admissao?: string | null
           data_desligamento?: string | null
           data_nascimento?: string | null
+          default_workspace_id?: string | null
           email?: string | null
           full_name?: string | null
           id: string
@@ -4140,6 +4142,7 @@ export type Database = {
           data_admissao?: string | null
           data_desligamento?: string | null
           data_nascimento?: string | null
+          default_workspace_id?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
@@ -4152,7 +4155,15 @@ export type Database = {
           tipo_contrato?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_default_workspace_id_fkey"
+            columns: ["default_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       projeto_bookmaker_historico: {
         Row: {
@@ -5428,6 +5439,56 @@ export type Database = {
             columns: ["rede_id"]
             isOneToOne: false
             referencedRelation: "redes_crypto"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string | null
+          created_by: string | null
+          email: string
+          expires_at: string
+          id: string
+          invited_user_id: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+          token: string
+          workspace_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email: string
+          expires_at?: string
+          id?: string
+          invited_user_id?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          token?: string
+          workspace_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_user_id?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          token?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_invites_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -7120,6 +7181,7 @@ export type Database = {
       }
     }
     Functions: {
+      accept_workspace_invite: { Args: { _token: string }; Returns: Json }
       admin_add_user_to_workspace: {
         Args: {
           _role?: Database["public"]["Enums"]["app_role"]
@@ -7402,6 +7464,7 @@ export type Database = {
         Returns: string
       }
       can_moderate_community: { Args: { _user_id: string }; Returns: boolean }
+      cancel_workspace_invite: { Args: { _invite_id: string }; Returns: Json }
       check_custom_permissions_limit: {
         Args: { workspace_uuid: string }
         Returns: Json
@@ -7450,8 +7513,30 @@ export type Database = {
         }
         Returns: string
       }
+      create_workspace_invite: {
+        Args: {
+          _email: string
+          _role?: Database["public"]["Enums"]["app_role"]
+          _workspace_id: string
+        }
+        Returns: Json
+      }
+      expire_old_invites: { Args: never; Returns: number }
       generate_public_id: { Args: never; Returns: string }
       get_current_workspace: { Args: never; Returns: string }
+      get_invite_by_token: { Args: { _token: string }; Returns: Json }
+      get_my_pending_invites: {
+        Args: never
+        Returns: {
+          expires_at: string
+          id: string
+          inviter_name: string
+          role: Database["public"]["Enums"]["app_role"]
+          token: string
+          workspace_id: string
+          workspace_name: string
+        }[]
+      }
       get_plan_entitlements: { Args: { plan_name: string }; Returns: Json }
       get_public_plans: { Args: never; Returns: Json }
       get_remaining_days: { Args: { p_expires_at: string }; Returns: number }
@@ -7485,6 +7570,30 @@ export type Database = {
         Returns: Database["public"]["Enums"]["app_role"]
       }
       get_user_workspace: { Args: { _user_id: string }; Returns: string }
+      get_user_workspaces: {
+        Args: { _user_id: string }
+        Returns: {
+          is_default: boolean
+          plan: string
+          role: Database["public"]["Enums"]["app_role"]
+          workspace_id: string
+          workspace_name: string
+          workspace_slug: string
+        }[]
+      }
+      get_workspace_invites: {
+        Args: { _workspace_id: string }
+        Returns: {
+          created_at: string
+          created_by_email: string
+          created_by_name: string
+          email: string
+          expires_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+        }[]
+      }
       get_workspace_usage: { Args: { workspace_uuid: string }; Returns: Json }
       has_permission: {
         Args: {
@@ -7532,6 +7641,7 @@ export type Database = {
         Args: { p_new_price_id?: string; p_workspace_id: string }
         Returns: string
       }
+      resend_workspace_invite: { Args: { _invite_id: string }; Returns: Json }
       schedule_downgrade: {
         Args: {
           p_reason?: string
@@ -7539,6 +7649,10 @@ export type Database = {
           p_workspace_id: string
         }
         Returns: string
+      }
+      set_current_workspace: {
+        Args: { _workspace_id: string }
+        Returns: boolean
       }
       update_parcerias_em_encerramento: { Args: never; Returns: undefined }
       user_belongs_to_workspace: {
