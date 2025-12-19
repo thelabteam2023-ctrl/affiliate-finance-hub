@@ -176,31 +176,12 @@ export default function Workspace() {
     }
   };
 
-  const handleRoleChange = async (memberId: string, newRole: AppRole) => {
-    try {
-      const { error } = await supabase
-        .from('workspace_members')
-        .update({ role: newRole })
-        .eq('id', memberId);
-
-      if (error) throw error;
-
-      setMembers(prev => 
-        prev.map(m => m.id === memberId ? { ...m, role: newRole } : m)
-      );
-
-      toast({
-        title: "Sucesso",
-        description: "Função atualizada com sucesso.",
-      });
-    } catch (error) {
-      console.error("Error updating role:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar a função.",
-        variant: "destructive",
-      });
-    }
+  // Callback chamado pelo MemberList após confirmar a mudança de role via RPC
+  const handleRoleChange = (memberId: string, newRole: AppRole) => {
+    // Apenas atualizar o estado local - a RPC já fez o update no banco
+    setMembers(prev => 
+      prev.map(m => m.id === memberId ? { ...m, role: newRole } : m)
+    );
   };
 
   const handleRemoveMember = async (memberId: string) => {
