@@ -70,6 +70,7 @@ const App = () => (
             <Route path="/accept-invite" element={<AcceptInvite />} />
 
             {/* Protected routes with layout */}
+            {/* Central - Acessível por todos os roles autenticados */}
             <Route path="/" element={
               <ProtectedRoute>
                 <AuthenticatedLayout>
@@ -78,102 +79,115 @@ const App = () => (
               </ProtectedRoute>
             } />
             
+            {/* Parceiros - Usa permission key do banco */}
             <Route path="/parceiros" element={
-              <ProtectedRoute requiredPermission="partners:view">
+              <ProtectedRoute requiredPermission="parceiros.read">
                 <AuthenticatedLayout>
                   <GestaoParceiros />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
             
+            {/* Bookmakers - Usa permission key do banco */}
             <Route path="/bookmakers" element={
-              <ProtectedRoute requiredPermission="bookmakers:view">
+              <ProtectedRoute requiredPermission="bookmakers.catalog.read">
                 <AuthenticatedLayout>
                   <GestaoBookmakers />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
             
+            {/* Bancos - Usa permission key do banco (financeiro.read) */}
             <Route path="/bancos" element={
-              <ProtectedRoute requiredPermission="finance:view">
+              <ProtectedRoute requiredPermission="financeiro.read">
                 <AuthenticatedLayout>
                   <GestaoBancos />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
             
+            {/* Investidores - Usa permission key do banco */}
             <Route path="/investidores" element={
-              <ProtectedRoute requiredPermission="investors:view">
+              <ProtectedRoute requiredPermission="investidores.read">
                 <AuthenticatedLayout>
                   <GestaoInvestidores />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
             
+            {/* Operadores - Usa permission key do banco */}
             <Route path="/operadores" element={
-              <ProtectedRoute requiredPermission="operators:view">
+              <ProtectedRoute requiredPermission="operadores.read">
                 <AuthenticatedLayout>
                   <GestaoOperadores />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
             
+            {/* Projetos - Usa permission key do banco */}
             <Route path="/projetos" element={
-              <ProtectedRoute requiredPermission="projects:view">
+              <ProtectedRoute requiredPermission="projetos.read">
                 <AuthenticatedLayout>
                   <GestaoProjetos />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
             
+            {/* Projeto Detalhe - Usa permission key do banco */}
             <Route path="/projeto/:id" element={
-              <ProtectedRoute requiredPermission="projects:view">
+              <ProtectedRoute requiredPermission="projetos.read">
                 <AuthenticatedLayout>
                   <ProjetoDetalhe />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
             
+            {/* Programa de Indicação - Usa permission key do banco */}
             <Route path="/programa-indicacao" element={
-              <ProtectedRoute requiredPermission="acquisition:view">
+              <ProtectedRoute requiredPermission="captacao.read">
                 <AuthenticatedLayout>
                   <ProgramaIndicacao />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
             
+            {/* Caixa - Usa permission key do banco */}
             <Route path="/caixa" element={
-              <ProtectedRoute requiredPermission="cash:view">
+              <ProtectedRoute requiredPermission="caixa.read">
                 <AuthenticatedLayout>
                   <Caixa />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
             
+            {/* Financeiro - Usa permission key do banco */}
             <Route path="/financeiro" element={
-              <ProtectedRoute requiredPermission="finance:view">
+              <ProtectedRoute requiredPermission="financeiro.read">
                 <AuthenticatedLayout>
                   <Financeiro />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
             
+            {/* Workspace - Requer role owner ou admin */}
             <Route path="/workspace" element={
-              <ProtectedRoute requiredRole={['owner', 'admin', 'master']}>
+              <ProtectedRoute requiredRole={['owner', 'admin']}>
                 <AuthenticatedLayout>
                   <Workspace />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
             
+            {/* Testes - Requer role owner */}
             <Route path="/testes" element={
-              <ProtectedRoute requiredRole={['owner', 'master']}>
+              <ProtectedRoute requiredRole={['owner']}>
                 <AuthenticatedLayout>
                   <Testes />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
             
+            {/* Admin do Sistema - Requer System Owner */}
             <Route path="/admin" element={
               <ProtectedRoute requireSystemOwner>
                 <AuthenticatedLayout>
@@ -182,6 +196,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             
+            {/* Comunidade - Verificação de plano é feita internamente */}
             <Route path="/comunidade" element={
               <ProtectedRoute>
                 <AuthenticatedLayout>

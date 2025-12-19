@@ -1,11 +1,10 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, ShieldX } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { NoWorkspaceScreen } from "@/components/NoWorkspaceScreen";
 import { BlockedUserScreen } from "@/components/BlockedUserScreen";
+import { AccessDenied } from "@/components/AccessDenied";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -26,6 +25,7 @@ export function ProtectedRoute({
   const location = useLocation();
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [hasAccess, setHasAccess] = useState(true);
+  const [denyReason, setDenyReason] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -34,6 +34,7 @@ export function ProtectedRoute({
 
       // SYSTEM OWNER has full access to everything
       if (isSystemOwner) {
+        console.log('[ProtectedRoute] System owner - full access granted');
         setHasAccess(true);
         setPermissionChecked(true);
         return;
@@ -41,6 +42,8 @@ export function ProtectedRoute({
 
       // System owner requirement - only system owners can access
       if (requireSystemOwner) {
+        console.log('[ProtectedRoute] Denied: requires system owner');
+        setDenyReason('Acesso restrito ao administrador do sistema.');
         setHasAccess(false);
         setPermissionChecked(true);
         return;
@@ -49,8 +52,13 @@ export function ProtectedRoute({
       // Check role requirement
       if (requiredRole && requiredRole.length > 0) {
         if (!role || !requiredRole.includes(role)) {
-          // Owner and master bypass role checks
-          if (role !== 'owner' && role !== 'master') {
+          // Owner bypasses role checks
+          if (role !== 'owner') {
+            console.log('[ProtectedRoute] Denied: role not in required list', { 
+              userRole: role, 
+              requiredRoles: requiredRole 
+            });
+            setDenyReason(`Acesso restrito para: ${requiredRole.join(', ')}`);
             setHasAccess(false);
             setPermissionChecked(true);
             return;
@@ -60,14 +68,30 @@ export function ProtectedRoute({
 
       // Check permission requirement
       if (requiredPermission) {
-        // Owner, admin, and master bypass permission checks
-        if (role === 'owner' || role === 'admin' || role === 'master') {
+        // Owner and admin bypass permission checks
+        if (role === 'owner' || role === 'admin') {
+          console.log('[ProtectedRoute] Owner/Admin - permission check bypassed');
           setHasAccess(true);
           setPermissionChecked(true);
           return;
         }
 
+        console.log('[ProtectedRoute] Checking permission:', {
+          permission: requiredPermission,
+          role: role,
+          workspaceId: workspace?.id
+        });
+
         const allowed = await hasPermission(requiredPermission);
+        
+        if (!allowed) {
+          console.log('[ProtectedRoute] Denied: permission not granted', {
+            permission: requiredPermission,
+            role: role
+          });
+          setDenyReason(`Permissão necessária: ${requiredPermission}`);
+        }
+        
         setHasAccess(allowed);
       }
 
@@ -75,7 +99,7 @@ export function ProtectedRoute({
     };
 
     checkAccess();
-  }, [user, initialized, role, requiredPermission, requiredRole, requireSystemOwner, hasPermission, isSystemOwner]);
+  }, [user, initialized, role, requiredPermission, requiredRole, requireSystemOwner, hasPermission, isSystemOwner, workspace?.id]);
 
   // Show loading while checking auth
   if (loading || !initialized) {
@@ -89,9 +113,9 @@ export function ProtectedRoute({
     );
   }
 
-  // Redirect to auth if not logged in
+  // Redirect to auth if not logged in, passing current location
   if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    return <Navigate to="/auth" state={{ from: location.pathname }} replace />;
   }
 
   // Check if user is blocked
@@ -122,33 +146,8 @@ export function ProtectedRoute({
       return <>{fallback}</>;
     }
 
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
-              <ShieldX className="h-8 w-8 text-destructive" />
-            </div>
-            <CardTitle className="text-2xl">Acesso Negado</CardTitle>
-            <CardDescription>
-              Você não tem permissão para acessar esta página.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <p className="text-sm text-muted-foreground text-center">
-              Entre em contato com o administrador do workspace para solicitar acesso.
-            </p>
-            <Button 
-              variant="outline" 
-              onClick={() => window.history.back()}
-              className="w-full"
-            >
-              Voltar
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    // Render AccessDenied with state for smart navigation
+    return <AccessDenied message={denyReason || undefined} />;
   }
 
   return <>{children}</>;
