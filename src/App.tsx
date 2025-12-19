@@ -26,6 +26,7 @@ import Comunidade from "./pages/Comunidade";
 import ComunidadeDetalhe from "./pages/ComunidadeDetalhe";
 import ComunidadeChatPopout from "./pages/ComunidadeChatPopout";
 import SystemAdmin from "./pages/SystemAdmin";
+import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -66,6 +67,7 @@ const App = () => (
             {/* Public routes - no layout */}
             <Route path="/landing" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/accept-invite" element={<AcceptInvite />} />
 
             {/* Protected routes with layout */}
             <Route path="/" element={
