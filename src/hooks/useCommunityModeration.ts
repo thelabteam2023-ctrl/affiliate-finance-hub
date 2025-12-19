@@ -58,7 +58,6 @@ export function useCommunityModeration() {
   }, [canModerate, toast, queryClient]);
 
   const deleteComment = useCallback(async (
-    topicId: string,
     commentId: string,
     reason: string = 'Removido pelo moderador'
   ): Promise<ModerationResult> => {
@@ -76,7 +75,7 @@ export function useCommunityModeration() {
       if (error) throw error;
 
       // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ['community-comments', topicId] });
+      queryClient.invalidateQueries({ queryKey: ['community-comments'] });
 
       toast({ title: 'Comentário removido com sucesso' });
       return { success: true };
