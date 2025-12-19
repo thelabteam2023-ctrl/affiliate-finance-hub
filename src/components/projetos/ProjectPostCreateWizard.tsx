@@ -1041,10 +1041,10 @@ export function ProjectPostCreateWizard({
                       <SelectContent>
                         {TIPOS_GATILHO.map((tipo) => (
                           <SelectItem key={tipo.value} value={tipo.value}>
-                            <div className="flex items-center gap-2">
+                            <span className="flex items-center justify-center gap-2 w-full">
                               <tipo.icon className="h-4 w-4" />
                               {tipo.label}
-                            </div>
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
