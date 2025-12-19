@@ -57,9 +57,10 @@ interface Comment {
 interface CommunityTopicsListProps {
   bookmakerId: string;
   onCreateTopic?: () => void;
+  refreshKey?: number;
 }
 
-export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTopicsListProps) {
+export function CommunityTopicsList({ bookmakerId, onCreateTopic, refreshKey = 0 }: CommunityTopicsListProps) {
   const { user } = useAuth();
   const { hasFullAccess, canEditAny } = useCommunityAccess();
   const { toast } = useToast();
@@ -84,7 +85,7 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
 
   useEffect(() => {
     fetchTopics();
-  }, [bookmakerId]);
+  }, [bookmakerId, refreshKey]);
 
   const fetchTopics = async () => {
     try {

@@ -32,8 +32,8 @@ export function useCommunityModeration() {
     setLoading(true);
     try {
       const { data, error } = await supabase.rpc('moderate_delete_topic', {
-        _topic_id: topicId,
-        _reason: reason,
+        p_topic_id: topicId,
+        p_reason: reason,
       });
 
       if (error) throw error;
@@ -69,8 +69,8 @@ export function useCommunityModeration() {
     setLoading(true);
     try {
       const { data, error } = await supabase.rpc('moderate_delete_comment', {
-        _comment_id: commentId,
-        _reason: reason,
+        p_comment_id: commentId,
+        p_reason: reason,
       });
 
       if (error) throw error;
