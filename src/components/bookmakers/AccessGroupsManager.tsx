@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useAccessGroups, AccessGroup } from "@/hooks/useAccessGroups";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -24,12 +26,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Edit, Trash2, Users, FolderOpen, Archive, CheckCircle, Building2 } from "lucide-react";
+import { Plus, Edit, Trash2, Users, FolderOpen, Archive, RotateCcw, Building2, Loader2 } from "lucide-react";
 import AccessGroupWorkspacesDialog from "./AccessGroupWorkspacesDialog";
 import AccessGroupBookmakersDialog from "./AccessGroupBookmakersDialog";
+import ArchiveGroupDialog from "./ArchiveGroupDialog";
 
 export default function AccessGroupsManager() {
-  const { groups, loading, createGroup, updateGroup, deleteGroup } = useAccessGroups();
+  const { groups, loading, createGroup, updateGroup, deleteGroup, fetchGroups } = useAccessGroups();
   const { toast } = useToast();
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -38,12 +41,21 @@ export default function AccessGroupsManager() {
   const [groupToDelete, setGroupToDelete] = useState<AccessGroup | null>(null);
   const [workspacesDialogOpen, setWorkspacesDialogOpen] = useState(false);
   const [bookmakersDialogOpen, setBookmakersDialogOpen] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<AccessGroup | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived">("active");
+  const [reactivating, setReactivating] = useState<string | null>(null);
 
   const [formName, setFormName] = useState("");
   const [formCode, setFormCode] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Filter groups by status
+  const filteredGroups = groups.filter((g) => {
+    if (statusFilter === "all") return true;
+    return g.status === statusFilter;
+  });
 
   const handleOpenCreate = () => {
     setEditingGroup(null);
@@ -116,23 +128,30 @@ export default function AccessGroupsManager() {
     }
   };
 
-  const handleToggleStatus = async (group: AccessGroup) => {
+  const handleOpenArchive = (group: AccessGroup) => {
+    setSelectedGroup(group);
+    setArchiveDialogOpen(true);
+  };
+
+  const handleReactivate = async (group: AccessGroup) => {
     try {
-      await updateGroup(group.id, {
-        status: group.status === "active" ? "archived" : "active",
+      setReactivating(group.id);
+      const { error } = await supabase.rpc("admin_reactivate_group", {
+        p_group_id: group.id,
       });
-      toast({
-        title: group.status === "active" ? "Grupo arquivado" : "Grupo reativado",
-      });
+      if (error) throw error;
+      toast({ title: "Grupo reativado!" });
+      fetchGroups();
     } catch (error: any) {
       toast({
-        title: "Erro",
+        title: "Erro ao reativar",
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setReactivating(null);
     }
   };
-
   const handleOpenWorkspaces = (group: AccessGroup) => {
     setSelectedGroup(group);
     setWorkspacesDialogOpen(true);
@@ -166,18 +185,35 @@ export default function AccessGroupsManager() {
         </Button>
       </div>
 
-      {groups.length === 0 ? (
+      {/* Status Filter */}
+      <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as "all" | "active" | "archived")}>
+        <TabsList>
+          <TabsTrigger value="active">
+            Ativos ({groups.filter(g => g.status === "active").length})
+          </TabsTrigger>
+          <TabsTrigger value="archived">
+            Arquivados ({groups.filter(g => g.status === "archived").length})
+          </TabsTrigger>
+          <TabsTrigger value="all">
+            Todos ({groups.length})
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {filteredGroups.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <FolderOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">
-              Nenhum grupo criado. Crie grupos para controlar acesso em lote.
+              {groups.length === 0 
+                ? "Nenhum grupo criado. Crie grupos para controlar acesso em lote."
+                : `Nenhum grupo ${statusFilter === "active" ? "ativo" : statusFilter === "archived" ? "arquivado" : ""} encontrado.`}
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {groups.map((group) => (
+          {filteredGroups.map((group) => (
             <Card
               key={group.id}
               className={group.status === "archived" ? "opacity-60" : ""}
@@ -244,17 +280,30 @@ export default function AccessGroupsManager() {
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleToggleStatus(group)}
-                  >
-                    {group.status === "active" ? (
+                  {group.status === "active" ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleOpenArchive(group)}
+                      title="Arquivar grupo"
+                    >
                       <Archive className="h-4 w-4" />
-                    ) : (
-                      <CheckCircle className="h-4 w-4" />
-                    )}
-                  </Button>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleReactivate(group)}
+                      disabled={reactivating === group.id}
+                      title="Reativar grupo"
+                    >
+                      {reactivating === group.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RotateCcw className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -357,6 +406,16 @@ export default function AccessGroupsManager() {
           open={bookmakersDialogOpen}
           onOpenChange={setBookmakersDialogOpen}
           group={selectedGroup}
+        />
+      )}
+
+      {/* Archive Dialog */}
+      {selectedGroup && (
+        <ArchiveGroupDialog
+          open={archiveDialogOpen}
+          onOpenChange={setArchiveDialogOpen}
+          group={selectedGroup}
+          onArchived={fetchGroups}
         />
       )}
     </div>

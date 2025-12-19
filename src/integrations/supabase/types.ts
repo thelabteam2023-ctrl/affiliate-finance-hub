@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_group_audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string
+          affected_bookmakers: string[] | null
+          affected_workspaces: string[] | null
+          created_at: string
+          details: Json | null
+          group_id: string
+          id: string
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          affected_bookmakers?: string[] | null
+          affected_workspaces?: string[] | null
+          created_at?: string
+          details?: Json | null
+          group_id: string
+          id?: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          affected_bookmakers?: string[] | null
+          affected_workspaces?: string[] | null
+          created_at?: string
+          details?: Json | null
+          group_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_group_audit_log_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "access_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       access_group_bookmakers: {
         Row: {
           added_at: string
@@ -101,6 +142,9 @@ export type Database = {
       }
       access_groups: {
         Row: {
+          archive_reason: string | null
+          archived_at: string | null
+          archived_by: string | null
           code: string
           created_at: string
           created_by: string | null
@@ -111,6 +155,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           code: string
           created_at?: string
           created_by?: string | null
@@ -121,6 +168,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           code?: string
           created_at?: string
           created_by?: string | null
@@ -7078,6 +7128,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_archive_group: {
+        Args: {
+          p_convert_to_direct_access?: boolean
+          p_group_id: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
+      admin_calculate_group_archive_impact: {
+        Args: { p_group_id: string }
+        Returns: Json
+      }
       admin_cleanup_dry_run: { Args: { _user_ids: string[] }; Returns: Json }
       admin_cleanup_system_owner_operational_data: {
         Args: { p_confirmation_phrase: string }
@@ -7276,6 +7338,7 @@ export type Database = {
         }[]
       }
       admin_preview_system_owner_cleanup: { Args: never; Returns: Json }
+      admin_reactivate_group: { Args: { p_group_id: string }; Returns: Json }
       admin_reset_community: {
         Args: { _confirmation_phrase?: string; _dry_run?: boolean }
         Returns: Json
