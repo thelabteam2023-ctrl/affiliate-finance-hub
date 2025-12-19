@@ -9,6 +9,7 @@ interface CommunityAccess {
   role: string | null;
   isOwner: boolean;
   isAdmin: boolean; // OWNER ou ADMIN do workspace
+  canModerate: boolean; // Pode moderar conteúdo (delete, clear)
   canEvaluate: boolean;
   canCreateTopics: boolean;
   canComment: boolean;
@@ -118,6 +119,7 @@ export function useCommunityAccess(): CommunityAccess {
     role,
     isOwner,
     isAdmin,
+    canModerate: isOwner || isAdmin, // Pode moderar conteúdo da comunidade
     canEvaluate: hasFullAccess,
     canCreateTopics: hasFullAccess,
     canComment: hasFullAccess,

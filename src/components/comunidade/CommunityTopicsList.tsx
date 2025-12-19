@@ -28,6 +28,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { CommunityEditDialog } from './CommunityEditDialog';
+import { ModerationMenu } from './ModerationMenu';
 
 interface Topic {
   id: string;
@@ -337,6 +338,13 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
                           <Flag className="h-4 w-4" />
                         </Button>
                       )}
+                      {/* Moderation Menu */}
+                      <ModerationMenu
+                        type="topic"
+                        itemId={topic.id}
+                        itemTitle={topic.titulo}
+                        onDeleted={fetchTopics}
+                      />
                     </div>
                   </div>
                 </CardHeader>
@@ -394,6 +402,13 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic }: CommunityTop
                                     <Flag className="h-3 w-3" />
                                   </Button>
                                 )}
+                                {/* Moderation Menu for Comments */}
+                                <ModerationMenu
+                                  type="comment"
+                                  itemId={comment.id}
+                                  onDeleted={fetchTopics}
+                                  size="sm"
+                                />
                               </div>
                             </div>
                           );
