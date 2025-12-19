@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useAuth } from "@/hooks/useAuth";
 import { useRole } from "@/hooks/useRole";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useModuleAccess } from "@/hooks/useModuleAccess";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { getRoleLabel } from "@/lib/roleLabels";
@@ -26,8 +27,7 @@ interface MenuItem {
   url: string;
   icon: any;
   iconName: string;
-  permission?: string;
-  roles?: string[];
+  moduleKey: string; // Key for module access check
 }
 
 interface MenuGroup {
@@ -42,59 +42,60 @@ const iconMap: Record<string, any> = {
 };
 
 // Menu structure organized by functional domain
+// moduleKey is used to check access via useModuleAccess
 const menuGroups: MenuGroup[] = [
   {
     label: "VISÃO GERAL",
     items: [
-      { title: "Central", url: "/", icon: Bell, iconName: "Bell" },
+      { title: "Central", url: "/", icon: Bell, iconName: "Bell", moduleKey: "central" },
     ],
   },
   {
     label: "OPERAÇÃO",
     items: [
-      { title: "Projetos", url: "/projetos", icon: FolderKanban, iconName: "FolderKanban", permission: "projects:view" },
-      { title: "Casas", url: "/bookmakers", icon: Building2, iconName: "Building2", permission: "bookmakers:view" },
+      { title: "Projetos", url: "/projetos", icon: FolderKanban, iconName: "FolderKanban", moduleKey: "projetos" },
+      { title: "Casas", url: "/bookmakers", icon: Building2, iconName: "Building2", moduleKey: "bookmakers" },
     ],
   },
   {
     label: "FINANCEIRO",
     items: [
-      { title: "Caixa", url: "/caixa", icon: Wallet, iconName: "Wallet", permission: "cash:view" },
-      { title: "Financeiro", url: "/financeiro", icon: PieChart, iconName: "PieChart", permission: "finance:view" },
-      { title: "Bancos", url: "/bancos", icon: Landmark, iconName: "Landmark", permission: "finance:view" },
-      { title: "Investidores", url: "/investidores", icon: TrendingUp, iconName: "TrendingUp", permission: "investors:view" },
+      { title: "Caixa", url: "/caixa", icon: Wallet, iconName: "Wallet", moduleKey: "caixa" },
+      { title: "Financeiro", url: "/financeiro", icon: PieChart, iconName: "PieChart", moduleKey: "financeiro" },
+      { title: "Bancos", url: "/bancos", icon: Landmark, iconName: "Landmark", moduleKey: "bancos" },
+      { title: "Investidores", url: "/investidores", icon: TrendingUp, iconName: "TrendingUp", moduleKey: "investidores" },
     ],
   },
   {
     label: "RELACIONAMENTOS",
     items: [
-      { title: "Parceiros", url: "/parceiros", icon: Users, iconName: "Users", permission: "partners:view" },
-      { title: "Operadores", url: "/operadores", icon: Briefcase, iconName: "Briefcase", permission: "operators:view" },
+      { title: "Parceiros", url: "/parceiros", icon: Users, iconName: "Users", moduleKey: "parceiros" },
+      { title: "Operadores", url: "/operadores", icon: Briefcase, iconName: "Briefcase", moduleKey: "operadores" },
     ],
   },
   {
     label: "CRESCIMENTO",
     items: [
-      { title: "Captação", url: "/programa-indicacao", icon: UserPlus, iconName: "UserPlus", permission: "acquisition:view" },
+      { title: "Captação", url: "/programa-indicacao", icon: UserPlus, iconName: "UserPlus", moduleKey: "captacao" },
     ],
   },
   {
     label: "COMUNIDADE",
     items: [
-      { title: "Comunidade", url: "/comunidade", icon: Users2, iconName: "Users2" },
+      { title: "Comunidade", url: "/comunidade", icon: Users2, iconName: "Users2", moduleKey: "comunidade" },
     ],
   },
   {
     label: "ADMINISTRAÇÃO",
     items: [
-      { title: "Workspace", url: "/workspace", icon: Settings, iconName: "Settings", roles: ["owner", "admin"] },
-      { title: "Admin Sistema", url: "/admin", icon: Shield, iconName: "Shield", roles: [] }, // System Owner only - handled separately
+      { title: "Workspace", url: "/workspace", icon: Settings, iconName: "Settings", moduleKey: "workspace" },
+      { title: "Admin Sistema", url: "/admin", icon: Shield, iconName: "Shield", moduleKey: "admin" },
     ],
   },
   {
     label: "DESENVOLVIMENTO",
     items: [
-      { title: "Testes", url: "/testes", icon: FlaskConical, iconName: "FlaskConical", roles: ["owner"] },
+      { title: "Testes", url: "/testes", icon: FlaskConical, iconName: "FlaskConical", moduleKey: "testes" },
     ],
   },
 ];
@@ -109,27 +110,15 @@ export function AppSidebar() {
   const { user, signOut, role, isSystemOwner, publicId } = useAuth();
   const { canManageWorkspace } = useRole();
   const { favorites } = useFavorites();
+  const { canAccess } = useModuleAccess();
   const currentPath = location.pathname;
   
   const isCollapsed = state === "collapsed";
   const isActive = (path: string) => currentPath === path;
 
-  // Function to check if user can see a menu item
+  // Function to check if user can see a menu item using the new module access system
   const canSeeItem = (item: MenuItem): boolean => {
-    // Admin Sistema is only for System Owner
-    if (item.url === '/admin') {
-      return isSystemOwner === true;
-    }
-    if (!item.permission && !item.roles) return true;
-    // System Owner can see everything
-    if (isSystemOwner) return true;
-    // Owner can see everything in their workspace
-    if (role === 'owner') return true;
-    if (item.roles && item.roles.length > 0) {
-      if (!role || !item.roles.includes(role)) return false;
-    }
-    if (item.permission && role === 'admin') return true;
-    return true;
+    return canAccess(item.moduleKey);
   };
 
   const handleSignOut = async () => {

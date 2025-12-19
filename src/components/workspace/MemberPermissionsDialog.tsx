@@ -112,7 +112,7 @@ export function MemberPermissionsDialog({
     hasLimitedPermissions,
     maxOverrides,
     workspacePlan,
-  } = usePermissionOverrides(member.user_id);
+  } = usePermissionOverrides(member.user_id, member.role);
 
   const [saving, setSaving] = useState<string | null>(null);
 

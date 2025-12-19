@@ -42,7 +42,7 @@ export default function ComunidadeDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { hasFullAccess } = useCommunityAccess();
+  const { hasFullAccess, canWrite, isViewer } = useCommunityAccess();
   const { onlineCount, isConnected } = useChatPresence('bookmaker', id);
   
   const [bookmaker, setBookmaker] = useState<BookmakerDetails | null>(null);
@@ -219,8 +219,8 @@ export default function ComunidadeDetalhe() {
           <OnlineIndicator count={onlineCount} isConnected={isConnected} className="mt-2" />
         </div>
         
-        {/* Action Buttons */}
-        {hasFullAccess && (
+        {/* Action Buttons - Only show if user can write */}
+        {canWrite && (
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
               <Button 
@@ -293,7 +293,7 @@ export default function ComunidadeDetalhe() {
                   <div className="text-center py-8 text-muted-foreground">
                     <Star className="h-12 w-12 mx-auto mb-3 opacity-30" />
                     <p>Nenhuma avaliação ainda</p>
-                    {hasFullAccess && (
+                    {canWrite && (
                       <Button 
                         variant="outline" 
                         size="sm" 
@@ -326,7 +326,7 @@ export default function ComunidadeDetalhe() {
                   <div className="text-center py-8 text-muted-foreground">
                     <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
                     <p>Nenhum tópico de discussão ainda</p>
-                    {hasFullAccess && (
+                    {canWrite && (
                       <Button 
                         variant="outline" 
                         size="sm" 
