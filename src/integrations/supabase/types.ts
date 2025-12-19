@@ -7476,6 +7476,10 @@ export type Database = {
         Args: { workspace_uuid: string }
         Returns: Json
       }
+      check_cycle_closing_requirements: {
+        Args: { _ciclo_id: string }
+        Returns: Json
+      }
       check_login_blocked: {
         Args: { p_email: string }
         Returns: {
@@ -7487,6 +7491,10 @@ export type Database = {
       check_partner_limit: { Args: { workspace_uuid: string }; Returns: Json }
       check_user_limit: { Args: { workspace_uuid: string }; Returns: Json }
       cleanup_expired_chat_messages: { Args: never; Returns: number }
+      close_project_cycle: {
+        Args: { _ciclo_id: string; _workspace_id: string }
+        Returns: Json
+      }
       column_exists: {
         Args: { _column_name: string; _table_name: string }
         Returns: boolean

@@ -30,6 +30,7 @@ import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CicloDialog } from "./CicloDialog";
 import { ComparativoCiclosTab } from "./ComparativoCiclosTab";
+import { FecharCicloConfirmDialog } from "./FecharCicloConfirmDialog";
 
 interface Ciclo {
   id: string;
@@ -90,10 +91,23 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCiclo, setSelectedCiclo] = useState<Ciclo | null>(null);
   const [cicloMetrics, setCicloMetrics] = useState<Record<string, CicloMetrics>>({});
+  const [fecharConfirmOpen, setFecharConfirmOpen] = useState(false);
+  const [cicloParaFechar, setCicloParaFechar] = useState<Ciclo | null>(null);
+  const [projetoNome, setProjetoNome] = useState("");
 
   useEffect(() => {
     fetchCiclos();
+    fetchProjetoNome();
   }, [projetoId]);
+
+  const fetchProjetoNome = async () => {
+    const { data } = await supabase
+      .from("projetos")
+      .select("nome")
+      .eq("id", projetoId)
+      .single();
+    if (data) setProjetoNome(data.nome);
+  };
 
   const fetchCiclos = async () => {
     try {
@@ -234,157 +248,10 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
     setDialogOpen(true);
   };
 
-  const handleFecharCiclo = async (ciclo: Ciclo) => {
-    try {
-      // Calcular métricas completas do período incluindo perdas
-      const [apostasResult, apostasMultiplasResult, surebetsResult, perdasResult, projetoResult] = await Promise.all([
-        supabase
-          .from("apostas")
-          .select("lucro_prejuizo, stake")
-          .eq("projeto_id", projetoId)
-          .gte("data_aposta", ciclo.data_inicio)
-          .lte("data_aposta", ciclo.data_fim_prevista)
-          .eq("status", "LIQUIDADA"),
-        supabase
-          .from("apostas_multiplas")
-          .select("lucro_prejuizo, stake")
-          .eq("projeto_id", projetoId)
-          .gte("data_aposta", ciclo.data_inicio)
-          .lte("data_aposta", ciclo.data_fim_prevista)
-          .in("resultado", ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"]),
-        supabase
-          .from("surebets")
-          .select("lucro_real, stake_total")
-          .eq("projeto_id", projetoId)
-          .gte("data_evento", ciclo.data_inicio)
-          .lte("data_evento", ciclo.data_fim_prevista)
-          .eq("status", "LIQUIDADA"),
-        supabase
-          .from("projeto_perdas")
-          .select("valor, status, categoria")
-          .eq("projeto_id", projetoId)
-          .eq("status", "CONFIRMADA")
-          .gte("data_registro", ciclo.data_inicio)
-          .lte("data_registro", ciclo.data_fim_prevista),
-        supabase
-          .from("projetos")
-          .select("investidor_id, percentual_investidor, base_calculo_investidor")
-          .eq("id", projetoId)
-          .single(),
-      ]);
-
-      const apostas = apostasResult.data || [];
-      const apostasMultiplas = apostasMultiplasResult.data || [];
-      const surebets = surebetsResult.data || [];
-      const perdasConfirmadas = perdasResult.data || [];
-      const projeto = projetoResult.data;
-
-      // Calcular totais
-      const qtdApostas = apostas.length + apostasMultiplas.length + surebets.length;
-      const volumeApostado = 
-        apostas.reduce((acc, a) => acc + (a.stake || 0), 0) +
-        apostasMultiplas.reduce((acc, a) => acc + (a.stake || 0), 0) +
-        surebets.reduce((acc, a) => acc + (a.stake_total || 0), 0);
-      const lucroBruto = 
-        apostas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
-        apostasMultiplas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
-        surebets.reduce((acc, a) => acc + (a.lucro_real || 0), 0);
-
-      // Calcular perdas confirmadas do período
-      const totalPerdasConfirmadas = perdasConfirmadas.reduce((acc, p) => acc + p.valor, 0);
-      
-      // Lucro líquido = lucro bruto - perdas confirmadas
-      const lucroLiquido = lucroBruto - totalPerdasConfirmadas;
-
-      // Calcular ROI baseado no lucro líquido (real)
-      const roi = volumeApostado > 0 ? (lucroLiquido / volumeApostado) * 100 : 0;
-      const ticketMedio = qtdApostas > 0 ? volumeApostado / qtdApostas : 0;
-      
-      // Calcular excedente se ciclo por volume
-      let excedenteProximo = 0;
-      if (ciclo.tipo_gatilho !== "TEMPO" && ciclo.meta_volume) {
-        const metricaFinal = ciclo.metrica_acumuladora === "VOLUME_APOSTADO" ? volumeApostado : lucroLiquido;
-        if (metricaFinal > ciclo.meta_volume) {
-          excedenteProximo = metricaFinal - ciclo.meta_volume;
-        }
-      }
-
-      // Construir observações com métricas e perdas
-      let metricsInfo = `📊 Métricas: ${qtdApostas} apostas | Volume: R$ ${volumeApostado.toFixed(2)} | Ticket Médio: R$ ${ticketMedio.toFixed(2)} | ROI: ${roi.toFixed(2)}%`;
-      
-      if (totalPerdasConfirmadas > 0) {
-        metricsInfo += ` | Perdas: R$ ${totalPerdasConfirmadas.toFixed(2)}`;
-      }
-
-      const observacoesFinais = ciclo.observacoes 
-        ? `${ciclo.observacoes}\n\n${metricsInfo}`
-        : metricsInfo;
-
-      const { error } = await supabase
-        .from("projeto_ciclos")
-        .update({
-          status: "FECHADO",
-          data_fim_real: new Date().toISOString().split("T")[0],
-          lucro_bruto: lucroBruto,
-          lucro_liquido: lucroLiquido,
-          valor_acumulado: ciclo.metrica_acumuladora === "VOLUME_APOSTADO" ? volumeApostado : lucroLiquido,
-          excedente_proximo: excedenteProximo,
-          gatilho_fechamento: "MANUAL",
-          data_fechamento: new Date().toISOString(),
-          observacoes: observacoesFinais,
-        })
-        .eq("id", ciclo.id);
-
-      if (error) throw error;
-
-      // ========== PARTICIPAÇÃO DE INVESTIDOR ==========
-      // Se o projeto tem investidor vinculado, calcular e registrar participação
-      if (projeto?.investidor_id && projeto.percentual_investidor > 0) {
-        const { data: session } = await supabase.auth.getSession();
-        if (session.session) {
-          // Determinar base de cálculo
-          const lucroBase = projeto.base_calculo_investidor === "LUCRO_BRUTO" 
-            ? lucroBruto 
-            : lucroLiquido;
-          
-          // Só registrar participação se houver lucro positivo
-          if (lucroBase > 0) {
-            const valorParticipacao = lucroBase * (projeto.percentual_investidor / 100);
-            
-            const { error: participacaoError } = await supabase
-              .from("participacao_ciclos")
-              .insert({
-                user_id: session.session.user.id,
-                projeto_id: projetoId,
-                ciclo_id: ciclo.id,
-                investidor_id: projeto.investidor_id,
-                percentual_aplicado: projeto.percentual_investidor,
-                base_calculo: projeto.base_calculo_investidor || "LUCRO_LIQUIDO",
-                lucro_base: lucroBase,
-                valor_participacao: valorParticipacao,
-                status: "A_PAGAR",
-                data_apuracao: new Date().toISOString(),
-              });
-
-            if (participacaoError) {
-              console.error("Erro ao registrar participação:", participacaoError);
-              toast.error("Ciclo fechado, mas erro ao calcular participação do investidor");
-            } else {
-              toast.success(`Participação de R$ ${valorParticipacao.toFixed(2)} apurada para o investidor`);
-            }
-          }
-        }
-      }
-      
-      const toastMsg = totalPerdasConfirmadas > 0
-        ? `Ciclo fechado! ${qtdApostas} apostas, Lucro Real: R$ ${lucroLiquido.toFixed(2)} (após R$ ${totalPerdasConfirmadas.toFixed(2)} em perdas), ROI: ${roi.toFixed(2)}%`
-        : `Ciclo fechado! ${qtdApostas} apostas, Lucro: R$ ${lucroLiquido.toFixed(2)}, ROI: ${roi.toFixed(2)}%`;
-      
-      toast.success(toastMsg);
-      fetchCiclos();
-    } catch (error: any) {
-      toast.error("Erro ao fechar ciclo: " + error.message);
-    }
+  // Abre o dialog de confirmação forte para fechar ciclo
+  const handleFecharCiclo = (ciclo: Ciclo) => {
+    setCicloParaFechar(ciclo);
+    setFecharConfirmOpen(true);
   };
 
 
@@ -650,9 +517,14 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
                           <Button variant="outline" size="sm" onClick={() => handleEditCiclo(ciclo)}>
                             Editar
                           </Button>
-                          <Button size="sm" onClick={() => handleFecharCiclo(ciclo)}>
-                            <CheckCircle2 className="h-4 w-4 mr-1" />
-                            Fechar
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => handleFecharCiclo(ciclo)}
+                            className="gap-1"
+                          >
+                            <Lock className="h-4 w-4" />
+                            Fechar Ciclo
                           </Button>
                         </>
                       )}
@@ -887,6 +759,17 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
         proximoNumero={ciclos.length > 0 ? Math.max(...ciclos.map(c => c.numero_ciclo)) + 1 : 1}
         onSuccess={fetchCiclos}
       />
+
+      {cicloParaFechar && (
+        <FecharCicloConfirmDialog
+          open={fecharConfirmOpen}
+          onOpenChange={setFecharConfirmOpen}
+          ciclo={cicloParaFechar}
+          projetoNome={projetoNome}
+          metrics={cicloMetrics[cicloParaFechar.id] || null}
+          onSuccess={fetchCiclos}
+        />
+      )}
       </TabsContent>
 
       <TabsContent value="comparativo">
