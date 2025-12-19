@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -26,7 +25,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Edit, Trash2, Users, FolderOpen, Archive, RotateCcw, Building2, Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Edit, Trash2, Users, FolderOpen, Archive, RotateCcw, Building2, Loader2, AlertTriangle } from "lucide-react";
 import AccessGroupWorkspacesDialog from "./AccessGroupWorkspacesDialog";
 import AccessGroupBookmakersDialog from "./AccessGroupBookmakersDialog";
 import ArchiveGroupDialog from "./ArchiveGroupDialog";
@@ -39,6 +39,8 @@ export default function AccessGroupsManager() {
   const [editingGroup, setEditingGroup] = useState<AccessGroup | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<AccessGroup | null>(null);
+  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [workspacesDialogOpen, setWorkspacesDialogOpen] = useState(false);
   const [bookmakersDialogOpen, setBookmakersDialogOpen] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
@@ -109,23 +111,36 @@ export default function AccessGroupsManager() {
 
   const handleDeleteClick = (group: AccessGroup) => {
     setGroupToDelete(group);
+    setDeleteConfirmed(false);
     setDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = async () => {
-    if (!groupToDelete) return;
+    if (!groupToDelete || !deleteConfirmed) return;
     try {
+      setDeleting(true);
       await deleteGroup(groupToDelete.id);
-      toast({ title: "Grupo excluído!" });
+      toast({ title: "Grupo excluído permanentemente!" });
       setDeleteDialogOpen(false);
       setGroupToDelete(null);
+      setDeleteConfirmed(false);
     } catch (error: any) {
       toast({
         title: "Erro",
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setDeleting(false);
     }
+  };
+
+  const handleCloseDeleteDialog = (open: boolean) => {
+    if (!open) {
+      setDeleteConfirmed(false);
+      setGroupToDelete(null);
+    }
+    setDeleteDialogOpen(open);
   };
 
   const handleOpenArchive = (group: AccessGroup) => {
@@ -304,14 +319,18 @@ export default function AccessGroupsManager() {
                       )}
                     </Button>
                   )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => handleDeleteClick(group)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {/* Only show delete for archived groups */}
+                  {group.status === "archived" && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => handleDeleteClick(group)}
+                      title="Excluir permanentemente"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -372,21 +391,67 @@ export default function AccessGroupsManager() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      {/* Delete Confirmation - Only for archived groups */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={handleCloseDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir grupo?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Isso removerá todos os vínculos de workspaces e bookmakers deste grupo.
-              As bookmakers continuarão existindo, mas os workspaces perderão o acesso via grupo.
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Excluir grupo permanentemente?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                <p>
+                  Esta ação é <strong>irreversível</strong> e removerá permanentemente o grupo{" "}
+                  <strong>{groupToDelete?.name}</strong> e todo seu histórico.
+                </p>
+                
+                {groupToDelete && (groupToDelete.workspace_count > 0 || groupToDelete.bookmaker_count > 0) && (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                    <p className="font-medium text-destructive mb-2">Impacto da exclusão:</p>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      {groupToDelete.workspace_count > 0 && (
+                        <li>{groupToDelete.workspace_count} workspace(s) vinculado(s) perderão referência</li>
+                      )}
+                      {groupToDelete.bookmaker_count > 0 && (
+                        <li>{groupToDelete.bookmaker_count} bookmaker(s) vinculada(s) serão desassociadas</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="flex items-start gap-3 pt-2">
+                  <Checkbox
+                    id="confirm-delete"
+                    checked={deleteConfirmed}
+                    onCheckedChange={(checked) => setDeleteConfirmed(checked === true)}
+                  />
+                  <label
+                    htmlFor="confirm-delete"
+                    className="text-sm cursor-pointer leading-relaxed"
+                  >
+                    Entendo que esta ação é <strong>irreversível</strong> e desejo excluir permanentemente este grupo.
+                  </label>
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Excluir
-            </AlertDialogAction>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={!deleteConfirmed || deleting}
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                "Excluir Permanentemente"
+              )}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
