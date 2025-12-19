@@ -1035,6 +1035,9 @@ export type Database = {
           context_id: string | null
           context_type: string
           created_at: string
+          delete_reason: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           edited_at: string | null
           expires_at: string
           id: string
@@ -1047,6 +1050,9 @@ export type Database = {
           context_id?: string | null
           context_type?: string
           created_at?: string
+          delete_reason?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string | null
           expires_at?: string
           id?: string
@@ -1059,6 +1065,9 @@ export type Database = {
           context_id?: string | null
           context_type?: string
           created_at?: string
+          delete_reason?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string | null
           expires_at?: string
           id?: string
@@ -1080,6 +1089,9 @@ export type Database = {
         Row: {
           conteudo: string
           created_at: string
+          delete_reason: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           edited_at: string | null
           id: string
           is_anonymous: boolean | null
@@ -1091,6 +1103,9 @@ export type Database = {
         Insert: {
           conteudo: string
           created_at?: string
+          delete_reason?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string | null
           id?: string
           is_anonymous?: boolean | null
@@ -1102,6 +1117,9 @@ export type Database = {
         Update: {
           conteudo?: string
           created_at?: string
+          delete_reason?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string | null
           id?: string
           is_anonymous?: boolean | null
@@ -1246,6 +1264,9 @@ export type Database = {
           bookmaker_catalogo_id: string
           conteudo: string
           created_at: string
+          delete_reason: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           edited_at: string | null
           id: string
           is_anonymous: boolean | null
@@ -1258,6 +1279,9 @@ export type Database = {
           bookmaker_catalogo_id: string
           conteudo: string
           created_at?: string
+          delete_reason?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string | null
           id?: string
           is_anonymous?: boolean | null
@@ -1270,6 +1294,9 @@ export type Database = {
           bookmaker_catalogo_id?: string
           conteudo?: string
           created_at?: string
+          delete_reason?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           edited_at?: string | null
           id?: string
           is_anonymous?: boolean | null
@@ -2431,6 +2458,53 @@ export type Database = {
           },
           {
             foreignKeyName: "matched_betting_rounds_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      moderation_logs: {
+        Row: {
+          action_type: string
+          actor_user_id: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          target_author_id: string | null
+          target_content: string | null
+          target_id: string | null
+          target_type: string
+          workspace_id: string | null
+        }
+        Insert: {
+          action_type: string
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          target_author_id?: string | null
+          target_content?: string | null
+          target_id?: string | null
+          target_type: string
+          workspace_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          target_author_id?: string | null
+          target_content?: string | null
+          target_id?: string | null
+          target_type?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moderation_logs_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -6537,6 +6611,7 @@ export type Database = {
         }
         Returns: string
       }
+      can_moderate_community: { Args: { _user_id: string }; Returns: boolean }
       check_custom_permissions_limit: {
         Args: { workspace_uuid: string }
         Returns: Json
@@ -6590,6 +6665,26 @@ export type Database = {
         Returns: boolean
       }
       is_system_owner: { Args: { _user_id: string }; Returns: boolean }
+      moderate_clear_chat: {
+        Args: {
+          _context_id?: string
+          _context_type?: string
+          _workspace_id: string
+        }
+        Returns: Json
+      }
+      moderate_delete_chat_message: {
+        Args: { _message_id: string; _reason?: string }
+        Returns: boolean
+      }
+      moderate_delete_comment: {
+        Args: { _comment_id: string; _reason?: string }
+        Returns: boolean
+      }
+      moderate_delete_topic: {
+        Args: { _reason?: string; _topic_id: string }
+        Returns: boolean
+      }
       operator_has_project_access: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean

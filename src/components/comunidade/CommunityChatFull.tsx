@@ -5,17 +5,26 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import { useCommunityAccess } from '@/hooks/useCommunityAccess';
 import { useChatBroadcast } from '@/hooks/useChatBroadcast';
 import { useChatPresence } from '@/hooks/useChatPresence';
+import { useCommunityModeration } from '@/hooks/useCommunityModeration';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageSquare, ExternalLink, Loader2, Globe, Building2, ChevronUp } from 'lucide-react';
+import { MessageSquare, ExternalLink, Loader2, Globe, Building2, ChevronUp, Settings, Trash2, Shield } from 'lucide-react';
 import { CommunityChatConvertDialog } from './CommunityChatConvertDialog';
 import { ChatMessageItem, ChatMessage } from './ChatMessageItem';
 import { ChatInput } from './ChatInput';
 import { ChatSettingsPopover } from './ChatSettingsPopover';
 import { OnlineIndicator } from './OnlineIndicator';
+import { ClearChatDialog } from './ClearChatDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 interface CommunityChatFullProps {
   isPopout?: boolean;
@@ -45,6 +54,8 @@ export function CommunityChatFull({
   const { toast } = useToast();
   const { notifyMessageSent, subscribe } = useChatBroadcast();
 
+  const { canModerate } = useCommunityModeration();
+
   const [contextType, setContextType] = useState<'general' | 'bookmaker'>(initialContextType);
   const [contextId, setContextId] = useState<string | null>(initialContextId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -53,6 +64,7 @@ export function CommunityChatFull({
   const [convertMessage, setConvertMessage] = useState<ChatMessage | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [newMessageCount, setNewMessageCount] = useState(0);
+  const [clearChatOpen, setClearChatOpen] = useState(false);
   
   // Real-time presence tracking
   const { onlineCount, isConnected } = useChatPresence(contextType, contextId);
@@ -373,6 +385,30 @@ export function CommunityChatFull({
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {/* Moderation Menu */}
+                {canModerate && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Shield className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground flex items-center gap-1">
+                        <Shield className="h-3 w-3" />
+                        Moderação
+                      </div>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive cursor-pointer"
+                        onClick={() => setClearChatOpen(true)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Limpar Chat
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
                 <ChatSettingsPopover />
                 {onGoToERP && (
                   <Button variant="outline" size="sm" onClick={onGoToERP}>
@@ -403,7 +439,33 @@ export function CommunityChatFull({
                   }
                 </span>
               </div>
-              <ChatSettingsPopover />
+              <div className="flex items-center gap-1">
+                {/* Moderation Menu for Embedded */}
+                {canModerate && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                        <Shield className="h-3.5 w-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground flex items-center gap-1">
+                        <Shield className="h-3 w-3" />
+                        Moderação
+                      </div>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive cursor-pointer"
+                        onClick={() => setClearChatOpen(true)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Limpar Chat
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                <ChatSettingsPopover />
+              </div>
             </div>
             <OnlineIndicator count={onlineCount} isConnected={isConnected} className="mt-1.5" />
           </div>
@@ -542,6 +604,22 @@ export function CommunityChatFull({
           onSuccess={() => {
             toast({ title: 'Tópico criado com sucesso!' });
             setConvertMessage(null);
+          }}
+        />
+      )}
+
+      {/* Clear Chat Dialog */}
+      {workspaceId && (
+        <ClearChatDialog
+          open={clearChatOpen}
+          onOpenChange={setClearChatOpen}
+          workspaceId={workspaceId}
+          contextType={contextType}
+          contextId={contextId}
+          contextName={bookmakerName}
+          onCleared={() => {
+            setMessages([]);
+            fetchMessages();
           }}
         />
       )}
