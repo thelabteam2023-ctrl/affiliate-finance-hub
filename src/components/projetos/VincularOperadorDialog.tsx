@@ -280,19 +280,32 @@ export function VincularOperadorDialog({
                 value={formData.selected_user_id}
                 onValueChange={(value) => setFormData({ ...formData, selected_user_id: value })}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um usuário elegível" />
+                <SelectTrigger className="relative">
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none pr-8">
+                    {formData.selected_user_id ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="truncate max-w-[180px]">
+                          {usersDisponiveis.find(u => u.user_id === formData.selected_user_id)?.display_name}
+                        </span>
+                        {usersDisponiveis.find(u => u.user_id === formData.selected_user_id) && 
+                          getEligibilityBadge(usersDisponiveis.find(u => u.user_id === formData.selected_user_id)!)}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Selecione um usuário elegível</span>
+                    )}
+                  </div>
+                  <SelectValue className="opacity-0" />
                 </SelectTrigger>
                 <SelectContent>
                   {usersDisponiveis.length === 0 ? (
-                    <SelectItem value="none" disabled>
+                    <SelectItem value="none" disabled className="justify-center">
                       Nenhum usuário elegível disponível
                     </SelectItem>
                   ) : (
                     usersDisponiveis.map((user) => (
-                      <SelectItem key={user.user_id} value={user.user_id}>
-                        <div className="flex items-center">
-                          <span>{user.display_name}</span>
+                      <SelectItem key={user.user_id} value={user.user_id} className="justify-center">
+                        <div className="flex items-center justify-center gap-2 w-full">
+                          <span className="truncate max-w-[180px]">{user.display_name}</span>
                           {getEligibilityBadge(user)}
                         </div>
                       </SelectItem>
