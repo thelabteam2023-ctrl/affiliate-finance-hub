@@ -143,6 +143,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
           id,
           nome,
           login_username,
+          bookmaker_catalogo_id,
           bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
         `)
         .eq("projeto_id", projetoId);
@@ -154,6 +155,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
         nome: b.nome,
         login_username: b.login_username,
         logo_url: b.bookmakers_catalogo?.logo_url || null,
+        bookmaker_catalogo_id: b.bookmaker_catalogo_id || null,
       }));
 
       setBookmakers(mapped);
