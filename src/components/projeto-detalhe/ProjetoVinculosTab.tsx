@@ -122,7 +122,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [changingStatus, setChangingStatus] = useState(false);
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [bonusDrawerOpen, setBonusDrawerOpen] = useState(false);
-  const [selectedBookmakerForBonus, setSelectedBookmakerForBonus] = useState<{ id: string; nome: string; login?: string; logo?: string | null } | null>(null);
+  const [selectedBookmakerForBonus, setSelectedBookmakerForBonus] = useState<{ id: string; nome: string; login?: string; logo?: string | null; bookmakerCatalogoId?: string | null } | null>(null);
   const [filterBonusOnly, setFilterBonusOnly] = useState(false);
 
   const { bonuses, fetchBonuses: refetchBonuses, getSummary, getActiveBonusByBookmaker, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
@@ -138,7 +138,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     return acc;
   }, {} as Record<string, number>);
 
-  const handleOpenBonusDrawer = (bookmaker: { id: string; nome: string; login?: string; logo?: string | null }) => {
+  const handleOpenBonusDrawer = (bookmaker: { id: string; nome: string; login?: string; logo?: string | null; bookmakerCatalogoId?: string | null }) => {
     setSelectedBookmakerForBonus(bookmaker);
     setBonusDrawerOpen(true);
   };
@@ -819,7 +819,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => handleOpenBonusDrawer({ id: vinculo.id, nome: vinculo.nome, login: vinculo.login_username, logo: vinculo.logo_url })}
+                      onClick={() => handleOpenBonusDrawer({ id: vinculo.id, nome: vinculo.nome, login: vinculo.login_username, logo: vinculo.logo_url, bookmakerCatalogoId: vinculo.bookmaker_catalogo_id })}
                       title="Ver Bônus"
                     >
                       <Coins className="mr-2 h-4 w-4" />
@@ -948,7 +948,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       size="icon"
                       className="h-8 w-8"
                       title="Ver Bônus"
-                      onClick={() => handleOpenBonusDrawer({ id: vinculo.id, nome: vinculo.nome })}
+                      onClick={() => handleOpenBonusDrawer({ id: vinculo.id, nome: vinculo.nome, login: vinculo.login_username, logo: vinculo.logo_url, bookmakerCatalogoId: vinculo.bookmaker_catalogo_id })}
                     >
                       <Coins className="h-4 w-4" />
                     </Button>
@@ -1185,6 +1185,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           bookmakerName={selectedBookmakerForBonus.nome}
           bookmakerLogin={selectedBookmakerForBonus.login}
           bookmakerLogo={selectedBookmakerForBonus.logo}
+          bookmakerCatalogoId={selectedBookmakerForBonus.bookmakerCatalogoId}
           onBonusChange={() => {
             refetchBonuses();
             fetchVinculos();
