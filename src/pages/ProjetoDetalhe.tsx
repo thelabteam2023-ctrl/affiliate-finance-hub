@@ -629,6 +629,7 @@ export default function ProjetoDetalhe() {
         <div className="flex items-center gap-3 pt-2 pb-1 border-b border-border/50">
           <GlobalActionsBar 
             projetoId={id!}
+            activeTab={activeTab}
             onApostaCreated={() => { fetchApostasResumo(); refreshResultado(); }}
             onBonusCreated={() => { /* Bonus area will auto-refresh */ }}
             onNavigateToTab={setActiveTab}
