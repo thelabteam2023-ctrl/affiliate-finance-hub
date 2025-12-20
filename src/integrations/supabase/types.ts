@@ -4179,14 +4179,23 @@ export type Database = {
           created_by: string
           credited_at: string | null
           currency: string
+          deadline_days: number | null
+          deposit_amount: number | null
           expires_at: string | null
           finalize_reason: string | null
           finalized_at: string | null
           finalized_by: string | null
           id: string
+          min_odds: number | null
           notes: string | null
           project_id: string
+          rollover_base: string | null
+          rollover_multiplier: number | null
+          rollover_progress: number | null
+          rollover_target_amount: number | null
+          source: string
           status: string
+          template_snapshot: Json | null
           title: string
           updated_at: string
           user_id: string
@@ -4199,14 +4208,23 @@ export type Database = {
           created_by: string
           credited_at?: string | null
           currency?: string
+          deadline_days?: number | null
+          deposit_amount?: number | null
           expires_at?: string | null
           finalize_reason?: string | null
           finalized_at?: string | null
           finalized_by?: string | null
           id?: string
+          min_odds?: number | null
           notes?: string | null
           project_id: string
+          rollover_base?: string | null
+          rollover_multiplier?: number | null
+          rollover_progress?: number | null
+          rollover_target_amount?: number | null
+          source?: string
           status?: string
+          template_snapshot?: Json | null
           title?: string
           updated_at?: string
           user_id: string
@@ -4219,14 +4237,23 @@ export type Database = {
           created_by?: string
           credited_at?: string | null
           currency?: string
+          deadline_days?: number | null
+          deposit_amount?: number | null
           expires_at?: string | null
           finalize_reason?: string | null
           finalized_at?: string | null
           finalized_by?: string | null
           id?: string
+          min_odds?: number | null
           notes?: string | null
           project_id?: string
+          rollover_base?: string | null
+          rollover_multiplier?: number | null
+          rollover_progress?: number | null
+          rollover_target_amount?: number | null
+          source?: string
           status?: string
+          template_snapshot?: Json | null
           title?: string
           updated_at?: string
           user_id?: string
