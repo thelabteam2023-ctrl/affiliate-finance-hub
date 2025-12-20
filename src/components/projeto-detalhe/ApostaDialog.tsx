@@ -21,6 +21,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -2111,32 +2116,52 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                 {aposta ? "Editar Aposta" : "Registrar Aposta"}
               </DialogTitle>
               {!aposta && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isPrintProcessing}
-                        className="gap-2 text-xs border-dashed"
-                      >
-                        {isPrintProcessing ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Camera className="h-3.5 w-3.5" />
-                        )}
-                        {isPrintProcessing ? "Lendo..." : "Importar por Print"}
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Beta</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs">
-                      <p className="text-xs">
-                        Arraste uma imagem, cole com <kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">Ctrl+V</kbd> ou clique para fazer upload do print do boletim.
+                <HoverCard openDelay={200} closeDelay={100}>
+                  <HoverCardTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isPrintProcessing}
+                      className="gap-2 text-xs border-dashed"
+                    >
+                      {isPrintProcessing ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Camera className="h-3.5 w-3.5" />
+                      )}
+                      {isPrintProcessing ? "Lendo..." : "Importar por Print"}
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Beta</span>
+                    </Button>
+                  </HoverCardTrigger>
+                  <HoverCardContent 
+                    side="bottom" 
+                    align="end"
+                    className="w-[300px] p-4 z-[100]"
+                    sideOffset={8}
+                  >
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold">Importar por Print</h4>
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">🖱️</span>
+                          <span>Arraste a imagem do boletim aqui</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">⌨️</span>
+                          <span>Cole com <kbd className="px-1.5 py-0.5 rounded bg-muted text-[11px] font-mono">Ctrl+V</kbd></span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">📁</span>
+                          <span>Ou clique para selecionar o arquivo</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground/70 pt-1 border-t border-border/50">
+                        Preenche automaticamente: Evento, Mercado e Seleção.
                       </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                    </div>
+                  </HoverCardContent>
+                </HoverCard>
               )}
               <input
                 ref={fileInputRef}
