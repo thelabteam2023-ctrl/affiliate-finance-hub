@@ -906,7 +906,76 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium truncate">{vinculo.nome}</span>
-                      <span className="text-sm text-muted-foreground">@{vinculo.login_username}</span>
+                      {vinculo.login_username && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Popover
+                                open={credentialsPopoverOpen === vinculo.id}
+                                onOpenChange={(open) => setCredentialsPopoverOpen(open ? vinculo.id : null)}
+                              >
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                  >
+                                    <IdCard className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-72" align="start">
+                                  <div className="space-y-3">
+                                    <h4 className="font-medium text-sm">Credenciais de Acesso</h4>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center justify-between gap-2 p-2 rounded bg-muted/50">
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-xs text-muted-foreground">Usuário</p>
+                                          <p className="text-sm font-medium truncate">{vinculo.login_username}</p>
+                                        </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7 flex-shrink-0"
+                                          onClick={() => copyToClipboard(vinculo.login_username, `user-header-${vinculo.id}`)}
+                                        >
+                                          {copiedField === `user-header-${vinculo.id}` ? (
+                                            <Check className="h-3 w-3 text-emerald-500" />
+                                          ) : (
+                                            <Copy className="h-3 w-3" />
+                                          )}
+                                        </Button>
+                                      </div>
+                                      {vinculo.login_password_encrypted && (
+                                        <div className="flex items-center justify-between gap-2 p-2 rounded bg-muted/50">
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-xs text-muted-foreground">Senha</p>
+                                            <p className="text-sm font-medium truncate">{decryptPassword(vinculo.login_password_encrypted)}</p>
+                                          </div>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 flex-shrink-0"
+                                            onClick={() => copyToClipboard(decryptPassword(vinculo.login_password_encrypted), `pass-header-${vinculo.id}`)}
+                                          >
+                                            {copiedField === `pass-header-${vinculo.id}` ? (
+                                              <Check className="h-3 w-3 text-emerald-500" />
+                                            ) : (
+                                              <Copy className="h-3 w-3" />
+                                            )}
+                                          </Button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Credenciais</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <User className="h-3 w-3" />
