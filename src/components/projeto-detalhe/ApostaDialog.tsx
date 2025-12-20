@@ -860,8 +860,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       toast.error("Preencha Esporte e Mercado (obrigatórios)");
       return;
     }
-    if (!evento || !selecao) {
-      toast.error("Preencha todos os campos obrigatórios (Evento, Seleção)");
+    if (!evento) {
+      toast.error("Preencha os times/evento");
       return;
     }
 
@@ -2060,7 +2060,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               {/* Seleção - Moneyline usa select, outros usam texto livre */}
               <div className="space-y-1.5">
                 <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">
-                  Seleção *
+                  Seleção
                 </Label>
                 {isMoneyline ? (
                   <Select value={selecao} onValueChange={setSelecao}>
