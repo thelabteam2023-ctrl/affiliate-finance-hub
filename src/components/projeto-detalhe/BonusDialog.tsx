@@ -18,18 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Loader2, Gift, Building2, Sparkles, Check, IdCard, Copy } from "lucide-react";
+import { Loader2, Gift, Building2, Sparkles, Check } from "lucide-react";
 import { BonusFormData, BonusStatus, ProjectBonus } from "@/hooks/useProjectBonuses";
 import { useBookmakerBonusTemplates, BonusTemplate, calculateRolloverTarget } from "@/hooks/useBookmakerBonusTemplates";
 import { format, addDays } from "date-fns";
@@ -91,8 +80,6 @@ export function BonusDialog({
   const [status, setStatus] = useState<BonusStatus>("credited");
   const [creditedAt, setCreditedAt] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
-  const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
   
   // New rollover fields
   const [rolloverMultiplier, setRolloverMultiplier] = useState("");
@@ -108,28 +95,6 @@ export function BonusDialog({
   const [templateMaxValue, setTemplateMaxValue] = useState<number | null>(null);
 
   const isEditMode = !!bonus;
-
-  const decryptPassword = (encrypted: string): string => {
-    try {
-      return atob(encrypted);
-    } catch {
-      return encrypted;
-    }
-  };
-
-  const copyToClipboard = (text: string, field: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(field);
-    toast({
-      title: `${field} copiado!`,
-      description: "O valor foi copiado para a área de transferência.",
-    });
-    setTimeout(() => setCopiedField(null), 2000);
-  };
-
-  const hasCredentials = (bk: BookmakerOption) => {
-    return bk.login_username && bk.login_password_encrypted;
-  };
 
   // Get the selected bookmaker to find its catalogo_id
   const selectedBookmaker = useMemo(() => {
@@ -341,103 +306,36 @@ export function BonusDialog({
         </DialogHeader>
 
         <div className="space-y-5 py-4">
-          {/* Bookmaker Select - Centralizado */}
+          {/* Bookmaker Select - Centralizado (sem ID Card) */}
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground text-center block">Casa de Apostas</Label>
-            <div className="flex items-center gap-2 justify-center">
-              <Select
-                value={bookmakerId}
-                onValueChange={setBookmakerId}
-                disabled={isEditMode || !!preselectedBookmakerId}
-              >
-                <SelectTrigger className="h-9 flex-1 justify-center [&>span]:flex [&>span]:items-center [&>span]:justify-center">
-                  <SelectValue placeholder="Selecione a casa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bookmakers.map((bk) => (
-                    <SelectItem key={bk.id} value={bk.id}>
-                      <div className="flex items-center gap-2">
-                        {bk.logo_url ? (
-                          <img
-                            src={bk.logo_url}
-                            alt={bk.nome}
-                            className="h-5 w-5 rounded object-contain bg-white"
-                          />
-                        ) : (
-                          <Building2 className="h-4 w-4" />
-                        )}
-                        <span>{bk.nome}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              {/* Credentials Popover */}
-              {selectedBookmaker && hasCredentials(selectedBookmaker) && (
-                <Popover
-                  open={credentialsPopoverOpen === selectedBookmaker.id}
-                  onOpenChange={(open) => setCredentialsPopoverOpen(open ? selectedBookmaker.id : null)}
-                >
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-9 w-9 p-0 shrink-0"
-                    >
-                      <IdCard className="h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-52 p-2" align="end">
-                    <div className="space-y-2">
-                      <div>
-                        <label className="text-[10px] text-muted-foreground">Usuário</label>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
-                            {selectedBookmaker.login_username}
-                          </code>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyToClipboard(selectedBookmaker.login_username, "Usuário")}
-                            className="h-6 w-6 p-0 shrink-0"
-                          >
-                            {copiedField === "Usuário" ? (
-                              <Check className="h-3 w-3 text-green-500" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-muted-foreground">Senha</label>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
-                            {decryptPassword(selectedBookmaker.login_password_encrypted || "")}
-                          </code>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyToClipboard(decryptPassword(selectedBookmaker.login_password_encrypted || ""), "Senha")}
-                            className="h-6 w-6 p-0 shrink-0"
-                          >
-                            {copiedField === "Senha" ? (
-                              <Check className="h-3 w-3 text-green-500" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
+            <Select
+              value={bookmakerId}
+              onValueChange={setBookmakerId}
+              disabled={isEditMode || !!preselectedBookmakerId}
+            >
+              <SelectTrigger className="h-10 justify-center [&>span]:flex [&>span]:items-center [&>span]:justify-center">
+                <SelectValue placeholder="Selecione a casa" />
+              </SelectTrigger>
+              <SelectContent>
+                {bookmakers.map((bk) => (
+                  <SelectItem key={bk.id} value={bk.id}>
+                    <div className="flex items-center gap-2">
+                      {bk.logo_url ? (
+                        <img
+                          src={bk.logo_url}
+                          alt={bk.nome}
+                          className="h-5 w-5 rounded object-contain bg-white"
+                        />
+                      ) : (
+                        <Building2 className="h-4 w-4" />
+                      )}
+                      <span>{bk.nome}</span>
                     </div>
-                  </PopoverContent>
-                </Popover>
-              )}
-            </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Template Suggestions - Centralizado */}
@@ -504,9 +402,12 @@ export function BonusDialog({
           {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
           {/* LINHA 2 — Valores monetários (Depósito + Bônus + Moeda) */}
           {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-          <div className="grid grid-cols-3 gap-3 items-end">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Valor do Depósito</Label>
+          <div className="grid grid-cols-3 gap-3">
+            {/* Depósito */}
+            <div className="flex flex-col">
+              <div className="h-5 flex items-center">
+                <Label className="text-xs text-muted-foreground">Valor do Depósito</Label>
+              </div>
               <Input
                 type="number"
                 step="0.01"
@@ -514,21 +415,24 @@ export function BonusDialog({
                 placeholder="0.00"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
-                className="h-10"
+                className="h-10 mt-1.5"
               />
-              {templatePercent && (
-                <p className="text-[10px] text-muted-foreground text-center">
-                  Bônus {templatePercent}%{templateMaxValue ? ` (máx. ${templateMaxValue})` : ''}
-                </p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                Valor do Bônus *
-                {templatePercent && amount && (
-                  <Badge variant="secondary" className="text-[9px] px-1">Auto</Badge>
+              <div className="h-4 mt-1">
+                {templatePercent && (
+                  <p className="text-[10px] text-muted-foreground text-center truncate">
+                    Bônus {templatePercent}%{templateMaxValue ? ` (máx. ${templateMaxValue})` : ''}
+                  </p>
                 )}
-              </Label>
+              </div>
+            </div>
+            {/* Bônus */}
+            <div className="flex flex-col">
+              <div className="h-5 flex items-center gap-1">
+                <Label className="text-xs text-muted-foreground">Valor do Bônus *</Label>
+                {templatePercent && amount && (
+                  <Badge variant="secondary" className="text-[9px] px-1 h-4">Auto</Badge>
+                )}
+              </div>
               <Input
                 type="number"
                 step="0.01"
@@ -536,13 +440,17 @@ export function BonusDialog({
                 placeholder="0.00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="h-10"
+                className="h-10 mt-1.5"
               />
+              <div className="h-4 mt-1" />
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Moeda</Label>
+            {/* Moeda */}
+            <div className="flex flex-col">
+              <div className="h-5 flex items-center">
+                <Label className="text-xs text-muted-foreground">Moeda</Label>
+              </div>
               <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger className="h-10">
+                <SelectTrigger className="h-10 mt-1.5">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -553,21 +461,23 @@ export function BonusDialog({
                   ))}
                 </SelectContent>
               </Select>
+              <div className="h-4 mt-1" />
             </div>
           </div>
 
           {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
           {/* LINHA 3 — Regras de Rollover (Rollover + Base + Odd Mín.) */}
           {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-          <div className="grid grid-cols-3 gap-3 items-end">
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1 text-xs text-muted-foreground">
-                Rollover
+          <div className="grid grid-cols-3 gap-3">
+            {/* Rollover */}
+            <div className="flex flex-col">
+              <div className="h-5 flex items-center gap-1">
+                <Label className="text-xs text-muted-foreground">Rollover</Label>
                 {filledFromTemplate && rolloverMultiplier && (
-                  <Badge variant="secondary" className="text-[9px] px-1">Cat.</Badge>
+                  <Badge variant="secondary" className="text-[9px] px-1 h-4">Cat.</Badge>
                 )}
-              </Label>
-              <div className="relative">
+              </div>
+              <div className="relative mt-1.5">
                 <Input
                   type="number"
                   step="1"
@@ -580,10 +490,13 @@ export function BonusDialog({
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">x</span>
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Base Rollover</Label>
+            {/* Base Rollover */}
+            <div className="flex flex-col">
+              <div className="h-5 flex items-center">
+                <Label className="text-xs text-muted-foreground">Base Rollover</Label>
+              </div>
               <Select value={rolloverBase} onValueChange={setRolloverBase}>
-                <SelectTrigger className="h-10">
+                <SelectTrigger className="h-10 mt-1.5">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -595,13 +508,14 @@ export function BonusDialog({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1 text-xs text-muted-foreground">
-                Odd Mín.
+            {/* Odd Mín. */}
+            <div className="flex flex-col">
+              <div className="h-5 flex items-center gap-1">
+                <Label className="text-xs text-muted-foreground">Odd Mín.</Label>
                 {filledFromTemplate && minOdds && (
-                  <Badge variant="secondary" className="text-[9px] px-1">Cat.</Badge>
+                  <Badge variant="secondary" className="text-[9px] px-1 h-4">Cat.</Badge>
                 )}
-              </Label>
+              </div>
               <Input
                 type="number"
                 step="0.01"
@@ -609,7 +523,7 @@ export function BonusDialog({
                 placeholder="1.50"
                 value={minOdds}
                 onChange={(e) => setMinOdds(e.target.value)}
-                className="h-10"
+                className="h-10 mt-1.5"
               />
             </div>
           </div>
@@ -617,15 +531,16 @@ export function BonusDialog({
           {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
           {/* LINHA 4 — Prazo e Datas (Prazo + Data Crédito + Expiração) */}
           {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-          <div className="grid grid-cols-3 gap-3 items-end">
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1 text-xs text-muted-foreground">
-                Prazo
+          <div className="grid grid-cols-3 gap-3">
+            {/* Prazo */}
+            <div className="flex flex-col">
+              <div className="h-5 flex items-center gap-1">
+                <Label className="text-xs text-muted-foreground">Prazo</Label>
                 {filledFromTemplate && deadlineDays && (
-                  <Badge variant="secondary" className="text-[9px] px-1">Cat.</Badge>
+                  <Badge variant="secondary" className="text-[9px] px-1 h-4">Cat.</Badge>
                 )}
-              </Label>
-              <div className="relative">
+              </div>
+              <div className="relative mt-1.5">
                 <Input
                   type="number"
                   step="1"
@@ -645,27 +560,33 @@ export function BonusDialog({
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">dias</span>
               </div>
             </div>
-            {status === "credited" ? (
-              <div className="space-y-1.5">
+            {/* Data do Crédito */}
+            <div className="flex flex-col">
+              <div className="h-5 flex items-center">
                 <Label className="text-xs text-muted-foreground">Data do Crédito</Label>
-                <div className="[&_button]:h-10">
+              </div>
+              <div className="[&_button]:h-10 mt-1.5">
+                {status === "credited" ? (
                   <DatePicker
                     value={creditedAt}
                     onChange={setCreditedAt}
                   />
-                </div>
-              </div>
-            ) : (
-              <div /> 
-            )}
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1 text-xs text-muted-foreground">
-                Expiração
-                {filledFromTemplate && expiresAt && (
-                  <Badge variant="secondary" className="text-[9px] px-1">Auto</Badge>
+                ) : (
+                  <div className="h-10 flex items-center justify-center text-xs text-muted-foreground border border-dashed rounded-md">
+                    —
+                  </div>
                 )}
-              </Label>
-              <div className="[&_button]:h-10">
+              </div>
+            </div>
+            {/* Expiração */}
+            <div className="flex flex-col">
+              <div className="h-5 flex items-center gap-1">
+                <Label className="text-xs text-muted-foreground">Expiração</Label>
+                {filledFromTemplate && expiresAt && (
+                  <Badge variant="secondary" className="text-[9px] px-1 h-4">Auto</Badge>
+                )}
+              </div>
+              <div className="[&_button]:h-10 mt-1.5">
                 <DatePicker
                   value={expiresAt}
                   onChange={setExpiresAt}
