@@ -4174,6 +4174,9 @@ export type Database = {
           credited_at: string | null
           currency: string
           expires_at: string | null
+          finalize_reason: string | null
+          finalized_at: string | null
+          finalized_by: string | null
           id: string
           notes: string | null
           project_id: string
@@ -4191,6 +4194,9 @@ export type Database = {
           credited_at?: string | null
           currency?: string
           expires_at?: string | null
+          finalize_reason?: string | null
+          finalized_at?: string | null
+          finalized_by?: string | null
           id?: string
           notes?: string | null
           project_id: string
@@ -4208,6 +4214,9 @@ export type Database = {
           credited_at?: string | null
           currency?: string
           expires_at?: string | null
+          finalize_reason?: string | null
+          finalized_at?: string | null
+          finalized_by?: string | null
           id?: string
           notes?: string | null
           project_id?: string

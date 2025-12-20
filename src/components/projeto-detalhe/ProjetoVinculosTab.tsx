@@ -34,10 +34,17 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Link2,
   Link2Off,
@@ -60,6 +67,8 @@ import {
   Gift,
   History,
   Coins,
+  TrendingUp,
+  Info,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Toggle } from "@/components/ui/toggle";
@@ -113,11 +122,15 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [changingStatus, setChangingStatus] = useState(false);
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [bonusDrawerOpen, setBonusDrawerOpen] = useState(false);
-  const [selectedBookmakerForBonus, setSelectedBookmakerForBonus] = useState<{ id: string; nome: string } | null>(null);
+  const [selectedBookmakerForBonus, setSelectedBookmakerForBonus] = useState<{ id: string; nome: string; login?: string; logo?: string | null } | null>(null);
+  const [filterBonusOnly, setFilterBonusOnly] = useState(false);
 
-  const { bonuses, fetchBonuses: refetchBonuses } = useProjectBonuses({ projectId: projetoId });
+  const { bonuses, fetchBonuses: refetchBonuses, getSummary, getActiveBonusByBookmaker, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
 
-  // Calculate bonus totals per bookmaker
+  const bonusSummary = getSummary();
+  const bookmakersWithBonus = getBookmakersWithActiveBonus();
+
+  // Calculate bonus totals per bookmaker (only credited/active bonuses)
   const bonusTotalsByBookmaker = bonuses.reduce((acc, bonus) => {
     if (bonus.status === 'credited') {
       acc[bonus.bookmaker_id] = (acc[bonus.bookmaker_id] || 0) + bonus.bonus_amount;
@@ -125,7 +138,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     return acc;
   }, {} as Record<string, number>);
 
-  const handleOpenBonusDrawer = (bookmaker: { id: string; nome: string }) => {
+  const handleOpenBonusDrawer = (bookmaker: { id: string; nome: string; login?: string; logo?: string | null }) => {
     setSelectedBookmakerForBonus(bookmaker);
     setBonusDrawerOpen(true);
   };
@@ -456,12 +469,16 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     }
   };
 
-  const filteredVinculos = vinculos.filter(
-    (v) =>
+  const filteredVinculos = vinculos.filter((v) => {
+    const matchesSearch =
       v.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       v.parceiro_nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.login_username.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      v.login_username.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesBonusFilter = filterBonusOnly ? bookmakersWithBonus.includes(v.id) : true;
+    
+    return matchesSearch && matchesBonusFilter;
+  });
 
   const toggleSelection = (id: string) => {
     setSelectedIds((prev) =>
@@ -470,6 +487,8 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   };
 
   const totalSaldo = vinculos.reduce((acc, v) => acc + v.saldo_atual, 0);
+  const totalBonusAtivo = bonusSummary.active_bonus_total;
+  const totalSaldoOperavel = totalSaldo + totalBonusAtivo;
   const vinculosAtivos = vinculos.filter((v) => v.bookmaker_status.toUpperCase() === "ATIVO").length;
   const vinculosLimitados = vinculos.filter((v) => v.bookmaker_status.toUpperCase() === "LIMITADA").length;
 
@@ -501,7 +520,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
 
       <TabsContent value="ativos" className="space-y-4">
         {/* KPIs */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Contas no Projeto</CardTitle>
@@ -515,25 +534,45 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
               <span className="text-emerald-400">{vinculosAtivos} ativas</span>
               {" · "}
               <span className="text-yellow-400">{vinculosLimitados} limitadas</span>
-              {historicoCount.devolvidas > 0 && (
-                <>
-                  {" · "}
-                  <span className="text-muted-foreground">{historicoCount.devolvidas} devolvidas</span>
-                </>
-              )}
             </p>
           </CardContent>
         </Card>
 
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="border-primary/30 bg-primary/5 cursor-help">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-1">
+                    Saldo Operável
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </CardTitle>
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">{formatCurrency(totalSaldoOperavel)}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Real {formatCurrency(totalSaldo)} + Bônus {formatCurrency(totalBonusAtivo)}
+                  </p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="font-medium">Saldo Operável = Real + Bônus Ativo</p>
+              <p className="text-xs text-muted-foreground">Valor disponível para operação incluindo bônus creditados</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo Total</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Bônus Ativo</CardTitle>
+            <Gift className="h-4 w-4 text-purple-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalSaldo)}</div>
+            <div className="text-2xl font-bold text-purple-400">{formatCurrency(totalBonusAtivo)}</div>
             <p className="text-xs text-muted-foreground">
-              Soma dos saldos em bookmakers
+              {bonusSummary.bookmakers_with_active_bonus} casa{bonusSummary.bookmakers_with_active_bonus !== 1 ? 's' : ''} com bônus
             </p>
           </CardContent>
         </Card>
@@ -555,7 +594,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <Button onClick={handleOpenAddDialog}>
           <Plus className="mr-2 h-4 w-4" />
           Adicionar Vínculos
@@ -572,6 +611,20 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             <LayoutGrid className="h-4 w-4" />
           )}
         </Toggle>
+        
+        {/* Filter: Only with bonus */}
+        <div className="flex items-center gap-2 px-3 py-1.5 border rounded-md bg-card">
+          <Switch
+            id="filter-bonus"
+            checked={filterBonusOnly}
+            onCheckedChange={setFilterBonusOnly}
+          />
+          <Label htmlFor="filter-bonus" className="text-sm cursor-pointer flex items-center gap-1">
+            <Gift className="h-3.5 w-3.5 text-purple-400" />
+            Só com bônus ({bookmakersWithBonus.length})
+          </Label>
+        </div>
+        
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -687,10 +740,31 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                   
                   {/* Saldos separados */}
                   <div className="pt-2 border-t space-y-1.5">
+                    {/* Saldo Operável (Real + Bônus) - Destaque */}
+                    {(bonusTotalsByBookmaker[vinculo.id] || 0) > 0 && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center justify-between p-1.5 rounded bg-primary/10 border border-primary/20">
+                              <span className="text-xs font-medium text-primary flex items-center gap-1">
+                                <TrendingUp className="h-3 w-3" />
+                                Saldo Operável
+                              </span>
+                              <span className="text-sm font-bold text-primary">
+                                {formatCurrency(vinculo.saldo_atual + (bonusTotalsByBookmaker[vinculo.id] || 0), vinculo.moeda)}
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Real + Bônus Ativo</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Wallet className="h-3 w-3" />
-                        Saldo Total
+                        Saldo Real
                       </span>
                       <span className="text-sm font-semibold">{formatCurrency(vinculo.saldo_atual, vinculo.moeda)}</span>
                     </div>
@@ -745,7 +819,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => handleOpenBonusDrawer({ id: vinculo.id, nome: vinculo.nome })}
+                      onClick={() => handleOpenBonusDrawer({ id: vinculo.id, nome: vinculo.nome, login: vinculo.login_username, logo: vinculo.logo_url })}
                       title="Ver Bônus"
                     >
                       <Coins className="mr-2 h-4 w-4" />
@@ -1109,6 +1183,12 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           projectId={projetoId}
           bookmakerId={selectedBookmakerForBonus.id}
           bookmakerName={selectedBookmakerForBonus.nome}
+          bookmakerLogin={selectedBookmakerForBonus.login}
+          bookmakerLogo={selectedBookmakerForBonus.logo}
+          onBonusChange={() => {
+            refetchBonuses();
+            fetchVinculos();
+          }}
         />
       )}
       </TabsContent>
