@@ -2497,49 +2497,46 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   </div>
                 </div>
                 
-                {/* Toggle "Usar Freebet nesta aposta?" (apenas se bookmaker tem saldo_freebet > 0 e NÃO for aposta que gerou freebet) */}
+                {/* Toggle "Usar Freebet nesta aposta?" - compacto e discreto */}
                 {bookmakerSaldo && bookmakerSaldo.saldoFreebet > 0 && !aposta?.gerou_freebet && (
-                  <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Gift className="h-4 w-4 text-amber-400" />
-                        <Label className="text-sm font-medium text-amber-400">Usar Freebet nesta aposta?</Label>
-                      </div>
-                      <Switch
+                  <div className="flex items-center justify-between py-2 px-3 rounded-md border border-border/30 bg-muted/10">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="usarFreebet"
                         checked={usarFreebetBookmaker}
-                        onCheckedChange={(checked) => {
+                        onChange={(e) => {
+                          const checked = e.target.checked;
                           setUsarFreebetBookmaker(checked);
-                          // Quando ativar, preencher stake com valor da freebet disponível
                           if (checked && bookmakerSaldo.saldoFreebet > 0) {
                             setStake(bookmakerSaldo.saldoFreebet.toString());
                           }
-                          // Quando ativar usar freebet, desativar "gerou freebet"
                           if (checked) {
                             setGerouFreebet(false);
                             setValorFreebetGerada("");
                           }
                         }}
                         disabled={!!aposta?.tipo_freebet}
+                        className="h-3.5 w-3.5 rounded border-border/50 text-primary focus:ring-primary/30 focus:ring-offset-0"
                       />
+                      <label htmlFor="usarFreebet" className="text-xs text-muted-foreground cursor-pointer">
+                        Usar Freebet
+                      </label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-3 w-3 text-muted-foreground/50 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[200px] text-xs">
+                            <p>Stake será debitada do saldo de Freebet ({formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)})</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                     {usarFreebetBookmaker && (
-                      <div className="space-y-1">
-                        <p className="text-xs text-amber-400">
-                          <Gift className="h-3 w-3 inline mr-1" />
-                          Stake será debitada do saldo de Freebet ({formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)} disponível)
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          • Se perder: não conta como prejuízo (freebet já foi consumida)
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          • Se ganhar: apenas o lucro entra como ganho real (stake não volta)
-                        </p>
-                      </div>
-                    )}
-                    {aposta?.tipo_freebet && (
-                      <p className="text-[10px] text-muted-foreground italic">
-                        Esta aposta foi feita com Freebet e não pode ser alterada.
-                      </p>
+                      <span className="text-[10px] text-muted-foreground/60">
+                        {formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)} disponível
+                      </span>
                     )}
                   </div>
                 )}
@@ -3264,31 +3261,33 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               </TabsContent>
             </Tabs>
 
-            {/* Resultado - Pills clicáveis */}
-            <div className="space-y-2">
-              <Label className="block text-center uppercase text-xs tracking-wider">Resultado</Label>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {[
-                  { value: "PENDENTE", label: "Pendente", color: "bg-amber-500/20 text-amber-400 border-amber-500/40 hover:bg-amber-500/30" },
-                  { value: "GREEN", label: "Green", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30" },
-                  { value: "RED", label: "Red", color: "bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/30" },
-                  { value: "MEIO_GREEN", label: "Meio Green", color: "bg-teal-500/20 text-teal-400 border-teal-500/40 hover:bg-teal-500/30" },
-                  { value: "MEIO_RED", label: "Meio Red", color: "bg-orange-500/20 text-orange-400 border-orange-500/40 hover:bg-orange-500/30" },
-                  { value: "VOID", label: "Void", color: "bg-slate-500/20 text-slate-400 border-slate-500/40 hover:bg-slate-500/30" },
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setStatusResultado(option.value)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${
-                      statusResultado === option.value 
-                        ? option.color + " ring-2 ring-offset-2 ring-offset-background ring-current" 
-                        : "bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/50"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+            {/* Resultado - Segmented control compacto */}
+            <div className="space-y-1.5">
+              <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Resultado</Label>
+              <div className="flex justify-center">
+                <div className="inline-flex rounded-md border border-border/40 bg-muted/20 p-0.5 gap-0.5">
+                  {[
+                    { value: "PENDENTE", label: "Pendente", selectedClass: "bg-muted text-foreground" },
+                    { value: "GREEN", label: "Green", selectedClass: "bg-emerald-500/20 text-emerald-500" },
+                    { value: "RED", label: "Red", selectedClass: "bg-red-500/20 text-red-500" },
+                    { value: "MEIO_GREEN", label: "½ Green", selectedClass: "bg-teal-500/20 text-teal-500" },
+                    { value: "MEIO_RED", label: "½ Red", selectedClass: "bg-orange-500/20 text-orange-500" },
+                    { value: "VOID", label: "Void", selectedClass: "bg-slate-500/20 text-slate-400" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setStatusResultado(option.value)}
+                      className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
+                        statusResultado === option.value 
+                          ? option.selectedClass
+                          : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/30"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -3312,30 +3311,42 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               </div>
             )}
 
-            {/* Freebet Gerada - apenas para Bookmaker e quando NÃO está usando freebet */}
+            {/* Freebet Gerada - compacto e discreto */}
             {tipoAposta === "bookmaker" && !usarFreebetBookmaker && (
-              <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Gift className="h-4 w-4 text-amber-400" />
-                    <Label className="text-sm font-medium text-amber-400">Esta aposta gerou Freebet?</Label>
-                  </div>
-                  <Switch
+              <div className="flex items-center justify-between py-2 px-3 rounded-md border border-border/30 bg-muted/10">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="gerouFreebet"
                     checked={gerouFreebet}
-                    onCheckedChange={setGerouFreebet}
+                    onChange={(e) => setGerouFreebet(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-border/50 text-primary focus:ring-primary/30 focus:ring-offset-0"
                   />
+                  <label htmlFor="gerouFreebet" className="text-xs text-muted-foreground cursor-pointer">
+                    Gerou Freebet?
+                  </label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-3 w-3 text-muted-foreground/50 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[180px] text-xs">
+                        <p>Marque se esta aposta desbloqueou uma freebet</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 {gerouFreebet && (
-                  <div className="space-y-2">
-                    <Label className="block text-xs tracking-wider text-muted-foreground">Valor da Freebet Recebida</Label>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-muted-foreground/60">Valor:</span>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
                       value={valorFreebetGerada}
                       onChange={(e) => setValorFreebetGerada(e.target.value)}
-                      placeholder="Ex: 50.00"
-                      className="text-center"
+                      placeholder="0.00"
+                      className="h-6 w-20 text-xs text-center px-2"
                     />
                   </div>
                 )}
