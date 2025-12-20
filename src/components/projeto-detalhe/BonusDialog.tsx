@@ -104,6 +104,8 @@ export function BonusDialog({
   // Template tracking
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [filledFromTemplate, setFilledFromTemplate] = useState(false);
+  const [templatePercent, setTemplatePercent] = useState<number | null>(null);
+  const [templateMaxValue, setTemplateMaxValue] = useState<number | null>(null);
 
   const isEditMode = !!bonus;
 
@@ -175,6 +177,8 @@ export function BonusDialog({
         setDeadlineDays("");
         setFilledFromTemplate(false);
         setSelectedTemplateId(null);
+        setTemplatePercent(null);
+        setTemplateMaxValue(null);
       }
     }
   }, [open, bonus, preselectedBookmakerId]);
@@ -184,8 +188,25 @@ export function BonusDialog({
     if (!isEditMode) {
       setSelectedTemplateId(null);
       setFilledFromTemplate(false);
+      setTemplatePercent(null);
+      setTemplateMaxValue(null);
     }
   }, [bookmakerId, isEditMode]);
+
+  // Auto-calculate bonus value when deposit changes and template has percentage
+  useEffect(() => {
+    if (templatePercent && depositAmount) {
+      const deposit = parseFloat(depositAmount);
+      if (!isNaN(deposit) && deposit > 0) {
+        let calculatedBonus = (deposit * templatePercent) / 100;
+        // Apply max value cap if exists
+        if (templateMaxValue && calculatedBonus > templateMaxValue) {
+          calculatedBonus = templateMaxValue;
+        }
+        setAmount(calculatedBonus.toFixed(2));
+      }
+    }
+  }, [depositAmount, templatePercent, templateMaxValue]);
 
   const handleSelectTemplate = (template: BonusTemplate) => {
     setSelectedTemplateId(template.id);
@@ -199,6 +220,20 @@ export function BonusDialog({
     setTitle([tipoLabel, percentLabel].filter(Boolean).join(" "));
     
     setCurrency(template.moeda || "BRL");
+    
+    // Store percentage for auto-calculation
+    if (template.percent) {
+      setTemplatePercent(parseFloat(template.percent));
+    } else {
+      setTemplatePercent(null);
+    }
+    
+    // Store max value for capping
+    if (template.valorMax) {
+      setTemplateMaxValue(parseFloat(template.valorMax));
+    } else {
+      setTemplateMaxValue(null);
+    }
     
     if (template.rolloverVezes) {
       setRolloverMultiplier(template.rolloverVezes);
@@ -215,6 +250,18 @@ export function BonusDialog({
       const today = new Date();
       const expiration = addDays(today, Number(template.prazo));
       setExpiresAt(format(expiration, "yyyy-MM-dd"));
+    }
+    
+    // If deposit already filled, calculate bonus
+    if (depositAmount) {
+      const deposit = parseFloat(depositAmount);
+      if (!isNaN(deposit) && deposit > 0 && template.percent) {
+        let calculatedBonus = (deposit * parseFloat(template.percent)) / 100;
+        if (template.valorMax && calculatedBonus > parseFloat(template.valorMax)) {
+          calculatedBonus = parseFloat(template.valorMax);
+        }
+        setAmount(calculatedBonus.toFixed(2));
+      }
     }
   };
 
@@ -436,40 +483,26 @@ export function BonusDialog({
             </div>
           )}
 
-          {/* 1️⃣ Título da Campanha - Centralizado e Destacado */}
-          <div className="space-y-1.5">
-            <Label className="flex items-center justify-center gap-2 text-sm font-medium">
-              Título / Campanha
-              {filledFromTemplate && (
-                <Badge variant="secondary" className="text-[10px]">Catálogo</Badge>
-              )}
-            </Label>
-            <Input
-              placeholder="Ex: Bônus 100% Depósito, Reload Semanal..."
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="text-center text-base font-medium h-11"
-            />
-          </div>
-
-          {/* 2️⃣ Linha 1 — Valores principais (3 colunas) */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* 1️⃣ Título da Campanha + Moeda - Mesma linha */}
+          <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
             <div className="space-y-1.5">
-              <Label className="text-xs">Valor do Bônus *</Label>
+              <Label className="flex items-center justify-center gap-2 text-sm font-medium">
+                Título / Campanha
+                {filledFromTemplate && (
+                  <Badge variant="secondary" className="text-[10px]">Catálogo</Badge>
+                )}
+              </Label>
               <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="h-9"
+                placeholder="Ex: Bônus 100% Depósito, Reload Semanal..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="text-center text-base font-medium h-11"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Moeda</Label>
+              <Label className="text-xs text-center block">Moeda</Label>
               <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger className="h-9">
+                <SelectTrigger className="h-11 w-24">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -481,26 +514,47 @@ export function BonusDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* 2️⃣ Valor do Depósito + Valor do Bônus (destacado) */}
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="flex items-center gap-1 text-xs">
-                Odd Mín.
-                {filledFromTemplate && minOdds && (
-                  <Badge variant="secondary" className="text-[9px] px-1">Cat.</Badge>
+              <Label className="text-xs">Valor do Depósito</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                className="h-9"
+              />
+              {templatePercent && (
+                <p className="text-[10px] text-muted-foreground text-center">
+                  Bônus {templatePercent}%{templateMaxValue ? ` (máx. ${templateMaxValue})` : ''}
+                </p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs flex items-center gap-1">
+                Valor do Bônus *
+                {templatePercent && amount && (
+                  <Badge variant="secondary" className="text-[9px] px-1">Auto</Badge>
                 )}
               </Label>
               <Input
                 type="number"
                 step="0.01"
-                min="1"
-                placeholder="1.50"
-                value={minOdds}
-                onChange={(e) => setMinOdds(e.target.value)}
+                min="0"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
                 className="h-9"
               />
             </div>
           </div>
 
-          {/* 3️⃣ Linha 2 — Regras do rollover (3 colunas) */}
+          {/* 3️⃣ Linha — Rollover (3 colunas) */}
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label className="flex items-center gap-1 text-xs">
@@ -537,6 +591,27 @@ export function BonusDialog({
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1 text-xs">
+                Odd Mín.
+                {filledFromTemplate && minOdds && (
+                  <Badge variant="secondary" className="text-[9px] px-1">Cat.</Badge>
+                )}
+              </Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="1"
+                placeholder="1.50"
+                value={minOdds}
+                onChange={(e) => setMinOdds(e.target.value)}
+                className="h-9"
+              />
+            </div>
+          </div>
+
+          {/* 4️⃣ Linha — Prazo */}
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label className="flex items-center gap-1 text-xs">
                 Prazo
