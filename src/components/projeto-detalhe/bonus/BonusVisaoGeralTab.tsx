@@ -68,7 +68,9 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
   const [betsLoading, setBetsLoading] = useState(true);
 
   const summary = getSummary();
-  const bookmakersInBonusMode = getBookmakersWithActiveBonus();
+  
+  // Memoize to prevent infinite loops
+  const bookmakersInBonusMode = useMemo(() => getBookmakersWithActiveBonus(), [bonuses]);
 
   // Get bonuses expiring soon
   const getExpiringSoon = (days: number): ProjectBonus[] => {
