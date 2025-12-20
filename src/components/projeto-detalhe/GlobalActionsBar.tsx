@@ -22,6 +22,7 @@ import { ApostaMultiplaDialog } from "./ApostaMultiplaDialog";
 import { SurebetDialog } from "./SurebetDialog";
 import { BonusDialog } from "./BonusDialog";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
+import { getEstrategiaFromTab, type ApostaEstrategia } from "@/lib/apostaConstants";
 
 interface GlobalActionsBarProps {
   projetoId: string;
@@ -209,6 +210,7 @@ export function GlobalActionsBar({
         aposta={null}
         projetoId={projetoId}
         onSuccess={handleApostaSuccess}
+        defaultEstrategia={getEstrategiaFromTab(activeTab || 'apostas')}
       />
 
       <ApostaMultiplaDialog
@@ -217,6 +219,7 @@ export function GlobalActionsBar({
         aposta={null}
         projetoId={projetoId}
         onSuccess={handleMultiplaSuccess}
+        defaultEstrategia={getEstrategiaFromTab(activeTab || 'apostas')}
       />
 
       <SurebetDialog

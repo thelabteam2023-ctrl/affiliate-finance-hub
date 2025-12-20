@@ -59,6 +59,8 @@ interface ApostaMultipla {
   valor_freebet_gerada: number | null;
   data_aposta: string;
   observacoes: string | null;
+  estrategia?: string | null;
+  forma_registro?: string | null;
 }
 
 interface Bookmaker {
@@ -82,6 +84,7 @@ interface ApostaMultiplaDialogProps {
   aposta: ApostaMultipla | null;
   projetoId: string;
   onSuccess: () => void;
+  defaultEstrategia?: string;
 }
 
 export function ApostaMultiplaDialog({
@@ -90,6 +93,7 @@ export function ApostaMultiplaDialog({
   aposta,
   projetoId,
   onSuccess,
+  defaultEstrategia = 'PUNTER',
 }: ApostaMultiplaDialogProps) {
   const [loading, setLoading] = useState(false);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
@@ -512,6 +516,8 @@ export function ApostaMultiplaDialog({
           : 0,
         data_aposta: dataAposta,
         observacoes: observacoes || null,
+        estrategia: aposta?.estrategia || defaultEstrategia,
+        forma_registro: 'MULTIPLA',
       };
 
       if (aposta) {
