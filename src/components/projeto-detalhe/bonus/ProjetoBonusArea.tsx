@@ -1,75 +1,185 @@
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, Building2, Target, History } from "lucide-react";
+import { LayoutDashboard, Building2, Target, History, PanelLeft, LayoutList } from "lucide-react";
 import { BonusVisaoGeralTab } from "./BonusVisaoGeralTab";
 import { BonusBookmakersTab } from "./BonusBookmakersTab";
 import { BonusApostasTab } from "./BonusApostasTab";
 import { BonusHistoricoTab } from "./BonusHistoricoTab";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ProjetoBonusAreaProps {
   projetoId: string;
 }
 
+type NavigationMode = "tabs" | "sidebar";
+type TabValue = "visao-geral" | "bookmakers" | "apostas" | "historico";
+
+const STORAGE_KEY = "bonus-area-nav-mode";
+
+const NAV_ITEMS = [
+  { value: "visao-geral" as TabValue, label: "Visão Geral", icon: LayoutDashboard },
+  { value: "bookmakers" as TabValue, label: "Bookmakers", icon: Building2, showCount: true },
+  { value: "apostas" as TabValue, label: "Apostas", icon: Target },
+  { value: "historico" as TabValue, label: "Histórico", icon: History },
+];
+
 export function ProjetoBonusArea({ projetoId }: ProjetoBonusAreaProps) {
   const { getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
   const bookmakersInBonusMode = getBookmakersWithActiveBonus();
+  
+  const [navMode, setNavMode] = useState<NavigationMode>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return (saved === "sidebar" ? "sidebar" : "tabs") as NavigationMode;
+  });
+  
+  const [activeTab, setActiveTab] = useState<TabValue>("visao-geral");
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, navMode);
+  }, [navMode]);
+
+  const handleModeToggle = () => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setNavMode(prev => prev === "tabs" ? "sidebar" : "tabs");
+      setTimeout(() => setIsTransitioning(false), 50);
+    }, 150);
+  };
+
+  const handleTabChange = (value: string) => {
+    if (value !== activeTab) {
+      setIsTransitioning(true);
+      setActiveTab(value as TabValue);
+      setTimeout(() => setIsTransitioning(false), 180);
+    }
+  };
+
+  const renderContent = () => {
+    const contentClass = cn(
+      "transition-all duration-200 ease-out",
+      isTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
+    );
+
+    return (
+      <div className={cn("min-h-[400px]", contentClass)}>
+        {activeTab === "visao-geral" && <BonusVisaoGeralTab projetoId={projetoId} />}
+        {activeTab === "bookmakers" && <BonusBookmakersTab projetoId={projetoId} />}
+        {activeTab === "apostas" && <BonusApostasTab projetoId={projetoId} />}
+        {activeTab === "historico" && <BonusHistoricoTab projetoId={projetoId} />}
+      </div>
+    );
+  };
+
+  const modeToggle = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleModeToggle}
+          className="h-8 w-8 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/50 transition-colors"
+        >
+          {navMode === "tabs" ? (
+            <PanelLeft className="h-4 w-4" />
+          ) : (
+            <LayoutList className="h-4 w-4" />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="text-xs">
+        {navMode === "tabs" ? "Modo Gestão" : "Modo Compacto"}
+      </TooltipContent>
+    </Tooltip>
+  );
+
+  // Mode: Slim Tabs
+  if (navMode === "tabs") {
+    return (
+      <div className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+          <div className="flex items-center justify-between border-b border-border/50">
+            <TabsList className="bg-transparent border-0 rounded-none p-0 h-auto gap-6">
+              {NAV_ITEMS.map((item) => (
+                <TabsTrigger
+                  key={item.value}
+                  value={item.value}
+                  className="bg-transparent border-0 rounded-none px-1 pb-3 pt-1 h-auto shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground/70 data-[state=active]:text-foreground transition-colors"
+                >
+                  <item.icon className="h-4 w-4 mr-2 opacity-60" />
+                  {item.label}
+                  {item.showCount && bookmakersInBonusMode.length > 0 && (
+                    <span className="ml-1.5 text-xs font-medium text-muted-foreground/60">
+                      ({bookmakersInBonusMode.length})
+                    </span>
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {modeToggle}
+          </div>
+
+          <TabsContent value={activeTab} className="mt-0">
+            {renderContent()}
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  }
+
+  // Mode: Sidebar
   return (
-    <div className="space-y-6">
-      {/* Slim contextual navigation - premium design */}
-      <Tabs defaultValue="visao-geral" className="space-y-6">
-        <TabsList className="bg-transparent border-b border-border/50 rounded-none p-0 h-auto gap-6">
-          <TabsTrigger 
-            value="visao-geral" 
-            className="bg-transparent border-0 rounded-none px-1 pb-3 pt-1 h-auto shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground/70 data-[state=active]:text-foreground transition-colors"
-          >
-            <LayoutDashboard className="h-4 w-4 mr-2 opacity-60" />
-            Visão Geral
-          </TabsTrigger>
-          <TabsTrigger 
-            value="bookmakers" 
-            className="bg-transparent border-0 rounded-none px-1 pb-3 pt-1 h-auto shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground/70 data-[state=active]:text-foreground transition-colors"
-          >
-            <Building2 className="h-4 w-4 mr-2 opacity-60" />
-            Bookmakers
-            {bookmakersInBonusMode.length > 0 && (
-              <span className="ml-1.5 text-xs font-medium text-muted-foreground/60 data-[state=active]:text-accent">
-                ({bookmakersInBonusMode.length})
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger 
-            value="apostas" 
-            className="bg-transparent border-0 rounded-none px-1 pb-3 pt-1 h-auto shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground/70 data-[state=active]:text-foreground transition-colors"
-          >
-            <Target className="h-4 w-4 mr-2 opacity-60" />
-            Apostas
-          </TabsTrigger>
-          <TabsTrigger 
-            value="historico" 
-            className="bg-transparent border-0 rounded-none px-1 pb-3 pt-1 h-auto shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground/70 data-[state=active]:text-foreground transition-colors"
-          >
-            <History className="h-4 w-4 mr-2 opacity-60" />
-            Histórico
-          </TabsTrigger>
-        </TabsList>
+    <div className="flex gap-6">
+      {/* Sidebar Navigation */}
+      <div className="w-48 shrink-0">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
+            Navegação
+          </span>
+          {modeToggle}
+        </div>
+        <nav className="space-y-1">
+          {NAV_ITEMS.map((item) => {
+            const isActive = activeTab === item.value;
+            return (
+              <button
+                key={item.value}
+                onClick={() => handleTabChange(item.value)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                  isActive
+                    ? "bg-accent/10 text-foreground shadow-sm"
+                    : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                <item.icon className={cn(
+                  "h-4 w-4 transition-colors",
+                  isActive ? "text-accent" : "opacity-60"
+                )} />
+                <span className="flex-1 text-left">{item.label}</span>
+                {item.showCount && bookmakersInBonusMode.length > 0 && (
+                  <span className={cn(
+                    "text-xs px-1.5 py-0.5 rounded-full transition-colors",
+                    isActive 
+                      ? "bg-accent/20 text-accent" 
+                      : "bg-muted/50 text-muted-foreground/60"
+                  )}>
+                    {bookmakersInBonusMode.length}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
 
-        <TabsContent value="visao-geral" className="mt-0">
-          <BonusVisaoGeralTab projetoId={projetoId} />
-        </TabsContent>
-
-        <TabsContent value="bookmakers" className="mt-0">
-          <BonusBookmakersTab projetoId={projetoId} />
-        </TabsContent>
-
-        <TabsContent value="apostas" className="mt-0">
-          <BonusApostasTab projetoId={projetoId} />
-        </TabsContent>
-
-        <TabsContent value="historico" className="mt-0">
-          <BonusHistoricoTab projetoId={projetoId} />
-        </TabsContent>
-      </Tabs>
+      {/* Content Area */}
+      <div className="flex-1 min-w-0">
+        {renderContent()}
+      </div>
     </div>
   );
 }
