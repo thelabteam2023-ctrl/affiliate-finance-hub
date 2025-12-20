@@ -39,6 +39,7 @@ interface BookmakerInBonusMode {
   nome: string;
   login_username: string;
   logo_url: string | null;
+  bookmaker_catalogo_id: string | null;
   parceiro_nome: string | null;
   saldo_real: number;
   moeda: string;
@@ -55,7 +56,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
   
   // Drawer state
   const [bonusDrawerOpen, setBonusDrawerOpen] = useState(false);
-  const [selectedBookmaker, setSelectedBookmaker] = useState<{ id: string; nome: string; login?: string; logo?: string | null } | null>(null);
+  const [selectedBookmaker, setSelectedBookmaker] = useState<{ id: string; nome: string; login?: string; logo?: string | null; bookmaker_catalogo_id?: string | null } | null>(null);
   
   // Finalize dialog state
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
@@ -84,6 +85,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           login_username,
           saldo_atual,
           moeda,
+          bookmaker_catalogo_id,
           bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url),
           parceiros!bookmakers_parceiro_id_fkey (nome)
         `)
@@ -121,6 +123,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           nome: bk.nome,
           login_username: bk.login_username,
           logo_url: bk.bookmakers_catalogo?.logo_url || null,
+          bookmaker_catalogo_id: bk.bookmaker_catalogo_id || null,
           parceiro_nome: bk.parceiros?.nome || null,
           saldo_real: bk.saldo_atual,
           moeda: bk.moeda || 'BRL',
@@ -147,6 +150,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
       nome: bk.nome,
       login: bk.login_username,
       logo: bk.logo_url,
+      bookmaker_catalogo_id: bk.bookmaker_catalogo_id,
     });
     setBonusDrawerOpen(true);
   };
@@ -375,6 +379,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           bookmakerName={selectedBookmaker.nome}
           bookmakerLogin={selectedBookmaker.login}
           bookmakerLogo={selectedBookmaker.logo}
+          bookmakerCatalogoId={selectedBookmaker.bookmaker_catalogo_id}
           onBonusChange={fetchBonuses}
         />
       )}
