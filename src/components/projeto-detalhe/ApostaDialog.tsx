@@ -3313,40 +3313,40 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
 
             {/* Freebet Gerada - design moderno com toggle pill */}
             {tipoAposta === "bookmaker" && !usarFreebetBookmaker && (
-              <div className={`flex items-center justify-between py-2.5 px-3.5 rounded-lg transition-all duration-200 ${
+              <div className={`flex items-center justify-between py-3 px-4 rounded-lg transition-all duration-200 ${
                 gerouFreebet 
-                  ? "bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 border border-emerald-500/30" 
-                  : "bg-muted/5 border border-transparent hover:border-border/20"
+                  ? "bg-gradient-to-r from-emerald-500/15 to-emerald-500/5 border border-emerald-500/40" 
+                  : "bg-muted/20 border border-border/40 hover:border-border/60 hover:bg-muted/30"
               }`}>
                 <button
                   type="button"
                   onClick={() => setGerouFreebet(!gerouFreebet)}
-                  className="flex items-center gap-2.5 group"
+                  className="flex items-center gap-3 group"
                 >
                   {/* Toggle pill moderno */}
-                  <div className={`relative w-9 h-5 rounded-full transition-all duration-200 ${
+                  <div className={`relative w-10 h-[22px] rounded-full transition-all duration-200 ${
                     gerouFreebet 
-                      ? "bg-emerald-500" 
-                      : "bg-muted-foreground/20"
+                      ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" 
+                      : "bg-muted-foreground/30"
                   }`}>
-                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200 ${
+                    <div className={`absolute top-[3px] w-4 h-4 rounded-full bg-white shadow-md transition-all duration-200 ${
                       gerouFreebet 
-                        ? "left-[18px]" 
-                        : "left-0.5"
+                        ? "left-[21px]" 
+                        : "left-[3px]"
                     }`} />
                   </div>
                   
                   {/* Label com ícone */}
-                  <div className="flex items-center gap-1.5">
-                    <Gift className={`h-3.5 w-3.5 transition-colors ${
+                  <div className="flex items-center gap-2">
+                    <Gift className={`h-4 w-4 transition-colors ${
                       gerouFreebet 
                         ? "text-emerald-400" 
-                        : "text-muted-foreground/50"
+                        : "text-muted-foreground"
                     }`} />
-                    <span className={`text-xs font-medium transition-colors ${
+                    <span className={`text-sm font-medium transition-colors ${
                       gerouFreebet 
                         ? "text-emerald-400" 
-                        : "text-muted-foreground/70 group-hover:text-muted-foreground"
+                        : "text-foreground/80 group-hover:text-foreground"
                     }`}>
                       Gerou Freebet
                     </span>
@@ -3356,10 +3356,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                 {/* Input de valor com animação */}
                 <div className={`flex items-center gap-2 overflow-hidden transition-all duration-200 ${
                   gerouFreebet 
-                    ? "opacity-100 max-w-[120px]" 
+                    ? "opacity-100 max-w-[130px]" 
                     : "opacity-0 max-w-0"
                 }`}>
-                  <span className="text-[10px] text-emerald-400/70 whitespace-nowrap">R$</span>
+                  <span className="text-xs text-emerald-400/80 whitespace-nowrap font-medium">R$</span>
                   <Input
                     type="number"
                     step="0.01"
@@ -3367,7 +3367,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                     value={valorFreebetGerada}
                     onChange={(e) => setValorFreebetGerada(e.target.value)}
                     placeholder="0.00"
-                    className="h-7 w-20 text-xs text-center px-2 bg-background/50 border-emerald-500/30 focus:border-emerald-500/50"
+                    className="h-8 w-24 text-sm text-center px-2 bg-background/60 border-emerald-500/40 focus:border-emerald-500/60"
                   />
                 </div>
               </div>
