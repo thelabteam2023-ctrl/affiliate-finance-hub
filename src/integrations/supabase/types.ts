@@ -196,6 +196,7 @@ export type Database = {
           esporte: string
           estrategia: string | null
           evento: string
+          forma_registro: string | null
           gerou_freebet: boolean | null
           id: string
           is_bonus_bet: boolean | null
@@ -235,6 +236,7 @@ export type Database = {
           esporte: string
           estrategia?: string | null
           evento: string
+          forma_registro?: string | null
           gerou_freebet?: boolean | null
           id?: string
           is_bonus_bet?: boolean | null
@@ -274,6 +276,7 @@ export type Database = {
           esporte?: string
           estrategia?: string | null
           evento?: string
+          forma_registro?: string | null
           gerou_freebet?: boolean | null
           id?: string
           is_bonus_bet?: boolean | null
@@ -388,6 +391,8 @@ export type Database = {
           cancelled_by: string | null
           created_at: string
           data_aposta: string
+          estrategia: string | null
+          forma_registro: string | null
           gerou_freebet: boolean | null
           id: string
           is_bonus_bet: boolean | null
@@ -415,6 +420,8 @@ export type Database = {
           cancelled_by?: string | null
           created_at?: string
           data_aposta?: string
+          estrategia?: string | null
+          forma_registro?: string | null
           gerou_freebet?: boolean | null
           id?: string
           is_bonus_bet?: boolean | null
@@ -442,6 +449,8 @@ export type Database = {
           cancelled_by?: string | null
           created_at?: string
           data_aposta?: string
+          estrategia?: string | null
+          forma_registro?: string | null
           gerou_freebet?: boolean | null
           id?: string
           is_bonus_bet?: boolean | null

@@ -46,6 +46,17 @@ export const APOSTA_ESTRATEGIA = {
 export type ApostaEstrategia = typeof APOSTA_ESTRATEGIA[keyof typeof APOSTA_ESTRATEGIA];
 
 /**
+ * Forma de registro - como a aposta foi registrada (estrutura do formulário)
+ */
+export const FORMA_REGISTRO = {
+  SIMPLES: 'SIMPLES',
+  MULTIPLA: 'MULTIPLA',
+  ARBITRAGEM: 'ARBITRAGEM',
+} as const;
+
+export type FormaRegistro = typeof FORMA_REGISTRO[keyof typeof FORMA_REGISTRO];
+
+/**
  * Labels para exibição de estratégias
  */
 export const ESTRATEGIA_LABELS: Record<ApostaEstrategia, string> = {
@@ -80,6 +91,123 @@ export const ESTRATEGIAS_LIST = [
   { value: APOSTA_ESTRATEGIA.EXTRACAO_BONUS, label: ESTRATEGIA_LABELS.EXTRACAO_BONUS },
   { value: APOSTA_ESTRATEGIA.DUPLO_GREEN, label: ESTRATEGIA_LABELS.DUPLO_GREEN },
 ] as const;
+
+/**
+ * Mapeia a aba ativa para a estratégia default
+ */
+export const getEstrategiaFromTab = (activeTab: string): ApostaEstrategia => {
+  const tabToEstrategia: Record<string, ApostaEstrategia> = {
+    apostas: 'PUNTER',
+    freebets: 'EXTRACAO_FREEBET',
+    bonus: 'EXTRACAO_BONUS',
+    surebet: 'SUREBET',
+    valuebet: 'VALUEBET',
+    duplogreen: 'DUPLO_GREEN',
+    // Aliases para garantir compatibilidade
+    'apostas-livres': 'PUNTER',
+    'visao-geral': 'PUNTER',
+  };
+  return tabToEstrategia[activeTab] || 'PUNTER';
+};
+
+/**
+ * Mapeia a estratégia para a aba principal
+ */
+export const getTabFromEstrategia = (estrategia: ApostaEstrategia | string | null): string => {
+  if (!estrategia) return 'apostas';
+  
+  const estrategiaToTab: Record<string, string> = {
+    PUNTER: 'apostas',
+    SUREBET: 'surebet',
+    VALUEBET: 'valuebet',
+    EXTRACAO_FREEBET: 'freebets',
+    EXTRACAO_BONUS: 'bonus',
+    DUPLO_GREEN: 'duplogreen',
+    // Legado
+    VALOR: 'apostas',
+  };
+  return estrategiaToTab[estrategia] || 'apostas';
+};
+
+/**
+ * Inferência de estratégia para dados legados (fallback)
+ * Usado apenas para apostas antigas sem estratégia definida
+ */
+export const inferEstrategiaLegado = (aposta: {
+  estrategia?: string | null;
+  surebet_id?: string | null;
+  tipo_freebet?: string | null;
+  gerou_freebet?: boolean | null;
+  is_bonus_bet?: boolean | null;
+}): ApostaEstrategia => {
+  // Se já tem estratégia válida, retornar
+  if (aposta.estrategia && aposta.estrategia !== 'VALOR') {
+    if (Object.values(APOSTA_ESTRATEGIA).includes(aposta.estrategia as ApostaEstrategia)) {
+      return aposta.estrategia as ApostaEstrategia;
+    }
+  }
+  
+  // Fallback heurístico para dados legados
+  if (aposta.surebet_id) {
+    console.warn(`[LEGADO] Aposta com surebet_id sem estratégia definida`);
+    return 'SUREBET';
+  }
+  
+  if (aposta.tipo_freebet || aposta.gerou_freebet) {
+    console.warn(`[LEGADO] Aposta com freebet sem estratégia definida`);
+    return 'EXTRACAO_FREEBET';
+  }
+  
+  if (aposta.is_bonus_bet) {
+    console.warn(`[LEGADO] Aposta com bonus sem estratégia definida`);
+    return 'EXTRACAO_BONUS';
+  }
+  
+  return 'PUNTER';
+};
+
+/**
+ * Valida consistência entre estratégia e dados da aposta
+ * Retorna warnings (não bloqueia salvamento)
+ */
+export const validateApostaConsistencia = (aposta: {
+  estrategia: string;
+  surebet_id?: string | null;
+  tipo_freebet?: string | null;
+  gerou_freebet?: boolean | null;
+  is_bonus_bet?: boolean | null;
+}): { valid: boolean; warnings: string[] } => {
+  const warnings: string[] = [];
+  
+  // Validar SUREBET
+  if (aposta.estrategia === 'SUREBET' && !aposta.surebet_id) {
+    warnings.push('Estratégia SUREBET mas sem surebet_id vinculado');
+  }
+  
+  // Validar EXTRACAO_FREEBET
+  if (aposta.estrategia === 'EXTRACAO_FREEBET' && !aposta.tipo_freebet && !aposta.gerou_freebet) {
+    warnings.push('Estratégia EXTRACAO_FREEBET mas sem indicador de freebet');
+  }
+  
+  // Validar EXTRACAO_BONUS
+  if (aposta.estrategia === 'EXTRACAO_BONUS' && !aposta.is_bonus_bet) {
+    warnings.push('Estratégia EXTRACAO_BONUS mas is_bonus_bet não está marcado');
+  }
+  
+  // Detectar conflitos
+  if (aposta.estrategia === 'VALUEBET' && aposta.surebet_id) {
+    warnings.push('Conflito: estratégia VALUEBET com surebet_id preenchido');
+  }
+  
+  if (aposta.estrategia === 'DUPLO_GREEN' && aposta.surebet_id) {
+    warnings.push('Conflito: estratégia DUPLO_GREEN com surebet_id preenchido');
+  }
+  
+  return {
+    valid: warnings.length === 0,
+    warnings
+  };
+};
 
 /**
  * Helper para verificar se uma aposta está finalizada

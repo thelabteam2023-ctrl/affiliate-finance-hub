@@ -836,6 +836,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           stake: stakes[index],
           status: "PENDENTE",
           estrategia: "SUREBET",
+          forma_registro: "ARBITRAGEM",
           modo_entrada: "PADRAO"
         }));
 

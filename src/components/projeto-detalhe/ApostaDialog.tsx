@@ -97,6 +97,7 @@ interface ApostaDialogProps {
   aposta: Aposta | null;
   projetoId: string;
   onSuccess: () => void;
+  defaultEstrategia?: string;
 }
 
 const ESPORTES_BASE = [
@@ -293,7 +294,7 @@ const getMoneylineSelecoes = (esporte: string, mandante: string, visitante: stri
 
 // Removed EXCHANGES list - now using bookmakers list for Exchange tab
 
-export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess }: ApostaDialogProps) {
+export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess, defaultEstrategia = 'PUNTER' }: ApostaDialogProps) {
   const [loading, setLoading] = useState(false);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -1257,7 +1258,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           bookmaker_id: bookmakerId,
           odd: bookmakerOdd,
           stake: bookmakerStake,
-          estrategia: "VALOR",
+          estrategia: aposta?.estrategia || defaultEstrategia,
+          forma_registro: 'SIMPLES',
           modo_entrada: "PADRAO",
           valor_retorno: valorRetornoCalculado,
           lucro_prejuizo: lucroPrejuizo,
@@ -1319,7 +1321,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           bookmaker_id: coberturaBackBookmakerId,
           odd: backOdd,
           stake: backStake,
-          estrategia: "COBERTURA_LAY",
+          estrategia: aposta?.estrategia || defaultEstrategia,
+          forma_registro: 'SIMPLES',
           modo_entrada: "EXCHANGE",
           valor_retorno: valorRetornoCalculado,
           lucro_prejuizo: lucroPrejuizo,
@@ -1384,7 +1387,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
           bookmaker_id: exchangeBookmakerId,
           odd: exchOdd,
           stake: exchStake,
-          estrategia: isLay ? "EXCHANGE_LAY" : "EXCHANGE_BACK",
+          estrategia: aposta?.estrategia || defaultEstrategia,
+          forma_registro: 'SIMPLES',
           modo_entrada: "EXCHANGE",
           valor_retorno: valorRetornoCalculado,
           lucro_prejuizo: lucroPrejuizo,

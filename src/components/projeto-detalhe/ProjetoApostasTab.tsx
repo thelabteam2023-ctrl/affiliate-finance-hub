@@ -16,7 +16,8 @@ import {
   Shield,
   Coins,
   Gift,
-  Filter
+  Filter,
+  Zap
 } from "lucide-react";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { SurebetDialog } from "./SurebetDialog";
@@ -35,6 +36,7 @@ import {
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import { DateRange } from "react-day-picker";
 import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
+import { ESTRATEGIAS_LIST, inferEstrategiaLegado, type ApostaEstrategia } from "@/lib/apostaConstants";
 
 type PeriodFilter = "hoje" | "ontem" | "7dias" | "mes" | "ano" | "todo" | "custom";
 
@@ -222,6 +224,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
   const [contextoFilter, setContextoFilter] = useState<ApostaContexto | "all">("all");
+  const [estrategiaFilter, setEstrategiaFilter] = useState<string>("all");
   const [tipoFilter, setTipoFilter] = useState<"todas" | "simples" | "multiplas" | "surebets">("todas");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -459,6 +462,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
     // Apostas simples
     apostas.forEach(aposta => {
       const contexto = getApostaContexto(aposta, bookmakersComBonusAtivo);
+      const estrategia = inferEstrategiaLegado(aposta);
       
       // Filtros de busca
       const matchesSearch = 
@@ -468,9 +472,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
       const matchesStatus = statusFilter === "all" || aposta.status === statusFilter;
       const matchesResultado = resultadoFilter === "all" || aposta.resultado === resultadoFilter;
       const matchesContexto = contextoFilter === "all" || contexto === contextoFilter;
+      const matchesEstrategia = estrategiaFilter === "all" || estrategia === estrategiaFilter;
       const matchesTipo = tipoFilter === "todas" || tipoFilter === "simples";
       
-      if (matchesSearch && matchesStatus && matchesResultado && matchesContexto && matchesTipo) {
+      if (matchesSearch && matchesStatus && matchesResultado && matchesContexto && matchesEstrategia && matchesTipo) {
         result.push({
           tipo: "simples",
           data: aposta,
@@ -527,7 +532,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
     
     // Ordenar por data
     return result.sort((a, b) => new Date(b.data_aposta).getTime() - new Date(a.data_aposta).getTime());
-  }, [apostas, apostasMultiplas, surebets, bookmakersComBonusAtivo, searchTerm, statusFilter, resultadoFilter, contextoFilter, tipoFilter]);
+  }, [apostas, apostasMultiplas, surebets, bookmakersComBonusAtivo, searchTerm, statusFilter, resultadoFilter, contextoFilter, estrategiaFilter, tipoFilter]);
 
   // Contadores por contexto
   const contadores = useMemo(() => {
@@ -744,6 +749,20 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                 <SelectItem value="MEIO_GREEN">Meio Green</SelectItem>
                 <SelectItem value="MEIO_RED">Meio Red</SelectItem>
                 <SelectItem value="VOID">Void</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {/* Filtro de Estratégia */}
+            <Select value={estrategiaFilter} onValueChange={setEstrategiaFilter}>
+              <SelectTrigger className="w-[150px] h-9">
+                <Zap className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Estratégia" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas Estratégias</SelectItem>
+                {ESTRATEGIAS_LIST.map(e => (
+                  <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
