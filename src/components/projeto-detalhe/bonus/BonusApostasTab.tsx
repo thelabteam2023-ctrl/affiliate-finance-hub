@@ -443,19 +443,6 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Info Banner */}
-      <Card className="border-amber-500/30 bg-amber-500/5">
-        <CardContent className="py-3">
-          <div className="flex items-center gap-2 text-sm">
-            <Coins className="h-4 w-4 text-amber-400" />
-            <span className="text-amber-400 font-medium">Modo Bônus:</span>
-            <span className="text-muted-foreground">
-              Mostrando apostas de {bookmakersInBonusMode.length} casa(s) com bônus ativo
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Filters & Actions */}
       <Card>
         <CardContent className="pt-4">
@@ -472,7 +459,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
               <DropdownMenuTrigger asChild>
                 <Button size="sm" className="h-9 bg-amber-600 hover:bg-amber-700">
                   <Plus className="mr-1 h-4 w-4" />
-                  Nova Aposta Bônus
+                  Nova Aposta
                   <ChevronDown className="ml-1 h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
