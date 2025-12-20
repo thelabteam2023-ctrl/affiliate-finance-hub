@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
 import { ApostaMultiplaDialog } from "@/components/projeto-detalhe/ApostaMultiplaDialog";
+import { SurebetCard, SurebetData } from "@/components/projeto-detalhe/SurebetCard";
+import { SurebetDialog } from "@/components/projeto-detalhe/SurebetDialog";
 import { ResultadoPill } from "@/components/projeto-detalhe/ResultadoPill";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import {
@@ -122,9 +124,39 @@ interface ApostaMultipla {
   };
 }
 
+interface Surebet {
+  id: string;
+  evento: string;
+  esporte: string;
+  modelo: string;
+  mercado?: string | null;
+  stake_total: number;
+  spread_calculado: number | null;
+  roi_esperado: number | null;
+  roi_real: number | null;
+  lucro_esperado: number | null;
+  lucro_real: number | null;
+  status: string;
+  resultado: string | null;
+  data_operacao: string;
+  observacoes: string | null;
+  pernas?: {
+    id: string;
+    bookmaker_id: string;
+    selecao: string;
+    odd: number;
+    stake: number;
+    resultado: string | null;
+    bookmaker?: {
+      nome: string;
+      parceiro?: { nome: string };
+    };
+  }[];
+}
+
 type ApostaUnificada = {
-  tipo: "simples" | "multipla";
-  data: Aposta | ApostaMultipla;
+  tipo: "simples" | "multipla" | "surebet";
+  data: Aposta | ApostaMultipla | Surebet;
   data_aposta: string;
 };
 
@@ -141,16 +173,19 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
   
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [apostasMultiplas, setApostasMultiplas] = useState<ApostaMultipla[]>([]);
+  const [surebets, setSurebets] = useState<Surebet[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
-  const [tipoFilter, setTipoFilter] = useState<"todas" | "simples" | "multiplas">("todas");
+  const [tipoFilter, setTipoFilter] = useState<"todas" | "simples" | "multiplas" | "surebets">("todas");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMultiplaOpen, setDialogMultiplaOpen] = useState(false);
+  const [dialogSurebetOpen, setDialogSurebetOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
   const [selectedApostaMultipla, setSelectedApostaMultipla] = useState<ApostaMultipla | null>(null);
+  const [selectedSurebet, setSelectedSurebet] = useState<SurebetData | null>(null);
   const [bookmakers, setBookmakers] = useState<any[]>([]);
 
   useEffect(() => {
@@ -160,7 +195,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
   const fetchAllApostas = async () => {
     try {
       setLoading(true);
-      await Promise.all([fetchApostas(), fetchApostasMultiplas(), fetchBookmakers()]);
+      await Promise.all([fetchApostas(), fetchApostasMultiplas(), fetchSurebets(), fetchBookmakers()]);
     } finally {
       setLoading(false);
     }
@@ -262,6 +297,58 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     }
   };
 
+  const fetchSurebets = async () => {
+    try {
+      // If no bookmakers in bonus mode, no surebets to show
+      if (bookmakersInBonusMode.length === 0) {
+        setSurebets([]);
+        return;
+      }
+
+      // Fetch surebets that have at least one perna with a bookmaker in bonus mode
+      const { data: surebetsData, error } = await supabase
+        .from("surebets")
+        .select("*")
+        .eq("projeto_id", projetoId)
+        .order("data_operacao", { ascending: false });
+
+      if (error) throw error;
+      
+      // Fetch pernas for each surebet and filter by bonus bookmakers
+      const surebetsComPernas = await Promise.all((surebetsData || []).map(async (surebet) => {
+        const { data: pernasData } = await supabase
+          .from("apostas")
+          .select(`
+            id,
+            bookmaker_id,
+            selecao,
+            odd,
+            stake,
+            resultado,
+            bookmaker:bookmakers (
+              nome,
+              parceiro:parceiros (nome)
+            )
+          `)
+          .eq("surebet_id", surebet.id);
+        
+        return {
+          ...surebet,
+          pernas: pernasData || []
+        };
+      }));
+      
+      // Filter surebets that have at least one perna with a bookmaker in bonus mode
+      const surebetsFiltradas = surebetsComPernas.filter(sb => 
+        sb.pernas?.some(p => bookmakersInBonusMode.includes(p.bookmaker_id))
+      );
+      
+      setSurebets(surebetsFiltradas);
+    } catch (error: any) {
+      console.error("Erro ao carregar surebets:", error.message);
+    }
+  };
+
   const handleApostaUpdated = () => {
     fetchAllApostas();
   };
@@ -289,10 +376,23 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     return (searchTerm === "" || matchesSearch) && matchesStatus && matchesResultado && matchesTipo;
   });
 
+  // Filter surebets
+  const filteredSurebets = surebets.filter((sb) => {
+    const matchesSearch = 
+      sb.evento.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sb.esporte.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sb.modelo.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || sb.status === statusFilter;
+    const matchesResultado = resultadoFilter === "all" || sb.resultado === resultadoFilter;
+    const matchesTipo = tipoFilter === "todas" || tipoFilter === "surebets";
+    return matchesSearch && matchesStatus && matchesResultado && matchesTipo;
+  });
+
   // Unify and sort
   const apostasUnificadas: ApostaUnificada[] = [
     ...filteredApostas.map(a => ({ tipo: "simples" as const, data: a, data_aposta: a.data_aposta })),
     ...filteredMultiplas.map(am => ({ tipo: "multipla" as const, data: am, data_aposta: am.data_aposta })),
+    ...filteredSurebets.map(sb => ({ tipo: "surebet" as const, data: sb, data_aposta: sb.data_operacao })),
   ].sort((a, b) => new Date(b.data_aposta).getTime() - new Date(a.data_aposta).getTime());
 
   const formatCurrency = (value: number) => {
@@ -385,6 +485,13 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
                   <Layers className="mr-2 h-4 w-4" />
                   Aposta Múltipla
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  setSelectedSurebet(null);
+                  setDialogSurebetOpen(true);
+                }}>
+                  <ArrowLeftRight className="mr-2 h-4 w-4" />
+                  Surebet
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <div className="relative flex-1 min-w-[200px]">
@@ -453,6 +560,35 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {apostasUnificadas.map((item) => {
+            // Card de Surebet
+            if (item.tipo === "surebet") {
+              const sb = item.data as Surebet;
+              
+              // Converter para formato SurebetData compatível com SurebetCard
+              const surebetData: SurebetData = {
+                ...sb,
+                pernas: sb.pernas?.map(p => ({
+                  id: p.id,
+                  selecao: p.selecao,
+                  odd: p.odd,
+                  stake: p.stake,
+                  resultado: p.resultado,
+                  bookmaker_nome: p.bookmaker?.nome || "—"
+                }))
+              };
+              
+              return (
+                <SurebetCard
+                  key={sb.id}
+                  surebet={surebetData}
+                  onEdit={(surebet) => {
+                    setSelectedSurebet(surebet);
+                    setDialogSurebetOpen(true);
+                  }}
+                />
+              );
+            }
+            
             if (item.tipo === "simples") {
               const aposta = item.data as Aposta;
               const parceiroNome = aposta.bookmaker?.parceiro?.nome ? getFirstLastName(aposta.bookmaker.parceiro.nome) : null;
@@ -621,6 +757,21 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
         onOpenChange={setDialogMultiplaOpen}
         projetoId={projetoId}
         aposta={selectedApostaMultipla}
+        onSuccess={handleApostaUpdated}
+      />
+
+      {/* Dialog Surebet - usa apenas bookmakers em modo bônus */}
+      <SurebetDialog
+        open={dialogSurebetOpen}
+        onOpenChange={(open) => {
+          setDialogSurebetOpen(open);
+          if (!open) {
+            setSelectedSurebet(null);
+          }
+        }}
+        projetoId={projetoId}
+        bookmakers={bookmakers}
+        surebet={selectedSurebet}
         onSuccess={handleApostaUpdated}
       />
     </div>
