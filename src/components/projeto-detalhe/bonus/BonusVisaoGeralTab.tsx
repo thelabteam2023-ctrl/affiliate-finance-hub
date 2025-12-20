@@ -1,11 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus } from "@/hooks/useProjectBonuses";
 import { Building2, Coins, Wallet, TrendingUp, AlertTriangle, Timer, Trophy } from "lucide-react";
-import { differenceInDays, parseISO, format } from "date-fns";
+import { differenceInDays, parseISO, format, subDays, startOfDay, startOfWeek, eachDayOfInterval, eachWeekOfInterval } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceLine, CartesianGrid, Tooltip } from "recharts";
 
 interface BonusVisaoGeralTabProps {
   projetoId: string;
@@ -22,10 +30,32 @@ interface BookmakerWithBonus {
   moeda: string;
 }
 
+interface DailyData {
+  date: string;
+  dateLabel: string;
+  deposits: number;
+  bonusCredits: number;
+  juice: number;
+  adjustedBalance: number;
+}
+
+interface WeeklyData {
+  weekStart: string;
+  weekLabel: string;
+  deposits: number;
+  bonusCredits: number;
+  count: number;
+}
+
+type PeriodFilter = 7 | 30 | 90;
+
 export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
   const [bookmakersWithBonus, setBookmakersWithBonus] = useState<BookmakerWithBonus[]>([]);
   const [loading, setLoading] = useState(true);
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>(30);
+  const [betsData, setBetsData] = useState<any[]>([]);
+  const [betsLoading, setBetsLoading] = useState(true);
 
   const summary = getSummary();
   const bookmakersInBonusMode = getBookmakersWithActiveBonus();
@@ -43,7 +73,41 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
 
   const expiring7Days = getExpiringSoon(7);
   const expiring15Days = getExpiringSoon(15);
-  const expiring30Days = getExpiringSoon(30);
+
+  // Fetch bets data for juice calculation
+  useEffect(() => {
+    const fetchBetsData = async () => {
+      if (!projetoId || bookmakersInBonusMode.length === 0) {
+        setBetsData([]);
+        setBetsLoading(false);
+        return;
+      }
+
+      try {
+        setBetsLoading(true);
+        const startDate = subDays(new Date(), periodFilter).toISOString();
+        
+        // Fetch bets from bookmakers in bonus mode or marked as bonus bets
+        const { data, error } = await supabase
+          .from("apostas")
+          .select("id, data_aposta, stake, lucro_prejuizo, bookmaker_id, is_bonus_bet")
+          .eq("projeto_id", projetoId)
+          .gte("data_aposta", startDate.split('T')[0])
+          .or(`is_bonus_bet.eq.true,bookmaker_id.in.(${bookmakersInBonusMode.join(',')})`)
+          .not("lucro_prejuizo", "is", null);
+
+        if (error) throw error;
+        setBetsData(data || []);
+      } catch (error) {
+        console.error("Error fetching bets:", error);
+        setBetsData([]);
+      } finally {
+        setBetsLoading(false);
+      }
+    };
+
+    fetchBetsData();
+  }, [projetoId, bookmakersInBonusMode, periodFilter]);
 
   useEffect(() => {
     fetchBookmakersWithBonus();
@@ -108,32 +172,156 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
     return `${symbols[moeda] || moeda} ${value.toFixed(2)}`;
   };
 
+  // Calculate daily data for charts
+  const dailyData = useMemo((): DailyData[] => {
+    const endDate = startOfDay(new Date());
+    const startDate = subDays(endDate, periodFilter);
+    const days = eachDayOfInterval({ start: startDate, end: endDate });
+
+    // Group bonuses by credited date
+    const bonusByDate: Record<string, { deposits: number; bonusCredits: number }> = {};
+    bonuses.forEach(b => {
+      if (b.status === 'credited' && b.credited_at) {
+        const dateKey = format(parseISO(b.credited_at), 'yyyy-MM-dd');
+        if (!bonusByDate[dateKey]) {
+          bonusByDate[dateKey] = { deposits: 0, bonusCredits: 0 };
+        }
+        bonusByDate[dateKey].deposits += b.deposit_amount || 0;
+        bonusByDate[dateKey].bonusCredits += b.bonus_amount;
+      }
+    });
+
+    // Group juice by date
+    const juiceByDate: Record<string, number> = {};
+    betsData.forEach(bet => {
+      const dateKey = bet.data_aposta;
+      if (!juiceByDate[dateKey]) {
+        juiceByDate[dateKey] = 0;
+      }
+      juiceByDate[dateKey] += bet.lucro_prejuizo || 0;
+    });
+
+    // Calculate cumulative adjusted balance
+    let cumulativeBalance = 0;
+    
+    return days.map(day => {
+      const dateKey = format(day, 'yyyy-MM-dd');
+      const dateLabel = format(day, 'dd/MM', { locale: ptBR });
+      
+      const dayData = bonusByDate[dateKey] || { deposits: 0, bonusCredits: 0 };
+      const juice = juiceByDate[dateKey] || 0;
+      
+      // Adjusted balance = previous + deposits + bonus + juice
+      cumulativeBalance += dayData.deposits + dayData.bonusCredits + juice;
+      
+      return {
+        date: dateKey,
+        dateLabel,
+        deposits: dayData.deposits,
+        bonusCredits: dayData.bonusCredits,
+        juice,
+        adjustedBalance: cumulativeBalance,
+      };
+    });
+  }, [bonuses, betsData, periodFilter]);
+
+  // Calculate weekly deposits
+  const weeklyData = useMemo((): WeeklyData[] => {
+    const endDate = new Date();
+    const startDate = subDays(endDate, periodFilter);
+    const weeks = eachWeekOfInterval({ start: startDate, end: endDate }, { weekStartsOn: 1 });
+
+    return weeks.map(weekStart => {
+      const weekEnd = subDays(startOfWeek(subDays(weekStart, -7), { weekStartsOn: 1 }), 1);
+      const weekLabel = format(weekStart, 'dd/MM', { locale: ptBR });
+
+      // Sum deposits and bonus credits for this week
+      let deposits = 0;
+      let bonusCredits = 0;
+      let count = 0;
+
+      bonuses.forEach(b => {
+        if (b.status === 'credited' && b.credited_at) {
+          const creditedDate = parseISO(b.credited_at);
+          if (creditedDate >= weekStart && creditedDate <= weekEnd) {
+            deposits += b.deposit_amount || 0;
+            bonusCredits += b.bonus_amount;
+            count++;
+          }
+        }
+      });
+
+      return {
+        weekStart: format(weekStart, 'yyyy-MM-dd'),
+        weekLabel,
+        deposits,
+        bonusCredits,
+        count,
+      };
+    });
+  }, [bonuses, periodFilter]);
+
   // Calculate totals
   const totalSaldoReal = bookmakersWithBonus.reduce((acc, bk) => acc + bk.saldo_real, 0);
   const totalSaldoOperavel = totalSaldoReal + summary.active_bonus_total;
 
+  const chartConfig = {
+    deposits: { label: "Depósitos", color: "hsl(var(--chart-2))" },
+    bonusCredits: { label: "Bônus", color: "hsl(var(--warning))" },
+    juice: { label: "Juice", color: "hsl(var(--primary))" },
+    adjustedBalance: { label: "Saldo Ajustado", color: "hsl(var(--primary))" },
+  };
+
+  const hasData = dailyData.some(d => d.deposits > 0 || d.bonusCredits > 0 || d.juice !== 0);
+
   return (
     <div className="space-y-6">
-      {/* KPIs */}
+      {/* Period Filter */}
+      <div className="flex justify-end gap-2">
+        {([7, 30, 90] as PeriodFilter[]).map((period) => (
+          <Button
+            key={period}
+            variant={periodFilter === period ? "default" : "outline"}
+            size="sm"
+            onClick={() => setPeriodFilter(period)}
+            className="text-xs"
+          >
+            {period} dias
+          </Button>
+        ))}
+      </div>
+
+      {/* KPIs with hierarchy - Saldo Operável is primary */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-amber-500/30 bg-amber-500/5">
+        <Card className="border-primary/30 bg-primary/5 lg:col-span-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Casas com Bônus</CardTitle>
-            <Building2 className="h-4 w-4 text-amber-400" />
+            <CardTitle className="text-sm font-medium">Saldo Operável</CardTitle>
+            <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-400">{summary.bookmakers_with_active_bonus}</div>
+            <div className="text-2xl font-bold text-primary">{formatCurrency(totalSaldoOperavel)}</div>
+            <p className="text-xs text-muted-foreground">Real + Bônus Ativo</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Casas com Bônus</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary.bookmakers_with_active_bonus}</div>
             <p className="text-xs text-muted-foreground">Em modo bônus ativo</p>
           </CardContent>
         </Card>
 
-        <Card className="border-amber-500/30 bg-amber-500/5">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Bônus Ativo</CardTitle>
-            <Coins className="h-4 w-4 text-amber-400" />
+            <Coins className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-400">{formatCurrency(summary.active_bonus_total)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(summary.active_bonus_total)}</div>
             <p className="text-xs text-muted-foreground">{summary.count_credited} bônus creditados</p>
           </CardContent>
         </Card>
@@ -148,24 +336,191 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
             <p className="text-xs text-muted-foreground">Apenas casas em modo bônus</p>
           </CardContent>
         </Card>
+      </div>
 
-        <Card className="border-primary/30 bg-primary/5">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo Operável</CardTitle>
-            <TrendingUp className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{formatCurrency(totalSaldoOperavel)}</div>
-            <p className="text-xs text-muted-foreground">Real + Bônus Ativo</p>
+      {/* Dashboard Charts */}
+      {hasData ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {/* Chart C - Adjusted Balance (Most Important) */}
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                Saldo Ajustado Acumulado
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Depósitos + Bônus + Resultado das Apostas
+              </p>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={dailyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
+                    <XAxis 
+                      dataKey="dateLabel" 
+                      tick={{ fontSize: 10 }} 
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 10 }} 
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => `R$${v}`}
+                    />
+                    <Tooltip 
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload?.length) return null;
+                        const data = payload[0]?.payload as DailyData;
+                        return (
+                          <div className="bg-card border rounded-lg p-3 shadow-lg">
+                            <p className="font-medium mb-2">{label}</p>
+                            <div className="space-y-1 text-xs">
+                              <p className="text-blue-400">Depósito: {formatCurrency(data.deposits)}</p>
+                              <p className="text-warning">Bônus: {formatCurrency(data.bonusCredits)}</p>
+                              <p className={data.juice >= 0 ? "text-green-400" : "text-red-400"}>
+                                Juice: {formatCurrency(data.juice)}
+                              </p>
+                              <p className="font-medium text-primary pt-1 border-t border-border">
+                                Saldo: {formatCurrency(data.adjustedBalance)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+                    <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
+                    <Line 
+                      type="monotone" 
+                      dataKey="adjustedBalance" 
+                      stroke="hsl(var(--primary))" 
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+
+          {/* Chart A - Weekly Deposits */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Coins className="h-4 w-4 text-blue-400" />
+                Depósitos Semanais
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-[200px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weeklyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
+                    <XAxis 
+                      dataKey="weekLabel" 
+                      tick={{ fontSize: 10 }} 
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 10 }} 
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => `R$${v}`}
+                    />
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload?.length) return null;
+                        const data = payload[0]?.payload as WeeklyData;
+                        return (
+                          <div className="bg-card border rounded-lg p-3 shadow-lg text-xs">
+                            <p className="font-medium mb-2">Semana de {label}</p>
+                            <p className="text-blue-400">Depósitos: {formatCurrency(data.deposits)}</p>
+                            <p className="text-warning">Bônus: {formatCurrency(data.bonusCredits)}</p>
+                            <p className="text-muted-foreground">{data.count} créditos</p>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Bar dataKey="deposits" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} name="Depósitos" />
+                    <Bar dataKey="bonusCredits" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} name="Bônus" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+
+          {/* Chart B - Daily Juice */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                Juice Diário (P&L)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-[200px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dailyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
+                    <XAxis 
+                      dataKey="dateLabel" 
+                      tick={{ fontSize: 10 }} 
+                      tickLine={false}
+                      axisLine={false}
+                      interval={periodFilter === 7 ? 0 : periodFilter === 30 ? 4 : 10}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 10 }} 
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => `R$${v}`}
+                    />
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload?.length) return null;
+                        const data = payload[0]?.payload as DailyData;
+                        return (
+                          <div className="bg-card border rounded-lg p-3 shadow-lg text-xs">
+                            <p className="font-medium mb-2">{label}</p>
+                            <p className={data.juice >= 0 ? "text-green-400" : "text-red-400"}>
+                              Juice: {formatCurrency(data.juice)}
+                            </p>
+                          </div>
+                        );
+                      }}
+                    />
+                    <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
+                    <Bar 
+                      dataKey="juice" 
+                      fill="hsl(var(--primary))"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center">
+            <TrendingUp className="mx-auto h-12 w-12 text-muted-foreground/40 mb-4" />
+            <h3 className="font-medium mb-2">Nenhum dado para exibir</h3>
+            <p className="text-sm text-muted-foreground">
+              Registre bônus e apostas para visualizar o dashboard
+            </p>
           </CardContent>
         </Card>
-      </div>
+      )}
 
       {/* Expiring Soon */}
       {expiring7Days.length > 0 && (
-        <Card className="border-red-500/30 bg-red-500/5">
+        <Card className="border-destructive/30 bg-destructive/5">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-red-400">
+            <CardTitle className="text-sm font-medium flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-4 w-4" />
               Expirando em 7 dias ({expiring7Days.length})
             </CardTitle>
@@ -173,7 +528,7 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
           <CardContent>
             <div className="flex flex-wrap gap-2">
               {expiring7Days.map(bonus => (
-                <Badge key={bonus.id} variant="outline" className="border-red-500/30 text-red-400">
+                <Badge key={bonus.id} variant="outline" className="border-destructive/30 text-destructive">
                   {bonus.bookmaker_nome} - {formatCurrency(bonus.bonus_amount, bonus.currency)}
                   {bonus.expires_at && (
                     <span className="ml-1 text-xs">({format(parseISO(bonus.expires_at), 'dd/MM')})</span>
@@ -186,9 +541,9 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
       )}
 
       {expiring15Days.length > expiring7Days.length && (
-        <Card className="border-yellow-500/30 bg-yellow-500/5">
+        <Card className="border-warning/30 bg-warning/5">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-yellow-400">
+            <CardTitle className="text-sm font-medium flex items-center gap-2 text-warning">
               <Timer className="h-4 w-4" />
               Expirando em 15 dias ({expiring15Days.length - expiring7Days.length} adicionais)
             </CardTitle>
@@ -196,7 +551,7 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
           <CardContent>
             <div className="flex flex-wrap gap-2">
               {expiring15Days.filter(b => !expiring7Days.some(e => e.id === b.id)).map(bonus => (
-                <Badge key={bonus.id} variant="outline" className="border-yellow-500/30 text-yellow-400">
+                <Badge key={bonus.id} variant="outline" className="border-warning/30 text-warning">
                   {bonus.bookmaker_nome} - {formatCurrency(bonus.bonus_amount, bonus.currency)}
                   {bonus.expires_at && (
                     <span className="ml-1 text-xs">({format(parseISO(bonus.expires_at), 'dd/MM')})</span>
@@ -212,7 +567,7 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-amber-400" />
+            <Trophy className="h-4 w-4 text-warning" />
             Ranking: Casas por Bônus Ativo
           </CardTitle>
         </CardHeader>
@@ -226,8 +581,8 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
             <ScrollArea className="h-[300px]">
               <div className="space-y-3">
                 {bookmakersWithBonus.map((bk, index) => (
-                  <div key={bk.id} className="flex items-center gap-3 p-3 rounded-lg bg-card border">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-sm">
+                  <div key={bk.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-warning/20 flex items-center justify-center text-warning font-bold text-sm">
                       {index + 1}
                     </div>
                     {bk.logo_url ? (
@@ -242,7 +597,7 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
                       <p className="text-xs text-muted-foreground truncate">{bk.login_username}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-amber-400">{formatCurrency(bk.bonus_ativo, bk.moeda)}</p>
+                      <p className="font-bold text-warning">{formatCurrency(bk.bonus_ativo, bk.moeda)}</p>
                       <p className="text-xs text-muted-foreground">
                         Operável: {formatCurrency(bk.saldo_real + bk.bonus_ativo, bk.moeda)}
                       </p>
