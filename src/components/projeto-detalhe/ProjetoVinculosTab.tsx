@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HistoricoVinculosTab } from "./HistoricoVinculosTab";
+import { VinculoBonusDrawer } from "./VinculoBonusDrawer";
+import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +59,7 @@ import {
   Clock,
   Gift,
   History,
+  Coins,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Toggle } from "@/components/ui/toggle";
@@ -109,6 +112,23 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [statusPopoverId, setStatusPopoverId] = useState<string | null>(null);
   const [changingStatus, setChangingStatus] = useState(false);
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const [bonusDrawerOpen, setBonusDrawerOpen] = useState(false);
+  const [selectedBookmakerForBonus, setSelectedBookmakerForBonus] = useState<{ id: string; nome: string } | null>(null);
+
+  const { bonuses, fetchBonuses: refetchBonuses } = useProjectBonuses({ projectId: projetoId });
+
+  // Calculate bonus totals per bookmaker
+  const bonusTotalsByBookmaker = bonuses.reduce((acc, bonus) => {
+    if (bonus.status === 'credited') {
+      acc[bonus.bookmaker_id] = (acc[bonus.bookmaker_id] || 0) + bonus.bonus_amount;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  const handleOpenBonusDrawer = (bookmaker: { id: string; nome: string }) => {
+    setSelectedBookmakerForBonus(bookmaker);
+    setBonusDrawerOpen(true);
+  };
 
   useEffect(() => {
     fetchVinculos();
@@ -706,8 +726,31 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       {vinculo.totalApostas}
                     </span>
                   </div>
+
+                  {/* Bonus Badge */}
+                  {(bonusTotalsByBookmaker[vinculo.id] || 0) > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Coins className="h-3 w-3 text-purple-400" />
+                        Bônus Creditado
+                      </span>
+                      <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
+                        {formatCurrency(bonusTotalsByBookmaker[vinculo.id], vinculo.moeda)}
+                      </Badge>
+                    </div>
+                  )}
                   
                   <div className="flex gap-2 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleOpenBonusDrawer({ id: vinculo.id, nome: vinculo.nome })}
+                      title="Ver Bônus"
+                    >
+                      <Coins className="mr-2 h-4 w-4" />
+                      Bônus
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -721,14 +764,13 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1 text-destructive hover:text-destructive"
+                      className="text-destructive hover:text-destructive"
                       onClick={() => {
                         setVinculoToRemove(vinculo);
                         setRemoveDialogOpen(true);
                       }}
                     >
-                      <Link2Off className="mr-2 h-4 w-4" />
-                      Liberar
+                      <Link2Off className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -809,6 +851,17 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                     </div>
                   )}
 
+                  {/* Bonus Badge in List */}
+                  {(bonusTotalsByBookmaker[vinculo.id] || 0) > 0 && (
+                    <div className="text-right flex-shrink-0 min-w-[80px]">
+                      <p className="text-xs text-muted-foreground flex items-center justify-end gap-1">
+                        <Coins className="h-3 w-3 text-purple-400" />
+                        Bônus
+                      </p>
+                      <p className="font-medium text-purple-400">{formatCurrency(bonusTotalsByBookmaker[vinculo.id], vinculo.moeda)}</p>
+                    </div>
+                  )}
+
                   {/* Status Badge */}
                   <div className="flex-shrink-0">
                     {getStatusBadge(vinculo.bookmaker_status)}
@@ -816,6 +869,15 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      title="Ver Bônus"
+                      onClick={() => handleOpenBonusDrawer({ id: vinculo.id, nome: vinculo.nome })}
+                    >
+                      <Coins className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -1032,6 +1094,23 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           fetchVinculos();
         }}
       />
+
+      {/* Bonus History Drawer */}
+      {selectedBookmakerForBonus && (
+        <VinculoBonusDrawer
+          open={bonusDrawerOpen}
+          onOpenChange={(open) => {
+            setBonusDrawerOpen(open);
+            if (!open) {
+              setSelectedBookmakerForBonus(null);
+              refetchBonuses();
+            }
+          }}
+          projectId={projetoId}
+          bookmakerId={selectedBookmakerForBonus.id}
+          bookmakerName={selectedBookmakerForBonus.nome}
+        />
+      )}
       </TabsContent>
 
       <TabsContent value="historico">
