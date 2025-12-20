@@ -198,6 +198,7 @@ export type Database = {
           evento: string
           gerou_freebet: boolean | null
           id: string
+          is_bonus_bet: boolean | null
           lay_comissao: number | null
           lay_exchange: string | null
           lay_liability: number | null
@@ -236,6 +237,7 @@ export type Database = {
           evento: string
           gerou_freebet?: boolean | null
           id?: string
+          is_bonus_bet?: boolean | null
           lay_comissao?: number | null
           lay_exchange?: string | null
           lay_liability?: number | null
@@ -274,6 +276,7 @@ export type Database = {
           evento?: string
           gerou_freebet?: boolean | null
           id?: string
+          is_bonus_bet?: boolean | null
           lay_comissao?: number | null
           lay_exchange?: string | null
           lay_liability?: number | null
@@ -387,6 +390,7 @@ export type Database = {
           data_aposta: string
           gerou_freebet: boolean | null
           id: string
+          is_bonus_bet: boolean | null
           lucro_prejuizo: number | null
           observacoes: string | null
           odd_final: number
@@ -413,6 +417,7 @@ export type Database = {
           data_aposta?: string
           gerou_freebet?: boolean | null
           id?: string
+          is_bonus_bet?: boolean | null
           lucro_prejuizo?: number | null
           observacoes?: string | null
           odd_final: number
@@ -439,6 +444,7 @@ export type Database = {
           data_aposta?: string
           gerou_freebet?: boolean | null
           id?: string
+          is_bonus_bet?: boolean | null
           lucro_prejuizo?: number | null
           observacoes?: string | null
           odd_final?: number

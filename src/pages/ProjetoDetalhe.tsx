@@ -36,7 +36,7 @@ import { ProjetoVinculosTab } from "@/components/projeto-detalhe/ProjetoVinculos
 import { ProjetoPerdasTab } from "@/components/projeto-detalhe/ProjetoPerdasTab";
 import { ProjetoFreebetsTab } from "@/components/projeto-detalhe/ProjetoFreebetsTab";
 import { ProjetoCiclosTab } from "@/components/projeto-detalhe/ProjetoCiclosTab";
-import { ProjetoBonusTab } from "@/components/projeto-detalhe/ProjetoBonusTab";
+import { ProjetoBonusArea } from "@/components/projeto-detalhe/bonus";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { DateRange } from "react-day-picker";
 
@@ -581,7 +581,7 @@ export default function ProjetoDetalhe() {
         </TabsContent>
 
         <TabsContent value="bonus">
-          <ProjetoBonusTab projetoId={id!} />
+          <ProjetoBonusArea projetoId={id!} />
         </TabsContent>
 
         <TabsContent value="perdas">
