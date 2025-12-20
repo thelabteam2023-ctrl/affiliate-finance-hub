@@ -25,6 +25,7 @@ import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 
 interface GlobalActionsBarProps {
   projetoId: string;
+  activeTab?: string;
   onApostaCreated?: () => void;
   onBonusCreated?: () => void;
   onNavigateToTab?: (tab: string) => void;
@@ -49,6 +50,7 @@ interface Bookmaker {
 
 export function GlobalActionsBar({ 
   projetoId, 
+  activeTab,
   onApostaCreated, 
   onBonusCreated,
   onNavigateToTab 
@@ -186,16 +188,18 @@ export function GlobalActionsBar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Novo Bônus Button */}
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="h-9"
-          onClick={() => setBonusDialogOpen(true)}
-        >
-          <Coins className="mr-1 h-4 w-4" />
-          Novo Bônus
-        </Button>
+        {/* Novo Bônus Button - only visible on Bônus tab */}
+        {activeTab === "bonus" && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-9"
+            onClick={() => setBonusDialogOpen(true)}
+          >
+            <Coins className="mr-1 h-4 w-4" />
+            Novo Bônus
+          </Button>
+        )}
       </div>
 
       {/* Dialogs */}
