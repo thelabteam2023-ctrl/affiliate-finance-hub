@@ -3311,45 +3311,65 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               </div>
             )}
 
-            {/* Freebet Gerada - compacto e discreto */}
+            {/* Freebet Gerada - design moderno com toggle pill */}
             {tipoAposta === "bookmaker" && !usarFreebetBookmaker && (
-              <div className="flex items-center justify-between py-2 px-3 rounded-md border border-border/30 bg-muted/10">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="gerouFreebet"
-                    checked={gerouFreebet}
-                    onChange={(e) => setGerouFreebet(e.target.checked)}
-                    className="h-3.5 w-3.5 rounded border-border/50 text-primary focus:ring-primary/30 focus:ring-offset-0"
-                  />
-                  <label htmlFor="gerouFreebet" className="text-xs text-muted-foreground cursor-pointer">
-                    Gerou Freebet?
-                  </label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="h-3 w-3 text-muted-foreground/50 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-[180px] text-xs">
-                        <p>Marque se esta aposta desbloqueou uma freebet</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                {gerouFreebet && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-muted-foreground/60">Valor:</span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={valorFreebetGerada}
-                      onChange={(e) => setValorFreebetGerada(e.target.value)}
-                      placeholder="0.00"
-                      className="h-6 w-20 text-xs text-center px-2"
-                    />
+              <div className={`flex items-center justify-between py-2.5 px-3.5 rounded-lg transition-all duration-200 ${
+                gerouFreebet 
+                  ? "bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 border border-emerald-500/30" 
+                  : "bg-muted/5 border border-transparent hover:border-border/20"
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => setGerouFreebet(!gerouFreebet)}
+                  className="flex items-center gap-2.5 group"
+                >
+                  {/* Toggle pill moderno */}
+                  <div className={`relative w-9 h-5 rounded-full transition-all duration-200 ${
+                    gerouFreebet 
+                      ? "bg-emerald-500" 
+                      : "bg-muted-foreground/20"
+                  }`}>
+                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200 ${
+                      gerouFreebet 
+                        ? "left-[18px]" 
+                        : "left-0.5"
+                    }`} />
                   </div>
-                )}
+                  
+                  {/* Label com ícone */}
+                  <div className="flex items-center gap-1.5">
+                    <Gift className={`h-3.5 w-3.5 transition-colors ${
+                      gerouFreebet 
+                        ? "text-emerald-400" 
+                        : "text-muted-foreground/50"
+                    }`} />
+                    <span className={`text-xs font-medium transition-colors ${
+                      gerouFreebet 
+                        ? "text-emerald-400" 
+                        : "text-muted-foreground/70 group-hover:text-muted-foreground"
+                    }`}>
+                      Gerou Freebet
+                    </span>
+                  </div>
+                </button>
+                
+                {/* Input de valor com animação */}
+                <div className={`flex items-center gap-2 overflow-hidden transition-all duration-200 ${
+                  gerouFreebet 
+                    ? "opacity-100 max-w-[120px]" 
+                    : "opacity-0 max-w-0"
+                }`}>
+                  <span className="text-[10px] text-emerald-400/70 whitespace-nowrap">R$</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={valorFreebetGerada}
+                    onChange={(e) => setValorFreebetGerada(e.target.value)}
+                    placeholder="0.00"
+                    className="h-7 w-20 text-xs text-center px-2 bg-background/50 border-emerald-500/30 focus:border-emerald-500/50"
+                  />
+                </div>
               </div>
             )}
           </div>
