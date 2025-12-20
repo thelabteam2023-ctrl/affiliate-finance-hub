@@ -27,7 +27,6 @@ import {
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ApostaDialog } from "./ApostaDialog";
-import { ApostaMultiplaDialog } from "./ApostaMultiplaDialog";
 import { DateRange } from "react-day-picker";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import {
@@ -68,39 +67,9 @@ interface Aposta {
   valor_retorno: number | null;
   observacoes: string | null;
   bookmaker_id: string;
-  bookmaker?: {
-    nome: string;
-    parceiro?: { nome: string };
-    bookmakers_catalogo?: { logo_url: string | null } | null;
-  };
+  bookmaker_nome?: string;
 }
 
-interface ApostaMultipla {
-  id: string;
-  data_aposta: string;
-  stake: number;
-  odd_final: number;
-  resultado: string | null;
-  lucro_prejuizo: number | null;
-  valor_retorno: number | null;
-  retorno_potencial: number | null;
-  estrategia: string | null;
-  bookmaker_id: string;
-  tipo_multipla: string;
-  status: string;
-  tipo_freebet: string | null;
-  gerou_freebet: boolean;
-  valor_freebet_gerada: number | null;
-  observacoes: string | null;
-  selecoes: { descricao: string; odd: string; resultado?: string }[];
-  bookmaker?: {
-    nome: string;
-    parceiro?: { nome: string };
-    bookmakers_catalogo?: { logo_url: string | null } | null;
-  };
-}
-
-// Badge simples para resultado
 function ResultadoBadge({ resultado }: { resultado: string | null }) {
   const getColor = (r: string | null) => {
     switch (r) {
@@ -134,15 +103,12 @@ export function ProjetoValueBetTab({
   dateRange 
 }: ProjetoValueBetTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
-  const [apostasMultiplas, setApostasMultiplas] = useState<ApostaMultipla[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogMultiplaOpen, setDialogMultiplaOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
-  const [selectedApostaMultipla, setSelectedApostaMultipla] = useState<ApostaMultipla | null>(null);
 
   const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
     const today = new Date();
@@ -177,7 +143,7 @@ export function ProjetoValueBetTab({
   const fetchData = async () => {
     try {
       setLoading(true);
-      await Promise.all([fetchApostas(), fetchApostasMultiplas()]);
+      await fetchApostas();
     } finally {
       setLoading(false);
     }
@@ -187,28 +153,10 @@ export function ProjetoValueBetTab({
     try {
       const { start, end } = getDateRangeFromFilter();
       
+      // Query simples sem joins complexos para evitar erros de tipo
       let query = supabase
         .from("apostas")
-        .select(`
-          id,
-          data_aposta,
-          esporte,
-          evento,
-          mercado,
-          selecao,
-          odd,
-          stake,
-          estrategia,
-          status,
-          resultado,
-          lucro_prejuizo,
-          bookmaker_id,
-          bookmaker:bookmakers (
-            nome,
-            parceiro:parceiros (nome),
-            bookmakers_catalogo (logo_url)
-          )
-        `)
+        .select("id, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id")
         .eq("projeto_id", projetoId)
         .eq("estrategia", APOSTA_ESTRATEGIA.VALUEBET)
         .order("data_aposta", { ascending: false });
@@ -218,38 +166,68 @@ export function ProjetoValueBetTab({
 
       const { data, error } = await query;
       if (error) throw error;
-      setApostas((data || []) as Aposta[]);
-    } catch (error: any) {
-      console.error("Erro ao carregar apostas ValueBet:", error.message);
-    }
-  };
-
-  const fetchApostasMultiplas = async () => {
-    try {
-      const { start, end } = getDateRangeFromFilter();
       
-      const { data, error } = await supabase
-        .from("apostas_multiplas")
-        .select("*")
-        .eq("projeto_id", projetoId)
-        .eq("estrategia", APOSTA_ESTRATEGIA.VALUEBET)
-        .order("data_aposta", { ascending: false });
-      if (error) throw error;
-      setApostasMultiplas((data || []).map((am: any) => ({
-        ...am,
-        selecoes: Array.isArray(am.selecoes) ? am.selecoes : []
-      })) as ApostaMultipla[]);
-    } catch (error: any) {
-      console.error("Erro ao carregar múltiplas ValueBet:", error.message);
+      // Buscar nomes dos bookmakers separadamente
+      const bookmakerIds = [...new Set((data || []).map((a: { bookmaker_id: string }) => a.bookmaker_id))];
+      
+      let bookmakerMap = new Map<string, string>();
+      if (bookmakerIds.length > 0) {
+        const { data: bookmakers } = await supabase
+          .from("bookmakers")
+          .select("id, nome")
+          .in("id", bookmakerIds);
+        
+        bookmakerMap = new Map((bookmakers || []).map((b: { id: string; nome: string }) => [b.id, b.nome]));
+      }
+      
+      const mappedApostas: Aposta[] = (data || []).map((a: {
+        id: string;
+        data_aposta: string;
+        esporte: string;
+        evento: string;
+        mercado: string | null;
+        selecao: string;
+        odd: number;
+        stake: number;
+        estrategia: string | null;
+        status: string;
+        resultado: string | null;
+        lucro_prejuizo: number | null;
+        valor_retorno: number | null;
+        observacoes: string | null;
+        bookmaker_id: string;
+      }) => ({
+        id: a.id,
+        data_aposta: a.data_aposta,
+        esporte: a.esporte,
+        evento: a.evento,
+        mercado: a.mercado,
+        selecao: a.selecao,
+        odd: a.odd,
+        stake: a.stake,
+        estrategia: a.estrategia,
+        status: a.status,
+        resultado: a.resultado,
+        lucro_prejuizo: a.lucro_prejuizo,
+        valor_retorno: a.valor_retorno,
+        observacoes: a.observacoes,
+        bookmaker_id: a.bookmaker_id,
+        bookmaker_nome: bookmakerMap.get(a.bookmaker_id) || "Desconhecida"
+      }));
+      
+      setApostas(mappedApostas);
+    } catch (error: unknown) {
+      console.error("Erro ao carregar apostas ValueBet:", error);
     }
   };
 
-  // Métricas consolidadas
   const metricas = useMemo(() => {
-    const todasApostas = [
-      ...apostas.map(a => ({ stake: a.stake, lucro: a.lucro_prejuizo, resultado: a.resultado, bookmaker: a.bookmaker?.nome })),
-      ...apostasMultiplas.map(am => ({ stake: am.stake, lucro: am.lucro_prejuizo, resultado: am.resultado, bookmaker: am.bookmaker?.nome }))
-    ];
+    const todasApostas = apostas.map(a => ({ 
+      stake: a.stake, 
+      lucro: a.lucro_prejuizo, 
+      resultado: a.resultado, 
+      bookmaker: a.bookmaker_nome 
+    }));
 
     const total = todasApostas.length;
     const totalStake = todasApostas.reduce((acc, a) => acc + a.stake, 0);
@@ -260,7 +238,6 @@ export function ProjetoValueBetTab({
     const taxaAcerto = liquidadas > 0 ? (greens / liquidadas) * 100 : 0;
     const roi = totalStake > 0 ? (lucroTotal / totalStake) * 100 : 0;
 
-    // Por casa
     const porCasa: Record<string, { stake: number; lucro: number; count: number }> = {};
     todasApostas.forEach(a => {
       const casa = a.bookmaker || "Desconhecida";
@@ -271,14 +248,12 @@ export function ProjetoValueBetTab({
     });
 
     return { total, totalStake, lucroTotal, greens, reds, taxaAcerto, roi, porCasa };
-  }, [apostas, apostasMultiplas]);
+  }, [apostas]);
 
-  // Dados para gráfico de evolução
   const evolutionData = useMemo(() => {
-    const todas = [
-      ...apostas.map(a => ({ data: a.data_aposta, lucro: a.lucro_prejuizo || 0 })),
-      ...apostasMultiplas.map(am => ({ data: am.data_aposta, lucro: am.lucro_prejuizo || 0 }))
-    ].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+    const todas = apostas
+      .map(a => ({ data: a.data_aposta, lucro: a.lucro_prejuizo || 0 }))
+      .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
 
     let acumulado = 0;
     return todas.map(a => {
@@ -289,9 +264,8 @@ export function ProjetoValueBetTab({
         acumulado
       };
     });
-  }, [apostas, apostasMultiplas]);
+  }, [apostas]);
 
-  // Dados para gráfico por casa
   const casaData = useMemo(() => {
     return Object.entries(metricas.porCasa)
       .map(([casa, data]) => ({
@@ -303,7 +277,6 @@ export function ProjetoValueBetTab({
       .sort((a, b) => b.lucro - a.lucro);
   }, [metricas]);
 
-  // Filtrar apostas para listagem
   const apostasFiltradas = useMemo(() => {
     return apostas.filter(a => {
       const matchesSearch = 
@@ -314,16 +287,6 @@ export function ProjetoValueBetTab({
       return matchesSearch && matchesResultado;
     });
   }, [apostas, searchTerm, resultadoFilter]);
-
-  const multiplasFiltradas = useMemo(() => {
-    return apostasMultiplas.filter(am => {
-      const matchesSearch = am.selecoes.some(s => 
-        s.descricao.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      const matchesResultado = resultadoFilter === "all" || am.resultado === resultadoFilter;
-      return (searchTerm === "" || matchesSearch) && matchesResultado;
-    });
-  }, [apostasMultiplas, searchTerm, resultadoFilter]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -423,7 +386,6 @@ export function ProjetoValueBetTab({
       {/* Gráficos */}
       {metricas.total > 0 && (
         <div className="grid gap-4 md:grid-cols-2">
-          {/* Evolução do Lucro */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
@@ -460,7 +422,6 @@ export function ProjetoValueBetTab({
             </CardContent>
           </Card>
 
-          {/* Eficiência por Casa */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
@@ -477,7 +438,7 @@ export function ProjetoValueBetTab({
                     <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `R$${v}`} />
                     <YAxis dataKey="casa" type="category" stroke="hsl(var(--muted-foreground))" fontSize={10} width={80} />
                     <Tooltip 
-                      formatter={(value: number, name: string) => [formatCurrency(value), "Lucro"]}
+                      formatter={(value: number) => [formatCurrency(value), "Lucro"]}
                       contentStyle={{ 
                         backgroundColor: 'hsl(var(--card))', 
                         border: '1px solid hsl(var(--border))',
@@ -486,7 +447,10 @@ export function ProjetoValueBetTab({
                     />
                     <Bar dataKey="lucro" radius={[0, 4, 4, 0]}>
                       {casaData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.lucro >= 0 ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))'} />
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.lucro >= 0 ? "hsl(var(--chart-2))" : "hsl(var(--destructive))"} 
+                        />
                       ))}
                     </Bar>
                   </BarChart>
@@ -497,206 +461,152 @@ export function ProjetoValueBetTab({
         </div>
       )}
 
-      {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar evento, esporte..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Resultado" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="PENDENTE">Pendente</SelectItem>
-            <SelectItem value="GREEN">Green</SelectItem>
-            <SelectItem value="RED">Red</SelectItem>
-            <SelectItem value="MEIO_GREEN">Meio Green</SelectItem>
-            <SelectItem value="MEIO_RED">Meio Red</SelectItem>
-            <SelectItem value="VOID">Void</SelectItem>
-          </SelectContent>
-        </Select>
-        <div className="flex gap-1">
-          <Button
-            variant={viewMode === "cards" ? "default" : "outline"}
-            size="icon"
-            onClick={() => setViewMode("cards")}
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === "list" ? "default" : "outline"}
-            size="icon"
-            onClick={() => setViewMode("list")}
-          >
-            <List className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Lista de Apostas */}
-      {metricas.total === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
-              Nenhuma aposta ValueBet encontrada no período.
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Crie apostas com estratégia "ValueBet" para visualizá-las aqui.
-            </p>
-          </CardContent>
-        </Card>
-      ) : viewMode === "cards" ? (
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {apostasFiltradas.map(aposta => (
-            <Card 
-              key={aposta.id} 
-              className="cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => {
-                setSelectedAposta(aposta as any);
-                setDialogOpen(true);
-              }}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <Badge variant="outline" className="text-purple-400 border-purple-400/30">
-                    ValueBet
-                  </Badge>
-                  <ResultadoBadge resultado={aposta.resultado} />
-                </div>
-                <p className="font-medium truncate">{aposta.evento}</p>
-                <p className="text-sm text-muted-foreground truncate">{aposta.selecao}</p>
-                <div className="flex items-center justify-between mt-2 text-sm">
-                  <span>Odd: {aposta.odd.toFixed(2)}</span>
-                  <span className={aposta.lucro_prejuizo && aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                    {formatCurrency(aposta.lucro_prejuizo || 0)}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {format(new Date(aposta.data_aposta), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-          {multiplasFiltradas.map(am => (
-            <Card 
-              key={am.id} 
-              className="cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => {
-                setSelectedApostaMultipla(am as any);
-                setDialogMultiplaOpen(true);
-              }}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex gap-1">
-                    <Badge variant="outline" className="text-purple-400 border-purple-400/30">
-                      ValueBet
-                    </Badge>
-                    <Badge variant="secondary">Múltipla</Badge>
-                  </div>
-                  <ResultadoBadge resultado={am.resultado} />
-                </div>
-                <p className="font-medium truncate">{am.selecoes[0]?.descricao || "Múltipla"}</p>
-                {am.selecoes.length > 1 && (
-                  <p className="text-sm text-muted-foreground">+{am.selecoes.length - 1} seleções</p>
-                )}
-                <div className="flex items-center justify-between mt-2 text-sm">
-                  <span>Odd: {am.odd_final.toFixed(2)}</span>
-                  <span className={am.lucro_prejuizo && am.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                    {formatCurrency(am.lucro_prejuizo || 0)}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {format(new Date(am.data_aposta), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="p-0">
-            <div className="divide-y divide-border">
-              {apostasFiltradas.map(aposta => (
-                <div 
-                  key={aposta.id}
-                  className="flex items-center gap-4 p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+      {/* Filtros e listagem */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <CardTitle className="text-base">Apostas ValueBet</CardTitle>
+            <div className="flex flex-wrap gap-2 items-center">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 w-[180px]"
+                />
+              </div>
+              <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="Resultado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="GREEN">Green</SelectItem>
+                  <SelectItem value="RED">Red</SelectItem>
+                  <SelectItem value="MEIO_GREEN">½ Green</SelectItem>
+                  <SelectItem value="MEIO_RED">½ Red</SelectItem>
+                  <SelectItem value="VOID">Void</SelectItem>
+                  <SelectItem value="PENDENTE">Pendente</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex border rounded-md">
+                <Button
+                  variant={viewMode === "cards" ? "secondary" : "ghost"}
+                  size="icon"
+                  onClick={() => setViewMode("cards")}
+                  className="rounded-r-none"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "secondary" : "ghost"}
+                  size="icon"
+                  onClick={() => setViewMode("list")}
+                  className="rounded-l-none"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {apostasFiltradas.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nenhuma aposta ValueBet encontrada</p>
+              <p className="text-sm mt-1">Crie apostas com estratégia ValueBet para visualizá-las aqui</p>
+            </div>
+          ) : viewMode === "cards" ? (
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {apostasFiltradas.map((aposta) => (
+                <Card 
+                  key={aposta.id} 
+                  className="cursor-pointer hover:border-purple-500/30 transition-colors"
                   onClick={() => {
-                    setSelectedAposta(aposta as any);
+                    setSelectedAposta(aposta);
                     setDialogOpen(true);
                   }}
                 >
-                  <ResultadoBadge resultado={aposta.resultado} />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{aposta.evento}</p>
-                    <p className="text-sm text-muted-foreground">{aposta.selecao}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-medium ${aposta.lucro_prejuizo && aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {formatCurrency(aposta.lucro_prejuizo || 0)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(aposta.data_aposta), "dd/MM", { locale: ptBR })}
-                    </p>
-                  </div>
-                </div>
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{aposta.evento}</p>
+                        <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
+                      </div>
+                      <ResultadoBadge resultado={aposta.resultado} />
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">{aposta.selecao}</span>
+                      <span className="font-medium">@{aposta.odd.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t">
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
+                      </span>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Stake: {formatCurrency(aposta.stake)}</p>
+                        {aposta.lucro_prejuizo !== null && (
+                          <p className={`text-sm font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {formatCurrency(aposta.lucro_prejuizo)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
-              {multiplasFiltradas.map(am => (
-                <div 
-                  key={am.id}
-                  className="flex items-center gap-4 p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {apostasFiltradas.map((aposta) => (
+                <div
+                  key={aposta.id}
+                  className="flex items-center justify-between p-3 rounded-lg border hover:border-purple-500/30 cursor-pointer transition-colors"
                   onClick={() => {
-                    setSelectedApostaMultipla(am as any);
-                    setDialogMultiplaOpen(true);
+                    setSelectedAposta(aposta);
+                    setDialogOpen(true);
                   }}
                 >
-                  <ResultadoBadge resultado={am.resultado} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium truncate">{am.selecoes[0]?.descricao || "Múltipla"}</p>
-                      <Badge variant="secondary" className="text-xs">Múltipla</Badge>
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="text-xs text-muted-foreground w-16">
+                      {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
                     </div>
-                    <p className="text-sm text-muted-foreground">{am.selecoes.length} seleções</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{aposta.evento}</p>
+                      <p className="text-xs text-muted-foreground">{aposta.selecao}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm">@{aposta.odd.toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground">{formatCurrency(aposta.stake)}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`font-medium ${am.lucro_prejuizo && am.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {formatCurrency(am.lucro_prejuizo || 0)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(am.data_aposta), "dd/MM", { locale: ptBR })}
-                    </p>
+                  <div className="flex items-center gap-3 ml-4">
+                    {aposta.lucro_prejuizo !== null && (
+                      <span className={`text-sm font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {formatCurrency(aposta.lucro_prejuizo)}
+                      </span>
+                    )}
+                    <ResultadoBadge resultado={aposta.resultado} />
                   </div>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dialog de Aposta */}
+      {selectedAposta && (
+        <ApostaDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          projetoId={projetoId}
+          aposta={selectedAposta as any}
+          onSuccess={handleApostaUpdated}
+        />
       )}
-
-      {/* Dialogs */}
-      <ApostaDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        aposta={selectedAposta}
-        projetoId={projetoId}
-        onSuccess={handleApostaUpdated}
-      />
-
-      <ApostaMultiplaDialog
-        open={dialogMultiplaOpen}
-        onOpenChange={setDialogMultiplaOpen}
-        aposta={selectedApostaMultipla}
-        projetoId={projetoId}
-        onSuccess={handleApostaUpdated}
-      />
     </div>
   );
 }
