@@ -40,6 +40,7 @@ export const APOSTA_ESTRATEGIA = {
   VALUEBET: 'VALUEBET',
   EXTRACAO_FREEBET: 'EXTRACAO_FREEBET',
   EXTRACAO_BONUS: 'EXTRACAO_BONUS',
+  DUPLO_GREEN: 'DUPLO_GREEN',
 } as const;
 
 export type ApostaEstrategia = typeof APOSTA_ESTRATEGIA[keyof typeof APOSTA_ESTRATEGIA];
@@ -53,6 +54,19 @@ export const ESTRATEGIA_LABELS: Record<ApostaEstrategia, string> = {
   VALUEBET: 'ValueBet',
   EXTRACAO_FREEBET: 'Extração de Freebet',
   EXTRACAO_BONUS: 'Extração de Bônus',
+  DUPLO_GREEN: 'Duplo Green',
+};
+
+/**
+ * Descrições/tooltips das estratégias
+ */
+export const ESTRATEGIA_TOOLTIPS: Record<ApostaEstrategia, string> = {
+  PUNTER: 'Aposta tradicional baseada em análise própria',
+  SUREBET: 'Arbitragem entre casas para lucro garantido',
+  VALUEBET: 'Aposta com valor esperado positivo identificado',
+  EXTRACAO_FREEBET: 'Conversão de freebet em dinheiro real',
+  EXTRACAO_BONUS: 'Conversão de saldo de bônus em dinheiro real',
+  DUPLO_GREEN: 'Estratégia coordenada para obter múltiplos greens',
 };
 
 /**
@@ -64,6 +78,7 @@ export const ESTRATEGIAS_LIST = [
   { value: APOSTA_ESTRATEGIA.VALUEBET, label: ESTRATEGIA_LABELS.VALUEBET },
   { value: APOSTA_ESTRATEGIA.EXTRACAO_FREEBET, label: ESTRATEGIA_LABELS.EXTRACAO_FREEBET },
   { value: APOSTA_ESTRATEGIA.EXTRACAO_BONUS, label: ESTRATEGIA_LABELS.EXTRACAO_BONUS },
+  { value: APOSTA_ESTRATEGIA.DUPLO_GREEN, label: ESTRATEGIA_LABELS.DUPLO_GREEN },
 ] as const;
 
 /**
