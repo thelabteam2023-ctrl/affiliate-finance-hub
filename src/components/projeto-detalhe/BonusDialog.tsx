@@ -18,17 +18,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Loader2, Gift, Building2, Sparkles, Check } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Loader2, Gift, Building2, Sparkles, Check, IdCard, Copy } from "lucide-react";
 import { BonusFormData, BonusStatus, ProjectBonus } from "@/hooks/useProjectBonuses";
 import { useBookmakerBonusTemplates, BonusTemplate, calculateRolloverTarget } from "@/hooks/useBookmakerBonusTemplates";
 import { format, addDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface BookmakerOption {
   id: string;
   nome: string;
   login_username: string;
+  login_password_encrypted?: string | null;
   logo_url?: string | null;
   bookmaker_catalogo_id?: string | null;
 }
@@ -70,6 +83,7 @@ export function BonusDialog({
   saving,
   onSubmit,
 }: BonusDialogProps) {
+  const { toast } = useToast();
   const [bookmakerId, setBookmakerId] = useState("");
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
@@ -77,7 +91,8 @@ export function BonusDialog({
   const [status, setStatus] = useState<BonusStatus>("credited");
   const [creditedAt, setCreditedAt] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
-  
+  const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   
   // New rollover fields
   const [rolloverMultiplier, setRolloverMultiplier] = useState("");
@@ -91,6 +106,28 @@ export function BonusDialog({
   const [filledFromTemplate, setFilledFromTemplate] = useState(false);
 
   const isEditMode = !!bonus;
+
+  const decryptPassword = (encrypted: string): string => {
+    try {
+      return atob(encrypted);
+    } catch {
+      return encrypted;
+    }
+  };
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    toast({
+      title: `${field} copiado!`,
+      description: "O valor foi copiado para a área de transferência.",
+    });
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const hasCredentials = (bk: BookmakerOption) => {
+    return bk.login_username && bk.login_password_encrypted;
+  };
 
   // Get the selected bookmaker to find its catalogo_id
   const selectedBookmaker = useMemo(() => {
@@ -260,36 +297,100 @@ export function BonusDialog({
           {/* Bookmaker Select - Centralizado */}
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground text-center block">Casa de Apostas</Label>
-            <Select
-              value={bookmakerId}
-              onValueChange={setBookmakerId}
-              disabled={isEditMode || !!preselectedBookmakerId}
-            >
-              <SelectTrigger className="h-9 justify-center [&>span]:flex [&>span]:items-center [&>span]:justify-center">
-                <SelectValue placeholder="Selecione a casa" />
-              </SelectTrigger>
-              <SelectContent>
-                {bookmakers.map((bk) => (
-                  <SelectItem key={bk.id} value={bk.id}>
-                    <div className="flex items-center gap-2">
-                      {bk.logo_url ? (
-                        <img
-                          src={bk.logo_url}
-                          alt={bk.nome}
-                          className="h-5 w-5 rounded object-contain bg-white"
-                        />
-                      ) : (
-                        <Building2 className="h-4 w-4" />
-                      )}
-                      <span>{bk.nome}</span>
-                      {bk.login_username && (
-                        <span className="text-muted-foreground text-xs">({bk.login_username})</span>
-                      )}
+            <div className="flex items-center gap-2 justify-center">
+              <Select
+                value={bookmakerId}
+                onValueChange={setBookmakerId}
+                disabled={isEditMode || !!preselectedBookmakerId}
+              >
+                <SelectTrigger className="h-9 flex-1 justify-center [&>span]:flex [&>span]:items-center [&>span]:justify-center">
+                  <SelectValue placeholder="Selecione a casa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {bookmakers.map((bk) => (
+                    <SelectItem key={bk.id} value={bk.id}>
+                      <div className="flex items-center gap-2">
+                        {bk.logo_url ? (
+                          <img
+                            src={bk.logo_url}
+                            alt={bk.nome}
+                            className="h-5 w-5 rounded object-contain bg-white"
+                          />
+                        ) : (
+                          <Building2 className="h-4 w-4" />
+                        )}
+                        <span>{bk.nome}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {/* Credentials Popover */}
+              {selectedBookmaker && hasCredentials(selectedBookmaker) && (
+                <Popover
+                  open={credentialsPopoverOpen === selectedBookmaker.id}
+                  onOpenChange={(open) => setCredentialsPopoverOpen(open ? selectedBookmaker.id : null)}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-9 w-9 p-0 shrink-0"
+                    >
+                      <IdCard className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-52 p-2" align="end">
+                    <div className="space-y-2">
+                      <div>
+                        <label className="text-[10px] text-muted-foreground">Usuário</label>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
+                            {selectedBookmaker.login_username}
+                          </code>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(selectedBookmaker.login_username, "Usuário")}
+                            className="h-6 w-6 p-0 shrink-0"
+                          >
+                            {copiedField === "Usuário" ? (
+                              <Check className="h-3 w-3 text-green-500" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground">Senha</label>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
+                            {decryptPassword(selectedBookmaker.login_password_encrypted || "")}
+                          </code>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(decryptPassword(selectedBookmaker.login_password_encrypted || ""), "Senha")}
+                            className="h-6 w-6 p-0 shrink-0"
+                          >
+                            {copiedField === "Senha" ? (
+                              <Check className="h-3 w-3 text-green-500" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
           </div>
 
           {/* Template Suggestions - Centralizado */}

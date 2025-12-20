@@ -52,7 +52,9 @@ interface BookmakerOption {
   id: string;
   nome: string;
   login_username: string;
+  login_password_encrypted?: string | null;
   logo_url?: string | null;
+  bookmaker_catalogo_id?: string | null;
 }
 
 const getStatusBadge = (status: BonusStatus) => {
@@ -143,6 +145,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
           id,
           nome,
           login_username,
+          login_password_encrypted,
           bookmaker_catalogo_id,
           bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
         `)
@@ -154,6 +157,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
         id: b.id,
         nome: b.nome,
         login_username: b.login_username,
+        login_password_encrypted: b.login_password_encrypted || null,
         logo_url: b.bookmakers_catalogo?.logo_url || null,
         bookmaker_catalogo_id: b.bookmaker_catalogo_id || null,
       }));

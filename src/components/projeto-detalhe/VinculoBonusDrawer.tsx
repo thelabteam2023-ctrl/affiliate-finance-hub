@@ -11,6 +11,7 @@ interface VinculoBonusDrawerProps {
   bookmakerId: string;
   bookmakerName: string;
   bookmakerLogin?: string;
+  bookmakerPassword?: string | null;
   bookmakerLogo?: string | null;
   bookmakerCatalogoId?: string | null;
   currency?: string;
@@ -24,6 +25,7 @@ export function VinculoBonusDrawer({
   bookmakerId,
   bookmakerName,
   bookmakerLogin = "",
+  bookmakerPassword,
   bookmakerLogo,
   bookmakerCatalogoId,
   currency = "BRL",
@@ -128,7 +130,7 @@ export function VinculoBonusDrawer({
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         projectId={projectId}
-        bookmakers={[{ id: bookmakerId, nome: bookmakerName, login_username: bookmakerLogin, bookmaker_catalogo_id: bookmakerCatalogoId }]}
+        bookmakers={[{ id: bookmakerId, nome: bookmakerName, login_username: bookmakerLogin, login_password_encrypted: bookmakerPassword, bookmaker_catalogo_id: bookmakerCatalogoId }]}
         bonus={editingBonus}
         preselectedBookmakerId={bookmakerId}
         saving={saving}
