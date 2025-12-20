@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { 
   Calculator, 
   Target, 
@@ -10,12 +11,30 @@ import {
   TrendingDown,
   LayoutGrid,
   List,
-  Plus
+  Plus,
+  Building2,
+  BarChart3,
+  Info
 } from "lucide-react";
 import { DateRange } from "react-day-picker";
-import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
+import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear, format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { SurebetDialog } from "./SurebetDialog";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip as RechartsTooltip, 
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  Legend,
+  Cell
+} from "recharts";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type PeriodFilter = "hoje" | "ontem" | "7dias" | "mes" | "ano" | "todo" | "custom";
 
@@ -231,6 +250,63 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "tod
     return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi };
   }, [surebets]);
 
+  // Dados para gráfico de eficiência por casa
+  const eficienciaPorCasa = useMemo(() => {
+    const casaMap = new Map<string, { lucro: number; volume: number; operacoes: number }>();
+    
+    surebets.forEach(surebet => {
+      surebet.pernas?.forEach(perna => {
+        const casa = perna.bookmaker_nome;
+        const existing = casaMap.get(casa) || { lucro: 0, volume: 0, operacoes: 0 };
+        // Lucro proporcional à participação da perna
+        const lucroPerna = (surebet.lucro_real || 0) / (surebet.pernas?.length || 1);
+        casaMap.set(casa, {
+          lucro: existing.lucro + lucroPerna,
+          volume: existing.volume + perna.stake,
+          operacoes: existing.operacoes + 1
+        });
+      });
+    });
+
+    return Array.from(casaMap.entries())
+      .map(([casa, data]) => ({
+        casa,
+        lucro: data.lucro,
+        volume: data.volume,
+        operacoes: data.operacoes,
+        roi: data.volume > 0 ? (data.lucro / data.volume) * 100 : 0
+      }))
+      .sort((a, b) => b.lucro - a.lucro)
+      .slice(0, 10);
+  }, [surebets]);
+
+  // Dados para gráfico de evolução de lucro
+  const evolucaoLucro = useMemo(() => {
+    const surebetsOrdenadas = [...surebets]
+      .filter(s => s.status === "LIQUIDADA")
+      .sort((a, b) => new Date(a.data_operacao).getTime() - new Date(b.data_operacao).getTime());
+
+    let lucroAcumulado = 0;
+    const dataMap = new Map<string, { lucro: number; operacoes: number }>();
+
+    surebetsOrdenadas.forEach(s => {
+      const dateKey = format(new Date(s.data_operacao), "dd/MM", { locale: ptBR });
+      lucroAcumulado += s.lucro_real || 0;
+      
+      const existing = dataMap.get(dateKey) || { lucro: 0, operacoes: 0 };
+      dataMap.set(dateKey, {
+        lucro: lucroAcumulado,
+        operacoes: existing.operacoes + 1
+      });
+    });
+
+    return Array.from(dataMap.entries()).map(([data, valores]) => ({
+      data,
+      lucro: valores.lucro,
+      operacoes: valores.operacoes
+    }));
+  }, [surebets]);
+
   return (
     <div className="space-y-4">
       {/* KPIs Resumo */}
@@ -293,6 +369,152 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "tod
           </CardContent>
         </Card>
       </div>
+
+      {/* Gráficos de Análise */}
+      {surebets.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Gráfico de Evolução de Lucro */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Evolução do Lucro</CardTitle>
+                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Lucro acumulado das surebets liquidadas ao longo do tempo</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {evolucaoLucro.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={evolucaoLucro}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis 
+                      dataKey="data" 
+                      tick={{ fontSize: 10 }} 
+                      className="text-muted-foreground"
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 10 }} 
+                      tickFormatter={(value) => `R$${value}`}
+                      className="text-muted-foreground"
+                    />
+                    <RechartsTooltip
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--popover))', 
+                        borderColor: 'hsl(var(--border))',
+                        borderRadius: '6px'
+                      }}
+                      formatter={(value: number) => [formatCurrency(value), 'Lucro Acumulado']}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="lucro" 
+                      stroke="hsl(var(--primary))" 
+                      strokeWidth={2}
+                      dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 3 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">
+                  Nenhuma surebet liquidada no período
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Gráfico de Eficiência por Casa */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Eficiência por Casa</CardTitle>
+                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Lucro gerado por cada casa de apostas em operações de surebet</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {eficienciaPorCasa.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={eficienciaPorCasa} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" horizontal={false} />
+                    <XAxis 
+                      type="number" 
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={(value) => `R$${value}`}
+                      className="text-muted-foreground"
+                    />
+                    <YAxis 
+                      type="category" 
+                      dataKey="casa" 
+                      tick={{ fontSize: 10 }}
+                      width={80}
+                      className="text-muted-foreground"
+                    />
+                    <RechartsTooltip
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--popover))', 
+                        borderColor: 'hsl(var(--border))',
+                        borderRadius: '6px'
+                      }}
+                      formatter={(value: number, name: string) => {
+                        if (name === 'lucro') return [formatCurrency(value), 'Lucro'];
+                        return [value, name];
+                      }}
+                      labelFormatter={(label) => `Casa: ${label}`}
+                    />
+                    <Bar dataKey="lucro" radius={[0, 4, 4, 0]}>
+                      {eficienciaPorCasa.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`}
+                          fill={entry.lucro >= 0 ? 'hsl(142, 76%, 36%)' : 'hsl(0, 84%, 60%)'}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">
+                  Nenhuma surebet com pernas registradas
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Aviso Informativo */}
+      <Card className="border-blue-500/30 bg-blue-500/5">
+        <CardContent className="py-3">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 text-blue-400 mt-0.5 shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-blue-400">Visão Especializada:</span> Esta aba exibe apenas operações de Surebet. 
+              As apostas individuais de cada surebet também aparecem na aba "Apostas Livres" com o contexto <Badge variant="outline" className="ml-1 h-4 text-[10px] border-cyan-500/30 text-cyan-400">Surebet</Badge>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Ações */}
       <Card>

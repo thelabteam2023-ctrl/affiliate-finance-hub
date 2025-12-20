@@ -31,7 +31,8 @@ import {
   Gift,
   Star,
   Settings2,
-  ChevronDown
+  ChevronDown,
+  ArrowLeftRight
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -47,6 +48,7 @@ import { ProjetoVinculosTab } from "@/components/projeto-detalhe/ProjetoVinculos
 import { ProjetoPerdasTab } from "@/components/projeto-detalhe/ProjetoPerdasTab";
 import { ProjetoFreebetsTab } from "@/components/projeto-detalhe/ProjetoFreebetsTab";
 import { ProjetoCiclosTab } from "@/components/projeto-detalhe/ProjetoCiclosTab";
+import { ProjetoSurebetTab } from "@/components/projeto-detalhe/ProjetoSurebetTab";
 import { ProjetoBonusArea } from "@/components/projeto-detalhe/bonus";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar";
@@ -579,6 +581,10 @@ export default function ProjetoDetalhe() {
             <Coins className="h-4 w-4" />
             Bônus
           </TabsTrigger>
+          <TabsTrigger value="surebet" className="flex items-center gap-2">
+            <ArrowLeftRight className="h-4 w-4" />
+            Surebet
+          </TabsTrigger>
           <TabsTrigger value="vinculos" className="flex items-center gap-2">
             <Link2 className="h-4 w-4" />
             Vínculos
@@ -659,6 +665,15 @@ export default function ProjetoDetalhe() {
 
         <TabsContent value="bonus">
           <ProjetoBonusArea projetoId={id!} />
+        </TabsContent>
+
+        <TabsContent value="surebet">
+          <ProjetoSurebetTab 
+            projetoId={id!} 
+            onDataChange={() => { fetchApostasResumo(); refreshResultado(); }}
+            periodFilter={periodFilter}
+            dateRange={dateRange}
+          />
         </TabsContent>
 
         <TabsContent value="vinculos">
