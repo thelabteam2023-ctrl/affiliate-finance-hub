@@ -1,0 +1,444 @@
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
+import { useProjectBonuses, ProjectBonus, FinalizeReason } from "@/hooks/useProjectBonuses";
+import { VinculoBonusDrawer } from "../VinculoBonusDrawer";
+import { FinalizeBonusDialog } from "../FinalizeBonusDialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { 
+  Building2, 
+  Coins, 
+  Search, 
+  Plus,
+  Eye,
+  ChevronDown,
+  ChevronRight
+} from "lucide-react";
+import { differenceInDays, parseISO } from "date-fns";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+
+interface BonusBookmakersTabProps {
+  projetoId: string;
+}
+
+interface BookmakerInBonusMode {
+  id: string;
+  nome: string;
+  login_username: string;
+  login_password_encrypted: string | null;
+  logo_url: string | null;
+  bookmaker_catalogo_id: string | null;
+  parceiro_nome: string | null;
+  saldo_real: number;
+  moeda: string;
+  bonus_ativo: number;
+  bonuses: ProjectBonus[];
+  nearest_expiry: Date | null;
+}
+
+export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
+  const { bonuses, fetchBonuses, finalizeBonus, saving, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
+  const [bookmakers, setBookmakers] = useState<BookmakerInBonusMode[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  
+  // Drawer state
+  const [bonusDrawerOpen, setBonusDrawerOpen] = useState(false);
+  const [selectedBookmaker, setSelectedBookmaker] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmaker_catalogo_id?: string | null } | null>(null);
+  
+  // Finalize dialog state
+  const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
+  const [bonusToFinalize, setBonusToFinalize] = useState<ProjectBonus | null>(null);
+
+  const bookmakersInBonusMode = getBookmakersWithActiveBonus();
+
+  useEffect(() => {
+    fetchBookmakers();
+  }, [projetoId, bonuses]);
+
+  const fetchBookmakers = async () => {
+    if (bookmakersInBonusMode.length === 0) {
+      setBookmakers([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("bookmakers")
+        .select(`
+          id,
+          nome,
+          login_username,
+          login_password_encrypted,
+          saldo_atual,
+          moeda,
+          bookmaker_catalogo_id,
+          bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url),
+          parceiros!bookmakers_parceiro_id_fkey (nome)
+        `)
+        .in("id", bookmakersInBonusMode);
+
+      if (error) throw error;
+
+      // Group bonuses by bookmaker
+      const bonusesByBookmaker: Record<string, ProjectBonus[]> = {};
+      bonuses.forEach(b => {
+        if (!bonusesByBookmaker[b.bookmaker_id]) {
+          bonusesByBookmaker[b.bookmaker_id] = [];
+        }
+        bonusesByBookmaker[b.bookmaker_id].push(b);
+      });
+
+      const mapped: BookmakerInBonusMode[] = (data || []).map((bk: any) => {
+        const bkBonuses = bonusesByBookmaker[bk.id] || [];
+        const activeBonuses = bkBonuses.filter(b => b.status === 'credited');
+        const bonusTotal = activeBonuses.reduce((acc, b) => acc + b.bonus_amount, 0);
+        
+        // Find nearest expiry
+        let nearestExpiry: Date | null = null;
+        activeBonuses.forEach(b => {
+          if (b.expires_at) {
+            const expiryDate = parseISO(b.expires_at);
+            if (!nearestExpiry || expiryDate < nearestExpiry) {
+              nearestExpiry = expiryDate;
+            }
+          }
+        });
+
+        return {
+          id: bk.id,
+          nome: bk.nome,
+          login_username: bk.login_username,
+          login_password_encrypted: bk.login_password_encrypted || null,
+          logo_url: bk.bookmakers_catalogo?.logo_url || null,
+          bookmaker_catalogo_id: bk.bookmaker_catalogo_id || null,
+          parceiro_nome: bk.parceiros?.nome || null,
+          saldo_real: bk.saldo_atual,
+          moeda: bk.moeda || 'BRL',
+          bonus_ativo: bonusTotal,
+          bonuses: bkBonuses,
+          nearest_expiry: nearestExpiry,
+        };
+      });
+
+      // Sort by bonus amount descending
+      mapped.sort((a, b) => b.bonus_ativo - a.bonus_ativo);
+      
+      setBookmakers(mapped);
+    } catch (error) {
+      console.error("Error fetching bookmakers:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleRow = (id: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedRows(newExpanded);
+  };
+
+  const handleOpenBonusDrawer = (bk: BookmakerInBonusMode) => {
+    setSelectedBookmaker({
+      id: bk.id,
+      nome: bk.nome,
+      login: bk.login_username,
+      password: bk.login_password_encrypted,
+      logo: bk.logo_url,
+      bookmaker_catalogo_id: bk.bookmaker_catalogo_id,
+    });
+    setBonusDrawerOpen(true);
+  };
+
+  const handleFinalizeClick = (bonus: ProjectBonus) => {
+    setBonusToFinalize(bonus);
+    setFinalizeDialogOpen(true);
+  };
+
+  const handleConfirmFinalize = async (reason: FinalizeReason): Promise<boolean> => {
+    if (!bonusToFinalize) return false;
+    const success = await finalizeBonus(bonusToFinalize.id, reason);
+    if (success) setFinalizeDialogOpen(false);
+    setBonusToFinalize(null);
+    return success;
+  };
+
+  const formatCurrency = (value: number, moeda: string = 'BRL') => {
+    const symbols: Record<string, string> = { BRL: 'R$', USD: '$', EUR: '€', GBP: '£' };
+    return `${symbols[moeda] || moeda} ${value.toFixed(2)}`;
+  };
+
+  const getExpiryBadge = (expiryDate: Date | null) => {
+    if (!expiryDate) return <span className="text-muted-foreground text-xs">—</span>;
+    const daysUntil = differenceInDays(expiryDate, new Date());
+    
+    if (daysUntil < 0) {
+      return <Badge variant="destructive" className="text-xs">Expirado</Badge>;
+    }
+    if (daysUntil <= 7) {
+      return <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">{daysUntil}d</Badge>;
+    }
+    if (daysUntil <= 15) {
+      return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-xs">{daysUntil}d</Badge>;
+    }
+    return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs">{daysUntil}d</Badge>;
+  };
+
+  const filteredBookmakers = bookmakers.filter(bk => 
+    bk.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    bk.login_username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    bk.parceiro_nome?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-full max-w-sm" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por nome, login ou parceiro..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {/* Table of bookmakers */}
+      {filteredBookmakers.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-10">
+              <Coins className="mx-auto h-12 w-12 text-muted-foreground/50" />
+              <h3 className="mt-4 text-lg font-semibold">Nenhuma bookmaker em modo bônus</h3>
+              <p className="text-muted-foreground">
+                Adicione bônus às bookmakers para vê-las aqui
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[40px]"></TableHead>
+                  <TableHead>Bookmaker</TableHead>
+                  <TableHead>Parceiro</TableHead>
+                  <TableHead className="text-right">Saldo Operável</TableHead>
+                  <TableHead className="text-right">Saldo Real</TableHead>
+                  <TableHead className="text-right">Bônus Ativo</TableHead>
+                  <TableHead className="text-center">Expiração</TableHead>
+                  <TableHead className="text-center">Ativos</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredBookmakers.map((bk) => {
+                  const activeBonuses = bk.bonuses.filter(b => b.status === 'credited');
+                  const isExpanded = expandedRows.has(bk.id);
+                  
+                  return (
+                    <Collapsible key={bk.id} asChild open={isExpanded} onOpenChange={() => toggleRow(bk.id)}>
+                      <>
+                        <TableRow 
+                          className="hover:bg-muted/50 cursor-pointer"
+                          onClick={() => toggleRow(bk.id)}
+                        >
+                          <TableCell>
+                            <CollapsibleTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </CollapsibleTrigger>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {bk.logo_url ? (
+                                <img
+                                  src={bk.logo_url}
+                                  alt={bk.nome}
+                                  className="h-8 w-8 rounded object-contain bg-white p-0.5"
+                                />
+                              ) : (
+                                <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center">
+                                  <Building2 className="h-4 w-4 text-primary" />
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <div className="font-medium truncate flex items-center gap-1.5">
+                                  {bk.nome}
+                                  <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1 py-0">
+                                    <Coins className="h-2.5 w-2.5" />
+                                  </Badge>
+                                </div>
+                                <div className="text-xs text-muted-foreground truncate">{bk.login_username}</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground">
+                              {bk.parceiro_nome || "—"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="font-semibold text-primary">
+                                    {formatCurrency(bk.saldo_real + bk.bonus_ativo, bk.moeda)}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Real + Bônus Ativo</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className="text-sm">{formatCurrency(bk.saldo_real, bk.moeda)}</span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className="text-sm font-medium text-amber-400">
+                              {formatCurrency(bk.bonus_ativo, bk.moeda)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {getExpiryBadge(bk.nearest_expiry)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="secondary" className="text-xs">
+                              {activeBonuses.length}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs border-amber-500/30 hover:bg-amber-500/10"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenBonusDrawer(bk);
+                              }}
+                            >
+                              <Eye className="h-3 w-3 mr-1" />
+                              Ver / Adicionar
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                        <CollapsibleContent asChild>
+                          <TableRow className="bg-muted/30 hover:bg-muted/30">
+                            <TableCell colSpan={9} className="py-3">
+                              <div className="pl-10 space-y-2">
+                                <p className="text-xs font-medium text-muted-foreground mb-2">
+                                  Bônus Ativos ({activeBonuses.length})
+                                </p>
+                                {activeBonuses.length === 0 ? (
+                                  <p className="text-xs text-muted-foreground">Nenhum bônus ativo</p>
+                                ) : (
+                                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                    {activeBonuses.map(bonus => (
+                                      <div 
+                                        key={bonus.id} 
+                                        className="flex items-center justify-between p-2 rounded-md bg-background border text-sm"
+                                      >
+                                        <div className="min-w-0 flex-1">
+                                          <div className="font-medium truncate">{bonus.title || 'Bônus'}</div>
+                                          <div className="text-xs text-amber-400 font-semibold">
+                                            {formatCurrency(bonus.bonus_amount, bonus.currency)}
+                                          </div>
+                                        </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 px-2 text-xs hover:bg-emerald-500/20 hover:text-emerald-400 shrink-0"
+                                          onClick={() => handleFinalizeClick(bonus)}
+                                        >
+                                          Finalizar
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        </CollapsibleContent>
+                      </>
+                    </Collapsible>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
+      )}
+
+      {/* Bonus Drawer */}
+      {selectedBookmaker && (
+        <VinculoBonusDrawer
+          open={bonusDrawerOpen}
+          onOpenChange={setBonusDrawerOpen}
+          projectId={projetoId}
+          bookmakerId={selectedBookmaker.id}
+          bookmakerName={selectedBookmaker.nome}
+          bookmakerLogin={selectedBookmaker.login}
+          bookmakerPassword={selectedBookmaker.password}
+          bookmakerLogo={selectedBookmaker.logo}
+          bookmakerCatalogoId={selectedBookmaker.bookmaker_catalogo_id}
+          onBonusChange={fetchBonuses}
+        />
+      )}
+
+      {/* Finalize Dialog */}
+      <FinalizeBonusDialog
+        open={finalizeDialogOpen}
+        onOpenChange={setFinalizeDialogOpen}
+        bonusAmount={bonusToFinalize?.bonus_amount || 0}
+        currency={bonusToFinalize?.currency || 'BRL'}
+        onConfirm={handleConfirmFinalize}
+      />
+    </div>
+  );
+}

@@ -1,7 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutDashboard, Building2, Target, History } from "lucide-react";
 import { BonusVisaoGeralTab } from "./BonusVisaoGeralTab";
-import { BonusCasasTab } from "./BonusCasasTab";
+import { BonusBookmakersTab } from "./BonusBookmakersTab";
 import { BonusApostasTab } from "./BonusApostasTab";
 import { BonusHistoricoTab } from "./BonusHistoricoTab";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
@@ -23,9 +23,9 @@ export function ProjetoBonusArea({ projetoId }: ProjetoBonusAreaProps) {
             <LayoutDashboard className="h-4 w-4" />
             Visão Geral
           </TabsTrigger>
-          <TabsTrigger value="casas" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsTrigger value="bookmakers" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Building2 className="h-4 w-4" />
-            Casas ({bookmakersInBonusMode.length})
+            Bookmakers ({bookmakersInBonusMode.length})
           </TabsTrigger>
           <TabsTrigger value="apostas" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Target className="h-4 w-4" />
@@ -41,8 +41,8 @@ export function ProjetoBonusArea({ projetoId }: ProjetoBonusAreaProps) {
           <BonusVisaoGeralTab projetoId={projetoId} />
         </TabsContent>
 
-        <TabsContent value="casas">
-          <BonusCasasTab projetoId={projetoId} />
+        <TabsContent value="bookmakers">
+          <BonusBookmakersTab projetoId={projetoId} />
         </TabsContent>
 
         <TabsContent value="apostas">
