@@ -307,8 +307,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     applyParsedData: applyPrintData
   } = useImportBetPrint();
 
-  // Track if mercado came from print (to bypass esporte dependency)
+  // Track if mercado/selecao came from print (to bypass dependencies)
   const [mercadoFromPrint, setMercadoFromPrint] = useState(false);
+  const [selecaoFromPrint, setSelecaoFromPrint] = useState(false);
 
   // Apply parsed data from print when available
   useEffect(() => {
@@ -320,9 +321,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       if (data.esporte) setEsporte(data.esporte);
       if (data.mercado) {
         setMercado(data.mercado);
-        setMercadoFromPrint(true); // Mark that mercado came from print
+        setMercadoFromPrint(true);
       }
-      if (data.selecao) setSelecao(data.selecao);
+      if (data.selecao) {
+        setSelecao(data.selecao);
+        setSelecaoFromPrint(true);
+      }
     }
   }, [printParsedData, aposta, applyPrintData]);
 
@@ -402,8 +406,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   // Check if current mercado is Moneyline (uses select instead of free text)
   const isMoneyline = isMoneylineMercado(mercado);
 
-  // Get Moneyline options for current sport/teams
-  const moneylineOptions = isMoneyline ? getMoneylineSelecoes(esporte, mandante, visitante) : [];
+  // Get Moneyline options for current sport/teams - include print selection if not in list
+  const baseMoneylineOptions = isMoneyline ? getMoneylineSelecoes(esporte, mandante, visitante) : [];
+  const moneylineOptions = selecaoFromPrint && selecao && !baseMoneylineOptions.includes(selecao)
+    ? [selecao, ...baseMoneylineOptions]
+    : baseMoneylineOptions;
 
   // Effective selection (always the selecao state now)
   const effectiveSelecao = selecao;
@@ -597,12 +604,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     }
   }, [esporte]);
 
-  // Reset selecao when mercado changes (only for new bets)
+  // Reset selecao when mercado changes (only for new bets AND not from print)
   useEffect(() => {
-    if (!aposta) {
+    if (!aposta && !selecaoFromPrint) {
       setSelecao("");
     }
-  }, [mercado, aposta]);
+  }, [mercado, aposta, selecaoFromPrint]);
 
   // Calcular Lay Stake e Liability para modo Bookmaker + Lay
   useEffect(() => {
@@ -814,6 +821,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     // Clear print import data
     clearPrintData();
     setMercadoFromPrint(false);
+    setSelecaoFromPrint(false);
   };
 
   const fetchBookmakers = async () => {
@@ -2228,7 +2236,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   Seleção
                 </Label>
                 {isMoneyline ? (
-                  <Select value={selecao} onValueChange={setSelecao}>
+                  <Select value={selecao} onValueChange={(val) => {
+                    setSelecao(val);
+                    if (selecaoFromPrint) setSelecaoFromPrint(false);
+                  }}>
                     <SelectTrigger className="h-10">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
@@ -2241,7 +2252,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                 ) : (
                   <Input
                     value={selecao}
-                    onChange={(e) => setSelecao(e.target.value)}
+                    onChange={(e) => {
+                      setSelecao(e.target.value);
+                      if (selecaoFromPrint) setSelecaoFromPrint(false);
+                    }}
                     placeholder="Ex: Real Madrid -1.5, Over 2.5, Mapa 1 Team A"
                     className="h-10"
                   />
