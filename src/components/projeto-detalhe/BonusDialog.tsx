@@ -405,7 +405,7 @@ export function BonusDialog({
           <div className="grid grid-cols-3 gap-3">
             {/* Depósito */}
             <div className="flex flex-col">
-              <div className="h-5 flex items-center">
+              <div className="h-5 flex items-center justify-center">
                 <Label className="text-xs text-muted-foreground">Valor do Depósito</Label>
               </div>
               <Input
@@ -415,7 +415,7 @@ export function BonusDialog({
                 placeholder="0.00"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
-                className="h-10 mt-1.5"
+                className="h-10 mt-1.5 text-center"
               />
               <div className="h-4 mt-1">
                 {templatePercent && (
@@ -427,7 +427,7 @@ export function BonusDialog({
             </div>
             {/* Bônus */}
             <div className="flex flex-col">
-              <div className="h-5 flex items-center gap-1">
+              <div className="h-5 flex items-center justify-center gap-1">
                 <Label className="text-xs text-muted-foreground">Valor do Bônus *</Label>
                 {templatePercent && amount && (
                   <Badge variant="secondary" className="text-[9px] px-1 h-4">Auto</Badge>
@@ -440,22 +440,22 @@ export function BonusDialog({
                 placeholder="0.00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="h-10 mt-1.5"
+                className="h-10 mt-1.5 text-center"
               />
               <div className="h-4 mt-1" />
             </div>
             {/* Moeda */}
             <div className="flex flex-col">
-              <div className="h-5 flex items-center">
+              <div className="h-5 flex items-center justify-center">
                 <Label className="text-xs text-muted-foreground">Moeda</Label>
               </div>
               <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger className="h-10 mt-1.5">
+                <SelectTrigger className="h-10 mt-1.5 justify-center [&>span]:text-center">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {CURRENCY_OPTIONS.map((c) => (
-                    <SelectItem key={c} value={c}>
+                    <SelectItem key={c} value={c} className="justify-center">
                       {c}
                     </SelectItem>
                   ))}
@@ -471,7 +471,7 @@ export function BonusDialog({
           <div className="grid grid-cols-3 gap-3">
             {/* Rollover */}
             <div className="flex flex-col">
-              <div className="h-5 flex items-center gap-1">
+              <div className="h-5 flex items-center justify-center gap-1">
                 <Label className="text-xs text-muted-foreground">Rollover</Label>
                 {filledFromTemplate && rolloverMultiplier && (
                   <Badge variant="secondary" className="text-[9px] px-1 h-4">Cat.</Badge>
@@ -485,23 +485,26 @@ export function BonusDialog({
                   placeholder="6"
                   value={rolloverMultiplier}
                   onChange={(e) => setRolloverMultiplier(e.target.value)}
-                  className="h-10 pr-7"
+                  className="h-10 pr-7 text-center"
                 />
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">x</span>
               </div>
             </div>
             {/* Base Rollover */}
             <div className="flex flex-col">
-              <div className="h-5 flex items-center">
+              <div className="h-5 flex items-center justify-center">
                 <Label className="text-xs text-muted-foreground">Base Rollover</Label>
               </div>
               <Select value={rolloverBase} onValueChange={setRolloverBase}>
-                <SelectTrigger className="h-10 mt-1.5">
+                <SelectTrigger 
+                  className="h-10 mt-1.5 justify-center [&>span]:flex-1 [&>span]:text-center [&>span]:min-w-0 [&>svg]:shrink-0"
+                  title={ROLLOVER_BASE_OPTIONS.find(o => o.value === rolloverBase)?.label}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {ROLLOVER_BASE_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
+                    <SelectItem key={opt.value} value={opt.value} className="justify-center">
                       {opt.label}
                     </SelectItem>
                   ))}
@@ -510,7 +513,7 @@ export function BonusDialog({
             </div>
             {/* Odd Mín. */}
             <div className="flex flex-col">
-              <div className="h-5 flex items-center gap-1">
+              <div className="h-5 flex items-center justify-center gap-1">
                 <Label className="text-xs text-muted-foreground">Odd Mín.</Label>
                 {filledFromTemplate && minOdds && (
                   <Badge variant="secondary" className="text-[9px] px-1 h-4">Cat.</Badge>
@@ -523,7 +526,7 @@ export function BonusDialog({
                 placeholder="1.50"
                 value={minOdds}
                 onChange={(e) => setMinOdds(e.target.value)}
-                className="h-10 mt-1.5"
+                className="h-10 mt-1.5 text-center"
               />
             </div>
           </div>
@@ -534,7 +537,7 @@ export function BonusDialog({
           <div className="grid grid-cols-3 gap-3">
             {/* Prazo */}
             <div className="flex flex-col">
-              <div className="h-5 flex items-center gap-1">
+              <div className="h-5 flex items-center justify-center gap-1">
                 <Label className="text-xs text-muted-foreground">Prazo</Label>
                 {filledFromTemplate && deadlineDays && (
                   <Badge variant="secondary" className="text-[9px] px-1 h-4">Cat.</Badge>
@@ -555,17 +558,17 @@ export function BonusDialog({
                       setExpiresAt(format(expiration, "yyyy-MM-dd"));
                     }
                   }}
-                  className="h-10 pr-10"
+                  className="h-10 pr-10 text-center"
                 />
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">dias</span>
               </div>
             </div>
             {/* Data do Crédito */}
             <div className="flex flex-col">
-              <div className="h-5 flex items-center">
+              <div className="h-5 flex items-center justify-center">
                 <Label className="text-xs text-muted-foreground">Data do Crédito</Label>
               </div>
-              <div className="[&_button]:h-10 mt-1.5">
+              <div className="[&_button]:h-10 [&_button]:justify-center mt-1.5">
                 {status === "credited" ? (
                   <DatePicker
                     value={creditedAt}
@@ -580,13 +583,13 @@ export function BonusDialog({
             </div>
             {/* Expiração */}
             <div className="flex flex-col">
-              <div className="h-5 flex items-center gap-1">
+              <div className="h-5 flex items-center justify-center gap-1">
                 <Label className="text-xs text-muted-foreground">Expiração</Label>
                 {filledFromTemplate && expiresAt && (
                   <Badge variant="secondary" className="text-[9px] px-1 h-4">Auto</Badge>
                 )}
               </div>
-              <div className="[&_button]:h-10 mt-1.5">
+              <div className="[&_button]:h-10 [&_button]:justify-center mt-1.5">
                 <DatePicker
                   value={expiresAt}
                   onChange={setExpiresAt}
