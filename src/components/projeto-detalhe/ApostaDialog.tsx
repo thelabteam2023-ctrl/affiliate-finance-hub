@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2, HelpCircle, Coins, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, XCircle, Shield, BarChart3, BookOpen, BookX, Gift, Percent } from "lucide-react";
+import { Loader2, Save, Trash2, HelpCircle, Coins, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, XCircle, Shield, BarChart3, BookOpen, BookX, Gift, Percent, Camera } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
   Tooltip,
@@ -40,6 +40,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { useImportBetPrint } from "@/hooks/useImportBetPrint";
+import { BetPrintDetectedFields } from "./BetPrintDetectedFields";
 
 interface Aposta {
   id: string;
@@ -290,6 +292,55 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   const [loading, setLoading] = useState(false);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Import by Print
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const {
+    isProcessing: isPrintProcessing,
+    parsedData: printParsedData,
+    imagePreview: printImagePreview,
+    processImage: processPrintImage,
+    processFromClipboard: processPrintClipboard,
+    clearParsedData: clearPrintData,
+    applyParsedData: applyPrintData
+  } = useImportBetPrint();
+
+  // Apply parsed data from print when available
+  useEffect(() => {
+    if (printParsedData && !aposta) {
+      const data = applyPrintData();
+      if (data.mandante) setMandante(data.mandante);
+      if (data.visitante) setVisitante(data.visitante);
+      if (data.dataHora) setDataAposta(data.dataHora);
+      if (data.esporte) setEsporte(data.esporte);
+      if (data.mercado) setMercado(data.mercado);
+      if (data.selecao) setSelecao(data.selecao);
+    }
+  }, [printParsedData, aposta, applyPrintData]);
+
+  // Handle paste for importing prints
+  const handlePaste = useCallback((event: ClipboardEvent) => {
+    if (!open || aposta) return; // Only for new bets
+    processPrintClipboard(event);
+  }, [open, aposta, processPrintClipboard]);
+
+  useEffect(() => {
+    if (open && !aposta) {
+      document.addEventListener("paste", handlePaste);
+      return () => document.removeEventListener("paste", handlePaste);
+    }
+  }, [open, aposta, handlePaste]);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      processPrintImage(file);
+    }
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   // Tipo de aposta (aba)
   const [tipoAposta, setTipoAposta] = useState<"bookmaker" | "exchange">("bookmaker");
@@ -718,6 +769,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     setTipoApostaExchangeBack("normal");
     setGerouFreebet(false);
     setValorFreebetGerada("");
+    // Clear print import data
+    clearPrintData();
   };
 
   const fetchBookmakers = async () => {
@@ -1984,12 +2037,58 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
-              {aposta ? "Editar Aposta" : "Registrar Aposta"}
-            </DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
+                {aposta ? "Editar Aposta" : "Registrar Aposta"}
+              </DialogTitle>
+              {!aposta && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isPrintProcessing}
+                        className="gap-2 text-xs border-dashed"
+                      >
+                        {isPrintProcessing ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Camera className="h-3.5 w-3.5" />
+                        )}
+                        {isPrintProcessing ? "Lendo..." : "Importar por Print"}
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Beta</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs">
+                      <p className="text-xs">
+                        Faça upload de um print do boletim ou cole com <kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">Ctrl+V</kbd> para preencher automaticamente os campos de contexto (evento, esporte, mercado, seleção).
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+            </div>
           </DialogHeader>
 
           <div className="grid gap-5 py-2">
+            {/* Detected fields from print */}
+            {printParsedData && !aposta && (
+              <BetPrintDetectedFields
+                parsedData={printParsedData}
+                imagePreview={printImagePreview}
+                onClear={clearPrintData}
+              />
+            )}
+
             {/* Linha 1: Mandante x Visitante + Data/Hora */}
             <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-3 items-end">
               <div className="space-y-1.5">
