@@ -158,7 +158,6 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
   ],
   "Basquete": [
     "Moneyline",
-    "Spread",
     "Over (Pontos)",
     "Under (Pontos)",
     "Handicap",
@@ -226,10 +225,6 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
     "Handicap de Mapas",
     "Over (Mapas)",
     "Under (Mapas)",
-    "Primeiro Dragão",
-    "Primeiro Barão",
-    "Primeiro Torre",
-    "First Blood",
     "Outro"
   ],
   "Counter-Strike": [
@@ -239,7 +234,6 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
     "Over (Rounds)",
     "Under (Rounds)",
     "Handicap de Mapas",
-    "Pistol Round",
     "Outro"
   ],
   "Dota 2": [
@@ -248,9 +242,6 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
     "Handicap de Mapas",
     "Over (Mapas)",
     "Under (Mapas)",
-    "Primeiro Roshan",
-    "Primeiro Barracks",
-    "First Blood",
     "Outro"
   ],
   "eFootball": [
@@ -269,6 +260,28 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
     "Handicap",
     "Outro"
   ]
+};
+
+// Helper to check if mercado is Moneyline
+const isMoneylineMercado = (mercado: string): boolean => {
+  const moneylineKeywords = ["Moneyline", "1X2", "Vencedor"];
+  return moneylineKeywords.some(kw => mercado.includes(kw));
+};
+
+// Get Moneyline selection options based on sport
+const getMoneylineSelecoes = (esporte: string, mandante: string, visitante: string): string[] => {
+  const timeCasa = mandante || "MANDANTE";
+  const timeFora = visitante || "VISITANTE";
+  
+  // Sports without draw
+  const sportsSemEmpate = ["Basquete", "Tênis", "Baseball", "Vôlei", "MMA/UFC", "Boxe"];
+  
+  if (sportsSemEmpate.includes(esporte) || esporte.includes("League") || esporte.includes("Counter") || esporte.includes("Dota")) {
+    return [timeCasa, timeFora];
+  }
+  
+  // Football and others with draw
+  return [timeCasa, "EMPATE", timeFora];
 };
 
 // Removed EXCHANGES list - now using bookmakers list for Exchange tab
@@ -293,71 +306,18 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   const [statusResultado, setStatusResultado] = useState("PENDENTE");
   const [valorRetorno, setValorRetorno] = useState("");
   const [observacoes, setObservacoes] = useState("");
-  
-  // Handicap specific fields
-  const [handicapTime, setHandicapTime] = useState<"mandante" | "visitante" | "">("");
-  const [handicapLinha, setHandicapLinha] = useState("");
 
   // Computed evento
   const evento = mandante && visitante ? `${mandante} x ${visitante}` : "";
 
-  // Check if current mercado is handicap
-  const isHandicapMercado = mercado.includes("Handicap");
+  // Check if current mercado is Moneyline (uses select instead of free text)
+  const isMoneyline = isMoneylineMercado(mercado);
 
-  // Handicap lines options
-  const HANDICAP_LINHAS = [
-    "-5.5", "-5.0", "-4.5", "-4.0", "-3.5", "-3.0", "-2.5", "-2.0", "-1.5", "-1.0", "-0.5",
-    "0", "+0.5", "+1.0", "+1.5", "+2.0", "+2.5", "+3.0", "+3.5", "+4.0", "+4.5", "+5.0", "+5.5"
-  ];
+  // Get Moneyline options for current sport/teams
+  const moneylineOptions = isMoneyline ? getMoneylineSelecoes(esporte, mandante, visitante) : [];
 
-  // Opções de seleção baseadas no mercado e times
-  const getSelecaoOptions = (): string[] => {
-    const mercadosMoneyline = ["Moneyline / 1X2", "Moneyline", "Dupla Chance", "Draw No Bet", "Vencedor do Jogo", "Vencedor"];
-    const mercadosBTTS = ["Ambas Marcam (BTTS)", "Ambas Marcam"];
-    
-    // Usa nomes genéricos se mandante/visitante não estiverem preenchidos
-    const timeCasa = mandante || "TIME CASA";
-    const timeFora = visitante || "TIME FORA";
-    
-    // Moneyline - mostra mandante, empate, visitante (UPPERCASE)
-    if (mercadosMoneyline.includes(mercado)) {
-      return [timeCasa, "EMPATE", timeFora];
-    }
-    
-    // Over - qualquer mercado que contenha "Over"
-    if (mercado.includes("Over")) {
-      return ["Over 0.5", "Over 1.5", "Over 2.5", "Over 3.5", "Over 4.5", "Over 5.5"];
-    }
-    
-    // Under - qualquer mercado que contenha "Under"
-    if (mercado.includes("Under")) {
-      return ["Under 0.5", "Under 1.5", "Under 2.5", "Under 3.5", "Under 4.5", "Under 5.5"];
-    }
-    
-    // BTTS
-    if (mercadosBTTS.includes(mercado)) {
-      return ["SIM", "NÃO"];
-    }
-    
-    // Handicap is handled separately with dedicated fields
-    if (isHandicapMercado) {
-      return [];
-    }
-    
-    return [];
-  };
-
-  // Build handicap selection from separate fields
-  const getHandicapSelecao = (): string => {
-    if (!isHandicapMercado || !handicapTime || !handicapLinha) return "";
-    const timeNome = handicapTime === "mandante" ? mandante : visitante;
-    return `${timeNome} ${handicapLinha}`;
-  };
-
-  // Get effective selecao (either from handicap fields or regular selecao)
-  const effectiveSelecao = isHandicapMercado ? getHandicapSelecao() : selecao;
-
-  const selecaoOptions = getSelecaoOptions();
+  // Effective selection (always the selecao state now)
+  const effectiveSelecao = selecao;
 
   // Bookmaker mode
   const [bookmakerId, setBookmakerId] = useState("");
@@ -440,26 +400,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
         const savedMercado = aposta.mercado || "";
         const savedSelecao = aposta.selecao || "";
         
-        // Set mercado first without triggering reset
+        // Set mercado and selecao (simplified - no more handicap fields)
         setTimeout(() => {
           setMercado(savedMercado);
-          
-          // Check if it's a handicap selection (contains a line like +1.5, -2.0, etc.)
-          const handicapMatch = savedSelecao.match(/^(.+?)\s([+-]?\d+\.?\d*)$/);
-          if (savedMercado.includes("Handicap") && handicapMatch) {
-            const teamName = handicapMatch[1].trim();
-            const linha = handicapMatch[2];
-            // Determine which team based on name
-            const eventoParts = aposta.evento?.split(" x ") || [];
-            if (teamName === eventoParts[0]) {
-              setHandicapTime("mandante");
-            } else if (teamName === eventoParts[1]) {
-              setHandicapTime("visitante");
-            }
-            setHandicapLinha(linha.startsWith("+") || linha.startsWith("-") ? linha : `+${linha}`);
-          } else {
-            setSelecao(savedSelecao);
-          }
+          setSelecao(savedSelecao);
         }, 50);
 
         // Determinar tipo de aposta baseado nos dados salvos
@@ -557,16 +501,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     if (!aposta) {
       setMercado("");
       setSelecao("");
-      setHandicapTime("");
-      setHandicapLinha("");
     }
   }, [esporte]);
 
-  // Reset handicap fields when mercado changes (only for new bets)
+  // Reset selecao when mercado changes (only for new bets)
   useEffect(() => {
     if (!aposta) {
-      setHandicapTime("");
-      setHandicapLinha("");
       setSelecao("");
     }
   }, [mercado, aposta]);
@@ -734,8 +674,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     setVisitante("");
     setMercado("");
     setSelecao("");
-    setHandicapTime("");
-    setHandicapLinha("");
     setOdd("");
     setStake("");
     setStatusResultado("PENDENTE");
@@ -918,9 +856,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
 
   const handleSave = async () => {
     // Validações básicas comuns a todos os modos
-    const finalSelecao = isHandicapMercado ? effectiveSelecao : selecao;
-    if (!esporte || !evento || !finalSelecao) {
-      toast.error("Preencha todos os campos obrigatórios (Esporte, Evento, Seleção)");
+    if (!esporte || !mercado) {
+      toast.error("Preencha Esporte e Mercado (obrigatórios)");
+      return;
+    }
+    if (!evento || !selecao) {
+      toast.error("Preencha todos os campos obrigatórios (Evento, Seleção)");
       return;
     }
 
@@ -2116,61 +2057,31 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   </SelectContent>
                 </Select>
               </div>
-              {/* Seleção - mostra campos de Handicap ou select normal */}
-              {isHandicapMercado ? (
-                <div className="space-y-1.5">
-                  <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Handicap</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Select value={handicapTime} onValueChange={(v) => setHandicapTime(v as "mandante" | "visitante")}>
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Time" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="mandante">{mandante || "Mandante"}</SelectItem>
-                        <SelectItem value="visitante">{visitante || "Visitante"}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select value={handicapLinha} onValueChange={setHandicapLinha} disabled={!handicapTime}>
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Linha" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {HANDICAP_LINHAS.map((linha) => (
-                          <SelectItem key={linha} value={linha}>{linha}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {effectiveSelecao && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      → <span className="font-medium text-foreground">{effectiveSelecao}</span>
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Seleção</Label>
-                  {selecaoOptions.length > 0 ? (
-                    <Select value={selecao} onValueChange={setSelecao}>
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {selecaoOptions.map((opt) => (
-                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input
-                      value={selecao}
-                      onChange={(e) => setSelecao(e.target.value)}
-                      placeholder="Ex: Real Madrid"
-                      className="h-10"
-                    />
-                  )}
-                </div>
-              )}
+              {/* Seleção - Moneyline usa select, outros usam texto livre */}
+              <div className="space-y-1.5">
+                <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">
+                  Seleção *
+                </Label>
+                {isMoneyline ? (
+                  <Select value={selecao} onValueChange={setSelecao}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {moneylineOptions.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={selecao}
+                    onChange={(e) => setSelecao(e.target.value)}
+                    placeholder="Ex: Real Madrid -1.5, Over 2.5, Mapa 1 Team A"
+                    className="h-10"
+                  />
+                )}
+              </div>
             </div>
 
             {/* Abas: Bookmaker vs Exchange */}
