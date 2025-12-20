@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -129,8 +129,15 @@ type ApostaUnificada = {
 };
 
 export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
-  const { getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
-  const bookmakersInBonusMode = getBookmakersWithActiveBonus();
+  const { getBookmakersWithActiveBonus, bonuses } = useProjectBonuses({ projectId: projetoId });
+  
+  // Memoize the bookmaker IDs to prevent infinite loops
+  const bookmakersInBonusMode = useMemo(() => {
+    return getBookmakersWithActiveBonus();
+  }, [bonuses]);
+  
+  // Create a stable string key for dependency
+  const bookmakersKey = useMemo(() => bookmakersInBonusMode.join(','), [bookmakersInBonusMode]);
   
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [apostasMultiplas, setApostasMultiplas] = useState<ApostaMultipla[]>([]);
@@ -148,7 +155,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
 
   useEffect(() => {
     fetchAllApostas();
-  }, [projetoId, bookmakersInBonusMode]);
+  }, [projetoId, bookmakersKey]);
 
   const fetchAllApostas = async () => {
     try {
