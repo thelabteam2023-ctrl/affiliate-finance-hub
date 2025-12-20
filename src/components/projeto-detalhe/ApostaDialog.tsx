@@ -2138,26 +2138,28 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                   <HoverCardContent 
                     side="bottom" 
                     align="end"
-                    className="w-[300px] p-4 z-[100]"
                     sideOffset={8}
+                    className="w-[300px] p-4"
                   >
                     <div className="space-y-3">
-                      <h4 className="text-sm font-semibold">Importar por Print</h4>
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <span className="text-base">🖱️</span>
-                          <span>Arraste a imagem do boletim aqui</span>
+                      <h4 className="text-sm font-semibold text-foreground">Importar por Print</h4>
+                      <div className="space-y-2.5 text-sm">
+                        <div className="flex items-start gap-2.5">
+                          <span className="text-base leading-none mt-0.5">🖱️</span>
+                          <span className="text-muted-foreground">Arraste a imagem do boletim aqui</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-base">⌨️</span>
-                          <span>Cole com <kbd className="px-1.5 py-0.5 rounded bg-muted text-[11px] font-mono">Ctrl+V</kbd></span>
+                        <div className="flex items-start gap-2.5">
+                          <span className="text-base leading-none mt-0.5">⌨️</span>
+                          <span className="text-muted-foreground">
+                            Cole com <kbd className="px-1.5 py-0.5 rounded bg-muted/80 text-[11px] font-mono border border-border/50">Ctrl+V</kbd>
+                          </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-base">📁</span>
-                          <span>Ou clique para selecionar o arquivo</span>
+                        <div className="flex items-start gap-2.5">
+                          <span className="text-base leading-none mt-0.5">📁</span>
+                          <span className="text-muted-foreground">Ou clique para selecionar o arquivo</span>
                         </div>
                       </div>
-                      <p className="text-xs text-muted-foreground/70 pt-1 border-t border-border/50">
+                      <p className="text-[11px] text-muted-foreground/60 pt-2 border-t border-border/40 leading-relaxed">
                         Preenche automaticamente: Evento, Mercado e Seleção.
                       </p>
                     </div>
