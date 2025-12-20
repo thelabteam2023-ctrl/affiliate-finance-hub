@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useProjectBonuses, ProjectBonus, BonusStatus, BonusFormData } from "@/hooks/useProjectBonuses";
+import { useProjectBonuses, ProjectBonus, BonusFormData, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { BonusHistoryDrawer } from "./BonusHistoryDrawer";
 import { BonusDialog } from "./BonusDialog";
+import { FinalizeBonusDialog } from "./FinalizeBonusDialog";
 
 interface VinculoBonusDrawerProps {
   open: boolean;
@@ -12,6 +13,7 @@ interface VinculoBonusDrawerProps {
   bookmakerLogin?: string;
   bookmakerLogo?: string | null;
   currency?: string;
+  onBonusChange?: () => void;
 }
 
 export function VinculoBonusDrawer({
@@ -23,9 +25,12 @@ export function VinculoBonusDrawer({
   bookmakerLogin = "",
   bookmakerLogo,
   currency = "BRL",
+  onBonusChange,
 }: VinculoBonusDrawerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBonus, setEditingBonus] = useState<ProjectBonus | null>(null);
+  const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
+  const [bonusToFinalize, setBonusToFinalize] = useState<ProjectBonus | null>(null);
 
   const {
     bonuses,
@@ -33,6 +38,7 @@ export function VinculoBonusDrawer({
     saving,
     createBonus,
     updateBonus,
+    finalizeBonus,
     deleteBonus,
     getBonusesByBookmaker,
     getSummary,
@@ -52,22 +58,40 @@ export function VinculoBonusDrawer({
   };
 
   const handleDeleteBonus = async (id: string): Promise<boolean> => {
-    return await deleteBonus(id);
+    const success = await deleteBonus(id);
+    if (success && onBonusChange) {
+      onBonusChange();
+    }
+    return success;
   };
 
-  const handleChangeStatus = async (id: string, status: BonusStatus): Promise<boolean> => {
-    return await updateBonus(id, { status });
+  const handleFinalizeBonus = (bonus: ProjectBonus) => {
+    setBonusToFinalize(bonus);
+    setFinalizeDialogOpen(true);
   };
 
-  const handleSaveBonus = async (data: BonusFormData) => {
+  const handleConfirmFinalize = async (reason: FinalizeReason): Promise<boolean> => {
+    if (!bonusToFinalize) return false;
+    const success = await finalizeBonus(bonusToFinalize.id, reason);
+    if (success) {
+      setBonusToFinalize(null);
+      if (onBonusChange) {
+        onBonusChange();
+      }
+    }
+    return success;
+  };
+
+  const handleSaveBonus = async (data: BonusFormData): Promise<boolean> => {
+    let success: boolean;
     if (editingBonus) {
-      const success = await updateBonus(editingBonus.id, data);
+      success = await updateBonus(editingBonus.id, data);
       if (success) {
         setDialogOpen(false);
         setEditingBonus(null);
       }
     } else {
-      const success = await createBonus({
+      success = await createBonus({
         ...data,
         bookmaker_id: bookmakerId,
       });
@@ -75,6 +99,10 @@ export function VinculoBonusDrawer({
         setDialogOpen(false);
       }
     }
+    if (success && onBonusChange) {
+      onBonusChange();
+    }
+    return success;
   };
 
   return (
@@ -91,7 +119,7 @@ export function VinculoBonusDrawer({
         onAddBonus={handleAddBonus}
         onEditBonus={handleEditBonus}
         onDeleteBonus={handleDeleteBonus}
-        onChangeStatus={handleChangeStatus}
+        onFinalizeBonus={handleFinalizeBonus}
       />
 
       <BonusDialog
@@ -102,14 +130,18 @@ export function VinculoBonusDrawer({
         bonus={editingBonus}
         preselectedBookmakerId={bookmakerId}
         saving={saving}
-        onSubmit={async (data) => {
-          if (editingBonus) {
-            return await updateBonus(editingBonus.id, data);
-          } else {
-            return await createBonus(data);
-          }
-        }}
+        onSubmit={handleSaveBonus}
       />
+
+      {bonusToFinalize && (
+        <FinalizeBonusDialog
+          open={finalizeDialogOpen}
+          onOpenChange={setFinalizeDialogOpen}
+          bonusAmount={bonusToFinalize.bonus_amount}
+          currency={bonusToFinalize.currency}
+          onConfirm={handleConfirmFinalize}
+        />
+      )}
     </>
   );
 }

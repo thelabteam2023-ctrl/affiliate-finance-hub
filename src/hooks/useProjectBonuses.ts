@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export type BonusStatus = "pending" | "credited" | "failed" | "expired" | "reversed";
+export type BonusStatus = "pending" | "credited" | "failed" | "expired" | "reversed" | "finalized";
+
+export type FinalizeReason = "rollover_completed" | "bonus_consumed" | "expired" | "cancelled_reversed";
 
 export interface ProjectBonus {
   id: string;
@@ -19,6 +21,9 @@ export interface ProjectBonus {
   created_by: string;
   created_at: string;
   updated_at: string;
+  finalized_at: string | null;
+  finalized_by: string | null;
+  finalize_reason: FinalizeReason | null;
   // Joined data
   bookmaker_nome?: string;
   bookmaker_login?: string;
@@ -43,11 +48,16 @@ export interface BonusSummary {
   total_failed: number;
   total_expired: number;
   total_reversed: number;
+  total_finalized: number;
   count_credited: number;
   count_pending: number;
   count_failed: number;
   count_expired: number;
   count_reversed: number;
+  count_finalized: number;
+  // For operational balance
+  active_bonus_total: number;
+  bookmakers_with_active_bonus: number;
 }
 
 interface UseProjectBonusesProps {
@@ -102,6 +112,9 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         created_by: b.created_by,
         created_at: b.created_at,
         updated_at: b.updated_at,
+        finalized_at: b.finalized_at,
+        finalized_by: b.finalized_by,
+        finalize_reason: b.finalize_reason as FinalizeReason | null,
         bookmaker_nome: b.bookmakers?.nome,
         bookmaker_login: b.bookmakers?.login_username,
         bookmaker_logo_url: b.bookmakers?.bookmakers_catalogo?.logo_url,
@@ -130,18 +143,27 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       total_failed: 0,
       total_expired: 0,
       total_reversed: 0,
+      total_finalized: 0,
       count_credited: 0,
       count_pending: 0,
       count_failed: 0,
       count_expired: 0,
       count_reversed: 0,
+      count_finalized: 0,
+      active_bonus_total: 0,
+      bookmakers_with_active_bonus: 0,
     };
+
+    const bookmakersWithBonus = new Set<string>();
 
     bonuses.forEach((b) => {
       switch (b.status) {
         case "credited":
           summary.total_credited += b.bonus_amount;
           summary.count_credited++;
+          // Credited = active bonus that enters operational balance
+          summary.active_bonus_total += b.bonus_amount;
+          bookmakersWithBonus.add(b.bookmaker_id);
           break;
         case "pending":
           summary.total_pending += b.bonus_amount;
@@ -159,10 +181,34 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
           summary.total_reversed += b.bonus_amount;
           summary.count_reversed++;
           break;
+        case "finalized":
+          summary.total_finalized += b.bonus_amount;
+          summary.count_finalized++;
+          break;
       }
     });
 
+    summary.bookmakers_with_active_bonus = bookmakersWithBonus.size;
+
     return summary;
+  }, [bonuses]);
+
+  // Get active (credited) bonus total for a specific bookmaker
+  const getActiveBonusByBookmaker = useCallback((bkId: string): number => {
+    return bonuses
+      .filter((b) => b.bookmaker_id === bkId && b.status === "credited")
+      .reduce((acc, b) => acc + b.bonus_amount, 0);
+  }, [bonuses]);
+
+  // Get all bookmaker IDs that have active bonuses
+  const getBookmakersWithActiveBonus = useCallback((): string[] => {
+    const ids = new Set<string>();
+    bonuses.forEach((b) => {
+      if (b.status === "credited") {
+        ids.add(b.bookmaker_id);
+      }
+    });
+    return Array.from(ids);
   }, [bonuses]);
 
   const createBonus = async (data: BonusFormData): Promise<boolean> => {
@@ -242,6 +288,46 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
     }
   };
 
+  const finalizeBonus = async (id: string, reason: FinalizeReason): Promise<boolean> => {
+    try {
+      setSaving(true);
+
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Usuário não autenticado");
+
+      const updateData = {
+        status: "finalized",
+        finalized_at: new Date().toISOString(),
+        finalized_by: userData.user.id,
+        finalize_reason: reason,
+      };
+
+      const { error } = await supabase
+        .from("project_bookmaker_link_bonuses")
+        .update(updateData)
+        .eq("id", id);
+
+      if (error) throw error;
+
+      const reasonLabels: Record<FinalizeReason, string> = {
+        rollover_completed: "Rollover concluído",
+        bonus_consumed: "Bônus consumido/zerado",
+        expired: "Expirou",
+        cancelled_reversed: "Cancelado/Revertido",
+      };
+
+      toast.success(`Bônus finalizado: ${reasonLabels[reason]}`);
+      await fetchBonuses();
+      return true;
+    } catch (error: any) {
+      console.error("Erro ao finalizar bônus:", error.message);
+      toast.error("Erro ao finalizar bônus: " + error.message);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const deleteBonus = async (id: string): Promise<boolean> => {
     try {
       setSaving(true);
@@ -283,8 +369,11 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
     getSummary,
     createBonus,
     updateBonus,
+    finalizeBonus,
     deleteBonus,
     getBonusesByBookmaker,
     getTotalCreditedByBookmaker,
+    getActiveBonusByBookmaker,
+    getBookmakersWithActiveBonus,
   };
 }
