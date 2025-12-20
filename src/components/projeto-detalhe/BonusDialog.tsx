@@ -59,7 +59,7 @@ const CURRENCY_OPTIONS = ["BRL", "USD", "EUR", "GBP", "USDT"];
 const ROLLOVER_BASE_OPTIONS: { value: string; label: string }[] = [
   { value: "DEPOSITO", label: "Depósito" },
   { value: "BONUS", label: "Bônus" },
-  { value: "DEPOSITO_BONUS", label: "Depósito + Bônus" },
+  { value: "DEPOSITO_BONUS", label: "Dep. + Bônus" },
 ];
 
 export function BonusDialog({
