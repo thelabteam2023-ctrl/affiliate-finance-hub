@@ -69,6 +69,9 @@ import {
   Coins,
   TrendingUp,
   Info,
+  IdCard,
+  Copy,
+  Check,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Toggle } from "@/components/ui/toggle";
@@ -121,7 +124,9 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [vinculoToRemove, setVinculoToRemove] = useState<Vinculo | null>(null);
   const [statusPopoverId, setStatusPopoverId] = useState<string | null>(null);
   const [changingStatus, setChangingStatus] = useState(false);
-  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const [viewMode, setViewMode] = useState<"cards" | "list">("list");
+  const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [bonusDrawerOpen, setBonusDrawerOpen] = useState(false);
   const [selectedBookmakerForBonus, setSelectedBookmakerForBonus] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmakerCatalogoId?: string | null } | null>(null);
   const [filterBonusOnly, setFilterBonusOnly] = useState(false);
@@ -434,6 +439,25 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       toast.error("Erro ao alterar status: " + error.message);
     } finally {
       setChangingStatus(false);
+    }
+  };
+
+  const decryptPassword = (encrypted: string | null): string => {
+    if (!encrypted) return "";
+    try {
+      return atob(encrypted);
+    } catch {
+      return encrypted;
+    }
+  };
+
+  const copyToClipboard = async (text: string, fieldName: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      toast.error("Erro ao copiar");
     }
   };
 
@@ -946,6 +970,69 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* Credentials Popover */}
+                    {vinculo.login_username && (
+                      <Popover
+                        open={credentialsPopoverOpen === vinculo.id}
+                        onOpenChange={(open) => setCredentialsPopoverOpen(open ? vinculo.id : null)}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Ver Credenciais"
+                          >
+                            <IdCard className="h-4 w-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-72" align="end">
+                          <div className="space-y-3">
+                            <h4 className="font-medium text-sm">Credenciais de Acesso</h4>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between gap-2 p-2 rounded bg-muted/50">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-muted-foreground">Usuário</p>
+                                  <p className="text-sm font-medium truncate">{vinculo.login_username}</p>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 flex-shrink-0"
+                                  onClick={() => copyToClipboard(vinculo.login_username, `user-${vinculo.id}`)}
+                                >
+                                  {copiedField === `user-${vinculo.id}` ? (
+                                    <Check className="h-3 w-3 text-emerald-500" />
+                                  ) : (
+                                    <Copy className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              </div>
+                              {vinculo.login_password_encrypted && (
+                                <div className="flex items-center justify-between gap-2 p-2 rounded bg-muted/50">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-muted-foreground">Senha</p>
+                                    <p className="text-sm font-medium truncate">{decryptPassword(vinculo.login_password_encrypted)}</p>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 flex-shrink-0"
+                                    onClick={() => copyToClipboard(decryptPassword(vinculo.login_password_encrypted), `pass-${vinculo.id}`)}
+                                  >
+                                    {copiedField === `pass-${vinculo.id}` ? (
+                                      <Check className="h-3 w-3 text-emerald-500" />
+                                    ) : (
+                                      <Copy className="h-3 w-3" />
+                                    )}
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
