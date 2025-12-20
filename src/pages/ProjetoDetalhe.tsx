@@ -430,18 +430,9 @@ export default function ProjetoDetalhe() {
         </div>
       </div>
 
-      {/* Global Actions Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <GlobalActionsBar 
-          projetoId={id!}
-          onApostaCreated={() => { fetchApostasResumo(); refreshResultado(); }}
-          onBonusCreated={() => { /* Bonus area will auto-refresh */ }}
-          onNavigateToTab={setActiveTab}
-        />
-        
-        {/* Period Filters */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">Período:</span>
+      {/* Period Filters - Stays in header area */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted-foreground">Período:</span>
         <div className="flex flex-wrap gap-1">
           {[
             { value: "hoje", label: "Hoje" },
@@ -487,7 +478,6 @@ export default function ProjetoDetalhe() {
             </PopoverContent>
           </Popover>
         </div>
-      </div>
       </div>
 
       {/* KPIs Resumo - Only show on performance tabs */}
@@ -634,6 +624,16 @@ export default function ProjetoDetalhe() {
             </DropdownMenuContent>
           </DropdownMenu>
         </TabsList>
+
+        {/* Action Bar - Logo abaixo das abas */}
+        <div className="flex items-center gap-3 pt-2 pb-1 border-b border-border/50">
+          <GlobalActionsBar 
+            projetoId={id!}
+            onApostaCreated={() => { fetchApostasResumo(); refreshResultado(); }}
+            onBonusCreated={() => { /* Bonus area will auto-refresh */ }}
+            onNavigateToTab={setActiveTab}
+          />
+        </div>
 
         <TabsContent value="visao-geral">
           <ProjetoDashboardTab 
