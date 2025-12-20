@@ -31,6 +31,42 @@ export const APOSTA_RESULTADO = {
 export type ApostaResultado = typeof APOSTA_RESULTADO[keyof typeof APOSTA_RESULTADO];
 
 /**
+ * Estratégia de aposta - define a abordagem/metodologia utilizada
+ * SEPARADO de Contexto Financeiro (Real/Freebet/Bônus)
+ */
+export const APOSTA_ESTRATEGIA = {
+  PUNTER: 'PUNTER',
+  SUREBET: 'SUREBET',
+  VALUEBET: 'VALUEBET',
+  EXTRACAO_FREEBET: 'EXTRACAO_FREEBET',
+  EXTRACAO_BONUS: 'EXTRACAO_BONUS',
+} as const;
+
+export type ApostaEstrategia = typeof APOSTA_ESTRATEGIA[keyof typeof APOSTA_ESTRATEGIA];
+
+/**
+ * Labels para exibição de estratégias
+ */
+export const ESTRATEGIA_LABELS: Record<ApostaEstrategia, string> = {
+  PUNTER: 'Punter',
+  SUREBET: 'Surebet',
+  VALUEBET: 'ValueBet',
+  EXTRACAO_FREEBET: 'Extração de Freebet',
+  EXTRACAO_BONUS: 'Extração de Bônus',
+};
+
+/**
+ * Lista de estratégias para selects
+ */
+export const ESTRATEGIAS_LIST = [
+  { value: APOSTA_ESTRATEGIA.PUNTER, label: ESTRATEGIA_LABELS.PUNTER },
+  { value: APOSTA_ESTRATEGIA.SUREBET, label: ESTRATEGIA_LABELS.SUREBET },
+  { value: APOSTA_ESTRATEGIA.VALUEBET, label: ESTRATEGIA_LABELS.VALUEBET },
+  { value: APOSTA_ESTRATEGIA.EXTRACAO_FREEBET, label: ESTRATEGIA_LABELS.EXTRACAO_FREEBET },
+  { value: APOSTA_ESTRATEGIA.EXTRACAO_BONUS, label: ESTRATEGIA_LABELS.EXTRACAO_BONUS },
+] as const;
+
+/**
  * Helper para verificar se uma aposta está finalizada
  */
 export const isApostaFinalizada = (status: string | null | undefined): boolean => 
