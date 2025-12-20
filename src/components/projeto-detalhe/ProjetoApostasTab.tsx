@@ -39,7 +39,7 @@ import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-f
 type PeriodFilter = "hoje" | "ontem" | "7dias" | "mes" | "ano" | "todo" | "custom";
 
 // Contextos de aposta para filtro unificado
-type ApostaContexto = "NORMAL" | "FREEBET" | "BONUS";
+type ApostaContexto = "NORMAL" | "FREEBET" | "BONUS" | "SUREBET";
 
 interface ProjetoApostasTabProps {
   projetoId: string;
@@ -76,6 +76,7 @@ interface Aposta {
   valor_freebet_gerada?: number | null;
   tipo_freebet?: string | null;
   is_bonus_bet?: boolean;
+  surebet_id?: string | null;
   bookmaker?: {
     nome: string;
     parceiro_id: string;
@@ -177,6 +178,11 @@ function getApostaContexto(
   aposta: Aposta | ApostaMultipla,
   bookmakersComBonusAtivo: string[]
 ): ApostaContexto {
+  // Verifica se é parte de uma surebet (apostas simples only)
+  if ('surebet_id' in aposta && aposta.surebet_id) {
+    return "SUREBET";
+  }
+  
   // Verifica se usou/gerou freebet
   if (aposta.tipo_freebet || aposta.gerou_freebet) {
     return "FREEBET";
@@ -308,7 +314,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
           )
         `)
         .eq("projeto_id", projetoId)
-        .is("surebet_id", null)
         .order("data_aposta", { ascending: false });
       
       if (start) {
@@ -551,7 +556,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
       total: all.length,
       normal: all.filter(a => a.contexto === "NORMAL").length,
       freebet: all.filter(a => a.contexto === "FREEBET").length,
-      bonus: all.filter(a => a.contexto === "BONUS").length
+      bonus: all.filter(a => a.contexto === "BONUS").length,
+      surebet: all.filter(a => a.contexto === "SUREBET").length
     };
   }, [apostas, apostasMultiplas, surebets, bookmakersComBonusAtivo]);
 
@@ -605,6 +611,13 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
   // Badge de contexto
   const getContextoBadge = (contexto: ApostaContexto) => {
     switch (contexto) {
+      case "SUREBET":
+        return (
+          <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-[10px] px-1.5 py-0">
+            <Shield className="h-2.5 w-2.5 mr-0.5" />
+            SB
+          </Badge>
+        );
       case "FREEBET":
         return (
           <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">
@@ -700,6 +713,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
                 <SelectItem value="BONUS">
                   <span className="flex items-center gap-2">
                     🟡 Bônus ({contadores.bonus})
+                  </span>
+                </SelectItem>
+                <SelectItem value="SUREBET">
+                  <span className="flex items-center gap-2">
+                    🔵 Surebet ({contadores.surebet})
                   </span>
                 </SelectItem>
               </SelectContent>
