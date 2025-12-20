@@ -483,26 +483,66 @@ export function BonusDialog({
             </div>
           )}
 
-          {/* 1️⃣ Título da Campanha + Moeda - Mesma linha */}
-          <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
+          {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          {/* LINHA 1 — Título / Campanha (centralizado) */}
+          {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          <div className="space-y-1.5">
+            <Label className="flex items-center justify-center gap-2 text-sm font-medium">
+              Título / Campanha
+              {filledFromTemplate && (
+                <Badge variant="secondary" className="text-[10px]">Catálogo</Badge>
+              )}
+            </Label>
+            <Input
+              placeholder="Ex: Bônus 100% Depósito, Reload Semanal..."
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="text-center text-base font-medium h-10"
+            />
+          </div>
+
+          {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          {/* LINHA 2 — Valores monetários (Depósito + Bônus + Moeda) */}
+          {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          <div className="grid grid-cols-3 gap-3 items-end">
             <div className="space-y-1.5">
-              <Label className="flex items-center justify-center gap-2 text-sm font-medium">
-                Título / Campanha
-                {filledFromTemplate && (
-                  <Badge variant="secondary" className="text-[10px]">Catálogo</Badge>
+              <Label className="text-xs text-muted-foreground">Valor do Depósito</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                className="h-10"
+              />
+              {templatePercent && (
+                <p className="text-[10px] text-muted-foreground text-center">
+                  Bônus {templatePercent}%{templateMaxValue ? ` (máx. ${templateMaxValue})` : ''}
+                </p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                Valor do Bônus *
+                {templatePercent && amount && (
+                  <Badge variant="secondary" className="text-[9px] px-1">Auto</Badge>
                 )}
               </Label>
               <Input
-                placeholder="Ex: Bônus 100% Depósito, Reload Semanal..."
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="text-center text-base font-medium h-11"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="h-10"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-center block">Moeda</Label>
+              <Label className="text-xs text-muted-foreground">Moeda</Label>
               <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger className="h-11 w-24">
+                <SelectTrigger className="h-10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -516,48 +556,12 @@ export function BonusDialog({
             </div>
           </div>
 
-          {/* 2️⃣ Valor do Depósito + Valor do Bônus (destacado) */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          {/* LINHA 3 — Regras de Rollover (Rollover + Base + Odd Mín.) */}
+          {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          <div className="grid grid-cols-3 gap-3 items-end">
             <div className="space-y-1.5">
-              <Label className="text-xs">Valor do Depósito</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
-                className="h-9"
-              />
-              {templatePercent && (
-                <p className="text-[10px] text-muted-foreground text-center">
-                  Bônus {templatePercent}%{templateMaxValue ? ` (máx. ${templateMaxValue})` : ''}
-                </p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs flex items-center gap-1">
-                Valor do Bônus *
-                {templatePercent && amount && (
-                  <Badge variant="secondary" className="text-[9px] px-1">Auto</Badge>
-                )}
-              </Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="h-9"
-              />
-            </div>
-          </div>
-
-          {/* 3️⃣ Linha — Rollover (3 colunas) */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1 text-xs">
+              <Label className="flex items-center gap-1 text-xs text-muted-foreground">
                 Rollover
                 {filledFromTemplate && rolloverMultiplier && (
                   <Badge variant="secondary" className="text-[9px] px-1">Cat.</Badge>
@@ -571,15 +575,15 @@ export function BonusDialog({
                   placeholder="6"
                   value={rolloverMultiplier}
                   onChange={(e) => setRolloverMultiplier(e.target.value)}
-                  className="h-9 pr-7"
+                  className="h-10 pr-7"
                 />
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">x</span>
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Base Rollover</Label>
+              <Label className="text-xs text-muted-foreground">Base Rollover</Label>
               <Select value={rolloverBase} onValueChange={setRolloverBase}>
-                <SelectTrigger className="h-9 text-xs">
+                <SelectTrigger className="h-10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -592,7 +596,7 @@ export function BonusDialog({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="flex items-center gap-1 text-xs">
+              <Label className="flex items-center gap-1 text-xs text-muted-foreground">
                 Odd Mín.
                 {filledFromTemplate && minOdds && (
                   <Badge variant="secondary" className="text-[9px] px-1">Cat.</Badge>
@@ -605,15 +609,17 @@ export function BonusDialog({
                 placeholder="1.50"
                 value={minOdds}
                 onChange={(e) => setMinOdds(e.target.value)}
-                className="h-9"
+                className="h-10"
               />
             </div>
           </div>
 
-          {/* 4️⃣ Linha — Prazo */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          {/* LINHA 4 — Prazo e Datas (Prazo + Data Crédito + Expiração) */}
+          {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          <div className="grid grid-cols-3 gap-3 items-end">
             <div className="space-y-1.5">
-              <Label className="flex items-center gap-1 text-xs">
+              <Label className="flex items-center gap-1 text-xs text-muted-foreground">
                 Prazo
                 {filledFromTemplate && deadlineDays && (
                   <Badge variant="secondary" className="text-[9px] px-1">Cat.</Badge>
@@ -634,53 +640,59 @@ export function BonusDialog({
                       setExpiresAt(format(expiration, "yyyy-MM-dd"));
                     }
                   }}
-                  className="h-9 pr-10"
+                  className="h-10 pr-10"
                 />
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">dias</span>
               </div>
             </div>
-          </div>
-
-          {/* 4️⃣ Linha 3 — Datas (2 colunas) */}
-          <div className="grid grid-cols-2 gap-3">
-            {status === "credited" && (
+            {status === "credited" ? (
               <div className="space-y-1.5">
-                <Label className="text-xs">Data do Crédito</Label>
-                <DatePicker
-                  value={creditedAt}
-                  onChange={setCreditedAt}
-                />
+                <Label className="text-xs text-muted-foreground">Data do Crédito</Label>
+                <div className="[&_button]:h-10">
+                  <DatePicker
+                    value={creditedAt}
+                    onChange={setCreditedAt}
+                  />
+                </div>
               </div>
+            ) : (
+              <div /> 
             )}
-            <div className={cn("space-y-1.5", status !== "credited" && "col-span-2")}>
-              <Label className="flex items-center gap-1 text-xs">
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1 text-xs text-muted-foreground">
                 Expiração
                 {filledFromTemplate && expiresAt && (
                   <Badge variant="secondary" className="text-[9px] px-1">Auto</Badge>
                 )}
               </Label>
-              <DatePicker
-                value={expiresAt}
-                onChange={setExpiresAt}
-              />
+              <div className="[&_button]:h-10">
+                <DatePicker
+                  value={expiresAt}
+                  onChange={setExpiresAt}
+                />
+              </div>
             </div>
           </div>
 
-          {/* 5️⃣ Linha 4 — Status (centralizado) */}
-          <div className="flex flex-col items-center space-y-1.5">
-            <Label className="text-xs">Status</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v as BonusStatus)}>
-              <SelectTrigger className="h-9 w-[180px] justify-center [&>span]:flex [&>span]:items-center [&>span]:justify-center">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    <span className={opt.color}>{opt.label}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          {/* LINHA 5 — Status (centralizado) */}
+          {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          <div className="flex justify-center pt-2">
+            <div className="space-y-1.5 w-48">
+              <Label className="text-xs text-muted-foreground text-center block">Status</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as BonusStatus)}>
+                <SelectTrigger className="h-10 justify-center [&>span]:flex [&>span]:items-center [&>span]:justify-center">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      <span className={opt.color}>{opt.label}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
