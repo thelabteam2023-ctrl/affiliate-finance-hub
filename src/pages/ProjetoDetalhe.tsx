@@ -8,9 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useProjetoResultado } from "@/hooks/useProjetoResultado";
+import { useProjectFavorites } from "@/hooks/useProjectFavorites";
 import { 
   ArrowLeft, 
   FolderKanban, 
@@ -26,7 +28,8 @@ import {
   Coins,
   AlertTriangle,
   Percent,
-  Gift
+  Gift,
+  Star
 } from "lucide-react";
 import { format, differenceInDays, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -83,6 +86,9 @@ export default function ProjetoDetalhe() {
   const [apostasResumo, setApostasResumo] = useState<ApostasResumo | null>(null);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  
+  // Project favorites
+  const { isFavorite, toggleFavorite } = useProjectFavorites();
   
   // Period filter state
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("todo");
@@ -383,10 +389,36 @@ export default function ProjetoDetalhe() {
             </div>
           </div>
         </div>
-        <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
-          <Edit className="mr-2 h-4 w-4" />
-          Editar Projeto
-        </Button>
+        <div className="flex items-center gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => {
+                    if (id) toggleFavorite(id);
+                  }}
+                >
+                  <Star 
+                    className={`h-4 w-4 transition-colors ${
+                      id && isFavorite(id) 
+                        ? "fill-amber-400 text-amber-400" 
+                        : "text-muted-foreground hover:text-amber-400"
+                    }`} 
+                  />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{id && isFavorite(id) ? "Remover dos atalhos" : "Adicionar aos atalhos"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
+            <Edit className="mr-2 h-4 w-4" />
+            Editar Projeto
+          </Button>
+        </div>
       </div>
 
       {/* Period Filters */}

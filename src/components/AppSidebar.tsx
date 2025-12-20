@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useAuth } from "@/hooks/useAuth";
 import { useRole } from "@/hooks/useRole";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useProjectFavorites } from "@/hooks/useProjectFavorites";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -21,6 +22,9 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 interface MenuItem {
   title: string;
@@ -33,6 +37,11 @@ interface MenuItem {
 interface MenuGroup {
   label: string;
   items: MenuItem[];
+}
+
+interface ProjectInfo {
+  id: string;
+  nome: string;
 }
 
 // Icon mapping for favorites
@@ -110,11 +119,39 @@ export function AppSidebar() {
   const { user, signOut, role, isSystemOwner, publicId } = useAuth();
   const { canManageWorkspace } = useRole();
   const { favorites } = useFavorites();
+  const { favorites: projectFavorites } = useProjectFavorites();
+  const { workspace } = useWorkspace();
   const { canAccess } = useModuleAccess();
   const currentPath = location.pathname;
   
+  // State for project names
+  const [projectNames, setProjectNames] = useState<Record<string, string>>({});
+  
   const isCollapsed = state === "collapsed";
   const isActive = (path: string) => currentPath === path;
+
+  // Load project names for favorites
+  useEffect(() => {
+    const loadProjectNames = async () => {
+      if (projectFavorites.length === 0) return;
+      
+      const projectIds = projectFavorites.map(f => f.project_id);
+      const { data } = await supabase
+        .from('projetos')
+        .select('id, nome')
+        .in('id', projectIds);
+      
+      if (data) {
+        const names: Record<string, string> = {};
+        data.forEach(p => {
+          names[p.id] = p.nome;
+        });
+        setProjectNames(names);
+      }
+    };
+    
+    loadProjectNames();
+  }, [projectFavorites]);
 
   // Function to check if user can see a menu item using the new module access system
   const canSeeItem = (item: MenuItem): boolean => {
@@ -136,6 +173,12 @@ export function AppSidebar() {
     const menuItem = allMenuItems.find(item => item.url === fav.page_path);
     return menuItem ? canSeeItem(menuItem) : false;
   });
+
+  // Check if user has access to projects module
+  const hasProjectAccess = canAccess("projetos");
+
+  // Combine page favorites and project favorites
+  const hasAnyFavorites = visibleFavorites.length > 0 || (hasProjectAccess && projectFavorites.length > 0);
 
   const renderMenuItem = (item: MenuItem) => {
     if (!canSeeItem(item)) return null;
@@ -217,6 +260,45 @@ export function AppSidebar() {
     );
   };
 
+  const renderProjectFavoriteItem = (projectFavorite: { project_id: string }) => {
+    const projectPath = `/projeto/${projectFavorite.project_id}`;
+    const projectName = projectNames[projectFavorite.project_id] || "Projeto";
+
+    return (
+      <SidebarMenuItem key={projectFavorite.project_id}>
+        {isCollapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <SidebarMenuButton asChild isActive={currentPath === projectPath}>
+                <NavLink 
+                  to={projectPath}
+                  className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-accent/50"
+                  activeClassName="bg-primary/10 text-primary"
+                >
+                  <FolderKanban className="h-4 w-4" />
+                </NavLink>
+              </SidebarMenuButton>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="font-medium">
+              {projectName}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <SidebarMenuButton asChild isActive={currentPath === projectPath}>
+            <NavLink 
+              to={projectPath}
+              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-accent/50"
+              activeClassName="bg-primary/10 text-primary font-medium"
+            >
+              <FolderKanban className="h-4 w-4 shrink-0" />
+              <span className="text-sm truncate">{projectName}</span>
+            </NavLink>
+          </SidebarMenuButton>
+        )}
+      </SidebarMenuItem>
+    );
+  };
+
   const renderMenuGroup = (group: MenuGroup, index: number) => {
     const visibleItems = group.items.filter(canSeeItem);
     if (visibleItems.length === 0) return null;
@@ -257,8 +339,8 @@ export function AppSidebar() {
           )}
         </div>
 
-        {/* Favorites Section - Only shown if there are favorites */}
-        {visibleFavorites.length > 0 && (
+        {/* Favorites Section - Shows page favorites and project favorites */}
+        {hasAnyFavorites && (
           <SidebarGroup>
             <SidebarGroupLabel 
               className={`
@@ -271,14 +353,17 @@ export function AppSidebar() {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-0.5">
+                {/* Page favorites */}
                 {visibleFavorites.map(renderFavoriteItem)}
+                {/* Project favorites */}
+                {hasProjectAccess && projectFavorites.map(renderProjectFavoriteItem)}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         )}
 
         {/* Separator after favorites */}
-        {visibleFavorites.length > 0 && (
+        {hasAnyFavorites && (
           <div className="my-4 mx-3 border-t border-border/50" />
         )}
 

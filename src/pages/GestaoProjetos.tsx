@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,8 +24,7 @@ import {
   Edit,
   ExternalLink,
   Trash2,
-  Eye,
-  Star
+  Eye
 } from "lucide-react";
 import { VisualizarOperadoresDialog } from "@/components/projetos/VisualizarOperadoresDialog";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
@@ -46,17 +45,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useProjectFavorites } from "@/hooks/useProjectFavorites";
 
 interface Projeto {
   id: string;
@@ -93,9 +83,6 @@ export default function GestaoProjetos() {
   const [projetoToDelete, setProjetoToDelete] = useState<Projeto | null>(null);
   const [visualizarOperadoresOpen, setVisualizarOperadoresOpen] = useState(false);
   const [projetoParaVisualizar, setProjetoParaVisualizar] = useState<Projeto | null>(null);
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-
-  const { isFavorite, toggleFavorite, count: favoritesCount, getFavoriteIds } = useProjectFavorites();
 
   useEffect(() => {
     fetchProjetos();
@@ -123,38 +110,11 @@ export default function GestaoProjetos() {
     }
   };
 
-  const handleToggleFavorite = async (e: React.MouseEvent, projectId: string) => {
-    e.stopPropagation();
-    const success = await toggleFavorite(projectId);
-    if (!success) {
-      toast.error("Não foi possível atualizar favorito");
-    }
-  };
-
-  // Sort and filter projects: favorites first, then by name
-  const sortedAndFilteredProjetos = useMemo(() => {
-    const favoriteIds = getFavoriteIds();
-    
-    // Filter first
-    const filtered = projetos.filter((proj) => {
-      const matchesSearch = proj.nome.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === "all" || proj.status === statusFilter;
-      const matchesFavoriteFilter = showFavoritesOnly ? favoriteIds.includes(proj.id) : true;
-      return matchesSearch && matchesStatus && matchesFavoriteFilter;
-    });
-
-    // Sort: favorites first, then by name
-    return filtered.sort((a, b) => {
-      const aIsFav = favoriteIds.includes(a.id);
-      const bIsFav = favoriteIds.includes(b.id);
-      
-      if (aIsFav && !bIsFav) return -1;
-      if (!aIsFav && bIsFav) return 1;
-      
-      // Within same category, sort by name
-      return a.nome.localeCompare(b.nome);
-    });
-  }, [projetos, searchTerm, statusFilter, showFavoritesOnly, getFavoriteIds]);
+  const filteredProjetos = projetos.filter((proj) => {
+    const matchesSearch = proj.nome.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || proj.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const handleOpenDialog = (projeto: Projeto | null, mode: "view" | "edit" | "create", initialTab?: string) => {
     setSelectedProjeto(projeto);
@@ -263,19 +223,6 @@ export default function GestaoProjetos() {
               />
             </div>
             
-            {/* Favorites filter */}
-            <div className="flex items-center gap-2 px-3 py-1.5 border rounded-md bg-card">
-              <Switch
-                id="filter-favorites"
-                checked={showFavoritesOnly}
-                onCheckedChange={setShowFavoritesOnly}
-              />
-              <Label htmlFor="filter-favorites" className="text-sm cursor-pointer flex items-center gap-1">
-                <Star className="h-3.5 w-3.5 text-amber-400" />
-                Favoritos ({favoritesCount})
-              </Label>
-            </div>
-            
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Status" />
@@ -319,7 +266,7 @@ export default function GestaoProjetos() {
             </Card>
           ))}
         </div>
-      ) : sortedAndFilteredProjetos.length === 0 ? (
+      ) : filteredProjetos.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-10">
@@ -335,7 +282,7 @@ export default function GestaoProjetos() {
         </Card>
       ) : viewMode === "cards" ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {sortedAndFilteredProjetos.map((projeto) => (
+          {filteredProjetos.map((projeto) => (
             <Card 
               key={projeto.id} 
               className="cursor-pointer hover:border-primary/50 transition-colors"
@@ -356,34 +303,9 @@ export default function GestaoProjetos() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => handleToggleFavorite(e, projeto.id)}
-                          >
-                            <Star 
-                              className={`h-4 w-4 transition-colors ${
-                                isFavorite(projeto.id) 
-                                  ? "fill-amber-400 text-amber-400" 
-                                  : "text-muted-foreground hover:text-amber-400"
-                              }`} 
-                            />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{isFavorite(projeto.id) ? "Remover dos favoritos" : "Favoritar projeto"}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <Badge className={getStatusColor(projeto.status)}>
-                      {getStatusLabel(projeto.status)}
-                    </Badge>
-                  </div>
+                  <Badge className={getStatusColor(projeto.status)}>
+                    {getStatusLabel(projeto.status)}
+                  </Badge>
                 </div>
               </CardHeader>
               <CardContent>
@@ -498,7 +420,7 @@ export default function GestaoProjetos() {
         <Card>
           <ScrollArea className="h-[600px]">
             <div className="divide-y">
-              {sortedAndFilteredProjetos.map((projeto) => (
+              {filteredProjetos.map((projeto) => (
                 <div
                   key={projeto.id}
                   className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer"
@@ -542,28 +464,6 @@ export default function GestaoProjetos() {
                       {getStatusLabel(projeto.status)}
                     </Badge>
                     <div className="flex gap-1">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={(e) => handleToggleFavorite(e, projeto.id)}
-                            >
-                              <Star 
-                                className={`h-4 w-4 transition-colors ${
-                                  isFavorite(projeto.id) 
-                                    ? "fill-amber-400 text-amber-400" 
-                                    : "text-muted-foreground hover:text-amber-400"
-                                }`} 
-                              />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{isFavorite(projeto.id) ? "Remover dos favoritos" : "Favoritar projeto"}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
                       <Button 
                         variant="ghost" 
                         size="icon"
