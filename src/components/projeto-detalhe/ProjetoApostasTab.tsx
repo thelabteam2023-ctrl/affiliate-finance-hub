@@ -614,32 +614,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
             >
               {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" className="h-9">
-                  <Plus className="mr-1 h-4 w-4" />
-                  Nova Aposta
-                  <ChevronDown className="ml-1 h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleOpenDialog(null)}>
-                  <Target className="mr-2 h-4 w-4" />
-                  Aposta Simples
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleOpenMultiplaDialog(null)}>
-                  <Layers className="mr-2 h-4 w-4" />
-                  Aposta Múltipla
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  setSelectedSurebet(null); // CRÍTICO: Limpar surebet selecionada antes de abrir "Nova Arbitragem"
-                  setDialogSurebetOpen(true);
-                }}>
-                  <ArrowLeftRight className="mr-2 h-4 w-4" />
-                  Surebet
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input

@@ -49,6 +49,7 @@ import { ProjetoFreebetsTab } from "@/components/projeto-detalhe/ProjetoFreebets
 import { ProjetoCiclosTab } from "@/components/projeto-detalhe/ProjetoCiclosTab";
 import { ProjetoBonusArea } from "@/components/projeto-detalhe/bonus";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
+import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar";
 import { DateRange } from "react-day-picker";
 
 interface Projeto {
@@ -429,9 +430,18 @@ export default function ProjetoDetalhe() {
         </div>
       </div>
 
-      {/* Period Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-muted-foreground">Período:</span>
+      {/* Global Actions Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <GlobalActionsBar 
+          projetoId={id!}
+          onApostaCreated={() => { fetchApostasResumo(); refreshResultado(); }}
+          onBonusCreated={() => { /* Bonus area will auto-refresh */ }}
+          onNavigateToTab={setActiveTab}
+        />
+        
+        {/* Period Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">Período:</span>
         <div className="flex flex-wrap gap-1">
           {[
             { value: "hoje", label: "Hoje" },
@@ -477,6 +487,7 @@ export default function ProjetoDetalhe() {
             </PopoverContent>
           </Popover>
         </div>
+      </div>
       </div>
 
       {/* KPIs Resumo - Only show on performance tabs */}
