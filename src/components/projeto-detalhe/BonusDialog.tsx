@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -78,7 +77,7 @@ export function BonusDialog({
   const [status, setStatus] = useState<BonusStatus>("credited");
   const [creditedAt, setCreditedAt] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
-  const [notes, setNotes] = useState("");
+  
   
   // New rollover fields
   const [rolloverMultiplier, setRolloverMultiplier] = useState("");
@@ -114,7 +113,7 @@ export function BonusDialog({
         setStatus(bonus.status);
         setCreditedAt(bonus.credited_at ? format(new Date(bonus.credited_at), "yyyy-MM-dd") : "");
         setExpiresAt(bonus.expires_at ? format(new Date(bonus.expires_at), "yyyy-MM-dd") : "");
-        setNotes(bonus.notes || "");
+        
         setRolloverMultiplier(bonus.rollover_multiplier ? String(bonus.rollover_multiplier) : "");
         setRolloverBase(bonus.rollover_base || "DEPOSITO_BONUS");
         setDepositAmount(bonus.deposit_amount ? String(bonus.deposit_amount) : "");
@@ -131,7 +130,7 @@ export function BonusDialog({
         setStatus("credited");
         setCreditedAt(format(new Date(), "yyyy-MM-dd"));
         setExpiresAt("");
-        setNotes("");
+        
         setRolloverMultiplier("");
         setRolloverBase("DEPOSITO_BONUS");
         setDepositAmount("");
@@ -225,7 +224,7 @@ export function BonusDialog({
       status,
       credited_at: status === "credited" && creditedAt ? new Date(creditedAt).toISOString() : null,
       expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
-      notes: notes.trim() || null,
+      notes: null,
       source: filledFromTemplate ? "template" : "manual",
       template_snapshot: templateSnapshot,
       rollover_multiplier: parsedRollover,
@@ -257,16 +256,16 @@ export function BonusDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Bookmaker Select */}
-          <div className="space-y-2">
-            <Label>Casa de Apostas *</Label>
+        <div className="space-y-5 py-4">
+          {/* Bookmaker Select - Compact */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Casa de Apostas</Label>
             <Select
               value={bookmakerId}
               onValueChange={setBookmakerId}
               disabled={isEditMode || !!preselectedBookmakerId}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-9">
                 <SelectValue placeholder="Selecione a casa" />
               </SelectTrigger>
               <SelectContent>
@@ -291,12 +290,12 @@ export function BonusDialog({
             </Select>
           </div>
 
-          {/* Template Suggestions */}
+          {/* Template Suggestions - Refined */}
           {!isEditMode && hasTemplates && bookmakerId && (
             <div className="space-y-2 p-3 rounded-lg border border-primary/20 bg-primary/5">
               <div className="flex items-center gap-2 text-sm font-medium text-primary">
                 <Sparkles className="h-4 w-4" />
-                Sugestões de bônus da casa
+                Sugestões de bônus
               </div>
               <div className="flex flex-wrap gap-2">
                 {templates.map((template) => (
@@ -334,25 +333,26 @@ export function BonusDialog({
             </div>
           )}
 
-          {/* Title */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
+          {/* 1️⃣ Título da Campanha - Centralizado e Destacado */}
+          <div className="space-y-1.5">
+            <Label className="flex items-center justify-center gap-2 text-sm font-medium">
               Título / Campanha
               {filledFromTemplate && (
                 <Badge variant="secondary" className="text-[10px]">Catálogo</Badge>
               )}
             </Label>
             <Input
-              placeholder="Ex: Bônus 100% Depósito, Reload Semanal, VIP..."
+              placeholder="Ex: Bônus 100% Depósito, Reload Semanal..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              className="text-center text-base font-medium h-11"
             />
           </div>
 
-          {/* Amount and Currency */}
+          {/* 2️⃣ Linha 1 — Valores principais (3 colunas) */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2 space-y-2">
-              <Label>Valor do Bônus *</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Valor do Bônus *</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -360,12 +360,13 @@ export function BonusDialog({
                 placeholder="0.00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
+                className="h-9"
               />
             </div>
-            <div className="space-y-2">
-              <Label>Moeda</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Moeda</Label>
               <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -377,43 +378,51 @@ export function BonusDialog({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          {/* Deposit Amount (optional for rollover calculation) */}
-          <div className="space-y-2">
-            <Label>Valor do Depósito (para cálculo de rollover)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              value={depositAmount}
-              onChange={(e) => setDepositAmount(e.target.value)}
-            />
-          </div>
-
-          {/* Rollover Section */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                Rollover (vezes)
-                {filledFromTemplate && rolloverMultiplier && (
-                  <Badge variant="secondary" className="text-[10px]">Catálogo</Badge>
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1 text-xs">
+                Odd Mín.
+                {filledFromTemplate && minOdds && (
+                  <Badge variant="secondary" className="text-[9px] px-1">Cat.</Badge>
                 )}
               </Label>
               <Input
                 type="number"
-                step="1"
-                min="0"
-                placeholder="Ex: 6"
-                value={rolloverMultiplier}
-                onChange={(e) => setRolloverMultiplier(e.target.value)}
+                step="0.01"
+                min="1"
+                placeholder="1.50"
+                value={minOdds}
+                onChange={(e) => setMinOdds(e.target.value)}
+                className="h-9"
               />
             </div>
-            <div className="space-y-2">
-              <Label>Base do Rollover</Label>
+          </div>
+
+          {/* 3️⃣ Linha 2 — Regras do rollover (3 colunas) */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1 text-xs">
+                Rollover
+                {filledFromTemplate && rolloverMultiplier && (
+                  <Badge variant="secondary" className="text-[9px] px-1">Cat.</Badge>
+                )}
+              </Label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="6"
+                  value={rolloverMultiplier}
+                  onChange={(e) => setRolloverMultiplier(e.target.value)}
+                  className="h-9 pr-7"
+                />
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">x</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Base Rollover</Label>
               <Select value={rolloverBase} onValueChange={setRolloverBase}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -425,52 +434,65 @@ export function BonusDialog({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          {/* Min Odds and Deadline */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Odd Mínima</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="1"
-                placeholder="Ex: 1.50"
-                value={minOdds}
-                onChange={(e) => setMinOdds(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                Prazo (dias)
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1 text-xs">
+                Prazo
                 {filledFromTemplate && deadlineDays && (
-                  <Badge variant="secondary" className="text-[10px]">Catálogo</Badge>
+                  <Badge variant="secondary" className="text-[9px] px-1">Cat.</Badge>
                 )}
               </Label>
-              <Input
-                type="number"
-                step="1"
-                min="1"
-                placeholder="Ex: 30"
-                value={deadlineDays}
-                onChange={(e) => {
-                  setDeadlineDays(e.target.value);
-                  // Auto-update expiration date
-                  if (e.target.value && creditedAt) {
-                    const baseDate = creditedAt ? new Date(creditedAt) : new Date();
-                    const expiration = addDays(baseDate, Number(e.target.value));
-                    setExpiresAt(format(expiration, "yyyy-MM-dd"));
-                  }
-                }}
+              <div className="relative">
+                <Input
+                  type="number"
+                  step="1"
+                  min="1"
+                  placeholder="30"
+                  value={deadlineDays}
+                  onChange={(e) => {
+                    setDeadlineDays(e.target.value);
+                    if (e.target.value && creditedAt) {
+                      const baseDate = creditedAt ? new Date(creditedAt) : new Date();
+                      const expiration = addDays(baseDate, Number(e.target.value));
+                      setExpiresAt(format(expiration, "yyyy-MM-dd"));
+                    }
+                  }}
+                  className="h-9 pr-10"
+                />
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">dias</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 4️⃣ Linha 3 — Datas (2 colunas) */}
+          <div className="grid grid-cols-2 gap-3">
+            {status === "credited" && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Data do Crédito</Label>
+                <DatePicker
+                  value={creditedAt}
+                  onChange={setCreditedAt}
+                />
+              </div>
+            )}
+            <div className={cn("space-y-1.5", status !== "credited" && "col-span-2")}>
+              <Label className="flex items-center gap-1 text-xs">
+                Expiração
+                {filledFromTemplate && expiresAt && (
+                  <Badge variant="secondary" className="text-[9px] px-1">Auto</Badge>
+                )}
+              </Label>
+              <DatePicker
+                value={expiresAt}
+                onChange={setExpiresAt}
               />
             </div>
           </div>
 
-          {/* Status */}
-          <div className="space-y-2">
-            <Label>Status *</Label>
+          {/* 5️⃣ Linha 4 — Status (largura média) */}
+          <div className="space-y-1.5 max-w-[200px]">
+            <Label className="text-xs">Status</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as BonusStatus)}>
-              <SelectTrigger>
+              <SelectTrigger className="h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -481,42 +503,6 @@ export function BonusDialog({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          {/* Credited At - only show if status is credited */}
-          {status === "credited" && (
-            <div className="space-y-2">
-              <Label>Data do Crédito</Label>
-              <DatePicker
-                value={creditedAt}
-                onChange={setCreditedAt}
-              />
-            </div>
-          )}
-
-          {/* Expires At */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              Data de Expiração
-              {filledFromTemplate && expiresAt && (
-                <Badge variant="secondary" className="text-[10px]">Auto-calculada</Badge>
-              )}
-            </Label>
-            <DatePicker
-              value={expiresAt}
-              onChange={setExpiresAt}
-            />
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label>Observações</Label>
-            <Textarea
-              placeholder="Detalhes adicionais sobre o bônus..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-            />
           </div>
         </div>
 
