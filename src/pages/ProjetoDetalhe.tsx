@@ -29,8 +29,16 @@ import {
   AlertTriangle,
   Percent,
   Gift,
-  Star
+  Star,
+  Settings2,
+  ChevronDown
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format, differenceInDays, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ProjetoDashboardTab } from "@/components/projeto-detalhe/ProjetoDashboardTab";
@@ -97,7 +105,7 @@ export default function ProjetoDetalhe() {
   const [activeTab, setActiveTab] = useState("apostas");
   
   // KPIs should only show on performance tabs
-  const showKpis = ["dashboard", "apostas", "perdas"].includes(activeTab);
+  const showKpis = ["visao-geral", "apostas", "perdas", "ciclos"].includes(activeTab);
 
   // Helper to get date range from filter - MUST be defined before use
   const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
@@ -553,21 +561,14 @@ export default function ProjetoDetalhe() {
       {/* Tabs */}
       <Tabs defaultValue="apostas" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="flex-wrap">
-          <TabsTrigger value="dashboard" className="flex items-center gap-2">
+          {/* Camada 1 - Operação (sempre visível) */}
+          <TabsTrigger value="visao-geral" className="flex items-center gap-2">
             <LayoutDashboard className="h-4 w-4" />
-            Dashboard
+            Visão Geral
           </TabsTrigger>
           <TabsTrigger value="apostas" className="flex items-center gap-2">
             <Target className="h-4 w-4" />
             Apostas Livres
-          </TabsTrigger>
-          <TabsTrigger value="ciclos" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Ciclos
-          </TabsTrigger>
-          <TabsTrigger value="vinculos" className="flex items-center gap-2">
-            <Link2 className="h-4 w-4" />
-            Vínculos
           </TabsTrigger>
           <TabsTrigger value="freebets" className="flex items-center gap-2">
             <Gift className="h-4 w-4" />
@@ -577,13 +578,53 @@ export default function ProjetoDetalhe() {
             <Coins className="h-4 w-4" />
             Bônus
           </TabsTrigger>
-          <TabsTrigger value="perdas" className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            Perdas
+          <TabsTrigger value="vinculos" className="flex items-center gap-2">
+            <Link2 className="h-4 w-4" />
+            Vínculos
           </TabsTrigger>
+          
+          {/* Camada 2 - Gestão (dropdown) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                  ["ciclos", "perdas"].includes(activeTab)
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Settings2 className="h-4 w-4 mr-2" />
+                Gestão
+                <ChevronDown className="h-3 w-3 ml-1" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[140px]">
+              <DropdownMenuItem 
+                onClick={() => setActiveTab("ciclos")}
+                className={cn(
+                  "flex items-center gap-2 cursor-pointer",
+                  activeTab === "ciclos" && "bg-accent"
+                )}
+              >
+                <Clock className="h-4 w-4" />
+                Ciclos
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => setActiveTab("perdas")}
+                className={cn(
+                  "flex items-center gap-2 cursor-pointer",
+                  activeTab === "perdas" && "bg-accent"
+                )}
+              >
+                <AlertTriangle className="h-4 w-4" />
+                Perdas
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </TabsList>
 
-        <TabsContent value="dashboard">
+        <TabsContent value="visao-geral">
           <ProjetoDashboardTab 
             projetoId={id!} 
             periodFilter={periodFilter}
@@ -600,20 +641,20 @@ export default function ProjetoDetalhe() {
           />
         </TabsContent>
 
-        <TabsContent value="ciclos">
-          <ProjetoCiclosTab projetoId={id!} />
-        </TabsContent>
-
-        <TabsContent value="vinculos">
-          <ProjetoVinculosTab projetoId={id!} />
-        </TabsContent>
-
         <TabsContent value="freebets">
           <ProjetoFreebetsTab projetoId={id!} />
         </TabsContent>
 
         <TabsContent value="bonus">
           <ProjetoBonusArea projetoId={id!} />
+        </TabsContent>
+
+        <TabsContent value="vinculos">
+          <ProjetoVinculosTab projetoId={id!} />
+        </TabsContent>
+
+        <TabsContent value="ciclos">
+          <ProjetoCiclosTab projetoId={id!} />
         </TabsContent>
 
         <TabsContent value="perdas">
