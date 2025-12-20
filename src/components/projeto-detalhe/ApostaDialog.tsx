@@ -307,34 +307,19 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     parsedData: printParsedData,
     imagePreview: printImagePreview,
     fieldsNeedingReview: printFieldsNeedingReview,
+    pendingData: printPendingData,
     processImage: processPrintImage,
     processFromClipboard: processPrintClipboard,
     clearParsedData: clearPrintData,
-    applyParsedData: applyPrintData
+    applyParsedData: applyPrintData,
+    resolveMarketForSport: resolvePrintMarket
   } = useImportBetPrint();
 
   // Track if mercado/selecao came from print (to bypass dependencies)
   const [mercadoFromPrint, setMercadoFromPrint] = useState(false);
   const [selecaoFromPrint, setSelecaoFromPrint] = useState(false);
-
-  // Apply parsed data from print when available
-  useEffect(() => {
-    if (printParsedData && !aposta) {
-      const data = applyPrintData();
-      if (data.mandante) setMandante(data.mandante);
-      if (data.visitante) setVisitante(data.visitante);
-      if (data.dataHora) setDataAposta(data.dataHora);
-      if (data.esporte) setEsporte(data.esporte);
-      if (data.mercado) {
-        setMercado(data.mercado);
-        setMercadoFromPrint(true);
-      }
-      if (data.selecao) {
-        setSelecao(data.selecao);
-        setSelecaoFromPrint(true);
-      }
-    }
-  }, [printParsedData, aposta, applyPrintData]);
+  // Store pending market intention for later resolution
+  const [pendingMercadoIntencao, setPendingMercadoIntencao] = useState<string | null>(null);
 
   // Handle paste for importing prints (Ctrl+V)
   const handlePaste = useCallback((event: ClipboardEvent) => {
@@ -485,6 +470,58 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   const mercadosDisponiveis = mercadoFromPrint && mercado && !baseMercados.includes(mercado)
     ? [mercado, ...baseMercados]
     : baseMercados;
+
+  // Apply parsed data from print when available - ALWAYS fill, even with low confidence
+  useEffect(() => {
+    if (printParsedData && !aposta) {
+      const data = applyPrintData();
+      
+      // ALWAYS fill mandante/visitante if detected
+      if (data.mandante) setMandante(data.mandante);
+      if (data.visitante) setVisitante(data.visitante);
+      if (data.dataHora) setDataAposta(data.dataHora);
+      
+      // Set esporte first (market depends on it for options, but we decouple for print)
+      if (data.esporte) setEsporte(data.esporte);
+      
+      // Store market intention for resolution when options load
+      if (printPendingData.mercadoIntencao || printPendingData.mercadoRaw) {
+        setPendingMercadoIntencao(printPendingData.mercadoIntencao || printPendingData.mercadoRaw);
+        setMercadoFromPrint(true);
+      }
+      
+      // Try to set mercado directly if it matches an option
+      if (data.mercado) {
+        setMercado(data.mercado);
+        setMercadoFromPrint(true);
+      }
+      
+      // ALWAYS fill selecao if detected
+      if (data.selecao) {
+        setSelecao(data.selecao);
+        setSelecaoFromPrint(true);
+      }
+    }
+  }, [printParsedData, aposta, applyPrintData, printPendingData]);
+
+  // Resolve pending market when sport changes or options become available
+  useEffect(() => {
+    if (pendingMercadoIntencao && esporte && mercadoFromPrint) {
+      // Get the available markets for this sport
+      const sportMarkets = MERCADOS_POR_ESPORTE[esporte] || MERCADOS_POR_ESPORTE["Outro"];
+      
+      // Try to resolve the market to an available option
+      const resolved = resolvePrintMarket(esporte, sportMarkets);
+      
+      if (resolved && sportMarkets.includes(resolved)) {
+        setMercado(resolved);
+        // Don't clear pendingMercadoIntencao in case user changes sport
+      } else if (resolved) {
+        // Set the resolved value even if not in list (will show as custom option)
+        setMercado(resolved);
+      }
+    }
+  }, [pendingMercadoIntencao, esporte, mercadoFromPrint, resolvePrintMarket]);
 
   useEffect(() => {
     if (open) {

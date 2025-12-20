@@ -1,6 +1,12 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { 
+  findCanonicalMarket, 
+  normalizeSport, 
+  resolveMarketToOptions,
+  getMarketsForSport
+} from "@/lib/marketNormalizer";
 
 export interface ParsedField {
   value: string | null;
@@ -25,11 +31,19 @@ export type FieldsNeedingReview = {
   selecao: boolean;
 };
 
+// Store intended market value that may need to be resolved later
+export interface PendingPrintData {
+  mercadoIntencao: string | null;
+  mercadoRaw: string | null;
+  esporteDetectado: string | null;
+}
+
 interface UseImportBetPrintReturn {
   isProcessing: boolean;
   parsedData: ParsedBetSlip | null;
   imagePreview: string | null;
   fieldsNeedingReview: FieldsNeedingReview;
+  pendingData: PendingPrintData;
   processImage: (file: File) => Promise<void>;
   processFromClipboard: (event: ClipboardEvent) => Promise<void>;
   clearParsedData: () => void;
@@ -41,6 +55,7 @@ interface UseImportBetPrintReturn {
     mercado: string;
     selecao: string;
   };
+  resolveMarketForSport: (sport: string, availableOptions: string[]) => string;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -49,6 +64,11 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
   const [isProcessing, setIsProcessing] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedBetSlip | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [pendingData, setPendingData] = useState<PendingPrintData>({
+    mercadoIntencao: null,
+    mercadoRaw: null,
+    esporteDetectado: null
+  });
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -74,6 +94,7 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
 
     setIsProcessing(true);
     setParsedData(null);
+    setPendingData({ mercadoIntencao: null, mercadoRaw: null, esporteDetectado: null });
 
     try {
       // Convert to base64
@@ -95,7 +116,42 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       }
 
       if (data?.success && data?.data) {
-        setParsedData(data.data);
+        const rawData = data.data as ParsedBetSlip;
+        
+        // Normalize sport
+        if (rawData.esporte?.value) {
+          const sportResult = normalizeSport(rawData.esporte.value);
+          rawData.esporte.value = sportResult.normalized;
+          // Downgrade confidence if normalization was uncertain
+          if (sportResult.confidence === "low" && rawData.esporte.confidence === "high") {
+            rawData.esporte.confidence = "medium";
+          }
+        }
+        
+        // Normalize market and store intention for later resolution
+        if (rawData.mercado?.value) {
+          const marketRaw = rawData.mercado.value;
+          const canonicalResult = findCanonicalMarket(marketRaw);
+          
+          // Store the intention for later resolution
+          setPendingData({
+            mercadoIntencao: canonicalResult.normalized,
+            mercadoRaw: marketRaw,
+            esporteDetectado: rawData.esporte?.value || null
+          });
+          
+          // Set the normalized value
+          rawData.mercado.value = canonicalResult.normalized;
+          
+          // Adjust confidence based on normalization
+          if (canonicalResult.confidence === "low") {
+            rawData.mercado.confidence = "low";
+          } else if (canonicalResult.confidence === "medium" && rawData.mercado.confidence === "high") {
+            rawData.mercado.confidence = "medium";
+          }
+        }
+        
+        setParsedData(rawData);
         toast.success("Print analisado com sucesso!");
       } else {
         throw new Error("Resposta inválida do servidor");
@@ -129,8 +185,28 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
   const clearParsedData = useCallback(() => {
     setParsedData(null);
     setImagePreview(null);
+    setPendingData({ mercadoIntencao: null, mercadoRaw: null, esporteDetectado: null });
   }, []);
 
+  // Resolve market for a specific sport and available options
+  const resolveMarketForSport = useCallback((sport: string, availableOptions: string[]): string => {
+    if (!pendingData.mercadoIntencao && !pendingData.mercadoRaw) {
+      return "";
+    }
+    
+    // Use the raw market if intention is not set
+    const marketToResolve = pendingData.mercadoIntencao || pendingData.mercadoRaw || "";
+    
+    // If no available options provided, get them from sport
+    const options = availableOptions.length > 0 
+      ? availableOptions 
+      : getMarketsForSport(sport);
+    
+    const resolved = resolveMarketToOptions(marketToResolve, options);
+    return resolved.normalized;
+  }, [pendingData]);
+
+  // Apply parsed data - ALWAYS fill fields, even with low confidence
   const applyParsedData = useCallback(() => {
     if (!parsedData) {
       return {
@@ -143,36 +219,26 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       };
     }
 
+    // CRITICAL CHANGE: Always fill if there's a value, regardless of confidence
+    // The "Revisar" indicator is now ONLY a visual warning, NOT a block
     return {
-      mandante: parsedData.mandante?.confidence !== "none" && parsedData.mandante?.value 
-        ? parsedData.mandante.value 
-        : "",
-      visitante: parsedData.visitante?.confidence !== "none" && parsedData.visitante?.value 
-        ? parsedData.visitante.value 
-        : "",
-      dataHora: parsedData.dataHora?.confidence !== "none" && parsedData.dataHora?.value 
-        ? parsedData.dataHora.value 
-        : "",
-      esporte: parsedData.esporte?.confidence !== "none" && parsedData.esporte?.value 
-        ? parsedData.esporte.value 
-        : "",
-      mercado: parsedData.mercado?.confidence !== "none" && parsedData.mercado?.value 
-        ? parsedData.mercado.value 
-        : "",
-      selecao: parsedData.selecao?.confidence !== "none" && parsedData.selecao?.value 
-        ? parsedData.selecao.value 
-        : ""
+      mandante: parsedData.mandante?.value || "",
+      visitante: parsedData.visitante?.value || "",
+      dataHora: parsedData.dataHora?.value || "",
+      esporte: parsedData.esporte?.value || "",
+      mercado: parsedData.mercado?.value || "",
+      selecao: parsedData.selecao?.value || ""
     };
   }, [parsedData]);
 
-  // Calculate which fields need review (medium or low confidence)
+  // Calculate which fields need review (medium or low confidence, but still filled)
   const fieldsNeedingReview: FieldsNeedingReview = {
-    mandante: parsedData?.mandante?.confidence === "medium" || parsedData?.mandante?.confidence === "low",
-    visitante: parsedData?.visitante?.confidence === "medium" || parsedData?.visitante?.confidence === "low",
-    dataHora: parsedData?.dataHora?.confidence === "medium" || parsedData?.dataHora?.confidence === "low",
-    esporte: parsedData?.esporte?.confidence === "medium" || parsedData?.esporte?.confidence === "low",
-    mercado: parsedData?.mercado?.confidence === "medium" || parsedData?.mercado?.confidence === "low",
-    selecao: parsedData?.selecao?.confidence === "medium" || parsedData?.selecao?.confidence === "low",
+    mandante: (parsedData?.mandante?.confidence === "medium" || parsedData?.mandante?.confidence === "low") && !!parsedData?.mandante?.value,
+    visitante: (parsedData?.visitante?.confidence === "medium" || parsedData?.visitante?.confidence === "low") && !!parsedData?.visitante?.value,
+    dataHora: (parsedData?.dataHora?.confidence === "medium" || parsedData?.dataHora?.confidence === "low") && !!parsedData?.dataHora?.value,
+    esporte: (parsedData?.esporte?.confidence === "medium" || parsedData?.esporte?.confidence === "low") && !!parsedData?.esporte?.value,
+    mercado: (parsedData?.mercado?.confidence === "medium" || parsedData?.mercado?.confidence === "low") && !!parsedData?.mercado?.value,
+    selecao: (parsedData?.selecao?.confidence === "medium" || parsedData?.selecao?.confidence === "low") && !!parsedData?.selecao?.value,
   };
 
   return {
@@ -180,9 +246,11 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     parsedData,
     imagePreview,
     fieldsNeedingReview,
+    pendingData,
     processImage,
     processFromClipboard,
     clearParsedData,
-    applyParsedData
+    applyParsedData,
+    resolveMarketForSport
   };
 }

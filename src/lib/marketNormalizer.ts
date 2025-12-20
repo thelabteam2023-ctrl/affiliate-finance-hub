@@ -1,0 +1,363 @@
+/**
+ * Market Normalizer - Converte nomes de mercados externos para os internos do sistema
+ * 
+ * Fluxo:
+ * 1. OCR detecta mercado_raw (texto do print)
+ * 2. Normalizador transforma em uma categoria canônica (mercado_canon)
+ * 3. Resolver tenta encontrar o melhor match dentro das opções disponíveis
+ * 4. Preenche o Select com a opção encontrada
+ */
+
+// Mapeamento de equivalências: termo externo -> termo interno do sistema
+const MARKET_EQUIVALENCES: Record<string, string[]> = {
+  // 1X2 / Moneyline
+  "Moneyline / 1X2": [
+    "match winner", "matchwinners", "1x2", "moneyline", "money line", "ml",
+    "full time result", "ftr", "winner", "vencedor", "ganhador",
+    "resultado final", "quem vence", "1 x 2", "home/draw/away"
+  ],
+  
+  // Over (Gols)
+  "Over (Gols)": [
+    "over", "acima", "mais de", "over goals", "total over",
+    "over 0.5", "over 1.5", "over 2.5", "over 3.5", "over 4.5",
+    "o0.5", "o1.5", "o2.5", "o3.5", "o4.5",
+    "+0.5 gols", "+1.5 gols", "+2.5 gols", "+3.5 gols"
+  ],
+  
+  // Under (Gols)
+  "Under (Gols)": [
+    "under", "abaixo", "menos de", "under goals", "total under",
+    "under 0.5", "under 1.5", "under 2.5", "under 3.5", "under 4.5",
+    "u0.5", "u1.5", "u2.5", "u3.5", "u4.5",
+    "-0.5 gols", "-1.5 gols", "-2.5 gols", "-3.5 gols"
+  ],
+  
+  // Handicap Asiático
+  "Handicap Asiático": [
+    "asian handicap", "ah", "handicap asiático", "handicap asiatico",
+    "asian hcap", "ah 0", "ah -1", "ah +1", "ah -0.5", "ah +0.5",
+    "ah -1.5", "ah +1.5", "spread asiático"
+  ],
+  
+  // Handicap Europeu
+  "Handicap Europeu": [
+    "european handicap", "eh", "handicap europeu", "handicap",
+    "hcap", "eh 0", "spread europeu"
+  ],
+  
+  // Ambas Marcam (BTTS)
+  "Ambas Marcam (BTTS)": [
+    "btts", "ambas marcam", "both teams to score", "both score",
+    "gol gol", "gg", "ambas equipes marcam", "sim/não",
+    "btts yes", "btts no", "btts sim", "btts não"
+  ],
+  
+  // Resultado Exato
+  "Resultado Exato": [
+    "resultado exato", "correct score", "placar exato", "exact score",
+    "placar correto", "score exato", "1-0", "2-1", "0-0"
+  ],
+  
+  // Dupla Chance
+  "Dupla Chance": [
+    "dupla chance", "double chance", "dc", "1x", "x2", "12",
+    "casa ou empate", "fora ou empate", "casa ou fora"
+  ],
+  
+  // Draw No Bet
+  "Draw No Bet": [
+    "draw no bet", "dnb", "empate anula", "empate reembolsa",
+    "devolução empate", "no draw", "sem empate"
+  ],
+  
+  // Primeiro/Último Gol
+  "Primeiro/Último Gol": [
+    "primeiro gol", "último gol", "first goal", "last goal",
+    "first scorer", "last scorer", "primeiro a marcar", "último a marcar",
+    "anytime scorer", "primeiro golo"
+  ],
+  
+  // Total de Cantos
+  "Total de Cantos": [
+    "cantos", "corners", "escanteios", "total corners",
+    "over corners", "under corners", "total cantos"
+  ],
+  
+  // Outro (genérico)
+  "Outro": []
+};
+
+// Mercados por esporte (para fallback)
+const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
+  "Futebol": [
+    "Moneyline / 1X2", "Over (Gols)", "Under (Gols)", "Handicap Asiático",
+    "Handicap Europeu", "Ambas Marcam (BTTS)", "Resultado Exato",
+    "Dupla Chance", "Draw No Bet", "Primeiro/Último Gol", "Total de Cantos", "Outro"
+  ],
+  "Basquete": [
+    "Moneyline", "Over (Pontos)", "Under (Pontos)", "Handicap", "1º/2º Tempo", "Margem de Vitória", "Outro"
+  ],
+  "Tênis": [
+    "Vencedor do Jogo", "Handicap de Games", "Over (Games)", "Under (Games)",
+    "Vencedor do Set", "Resultado Exato (Sets)", "Outro"
+  ],
+  "Outro": ["Vencedor", "Over", "Under", "Handicap", "Outro"]
+};
+
+/**
+ * Normaliza um texto para comparação (lowercase, sem acentos, sem espaços extras)
+ */
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Calcula similaridade entre duas strings (0-1)
+ */
+function calculateSimilarity(str1: string, str2: string): number {
+  const s1 = normalizeText(str1);
+  const s2 = normalizeText(str2);
+  
+  if (s1 === s2) return 1;
+  if (s1.includes(s2) || s2.includes(s1)) return 0.8;
+  
+  // Jaccard similarity baseado em palavras
+  const words1 = new Set(s1.split(" "));
+  const words2 = new Set(s2.split(" "));
+  const intersection = new Set([...words1].filter(x => words2.has(x)));
+  const union = new Set([...words1, ...words2]);
+  
+  return intersection.size / union.size;
+}
+
+export interface NormalizedMarket {
+  original: string;
+  normalized: string;
+  confidence: "exact" | "high" | "medium" | "low" | "none";
+  matchedKeyword?: string;
+}
+
+/**
+ * Encontra o mercado canônico a partir de um texto raw
+ */
+export function findCanonicalMarket(rawMarket: string): NormalizedMarket {
+  if (!rawMarket || rawMarket.trim() === "") {
+    return { original: rawMarket, normalized: "", confidence: "none" };
+  }
+  
+  const normalizedRaw = normalizeText(rawMarket);
+  
+  // Busca exata nos valores canônicos
+  for (const canonicalMarket of Object.keys(MARKET_EQUIVALENCES)) {
+    if (normalizeText(canonicalMarket) === normalizedRaw) {
+      return {
+        original: rawMarket,
+        normalized: canonicalMarket,
+        confidence: "exact"
+      };
+    }
+  }
+  
+  // Busca nos sinônimos/equivalências
+  for (const [canonicalMarket, synonyms] of Object.entries(MARKET_EQUIVALENCES)) {
+    for (const synonym of synonyms) {
+      const normalizedSynonym = normalizeText(synonym);
+      
+      // Match exato com sinônimo
+      if (normalizedSynonym === normalizedRaw) {
+        return {
+          original: rawMarket,
+          normalized: canonicalMarket,
+          confidence: "exact",
+          matchedKeyword: synonym
+        };
+      }
+      
+      // Match parcial (sinônimo contido no raw ou vice-versa)
+      if (normalizedRaw.includes(normalizedSynonym) || normalizedSynonym.includes(normalizedRaw)) {
+        return {
+          original: rawMarket,
+          normalized: canonicalMarket,
+          confidence: "high",
+          matchedKeyword: synonym
+        };
+      }
+    }
+  }
+  
+  // Busca por similaridade
+  let bestMatch = { market: "", similarity: 0, keyword: "" };
+  
+  for (const [canonicalMarket, synonyms] of Object.entries(MARKET_EQUIVALENCES)) {
+    // Compara com o nome canônico
+    const simCanonical = calculateSimilarity(rawMarket, canonicalMarket);
+    if (simCanonical > bestMatch.similarity) {
+      bestMatch = { market: canonicalMarket, similarity: simCanonical, keyword: canonicalMarket };
+    }
+    
+    // Compara com cada sinônimo
+    for (const synonym of synonyms) {
+      const sim = calculateSimilarity(rawMarket, synonym);
+      if (sim > bestMatch.similarity) {
+        bestMatch = { market: canonicalMarket, similarity: sim, keyword: synonym };
+      }
+    }
+  }
+  
+  if (bestMatch.similarity >= 0.6) {
+    return {
+      original: rawMarket,
+      normalized: bestMatch.market,
+      confidence: bestMatch.similarity >= 0.8 ? "high" : "medium",
+      matchedKeyword: bestMatch.keyword
+    };
+  }
+  
+  if (bestMatch.similarity >= 0.4) {
+    return {
+      original: rawMarket,
+      normalized: bestMatch.market,
+      confidence: "low",
+      matchedKeyword: bestMatch.keyword
+    };
+  }
+  
+  // Não encontrou match - retorna "Outro" se disponível
+  return {
+    original: rawMarket,
+    normalized: "Outro",
+    confidence: "low"
+  };
+}
+
+/**
+ * Resolve o melhor match dentro de uma lista de opções disponíveis
+ */
+export function resolveMarketToOptions(
+  rawMarket: string,
+  availableOptions: string[]
+): NormalizedMarket {
+  if (!rawMarket || !availableOptions.length) {
+    return { original: rawMarket, normalized: "", confidence: "none" };
+  }
+  
+  const normalizedRaw = normalizeText(rawMarket);
+  
+  // Primeiro, tenta encontrar o mercado canônico
+  const canonical = findCanonicalMarket(rawMarket);
+  
+  // Verifica se o canônico está nas opções
+  if (canonical.normalized && availableOptions.includes(canonical.normalized)) {
+    return canonical;
+  }
+  
+  // Busca direta nas opções disponíveis
+  for (const option of availableOptions) {
+    if (normalizeText(option) === normalizedRaw) {
+      return { original: rawMarket, normalized: option, confidence: "exact" };
+    }
+  }
+  
+  // Busca por similaridade nas opções disponíveis
+  let bestMatch = { option: "", similarity: 0 };
+  
+  for (const option of availableOptions) {
+    const sim = calculateSimilarity(rawMarket, option);
+    if (sim > bestMatch.similarity) {
+      bestMatch = { option, similarity: sim };
+    }
+    
+    // Também compara com o canônico
+    if (canonical.normalized) {
+      const simCanonical = calculateSimilarity(canonical.normalized, option);
+      if (simCanonical > bestMatch.similarity) {
+        bestMatch = { option, similarity: simCanonical };
+      }
+    }
+  }
+  
+  if (bestMatch.similarity >= 0.6) {
+    return {
+      original: rawMarket,
+      normalized: bestMatch.option,
+      confidence: bestMatch.similarity >= 0.8 ? "high" : "medium"
+    };
+  }
+  
+  // Fallback: retorna "Outro" se existir nas opções
+  if (availableOptions.includes("Outro")) {
+    return {
+      original: rawMarket,
+      normalized: "Outro",
+      confidence: "low"
+    };
+  }
+  
+  // Último recurso: retorna a primeira opção
+  return {
+    original: rawMarket,
+    normalized: availableOptions[0] || "",
+    confidence: "low"
+  };
+}
+
+/**
+ * Obtém os mercados disponíveis para um esporte
+ */
+export function getMarketsForSport(sport: string): string[] {
+  return MERCADOS_POR_ESPORTE[sport] || MERCADOS_POR_ESPORTE["Outro"];
+}
+
+/**
+ * Normaliza um esporte para o nome canônico do sistema
+ */
+export function normalizeSport(rawSport: string): { normalized: string; confidence: "exact" | "high" | "low" | "none" } {
+  if (!rawSport) return { normalized: "", confidence: "none" };
+  
+  const SPORTS = [
+    "Futebol", "Basquete", "Tênis", "Baseball", "Hockey",
+    "Futebol Americano", "Vôlei", "MMA/UFC", "League of Legends",
+    "Counter-Strike", "Dota 2", "eFootball", "Outro"
+  ];
+  
+  const normalizedRaw = normalizeText(rawSport);
+  
+  // Busca exata
+  for (const sport of SPORTS) {
+    if (normalizeText(sport) === normalizedRaw) {
+      return { normalized: sport, confidence: "exact" };
+    }
+  }
+  
+  // Busca por inclusão
+  const sportAliases: Record<string, string[]> = {
+    "Futebol": ["soccer", "football", "fut", "futebol"],
+    "Basquete": ["basketball", "nba", "basquete"],
+    "Tênis": ["tennis", "tenis"],
+    "Baseball": ["mlb", "baseball", "beisebol"],
+    "Hockey": ["nhl", "ice hockey", "hoquei"],
+    "Futebol Americano": ["nfl", "american football"],
+    "Vôlei": ["volleyball", "volei", "voleibol"],
+    "MMA/UFC": ["mma", "ufc", "luta", "fight"],
+    "League of Legends": ["lol", "league"],
+    "Counter-Strike": ["cs", "csgo", "cs2", "counter strike"],
+    "Dota 2": ["dota"],
+    "eFootball": ["efootball", "pes", "fifa"]
+  };
+  
+  for (const [sport, aliases] of Object.entries(sportAliases)) {
+    for (const alias of aliases) {
+      if (normalizedRaw.includes(normalizeText(alias))) {
+        return { normalized: sport, confidence: "high" };
+      }
+    }
+  }
+  
+  return { normalized: "Outro", confidence: "low" };
+}
