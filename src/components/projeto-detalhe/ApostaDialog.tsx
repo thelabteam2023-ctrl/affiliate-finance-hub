@@ -307,6 +307,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     applyParsedData: applyPrintData
   } = useImportBetPrint();
 
+  // Track if mercado came from print (to bypass esporte dependency)
+  const [mercadoFromPrint, setMercadoFromPrint] = useState(false);
+
   // Apply parsed data from print when available
   useEffect(() => {
     if (printParsedData && !aposta) {
@@ -315,7 +318,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       if (data.visitante) setVisitante(data.visitante);
       if (data.dataHora) setDataAposta(data.dataHora);
       if (data.esporte) setEsporte(data.esporte);
-      if (data.mercado) setMercado(data.mercado);
+      if (data.mercado) {
+        setMercado(data.mercado);
+        setMercadoFromPrint(true); // Mark that mercado came from print
+      }
       if (data.selecao) setSelecao(data.selecao);
     }
   }, [printParsedData, aposta, applyPrintData]);
@@ -461,7 +467,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   const [layStake, setLayStake] = useState<number | null>(null);
   const [layLiability, setLayLiability] = useState<number | null>(null);
 
-  const mercadosDisponiveis = esporte ? MERCADOS_POR_ESPORTE[esporte] || MERCADOS_POR_ESPORTE["Outro"] : [];
+  // Get available markets - include print market if not in list
+  const baseMercados = esporte ? MERCADOS_POR_ESPORTE[esporte] || MERCADOS_POR_ESPORTE["Outro"] : [];
+  const mercadosDisponiveis = mercadoFromPrint && mercado && !baseMercados.includes(mercado)
+    ? [mercado, ...baseMercados]
+    : baseMercados;
 
   useEffect(() => {
     if (open) {
@@ -803,6 +813,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     setValorFreebetGerada("");
     // Clear print import data
     clearPrintData();
+    setMercadoFromPrint(false);
   };
 
   const fetchBookmakers = async () => {
@@ -2195,14 +2206,19 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                 <Select value={mercado} onValueChange={(val) => {
                   setMercado(val);
                   setSelecao("");
-                }} disabled={!esporte}>
+                  if (mercadoFromPrint) setMercadoFromPrint(false); // Clear flag when user changes manually
+                }} disabled={!esporte && !mercadoFromPrint}>
                   <SelectTrigger className="h-10">
-                    <SelectValue placeholder={esporte ? "Selecione" : "Esporte primeiro"} />
+                    <SelectValue placeholder={esporte || mercadoFromPrint ? "Selecione" : "Esporte primeiro"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {mercadosDisponiveis.map((m) => (
-                      <SelectItem key={m} value={m}>{m}</SelectItem>
-                    ))}
+                    {mercadosDisponiveis.length > 0 ? (
+                      mercadosDisponiveis.map((m) => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      ))
+                    ) : mercado ? (
+                      <SelectItem value={mercado}>{mercado}</SelectItem>
+                    ) : null}
                   </SelectContent>
                 </Select>
               </div>
