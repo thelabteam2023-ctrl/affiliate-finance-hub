@@ -606,8 +606,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
         onOpenChange={setDialogOpen}
         projetoId={projetoId}
         aposta={selectedAposta}
-        onApostaCreated={handleApostaUpdated}
-        onApostaUpdated={handleApostaUpdated}
+        onSuccess={handleApostaUpdated}
       />
 
       <ApostaMultiplaDialog
@@ -615,8 +614,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
         onOpenChange={setDialogMultiplaOpen}
         projetoId={projetoId}
         aposta={selectedApostaMultipla}
-        onCreated={handleApostaUpdated}
-        onUpdated={handleApostaUpdated}
+        onSuccess={handleApostaUpdated}
       />
     </div>
   );
