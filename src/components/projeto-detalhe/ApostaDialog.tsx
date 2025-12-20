@@ -306,6 +306,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     isProcessing: isPrintProcessing,
     parsedData: printParsedData,
     imagePreview: printImagePreview,
+    fieldsNeedingReview: printFieldsNeedingReview,
     processImage: processPrintImage,
     processFromClipboard: processPrintClipboard,
     clearParsedData: clearPrintData,
@@ -2186,28 +2187,34 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             {/* Linha 1: Mandante x Visitante + Data/Hora */}
             <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-3 items-end">
               <div className="space-y-1.5">
-                <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Mandante</Label>
+                <Label className={`block text-center uppercase text-[10px] tracking-wider ${printFieldsNeedingReview.mandante ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                  Mandante {printFieldsNeedingReview.mandante && <span className="text-[9px]">⚠</span>}
+                </Label>
                 <Input
                   value={mandante}
                   onChange={(e) => setMandante(e.target.value.toUpperCase())}
                   placeholder="REAL MADRID"
-                  className="uppercase text-center h-10"
+                  className={`uppercase text-center h-10 ${printFieldsNeedingReview.mandante ? 'border-amber-500/50 focus:ring-amber-500/30' : ''}`}
                 />
               </div>
               <div className="flex items-center justify-center pb-1">
                 <span className="text-lg font-bold text-muted-foreground/60">×</span>
               </div>
               <div className="space-y-1.5">
-                <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Visitante</Label>
+                <Label className={`block text-center uppercase text-[10px] tracking-wider ${printFieldsNeedingReview.visitante ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                  Visitante {printFieldsNeedingReview.visitante && <span className="text-[9px]">⚠</span>}
+                </Label>
                 <Input
                   value={visitante}
                   onChange={(e) => setVisitante(e.target.value.toUpperCase())}
                   placeholder="BARCELONA"
-                  className="uppercase text-center h-10"
+                  className={`uppercase text-center h-10 ${printFieldsNeedingReview.visitante ? 'border-amber-500/50 focus:ring-amber-500/30' : ''}`}
                 />
               </div>
-              <div className="space-y-1.5 min-w-[180px]">
-                <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Data/Hora</Label>
+              <div className={`space-y-1.5 min-w-[180px] ${printFieldsNeedingReview.dataHora ? '[&_button]:border-amber-500/50' : ''}`}>
+                <Label className={`block text-center uppercase text-[10px] tracking-wider ${printFieldsNeedingReview.dataHora ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                  Data/Hora {printFieldsNeedingReview.dataHora && <span className="text-[9px]">⚠</span>}
+                </Label>
                 <DateTimePicker
                   value={dataAposta}
                   onChange={setDataAposta}
@@ -2219,12 +2226,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
             {/* Linha 2: Esporte, Mercado, Seleção */}
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Esporte</Label>
+                <Label className={`block text-center uppercase text-[10px] tracking-wider ${printFieldsNeedingReview.esporte ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                  Esporte {printFieldsNeedingReview.esporte && <span className="text-[9px]">⚠</span>}
+                </Label>
                 <Select value={esporte} onValueChange={(val) => {
                   setEsporte(val);
                   incrementSportUsage(val);
                 }}>
-                  <SelectTrigger className="h-10">
+                  <SelectTrigger className={`h-10 ${printFieldsNeedingReview.esporte ? 'border-amber-500/50' : ''}`}>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
@@ -2235,13 +2244,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Mercado</Label>
+                <Label className={`block text-center uppercase text-[10px] tracking-wider ${printFieldsNeedingReview.mercado ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                  Mercado {printFieldsNeedingReview.mercado && <span className="text-[9px]">⚠</span>}
+                </Label>
                 <Select value={mercado} onValueChange={(val) => {
                   setMercado(val);
                   setSelecao("");
                   if (mercadoFromPrint) setMercadoFromPrint(false); // Clear flag when user changes manually
                 }} disabled={!esporte && !mercadoFromPrint}>
-                  <SelectTrigger className="h-10">
+                  <SelectTrigger className={`h-10 ${printFieldsNeedingReview.mercado ? 'border-amber-500/50' : ''}`}>
                     <SelectValue placeholder={esporte || mercadoFromPrint ? "Selecione" : "Esporte primeiro"} />
                   </SelectTrigger>
                   <SelectContent>
@@ -2257,15 +2268,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
               </div>
               {/* Seleção - Moneyline usa select, outros usam texto livre */}
               <div className="space-y-1.5">
-                <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">
-                  Seleção
+                <Label className={`block text-center uppercase text-[10px] tracking-wider ${printFieldsNeedingReview.selecao ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                  Seleção {printFieldsNeedingReview.selecao && <span className="text-[9px]">⚠</span>}
                 </Label>
                 {isMoneyline ? (
                   <Select value={selecao} onValueChange={(val) => {
                     setSelecao(val);
                     if (selecaoFromPrint) setSelecaoFromPrint(false);
                   }}>
-                    <SelectTrigger className="h-10">
+                    <SelectTrigger className={`h-10 ${printFieldsNeedingReview.selecao ? 'border-amber-500/50' : ''}`}>
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
@@ -2282,7 +2293,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                       if (selecaoFromPrint) setSelecaoFromPrint(false);
                     }}
                     placeholder="Ex: Real Madrid -1.5, Over 2.5, Mapa 1 Team A"
-                    className="h-10"
+                    className={`h-10 ${printFieldsNeedingReview.selecao ? 'border-amber-500/50' : ''}`}
                   />
                 )}
               </div>

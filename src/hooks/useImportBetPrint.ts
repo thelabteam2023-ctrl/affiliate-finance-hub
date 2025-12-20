@@ -16,10 +16,20 @@ export interface ParsedBetSlip {
   selecao: ParsedField;
 }
 
+export type FieldsNeedingReview = {
+  mandante: boolean;
+  visitante: boolean;
+  dataHora: boolean;
+  esporte: boolean;
+  mercado: boolean;
+  selecao: boolean;
+};
+
 interface UseImportBetPrintReturn {
   isProcessing: boolean;
   parsedData: ParsedBetSlip | null;
   imagePreview: string | null;
+  fieldsNeedingReview: FieldsNeedingReview;
   processImage: (file: File) => Promise<void>;
   processFromClipboard: (event: ClipboardEvent) => Promise<void>;
   clearParsedData: () => void;
@@ -155,10 +165,21 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     };
   }, [parsedData]);
 
+  // Calculate which fields need review (medium or low confidence)
+  const fieldsNeedingReview: FieldsNeedingReview = {
+    mandante: parsedData?.mandante?.confidence === "medium" || parsedData?.mandante?.confidence === "low",
+    visitante: parsedData?.visitante?.confidence === "medium" || parsedData?.visitante?.confidence === "low",
+    dataHora: parsedData?.dataHora?.confidence === "medium" || parsedData?.dataHora?.confidence === "low",
+    esporte: parsedData?.esporte?.confidence === "medium" || parsedData?.esporte?.confidence === "low",
+    mercado: parsedData?.mercado?.confidence === "medium" || parsedData?.mercado?.confidence === "low",
+    selecao: parsedData?.selecao?.confidence === "medium" || parsedData?.selecao?.confidence === "low",
+  };
+
   return {
     isProcessing,
     parsedData,
     imagePreview,
+    fieldsNeedingReview,
     processImage,
     processFromClipboard,
     clearParsedData,
