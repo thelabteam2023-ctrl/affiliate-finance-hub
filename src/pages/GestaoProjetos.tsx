@@ -24,8 +24,11 @@ import {
   Edit,
   ExternalLink,
   Trash2,
-  Eye
+  Eye,
+  Star
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useProjectFavorites } from "@/hooks/useProjectFavorites";
 import { VisualizarOperadoresDialog } from "@/components/projetos/VisualizarOperadoresDialog";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import {
@@ -83,6 +86,7 @@ export default function GestaoProjetos() {
   const [projetoToDelete, setProjetoToDelete] = useState<Projeto | null>(null);
   const [visualizarOperadoresOpen, setVisualizarOperadoresOpen] = useState(false);
   const [projetoParaVisualizar, setProjetoParaVisualizar] = useState<Projeto | null>(null);
+  const { isFavorite, toggleFavorite } = useProjectFavorites();
 
   useEffect(() => {
     fetchProjetos();
@@ -303,9 +307,33 @@ export default function GestaoProjetos() {
                       )}
                     </div>
                   </div>
-                  <Badge className={getStatusColor(projeto.status)}>
-                    {getStatusLabel(projeto.status)}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(projeto.id);
+                          }}
+                          className="p-1 rounded hover:bg-muted transition-colors"
+                        >
+                          <Star
+                            className={`h-4 w-4 ${
+                              isFavorite(projeto.id)
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-muted-foreground hover:text-yellow-400"
+                            }`}
+                          />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {isFavorite(projeto.id) ? "Remover dos atalhos" : "Adicionar aos atalhos"}
+                      </TooltipContent>
+                    </Tooltip>
+                    <Badge className={getStatusColor(projeto.status)}>
+                      {getStatusLabel(projeto.status)}
+                    </Badge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -460,6 +488,28 @@ export default function GestaoProjetos() {
                       <p className="text-xs text-muted-foreground">Operadores</p>
                       <p className="text-sm">{projeto.operadores_ativos || 0}</p>
                     </div>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(projeto.id);
+                          }}
+                          className="p-1 rounded hover:bg-muted transition-colors"
+                        >
+                          <Star
+                            className={`h-4 w-4 ${
+                              isFavorite(projeto.id)
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-muted-foreground hover:text-yellow-400"
+                            }`}
+                          />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {isFavorite(projeto.id) ? "Remover dos atalhos" : "Adicionar aos atalhos"}
+                      </TooltipContent>
+                    </Tooltip>
                     <Badge className={getStatusColor(projeto.status)}>
                       {getStatusLabel(projeto.status)}
                     </Badge>
