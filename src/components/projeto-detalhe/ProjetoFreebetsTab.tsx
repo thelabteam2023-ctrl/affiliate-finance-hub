@@ -440,139 +440,265 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
         </Card>
       )}
 
-      {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por casa, parceiro, motivo..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todas">Todas</SelectItem>
-            <SelectItem value="disponiveis">Disponíveis</SelectItem>
-            <SelectItem value="utilizadas">Utilizadas</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={casaFilter} onValueChange={setCasaFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Casa" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todas">Todas as Casas</SelectItem>
-            {casasDisponiveis.map(casa => (
-              <SelectItem key={casa} value={casa}>{casa}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Tabela de Freebets */}
-      <Card>
-        <CardContent className="p-0">
-          {freebetsFiltradas.length === 0 ? (
-            <div className="text-center py-12">
-              <Gift className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-4 text-lg font-semibold">Nenhuma freebet encontrada</h3>
-              <p className="text-muted-foreground">
-                {freebets.length === 0 
-                  ? "Freebets geradas por apostas aparecerão aqui"
-                  : "Nenhuma freebet corresponde aos filtros"
-                }
-              </p>
+      {/* Layout 2 colunas: Apostas (principal) + Freebets do Período (secundário) */}
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        {/* Card Principal - Apostas com Freebet */}
+        <Card className="min-h-[400px]">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" />
+              Apostas Registradas
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Apostas que utilizam contexto financeiro Freebet
+            </p>
+          </CardHeader>
+          <CardContent>
+            {/* Filtros */}
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por casa, parceiro, motivo..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas</SelectItem>
+                  <SelectItem value="disponiveis">Disponíveis</SelectItem>
+                  <SelectItem value="utilizadas">Utilizadas</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={casaFilter} onValueChange={setCasaFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Casa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas as Casas</SelectItem>
+                  {casasDisponiveis.map(casa => (
+                    <SelectItem key={casa} value={casa}>{casa}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Casa</TableHead>
-                  <TableHead>Parceiro</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Motivo</TableHead>
-                  <TableHead>Data Recebida</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {freebetsFiltradas.map(fb => (
-                  <TableRow key={fb.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {fb.logo_url ? (
-                          <img
-                            src={fb.logo_url}
-                            alt={fb.bookmaker_nome}
-                            className="h-8 w-8 rounded object-contain bg-white p-0.5"
-                          />
-                        ) : (
-                          <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
-                            <Building2 className="h-4 w-4" />
+
+            {/* Tabela de Freebets */}
+            {freebetsFiltradas.length === 0 ? (
+              <div className="text-center py-16 border rounded-lg bg-muted/5">
+                <Target className="mx-auto h-12 w-12 text-muted-foreground/30" />
+                <h3 className="mt-4 text-base font-medium text-muted-foreground">
+                  Nenhuma aposta relacionada a Freebet encontrada
+                </h3>
+                <p className="text-sm text-muted-foreground/70 mt-1">
+                  Apostas com contexto Freebet aparecerão aqui
+                </p>
+              </div>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Casa</TableHead>
+                      <TableHead>Parceiro</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead>Motivo</TableHead>
+                      <TableHead>Data Recebida</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {freebetsFiltradas.map(fb => (
+                      <TableRow key={fb.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {fb.logo_url ? (
+                              <img
+                                src={fb.logo_url}
+                                alt={fb.bookmaker_nome}
+                                className="h-8 w-8 rounded object-contain bg-white p-0.5"
+                              />
+                            ) : (
+                              <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+                                <Building2 className="h-4 w-4" />
+                              </div>
+                            )}
+                            <span className="font-medium">{fb.bookmaker_nome}</span>
                           </div>
-                        )}
-                        <span className="font-medium">{fb.bookmaker_nome}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-muted-foreground">
-                        {fb.parceiro_nome || "-"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-semibold text-amber-400">
-                        {formatCurrency(fb.valor)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm">{fb.motivo}</span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(fb.data_recebida), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {fb.status === "PENDENTE" ? (
-                        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-                          <Clock className="h-3 w-3 mr-1" />
-                          Aguardando
-                        </Badge>
-                      ) : fb.status === "NAO_LIBERADA" ? (
-                        <Badge variant="secondary" className="bg-red-500/10 text-red-400 border-red-500/20">
-                          <XCircle className="h-3 w-3 mr-1" />
-                          Não liberada
-                        </Badge>
-                      ) : fb.utilizada ? (
-                        <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Utilizada
-                          {fb.data_utilizacao && (
-                            <span className="ml-1 text-[10px]">
-                              ({format(new Date(fb.data_utilizacao), "dd/MM", { locale: ptBR })})
-                            </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-muted-foreground">
+                            {fb.parceiro_nome || "-"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-semibold text-amber-400">
+                            {formatCurrency(fb.valor)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">{fb.motivo}</span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            {format(new Date(fb.data_recebida), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {fb.status === "PENDENTE" ? (
+                            <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Aguardando
+                            </Badge>
+                          ) : fb.status === "NAO_LIBERADA" ? (
+                            <Badge variant="secondary" className="bg-red-500/10 text-red-400 border-red-500/20">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Não liberada
+                            </Badge>
+                          ) : fb.utilizada ? (
+                            <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Utilizada
+                              {fb.data_utilizacao && (
+                                <span className="ml-1 text-[10px]">
+                                  ({format(new Date(fb.data_utilizacao), "dd/MM", { locale: ptBR })})
+                                </span>
+                              )}
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Disponível
+                            </Badge>
                           )}
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Disponível
-                        </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Card Secundário - Freebets do Período */}
+        <Card className="h-fit">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Gift className="h-4 w-4 text-amber-400" />
+              Freebets do Período
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {freebetsNoPeriodo.length === 0 ? (
+              <div className="text-center py-8 border rounded-lg bg-muted/5">
+                <Gift className="mx-auto h-8 w-8 text-muted-foreground/30" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Nenhuma freebet no período
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Resumo */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <div className="flex items-center gap-2">
+                      <Gift className="h-4 w-4 text-amber-400" />
+                      <span className="text-sm font-medium">Total Recebido</span>
+                    </div>
+                    <span className="text-lg font-bold text-amber-400">
+                      {formatCurrency(metricas.totalRecebido)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                      <span className="text-sm font-medium">Disponíveis</span>
+                    </div>
+                    <span className="text-lg font-bold text-emerald-400">
+                      {freebetsDisponiveis}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Utilizadas</span>
+                    </div>
+                    <span className="text-lg font-bold text-muted-foreground">
+                      {freebetsUtilizadas}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Taxa de Extração */}
+                <div className="pt-3 border-t">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Taxa de Extração</span>
+                    <span className={`text-sm font-bold ${metricas.taxaExtracao >= 70 ? 'text-emerald-400' : metricas.taxaExtracao >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                      {metricas.taxaExtracao.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${metricas.taxaExtracao >= 70 ? 'bg-emerald-500' : metricas.taxaExtracao >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                      style={{ width: `${Math.min(100, metricas.taxaExtracao)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Lucro: {formatCurrency(metricas.totalExtraido)}
+                  </p>
+                </div>
+
+                {/* Casas com saldo */}
+                {bookmakersComFreebet.length > 0 && (
+                  <div className="pt-3 border-t">
+                    <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
+                      Casas com Saldo
+                    </p>
+                    <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                      {bookmakersComFreebet.slice(0, 5).map(bk => (
+                        <div
+                          key={bk.id}
+                          className="flex items-center gap-2 p-2 rounded-lg border bg-card"
+                        >
+                          {bk.logo_url ? (
+                            <img
+                              src={bk.logo_url}
+                              alt={bk.nome}
+                              className="h-6 w-6 rounded object-contain bg-white p-0.5"
+                            />
+                          ) : (
+                            <div className="h-6 w-6 rounded bg-muted flex items-center justify-center">
+                              <Building2 className="h-3 w-3" />
+                            </div>
+                          )}
+                          <span className="text-sm font-medium flex-1 truncate">{bk.nome}</span>
+                          <span className="text-sm font-bold text-amber-400">
+                            {formatCurrency(bk.saldo_freebet)}
+                          </span>
+                        </div>
+                      ))}
+                      {bookmakersComFreebet.length > 5 && (
+                        <p className="text-xs text-muted-foreground text-center py-1">
+                          +{bookmakersComFreebet.length - 5} casas
+                        </p>
                       )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
