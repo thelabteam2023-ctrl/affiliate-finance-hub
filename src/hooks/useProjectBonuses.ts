@@ -6,6 +6,8 @@ export type BonusStatus = "pending" | "credited" | "failed" | "expired" | "rever
 
 export type FinalizeReason = "rollover_completed" | "bonus_consumed" | "expired" | "cancelled_reversed";
 
+export type BonusSource = "manual" | "template";
+
 export interface ProjectBonus {
   id: string;
   workspace_id: string | null;
@@ -24,11 +26,22 @@ export interface ProjectBonus {
   finalized_at: string | null;
   finalized_by: string | null;
   finalize_reason: FinalizeReason | null;
+  // New fields for template and rollover
+  source: BonusSource;
+  template_snapshot: Record<string, unknown> | null;
+  rollover_multiplier: number | null;
+  rollover_base: string | null;
+  rollover_target_amount: number | null;
+  rollover_progress: number;
+  deposit_amount: number | null;
+  min_odds: number | null;
+  deadline_days: number | null;
   // Joined data
   bookmaker_nome?: string;
   bookmaker_login?: string;
   bookmaker_logo_url?: string | null;
   parceiro_nome?: string | null;
+  bookmaker_catalogo_id?: string | null;
 }
 
 export interface BonusFormData {
@@ -40,6 +53,15 @@ export interface BonusFormData {
   credited_at?: string | null;
   expires_at?: string | null;
   notes?: string | null;
+  // New fields
+  source?: BonusSource;
+  template_snapshot?: Record<string, unknown> | null;
+  rollover_multiplier?: number | null;
+  rollover_base?: string | null;
+  rollover_target_amount?: number | null;
+  deposit_amount?: number | null;
+  min_odds?: number | null;
+  deadline_days?: number | null;
 }
 
 export interface BonusSummary {
@@ -82,6 +104,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
             nome,
             login_username,
             parceiro_id,
+            bookmaker_catalogo_id,
             bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url),
             parceiros!bookmakers_parceiro_id_fkey (nome)
           )
@@ -115,10 +138,22 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         finalized_at: b.finalized_at,
         finalized_by: b.finalized_by,
         finalize_reason: b.finalize_reason as FinalizeReason | null,
+        // New fields
+        source: (b.source || "manual") as BonusSource,
+        template_snapshot: b.template_snapshot as Record<string, unknown> | null,
+        rollover_multiplier: b.rollover_multiplier ? Number(b.rollover_multiplier) : null,
+        rollover_base: b.rollover_base,
+        rollover_target_amount: b.rollover_target_amount ? Number(b.rollover_target_amount) : null,
+        rollover_progress: Number(b.rollover_progress || 0),
+        deposit_amount: b.deposit_amount ? Number(b.deposit_amount) : null,
+        min_odds: b.min_odds ? Number(b.min_odds) : null,
+        deadline_days: b.deadline_days ? Number(b.deadline_days) : null,
+        // Joined data
         bookmaker_nome: b.bookmakers?.nome,
         bookmaker_login: b.bookmakers?.login_username,
         bookmaker_logo_url: b.bookmakers?.bookmakers_catalogo?.logo_url,
         parceiro_nome: b.bookmakers?.parceiros?.nome,
+        bookmaker_catalogo_id: b.bookmakers?.bookmaker_catalogo_id,
       }));
 
       setBonuses(mapped);
@@ -238,11 +273,20 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         created_by: userData.user.id,
         user_id: userData.user.id,
         workspace_id: projectData?.workspace_id || null,
+        // New fields
+        source: data.source || "manual",
+        template_snapshot: data.template_snapshot || null,
+        rollover_multiplier: data.rollover_multiplier || null,
+        rollover_base: data.rollover_base || null,
+        rollover_target_amount: data.rollover_target_amount || null,
+        deposit_amount: data.deposit_amount || null,
+        min_odds: data.min_odds || null,
+        deadline_days: data.deadline_days || null,
       };
 
       const { error } = await supabase
         .from("project_bookmaker_link_bonuses")
-        .insert(bonusData);
+        .insert(bonusData as any);
 
       if (error) throw error;
 
@@ -361,6 +405,36 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       .reduce((acc, b) => acc + b.bonus_amount, 0);
   }, [bonuses]);
 
+  const updateRolloverProgress = async (id: string, progress: number): Promise<boolean> => {
+    try {
+      setSaving(true);
+
+      const { error } = await supabase
+        .from("project_bookmaker_link_bonuses")
+        .update({ rollover_progress: progress })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Progresso de rollover atualizado");
+      await fetchBonuses();
+      return true;
+    } catch (error: any) {
+      console.error("Erro ao atualizar progresso:", error.message);
+      toast.error("Erro ao atualizar progresso: " + error.message);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Calculate rollover percentage for a bonus
+  const getRolloverPercentage = useCallback((bonus: ProjectBonus): number => {
+    if (!bonus.rollover_target_amount || bonus.rollover_target_amount <= 0) return 0;
+    const progress = bonus.rollover_progress || 0;
+    return Math.min(100, (progress / bonus.rollover_target_amount) * 100);
+  }, []);
+
   return {
     bonuses,
     loading,
@@ -375,5 +449,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
     getTotalCreditedByBookmaker,
     getActiveBonusByBookmaker,
     getBookmakersWithActiveBonus,
+    updateRolloverProgress,
+    getRolloverPercentage,
   };
 }
