@@ -257,15 +257,15 @@ export function BonusDialog({
         </DialogHeader>
 
         <div className="space-y-5 py-4">
-          {/* Bookmaker Select - Compact */}
+          {/* Bookmaker Select - Centralizado */}
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Casa de Apostas</Label>
+            <Label className="text-xs text-muted-foreground text-center block">Casa de Apostas</Label>
             <Select
               value={bookmakerId}
               onValueChange={setBookmakerId}
               disabled={isEditMode || !!preselectedBookmakerId}
             >
-              <SelectTrigger className="h-9">
+              <SelectTrigger className="h-9 justify-center [&>span]:flex [&>span]:items-center [&>span]:justify-center">
                 <SelectValue placeholder="Selecione a casa" />
               </SelectTrigger>
               <SelectContent>
@@ -292,14 +292,14 @@ export function BonusDialog({
             </Select>
           </div>
 
-          {/* Template Suggestions - Refined */}
+          {/* Template Suggestions - Centralizado */}
           {!isEditMode && hasTemplates && bookmakerId && (
             <div className="space-y-2 p-3 rounded-lg border border-primary/20 bg-primary/5">
-              <div className="flex items-center gap-2 text-sm font-medium text-primary">
+              <div className="flex items-center justify-center gap-2 text-sm font-medium text-primary">
                 <Sparkles className="h-4 w-4" />
                 Sugestões de bônus
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap justify-center gap-2">
                 {templates.map((template) => (
                   <button
                     key={template.id}
@@ -320,7 +320,7 @@ export function BonusDialog({
                 ))}
               </div>
               {filledFromTemplate && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                <p className="text-xs text-muted-foreground flex items-center justify-center gap-1 mt-1">
                   <Check className="h-3 w-3 text-emerald-500" />
                   Campos preenchidos pelo catálogo
                 </p>
