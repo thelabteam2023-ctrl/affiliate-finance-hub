@@ -1,0 +1,392 @@
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
+import { useProjectBonuses, ProjectBonus, FinalizeReason } from "@/hooks/useProjectBonuses";
+import { VinculoBonusDrawer } from "../VinculoBonusDrawer";
+import { FinalizeBonusDialog } from "../FinalizeBonusDialog";
+import { 
+  Building2, 
+  Coins, 
+  Wallet, 
+  TrendingUp, 
+  Search, 
+  Gift, 
+  Clock, 
+  User,
+  Plus,
+  CheckCircle2,
+  AlertTriangle
+} from "lucide-react";
+import { differenceInDays, parseISO, format } from "date-fns";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+interface BonusCasasTabProps {
+  projetoId: string;
+}
+
+interface BookmakerInBonusMode {
+  id: string;
+  nome: string;
+  login_username: string;
+  logo_url: string | null;
+  parceiro_nome: string | null;
+  saldo_real: number;
+  moeda: string;
+  bonus_ativo: number;
+  bonuses: ProjectBonus[];
+  nearest_expiry: Date | null;
+}
+
+export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
+  const { bonuses, fetchBonuses, finalizeBonus, saving, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
+  const [bookmakers, setBookmakers] = useState<BookmakerInBonusMode[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  // Drawer state
+  const [bonusDrawerOpen, setBonusDrawerOpen] = useState(false);
+  const [selectedBookmaker, setSelectedBookmaker] = useState<{ id: string; nome: string; login?: string; logo?: string | null } | null>(null);
+  
+  // Finalize dialog state
+  const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
+  const [bonusToFinalize, setBonusToFinalize] = useState<ProjectBonus | null>(null);
+
+  const bookmakersInBonusMode = getBookmakersWithActiveBonus();
+
+  useEffect(() => {
+    fetchBookmakers();
+  }, [projetoId, bonuses]);
+
+  const fetchBookmakers = async () => {
+    if (bookmakersInBonusMode.length === 0) {
+      setBookmakers([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("bookmakers")
+        .select(`
+          id,
+          nome,
+          login_username,
+          saldo_atual,
+          moeda,
+          bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url),
+          parceiros!bookmakers_parceiro_id_fkey (nome)
+        `)
+        .in("id", bookmakersInBonusMode);
+
+      if (error) throw error;
+
+      // Group bonuses by bookmaker
+      const bonusesByBookmaker: Record<string, ProjectBonus[]> = {};
+      bonuses.forEach(b => {
+        if (!bonusesByBookmaker[b.bookmaker_id]) {
+          bonusesByBookmaker[b.bookmaker_id] = [];
+        }
+        bonusesByBookmaker[b.bookmaker_id].push(b);
+      });
+
+      const mapped: BookmakerInBonusMode[] = (data || []).map((bk: any) => {
+        const bkBonuses = bonusesByBookmaker[bk.id] || [];
+        const activeBonuses = bkBonuses.filter(b => b.status === 'credited');
+        const bonusTotal = activeBonuses.reduce((acc, b) => acc + b.bonus_amount, 0);
+        
+        // Find nearest expiry
+        let nearestExpiry: Date | null = null;
+        activeBonuses.forEach(b => {
+          if (b.expires_at) {
+            const expiryDate = parseISO(b.expires_at);
+            if (!nearestExpiry || expiryDate < nearestExpiry) {
+              nearestExpiry = expiryDate;
+            }
+          }
+        });
+
+        return {
+          id: bk.id,
+          nome: bk.nome,
+          login_username: bk.login_username,
+          logo_url: bk.bookmakers_catalogo?.logo_url || null,
+          parceiro_nome: bk.parceiros?.nome || null,
+          saldo_real: bk.saldo_atual,
+          moeda: bk.moeda || 'BRL',
+          bonus_ativo: bonusTotal,
+          bonuses: bkBonuses,
+          nearest_expiry: nearestExpiry,
+        };
+      });
+
+      // Sort by bonus amount descending
+      mapped.sort((a, b) => b.bonus_ativo - a.bonus_ativo);
+      
+      setBookmakers(mapped);
+    } catch (error) {
+      console.error("Error fetching bookmakers:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenBonusDrawer = (bk: BookmakerInBonusMode) => {
+    setSelectedBookmaker({
+      id: bk.id,
+      nome: bk.nome,
+      login: bk.login_username,
+      logo: bk.logo_url,
+    });
+    setBonusDrawerOpen(true);
+  };
+
+  const handleFinalizeClick = (bonus: ProjectBonus) => {
+    setBonusToFinalize(bonus);
+    setFinalizeDialogOpen(true);
+  };
+
+  const handleConfirmFinalize = async (reason: FinalizeReason): Promise<boolean> => {
+    if (!bonusToFinalize) return false;
+    const success = await finalizeBonus(bonusToFinalize.id, reason);
+    if (success) setFinalizeDialogOpen(false);
+    setBonusToFinalize(null);
+  };
+
+  const formatCurrency = (value: number, moeda: string = 'BRL') => {
+    const symbols: Record<string, string> = { BRL: 'R$', USD: '$', EUR: '€', GBP: '£' };
+    return `${symbols[moeda] || moeda} ${value.toFixed(2)}`;
+  };
+
+  const getExpiryBadge = (expiryDate: Date | null) => {
+    if (!expiryDate) return null;
+    const daysUntil = differenceInDays(expiryDate, new Date());
+    
+    if (daysUntil < 0) {
+      return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Expirado</Badge>;
+    }
+    if (daysUntil <= 7) {
+      return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">{daysUntil}d restantes</Badge>;
+    }
+    if (daysUntil <= 15) {
+      return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">{daysUntil}d restantes</Badge>;
+    }
+    return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">{daysUntil}d restantes</Badge>;
+  };
+
+  const filteredBookmakers = bookmakers.filter(bk => 
+    bk.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    bk.login_username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    bk.parceiro_nome?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-full" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-48" />)}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por nome, login ou parceiro..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {/* Grid of bookmakers in bonus mode */}
+      {filteredBookmakers.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-10">
+              <Coins className="mx-auto h-12 w-12 text-muted-foreground/50" />
+              <h3 className="mt-4 text-lg font-semibold">Nenhuma casa em modo bônus</h3>
+              <p className="text-muted-foreground">
+                Adicione bônus às casas para vê-las aqui
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredBookmakers.map((bk) => {
+            const activeBonuses = bk.bonuses.filter(b => b.status === 'credited');
+            
+            return (
+              <Card key={bk.id} className="border-amber-500/30 hover:border-amber-500/50 transition-colors">
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      {bk.logo_url ? (
+                        <img
+                          src={bk.logo_url}
+                          alt={bk.nome}
+                          className="h-10 w-10 rounded-lg object-contain bg-white p-1"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Building2 className="h-5 w-5 text-primary" />
+                        </div>
+                      )}
+                      <div>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          {bk.nome}
+                          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
+                            <Coins className="h-3 w-3 mr-1" />
+                            Bônus
+                          </Badge>
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">{bk.login_username}</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {/* Partner */}
+                    <div className="flex items-center gap-2 text-sm">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">{bk.parceiro_nome || "Sem parceiro"}</span>
+                    </div>
+
+                    {/* Balances */}
+                    <div className="pt-2 border-t space-y-2">
+                      {/* Operational Balance - Highlight */}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center justify-between p-2 rounded bg-primary/10 border border-primary/20">
+                              <span className="text-xs font-medium text-primary flex items-center gap-1">
+                                <TrendingUp className="h-3 w-3" />
+                                Saldo Operável
+                              </span>
+                              <span className="text-sm font-bold text-primary">
+                                {formatCurrency(bk.saldo_real + bk.bonus_ativo, bk.moeda)}
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Real + Bônus Ativo</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Wallet className="h-3 w-3" />
+                          Saldo Real
+                        </span>
+                        <span className="text-sm font-semibold">{formatCurrency(bk.saldo_real, bk.moeda)}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Gift className="h-3 w-3 text-amber-400" />
+                          Bônus Ativo
+                        </span>
+                        <span className="text-sm font-semibold text-amber-400">{formatCurrency(bk.bonus_ativo, bk.moeda)}</span>
+                      </div>
+                    </div>
+
+                    {/* Expiry */}
+                    {bk.nearest_expiry && (
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Expiração
+                        </span>
+                        {getExpiryBadge(bk.nearest_expiry)}
+                      </div>
+                    )}
+
+                    {/* Active Bonuses List */}
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground mb-2">Bônus Ativos ({activeBonuses.length}):</p>
+                      <ScrollArea className="h-24">
+                        <div className="space-y-1.5">
+                          {activeBonuses.map(bonus => (
+                            <div key={bonus.id} className="flex items-center justify-between text-xs p-1.5 rounded bg-card border">
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <span className="truncate">{bonus.title || 'Bônus'}</span>
+                                <span className="font-semibold text-amber-400">{formatCurrency(bonus.bonus_amount, bonus.currency)}</span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-xs hover:bg-emerald-500/20 hover:text-emerald-400"
+                                onClick={() => handleFinalizeClick(bonus)}
+                              >
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Finalizar
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="pt-2 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-amber-500/30 hover:bg-amber-500/10"
+                        onClick={() => handleOpenBonusDrawer(bk)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Ver / Adicionar Bônus
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Bonus Drawer */}
+      {selectedBookmaker && (
+        <VinculoBonusDrawer
+          open={bonusDrawerOpen}
+          onOpenChange={setBonusDrawerOpen}
+          projectId={projetoId}
+          bookmakerId={selectedBookmaker.id}
+          bookmakerName={selectedBookmaker.nome}
+          bookmakerLogin={selectedBookmaker.login}
+          bookmakerLogo={selectedBookmaker.logo}
+          onBonusChange={fetchBonuses}
+        />
+      )}
+
+      {/* Finalize Dialog */}
+      <FinalizeBonusDialog
+        open={finalizeDialogOpen}
+        onOpenChange={setFinalizeDialogOpen}
+        bonusAmount={bonusToFinalize?.bonus_amount || 0}
+        currency={bonusToFinalize?.currency || 'BRL'}
+        onConfirm={handleConfirmFinalize}
+      />
+    </div>
+  );
+}
