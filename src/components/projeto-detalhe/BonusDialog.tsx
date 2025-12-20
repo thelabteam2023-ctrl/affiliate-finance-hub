@@ -282,7 +282,9 @@ export function BonusDialog({
                         <Building2 className="h-4 w-4" />
                       )}
                       <span>{bk.nome}</span>
-                      <span className="text-muted-foreground text-xs">({bk.login_username})</span>
+                      {bk.login_username && (
+                        <span className="text-muted-foreground text-xs">({bk.login_username})</span>
+                      )}
                     </div>
                   </SelectItem>
                 ))}
@@ -488,11 +490,11 @@ export function BonusDialog({
             </div>
           </div>
 
-          {/* 5️⃣ Linha 4 — Status (largura média) */}
-          <div className="space-y-1.5 max-w-[200px]">
+          {/* 5️⃣ Linha 4 — Status (centralizado) */}
+          <div className="flex flex-col items-center space-y-1.5">
             <Label className="text-xs">Status</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as BonusStatus)}>
-              <SelectTrigger className="h-9">
+              <SelectTrigger className="h-9 w-[180px] justify-center [&>span]:flex [&>span]:items-center [&>span]:justify-center">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
