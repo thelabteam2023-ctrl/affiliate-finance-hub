@@ -32,7 +32,7 @@ export function ProjetoBonusArea({ projetoId }: ProjetoBonusAreaProps) {
   
   const [navMode, setNavMode] = useState<NavigationMode>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return (saved === "sidebar" ? "sidebar" : "tabs") as NavigationMode;
+    return (saved === "tabs" ? "tabs" : "sidebar") as NavigationMode;
   });
   
   const [activeTab, setActiveTab] = useState<TabValue>("visao-geral");
