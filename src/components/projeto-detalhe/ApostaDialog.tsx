@@ -295,6 +295,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
 
   // Import by Print
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dialogContentRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const {
     isProcessing: isPrintProcessing,
     parsedData: printParsedData,
@@ -318,7 +320,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
     }
   }, [printParsedData, aposta, applyPrintData]);
 
-  // Handle paste for importing prints
+  // Handle paste for importing prints (Ctrl+V)
   const handlePaste = useCallback((event: ClipboardEvent) => {
     if (!open || aposta) return; // Only for new bets
     processPrintClipboard(event);
@@ -330,6 +332,36 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
       return () => document.removeEventListener("paste", handlePaste);
     }
   }, [open, aposta, handlePaste]);
+
+  // Handle drag and drop for importing prints
+  const handleDragOver = useCallback((event: React.DragEvent) => {
+    if (aposta) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(true);
+  }, [aposta]);
+
+  const handleDragLeave = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(false);
+    
+    if (aposta) return; // Only for new bets
+
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith("image/")) {
+        processPrintImage(file);
+      }
+    }
+  }, [aposta, processPrintImage]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -2035,7 +2067,25 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent 
+          className={`max-w-3xl max-h-[90vh] overflow-y-auto transition-all ${
+            isDragging && !aposta ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+          }`}
+          ref={dialogContentRef}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {/* Drag overlay */}
+          {isDragging && !aposta && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/90 rounded-lg border-2 border-dashed border-primary">
+              <div className="text-center space-y-2">
+                <Camera className="h-10 w-10 mx-auto text-primary" />
+                <p className="text-sm font-medium text-primary">Solte a imagem para importar</p>
+              </div>
+            </div>
+          )}
+
           <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
@@ -2063,7 +2113,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess 
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-xs">
                       <p className="text-xs">
-                        Faça upload de um print do boletim ou cole com <kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">Ctrl+V</kbd> para preencher automaticamente os campos de contexto (evento, esporte, mercado, seleção).
+                        Arraste uma imagem, cole com <kbd className="px-1 py-0.5 rounded bg-muted text-[10px]">Ctrl+V</kbd> ou clique para fazer upload do print do boletim.
                       </p>
                     </TooltipContent>
                   </Tooltip>
