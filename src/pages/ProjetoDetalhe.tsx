@@ -33,7 +33,8 @@ import {
   Settings2,
   ChevronDown,
   ArrowLeftRight,
-  Sparkles
+  Sparkles,
+  Zap
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -51,6 +52,7 @@ import { ProjetoFreebetsTab } from "@/components/projeto-detalhe/ProjetoFreebets
 import { ProjetoCiclosTab } from "@/components/projeto-detalhe/ProjetoCiclosTab";
 import { ProjetoSurebetTab } from "@/components/projeto-detalhe/ProjetoSurebetTab";
 import { ProjetoValueBetTab } from "@/components/projeto-detalhe/ProjetoValueBetTab";
+import { ProjetoDuploGreenTab } from "@/components/projeto-detalhe/ProjetoDuploGreenTab";
 import { ProjetoBonusArea } from "@/components/projeto-detalhe/bonus";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar";
@@ -591,6 +593,10 @@ export default function ProjetoDetalhe() {
             <Sparkles className="h-4 w-4" />
             ValueBet
           </TabsTrigger>
+          <TabsTrigger value="duplogreen" className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            Duplo Green
+          </TabsTrigger>
           <TabsTrigger value="vinculos" className="flex items-center gap-2">
             <Link2 className="h-4 w-4" />
             Vínculos
@@ -684,6 +690,15 @@ export default function ProjetoDetalhe() {
 
         <TabsContent value="valuebet">
           <ProjetoValueBetTab 
+            projetoId={id!} 
+            onDataChange={() => { fetchApostasResumo(); refreshResultado(); }}
+            periodFilter={periodFilter}
+            dateRange={dateRange}
+          />
+        </TabsContent>
+
+        <TabsContent value="duplogreen">
+          <ProjetoDuploGreenTab 
             projetoId={id!} 
             onDataChange={() => { fetchApostasResumo(); refreshResultado(); }}
             periodFilter={periodFilter}
