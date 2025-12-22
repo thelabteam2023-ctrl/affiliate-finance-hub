@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Switch } from "@/components/ui/switch";
@@ -17,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { 
-  Gift, Search, Building2, User, Target, CheckCircle2, Clock, 
+  Gift, Search, Building2, Target, CheckCircle2, Clock, 
   TrendingUp, Percent, LayoutGrid, List, Minimize2, BarChart3 
 } from "lucide-react";
 import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
@@ -32,6 +31,8 @@ import {
   BookmakerComFreebet,
   BookmakerFreebetStats
 } from "./freebets";
+import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
+import { ApostaMultiplaDialog } from "@/components/projeto-detalhe/ApostaMultiplaDialog";
 
 interface ProjetoFreebetsTabProps {
   projetoId: string;
@@ -48,6 +49,13 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
   const [apostasOperacionais, setApostasOperacionais] = useState<ApostaOperacionalFreebet[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [casaFilter, setCasaFilter] = useState<string>("todas");
+  
+  // Dialog states
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMultiplaOpen, setDialogMultiplaOpen] = useState(false);
+  const [selectedAposta, setSelectedAposta] = useState<any>(null);
+  const [selectedApostaMultipla, setSelectedApostaMultipla] = useState<any>(null);
+  const [bookmakers, setBookmakers] = useState<any[]>([]);
 
   // Preferências de visualização (persistidas)
   const { 
@@ -93,10 +101,33 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
       await Promise.all([
         fetchFreebets(), 
         fetchBookmakersComFreebet(), 
-        fetchApostasOperacionais()
+        fetchApostasOperacionais(),
+        fetchBookmakers()
       ]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBookmakers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("bookmakers")
+        .select(`
+          id,
+          nome,
+          saldo_atual,
+          saldo_freebet,
+          parceiro:parceiros (nome),
+          bookmakers_catalogo (logo_url)
+        `)
+        .eq("projeto_id", projetoId)
+        .in("status", ["ativo", "ATIVO", "LIMITADA", "limitada"]);
+
+      if (error) throw error;
+      setBookmakers(data || []);
+    } catch (error: any) {
+      console.error("Erro ao carregar bookmakers:", error.message);
     }
   };
 
@@ -268,6 +299,62 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
       style: "currency",
       currency: "BRL",
     }).format(value);
+  };
+
+  // Handlers para atualização de resultado e edição
+  const handleApostaUpdated = () => {
+    fetchData();
+    onDataChange?.();
+  };
+
+  const handleEditClick = (aposta: ApostaOperacionalFreebet) => {
+    if (aposta.tipo === "multipla") {
+      // Buscar dados completos da aposta múltipla
+      setSelectedApostaMultipla({
+        id: aposta.id,
+        bookmaker_id: aposta.bookmaker_id,
+        stake: aposta.stake,
+        odd_final: aposta.odd,
+        resultado: aposta.resultado,
+        status: aposta.status,
+        lucro_prejuizo: aposta.lucro_prejuizo,
+        valor_retorno: aposta.valor_retorno,
+        data_aposta: aposta.data_aposta,
+        tipo_freebet: aposta.tipo_freebet,
+        gerou_freebet: aposta.gerou_freebet,
+        valor_freebet_gerada: aposta.valor_freebet_gerada,
+        selecoes: aposta.selecao.split(" + ").map(s => ({ descricao: s, selecao: s, odd: "1.00" })),
+        bookmaker: {
+          nome: aposta.bookmaker_nome,
+          bookmakers_catalogo: { logo_url: aposta.logo_url }
+        }
+      });
+      setDialogMultiplaOpen(true);
+    } else {
+      // Buscar dados completos da aposta simples
+      setSelectedAposta({
+        id: aposta.id,
+        bookmaker_id: aposta.bookmaker_id,
+        evento: aposta.evento,
+        mercado: aposta.mercado,
+        selecao: aposta.selecao,
+        odd: aposta.odd,
+        stake: aposta.stake,
+        resultado: aposta.resultado,
+        status: aposta.status,
+        lucro_prejuizo: aposta.lucro_prejuizo,
+        valor_retorno: aposta.valor_retorno,
+        data_aposta: aposta.data_aposta,
+        tipo_freebet: aposta.tipo_freebet,
+        gerou_freebet: aposta.gerou_freebet,
+        valor_freebet_gerada: aposta.valor_freebet_gerada,
+        bookmaker: {
+          nome: aposta.bookmaker_nome,
+          bookmakers_catalogo: { logo_url: aposta.logo_url }
+        }
+      });
+      setDialogOpen(true);
+    }
   };
 
   // Filtrar por período
@@ -632,7 +719,12 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
                   <p className="mt-3 text-sm text-muted-foreground">Nenhuma aposta pendente</p>
                 </div>
               ) : viewMode === "list" ? (
-                <FreebetApostasList apostas={apostasAtivas} formatCurrency={formatCurrency} />
+                <FreebetApostasList 
+                  apostas={apostasAtivas} 
+                  formatCurrency={formatCurrency}
+                  onResultadoUpdated={handleApostaUpdated}
+                  onEditClick={handleEditClick}
+                />
               ) : (
                 <div className={`grid gap-3 ${compactMode ? 'space-y-0' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
                   {apostasAtivas.map(aposta => (
@@ -640,7 +732,9 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
                       key={aposta.id} 
                       aposta={aposta} 
                       compact={compactMode}
-                      formatCurrency={formatCurrency} 
+                      formatCurrency={formatCurrency}
+                      onResultadoUpdated={handleApostaUpdated}
+                      onEditClick={handleEditClick}
                     />
                   ))}
                 </div>
@@ -655,7 +749,12 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
                   <p className="mt-3 text-sm text-muted-foreground">Nenhuma aposta finalizada</p>
                 </div>
               ) : viewMode === "list" ? (
-                <FreebetApostasList apostas={apostasHistorico} formatCurrency={formatCurrency} />
+                <FreebetApostasList 
+                  apostas={apostasHistorico} 
+                  formatCurrency={formatCurrency}
+                  onResultadoUpdated={handleApostaUpdated}
+                  onEditClick={handleEditClick}
+                />
               ) : (
                 <div className={`grid gap-3 ${compactMode ? 'space-y-0' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
                   {apostasHistorico.map(aposta => (
@@ -663,7 +762,9 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
                       key={aposta.id} 
                       aposta={aposta} 
                       compact={compactMode}
-                      formatCurrency={formatCurrency} 
+                      formatCurrency={formatCurrency}
+                      onResultadoUpdated={handleApostaUpdated}
+                      onEditClick={handleEditClick}
                     />
                   ))}
                 </div>
@@ -691,6 +792,23 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Dialogs */}
+      <ApostaDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        projetoId={projetoId}
+        aposta={selectedAposta}
+        onSuccess={handleApostaUpdated}
+      />
+
+      <ApostaMultiplaDialog
+        open={dialogMultiplaOpen}
+        onOpenChange={setDialogMultiplaOpen}
+        projetoId={projetoId}
+        aposta={selectedApostaMultipla}
+        onSuccess={handleApostaUpdated}
+      />
     </div>
   );
 }
