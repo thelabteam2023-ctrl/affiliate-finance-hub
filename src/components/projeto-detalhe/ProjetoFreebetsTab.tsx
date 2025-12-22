@@ -62,6 +62,9 @@ interface ApostaOperacionalFreebet {
   bookmaker_nome: string;
   logo_url: string | null;
   parceiro_nome: string | null;
+  // Indica se é aposta qualificadora que gerou freebet
+  gerou_freebet: boolean;
+  valor_freebet_gerada: number | null;
 }
 
 export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDateRange }: ProjetoFreebetsTabProps) {
@@ -199,6 +202,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
   const fetchApostasOperacionais = async () => {
     try {
       // Buscar apostas simples com contexto_operacional = FREEBET
+      // Buscar apostas com contexto_operacional = FREEBET OU que geraram freebet
       const { data: apostasSimples, error: errorSimples } = await supabase
         .from("apostas")
         .select(`
@@ -215,6 +219,8 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
           resultado,
           tipo_freebet,
           contexto_operacional,
+          gerou_freebet,
+          valor_freebet_gerada,
           bookmakers!apostas_bookmaker_id_fkey (
             nome,
             parceiros!bookmakers_parceiro_id_fkey (nome),
@@ -222,13 +228,14 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
           )
         `)
         .eq("projeto_id", projetoId)
-        .eq("contexto_operacional", "FREEBET")
+        .or("contexto_operacional.eq.FREEBET,gerou_freebet.eq.true")
         .is("cancelled_at", null)
         .order("data_aposta", { ascending: false });
 
       if (errorSimples) throw errorSimples;
 
       // Buscar apostas múltiplas com contexto_operacional = FREEBET
+      // Buscar apostas múltiplas com contexto_operacional = FREEBET OU que geraram freebet
       const { data: apostasMultiplas, error: errorMultiplas } = await supabase
         .from("apostas_multiplas")
         .select(`
@@ -243,6 +250,8 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
           resultado,
           tipo_freebet,
           contexto_operacional,
+          gerou_freebet,
+          valor_freebet_gerada,
           bookmakers!apostas_multiplas_bookmaker_id_fkey (
             nome,
             parceiros!bookmakers_parceiro_id_fkey (nome),
@@ -250,7 +259,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
           )
         `)
         .eq("projeto_id", projetoId)
-        .eq("contexto_operacional", "FREEBET")
+        .or("contexto_operacional.eq.FREEBET,gerou_freebet.eq.true")
         .is("cancelled_at", null)
         .order("data_aposta", { ascending: false });
 
@@ -274,6 +283,8 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
         bookmaker_nome: ap.bookmakers?.nome || "Desconhecida",
         logo_url: ap.bookmakers?.bookmakers_catalogo?.logo_url || null,
         parceiro_nome: ap.bookmakers?.parceiros?.nome || null,
+        gerou_freebet: ap.gerou_freebet || false,
+        valor_freebet_gerada: ap.valor_freebet_gerada || null,
       }));
 
       // Formatar apostas múltiplas
@@ -297,6 +308,8 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
           bookmaker_nome: ap.bookmakers?.nome || "Desconhecida",
           logo_url: ap.bookmakers?.bookmakers_catalogo?.logo_url || null,
           parceiro_nome: ap.bookmakers?.parceiros?.nome || null,
+          gerou_freebet: ap.gerou_freebet || false,
+          valor_freebet_gerada: ap.valor_freebet_gerada || null,
         };
       });
 
@@ -629,10 +642,10 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Target className="h-4 w-4 text-primary" />
-              Apostas com Freebet
+              Apostas Relacionadas a Freebet
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Apostas realizadas utilizando Freebet como recurso
+              Apostas qualificadoras (que geraram freebet) e apostas usando freebet
             </p>
           </CardHeader>
           <CardContent>
@@ -719,14 +732,21 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap justify-end">
                         {aposta.tipo === "multipla" && (
                           <Badge variant="outline" className="text-xs">Múltipla</Badge>
                         )}
-                        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
-                          <Gift className="h-3 w-3 mr-1" />
-                          Freebet
-                        </Badge>
+                        {aposta.gerou_freebet ? (
+                          <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-xs">
+                            <Target className="h-3 w-3 mr-1" />
+                            Qualificadora
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
+                            <Gift className="h-3 w-3 mr-1" />
+                            Freebet
+                          </Badge>
+                        )}
                       </div>
                     </div>
 
@@ -769,6 +789,19 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
                         </p>
                       </div>
                     </div>
+
+                    {/* Gerou Freebet Info */}
+                    {aposta.gerou_freebet && aposta.valor_freebet_gerada && (
+                      <div className="flex items-center justify-between p-2 rounded bg-purple-500/10 border border-purple-500/20 mb-3">
+                        <span className="text-xs text-purple-400 flex items-center gap-1">
+                          <Gift className="h-3 w-3" />
+                          Gerou Freebet
+                        </span>
+                        <span className="text-sm font-bold text-purple-400">
+                          {formatCurrency(aposta.valor_freebet_gerada)}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Footer: Data + Resultado */}
                     <div className="flex items-center justify-between pt-2 border-t">
