@@ -117,50 +117,14 @@ export function RegistroApostaFields({
   };
 
   return (
-    <div className={`grid gap-3 ${compact ? 'grid-cols-3' : 'grid-cols-1 md:grid-cols-3'}`}>
-      {/* Forma de Registro */}
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-1.5">
-          <Label className="text-xs text-muted-foreground">
-            Forma de Registro
-            {showRequired && <span className="text-destructive">*</span>}
-          </Label>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <HelpCircle className="h-3 w-3 text-muted-foreground/50 cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs">
-                <p className="text-xs">
-                  Como a aposta foi estruturada tecnicamente.
-                  <br /><br />
-                  <strong>SIMPLES:</strong> Uma única seleção
-                  <br />
-                  <strong>MÚLTIPLA:</strong> Várias seleções combinadas
-                  <br />
-                  <strong>ARBITRAGEM:</strong> Operação em múltiplas casas
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-        <Select
-          value={values.forma_registro || ""}
-          onValueChange={(v) => handleChange('forma_registro', v)}
-          disabled={disabled?.forma_registro}
-        >
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue placeholder="Selecione..." />
-          </SelectTrigger>
-          <SelectContent>
-            {FORMAS_REGISTRO_LIST.map((item) => (
-              <SelectItem key={item.value} value={item.value} className="text-xs">
-                {item.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <div className={`grid gap-3 ${compact ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-2'}`}>
+      {/* 
+       * NOTA: Forma de Registro foi REMOVIDA da UI.
+       * É apenas um metadado técnico definido automaticamente pelo tipo de formulário:
+       * - ApostaDialog = SIMPLES
+       * - ApostaMultiplaDialog = MULTIPLA  
+       * - SurebetDialog = ARBITRAGEM
+       */}
 
       {/* Estratégia */}
       <div className="space-y-1.5">
@@ -277,9 +241,7 @@ export function validateRegistroAposta(values: RegistroApostaValues): {
 } {
   const errors: string[] = [];
   
-  if (!values.forma_registro) {
-    errors.push("Forma de registro obrigatória");
-  }
+  // forma_registro NÃO é validada - é definida automaticamente pelo tipo de formulário
   if (!values.estrategia) {
     errors.push("Estratégia obrigatória");
   }
