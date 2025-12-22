@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -17,10 +19,12 @@ import {
 } from "@/components/ui/select";
 import { 
   Gift, Search, Building2, Target, CheckCircle2, Clock, 
-  TrendingUp, Percent, LayoutGrid, List, Minimize2, BarChart3 
+  TrendingUp, Percent, LayoutGrid, List, Minimize2, BarChart3,
+  LayoutDashboard, History, PanelLeft, LayoutList
 } from "lucide-react";
 import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { useFreebetViewPreferences, FreebetSubTab } from "@/hooks/useFreebetViewPreferences";
+import { cn } from "@/lib/utils";
 import { 
   FreebetApostaCard, 
   FreebetApostasList, 
@@ -42,6 +46,27 @@ interface ProjetoFreebetsTabProps {
   refreshTrigger?: number;
 }
 
+type NavigationMode = "tabs" | "sidebar";
+type NavTabValue = "visao-geral" | "apostas" | "por-casa" | "graficos";
+type InternalPeriodFilter = "7dias" | "30dias" | "90dias" | "ano" | "tudo";
+
+const NAV_STORAGE_KEY = "freebets-nav-mode";
+
+const NAV_ITEMS = [
+  { value: "visao-geral" as NavTabValue, label: "Visão Geral", icon: LayoutDashboard },
+  { value: "apostas" as NavTabValue, label: "Apostas", icon: Target },
+  { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
+  { value: "graficos" as NavTabValue, label: "Gráficos", icon: BarChart3 },
+];
+
+const PERIOD_OPTIONS: { value: InternalPeriodFilter; label: string }[] = [
+  { value: "7dias", label: "7 dias" },
+  { value: "30dias", label: "30 dias" },
+  { value: "90dias", label: "90 dias" },
+  { value: "ano", label: "Ano" },
+  { value: "tudo", label: "Todo Tempo" },
+];
+
 export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDateRange, onDataChange, refreshTrigger }: ProjetoFreebetsTabProps) {
   const [loading, setLoading] = useState(true);
   const [freebets, setFreebets] = useState<FreebetRecebida[]>([]);
@@ -49,6 +74,17 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
   const [apostasOperacionais, setApostasOperacionais] = useState<ApostaOperacionalFreebet[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [casaFilter, setCasaFilter] = useState<string>("todas");
+  
+  // Internal period filter (local to this tab)
+  const [internalPeriod, setInternalPeriod] = useState<InternalPeriodFilter>("30dias");
+  
+  // Navigation mode (sidebar vs tabs)
+  const [navMode, setNavMode] = useState<NavigationMode>(() => {
+    const saved = localStorage.getItem(NAV_STORAGE_KEY);
+    return (saved === "tabs" ? "tabs" : "sidebar") as NavigationMode;
+  });
+  const [activeNavTab, setActiveNavTab] = useState<NavTabValue>("visao-geral");
+  const [isTransitioning, setIsTransitioning] = useState(false);
   
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -64,32 +100,30 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
     subTab, setSubTab 
   } = useFreebetViewPreferences();
 
-  // Calcular range de datas baseado no filtro
+  // Save nav mode preference
+  useEffect(() => {
+    localStorage.setItem(NAV_STORAGE_KEY, navMode);
+  }, [navMode]);
+
+  // Calcular range de datas baseado no filtro interno
   const dateRange = useMemo(() => {
     const now = new Date();
     const today = startOfDay(now);
     
-    switch (periodFilter) {
-      case "hoje":
-        return { start: today, end: endOfDay(now) };
-      case "ontem":
-        const yesterday = subDays(today, 1);
-        return { start: yesterday, end: endOfDay(yesterday) };
+    switch (internalPeriod) {
       case "7dias":
         return { start: subDays(today, 7), end: endOfDay(now) };
-      case "mes":
-        return { start: startOfMonth(now), end: endOfDay(now) };
+      case "30dias":
+        return { start: subDays(today, 30), end: endOfDay(now) };
+      case "90dias":
+        return { start: subDays(today, 90), end: endOfDay(now) };
       case "ano":
         return { start: startOfYear(now), end: endOfDay(now) };
-      case "periodo":
-        if (customDateRange) {
-          return { start: customDateRange.start, end: endOfDay(customDateRange.end) };
-        }
-        return null;
+      case "tudo":
       default:
         return null;
     }
-  }, [periodFilter, customDateRange]);
+  }, [internalPeriod]);
 
   useEffect(() => {
     fetchData();
@@ -309,7 +343,6 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
 
   const handleEditClick = (aposta: ApostaOperacionalFreebet) => {
     if (aposta.tipo === "multipla") {
-      // Buscar dados completos da aposta múltipla
       setSelectedApostaMultipla({
         id: aposta.id,
         bookmaker_id: aposta.bookmaker_id,
@@ -331,7 +364,6 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
       });
       setDialogMultiplaOpen(true);
     } else {
-      // Buscar dados completos da aposta simples
       setSelectedAposta({
         id: aposta.id,
         bookmaker_id: aposta.bookmaker_id,
@@ -354,6 +386,23 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
         }
       });
       setDialogOpen(true);
+    }
+  };
+
+  // Navigation handlers
+  const handleModeToggle = () => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setNavMode(prev => prev === "tabs" ? "sidebar" : "tabs");
+      setTimeout(() => setIsTransitioning(false), 50);
+    }, 150);
+  };
+
+  const handleNavTabChange = (value: string) => {
+    if (value !== activeNavTab) {
+      setIsTransitioning(true);
+      setActiveNavTab(value as NavTabValue);
+      setTimeout(() => setIsTransitioning(false), 180);
     }
   };
 
@@ -516,18 +565,110 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
   const freebetsUtilizadas = freebetsNoPeriodo.filter(f => f.utilizada).length;
   const freebetsDisponiveis = freebetsNoPeriodo.filter(f => !f.utilizada).length;
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-          {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-24" />)}
+  // Mode toggle button component
+  const modeToggle = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleModeToggle}
+          className="h-8 w-8 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/50 transition-colors"
+        >
+          {navMode === "tabs" ? (
+            <PanelLeft className="h-4 w-4" />
+          ) : (
+            <LayoutList className="h-4 w-4" />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="text-xs">
+        {navMode === "tabs" ? "Modo Gestão" : "Modo Compacto"}
+      </TooltipContent>
+    </Tooltip>
+  );
+
+  // Period filter component
+  const periodFilterButtons = (
+    <div className="flex gap-1">
+      {PERIOD_OPTIONS.map((option) => (
+        <Button
+          key={option.value}
+          variant={internalPeriod === option.value ? "default" : "outline"}
+          size="sm"
+          onClick={() => setInternalPeriod(option.value)}
+          className="text-xs h-7 px-2"
+        >
+          {option.label}
+        </Button>
+      ))}
+    </div>
+  );
+
+  // Freebets disponíveis sidebar component
+  const freebetsDisponiveisSidebar = (
+    <div className="space-y-2">
+      <h4 className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider mb-3">
+        Freebets Disponíveis
+      </h4>
+      {bookmakersComFreebet.length === 0 ? (
+        <p className="text-xs text-muted-foreground py-2">Nenhuma freebet disponível</p>
+      ) : (
+        <div className="space-y-1">
+          {bookmakersComFreebet.map(bk => (
+            <div 
+              key={bk.id} 
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors"
+            >
+              {bk.logo_url ? (
+                <img src={bk.logo_url} alt={bk.nome} className="h-5 w-5 rounded object-contain bg-white p-0.5" />
+              ) : (
+                <Gift className="h-4 w-4 text-amber-400" />
+              )}
+              <span className="text-sm font-medium truncate flex-1">{bk.nome}</span>
+              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs shrink-0">
+                {formatCurrency(bk.saldo_freebet)}
+              </Badge>
+            </div>
+          ))}
         </div>
-        <Skeleton className="h-96" />
+      )}
+    </div>
+  );
+
+  // Main content renderer based on active tab
+  const renderMainContent = () => {
+    const contentClass = cn(
+      "transition-all duration-200 ease-out",
+      isTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
+    );
+
+    return (
+      <div className={cn("min-h-[400px]", contentClass)}>
+        {activeNavTab === "visao-geral" && renderVisaoGeral()}
+        {activeNavTab === "apostas" && renderApostas()}
+        {activeNavTab === "por-casa" && (
+          <FreebetResumoPorCasa 
+            stats={statsPorCasa} 
+            formatCurrency={formatCurrency}
+            viewMode={viewMode}
+          />
+        )}
+        {activeNavTab === "graficos" && (
+          <FreebetGraficos 
+            apostas={apostasNoPeriodo} 
+            statsPorCasa={statsPorCasa}
+            formatCurrency={formatCurrency}
+            dateRange={dateRange}
+            freebets={freebetsNoPeriodo}
+          />
+        )}
       </div>
     );
-  }
+  };
 
-  return (
+  // Visão Geral content
+  const renderVisaoGeral = () => (
     <div className="space-y-4">
       {/* KPIs - Métricas de Período */}
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
@@ -604,195 +745,292 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
         </Card>
       </div>
 
-      {/* Saldo por Casa (compacto) */}
-      {bookmakersComFreebet.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {bookmakersComFreebet.slice(0, 6).map(bk => (
-            <div key={bk.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-card">
-              {bk.logo_url ? (
-                <img src={bk.logo_url} alt={bk.nome} className="h-5 w-5 rounded object-contain bg-white p-0.5" />
-              ) : (
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-              )}
-              <span className="text-sm font-medium">{bk.nome}</span>
-              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
-                {formatCurrency(bk.saldo_freebet)}
-              </Badge>
-            </div>
-          ))}
-          {bookmakersComFreebet.length > 6 && (
-            <div className="flex items-center px-3 py-1.5 rounded-full border bg-muted/50">
-              <span className="text-xs text-muted-foreground">+{bookmakersComFreebet.length - 6} casas</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Área Principal com Sub-abas */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Recent Apostas Preview */}
+      {apostasAtivas.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <Target className="h-4 w-4 text-primary" />
-              Centro de Inteligência Freebet
+              <Clock className="h-4 w-4 text-primary" />
+              Apostas Pendentes
+              <Badge variant="secondary" className="ml-2">{apostasAtivas.length}</Badge>
             </CardTitle>
-            
-            {/* Controles de Visualização */}
-            <div className="flex items-center gap-4">
-              <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as any)}>
-                <ToggleGroupItem value="card" aria-label="Cards" size="sm">
-                  <LayoutGrid className="h-4 w-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="list" aria-label="Lista" size="sm">
-                  <List className="h-4 w-4" />
-                </ToggleGroupItem>
-              </ToggleGroup>
-              
-              <div className="flex items-center gap-2">
-                <Switch id="compact" checked={compactMode} onCheckedChange={toggleCompactMode} />
-                <Label htmlFor="compact" className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1">
-                  <Minimize2 className="h-3 w-3" />
-                  Compacto
-                </Label>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {apostasAtivas.slice(0, 6).map(aposta => (
+                <FreebetApostaCard 
+                  key={aposta.id} 
+                  aposta={aposta} 
+                  compact={true}
+                  formatCurrency={formatCurrency}
+                  onResultadoUpdated={handleApostaUpdated}
+                  onEditClick={handleEditClick}
+                />
+              ))}
+            </div>
+            {apostasAtivas.length > 6 && (
+              <div className="mt-4 text-center">
+                <Button variant="ghost" size="sm" onClick={() => setActiveNavTab("apostas")}>
+                  Ver todas as {apostasAtivas.length} apostas
+                </Button>
               </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+
+  // Apostas content with sub-tabs
+  const renderApostas = () => (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Target className="h-4 w-4 text-primary" />
+            Centro de Inteligência Freebet
+          </CardTitle>
+          
+          {/* Controles de Visualização */}
+          <div className="flex items-center gap-4">
+            <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as any)}>
+              <ToggleGroupItem value="card" aria-label="Cards" size="sm">
+                <LayoutGrid className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="list" aria-label="Lista" size="sm">
+                <List className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+            
+            <div className="flex items-center gap-2">
+              <Switch id="compact" checked={compactMode} onCheckedChange={toggleCompactMode} />
+              <Label htmlFor="compact" className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1">
+                <Minimize2 className="h-3 w-3" />
+                Compacto
+              </Label>
             </div>
           </div>
-        </CardHeader>
-        
-        <CardContent>
-          <Tabs value={subTab} onValueChange={(v) => setSubTab(v as FreebetSubTab)} className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <TabsList>
-                <TabsTrigger value="ativas" className="gap-1.5">
-                  <Clock className="h-3.5 w-3.5" />
-                  Ativas
-                  {apostasAtivas.length > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-5 px-1.5">{apostasAtivas.length}</Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="historico" className="gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Histórico
-                </TabsTrigger>
-                <TabsTrigger value="por-casa" className="gap-1.5">
-                  <Building2 className="h-3.5 w-3.5" />
-                  Por Casa
-                </TabsTrigger>
-                <TabsTrigger value="graficos" className="gap-1.5">
-                  <BarChart3 className="h-3.5 w-3.5" />
-                  Gráficos
-                </TabsTrigger>
-              </TabsList>
-              
-              {/* Filtros (apenas para abas de apostas) */}
-              {(subTab === "ativas" || subTab === "historico") && (
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9 w-[200px] h-9"
-                    />
-                  </div>
-                  <Select value={casaFilter} onValueChange={setCasaFilter}>
-                    <SelectTrigger className="w-[150px] h-9">
-                      <SelectValue placeholder="Casa" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todas">Todas as Casas</SelectItem>
-                      {casasDisponiveis.map(casa => (
-                        <SelectItem key={casa} value={casa}>{casa}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+        </div>
+      </CardHeader>
+      
+      <CardContent>
+        <Tabs value={subTab} onValueChange={(v) => setSubTab(v as FreebetSubTab)} className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <TabsList>
+              <TabsTrigger value="ativas" className="gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                Ativas
+                {apostasAtivas.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">{apostasAtivas.length}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="historico" className="gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Histórico
+              </TabsTrigger>
+            </TabsList>
+            
+            {/* Filtros */}
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 w-[200px] h-9"
+                />
+              </div>
+              <Select value={casaFilter} onValueChange={setCasaFilter}>
+                <SelectTrigger className="w-[150px] h-9">
+                  <SelectValue placeholder="Casa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas as Casas</SelectItem>
+                  {casasDisponiveis.map(casa => (
+                    <SelectItem key={casa} value={casa}>{casa}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+          </div>
 
-            {/* Conteúdo: Apostas Ativas */}
-            <TabsContent value="ativas" className="mt-4">
-              {apostasAtivas.length === 0 ? (
-                <div className="text-center py-12 border rounded-lg bg-muted/5">
-                  <Clock className="mx-auto h-10 w-10 text-muted-foreground/30" />
-                  <p className="mt-3 text-sm text-muted-foreground">Nenhuma aposta pendente</p>
-                </div>
-              ) : viewMode === "list" ? (
-                <FreebetApostasList 
-                  apostas={apostasAtivas} 
-                  formatCurrency={formatCurrency}
-                  onResultadoUpdated={handleApostaUpdated}
-                  onEditClick={handleEditClick}
-                />
-              ) : (
-                <div className={`grid gap-3 ${compactMode ? 'space-y-0' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
-                  {apostasAtivas.map(aposta => (
-                    <FreebetApostaCard 
-                      key={aposta.id} 
-                      aposta={aposta} 
-                      compact={compactMode}
-                      formatCurrency={formatCurrency}
-                      onResultadoUpdated={handleApostaUpdated}
-                      onEditClick={handleEditClick}
-                    />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Conteúdo: Histórico */}
-            <TabsContent value="historico" className="mt-4">
-              {apostasHistorico.length === 0 ? (
-                <div className="text-center py-12 border rounded-lg bg-muted/5">
-                  <CheckCircle2 className="mx-auto h-10 w-10 text-muted-foreground/30" />
-                  <p className="mt-3 text-sm text-muted-foreground">Nenhuma aposta finalizada</p>
-                </div>
-              ) : viewMode === "list" ? (
-                <FreebetApostasList 
-                  apostas={apostasHistorico} 
-                  formatCurrency={formatCurrency}
-                  onResultadoUpdated={handleApostaUpdated}
-                  onEditClick={handleEditClick}
-                />
-              ) : (
-                <div className={`grid gap-3 ${compactMode ? 'space-y-0' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
-                  {apostasHistorico.map(aposta => (
-                    <FreebetApostaCard 
-                      key={aposta.id} 
-                      aposta={aposta} 
-                      compact={compactMode}
-                      formatCurrency={formatCurrency}
-                      onResultadoUpdated={handleApostaUpdated}
-                      onEditClick={handleEditClick}
-                    />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Conteúdo: Por Casa */}
-            <TabsContent value="por-casa" className="mt-4">
-              <FreebetResumoPorCasa 
-                stats={statsPorCasa} 
+          {/* Conteúdo: Apostas Ativas */}
+          <TabsContent value="ativas" className="mt-4">
+            {apostasAtivas.length === 0 ? (
+              <div className="text-center py-12 border rounded-lg bg-muted/5">
+                <Clock className="mx-auto h-10 w-10 text-muted-foreground/30" />
+                <p className="mt-3 text-sm text-muted-foreground">Nenhuma aposta pendente</p>
+              </div>
+            ) : viewMode === "list" ? (
+              <FreebetApostasList 
+                apostas={apostasAtivas} 
                 formatCurrency={formatCurrency}
-                viewMode={viewMode}
+                onResultadoUpdated={handleApostaUpdated}
+                onEditClick={handleEditClick}
               />
-            </TabsContent>
+            ) : (
+              <div className={`grid gap-3 ${compactMode ? 'space-y-0' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
+                {apostasAtivas.map(aposta => (
+                  <FreebetApostaCard 
+                    key={aposta.id} 
+                    aposta={aposta} 
+                    compact={compactMode}
+                    formatCurrency={formatCurrency}
+                    onResultadoUpdated={handleApostaUpdated}
+                    onEditClick={handleEditClick}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
-            {/* Conteúdo: Gráficos */}
-            <TabsContent value="graficos" className="mt-4">
-              <FreebetGraficos 
-                apostas={apostasNoPeriodo} 
-                statsPorCasa={statsPorCasa}
+          {/* Conteúdo: Histórico */}
+          <TabsContent value="historico" className="mt-4">
+            {apostasHistorico.length === 0 ? (
+              <div className="text-center py-12 border rounded-lg bg-muted/5">
+                <CheckCircle2 className="mx-auto h-10 w-10 text-muted-foreground/30" />
+                <p className="mt-3 text-sm text-muted-foreground">Nenhuma aposta finalizada</p>
+              </div>
+            ) : viewMode === "list" ? (
+              <FreebetApostasList 
+                apostas={apostasHistorico} 
                 formatCurrency={formatCurrency}
-                dateRange={dateRange}
-                freebets={freebetsNoPeriodo}
+                onResultadoUpdated={handleApostaUpdated}
+                onEditClick={handleEditClick}
               />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+            ) : (
+              <div className={`grid gap-3 ${compactMode ? 'space-y-0' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
+                {apostasHistorico.map(aposta => (
+                  <FreebetApostaCard 
+                    key={aposta.id} 
+                    aposta={aposta} 
+                    compact={compactMode}
+                    formatCurrency={formatCurrency}
+                    onResultadoUpdated={handleApostaUpdated}
+                    onEditClick={handleEditClick}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
+  );
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+          {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-24" />)}
+        </div>
+        <Skeleton className="h-96" />
+      </div>
+    );
+  }
+
+  // Mode: Slim Tabs
+  if (navMode === "tabs") {
+    return (
+      <div className="space-y-6">
+        <Tabs value={activeNavTab} onValueChange={handleNavTabChange} className="space-y-6">
+          <div className="flex items-center justify-between border-b border-border/50">
+            <TabsList className="bg-transparent border-0 rounded-none p-0 h-auto gap-6">
+              {NAV_ITEMS.map((item) => (
+                <TabsTrigger
+                  key={item.value}
+                  value={item.value}
+                  className="bg-transparent border-0 rounded-none px-1 pb-3 pt-1 h-auto shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground/70 data-[state=active]:text-foreground transition-colors"
+                >
+                  <item.icon className="h-4 w-4 mr-2 opacity-60" />
+                  {item.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            <div className="flex items-center gap-4">
+              {periodFilterButtons}
+              {modeToggle}
+            </div>
+          </div>
+
+          <TabsContent value={activeNavTab} className="mt-0">
+            {renderMainContent()}
+          </TabsContent>
+        </Tabs>
+
+        {/* Dialogs */}
+        <ApostaDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          projetoId={projetoId}
+          aposta={selectedAposta}
+          onSuccess={handleApostaUpdated}
+        />
+
+        <ApostaMultiplaDialog
+          open={dialogMultiplaOpen}
+          onOpenChange={setDialogMultiplaOpen}
+          projetoId={projetoId}
+          aposta={selectedApostaMultipla}
+          onSuccess={handleApostaUpdated}
+        />
+      </div>
+    );
+  }
+
+  // Mode: Sidebar
+  return (
+    <div className="space-y-4">
+      {/* Period Filter at top right */}
+      <div className="flex justify-end">
+        {periodFilterButtons}
+      </div>
+      
+      <div className="flex gap-6">
+        {/* Sidebar Navigation */}
+        <div className="w-52 shrink-0 space-y-6">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
+                Navegação
+              </span>
+              {modeToggle}
+            </div>
+            <nav className="space-y-1">
+              {NAV_ITEMS.map((item) => {
+                const isActive = activeNavTab === item.value;
+                return (
+                  <button
+                    key={item.value}
+                    onClick={() => handleNavTabChange(item.value)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                      isActive
+                        ? "bg-accent/10 text-foreground shadow-sm"
+                        : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    <item.icon className={cn(
+                      "h-4 w-4 transition-colors",
+                      isActive ? "text-accent" : "opacity-60"
+                    )} />
+                    <span className="flex-1 text-left">{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Freebets Disponíveis */}
+          {freebetsDisponiveisSidebar}
+        </div>
+
+        {/* Content Area */}
+        <div className="flex-1 min-w-0">
+          {renderMainContent()}
+        </div>
+      </div>
 
       {/* Dialogs */}
       <ApostaDialog
