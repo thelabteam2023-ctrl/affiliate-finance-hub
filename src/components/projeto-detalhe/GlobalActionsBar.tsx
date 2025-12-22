@@ -211,6 +211,7 @@ export function GlobalActionsBar({
         projetoId={projetoId}
         onSuccess={handleApostaSuccess}
         defaultEstrategia={getEstrategiaFromTab(activeTab || 'apostas')}
+        activeTab={activeTab || 'apostas'}
       />
 
       <ApostaMultiplaDialog
@@ -220,6 +221,7 @@ export function GlobalActionsBar({
         projetoId={projetoId}
         onSuccess={handleMultiplaSuccess}
         defaultEstrategia={getEstrategiaFromTab(activeTab || 'apostas')}
+        activeTab={activeTab || 'apostas'}
       />
 
       <SurebetDialog
@@ -229,6 +231,7 @@ export function GlobalActionsBar({
         bookmakers={bookmakers}
         surebet={null}
         onSuccess={handleSurebetSuccess}
+        activeTab={activeTab || 'surebet'}
       />
 
       <BonusDialog

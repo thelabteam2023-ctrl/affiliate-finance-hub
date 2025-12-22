@@ -100,6 +100,7 @@ interface ApostaDialogProps {
   projetoId: string;
   onSuccess: () => void;
   defaultEstrategia?: string;
+  activeTab?: string;
 }
 
 const ESPORTES_BASE = [
@@ -296,7 +297,7 @@ const getMoneylineSelecoes = (esporte: string, mandante: string, visitante: stri
 
 // Removed EXCHANGES list - now using bookmakers list for Exchange tab
 
-export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess, defaultEstrategia = 'PUNTER' }: ApostaDialogProps) {
+export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess, defaultEstrategia = 'PUNTER', activeTab = 'apostas' }: ApostaDialogProps) {
   const [loading, setLoading] = useState(false);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -2252,7 +2253,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               <RegistroApostaFields
                 values={registroValues}
                 onChange={setRegistroValues}
-                suggestions={getSuggestionsForTab('apostas')}
+                suggestions={getSuggestionsForTab(activeTab)}
                 compact
               />
             </div>
