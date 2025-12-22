@@ -1,56 +1,24 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
-  BarChart, Bar, LineChart, Line, XAxis, YAxis, 
+  BarChart, Bar, XAxis, YAxis, 
   CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell 
 } from "recharts";
-import { TrendingUp, PieChart as PieChartIcon, BarChart3 } from "lucide-react";
-import { ApostaOperacionalFreebet, BookmakerFreebetStats, ChartDataPoint, BookmakerChartData } from "./types";
-import { format, parseISO, startOfDay, eachDayOfInterval, subDays } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { PieChart as PieChartIcon, BarChart3 } from "lucide-react";
+import { ApostaOperacionalFreebet, BookmakerFreebetStats, BookmakerChartData, FreebetRecebida } from "./types";
+import { CurvaExtracaoChart } from "./CurvaExtracaoChart";
 
 interface FreebetGraficosProps {
   apostas: ApostaOperacionalFreebet[];
   statsPorCasa: BookmakerFreebetStats[];
   formatCurrency: (value: number) => string;
   dateRange: { start: Date; end: Date } | null;
+  freebets?: FreebetRecebida[];
 }
 
 const COLORS = ['#22c55e', '#ef4444', '#eab308', '#6366f1', '#f97316', '#14b8a6'];
 
-export function FreebetGraficos({ apostas, statsPorCasa, formatCurrency, dateRange }: FreebetGraficosProps) {
-  // Evolução do valor extraído no tempo
-  const evolucaoData = useMemo(() => {
-    if (apostas.length === 0) return [];
-    
-    const range = dateRange || {
-      start: subDays(new Date(), 30),
-      end: new Date()
-    };
-    
-    const days = eachDayOfInterval({ start: range.start, end: range.end });
-    let acumulado = 0;
-    
-    return days.map(day => {
-      const dayStart = startOfDay(day);
-      const apostasNoDia = apostas.filter(ap => {
-        const apostaDate = startOfDay(parseISO(ap.data_aposta));
-        return apostaDate.getTime() === dayStart.getTime() && 
-               ap.status === "LIQUIDADA" && 
-               (ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN");
-      });
-      
-      const lucroNoDia = apostasNoDia.reduce((acc, ap) => acc + (ap.lucro_prejuizo || 0), 0);
-      acumulado += lucroNoDia;
-      
-      return {
-        date: format(day, "dd/MM", { locale: ptBR }),
-        valor: lucroNoDia,
-        acumulado
-      };
-    });
-  }, [apostas, dateRange]);
-
+export function FreebetGraficos({ apostas, statsPorCasa, formatCurrency, dateRange, freebets = [] }: FreebetGraficosProps) {
   // Comparativo por casa
   const comparativoCasas = useMemo((): BookmakerChartData[] => {
     return statsPorCasa
@@ -80,6 +48,11 @@ export function FreebetGraficos({ apostas, statsPorCasa, formatCurrency, dateRan
     ].filter(d => d.value > 0);
   }, [apostas]);
 
+  // Casas disponíveis para filtro
+  const casasDisponiveis = useMemo(() => {
+    return [...new Set(apostas.map(ap => ap.bookmaker_nome))];
+  }, [apostas]);
+
   // Custom tooltip
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -99,7 +72,7 @@ export function FreebetGraficos({ apostas, statsPorCasa, formatCurrency, dateRan
     return null;
   };
 
-  if (apostas.length === 0) {
+  if (apostas.length === 0 && freebets.length === 0) {
     return (
       <div className="text-center py-12 border rounded-lg bg-muted/5">
         <BarChart3 className="mx-auto h-10 w-10 text-muted-foreground/30" />
@@ -110,45 +83,14 @@ export function FreebetGraficos({ apostas, statsPorCasa, formatCurrency, dateRan
 
   return (
     <div className="space-y-6">
-      {/* Evolução do Lucro */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-emerald-400" />
-            Evolução do Lucro Extraído
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={evolucaoData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="acumulado" 
-                  name="Acumulado" 
-                  stroke="#22c55e" 
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="valor" 
-                  name="Diário" 
-                  stroke="#6366f1" 
-                  strokeWidth={1}
-                  dot={false}
-                  strokeDasharray="3 3"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Gráfico Principal: Curva de Extração */}
+      <CurvaExtracaoChart
+        apostas={apostas}
+        freebets={freebets}
+        formatCurrency={formatCurrency}
+        dateRange={dateRange}
+        casasDisponiveis={casasDisponiveis}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Comparativo por Casa */}
