@@ -2173,31 +2173,31 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               <DialogTitle className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
                 {aposta ? "Editar Aposta" : "Registrar Aposta"}
               </DialogTitle>
-{!aposta && (
-                <TooltipProvider>
-                  <Tooltip delayDuration={300}>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isPrintProcessing}
-                        className="gap-2 text-xs border-dashed"
-                      >
-                        {isPrintProcessing ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Camera className="h-3.5 w-3.5" />
-                        )}
-                        {isPrintProcessing ? "Lendo..." : "Importar por Print"}
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Beta</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent 
-                      side="bottom" 
-                      align="end"
-                      sideOffset={8}
-                      className="w-[280px] p-3"
+              {!aposta && (
+                <div className="relative">
+                  <div className="group relative">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isPrintProcessing}
+                      className="gap-2 text-xs border-dashed"
+                    >
+                      {isPrintProcessing ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Camera className="h-3.5 w-3.5" />
+                      )}
+                      {isPrintProcessing ? "Lendo..." : "Importar por Print"}
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                        Beta
+                      </span>
+                    </Button>
+
+                    {/* Tooltip (somente hover) */}
+                    <div
+                      className="pointer-events-none absolute right-0 top-full z-50 mt-2 w-[280px] origin-top-right rounded-md border border-border/60 bg-popover p-3 text-popover-foreground shadow-md opacity-0 translate-y-1 scale-[0.98] transition-all duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100"
+                      role="note"
                     >
                       <div className="space-y-2">
                         <div className="space-y-1.5 text-xs">
@@ -2208,7 +2208,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                           <div className="flex items-start gap-2">
                             <span className="leading-none">⌨️</span>
                             <span>
-                              Cole com <kbd className="px-1 py-0.5 rounded bg-background/50 text-[10px] font-mono">Ctrl+V</kbd>
+                              Cole com{" "}
+                              <kbd className="px-1 py-0.5 rounded bg-muted/60 text-[10px] font-mono border border-border/40">
+                                Ctrl+V
+                              </kbd>
                             </span>
                           </div>
                           <div className="flex items-start gap-2">
@@ -2220,9 +2223,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                           Preenche automaticamente: Evento, Mercado e Seleção.
                         </p>
                       </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                    </div>
+                  </div>
+                </div>
               )}
               <input
                 ref={fileInputRef}
