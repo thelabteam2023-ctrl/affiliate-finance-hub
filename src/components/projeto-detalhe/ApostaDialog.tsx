@@ -2417,7 +2417,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         <p className="text-muted-foreground/70 text-[10px]">
                           ({formatCurrencyWithSymbol(bookmakerSaldo.saldo, bookmakerSaldo.moeda)} real
                           {bookmakerSaldo.saldoFreebet > 0 && (
-                            <> + <Gift className="h-2.5 w-2.5 inline mx-0.5 text-amber-400" />{formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)} bônus</>
+                            <> + <Gift className="h-2.5 w-2.5 inline mx-0.5 text-amber-400" />{formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)} freebet</>
                           )})
                         </p>
                       </div>
@@ -2679,7 +2679,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                             <div className="text-muted-foreground/70 text-[10px]">
                               ({exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} real
                               {exchangeBookmakerSaldo.saldoFreebet > 0 && (
-                                <> + <Gift className="h-2.5 w-2.5 inline mx-0.5 text-amber-400" />{exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldoFreebet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} bônus</>
+                                <> + <Gift className="h-2.5 w-2.5 inline mx-0.5 text-amber-400" />{exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldoFreebet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} freebet</>
                               )})
                             </div>
                           </div>
@@ -2995,7 +2995,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 <div className="text-muted-foreground/70 text-[10px]">
                                   ({coberturaBackSaldo.moeda} {coberturaBackSaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} real
                                   {coberturaBackSaldo.saldoFreebet > 0 && (
-                                    <> + <Gift className="h-2.5 w-2.5 inline mx-0.5 text-amber-400" />{coberturaBackSaldo.moeda} {coberturaBackSaldo.saldoFreebet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} bônus</>
+                                    <> + <Gift className="h-2.5 w-2.5 inline mx-0.5 text-amber-400" />{coberturaBackSaldo.moeda} {coberturaBackSaldo.saldoFreebet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} freebet</>
                                   )})
                                 </div>
                               </div>
@@ -3116,7 +3116,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 <div className="text-muted-foreground/70 text-[10px]">
                                   ({coberturaLaySaldo.moeda} {coberturaLaySaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} real
                                   {coberturaLaySaldo.saldoFreebet > 0 && (
-                                    <> + <Gift className="h-2.5 w-2.5 inline mx-0.5 text-amber-400" />{coberturaLaySaldo.moeda} {coberturaLaySaldo.saldoFreebet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} bônus</>
+                                    <> + <Gift className="h-2.5 w-2.5 inline mx-0.5 text-amber-400" />{coberturaLaySaldo.moeda} {coberturaLaySaldo.saldoFreebet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} freebet</>
                                   )})
                                 </div>
                               </div>
