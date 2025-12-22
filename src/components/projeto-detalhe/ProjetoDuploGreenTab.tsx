@@ -50,6 +50,7 @@ interface ProjetoDuploGreenTabProps {
   onDataChange?: () => void;
   periodFilter?: PeriodFilter;
   dateRange?: DateRange;
+  refreshTrigger?: number;
 }
 
 interface Aposta {
@@ -101,7 +102,8 @@ export function ProjetoDuploGreenTab({
   projetoId, 
   onDataChange, 
   periodFilter = "todo", 
-  dateRange 
+  dateRange,
+  refreshTrigger
 }: ProjetoDuploGreenTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,7 +141,7 @@ export function ProjetoDuploGreenTab({
 
   useEffect(() => {
     fetchData();
-  }, [projetoId, periodFilter, dateRange]);
+  }, [projetoId, periodFilter, dateRange, refreshTrigger]);
 
   const fetchData = async () => {
     try {

@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 interface ProjetoBonusAreaProps {
   projetoId: string;
+  refreshTrigger?: number;
 }
 
 type NavigationMode = "tabs" | "sidebar";
@@ -26,9 +27,16 @@ const NAV_ITEMS = [
   { value: "historico" as TabValue, label: "Histórico", icon: History },
 ];
 
-export function ProjetoBonusArea({ projetoId }: ProjetoBonusAreaProps) {
-  const { getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
+export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusAreaProps) {
+  const { getBookmakersWithActiveBonus, fetchBonuses } = useProjectBonuses({ projectId: projetoId });
   const bookmakersInBonusMode = getBookmakersWithActiveBonus();
+  
+  // Refetch when refreshTrigger changes
+  useEffect(() => {
+    if (refreshTrigger !== undefined && refreshTrigger > 0) {
+      fetchBonuses();
+    }
+  }, [refreshTrigger]);
   
   const [navMode, setNavMode] = useState<NavigationMode>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);

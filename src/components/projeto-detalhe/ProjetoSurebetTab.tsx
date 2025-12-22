@@ -43,6 +43,7 @@ interface ProjetoSurebetTabProps {
   onDataChange?: () => void;
   periodFilter?: PeriodFilter;
   dateRange?: DateRange;
+  refreshTrigger?: number;
 }
 
 interface Surebet {
@@ -77,7 +78,7 @@ interface Bookmaker {
   } | null;
 }
 
-export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "todo", dateRange }: ProjetoSurebetTabProps) {
+export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "todo", dateRange, refreshTrigger }: ProjetoSurebetTabProps) {
   const [surebets, setSurebets] = useState<Surebet[]>([]);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,7 +114,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "tod
 
   useEffect(() => {
     fetchData();
-  }, [projetoId, periodFilter, dateRange]);
+  }, [projetoId, periodFilter, dateRange, refreshTrigger]);
 
   const fetchData = async () => {
     try {
