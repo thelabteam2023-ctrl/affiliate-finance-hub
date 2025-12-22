@@ -48,6 +48,7 @@ interface ProjetoApostasTabProps {
   onDataChange?: () => void;
   periodFilter?: PeriodFilter;
   dateRange?: DateRange;
+  refreshTrigger?: number;
 }
 
 interface Aposta {
@@ -215,7 +216,7 @@ function getSurebetContexto(
   return "NORMAL";
 }
 
-export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "todo", dateRange }: ProjetoApostasTabProps) {
+export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "todo", dateRange, refreshTrigger }: ProjetoApostasTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [apostasMultiplas, setApostasMultiplas] = useState<ApostaMultipla[]>([]);
   const [surebets, setSurebets] = useState<Surebet[]>([]);
@@ -267,7 +268,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
 
   useEffect(() => {
     fetchAllApostas();
-  }, [projetoId, periodFilter, dateRange]);
+  }, [projetoId, periodFilter, dateRange, refreshTrigger]);
 
   const fetchAllApostas = async () => {
     try {

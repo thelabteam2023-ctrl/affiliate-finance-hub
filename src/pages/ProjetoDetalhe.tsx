@@ -111,8 +111,18 @@ export default function ProjetoDetalhe() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("apostas");
   
+  // Refresh trigger - incrementado toda vez que uma aposta/bonus é criado
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
   // KPIs should only show on performance tabs
   const showKpis = ["visao-geral", "apostas", "perdas", "ciclos"].includes(activeTab);
+  
+  // Função centralizada para disparar refresh em todas as abas
+  const triggerGlobalRefresh = () => {
+    setRefreshTrigger(prev => prev + 1);
+    fetchApostasResumo();
+    refreshResultado();
+  };
 
   // Helper to get date range from filter - MUST be defined before use
   const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
@@ -648,8 +658,8 @@ export default function ProjetoDetalhe() {
           <GlobalActionsBar 
             projetoId={id!}
             activeTab={activeTab}
-            onApostaCreated={() => { fetchApostasResumo(); refreshResultado(); }}
-            onBonusCreated={() => { /* Bonus area will auto-refresh */ }}
+            onApostaCreated={triggerGlobalRefresh}
+            onBonusCreated={triggerGlobalRefresh}
             onNavigateToTab={setActiveTab}
           />
         </div>
@@ -665,44 +675,55 @@ export default function ProjetoDetalhe() {
         <TabsContent value="apostas">
           <ProjetoApostasTab 
             projetoId={id!} 
-            onDataChange={() => { fetchApostasResumo(); refreshResultado(); }}
+            onDataChange={triggerGlobalRefresh}
             periodFilter={periodFilter}
             dateRange={dateRange}
+            refreshTrigger={refreshTrigger}
           />
         </TabsContent>
 
         <TabsContent value="freebets">
-          <ProjetoFreebetsTab projetoId={id!} />
+          <ProjetoFreebetsTab 
+            projetoId={id!} 
+            refreshTrigger={refreshTrigger}
+            onDataChange={triggerGlobalRefresh}
+          />
         </TabsContent>
 
         <TabsContent value="bonus">
-          <ProjetoBonusArea projetoId={id!} />
+          <ProjetoBonusArea 
+            projetoId={id!} 
+            refreshTrigger={refreshTrigger}
+          />
         </TabsContent>
 
         <TabsContent value="surebet">
           <ProjetoSurebetTab 
             projetoId={id!} 
-            onDataChange={() => { fetchApostasResumo(); refreshResultado(); }}
+            onDataChange={triggerGlobalRefresh}
             periodFilter={periodFilter}
             dateRange={dateRange}
+            refreshTrigger={refreshTrigger}
           />
         </TabsContent>
 
         <TabsContent value="valuebet">
           <ProjetoValueBetTab 
             projetoId={id!} 
-            onDataChange={() => { fetchApostasResumo(); refreshResultado(); }}
+            onDataChange={triggerGlobalRefresh}
             periodFilter={periodFilter}
             dateRange={dateRange}
+            refreshTrigger={refreshTrigger}
           />
         </TabsContent>
 
         <TabsContent value="duplogreen">
           <ProjetoDuploGreenTab 
             projetoId={id!} 
-            onDataChange={() => { fetchApostasResumo(); refreshResultado(); }}
+            onDataChange={triggerGlobalRefresh}
             periodFilter={periodFilter}
             dateRange={dateRange}
+            refreshTrigger={refreshTrigger}
           />
         </TabsContent>
 
@@ -715,7 +736,7 @@ export default function ProjetoDetalhe() {
         </TabsContent>
 
         <TabsContent value="perdas">
-          <ProjetoPerdasTab projetoId={id!} onDataChange={refreshResultado} />
+          <ProjetoPerdasTab projetoId={id!} onDataChange={triggerGlobalRefresh} />
         </TabsContent>
 
       </Tabs>

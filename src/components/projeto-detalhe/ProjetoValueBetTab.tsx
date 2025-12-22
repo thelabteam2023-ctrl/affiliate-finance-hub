@@ -49,6 +49,7 @@ interface ProjetoValueBetTabProps {
   onDataChange?: () => void;
   periodFilter?: PeriodFilter;
   dateRange?: DateRange;
+  refreshTrigger?: number;
 }
 
 interface Aposta {
@@ -100,7 +101,8 @@ export function ProjetoValueBetTab({
   projetoId, 
   onDataChange, 
   periodFilter = "todo", 
-  dateRange 
+  dateRange,
+  refreshTrigger
 }: ProjetoValueBetTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,7 +140,7 @@ export function ProjetoValueBetTab({
 
   useEffect(() => {
     fetchData();
-  }, [projetoId, periodFilter, dateRange]);
+  }, [projetoId, periodFilter, dateRange, refreshTrigger]);
 
   const fetchData = async () => {
     try {

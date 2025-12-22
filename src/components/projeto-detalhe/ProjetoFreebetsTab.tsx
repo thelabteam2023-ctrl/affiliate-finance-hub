@@ -37,9 +37,11 @@ interface ProjetoFreebetsTabProps {
   projetoId: string;
   periodFilter?: string;
   customDateRange?: { start: Date; end: Date } | null;
+  onDataChange?: () => void;
+  refreshTrigger?: number;
 }
 
-export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDateRange }: ProjetoFreebetsTabProps) {
+export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDateRange, onDataChange, refreshTrigger }: ProjetoFreebetsTabProps) {
   const [loading, setLoading] = useState(true);
   const [freebets, setFreebets] = useState<FreebetRecebida[]>([]);
   const [bookmakersComFreebet, setBookmakersComFreebet] = useState<BookmakerComFreebet[]>([]);
@@ -83,7 +85,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
 
   useEffect(() => {
     fetchData();
-  }, [projetoId]);
+  }, [projetoId, refreshTrigger]);
 
   const fetchData = async () => {
     try {
