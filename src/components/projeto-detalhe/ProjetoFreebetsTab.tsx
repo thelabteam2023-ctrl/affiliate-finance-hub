@@ -787,6 +787,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
                 statsPorCasa={statsPorCasa}
                 formatCurrency={formatCurrency}
                 dateRange={dateRange}
+                freebets={freebetsNoPeriodo}
               />
             </TabsContent>
           </Tabs>
