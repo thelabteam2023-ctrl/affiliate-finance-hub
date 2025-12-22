@@ -11,15 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Gift, Search, Building2, User, Calendar, Target, CheckCircle2, Clock, TrendingUp, Percent, XCircle } from "lucide-react";
+import { Gift, Search, Building2, User, Calendar, Target, CheckCircle2, Clock, TrendingUp, Percent, XCircle, Trophy, AlertTriangle, CircleDot } from "lucide-react";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -52,22 +44,34 @@ interface BookmakerComFreebet {
   saldo_freebet: number;
 }
 
-interface ApostaComFreebet {
+// Interface expandida para apostas operacionais com freebet
+interface ApostaOperacionalFreebet {
   id: string;
+  tipo: "simples" | "multipla";
+  evento: string;
+  mercado: string | null;
+  selecao: string;
+  odd: number;
+  stake: number;
   lucro_prejuizo: number | null;
-  tipo_freebet: string | null;
+  valor_retorno: number | null;
   data_aposta: string;
+  status: string;
   resultado: string | null;
-  contexto_operacional?: string | null;
+  tipo_freebet: string | null;
+  bookmaker_nome: string;
+  logo_url: string | null;
+  parceiro_nome: string | null;
 }
 
 export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDateRange }: ProjetoFreebetsTabProps) {
   const [loading, setLoading] = useState(true);
   const [freebets, setFreebets] = useState<FreebetRecebida[]>([]);
   const [bookmakersComFreebet, setBookmakersComFreebet] = useState<BookmakerComFreebet[]>([]);
-  const [apostasComFreebet, setApostasComFreebet] = useState<ApostaComFreebet[]>([]);
+  const [apostasOperacionais, setApostasOperacionais] = useState<ApostaOperacionalFreebet[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"todas" | "disponiveis" | "utilizadas">("todas");
+  const [statusFilter, setStatusFilter] = useState<"todas" | "pendente" | "liquidada">("todas");
+  const [resultadoFilter, setResultadoFilter] = useState<"todas" | "ganhas" | "perdidas">("todas");
   const [casaFilter, setCasaFilter] = useState<string>("todas");
 
   // Calcular range de datas baseado no filtro
@@ -104,7 +108,11 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
   const fetchData = async () => {
     try {
       setLoading(true);
-      await Promise.all([fetchFreebets(), fetchBookmakersComFreebet(), fetchApostasComFreebet()]);
+      await Promise.all([
+        fetchFreebets(), 
+        fetchBookmakersComFreebet(), 
+        fetchApostasOperacionais()
+      ]);
     } finally {
       setLoading(false);
     }
@@ -148,7 +156,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
         utilizada: fb.utilizada || false,
         data_utilizacao: fb.data_utilizacao,
         aposta_id: fb.aposta_id,
-        status: fb.status || "LIBERADA", // Default para compatibilidade
+        status: fb.status || "LIBERADA",
       }));
 
       setFreebets(formatted);
@@ -187,20 +195,119 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
     }
   };
 
-  const fetchApostasComFreebet = async () => {
+  // Buscar apostas OPERACIONAIS com contexto freebet (não eventos financeiros)
+  const fetchApostasOperacionais = async () => {
     try {
-      // Buscar apostas com contexto_operacional = FREEBET OU tipo_freebet não nulo (compatibilidade)
-      const { data, error } = await supabase
+      // Buscar apostas simples com contexto_operacional = FREEBET
+      const { data: apostasSimples, error: errorSimples } = await supabase
         .from("apostas")
-        .select("id, lucro_prejuizo, tipo_freebet, data_aposta, resultado, contexto_operacional")
+        .select(`
+          id,
+          evento,
+          mercado,
+          selecao,
+          odd,
+          stake,
+          lucro_prejuizo,
+          valor_retorno,
+          data_aposta,
+          status,
+          resultado,
+          tipo_freebet,
+          contexto_operacional,
+          bookmakers!apostas_bookmaker_id_fkey (
+            nome,
+            parceiros!bookmakers_parceiro_id_fkey (nome),
+            bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
+          )
+        `)
         .eq("projeto_id", projetoId)
-        .or("contexto_operacional.eq.FREEBET,tipo_freebet.not.is.null");
+        .eq("contexto_operacional", "FREEBET")
+        .is("cancelled_at", null)
+        .order("data_aposta", { ascending: false });
 
-      if (error) throw error;
+      if (errorSimples) throw errorSimples;
 
-      setApostasComFreebet(data || []);
+      // Buscar apostas múltiplas com contexto_operacional = FREEBET
+      const { data: apostasMultiplas, error: errorMultiplas } = await supabase
+        .from("apostas_multiplas")
+        .select(`
+          id,
+          selecoes,
+          odd_final,
+          stake,
+          lucro_prejuizo,
+          valor_retorno,
+          data_aposta,
+          status,
+          resultado,
+          tipo_freebet,
+          contexto_operacional,
+          bookmakers!apostas_multiplas_bookmaker_id_fkey (
+            nome,
+            parceiros!bookmakers_parceiro_id_fkey (nome),
+            bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
+          )
+        `)
+        .eq("projeto_id", projetoId)
+        .eq("contexto_operacional", "FREEBET")
+        .is("cancelled_at", null)
+        .order("data_aposta", { ascending: false });
+
+      if (errorMultiplas) throw errorMultiplas;
+
+      // Formatar apostas simples
+      const simplesFormatted: ApostaOperacionalFreebet[] = (apostasSimples || []).map((ap: any) => ({
+        id: ap.id,
+        tipo: "simples" as const,
+        evento: ap.evento,
+        mercado: ap.mercado,
+        selecao: ap.selecao,
+        odd: ap.odd,
+        stake: ap.stake,
+        lucro_prejuizo: ap.lucro_prejuizo,
+        valor_retorno: ap.valor_retorno,
+        data_aposta: ap.data_aposta,
+        status: ap.status,
+        resultado: ap.resultado,
+        tipo_freebet: ap.tipo_freebet,
+        bookmaker_nome: ap.bookmakers?.nome || "Desconhecida",
+        logo_url: ap.bookmakers?.bookmakers_catalogo?.logo_url || null,
+        parceiro_nome: ap.bookmakers?.parceiros?.nome || null,
+      }));
+
+      // Formatar apostas múltiplas
+      const multiplasFormatted: ApostaOperacionalFreebet[] = (apostasMultiplas || []).map((ap: any) => {
+        const selecoes = Array.isArray(ap.selecoes) ? ap.selecoes : [];
+        const primeiraSelecao = selecoes[0] || {};
+        return {
+          id: ap.id,
+          tipo: "multipla" as const,
+          evento: primeiraSelecao.evento || `Múltipla (${selecoes.length} seleções)`,
+          mercado: primeiraSelecao.mercado || null,
+          selecao: selecoes.map((s: any) => s.selecao).join(" + ") || "Múltipla",
+          odd: ap.odd_final,
+          stake: ap.stake,
+          lucro_prejuizo: ap.lucro_prejuizo,
+          valor_retorno: ap.valor_retorno,
+          data_aposta: ap.data_aposta,
+          status: ap.status,
+          resultado: ap.resultado,
+          tipo_freebet: ap.tipo_freebet,
+          bookmaker_nome: ap.bookmakers?.nome || "Desconhecida",
+          logo_url: ap.bookmakers?.bookmakers_catalogo?.logo_url || null,
+          parceiro_nome: ap.bookmakers?.parceiros?.nome || null,
+        };
+      });
+
+      // Combinar e ordenar por data
+      const todasApostas = [...simplesFormatted, ...multiplasFormatted].sort(
+        (a, b) => new Date(b.data_aposta).getTime() - new Date(a.data_aposta).getTime()
+      );
+
+      setApostasOperacionais(todasApostas);
     } catch (error: any) {
-      console.error("Erro ao buscar apostas com freebet:", error);
+      console.error("Erro ao buscar apostas operacionais:", error);
     }
   };
 
@@ -230,57 +337,74 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
     });
   }, [freebets, dateRange]);
 
-  const apostasComFreebetNoPeriodo = useMemo(() => {
-    if (!dateRange) return apostasComFreebet;
-    return apostasComFreebet.filter(ap => {
+  // Apostas operacionais no período
+  const apostasNoPeriodo = useMemo(() => {
+    if (!dateRange) return apostasOperacionais;
+    return apostasOperacionais.filter(ap => {
       const dataAposta = new Date(ap.data_aposta);
       return dataAposta >= dateRange.start && dataAposta <= dateRange.end;
     });
-  }, [apostasComFreebet, dateRange]);
+  }, [apostasOperacionais, dateRange]);
 
   // Métricas de extração - APENAS FREEBETS LIBERADAS
   const metricas = useMemo(() => {
-    // Total de freebets liberadas no período (face value)
     const totalRecebido = freebetsLiberadasNoPeriodo.reduce((acc, fb) => acc + fb.valor, 0);
     
-    // Total extraído: soma do lucro de apostas que usaram freebet
-    // Considera apostas com contexto_operacional = FREEBET OU tipo_freebet válido (compatibilidade)
-    const totalExtraido = apostasComFreebetNoPeriodo
-      .filter(ap => (ap as any).contexto_operacional === "FREEBET" || (ap.tipo_freebet && ap.tipo_freebet !== "normal"))
-      .reduce((acc, ap) => {
-        // Só soma lucros positivos (GREEN/MEIO_GREEN)
-        const lucro = ap.lucro_prejuizo || 0;
-        return acc + Math.max(0, lucro);
-      }, 0);
+    // Total extraído: soma do lucro de apostas operacionais com freebet
+    const apostasFinalizadas = apostasNoPeriodo.filter(ap => 
+      ap.status === "LIQUIDADA" && ap.resultado && ap.resultado !== "PENDENTE"
+    );
+    
+    const totalExtraido = apostasFinalizadas.reduce((acc, ap) => {
+      const lucro = ap.lucro_prejuizo || 0;
+      return acc + Math.max(0, lucro);
+    }, 0);
     
     // Taxa de extração
     const taxaExtracao = totalRecebido > 0 ? (totalExtraido / totalRecebido) * 100 : 0;
 
+    // Métricas de apostas
+    const totalApostas = apostasNoPeriodo.length;
+    const apostasGanhas = apostasNoPeriodo.filter(ap => 
+      ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN"
+    ).length;
+    const taxaAcerto = totalApostas > 0 ? (apostasGanhas / totalApostas) * 100 : 0;
+
     return {
       totalRecebido,
       totalExtraido,
-      taxaExtracao
+      taxaExtracao,
+      totalApostas,
+      apostasGanhas,
+      taxaAcerto
     };
-  }, [freebetsLiberadasNoPeriodo, apostasComFreebetNoPeriodo]);
+  }, [freebetsLiberadasNoPeriodo, apostasNoPeriodo]);
 
-  // Filtros de lista
-  const casasDisponiveis = [...new Set(freebets.map(f => f.bookmaker_nome))];
+  // Casas disponíveis para filtro
+  const casasDisponiveis = [...new Set(apostasNoPeriodo.map(ap => ap.bookmaker_nome))];
   
-  const freebetsFiltradas = freebetsNoPeriodo.filter(fb => {
+  // Filtrar apostas operacionais
+  const apostasFiltradas = apostasNoPeriodo.filter(ap => {
     // Filtro de status
-    if (statusFilter === "disponiveis" && fb.utilizada) return false;
-    if (statusFilter === "utilizadas" && !fb.utilizada) return false;
+    if (statusFilter === "pendente" && ap.status !== "PENDENTE") return false;
+    if (statusFilter === "liquidada" && ap.status !== "LIQUIDADA") return false;
+    
+    // Filtro de resultado
+    if (resultadoFilter === "ganhas" && ap.resultado !== "GREEN" && ap.resultado !== "MEIO_GREEN") return false;
+    if (resultadoFilter === "perdidas" && ap.resultado !== "RED" && ap.resultado !== "MEIO_RED") return false;
     
     // Filtro de casa
-    if (casaFilter !== "todas" && fb.bookmaker_nome !== casaFilter) return false;
+    if (casaFilter !== "todas" && ap.bookmaker_nome !== casaFilter) return false;
     
     // Filtro de busca
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       return (
-        fb.bookmaker_nome.toLowerCase().includes(search) ||
-        fb.parceiro_nome?.toLowerCase().includes(search) ||
-        fb.motivo.toLowerCase().includes(search)
+        ap.evento.toLowerCase().includes(search) ||
+        ap.selecao.toLowerCase().includes(search) ||
+        ap.mercado?.toLowerCase().includes(search) ||
+        ap.bookmaker_nome.toLowerCase().includes(search) ||
+        ap.parceiro_nome?.toLowerCase().includes(search)
       );
     }
     
@@ -292,6 +416,62 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
   const casasComFreebet = bookmakersComFreebet.length;
   const freebetsUtilizadas = freebetsNoPeriodo.filter(f => f.utilizada).length;
   const freebetsDisponiveis = freebetsNoPeriodo.filter(f => !f.utilizada).length;
+
+  // Helper para badge de resultado
+  const getResultadoBadge = (resultado: string | null, status: string) => {
+    if (status === "PENDENTE" || !resultado || resultado === "PENDENTE") {
+      return (
+        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+          <Clock className="h-3 w-3 mr-1" />
+          Pendente
+        </Badge>
+      );
+    }
+    
+    switch (resultado) {
+      case "GREEN":
+        return (
+          <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+            <Trophy className="h-3 w-3 mr-1" />
+            Green
+          </Badge>
+        );
+      case "MEIO_GREEN":
+        return (
+          <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Meio Green
+          </Badge>
+        );
+      case "RED":
+        return (
+          <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
+            <XCircle className="h-3 w-3 mr-1" />
+            Red
+          </Badge>
+        );
+      case "MEIO_RED":
+        return (
+          <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            Meio Red
+          </Badge>
+        );
+      case "VOID":
+        return (
+          <Badge variant="secondary">
+            <CircleDot className="h-3 w-3 mr-1" />
+            Void
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="secondary">
+            {resultado}
+          </Badge>
+        );
+    }
+  };
 
   if (loading) {
     return (
@@ -329,7 +509,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
           <CardContent>
             <div className="text-2xl font-bold text-emerald-400">{formatCurrency(metricas.totalExtraido)}</div>
             <p className="text-xs text-muted-foreground">
-              Lucro de apostas com freebet
+              {metricas.totalApostas} apostas realizadas
             </p>
           </CardContent>
         </Card>
@@ -344,7 +524,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
               {metricas.taxaExtracao.toFixed(1)}%
             </div>
             <p className="text-xs text-muted-foreground">
-              Extraído ÷ Recebido
+              Taxa de acerto: {metricas.taxaAcerto.toFixed(0)}%
             </p>
           </CardContent>
         </Card>
@@ -442,17 +622,17 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
         </Card>
       )}
 
-      {/* Layout 2 colunas: Apostas (principal) + Freebets do Período (secundário) */}
+      {/* Layout 2 colunas: Apostas Operacionais (principal) + Freebets do Período (secundário) */}
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        {/* Card Principal - Apostas com Freebet */}
+        {/* Card Principal - Apostas Operacionais com Freebet */}
         <Card className="min-h-[400px]">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Target className="h-4 w-4 text-primary" />
-              Apostas Registradas
+              Apostas com Freebet
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Apostas que utilizam contexto financeiro Freebet
+              Apostas realizadas utilizando Freebet como recurso
             </p>
           </CardHeader>
           <CardContent>
@@ -461,20 +641,30 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por casa, parceiro, motivo..."
+                  placeholder="Buscar por evento, seleção, casa..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
               <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-[130px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todas">Todas</SelectItem>
-                  <SelectItem value="disponiveis">Disponíveis</SelectItem>
-                  <SelectItem value="utilizadas">Utilizadas</SelectItem>
+                  <SelectItem value="pendente">Pendentes</SelectItem>
+                  <SelectItem value="liquidada">Liquidadas</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={resultadoFilter} onValueChange={(v) => setResultadoFilter(v as any)}>
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="Resultado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas</SelectItem>
+                  <SelectItem value="ganhas">Ganhas</SelectItem>
+                  <SelectItem value="perdidas">Perdidas</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={casaFilter} onValueChange={setCasaFilter}>
@@ -490,100 +680,106 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
               </Select>
             </div>
 
-            {/* Tabela de Freebets */}
-            {freebetsFiltradas.length === 0 ? (
+            {/* Cards de Apostas */}
+            {apostasFiltradas.length === 0 ? (
               <div className="text-center py-16 border rounded-lg bg-muted/5">
                 <Target className="mx-auto h-12 w-12 text-muted-foreground/30" />
                 <h3 className="mt-4 text-base font-medium text-muted-foreground">
-                  Nenhuma aposta relacionada a Freebet encontrada
+                  Nenhuma aposta com Freebet encontrada
                 </h3>
                 <p className="text-sm text-muted-foreground/70 mt-1">
-                  Apostas com contexto Freebet aparecerão aqui
+                  Apostas com contexto operacional Freebet aparecerão aqui
                 </p>
               </div>
             ) : (
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Casa</TableHead>
-                      <TableHead>Parceiro</TableHead>
-                      <TableHead>Valor</TableHead>
-                      <TableHead>Motivo</TableHead>
-                      <TableHead>Data Recebida</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {freebetsFiltradas.map(fb => (
-                      <TableRow key={fb.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {fb.logo_url ? (
-                              <img
-                                src={fb.logo_url}
-                                alt={fb.bookmaker_nome}
-                                className="h-8 w-8 rounded object-contain bg-white p-0.5"
-                              />
-                            ) : (
-                              <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
-                                <Building2 className="h-4 w-4" />
-                              </div>
-                            )}
-                            <span className="font-medium">{fb.bookmaker_nome}</span>
+              <div className="grid gap-3 md:grid-cols-2">
+                {apostasFiltradas.map(aposta => (
+                  <div
+                    key={aposta.id}
+                    className="p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+                  >
+                    {/* Header: Casa + Badge Tipo */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        {aposta.logo_url ? (
+                          <img
+                            src={aposta.logo_url}
+                            alt={aposta.bookmaker_nome}
+                            className="h-8 w-8 rounded object-contain bg-white p-0.5"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+                            <Building2 className="h-4 w-4" />
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-muted-foreground">
-                            {fb.parceiro_nome || "-"}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-semibold text-amber-400">
-                            {formatCurrency(fb.valor)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">{fb.motivo}</span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            {format(new Date(fb.data_recebida), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {fb.status === "PENDENTE" ? (
-                            <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-                              <Clock className="h-3 w-3 mr-1" />
-                              Aguardando
-                            </Badge>
-                          ) : fb.status === "NAO_LIBERADA" ? (
-                            <Badge variant="secondary" className="bg-red-500/10 text-red-400 border-red-500/20">
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Não liberada
-                            </Badge>
-                          ) : fb.utilizada ? (
-                            <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Utilizada
-                              {fb.data_utilizacao && (
-                                <span className="ml-1 text-[10px]">
-                                  ({format(new Date(fb.data_utilizacao), "dd/MM", { locale: ptBR })})
-                                </span>
-                              )}
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Disponível
-                            </Badge>
+                        )}
+                        <div>
+                          <p className="font-medium text-sm">{aposta.bookmaker_nome}</p>
+                          {aposta.parceiro_nome && (
+                            <p className="text-xs text-muted-foreground">{aposta.parceiro_nome}</p>
                           )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {aposta.tipo === "multipla" && (
+                          <Badge variant="outline" className="text-xs">Múltipla</Badge>
+                        )}
+                        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
+                          <Gift className="h-3 w-3 mr-1" />
+                          Freebet
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Evento e Seleção */}
+                    <div className="mb-3">
+                      <p className="font-medium text-sm truncate" title={aposta.evento}>
+                        {aposta.evento}
+                      </p>
+                      <p className="text-sm text-primary truncate" title={aposta.selecao}>
+                        {aposta.selecao}
+                      </p>
+                      {aposta.mercado && (
+                        <p className="text-xs text-muted-foreground">{aposta.mercado}</p>
+                      )}
+                    </div>
+
+                    {/* Valores */}
+                    <div className="grid grid-cols-3 gap-2 mb-3 text-sm">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Odd</p>
+                        <p className="font-semibold">{aposta.odd.toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Stake</p>
+                        <p className="font-semibold text-amber-400">{formatCurrency(aposta.stake)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          {aposta.status === "LIQUIDADA" ? "P/L" : "Retorno Pot."}
+                        </p>
+                        <p className={`font-semibold ${
+                          aposta.lucro_prejuizo !== null 
+                            ? aposta.lucro_prejuizo >= 0 ? "text-emerald-400" : "text-red-400"
+                            : ""
+                        }`}>
+                          {aposta.status === "LIQUIDADA" && aposta.lucro_prejuizo !== null
+                            ? formatCurrency(aposta.lucro_prejuizo)
+                            : formatCurrency(aposta.stake * (aposta.odd - 1))
+                          }
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Footer: Data + Resultado */}
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        {format(new Date(aposta.data_aposta), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                      </div>
+                      {getResultadoBadge(aposta.resultado, aposta.status)}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
