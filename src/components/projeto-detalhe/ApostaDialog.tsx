@@ -275,9 +275,14 @@ const isMoneylineMercado = (mercado: string): boolean => {
 };
 
 // Get Moneyline selection options based on sport
-const getMoneylineSelecoes = (esporte: string, mandante: string, visitante: string): string[] => {
+const getMoneylineSelecoes = (esporte: string | undefined, mandante: string, visitante: string): string[] => {
   const timeCasa = mandante || "MANDANTE";
   const timeFora = visitante || "VISITANTE";
+  
+  // Guard against undefined esporte
+  if (!esporte) {
+    return [timeCasa, "EMPATE", timeFora];
+  }
   
   // Sports without draw
   const sportsSemEmpate = ["Basquete", "Tênis", "Baseball", "Vôlei", "MMA/UFC", "Boxe"];
