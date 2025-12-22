@@ -2400,7 +2400,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                     {displayName}
                                   </span>
                                   <span className="text-xs text-muted-foreground flex-shrink-0">
-                                    Disp: {formatCurrencyWithSymbol(bk.saldo_disponivel, bk.moeda)}
+                                    Disp: {formatCurrencyWithSymbol(bk.saldo_disponivel + bk.saldo_freebet, bk.moeda)}
                                   </span>
                                 </div>
                               </SelectItem>
@@ -2412,13 +2412,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     {bookmakerSaldo && (
                       <div className="text-xs text-center space-y-0.5">
                         <p className="text-muted-foreground">
-                          Saldo: <span className="text-emerald-500 font-medium">{formatCurrencyWithSymbol(bookmakerSaldo.saldo, bookmakerSaldo.moeda)}</span>
+                          Saldo Total: <span className="text-emerald-500 font-medium">{formatCurrencyWithSymbol(bookmakerSaldo.saldo + bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)}</span>
                         </p>
-                        <p className="text-muted-foreground">
-                          <Gift className="h-3 w-3 inline mr-0.5 text-amber-400" />
-                          Freebet: <span className={`font-medium ${bookmakerSaldo.saldoFreebet > 0 ? 'text-amber-400' : 'text-muted-foreground'}`}>
-                            {formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)}
-                          </span>
+                        <p className="text-muted-foreground/70 text-[10px]">
+                          ({formatCurrencyWithSymbol(bookmakerSaldo.saldo, bookmakerSaldo.moeda)} real
+                          {bookmakerSaldo.saldoFreebet > 0 && (
+                            <> + <Gift className="h-2.5 w-2.5 inline mx-0.5 text-amber-400" />{formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)} bônus</>
+                          )})
                         </p>
                       </div>
                     )}
@@ -2672,21 +2672,16 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         {exchangeBookmakerSaldo && (
                           <div className="text-center text-xs text-muted-foreground space-y-0.5">
                             <div>
-                              Saldo: <span className={`font-medium ${tipoOperacaoExchange === "back" ? "text-emerald-400" : "text-rose-400"}`}>
-                                {exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              Saldo Total: <span className={`font-medium ${tipoOperacaoExchange === "back" ? "text-emerald-400" : "text-rose-400"}`}>
+                                {exchangeBookmakerSaldo.moeda} {(exchangeBookmakerSaldo.saldo + exchangeBookmakerSaldo.saldoFreebet).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                               </span>
-                              {exchangeBookmakerSaldo.saldoDisponivel !== exchangeBookmakerSaldo.saldo && (
-                                <span className="text-amber-400 ml-1">
-                                  (Livre: {exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldoDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
-                                </span>
-                              )}
                             </div>
-                            {exchangeBookmakerSaldo.saldoFreebet > 0 && (
-                              <div className="text-amber-400">
-                                <Gift className="h-3 w-3 inline mr-0.5" />
-                                Freebet: <span className="font-medium">{exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldoFreebet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                              </div>
-                            )}
+                            <div className="text-muted-foreground/70 text-[10px]">
+                              ({exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} real
+                              {exchangeBookmakerSaldo.saldoFreebet > 0 && (
+                                <> + <Gift className="h-2.5 w-2.5 inline mx-0.5 text-amber-400" />{exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldoFreebet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} bônus</>
+                              )})
+                            </div>
                           </div>
                         )}
                       </div>
@@ -2993,21 +2988,16 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                             {coberturaBackSaldo && (
                               <div className="text-center text-xs text-muted-foreground space-y-0.5">
                                 <div>
-                                  Saldo: <span className="font-medium text-emerald-400">
-                                    {coberturaBackSaldo.moeda} {coberturaBackSaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  Saldo Total: <span className="font-medium text-emerald-400">
+                                    {coberturaBackSaldo.moeda} {(coberturaBackSaldo.saldo + coberturaBackSaldo.saldoFreebet).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                   </span>
-                                  {coberturaBackSaldo.saldoDisponivel !== coberturaBackSaldo.saldo && (
-                                    <span className="text-amber-400 ml-1">
-                                      (Livre: {coberturaBackSaldo.moeda} {coberturaBackSaldo.saldoDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
-                                    </span>
-                                  )}
                                 </div>
-                                {coberturaBackSaldo.saldoFreebet > 0 && (
-                                  <div className="text-amber-400">
-                                    <Gift className="h-3 w-3 inline mr-0.5" />
-                                    Freebet: <span className="font-medium">{coberturaBackSaldo.moeda} {coberturaBackSaldo.saldoFreebet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                  </div>
-                                )}
+                                <div className="text-muted-foreground/70 text-[10px]">
+                                  ({coberturaBackSaldo.moeda} {coberturaBackSaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} real
+                                  {coberturaBackSaldo.saldoFreebet > 0 && (
+                                    <> + <Gift className="h-2.5 w-2.5 inline mx-0.5 text-amber-400" />{coberturaBackSaldo.moeda} {coberturaBackSaldo.saldoFreebet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} bônus</>
+                                  )})
+                                </div>
                               </div>
                             )}
                           </div>
@@ -3117,15 +3107,18 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                               </SelectContent>
                             </Select>
                             {coberturaLaySaldo && (
-                              <div className="text-center text-xs text-muted-foreground">
-                                Saldo: <span className="font-medium text-rose-400">
-                                  {coberturaLaySaldo.moeda} {coberturaLaySaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </span>
-                                {coberturaLaySaldo.saldoDisponivel !== coberturaLaySaldo.saldo && (
-                                  <span className="text-amber-400 ml-1">
-                                    (Livre: {coberturaLaySaldo.moeda} {coberturaLaySaldo.saldoDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                              <div className="text-center text-xs text-muted-foreground space-y-0.5">
+                                <div>
+                                  Saldo Total: <span className="font-medium text-rose-400">
+                                    {coberturaLaySaldo.moeda} {(coberturaLaySaldo.saldo + coberturaLaySaldo.saldoFreebet).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                   </span>
-                                )}
+                                </div>
+                                <div className="text-muted-foreground/70 text-[10px]">
+                                  ({coberturaLaySaldo.moeda} {coberturaLaySaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} real
+                                  {coberturaLaySaldo.saldoFreebet > 0 && (
+                                    <> + <Gift className="h-2.5 w-2.5 inline mx-0.5 text-amber-400" />{coberturaLaySaldo.moeda} {coberturaLaySaldo.saldoFreebet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} bônus</>
+                                  )})
+                                </div>
                               </div>
                             )}
                           </div>

@@ -1038,7 +1038,7 @@ export function ApostaMultiplaDialog({
                           />
                         )}
                         <span className="uppercase">
-                          {bk.nome} • {getFirstLastName(bk.parceiro?.nome || "")} – {formatCurrency(bk.saldo_atual)}
+                          {bk.nome} • {getFirstLastName(bk.parceiro?.nome || "")} – {formatCurrency(bk.saldo_atual + (bk.saldo_freebet || 0))}
                         </span>
                       </div>
                     </SelectItem>
@@ -1050,17 +1050,17 @@ export function ApostaMultiplaDialog({
               {bookmakerSaldo && (
                 <div className="flex gap-4 text-xs">
                   <span className="text-muted-foreground">
-                    Saldo:{" "}
+                    Saldo Total:{" "}
                     <span className="text-foreground font-medium">
-                      {formatCurrency(bookmakerSaldo.saldo)}
+                      {formatCurrency(bookmakerSaldo.saldo + bookmakerSaldo.saldoFreebet)}
+                    </span>
+                    <span className="text-muted-foreground/70 ml-1">
+                      ({formatCurrency(bookmakerSaldo.saldo)} real
+                      {bookmakerSaldo.saldoFreebet > 0 && (
+                        <> + <Gift className="h-3 w-3 inline mx-0.5 text-amber-400" />{formatCurrency(bookmakerSaldo.saldoFreebet)} bônus</>
+                      )})
                     </span>
                   </span>
-                  {bookmakerSaldo.saldoFreebet > 0 && (
-                    <span className="text-amber-400">
-                      <Gift className="h-3 w-3 inline mr-1" />
-                      Freebet: {formatCurrency(bookmakerSaldo.saldoFreebet)}
-                    </span>
-                  )}
                 </div>
               )}
             </div>
