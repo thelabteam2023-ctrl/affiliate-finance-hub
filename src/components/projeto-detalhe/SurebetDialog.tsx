@@ -19,7 +19,8 @@ import {
   Trash2,
   Wallet,
   RotateCcw,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Gift
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
@@ -74,6 +75,9 @@ interface OddEntry {
   isManuallyEdited: boolean;
   resultado?: string | null;
   aposta_id?: string;
+  gerouFreebet?: boolean;
+  valorFreebetGerada?: string;
+  freebetStatus?: "PENDENTE" | "LIBERADA" | "NAO_LIBERADA" | null;
 }
 
 const ESPORTES = [
@@ -339,7 +343,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       .from("apostas")
       .select(`
         id, selecao, odd, stake, resultado, lucro_prejuizo,
-        bookmaker_id,
+        bookmaker_id, gerou_freebet, valor_freebet_gerada,
         bookmaker:bookmakers (nome, saldo_atual)
       `)
       .eq("surebet_id", surebetId);
@@ -363,6 +367,20 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     
     setLinkedApostas(sortedData);
     
+    // Buscar status de freebets associadas
+    const apostaIds = sortedData.map(a => a.id);
+    const { data: freebetsData } = await supabase
+      .from("freebets_recebidas")
+      .select("aposta_id, status")
+      .in("aposta_id", apostaIds);
+    
+    const freebetStatusMap: Record<string, string> = {};
+    freebetsData?.forEach(fb => {
+      if (fb.aposta_id) {
+        freebetStatusMap[fb.aposta_id] = fb.status;
+      }
+    });
+    
     // Popular o array de odds com os dados das apostas para cálculos
     const newOdds: OddEntry[] = sortedData.map((aposta, index) => ({
       bookmaker_id: aposta.bookmaker_id || "",
@@ -372,7 +390,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       isReference: index === 0,
       isManuallyEdited: true, // Já foi salvo, não precisa recalcular automaticamente
       resultado: aposta.resultado,
-      aposta_id: aposta.id
+      aposta_id: aposta.id,
+      gerouFreebet: aposta.gerou_freebet || false,
+      valorFreebetGerada: aposta.valor_freebet_gerada?.toString() || "",
+      freebetStatus: freebetStatusMap[aposta.id] as OddEntry["freebetStatus"] || null
     }));
     
     setOdds(newOdds);
@@ -395,6 +416,26 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     // A referência sempre é o driver dos cálculos
     // Alterar stake NÃO desativa o cálculo automático
     
+    setOdds(newOdds);
+  };
+
+  // Atualizar campos de freebet de uma posição
+  const updateOddFreebet = (index: number, gerouFreebet: boolean, valorFreebetGerada?: string) => {
+    const newOdds = [...odds];
+    // Se ativando freebet nesta posição, desativar nas outras
+    if (gerouFreebet) {
+      newOdds.forEach((o, i) => {
+        if (i !== index) {
+          o.gerouFreebet = false;
+          o.valorFreebetGerada = "";
+        }
+      });
+    }
+    newOdds[index] = { 
+      ...newOdds[index], 
+      gerouFreebet,
+      valorFreebetGerada: valorFreebetGerada !== undefined ? valorFreebetGerada : newOdds[index].valorFreebetGerada
+    };
     setOdds(newOdds);
   };
 
@@ -863,14 +904,36 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           estrategia: registroValues.estrategia,
           forma_registro: registroValues.forma_registro,
           contexto_operacional: registroValues.contexto_operacional,
-          modo_entrada: "PADRAO"
+          modo_entrada: "PADRAO",
+          gerou_freebet: entry.gerouFreebet || false,
+          valor_freebet_gerada: entry.gerouFreebet && entry.valorFreebetGerada 
+            ? parseFloat(entry.valorFreebetGerada) 
+            : null
         }));
 
-        const { error: apostasError } = await supabase
+        const { data: apostasCriadas, error: apostasError } = await supabase
           .from("apostas")
-          .insert(apostasToCreate);
+          .insert(apostasToCreate)
+          .select("id, bookmaker_id, gerou_freebet, valor_freebet_gerada");
 
         if (apostasError) throw apostasError;
+
+        // Registrar freebets geradas (se houver)
+        if (apostasCriadas) {
+          for (let i = 0; i < apostasCriadas.length; i++) {
+            const apostaCriada = apostasCriadas[i];
+            if (apostaCriada.gerou_freebet && apostaCriada.valor_freebet_gerada && apostaCriada.valor_freebet_gerada > 0) {
+              await registrarFreebetGerada(
+                apostaCriada.bookmaker_id,
+                apostaCriada.valor_freebet_gerada,
+                user.id,
+                projetoId,
+                apostaCriada.id,
+                "PENDENTE" // Aposta ainda pendente, freebet também pendente
+              );
+            }
+          }
+        }
 
         // NOTA: Não debitar saldo_atual na criação de apostas PENDENTES!
         // O modelo contábil correto é:
@@ -960,6 +1023,140 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   const hasChangesRef = useRef(false);
   const toastShownRef = useRef(false);
 
+  // Funções de gerenciamento de Freebet
+  const registrarFreebetGerada = async (
+    bookmakerIdFreebet: string,
+    valor: number,
+    userId: string,
+    projetoIdFreebet: string,
+    apostaId: string,
+    resultadoAposta: string | null
+  ) => {
+    try {
+      // Determinar status baseado no resultado da aposta
+      let status: "PENDENTE" | "LIBERADA" | "NAO_LIBERADA" = "PENDENTE";
+      if (resultadoAposta && resultadoAposta !== "PENDENTE") {
+        // GREEN, RED, MEIO_GREEN, MEIO_RED = libera freebet
+        // VOID = não libera
+        status = resultadoAposta === "VOID" ? "NAO_LIBERADA" : "LIBERADA";
+      }
+
+      // Só incrementar saldo_freebet se a freebet for liberada
+      if (status === "LIBERADA") {
+        const { data: bookmaker } = await supabase
+          .from("bookmakers")
+          .select("saldo_freebet")
+          .eq("id", bookmakerIdFreebet)
+          .maybeSingle();
+
+        if (bookmaker) {
+          const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + valor;
+          await supabase
+            .from("bookmakers")
+            .update({ saldo_freebet: novoSaldoFreebet })
+            .eq("id", bookmakerIdFreebet);
+        }
+      }
+
+      // Registrar na tabela freebets_recebidas
+      await supabase
+        .from("freebets_recebidas")
+        .insert({
+          user_id: userId,
+          projeto_id: projetoIdFreebet,
+          bookmaker_id: bookmakerIdFreebet,
+          valor: valor,
+          motivo: "Aposta qualificadora (Arbitragem)",
+          data_recebida: new Date().toISOString(),
+          utilizada: false,
+          aposta_id: apostaId,
+          status: status,
+        });
+    } catch (error) {
+      console.error("Erro ao registrar freebet gerada:", error);
+    }
+  };
+
+  const liberarFreebetPendente = async (apostaId: string) => {
+    try {
+      const { data: freebetPendente } = await supabase
+        .from("freebets_recebidas")
+        .select("id, bookmaker_id, valor")
+        .eq("aposta_id", apostaId)
+        .eq("status", "PENDENTE")
+        .maybeSingle();
+
+      if (freebetPendente) {
+        await supabase
+          .from("freebets_recebidas")
+          .update({ status: "LIBERADA" })
+          .eq("id", freebetPendente.id);
+
+        const { data: bookmaker } = await supabase
+          .from("bookmakers")
+          .select("saldo_freebet")
+          .eq("id", freebetPendente.bookmaker_id)
+          .maybeSingle();
+
+        if (bookmaker) {
+          const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + freebetPendente.valor;
+          await supabase
+            .from("bookmakers")
+            .update({ saldo_freebet: novoSaldoFreebet })
+            .eq("id", freebetPendente.bookmaker_id);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao liberar freebet pendente:", error);
+    }
+  };
+
+  const recusarFreebetPendente = async (apostaId: string) => {
+    try {
+      await supabase
+        .from("freebets_recebidas")
+        .update({ status: "NAO_LIBERADA" })
+        .eq("aposta_id", apostaId)
+        .eq("status", "PENDENTE");
+    } catch (error) {
+      console.error("Erro ao recusar freebet pendente:", error);
+    }
+  };
+
+  const reverterFreebetParaPendente = async (apostaId: string) => {
+    try {
+      const { data: freebetLiberada } = await supabase
+        .from("freebets_recebidas")
+        .select("id, bookmaker_id, valor")
+        .eq("aposta_id", apostaId)
+        .eq("status", "LIBERADA")
+        .maybeSingle();
+
+      if (freebetLiberada) {
+        const { data: bookmaker } = await supabase
+          .from("bookmakers")
+          .select("saldo_freebet")
+          .eq("id", freebetLiberada.bookmaker_id)
+          .maybeSingle();
+
+        if (bookmaker) {
+          const novoSaldoFreebet = Math.max(0, (bookmaker.saldo_freebet || 0) - freebetLiberada.valor);
+          await supabase
+            .from("bookmakers")
+            .update({ saldo_freebet: novoSaldoFreebet })
+            .eq("id", freebetLiberada.bookmaker_id);
+        }
+
+        await supabase
+          .from("freebets_recebidas")
+          .update({ status: "PENDENTE" })
+          .eq("id", freebetLiberada.id);
+      }
+    } catch (error) {
+      console.error("Erro ao reverter freebet para pendente:", error);
+    }
+  };
+
   const handleLiquidarAposta = useCallback(async (apostaId: string, resultado: "GREEN" | "RED" | "VOID" | null) => {
     try {
       const aposta = linkedApostas.find(a => a.id === apostaId);
@@ -1047,6 +1244,81 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
       if (error) throw error;
 
+      // Gerenciar status de Freebet associada à aposta
+      const oddEntry = odds.find(o => o.aposta_id === apostaId);
+      const apostaGerouFreebet = aposta.gerou_freebet || oddEntry?.gerouFreebet;
+      
+      if (apostaGerouFreebet) {
+        const eraPendente = !resultadoAnterior || resultadoAnterior === "PENDENTE";
+        const agoraPendente = !resultado || resultado === null;
+        
+        if (eraPendente && !agoraPendente) {
+          // Aposta foi liquidada: liberar ou recusar freebet
+          if (resultado === "VOID") {
+            await recusarFreebetPendente(apostaId);
+          } else {
+            // GREEN ou RED liberam a freebet
+            await liberarFreebetPendente(apostaId);
+          }
+        } else if (!eraPendente && agoraPendente) {
+          // Aposta voltou para pendente: reverter freebet para pendente
+          await reverterFreebetParaPendente(apostaId);
+        } else if (!eraPendente && !agoraPendente) {
+          // Resultado mudou de um para outro (ex: GREEN -> VOID)
+          if (resultado === "VOID" && resultadoAnterior !== "VOID") {
+            // Estava liberada, agora deve ser recusada
+            const { data: freebetLiberada } = await supabase
+              .from("freebets_recebidas")
+              .select("id, bookmaker_id, valor")
+              .eq("aposta_id", apostaId)
+              .eq("status", "LIBERADA")
+              .maybeSingle();
+            
+            if (freebetLiberada) {
+              // Reverter saldo
+              const { data: bk } = await supabase
+                .from("bookmakers")
+                .select("saldo_freebet")
+                .eq("id", freebetLiberada.bookmaker_id)
+                .maybeSingle();
+              
+              if (bk) {
+                await supabase
+                  .from("bookmakers")
+                  .update({ saldo_freebet: Math.max(0, (bk.saldo_freebet || 0) - freebetLiberada.valor) })
+                  .eq("id", freebetLiberada.bookmaker_id);
+              }
+              
+              await supabase
+                .from("freebets_recebidas")
+                .update({ status: "NAO_LIBERADA" })
+                .eq("id", freebetLiberada.id);
+            }
+          } else if (resultado !== "VOID" && resultadoAnterior === "VOID") {
+            // Estava recusada, agora deve ser liberada
+            await liberarFreebetPendente(apostaId);
+          }
+        }
+        
+        // Atualizar status no estado local
+        setOdds(prev => prev.map(o => 
+          o.aposta_id === apostaId
+            ? { 
+                ...o, 
+                resultado,
+                freebetStatus: agoraPendente ? "PENDENTE" : (resultado === "VOID" ? "NAO_LIBERADA" : "LIBERADA")
+              }
+            : o
+        ));
+      } else {
+        // Atualizar o array de odds (sem freebet)
+        setOdds(prev => prev.map(o => 
+          o.aposta_id === apostaId
+            ? { ...o, resultado }
+            : o
+        ));
+      }
+
       // Marcar que houve alterações (para chamar onSuccess ao fechar)
       hasChangesRef.current = true;
 
@@ -1055,13 +1327,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         a.id === apostaId 
           ? { ...a, resultado, lucro_prejuizo: lucro }
           : a
-      ));
-      
-      // Atualizar o array de odds também para manter sincronizado
-      setOdds(prev => prev.map(o => 
-        o.aposta_id === apostaId
-          ? { ...o, resultado }
-          : o
       ));
       
       // Recalcular status da surebet
@@ -1542,6 +1807,89 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             <Badge variant="destructive" className="text-[10px] h-4 px-1 w-fit mx-auto">
                               Saldo Insuficiente
                             </Badge>
+                          )}
+                          
+                          {/* Toggle "Gerou Freebet" - compacto */}
+                          {!isEditing && entry.bookmaker_id && (
+                            <div className={`mt-2 pt-2 border-t border-border/30 ${
+                              entry.gerouFreebet 
+                                ? "bg-gradient-to-r from-emerald-500/10 to-transparent rounded-lg -mx-2 px-2 pb-2" 
+                                : ""
+                            }`}>
+                              <div className="flex items-center justify-between gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => updateOddFreebet(index, !entry.gerouFreebet)}
+                                  className="flex items-center gap-2 group"
+                                >
+                                  <div className={`relative w-8 h-[18px] rounded-full transition-all duration-200 ${
+                                    entry.gerouFreebet 
+                                      ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]" 
+                                      : "bg-muted-foreground/30"
+                                  }`}>
+                                    <div className={`absolute top-[2px] w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all duration-200 ${
+                                      entry.gerouFreebet 
+                                        ? "left-[17px]" 
+                                        : "left-[2px]"
+                                    }`} />
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Gift className={`h-3 w-3 transition-colors ${
+                                      entry.gerouFreebet ? "text-emerald-400" : "text-muted-foreground"
+                                    }`} />
+                                    <span className={`text-[10px] font-medium transition-colors ${
+                                      entry.gerouFreebet 
+                                        ? "text-emerald-400" 
+                                        : "text-muted-foreground group-hover:text-foreground"
+                                    }`}>
+                                      Freebet
+                                    </span>
+                                  </div>
+                                </button>
+                                
+                                {/* Input de valor com animação */}
+                                <div className={`flex items-center gap-1 overflow-hidden transition-all duration-200 ${
+                                  entry.gerouFreebet 
+                                    ? "opacity-100 max-w-[80px]" 
+                                    : "opacity-0 max-w-0"
+                                }`}>
+                                  <span className="text-[10px] text-emerald-400/80 whitespace-nowrap">R$</span>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={entry.valorFreebetGerada || ""}
+                                    onChange={(e) => updateOddFreebet(index, true, e.target.value)}
+                                    placeholder="0"
+                                    className="h-6 w-16 text-[10px] text-center px-1 bg-background/60 border-emerald-500/40 focus:border-emerald-500/60"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Indicador de Freebet em modo edição */}
+                          {isEditing && entry.gerouFreebet && entry.valorFreebetGerada && (
+                            <div className="mt-2 pt-2 border-t border-border/30">
+                              <div className="flex items-center justify-center gap-2">
+                                <Gift className="h-3 w-3 text-emerald-400" />
+                                <span className="text-[10px] font-medium text-emerald-400">
+                                  Freebet: {formatCurrency(parseFloat(entry.valorFreebetGerada) || 0)}
+                                </span>
+                                {entry.freebetStatus && (
+                                  <Badge className={`text-[9px] h-4 px-1 ${
+                                    entry.freebetStatus === "LIBERADA" 
+                                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40" 
+                                      : entry.freebetStatus === "NAO_LIBERADA"
+                                      ? "bg-red-500/20 text-red-400 border-red-500/40"
+                                      : "bg-amber-500/20 text-amber-400 border-amber-500/40"
+                                  }`}>
+                                    {entry.freebetStatus === "LIBERADA" ? "Liberada" : 
+                                     entry.freebetStatus === "NAO_LIBERADA" ? "Não Lib." : "Pendente"}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
                           )}
                         </div>
                       </div>
