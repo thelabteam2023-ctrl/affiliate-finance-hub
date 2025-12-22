@@ -72,7 +72,7 @@ export interface RegistroApostaFieldsProps {
 
 const ContextoIcon = ({ contexto }: { contexto: ContextoOperacional | null }) => {
   if (contexto === 'FREEBET') return <Gift className="h-3.5 w-3.5 text-purple-500" />;
-  if (contexto === 'BONUS') return <Sparkles className="h-3.5 w-3.5 text-amber-500" />;
+  if (contexto === 'BONUS_SALDO') return <Sparkles className="h-3.5 w-3.5 text-amber-500" />;
   return <Coins className="h-3.5 w-3.5 text-emerald-500" />;
 };
 
@@ -232,7 +232,7 @@ export function RegistroApostaFields({
                   <br />
                   <strong>Freebet:</strong> Aposta grátis da casa
                   <br />
-                  <strong>Saldo de Bônus:</strong> Crédito promocional
+                  <strong>Saldo Real + Bônus:</strong> Saldo real + crédito promocional
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -297,6 +297,14 @@ export function validateRegistroAposta(values: RegistroApostaValues): {
  * Sugestões baseadas na aba ativa
  * IMPORTANTE: São apenas SUGESTÕES, o usuário pode alterar
  */
+/**
+ * Sugestões baseadas na aba ativa
+ * IMPORTANTE: São apenas SUGESTÕES, o usuário pode alterar
+ * 
+ * REGRA: O formulário (Simples/Múltipla/Arbitragem) é apenas meio de entrada,
+ * portanto SEMPRE sugerimos 'SIMPLES' como default.
+ * Estratégia e Contexto são os campos conceituais.
+ */
 export function getSuggestionsForTab(activeTab: string): Partial<RegistroApostaValues> {
   const tabSuggestions: Record<string, Partial<RegistroApostaValues>> = {
     apostas: {
@@ -309,13 +317,14 @@ export function getSuggestionsForTab(activeTab: string): Partial<RegistroApostaV
       estrategia: 'EXTRACAO_FREEBET',
       contexto_operacional: 'FREEBET',
     },
+    // Aba Bônus: sempre SIMPLES + EXTRACAO_BONUS + BONUS_SALDO
     bonus: {
       forma_registro: 'SIMPLES',
       estrategia: 'EXTRACAO_BONUS',
-      contexto_operacional: 'BONUS',
+      contexto_operacional: 'BONUS_SALDO',
     },
     surebet: {
-      forma_registro: 'ARBITRAGEM',
+      forma_registro: 'SIMPLES',
       estrategia: 'SUREBET',
       contexto_operacional: 'NORMAL',
     },
@@ -327,6 +336,11 @@ export function getSuggestionsForTab(activeTab: string): Partial<RegistroApostaV
     duplogreen: {
       forma_registro: 'SIMPLES',
       estrategia: 'DUPLO_GREEN',
+      contexto_operacional: 'NORMAL',
+    },
+    matched: {
+      forma_registro: 'SIMPLES',
+      estrategia: 'MATCHED_BETTING',
       contexto_operacional: 'NORMAL',
     },
   };

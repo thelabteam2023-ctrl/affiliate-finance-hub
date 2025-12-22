@@ -48,6 +48,7 @@ export const APOSTA_ESTRATEGIA = {
   EXTRACAO_FREEBET: 'EXTRACAO_FREEBET',
   EXTRACAO_BONUS: 'EXTRACAO_BONUS',
   DUPLO_GREEN: 'DUPLO_GREEN',
+  MATCHED_BETTING: 'MATCHED_BETTING',
 } as const;
 
 export type ApostaEstrategia = typeof APOSTA_ESTRATEGIA[keyof typeof APOSTA_ESTRATEGIA];
@@ -76,9 +77,9 @@ export type FormaRegistro = typeof FORMA_REGISTRO[keyof typeof FORMA_REGISTRO];
  * - Contexto NUNCA muda depois
  */
 export const CONTEXTO_OPERACIONAL = {
-  NORMAL: 'NORMAL',    // Saldo real
-  FREEBET: 'FREEBET',  // Freebet
-  BONUS: 'BONUS',      // Saldo de bônus
+  NORMAL: 'NORMAL',           // Saldo real
+  FREEBET: 'FREEBET',         // Freebet
+  BONUS_SALDO: 'BONUS_SALDO', // Saldo Real + Saldo de Bônus
 } as const;
 
 export type ContextoOperacional = typeof CONTEXTO_OPERACIONAL[keyof typeof CONTEXTO_OPERACIONAL];
@@ -89,7 +90,7 @@ export type ContextoOperacional = typeof CONTEXTO_OPERACIONAL[keyof typeof CONTE
 export const CONTEXTO_LABELS: Record<ContextoOperacional, string> = {
   NORMAL: 'Saldo Real',
   FREEBET: 'Freebet',
-  BONUS: 'Saldo de Bônus',
+  BONUS_SALDO: 'Saldo Real + Bônus',
 };
 
 /**
@@ -98,7 +99,7 @@ export const CONTEXTO_LABELS: Record<ContextoOperacional, string> = {
 export const CONTEXTOS_LIST = [
   { value: CONTEXTO_OPERACIONAL.NORMAL, label: CONTEXTO_LABELS.NORMAL },
   { value: CONTEXTO_OPERACIONAL.FREEBET, label: CONTEXTO_LABELS.FREEBET },
-  { value: CONTEXTO_OPERACIONAL.BONUS, label: CONTEXTO_LABELS.BONUS },
+  { value: CONTEXTO_OPERACIONAL.BONUS_SALDO, label: CONTEXTO_LABELS.BONUS_SALDO },
 ] as const;
 
 /**
@@ -129,6 +130,7 @@ export const ESTRATEGIA_LABELS: Record<ApostaEstrategia, string> = {
   EXTRACAO_FREEBET: 'Extração de Freebet',
   EXTRACAO_BONUS: 'Extração de Bônus',
   DUPLO_GREEN: 'Duplo Green',
+  MATCHED_BETTING: 'Matched Betting',
 };
 
 /**
@@ -141,6 +143,7 @@ export const ESTRATEGIA_TOOLTIPS: Record<ApostaEstrategia, string> = {
   EXTRACAO_FREEBET: 'Conversão de freebet em dinheiro real',
   EXTRACAO_BONUS: 'Conversão de saldo de bônus em dinheiro real',
   DUPLO_GREEN: 'Estratégia coordenada para obter múltiplos greens',
+  MATCHED_BETTING: 'Aposta coordenada para extração de bônus',
 };
 
 /**
@@ -153,6 +156,7 @@ export const ESTRATEGIAS_LIST = [
   { value: APOSTA_ESTRATEGIA.EXTRACAO_FREEBET, label: ESTRATEGIA_LABELS.EXTRACAO_FREEBET },
   { value: APOSTA_ESTRATEGIA.EXTRACAO_BONUS, label: ESTRATEGIA_LABELS.EXTRACAO_BONUS },
   { value: APOSTA_ESTRATEGIA.DUPLO_GREEN, label: ESTRATEGIA_LABELS.DUPLO_GREEN },
+  { value: APOSTA_ESTRATEGIA.MATCHED_BETTING, label: ESTRATEGIA_LABELS.MATCHED_BETTING },
 ] as const;
 
 /**
@@ -166,6 +170,7 @@ export const getEstrategiaFromTab = (activeTab: string): ApostaEstrategia => {
     surebet: 'SUREBET',
     valuebet: 'VALUEBET',
     duplogreen: 'DUPLO_GREEN',
+    matched: 'MATCHED_BETTING',
     // Aliases para garantir compatibilidade
     'apostas-livres': 'PUNTER',
     'visao-geral': 'PUNTER',
@@ -186,6 +191,7 @@ export const getTabFromEstrategia = (estrategia: ApostaEstrategia | string | nul
     EXTRACAO_FREEBET: 'freebets',
     EXTRACAO_BONUS: 'bonus',
     DUPLO_GREEN: 'duplogreen',
+    MATCHED_BETTING: 'matched',
     // Legado
     VALOR: 'apostas',
   };
