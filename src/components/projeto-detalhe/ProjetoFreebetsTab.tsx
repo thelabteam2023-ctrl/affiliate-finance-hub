@@ -4,6 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -11,60 +16,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Gift, Search, Building2, User, Calendar, Target, CheckCircle2, Clock, TrendingUp, Percent, XCircle, Trophy, AlertTriangle, CircleDot } from "lucide-react";
-import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { 
+  Gift, Search, Building2, User, Target, CheckCircle2, Clock, 
+  TrendingUp, Percent, LayoutGrid, List, Minimize2, BarChart3 
+} from "lucide-react";
+import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
+import { useFreebetViewPreferences, FreebetSubTab } from "@/hooks/useFreebetViewPreferences";
+import { 
+  FreebetApostaCard, 
+  FreebetApostasList, 
+  FreebetResumoPorCasa,
+  FreebetGraficos,
+  ApostaOperacionalFreebet,
+  FreebetRecebida,
+  BookmakerComFreebet,
+  BookmakerFreebetStats
+} from "./freebets";
 
 interface ProjetoFreebetsTabProps {
   projetoId: string;
   periodFilter?: string;
   customDateRange?: { start: Date; end: Date } | null;
-}
-
-interface FreebetRecebida {
-  id: string;
-  bookmaker_id: string;
-  bookmaker_nome: string;
-  parceiro_nome: string | null;
-  logo_url: string | null;
-  valor: number;
-  motivo: string;
-  data_recebida: string;
-  utilizada: boolean;
-  data_utilizacao: string | null;
-  aposta_id: string | null;
-  status: "PENDENTE" | "LIBERADA" | "NAO_LIBERADA";
-}
-
-interface BookmakerComFreebet {
-  id: string;
-  nome: string;
-  parceiro_nome: string | null;
-  logo_url: string | null;
-  saldo_freebet: number;
-}
-
-// Interface expandida para apostas operacionais com freebet
-interface ApostaOperacionalFreebet {
-  id: string;
-  tipo: "simples" | "multipla";
-  evento: string;
-  mercado: string | null;
-  selecao: string;
-  odd: number;
-  stake: number;
-  lucro_prejuizo: number | null;
-  valor_retorno: number | null;
-  data_aposta: string;
-  status: string;
-  resultado: string | null;
-  tipo_freebet: string | null;
-  bookmaker_nome: string;
-  logo_url: string | null;
-  parceiro_nome: string | null;
-  // Indica se é aposta qualificadora que gerou freebet
-  gerou_freebet: boolean;
-  valor_freebet_gerada: number | null;
 }
 
 export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDateRange }: ProjetoFreebetsTabProps) {
@@ -73,9 +45,14 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
   const [bookmakersComFreebet, setBookmakersComFreebet] = useState<BookmakerComFreebet[]>([]);
   const [apostasOperacionais, setApostasOperacionais] = useState<ApostaOperacionalFreebet[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"todas" | "pendente" | "liquidada">("todas");
-  const [resultadoFilter, setResultadoFilter] = useState<"todas" | "ganhas" | "perdidas">("todas");
   const [casaFilter, setCasaFilter] = useState<string>("todas");
+
+  // Preferências de visualização (persistidas)
+  const { 
+    viewMode, setViewMode, 
+    compactMode, toggleCompactMode,
+    subTab, setSubTab 
+  } = useFreebetViewPreferences();
 
   // Calcular range de datas baseado no filtro
   const dateRange = useMemo(() => {
@@ -100,7 +77,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
         }
         return null;
       default:
-        return null; // "tudo"
+        return null;
     }
   }, [periodFilter, customDateRange]);
 
@@ -126,18 +103,10 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
       const { data, error } = await supabase
         .from("freebets_recebidas")
         .select(`
-          id,
-          bookmaker_id,
-          valor,
-          motivo,
-          data_recebida,
-          utilizada,
-          data_utilizacao,
-          aposta_id,
-          status,
+          id, bookmaker_id, valor, motivo, data_recebida, utilizada, 
+          data_utilizacao, aposta_id, status,
           bookmakers!freebets_recebidas_bookmaker_id_fkey (
-            nome,
-            parceiro_id,
+            nome, parceiro_id,
             parceiros!bookmakers_parceiro_id_fkey (nome),
             bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
           )
@@ -173,9 +142,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
       const { data, error } = await supabase
         .from("bookmakers")
         .select(`
-          id,
-          nome,
-          saldo_freebet,
+          id, nome, saldo_freebet,
           parceiros!bookmakers_parceiro_id_fkey (nome),
           bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
         `)
@@ -198,32 +165,16 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
     }
   };
 
-  // Buscar apostas OPERACIONAIS com contexto freebet (não eventos financeiros)
   const fetchApostasOperacionais = async () => {
     try {
-      // Buscar apostas simples com contexto_operacional = FREEBET
-      // Buscar apostas com contexto_operacional = FREEBET OU que geraram freebet
       const { data: apostasSimples, error: errorSimples } = await supabase
         .from("apostas")
         .select(`
-          id,
-          evento,
-          mercado,
-          selecao,
-          odd,
-          stake,
-          lucro_prejuizo,
-          valor_retorno,
-          data_aposta,
-          status,
-          resultado,
-          tipo_freebet,
-          contexto_operacional,
-          gerou_freebet,
-          valor_freebet_gerada,
+          id, evento, mercado, selecao, odd, stake, lucro_prejuizo, valor_retorno,
+          data_aposta, status, resultado, tipo_freebet, contexto_operacional,
+          gerou_freebet, valor_freebet_gerada, bookmaker_id,
           bookmakers!apostas_bookmaker_id_fkey (
-            nome,
-            parceiros!bookmakers_parceiro_id_fkey (nome),
+            nome, parceiros!bookmakers_parceiro_id_fkey (nome),
             bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
           )
         `)
@@ -234,27 +185,14 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
 
       if (errorSimples) throw errorSimples;
 
-      // Buscar apostas múltiplas com contexto_operacional = FREEBET
-      // Buscar apostas múltiplas com contexto_operacional = FREEBET OU que geraram freebet
       const { data: apostasMultiplas, error: errorMultiplas } = await supabase
         .from("apostas_multiplas")
         .select(`
-          id,
-          selecoes,
-          odd_final,
-          stake,
-          lucro_prejuizo,
-          valor_retorno,
-          data_aposta,
-          status,
-          resultado,
-          tipo_freebet,
-          contexto_operacional,
-          gerou_freebet,
-          valor_freebet_gerada,
+          id, selecoes, odd_final, stake, lucro_prejuizo, valor_retorno,
+          data_aposta, status, resultado, tipo_freebet, contexto_operacional,
+          gerou_freebet, valor_freebet_gerada, bookmaker_id,
           bookmakers!apostas_multiplas_bookmaker_id_fkey (
-            nome,
-            parceiros!bookmakers_parceiro_id_fkey (nome),
+            nome, parceiros!bookmakers_parceiro_id_fkey (nome),
             bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
           )
         `)
@@ -265,7 +203,6 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
 
       if (errorMultiplas) throw errorMultiplas;
 
-      // Formatar apostas simples
       const simplesFormatted: ApostaOperacionalFreebet[] = (apostasSimples || []).map((ap: any) => ({
         id: ap.id,
         tipo: "simples" as const,
@@ -280,6 +217,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
         status: ap.status,
         resultado: ap.resultado,
         tipo_freebet: ap.tipo_freebet,
+        bookmaker_id: ap.bookmaker_id,
         bookmaker_nome: ap.bookmakers?.nome || "Desconhecida",
         logo_url: ap.bookmakers?.bookmakers_catalogo?.logo_url || null,
         parceiro_nome: ap.bookmakers?.parceiros?.nome || null,
@@ -287,7 +225,6 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
         valor_freebet_gerada: ap.valor_freebet_gerada || null,
       }));
 
-      // Formatar apostas múltiplas
       const multiplasFormatted: ApostaOperacionalFreebet[] = (apostasMultiplas || []).map((ap: any) => {
         const selecoes = Array.isArray(ap.selecoes) ? ap.selecoes : [];
         const primeiraSelecao = selecoes[0] || {};
@@ -305,6 +242,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
           status: ap.status,
           resultado: ap.resultado,
           tipo_freebet: ap.tipo_freebet,
+          bookmaker_id: ap.bookmaker_id,
           bookmaker_nome: ap.bookmakers?.nome || "Desconhecida",
           logo_url: ap.bookmakers?.bookmakers_catalogo?.logo_url || null,
           parceiro_nome: ap.bookmakers?.parceiros?.nome || null,
@@ -313,7 +251,6 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
         };
       });
 
-      // Combinar e ordenar por data
       const todasApostas = [...simplesFormatted, ...multiplasFormatted].sort(
         (a, b) => new Date(b.data_aposta).getTime() - new Date(a.data_aposta).getTime()
       );
@@ -331,17 +268,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
     }).format(value);
   };
 
-  // Filtrar freebets e apostas pelo período - APENAS LIBERADAS para métricas
-  const freebetsLiberadasNoPeriodo = useMemo(() => {
-    const liberadas = freebets.filter(fb => fb.status === "LIBERADA");
-    if (!dateRange) return liberadas;
-    return liberadas.filter(fb => {
-      const dataRecebida = new Date(fb.data_recebida);
-      return dataRecebida >= dateRange.start && dataRecebida <= dateRange.end;
-    });
-  }, [freebets, dateRange]);
-
-  // Todas freebets no período para listagem (inclui pendentes para visualização)
+  // Filtrar por período
   const freebetsNoPeriodo = useMemo(() => {
     if (!dateRange) return freebets;
     return freebets.filter(fb => {
@@ -350,7 +277,6 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
     });
   }, [freebets, dateRange]);
 
-  // Apostas operacionais no período
   const apostasNoPeriodo = useMemo(() => {
     if (!dateRange) return apostasOperacionais;
     return apostasOperacionais.filter(ap => {
@@ -359,11 +285,38 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
     });
   }, [apostasOperacionais, dateRange]);
 
-  // Métricas de extração - APENAS FREEBETS LIBERADAS
+  // Casas disponíveis para filtro
+  const casasDisponiveis = [...new Set(apostasNoPeriodo.map(ap => ap.bookmaker_nome))];
+
+  // Filtrar apostas
+  const apostasFiltradas = useMemo(() => {
+    return apostasNoPeriodo.filter(ap => {
+      if (casaFilter !== "todas" && ap.bookmaker_nome !== casaFilter) return false;
+      
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase();
+        return (
+          ap.evento.toLowerCase().includes(search) ||
+          ap.selecao.toLowerCase().includes(search) ||
+          ap.mercado?.toLowerCase().includes(search) ||
+          ap.bookmaker_nome.toLowerCase().includes(search) ||
+          ap.parceiro_nome?.toLowerCase().includes(search)
+        );
+      }
+      
+      return true;
+    });
+  }, [apostasNoPeriodo, casaFilter, searchTerm]);
+
+  // Apostas por status
+  const apostasAtivas = apostasFiltradas.filter(ap => ap.status === "PENDENTE" || ap.resultado === "PENDENTE");
+  const apostasHistorico = apostasFiltradas.filter(ap => ap.status === "LIQUIDADA" && ap.resultado !== "PENDENTE");
+
+  // Métricas globais
   const metricas = useMemo(() => {
-    const totalRecebido = freebetsLiberadasNoPeriodo.reduce((acc, fb) => acc + fb.valor, 0);
+    const freebetsLiberadas = freebetsNoPeriodo.filter(fb => fb.status === "LIBERADA");
+    const totalRecebido = freebetsLiberadas.reduce((acc, fb) => acc + fb.valor, 0);
     
-    // Total extraído: soma do lucro de apostas operacionais com freebet
     const apostasFinalizadas = apostasNoPeriodo.filter(ap => 
       ap.status === "LIQUIDADA" && ap.resultado && ap.resultado !== "PENDENTE"
     );
@@ -373,13 +326,16 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
       return acc + Math.max(0, lucro);
     }, 0);
     
-    // Taxa de extração
     const taxaExtracao = totalRecebido > 0 ? (totalExtraido / totalRecebido) * 100 : 0;
-
-    // Métricas de apostas
     const totalApostas = apostasNoPeriodo.length;
     const apostasGanhas = apostasNoPeriodo.filter(ap => 
       ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN"
+    ).length;
+    const apostasPerdidas = apostasNoPeriodo.filter(ap => 
+      ap.resultado === "RED" || ap.resultado === "MEIO_RED"
+    ).length;
+    const apostasPendentes = apostasNoPeriodo.filter(ap => 
+      ap.status === "PENDENTE" || ap.resultado === "PENDENTE"
     ).length;
     const taxaAcerto = totalApostas > 0 ? (apostasGanhas / totalApostas) * 100 : 0;
 
@@ -389,102 +345,87 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
       taxaExtracao,
       totalApostas,
       apostasGanhas,
+      apostasPerdidas,
+      apostasPendentes,
       taxaAcerto
     };
-  }, [freebetsLiberadasNoPeriodo, apostasNoPeriodo]);
+  }, [freebetsNoPeriodo, apostasNoPeriodo]);
 
-  // Casas disponíveis para filtro
-  const casasDisponiveis = [...new Set(apostasNoPeriodo.map(ap => ap.bookmaker_nome))];
-  
-  // Filtrar apostas operacionais
-  const apostasFiltradas = apostasNoPeriodo.filter(ap => {
-    // Filtro de status
-    if (statusFilter === "pendente" && ap.status !== "PENDENTE") return false;
-    if (statusFilter === "liquidada" && ap.status !== "LIQUIDADA") return false;
+  // Estatísticas por casa
+  const statsPorCasa = useMemo((): BookmakerFreebetStats[] => {
+    const casasMap = new Map<string, BookmakerFreebetStats>();
     
-    // Filtro de resultado
-    if (resultadoFilter === "ganhas" && ap.resultado !== "GREEN" && ap.resultado !== "MEIO_GREEN") return false;
-    if (resultadoFilter === "perdidas" && ap.resultado !== "RED" && ap.resultado !== "MEIO_RED") return false;
+    // Agregar freebets recebidas
+    freebetsNoPeriodo.forEach(fb => {
+      if (fb.status !== "LIBERADA") return;
+      
+      const existing = casasMap.get(fb.bookmaker_id) || {
+        bookmaker_id: fb.bookmaker_id,
+        bookmaker_nome: fb.bookmaker_nome,
+        logo_url: fb.logo_url,
+        parceiro_nome: fb.parceiro_nome,
+        total_freebets_recebidas: 0,
+        valor_total_recebido: 0,
+        apostas_realizadas: 0,
+        apostas_ganhas: 0,
+        apostas_perdidas: 0,
+        apostas_pendentes: 0,
+        valor_total_extraido: 0,
+        taxa_extracao: 0,
+        taxa_conversao: 0,
+        saldo_atual: 0,
+      };
+      
+      existing.total_freebets_recebidas += 1;
+      existing.valor_total_recebido += fb.valor;
+      
+      casasMap.set(fb.bookmaker_id, existing);
+    });
     
-    // Filtro de casa
-    if (casaFilter !== "todas" && ap.bookmaker_nome !== casaFilter) return false;
+    // Agregar apostas
+    apostasNoPeriodo.forEach(ap => {
+      const existing = casasMap.get(ap.bookmaker_id);
+      if (!existing) return;
+      
+      existing.apostas_realizadas += 1;
+      
+      if (ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN") {
+        existing.apostas_ganhas += 1;
+        existing.valor_total_extraido += Math.max(0, ap.lucro_prejuizo || 0);
+      } else if (ap.resultado === "RED" || ap.resultado === "MEIO_RED") {
+        existing.apostas_perdidas += 1;
+      } else {
+        existing.apostas_pendentes += 1;
+      }
+    });
     
-    // Filtro de busca
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      return (
-        ap.evento.toLowerCase().includes(search) ||
-        ap.selecao.toLowerCase().includes(search) ||
-        ap.mercado?.toLowerCase().includes(search) ||
-        ap.bookmaker_nome.toLowerCase().includes(search) ||
-        ap.parceiro_nome?.toLowerCase().includes(search)
-      );
-    }
+    // Adicionar saldo atual de bookmakers
+    bookmakersComFreebet.forEach(bk => {
+      const existing = casasMap.get(bk.id);
+      if (existing) {
+        existing.saldo_atual = bk.saldo_freebet;
+      }
+    });
     
-    return true;
-  });
+    // Calcular taxas
+    return Array.from(casasMap.values())
+      .map(stat => ({
+        ...stat,
+        taxa_extracao: stat.valor_total_recebido > 0 
+          ? (stat.valor_total_extraido / stat.valor_total_recebido) * 100 
+          : 0,
+        taxa_conversao: stat.apostas_realizadas > 0 
+          ? (stat.apostas_ganhas / stat.apostas_realizadas) * 100 
+          : 0
+      }))
+      .sort((a, b) => b.valor_total_recebido - a.valor_total_recebido);
+  }, [freebetsNoPeriodo, apostasNoPeriodo, bookmakersComFreebet]);
 
-  // KPIs de estoque atual
+  // Estoque atual
   const totalFreebetDisponivel = bookmakersComFreebet.reduce((acc, bk) => acc + bk.saldo_freebet, 0);
   const casasComFreebet = bookmakersComFreebet.length;
   const freebetsUtilizadas = freebetsNoPeriodo.filter(f => f.utilizada).length;
   const freebetsDisponiveis = freebetsNoPeriodo.filter(f => !f.utilizada).length;
-
-  // Helper para badge de resultado
-  const getResultadoBadge = (resultado: string | null, status: string) => {
-    if (status === "PENDENTE" || !resultado || resultado === "PENDENTE") {
-      return (
-        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-          <Clock className="h-3 w-3 mr-1" />
-          Pendente
-        </Badge>
-      );
-    }
-    
-    switch (resultado) {
-      case "GREEN":
-        return (
-          <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-            <Trophy className="h-3 w-3 mr-1" />
-            Green
-          </Badge>
-        );
-      case "MEIO_GREEN":
-        return (
-          <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-            <CheckCircle2 className="h-3 w-3 mr-1" />
-            Meio Green
-          </Badge>
-        );
-      case "RED":
-        return (
-          <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
-            <XCircle className="h-3 w-3 mr-1" />
-            Red
-          </Badge>
-        );
-      case "MEIO_RED":
-        return (
-          <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
-            <AlertTriangle className="h-3 w-3 mr-1" />
-            Meio Red
-          </Badge>
-        );
-      case "VOID":
-        return (
-          <Badge variant="secondary">
-            <CircleDot className="h-3 w-3 mr-1" />
-            Void
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="secondary">
-            {resultado}
-          </Badge>
-        );
-    }
-  };
 
   if (loading) {
     return (
@@ -500,436 +441,254 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
   return (
     <div className="space-y-4">
       {/* KPIs - Métricas de Período */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
         <Card className="border-amber-500/20 bg-amber-500/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Freebets Recebidas</CardTitle>
+            <CardTitle className="text-sm font-medium">Recebido</CardTitle>
             <Gift className="h-4 w-4 text-amber-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-400">{formatCurrency(metricas.totalRecebido)}</div>
-            <p className="text-xs text-muted-foreground">
-              {freebetsNoPeriodo.length} freebets no período
-            </p>
+            <p className="text-xs text-muted-foreground">{freebetsNoPeriodo.length} freebets</p>
           </CardContent>
         </Card>
 
         <Card className="border-emerald-500/20 bg-emerald-500/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lucro Extraído</CardTitle>
+            <CardTitle className="text-sm font-medium">Extraído</CardTitle>
             <TrendingUp className="h-4 w-4 text-emerald-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-emerald-400">{formatCurrency(metricas.totalExtraido)}</div>
-            <p className="text-xs text-muted-foreground">
-              {metricas.totalApostas} apostas realizadas
-            </p>
+            <p className="text-xs text-muted-foreground">{metricas.apostasGanhas} ganhas</p>
           </CardContent>
         </Card>
 
-        <Card className={`border-${metricas.taxaExtracao >= 70 ? 'emerald' : metricas.taxaExtracao >= 50 ? 'amber' : 'red'}-500/20 bg-${metricas.taxaExtracao >= 70 ? 'emerald' : metricas.taxaExtracao >= 50 ? 'amber' : 'red'}-500/5`}>
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Extração</CardTitle>
+            <CardTitle className="text-sm font-medium">Taxa Extração</CardTitle>
             <Percent className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${metricas.taxaExtracao >= 70 ? 'text-emerald-400' : metricas.taxaExtracao >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
               {metricas.taxaExtracao.toFixed(1)}%
             </div>
+            <p className="text-xs text-muted-foreground">Acerto: {metricas.taxaAcerto.toFixed(0)}%</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Apostas</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metricas.totalApostas}</div>
             <p className="text-xs text-muted-foreground">
-              Taxa de acerto: {metricas.taxaAcerto.toFixed(0)}%
+              <span className="text-yellow-400">{metricas.apostasPendentes}</span> pendentes
             </p>
           </CardContent>
         </Card>
-      </div>
 
-      {/* KPIs - Estoque Atual */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="border-amber-500/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Freebet Disponível</CardTitle>
+            <CardTitle className="text-sm font-medium">Saldo Atual</CardTitle>
             <Gift className="h-4 w-4 text-amber-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-400">{formatCurrency(totalFreebetDisponivel)}</div>
-            <p className="text-xs text-muted-foreground">
-              Saldo atual para uso
-            </p>
+            <p className="text-xs text-muted-foreground">{casasComFreebet} casas</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Casas com Freebet</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{casasComFreebet}</div>
-            <p className="text-xs text-muted-foreground">
-              Bookmakers com saldo
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Freebets no Período</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Freebets</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{freebetsNoPeriodo.length}</div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-emerald-400">{freebetsDisponiveis} disponíveis</span>
-              {" · "}
-              <span className="text-muted-foreground">{freebetsUtilizadas} utilizadas</span>
+              <span className="text-emerald-400">{freebetsDisponiveis}</span> / <span className="text-muted-foreground">{freebetsUtilizadas}</span>
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Casas com Saldo de Freebet */}
+      {/* Saldo por Casa (compacto) */}
       {bookmakersComFreebet.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Gift className="h-4 w-4 text-amber-400" />
-              Saldo de Freebet por Casa
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {bookmakersComFreebet.map(bk => (
-                <div
-                  key={bk.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border bg-card"
-                >
-                  {bk.logo_url ? (
-                    <img
-                      src={bk.logo_url}
-                      alt={bk.nome}
-                      className="h-10 w-10 rounded-lg object-contain bg-white p-1"
-                    />
-                  ) : (
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Building2 className="h-5 w-5 text-primary" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{bk.nome}</p>
-                    {bk.parceiro_nome && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        {bk.parceiro_nome}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-amber-400">
-                      {formatCurrency(bk.saldo_freebet)}
-                    </p>
-                  </div>
-                </div>
-              ))}
+        <div className="flex flex-wrap gap-2">
+          {bookmakersComFreebet.slice(0, 6).map(bk => (
+            <div key={bk.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-card">
+              {bk.logo_url ? (
+                <img src={bk.logo_url} alt={bk.nome} className="h-5 w-5 rounded object-contain bg-white p-0.5" />
+              ) : (
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+              )}
+              <span className="text-sm font-medium">{bk.nome}</span>
+              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
+                {formatCurrency(bk.saldo_freebet)}
+              </Badge>
             </div>
-          </CardContent>
-        </Card>
+          ))}
+          {bookmakersComFreebet.length > 6 && (
+            <div className="flex items-center px-3 py-1.5 rounded-full border bg-muted/50">
+              <span className="text-xs text-muted-foreground">+{bookmakersComFreebet.length - 6} casas</span>
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Layout 2 colunas: Apostas Operacionais (principal) + Freebets do Período (secundário) */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        {/* Card Principal - Apostas Operacionais com Freebet */}
-        <Card className="min-h-[400px]">
-          <CardHeader className="pb-3">
+      {/* Área Principal com Sub-abas */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <CardTitle className="text-base flex items-center gap-2">
               <Target className="h-4 w-4 text-primary" />
-              Apostas Relacionadas a Freebet
+              Centro de Inteligência Freebet
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Apostas qualificadoras (que geraram freebet) e apostas usando freebet
-            </p>
-          </CardHeader>
-          <CardContent>
-            {/* Filtros */}
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por evento, seleção, casa..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+            
+            {/* Controles de Visualização */}
+            <div className="flex items-center gap-4">
+              <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as any)}>
+                <ToggleGroupItem value="card" aria-label="Cards" size="sm">
+                  <LayoutGrid className="h-4 w-4" />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="list" aria-label="Lista" size="sm">
+                  <List className="h-4 w-4" />
+                </ToggleGroupItem>
+              </ToggleGroup>
+              
+              <div className="flex items-center gap-2">
+                <Switch id="compact" checked={compactMode} onCheckedChange={toggleCompactMode} />
+                <Label htmlFor="compact" className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1">
+                  <Minimize2 className="h-3 w-3" />
+                  Compacto
+                </Label>
               </div>
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas</SelectItem>
-                  <SelectItem value="pendente">Pendentes</SelectItem>
-                  <SelectItem value="liquidada">Liquidadas</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={resultadoFilter} onValueChange={(v) => setResultadoFilter(v as any)}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Resultado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas</SelectItem>
-                  <SelectItem value="ganhas">Ganhas</SelectItem>
-                  <SelectItem value="perdidas">Perdidas</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={casaFilter} onValueChange={setCasaFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Casa" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas as Casas</SelectItem>
-                  {casasDisponiveis.map(casa => (
-                    <SelectItem key={casa} value={casa}>{casa}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
-
-            {/* Cards de Apostas */}
-            {apostasFiltradas.length === 0 ? (
-              <div className="text-center py-16 border rounded-lg bg-muted/5">
-                <Target className="mx-auto h-12 w-12 text-muted-foreground/30" />
-                <h3 className="mt-4 text-base font-medium text-muted-foreground">
-                  Nenhuma aposta com Freebet encontrada
-                </h3>
-                <p className="text-sm text-muted-foreground/70 mt-1">
-                  Apostas com contexto operacional Freebet aparecerão aqui
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {apostasFiltradas.map(aposta => (
-                  <div
-                    key={aposta.id}
-                    className="p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
-                  >
-                    {/* Header: Casa + Badge Tipo */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        {aposta.logo_url ? (
-                          <img
-                            src={aposta.logo_url}
-                            alt={aposta.bookmaker_nome}
-                            className="h-8 w-8 rounded object-contain bg-white p-0.5"
-                          />
-                        ) : (
-                          <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
-                            <Building2 className="h-4 w-4" />
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-medium text-sm">{aposta.bookmaker_nome}</p>
-                          {aposta.parceiro_nome && (
-                            <p className="text-xs text-muted-foreground">{aposta.parceiro_nome}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                        {aposta.tipo === "multipla" && (
-                          <Badge variant="outline" className="text-xs">Múltipla</Badge>
-                        )}
-                        {aposta.gerou_freebet ? (
-                          <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-xs">
-                            <Target className="h-3 w-3 mr-1" />
-                            Qualificadora
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
-                            <Gift className="h-3 w-3 mr-1" />
-                            Freebet
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Evento e Seleção */}
-                    <div className="mb-3">
-                      <p className="font-medium text-sm truncate" title={aposta.evento}>
-                        {aposta.evento}
-                      </p>
-                      <p className="text-sm text-primary truncate" title={aposta.selecao}>
-                        {aposta.selecao}
-                      </p>
-                      {aposta.mercado && (
-                        <p className="text-xs text-muted-foreground">{aposta.mercado}</p>
-                      )}
-                    </div>
-
-                    {/* Valores */}
-                    <div className="grid grid-cols-3 gap-2 mb-3 text-sm">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Odd</p>
-                        <p className="font-semibold">{aposta.odd.toFixed(2)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Stake</p>
-                        <p className="font-semibold text-amber-400">{formatCurrency(aposta.stake)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          {aposta.status === "LIQUIDADA" ? "P/L" : "Retorno Pot."}
-                        </p>
-                        <p className={`font-semibold ${
-                          aposta.lucro_prejuizo !== null 
-                            ? aposta.lucro_prejuizo >= 0 ? "text-emerald-400" : "text-red-400"
-                            : ""
-                        }`}>
-                          {aposta.status === "LIQUIDADA" && aposta.lucro_prejuizo !== null
-                            ? formatCurrency(aposta.lucro_prejuizo)
-                            : formatCurrency(aposta.stake * (aposta.odd - 1))
-                          }
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Gerou Freebet Info */}
-                    {aposta.gerou_freebet && aposta.valor_freebet_gerada && (
-                      <div className="flex items-center justify-between p-2 rounded bg-purple-500/10 border border-purple-500/20 mb-3">
-                        <span className="text-xs text-purple-400 flex items-center gap-1">
-                          <Gift className="h-3 w-3" />
-                          Gerou Freebet
-                        </span>
-                        <span className="text-sm font-bold text-purple-400">
-                          {formatCurrency(aposta.valor_freebet_gerada)}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Footer: Data + Resultado */}
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(aposta.data_aposta), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                      </div>
-                      {getResultadoBadge(aposta.resultado, aposta.status)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Card Secundário - Freebets do Período */}
-        <Card className="h-fit">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Gift className="h-4 w-4 text-amber-400" />
-              Freebets do Período
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {freebetsNoPeriodo.length === 0 ? (
-              <div className="text-center py-8 border rounded-lg bg-muted/5">
-                <Gift className="mx-auto h-8 w-8 text-muted-foreground/30" />
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Nenhuma freebet no período
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Resumo */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                    <div className="flex items-center gap-2">
-                      <Gift className="h-4 w-4 text-amber-400" />
-                      <span className="text-sm font-medium">Total Recebido</span>
-                    </div>
-                    <span className="text-lg font-bold text-amber-400">
-                      {formatCurrency(metricas.totalRecebido)}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                      <span className="text-sm font-medium">Disponíveis</span>
-                    </div>
-                    <span className="text-lg font-bold text-emerald-400">
-                      {freebetsDisponiveis}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Utilizadas</span>
-                    </div>
-                    <span className="text-lg font-bold text-muted-foreground">
-                      {freebetsUtilizadas}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Taxa de Extração */}
-                <div className="pt-3 border-t">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">Taxa de Extração</span>
-                    <span className={`text-sm font-bold ${metricas.taxaExtracao >= 70 ? 'text-emerald-400' : metricas.taxaExtracao >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
-                      {metricas.taxaExtracao.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${metricas.taxaExtracao >= 70 ? 'bg-emerald-500' : metricas.taxaExtracao >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
-                      style={{ width: `${Math.min(100, metricas.taxaExtracao)}%` }}
+          </div>
+        </CardHeader>
+        
+        <CardContent>
+          <Tabs value={subTab} onValueChange={(v) => setSubTab(v as FreebetSubTab)} className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <TabsList>
+                <TabsTrigger value="ativas" className="gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  Ativas
+                  {apostasAtivas.length > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-5 px-1.5">{apostasAtivas.length}</Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="historico" className="gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Histórico
+                </TabsTrigger>
+                <TabsTrigger value="por-casa" className="gap-1.5">
+                  <Building2 className="h-3.5 w-3.5" />
+                  Por Casa
+                </TabsTrigger>
+                <TabsTrigger value="graficos" className="gap-1.5">
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  Gráficos
+                </TabsTrigger>
+              </TabsList>
+              
+              {/* Filtros (apenas para abas de apostas) */}
+              {(subTab === "ativas" || subTab === "historico") && (
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9 w-[200px] h-9"
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Lucro: {formatCurrency(metricas.totalExtraido)}
-                  </p>
-                </div>
-
-                {/* Casas com saldo */}
-                {bookmakersComFreebet.length > 0 && (
-                  <div className="pt-3 border-t">
-                    <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
-                      Casas com Saldo
-                    </p>
-                    <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                      {bookmakersComFreebet.slice(0, 5).map(bk => (
-                        <div
-                          key={bk.id}
-                          className="flex items-center gap-2 p-2 rounded-lg border bg-card"
-                        >
-                          {bk.logo_url ? (
-                            <img
-                              src={bk.logo_url}
-                              alt={bk.nome}
-                              className="h-6 w-6 rounded object-contain bg-white p-0.5"
-                            />
-                          ) : (
-                            <div className="h-6 w-6 rounded bg-muted flex items-center justify-center">
-                              <Building2 className="h-3 w-3" />
-                            </div>
-                          )}
-                          <span className="text-sm font-medium flex-1 truncate">{bk.nome}</span>
-                          <span className="text-sm font-bold text-amber-400">
-                            {formatCurrency(bk.saldo_freebet)}
-                          </span>
-                        </div>
+                  <Select value={casaFilter} onValueChange={setCasaFilter}>
+                    <SelectTrigger className="w-[150px] h-9">
+                      <SelectValue placeholder="Casa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todas">Todas as Casas</SelectItem>
+                      {casasDisponiveis.map(casa => (
+                        <SelectItem key={casa} value={casa}>{casa}</SelectItem>
                       ))}
-                      {bookmakersComFreebet.length > 5 && (
-                        <p className="text-xs text-muted-foreground text-center py-1">
-                          +{bookmakersComFreebet.length - 5} casas
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            {/* Conteúdo: Apostas Ativas */}
+            <TabsContent value="ativas" className="mt-4">
+              {apostasAtivas.length === 0 ? (
+                <div className="text-center py-12 border rounded-lg bg-muted/5">
+                  <Clock className="mx-auto h-10 w-10 text-muted-foreground/30" />
+                  <p className="mt-3 text-sm text-muted-foreground">Nenhuma aposta pendente</p>
+                </div>
+              ) : viewMode === "list" ? (
+                <FreebetApostasList apostas={apostasAtivas} formatCurrency={formatCurrency} />
+              ) : (
+                <div className={`grid gap-3 ${compactMode ? 'space-y-0' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
+                  {apostasAtivas.map(aposta => (
+                    <FreebetApostaCard 
+                      key={aposta.id} 
+                      aposta={aposta} 
+                      compact={compactMode}
+                      formatCurrency={formatCurrency} 
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Conteúdo: Histórico */}
+            <TabsContent value="historico" className="mt-4">
+              {apostasHistorico.length === 0 ? (
+                <div className="text-center py-12 border rounded-lg bg-muted/5">
+                  <CheckCircle2 className="mx-auto h-10 w-10 text-muted-foreground/30" />
+                  <p className="mt-3 text-sm text-muted-foreground">Nenhuma aposta finalizada</p>
+                </div>
+              ) : viewMode === "list" ? (
+                <FreebetApostasList apostas={apostasHistorico} formatCurrency={formatCurrency} />
+              ) : (
+                <div className={`grid gap-3 ${compactMode ? 'space-y-0' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
+                  {apostasHistorico.map(aposta => (
+                    <FreebetApostaCard 
+                      key={aposta.id} 
+                      aposta={aposta} 
+                      compact={compactMode}
+                      formatCurrency={formatCurrency} 
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Conteúdo: Por Casa */}
+            <TabsContent value="por-casa" className="mt-4">
+              <FreebetResumoPorCasa 
+                stats={statsPorCasa} 
+                formatCurrency={formatCurrency}
+                viewMode={viewMode}
+              />
+            </TabsContent>
+
+            {/* Conteúdo: Gráficos */}
+            <TabsContent value="graficos" className="mt-4">
+              <FreebetGraficos 
+                apostas={apostasNoPeriodo} 
+                statsPorCasa={statsPorCasa}
+                formatCurrency={formatCurrency}
+                dateRange={dateRange}
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }
