@@ -22,6 +22,7 @@ import {
   ArrowLeftRight
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 
 interface Bookmaker {
   id: string;
@@ -134,6 +135,16 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   const [modelo, setModelo] = useState<"1-X-2" | "1-2">("1-2");
   const [observacoes, setObservacoes] = useState("");
   const [saving, setSaving] = useState(false);
+  
+  // Registro explícito - sugestões da aba surebet
+  const [registroValues, setRegistroValues] = useState<RegistroApostaValues>(() => {
+    const suggestions = getSuggestionsForTab('surebet');
+    return {
+      forma_registro: suggestions.forma_registro || 'ARBITRAGEM',
+      estrategia: suggestions.estrategia || 'SUREBET',
+      contexto_operacional: suggestions.contexto_operacional || 'NORMAL',
+    };
+  });
   
   // Arredondamento de stakes
   const [arredondarAtivado, setArredondarAtivado] = useState(false);
@@ -299,6 +310,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       bookmaker_id: "", odd: "", stake: "", selecao: sel, isReference: i === 0, isManuallyEdited: false
     })));
     setLinkedApostas([]);
+    // Reset registro values com sugestões padrão
+    const suggestions = getSuggestionsForTab('surebet');
+    setRegistroValues({
+      forma_registro: suggestions.forma_registro || 'ARBITRAGEM',
+      estrategia: suggestions.estrategia || 'SUREBET',
+      contexto_operacional: suggestions.contexto_operacional || 'NORMAL',
+    });
   };
   
   // Função de arredondamento
@@ -727,6 +745,12 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   }, [odds]);
 
   const handleSave = async () => {
+    // Validação dos campos de registro obrigatórios
+    if (!registroValues.forma_registro || !registroValues.estrategia || !registroValues.contexto_operacional) {
+      toast.error("Preencha todos os campos obrigatórios: forma de registro, estratégia e contexto operacional");
+      return;
+    }
+
     // Validação simplificada - apenas campos obrigatórios
     if (!evento.trim()) {
       toast.error("Informe o evento");
@@ -835,8 +859,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           odd: parseFloat(entry.odd),
           stake: stakes[index],
           status: "PENDENTE",
-          estrategia: "SUREBET",
-          forma_registro: "ARBITRAGEM",
+          estrategia: registroValues.estrategia,
+          forma_registro: registroValues.forma_registro,
+          contexto_operacional: registroValues.contexto_operacional,
           modo_entrada: "PADRAO"
         }));
 
@@ -1111,6 +1136,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Formulário - Lado Esquerdo (mais largo) */}
           <div className="flex-1 space-y-4">
+            {/* Campos de Registro Obrigatórios */}
+            <RegistroApostaFields
+              values={registroValues}
+              onChange={setRegistroValues}
+              disabled={isEditing ? { forma_registro: true, estrategia: true, contexto_operacional: true } : undefined}
+            />
+
             {/* Cabeçalho */}
             <div className="space-y-4">
               <div className="space-y-2">

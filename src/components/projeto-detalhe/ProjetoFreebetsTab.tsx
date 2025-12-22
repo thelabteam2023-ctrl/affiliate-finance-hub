@@ -58,6 +58,7 @@ interface ApostaComFreebet {
   tipo_freebet: string | null;
   data_aposta: string;
   resultado: string | null;
+  contexto_operacional?: string | null;
 }
 
 export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDateRange }: ProjetoFreebetsTabProps) {
@@ -188,11 +189,12 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
 
   const fetchApostasComFreebet = async () => {
     try {
+      // Buscar apostas com contexto_operacional = FREEBET OU tipo_freebet não nulo (compatibilidade)
       const { data, error } = await supabase
         .from("apostas")
-        .select("id, lucro_prejuizo, tipo_freebet, data_aposta, resultado")
+        .select("id, lucro_prejuizo, tipo_freebet, data_aposta, resultado, contexto_operacional")
         .eq("projeto_id", projetoId)
-        .not("tipo_freebet", "is", null);
+        .or("contexto_operacional.eq.FREEBET,tipo_freebet.not.is.null");
 
       if (error) throw error;
 
@@ -242,9 +244,9 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
     const totalRecebido = freebetsLiberadasNoPeriodo.reduce((acc, fb) => acc + fb.valor, 0);
     
     // Total extraído: soma do lucro de apostas que usaram freebet
-    // Considera apenas apostas GREEN/MEIO_GREEN (lucro positivo)
+    // Considera apostas com contexto_operacional = FREEBET OU tipo_freebet válido (compatibilidade)
     const totalExtraido = apostasComFreebetNoPeriodo
-      .filter(ap => ap.tipo_freebet && ap.tipo_freebet !== "normal")
+      .filter(ap => (ap as any).contexto_operacional === "FREEBET" || (ap.tipo_freebet && ap.tipo_freebet !== "normal"))
       .reduce((acc, ap) => {
         // Só soma lucros positivos (GREEN/MEIO_GREEN)
         const lucro = ap.lucro_prejuizo || 0;

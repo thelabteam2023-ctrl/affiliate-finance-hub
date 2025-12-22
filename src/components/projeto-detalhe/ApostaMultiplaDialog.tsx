@@ -35,6 +35,7 @@ import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Card, CardContent } from "@/components/ui/card";
+import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 
 interface Selecao {
   descricao: string;
@@ -107,6 +108,16 @@ export function ApostaMultiplaDialog({
   const [statusResultado, setStatusResultado] = useState("PENDENTE");
   const [dataAposta, setDataAposta] = useState("");
   const [observacoes, setObservacoes] = useState("");
+
+  // Registro explícito
+  const [registroValues, setRegistroValues] = useState<RegistroApostaValues>(() => {
+    const suggestions = getSuggestionsForTab(defaultEstrategia === 'EXTRACAO_BONUS' ? 'bonus' : 'apostas');
+    return {
+      forma_registro: 'MULTIPLA',
+      estrategia: defaultEstrategia as any,
+      contexto_operacional: suggestions.contexto_operacional || 'NORMAL',
+    };
+  });
 
   // Seleções
   const [selecoes, setSelecoes] = useState<Selecao[]>([
@@ -227,6 +238,13 @@ export function ApostaMultiplaDialog({
     setGerouFreebet(false);
     setValorFreebetGerada("");
     setBookmakerSaldo(null);
+    // Reset registro values
+    const suggestions = getSuggestionsForTab(defaultEstrategia === 'EXTRACAO_BONUS' ? 'bonus' : 'apostas');
+    setRegistroValues({
+      forma_registro: 'MULTIPLA',
+      estrategia: defaultEstrategia as any,
+      contexto_operacional: suggestions.contexto_operacional || 'NORMAL',
+    });
   };
 
   const getLocalDateTimeString = () => {
@@ -429,6 +447,12 @@ export function ApostaMultiplaDialog({
   };
 
   const handleSubmit = async () => {
+    // Validação dos campos de registro obrigatórios
+    if (!registroValues.forma_registro || !registroValues.estrategia || !registroValues.contexto_operacional) {
+      toast.error("Preencha todos os campos obrigatórios: forma de registro, estratégia e contexto operacional");
+      return;
+    }
+
     // Validações
     if (!bookmakerId) {
       toast.error("Selecione uma casa/vínculo");
@@ -516,8 +540,9 @@ export function ApostaMultiplaDialog({
           : 0,
         data_aposta: dataAposta,
         observacoes: observacoes || null,
-        estrategia: aposta?.estrategia || defaultEstrategia,
-        forma_registro: 'MULTIPLA',
+        estrategia: registroValues.estrategia,
+        forma_registro: registroValues.forma_registro,
+        contexto_operacional: registroValues.contexto_operacional,
       };
 
       if (aposta) {
@@ -1019,6 +1044,12 @@ export function ApostaMultiplaDialog({
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {/* Campos de Registro Obrigatórios */}
+            <RegistroApostaFields
+              values={registroValues}
+              onChange={setRegistroValues}
+            />
+
             {/* Bookmaker / Vínculo */}
             <div className="space-y-2">
               <Label>Casa / Vínculo *</Label>
