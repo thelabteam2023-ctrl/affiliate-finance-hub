@@ -513,9 +513,10 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     );
   };
 
-  const totalSaldo = vinculos.reduce((acc, v) => acc + v.saldo_atual, 0);
+  const totalSaldoReal = vinculos.reduce((acc, v) => acc + v.saldo_atual, 0);
+  const totalSaldoFreebet = vinculos.reduce((acc, v) => acc + (v.saldo_freebet || 0), 0);
   const totalBonusAtivo = bonusSummary.active_bonus_total;
-  const totalSaldoOperavel = totalSaldo + totalBonusAtivo;
+  const totalSaldoOperavel = totalSaldoReal + totalSaldoFreebet + totalBonusAtivo;
   const vinculosAtivos = vinculos.filter((v) => v.bookmaker_status.toUpperCase() === "ATIVO").length;
   const vinculosLimitados = vinculos.filter((v) => v.bookmaker_status.toUpperCase() === "LIMITADA").length;
 
@@ -579,14 +580,14 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                 <CardContent>
                   <div className="text-2xl font-bold text-primary">{formatCurrency(totalSaldoOperavel)}</div>
                   <p className="text-xs text-muted-foreground">
-                    Real {formatCurrency(totalSaldo)} + Bônus {formatCurrency(totalBonusAtivo)}
+                    Real {formatCurrency(totalSaldoReal)} {totalSaldoFreebet > 0 && `+ FB ${formatCurrency(totalSaldoFreebet)}`} {totalBonusAtivo > 0 && `+ Bônus ${formatCurrency(totalBonusAtivo)}`}
                   </p>
                 </CardContent>
               </Card>
             </TooltipTrigger>
             <TooltipContent>
-              <p className="font-medium">Saldo Operável = Real + Bônus Ativo</p>
-              <p className="text-xs text-muted-foreground">Valor disponível para operação incluindo bônus creditados</p>
+              <p className="font-medium">Saldo Operável = Real + Freebet + Bônus</p>
+              <p className="text-xs text-muted-foreground">Valor total disponível para operação</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -778,12 +779,12 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                                 Saldo Operável
                               </span>
                               <span className="text-sm font-bold text-primary">
-                                {formatCurrency(vinculo.saldo_atual + (bonusTotalsByBookmaker[vinculo.id] || 0), vinculo.moeda)}
+                                {formatCurrency(vinculo.saldo_atual + (vinculo.saldo_freebet || 0) + (bonusTotalsByBookmaker[vinculo.id] || 0), vinculo.moeda)}
                               </span>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Real + Bônus Ativo</p>
+                            <p>Real + Freebet + Bônus Ativo</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -987,7 +988,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                   {/* Saldo Total */}
                   <div className="text-right flex-shrink-0 min-w-[80px]">
                     <p className="text-xs text-muted-foreground">Saldo Total</p>
-                    <p className="font-semibold">{formatCurrency(vinculo.saldo_atual + (vinculo.saldo_freebet || 0), vinculo.moeda)}</p>
+                    <p className="font-semibold">{formatCurrency(vinculo.saldo_atual + (vinculo.saldo_freebet || 0) + (bonusTotalsByBookmaker[vinculo.id] || 0), vinculo.moeda)}</p>
                   </div>
 
                   {/* Em Aposta */}

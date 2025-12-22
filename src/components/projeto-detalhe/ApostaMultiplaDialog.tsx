@@ -1057,7 +1057,7 @@ export function ApostaMultiplaDialog({
                     <span className="text-muted-foreground/70 ml-1">
                       ({formatCurrency(bookmakerSaldo.saldo)} real
                       {bookmakerSaldo.saldoFreebet > 0 && (
-                        <> + <Gift className="h-3 w-3 inline mx-0.5 text-amber-400" />{formatCurrency(bookmakerSaldo.saldoFreebet)} bônus</>
+                        <> + <Gift className="h-3 w-3 inline mx-0.5 text-amber-400" />{formatCurrency(bookmakerSaldo.saldoFreebet)} freebet</>
                       )})
                     </span>
                   </span>
