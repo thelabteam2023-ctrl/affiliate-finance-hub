@@ -84,12 +84,14 @@ export function RegistroApostaFields({
   compact = false,
   showRequired = true,
 }: RegistroApostaFieldsProps) {
-  // Aplicar sugestões iniciais apenas uma vez (quando valores são null)
+  // Aplicar sugestões quando valores são null (novo registro ou após reset)
+  // Inclui suggestions nas dependências para reagir a mudanças de aba
   useEffect(() => {
     if (suggestions) {
       const newValues = { ...values };
       let changed = false;
       
+      // Só aplica se o valor atual é null (reset ou novo)
       if (values.forma_registro === null && suggestions.forma_registro) {
         newValues.forma_registro = suggestions.forma_registro;
         changed = true;
@@ -107,7 +109,7 @@ export function RegistroApostaFields({
         onChange(newValues);
       }
     }
-  }, []); // Executar apenas na montagem
+  }, [suggestions, values.estrategia, values.contexto_operacional, values.forma_registro]);
 
   const handleChange = (field: keyof RegistroApostaValues, value: string) => {
     onChange({
