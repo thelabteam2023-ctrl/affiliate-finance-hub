@@ -72,7 +72,7 @@ export interface RegistroApostaFieldsProps {
 
 const ContextoIcon = ({ contexto }: { contexto: ContextoOperacional | null }) => {
   if (contexto === 'FREEBET') return <Gift className="h-3.5 w-3.5 text-purple-500" />;
-  if (contexto === 'BONUS_SALDO') return <Sparkles className="h-3.5 w-3.5 text-amber-500" />;
+  if (contexto === 'BONUS') return <Sparkles className="h-3.5 w-3.5 text-amber-500" />;
   return <Coins className="h-3.5 w-3.5 text-emerald-500" />;
 };
 
@@ -232,7 +232,7 @@ export function RegistroApostaFields({
                   <br />
                   <strong>Freebet:</strong> Aposta grátis da casa
                   <br />
-                  <strong>Saldo Real + Bônus:</strong> Saldo real + crédito promocional
+                  <strong>Bônus:</strong> Crédito promocional
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -307,47 +307,54 @@ export function validateRegistroAposta(values: RegistroApostaValues): {
  */
 export function getSuggestionsForTab(activeTab: string): Partial<RegistroApostaValues> {
   const tabSuggestions: Record<string, Partial<RegistroApostaValues>> = {
-    apostas: {
-      forma_registro: 'SIMPLES',
-      estrategia: 'PUNTER',
-      contexto_operacional: 'NORMAL',
-    },
+    // Aba Freebet
     freebets: {
       forma_registro: 'SIMPLES',
       estrategia: 'EXTRACAO_FREEBET',
       contexto_operacional: 'FREEBET',
     },
-    // Aba Bônus: sempre SIMPLES + EXTRACAO_BONUS + BONUS_SALDO
+    // Aba Bônus
     bonus: {
       forma_registro: 'SIMPLES',
       estrategia: 'EXTRACAO_BONUS',
-      contexto_operacional: 'BONUS_SALDO',
+      contexto_operacional: 'BONUS',
     },
+    // Aba Surebet
     surebet: {
       forma_registro: 'SIMPLES',
       estrategia: 'SUREBET',
       contexto_operacional: 'NORMAL',
     },
+    // Aba ValueBet
     valuebet: {
       forma_registro: 'SIMPLES',
       estrategia: 'VALUEBET',
       contexto_operacional: 'NORMAL',
     },
+    // Aba Duplo Green
     duplogreen: {
       forma_registro: 'SIMPLES',
       estrategia: 'DUPLO_GREEN',
       contexto_operacional: 'NORMAL',
     },
+    // Aba Matched Betting
     matched: {
       forma_registro: 'SIMPLES',
       estrategia: 'MATCHED_BETTING',
       contexto_operacional: 'NORMAL',
     },
+    // Aba Apostas Livres - estratégia NÃO definida (usuário escolhe)
+    apostas: {
+      forma_registro: 'SIMPLES',
+      estrategia: undefined,
+      contexto_operacional: 'NORMAL',
+    },
   };
   
+  // Default para abas não mapeadas: Apostas Livres
   return tabSuggestions[activeTab] || {
     forma_registro: 'SIMPLES',
-    estrategia: 'PUNTER',
+    estrategia: undefined,
     contexto_operacional: 'NORMAL',
   };
 }
