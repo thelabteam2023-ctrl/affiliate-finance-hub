@@ -77,9 +77,9 @@ export type FormaRegistro = typeof FORMA_REGISTRO[keyof typeof FORMA_REGISTRO];
  * - Contexto NUNCA muda depois
  */
 export const CONTEXTO_OPERACIONAL = {
-  NORMAL: 'NORMAL',           // Saldo real
-  FREEBET: 'FREEBET',         // Freebet
-  BONUS_SALDO: 'BONUS_SALDO', // Saldo Real + Saldo de Bônus
+  NORMAL: 'NORMAL',   // Saldo real
+  FREEBET: 'FREEBET', // Freebet
+  BONUS: 'BONUS',     // Bônus
 } as const;
 
 export type ContextoOperacional = typeof CONTEXTO_OPERACIONAL[keyof typeof CONTEXTO_OPERACIONAL];
@@ -90,7 +90,7 @@ export type ContextoOperacional = typeof CONTEXTO_OPERACIONAL[keyof typeof CONTE
 export const CONTEXTO_LABELS: Record<ContextoOperacional, string> = {
   NORMAL: 'Saldo Real',
   FREEBET: 'Freebet',
-  BONUS_SALDO: 'Saldo Real + Bônus',
+  BONUS: 'Bônus',
 };
 
 /**
@@ -99,7 +99,7 @@ export const CONTEXTO_LABELS: Record<ContextoOperacional, string> = {
 export const CONTEXTOS_LIST = [
   { value: CONTEXTO_OPERACIONAL.NORMAL, label: CONTEXTO_LABELS.NORMAL },
   { value: CONTEXTO_OPERACIONAL.FREEBET, label: CONTEXTO_LABELS.FREEBET },
-  { value: CONTEXTO_OPERACIONAL.BONUS_SALDO, label: CONTEXTO_LABELS.BONUS_SALDO },
+  { value: CONTEXTO_OPERACIONAL.BONUS, label: CONTEXTO_LABELS.BONUS },
 ] as const;
 
 /**
