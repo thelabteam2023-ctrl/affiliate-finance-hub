@@ -987,7 +987,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                   {/* Saldo Total */}
                   <div className="text-right flex-shrink-0 min-w-[80px]">
                     <p className="text-xs text-muted-foreground">Saldo Total</p>
-                    <p className="font-semibold">{formatCurrency(vinculo.saldo_atual, vinculo.moeda)}</p>
+                    <p className="font-semibold">{formatCurrency(vinculo.saldo_atual + (vinculo.saldo_freebet || 0), vinculo.moeda)}</p>
                   </div>
 
                   {/* Em Aposta */}
