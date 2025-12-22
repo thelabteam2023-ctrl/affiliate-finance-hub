@@ -86,6 +86,7 @@ interface ApostaMultiplaDialogProps {
   projetoId: string;
   onSuccess: () => void;
   defaultEstrategia?: string;
+  activeTab?: string;
 }
 
 export function ApostaMultiplaDialog({
@@ -95,6 +96,7 @@ export function ApostaMultiplaDialog({
   projetoId,
   onSuccess,
   defaultEstrategia = 'PUNTER',
+  activeTab = 'apostas',
 }: ApostaMultiplaDialogProps) {
   const [loading, setLoading] = useState(false);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
@@ -111,10 +113,10 @@ export function ApostaMultiplaDialog({
 
   // Registro explícito
   const [registroValues, setRegistroValues] = useState<RegistroApostaValues>(() => {
-    const suggestions = getSuggestionsForTab(defaultEstrategia === 'EXTRACAO_BONUS' ? 'bonus' : 'apostas');
+    const suggestions = getSuggestionsForTab(activeTab);
     return {
       forma_registro: 'MULTIPLA',
-      estrategia: defaultEstrategia as any,
+      estrategia: suggestions.estrategia || defaultEstrategia as any,
       contexto_operacional: suggestions.contexto_operacional || 'NORMAL',
     };
   });
@@ -239,10 +241,10 @@ export function ApostaMultiplaDialog({
     setValorFreebetGerada("");
     setBookmakerSaldo(null);
     // Reset registro values
-    const suggestions = getSuggestionsForTab(defaultEstrategia === 'EXTRACAO_BONUS' ? 'bonus' : 'apostas');
+    const suggestions = getSuggestionsForTab(activeTab);
     setRegistroValues({
       forma_registro: 'MULTIPLA',
-      estrategia: defaultEstrategia as any,
+      estrategia: suggestions.estrategia || defaultEstrategia as any,
       contexto_operacional: suggestions.contexto_operacional || 'NORMAL',
     });
   };

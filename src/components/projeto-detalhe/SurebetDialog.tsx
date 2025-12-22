@@ -62,6 +62,7 @@ interface SurebetDialogProps {
   bookmakers: Bookmaker[];
   surebet: Surebet | null;
   onSuccess: () => void;
+  activeTab?: string;
 }
 
 interface OddEntry {
@@ -125,7 +126,7 @@ const getSelecoesPorMercado = (mercado: string, modelo: "1-X-2" | "1-2"): string
 const SELECOES_1X2 = ["Casa", "Empate", "Fora"];
 const SELECOES_BINARIO = ["Sim", "Não"];
 
-export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, surebet, onSuccess }: SurebetDialogProps) {
+export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, surebet, onSuccess, activeTab = 'surebet' }: SurebetDialogProps) {
   const isEditing = !!surebet;
   
   // Form state
@@ -136,9 +137,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   const [observacoes, setObservacoes] = useState("");
   const [saving, setSaving] = useState(false);
   
-  // Registro explícito - sugestões da aba surebet
+  // Registro explícito - sugestões da aba ativa
   const [registroValues, setRegistroValues] = useState<RegistroApostaValues>(() => {
-    const suggestions = getSuggestionsForTab('surebet');
+    const suggestions = getSuggestionsForTab(activeTab);
     return {
       forma_registro: suggestions.forma_registro || 'ARBITRAGEM',
       estrategia: suggestions.estrategia || 'SUREBET',
@@ -310,8 +311,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       bookmaker_id: "", odd: "", stake: "", selecao: sel, isReference: i === 0, isManuallyEdited: false
     })));
     setLinkedApostas([]);
-    // Reset registro values com sugestões padrão
-    const suggestions = getSuggestionsForTab('surebet');
+    // Reset registro values com sugestões da aba ativa
+    const suggestions = getSuggestionsForTab(activeTab);
     setRegistroValues({
       forma_registro: suggestions.forma_registro || 'ARBITRAGEM',
       estrategia: suggestions.estrategia || 'SUREBET',
