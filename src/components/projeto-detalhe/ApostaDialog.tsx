@@ -21,11 +21,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -2178,55 +2173,56 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               <DialogTitle className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
                 {aposta ? "Editar Aposta" : "Registrar Aposta"}
               </DialogTitle>
-              {!aposta && (
-                <HoverCard openDelay={200} closeDelay={100}>
-                  <HoverCardTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isPrintProcessing}
-                      className="gap-2 text-xs border-dashed"
+{!aposta && (
+                <TooltipProvider>
+                  <Tooltip delayDuration={300}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isPrintProcessing}
+                        className="gap-2 text-xs border-dashed"
+                      >
+                        {isPrintProcessing ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Camera className="h-3.5 w-3.5" />
+                        )}
+                        {isPrintProcessing ? "Lendo..." : "Importar por Print"}
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Beta</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent 
+                      side="bottom" 
+                      align="end"
+                      sideOffset={8}
+                      className="w-[280px] p-3"
                     >
-                      {isPrintProcessing ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Camera className="h-3.5 w-3.5" />
-                      )}
-                      {isPrintProcessing ? "Lendo..." : "Importar por Print"}
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Beta</span>
-                    </Button>
-                  </HoverCardTrigger>
-                  <HoverCardContent 
-                    side="bottom" 
-                    align="end"
-                    sideOffset={8}
-                    className="w-[300px] p-4"
-                  >
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-semibold text-foreground">Importar por Print</h4>
-                      <div className="space-y-2.5 text-sm">
-                        <div className="flex items-start gap-2.5">
-                          <span className="text-base leading-none mt-0.5">🖱️</span>
-                          <span className="text-muted-foreground">Arraste a imagem do boletim aqui</span>
+                      <div className="space-y-2">
+                        <div className="space-y-1.5 text-xs">
+                          <div className="flex items-start gap-2">
+                            <span className="leading-none">🖱️</span>
+                            <span>Arraste a imagem do boletim aqui</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="leading-none">⌨️</span>
+                            <span>
+                              Cole com <kbd className="px-1 py-0.5 rounded bg-background/50 text-[10px] font-mono">Ctrl+V</kbd>
+                            </span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="leading-none">📁</span>
+                            <span>Ou clique para selecionar o arquivo</span>
+                          </div>
                         </div>
-                        <div className="flex items-start gap-2.5">
-                          <span className="text-base leading-none mt-0.5">⌨️</span>
-                          <span className="text-muted-foreground">
-                            Cole com <kbd className="px-1.5 py-0.5 rounded bg-muted/80 text-[11px] font-mono border border-border/50">Ctrl+V</kbd>
-                          </span>
-                        </div>
-                        <div className="flex items-start gap-2.5">
-                          <span className="text-base leading-none mt-0.5">📁</span>
-                          <span className="text-muted-foreground">Ou clique para selecionar o arquivo</span>
-                        </div>
+                        <p className="text-[10px] text-muted-foreground/80 pt-1.5 border-t border-border/30">
+                          Preenche automaticamente: Evento, Mercado e Seleção.
+                        </p>
                       </div>
-                      <p className="text-[11px] text-muted-foreground/60 pt-2 border-t border-border/40 leading-relaxed">
-                        Preenche automaticamente: Evento, Mercado e Seleção.
-                      </p>
-                    </div>
-                  </HoverCardContent>
-                </HoverCard>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
               <input
                 ref={fileInputRef}
