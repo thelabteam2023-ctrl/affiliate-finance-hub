@@ -1,6 +1,11 @@
 /**
  * Constantes centralizadas para o domínio de Apostas
  * Garante consistência em todo o sistema
+ * 
+ * PRINCÍPIO FUNDAMENTAL (IMUTÁVEL):
+ * - Estratégia, Forma de Registro e Contexto Operacional são SEMPRE independentes
+ * - Estratégia é sempre uma decisão humana explícita, NUNCA inferida
+ * - Todas as combinações são válidas
  */
 
 /**
@@ -32,7 +37,9 @@ export type ApostaResultado = typeof APOSTA_RESULTADO[keyof typeof APOSTA_RESULT
 
 /**
  * Estratégia de aposta - define a abordagem/metodologia utilizada
- * SEPARADO de Contexto Financeiro (Real/Freebet/Bônus)
+ * SEPARADO de Contexto Operacional (origem do capital)
+ * 
+ * REGRA: Estratégia é SEMPRE explícita, NUNCA inferida
  */
 export const APOSTA_ESTRATEGIA = {
   PUNTER: 'PUNTER',
@@ -46,7 +53,10 @@ export const APOSTA_ESTRATEGIA = {
 export type ApostaEstrategia = typeof APOSTA_ESTRATEGIA[keyof typeof APOSTA_ESTRATEGIA];
 
 /**
- * Forma de registro - como a aposta foi registrada (estrutura do formulário)
+ * Forma de registro - como a aposta foi estruturada tecnicamente
+ * 
+ * REGRA: QUALQUER forma de registro pode ser usada com QUALQUER estratégia
+ * Todas as combinações são VÁLIDAS
  */
 export const FORMA_REGISTRO = {
   SIMPLES: 'SIMPLES',
@@ -55,6 +65,59 @@ export const FORMA_REGISTRO = {
 } as const;
 
 export type FormaRegistro = typeof FORMA_REGISTRO[keyof typeof FORMA_REGISTRO];
+
+/**
+ * Contexto Operacional - define a ORIGEM do capital utilizado
+ * Campo EXPLÍCITO e OBRIGATÓRIO no registro de aposta
+ * 
+ * REGRAS:
+ * - Contexto é escolhido pelo usuário na criação
+ * - Contexto NUNCA é inferido
+ * - Contexto NUNCA muda depois
+ */
+export const CONTEXTO_OPERACIONAL = {
+  NORMAL: 'NORMAL',    // Saldo real
+  FREEBET: 'FREEBET',  // Freebet
+  BONUS: 'BONUS',      // Saldo de bônus
+} as const;
+
+export type ContextoOperacional = typeof CONTEXTO_OPERACIONAL[keyof typeof CONTEXTO_OPERACIONAL];
+
+/**
+ * Labels para exibição de Contexto Operacional
+ */
+export const CONTEXTO_LABELS: Record<ContextoOperacional, string> = {
+  NORMAL: 'Saldo Real',
+  FREEBET: 'Freebet',
+  BONUS: 'Saldo de Bônus',
+};
+
+/**
+ * Lista de contextos para selects
+ */
+export const CONTEXTOS_LIST = [
+  { value: CONTEXTO_OPERACIONAL.NORMAL, label: CONTEXTO_LABELS.NORMAL },
+  { value: CONTEXTO_OPERACIONAL.FREEBET, label: CONTEXTO_LABELS.FREEBET },
+  { value: CONTEXTO_OPERACIONAL.BONUS, label: CONTEXTO_LABELS.BONUS },
+] as const;
+
+/**
+ * Labels para exibição de Forma de Registro
+ */
+export const FORMA_REGISTRO_LABELS: Record<FormaRegistro, string> = {
+  SIMPLES: 'Simples',
+  MULTIPLA: 'Múltipla',
+  ARBITRAGEM: 'Arbitragem',
+};
+
+/**
+ * Lista de formas de registro para selects
+ */
+export const FORMAS_REGISTRO_LIST = [
+  { value: FORMA_REGISTRO.SIMPLES, label: FORMA_REGISTRO_LABELS.SIMPLES },
+  { value: FORMA_REGISTRO.MULTIPLA, label: FORMA_REGISTRO_LABELS.MULTIPLA },
+  { value: FORMA_REGISTRO.ARBITRAGEM, label: FORMA_REGISTRO_LABELS.ARBITRAGEM },
+] as const;
 
 /**
  * Labels para exibição de estratégias

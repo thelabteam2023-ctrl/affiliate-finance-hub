@@ -191,6 +191,7 @@ export type Database = {
           cancel_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
+          contexto_operacional: string | null
           created_at: string
           data_aposta: string
           esporte: string
@@ -231,6 +232,7 @@ export type Database = {
           cancel_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          contexto_operacional?: string | null
           created_at?: string
           data_aposta?: string
           esporte: string
@@ -271,6 +273,7 @@ export type Database = {
           cancel_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          contexto_operacional?: string | null
           created_at?: string
           data_aposta?: string
           esporte?: string
@@ -389,6 +392,7 @@ export type Database = {
           cancel_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
+          contexto_operacional: string | null
           created_at: string
           data_aposta: string
           estrategia: string | null
@@ -418,6 +422,7 @@ export type Database = {
           cancel_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          contexto_operacional?: string | null
           created_at?: string
           data_aposta?: string
           estrategia?: string | null
@@ -447,6 +452,7 @@ export type Database = {
           cancel_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          contexto_operacional?: string | null
           created_at?: string
           data_aposta?: string
           estrategia?: string | null

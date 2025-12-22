@@ -47,6 +47,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { useImportBetPrint } from "@/hooks/useImportBetPrint";
 import { BetPrintDetectedFields } from "./BetPrintDetectedFields";
+import { RegistroApostaFields, RegistroApostaValues, validateRegistroAposta, getSuggestionsForTab } from "./RegistroApostaFields";
+import { FORMA_REGISTRO, APOSTA_ESTRATEGIA, CONTEXTO_OPERACIONAL, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional } from "@/lib/apostaConstants";
 
 interface Aposta {
   id: string;
@@ -462,6 +464,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const [gerouFreebet, setGerouFreebet] = useState(false);
   const [valorFreebetGerada, setValorFreebetGerada] = useState("");
 
+  // Registro de Aposta - Campos EXPLÍCITOS (Prompt Oficial)
+  const [registroValues, setRegistroValues] = useState<RegistroApostaValues>({
+    forma_registro: null,
+    estrategia: null,
+    contexto_operacional: null,
+  });
+
   // Calculated values
   const [layStake, setLayStake] = useState<number | null>(null);
   const [layLiability, setLayLiability] = useState<number | null>(null);
@@ -862,6 +871,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     setTipoApostaExchangeBack("normal");
     setGerouFreebet(false);
     setValorFreebetGerada("");
+    // Reset registro values to null (will be populated by suggestions)
+    setRegistroValues({
+      forma_registro: null,
+      estrategia: null,
+      contexto_operacional: null,
+    });
     // Clear print import data
     clearPrintData();
     setMercadoFromPrint(false);
@@ -1003,6 +1018,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   };
 
   const handleSave = async () => {
+    // Validação de campos de registro obrigatórios (Prompt Oficial)
+    const registroValidation = validateRegistroAposta(registroValues);
+    if (!registroValidation.valid) {
+      toast.error(registroValidation.errors[0] || "Preencha todos os campos de registro obrigatórios");
+      return;
+    }
+
     // Validações básicas comuns a todos os modos
     if (!esporte || !mercado) {
       toast.error("Preencha Esporte e Mercado (obrigatórios)");
@@ -1189,6 +1211,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         observacoes: observacoes || null,
         gerou_freebet: gerouFreebet,
         valor_freebet_gerada: gerouFreebet && valorFreebetGerada ? parseFloat(valorFreebetGerada) : null,
+        // Campos explícitos do Prompt Oficial - NUNCA inferidos
+        estrategia: registroValues.estrategia,
+        forma_registro: registroValues.forma_registro,
+        contexto_operacional: registroValues.contexto_operacional,
       };
 
       if (tipoAposta === "bookmaker") {
@@ -1258,8 +1284,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           bookmaker_id: bookmakerId,
           odd: bookmakerOdd,
           stake: bookmakerStake,
-          estrategia: aposta?.estrategia || defaultEstrategia,
-          forma_registro: 'SIMPLES',
           modo_entrada: "PADRAO",
           valor_retorno: valorRetornoCalculado,
           lucro_prejuizo: lucroPrejuizo,
@@ -1321,8 +1345,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           bookmaker_id: coberturaBackBookmakerId,
           odd: backOdd,
           stake: backStake,
-          estrategia: aposta?.estrategia || defaultEstrategia,
-          forma_registro: 'SIMPLES',
           modo_entrada: "EXCHANGE",
           valor_retorno: valorRetornoCalculado,
           lucro_prejuizo: lucroPrejuizo,
@@ -1387,8 +1409,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           bookmaker_id: exchangeBookmakerId,
           odd: exchOdd,
           stake: exchStake,
-          estrategia: aposta?.estrategia || defaultEstrategia,
-          forma_registro: 'SIMPLES',
           modo_entrada: "EXCHANGE",
           valor_retorno: valorRetornoCalculado,
           lucro_prejuizo: lucroPrejuizo,
@@ -2226,6 +2246,16 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 onClear={clearPrintData}
               />
             )}
+
+            {/* Campos de Registro Explícito (Prompt Oficial) */}
+            <div className="p-3 rounded-lg border border-border/50 bg-muted/30">
+              <RegistroApostaFields
+                values={registroValues}
+                onChange={setRegistroValues}
+                suggestions={getSuggestionsForTab('apostas')}
+                compact
+              />
+            </div>
 
             {/* Linha 1: Mandante x Visitante + Data/Hora */}
             <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-3 items-end">
