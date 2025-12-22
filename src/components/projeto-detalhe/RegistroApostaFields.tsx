@@ -208,12 +208,7 @@ export function RegistroApostaFields({
           disabled={disabled?.contexto_operacional}
         >
           <SelectTrigger className="h-8 text-xs">
-            <div className="flex items-center gap-1.5">
-              {values.contexto_operacional && (
-                <ContextoIcon contexto={values.contexto_operacional} />
-              )}
-              <SelectValue placeholder="Selecione..." />
-            </div>
+            <SelectValue placeholder="Selecione..." />
           </SelectTrigger>
           <SelectContent>
             {CONTEXTOS_LIST.map((item) => (
