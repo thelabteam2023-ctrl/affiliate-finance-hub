@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutDashboard, Building2, Target, History, PanelLeft, LayoutList } from "lucide-react";
 import { BonusVisaoGeralTab } from "./BonusVisaoGeralTab";
@@ -9,6 +9,7 @@ import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange } from "../StandardTimeFilter";
 
 interface ProjetoBonusAreaProps {
   projetoId: string;
@@ -45,6 +46,12 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
   
   const [activeTab, setActiveTab] = useState<TabValue>("visao-geral");
   const [isTransitioning, setIsTransitioning] = useState(false);
+  
+  // Standard time filter state
+  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
+  const [internalDateRange, setInternalDateRange] = useState<DateRange | undefined>();
+  
+  const dateRange = useMemo(() => getDateRangeFromPeriod(internalPeriod, internalDateRange), [internalPeriod, internalDateRange]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, navMode);
@@ -65,6 +72,16 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
       setTimeout(() => setIsTransitioning(false), 180);
     }
   };
+  
+  // Period filter component
+  const periodFilterComponent = (
+    <StandardTimeFilter
+      period={internalPeriod}
+      onPeriodChange={setInternalPeriod}
+      customDateRange={internalDateRange}
+      onCustomDateRangeChange={setInternalDateRange}
+    />
+  );
 
   const renderContent = () => {
     const contentClass = cn(
@@ -127,7 +144,10 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
                 </TabsTrigger>
               ))}
             </TabsList>
-            {modeToggle}
+            <div className="flex items-center gap-4">
+              {periodFilterComponent}
+              {modeToggle}
+            </div>
           </div>
 
           <TabsContent value={activeTab} className="mt-0">
@@ -140,53 +160,60 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
 
   // Mode: Sidebar
   return (
-    <div className="flex gap-6">
-      {/* Sidebar Navigation */}
-      <div className="w-48 shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
-            Navegação
-          </span>
-          {modeToggle}
-        </div>
-        <nav className="space-y-1">
-          {NAV_ITEMS.map((item) => {
-            const isActive = activeTab === item.value;
-            return (
-              <button
-                key={item.value}
-                onClick={() => handleTabChange(item.value)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-                  isActive
-                    ? "bg-accent/10 text-foreground shadow-sm"
-                    : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/50"
-                )}
-              >
-                <item.icon className={cn(
-                  "h-4 w-4 transition-colors",
-                  isActive ? "text-accent" : "opacity-60"
-                )} />
-                <span className="flex-1 text-left">{item.label}</span>
-                {item.showCount && bookmakersInBonusMode.length > 0 && (
-                  <span className={cn(
-                    "text-xs px-1.5 py-0.5 rounded-full transition-colors",
-                    isActive 
-                      ? "bg-accent/20 text-accent" 
-                      : "bg-muted/50 text-muted-foreground/60"
-                  )}>
-                    {bookmakersInBonusMode.length}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
+    <div className="space-y-4">
+      {/* Period Filter at top right */}
+      <div className="flex justify-end">
+        {periodFilterComponent}
       </div>
+      
+      <div className="flex gap-6">
+        {/* Sidebar Navigation */}
+        <div className="w-48 shrink-0">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
+              Navegação
+            </span>
+            {modeToggle}
+          </div>
+          <nav className="space-y-1">
+            {NAV_ITEMS.map((item) => {
+              const isActive = activeTab === item.value;
+              return (
+                <button
+                  key={item.value}
+                  onClick={() => handleTabChange(item.value)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                    isActive
+                      ? "bg-accent/10 text-foreground shadow-sm"
+                      : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/50"
+                  )}
+                >
+                  <item.icon className={cn(
+                    "h-4 w-4 transition-colors",
+                    isActive ? "text-accent" : "opacity-60"
+                  )} />
+                  <span className="flex-1 text-left">{item.label}</span>
+                  {item.showCount && bookmakersInBonusMode.length > 0 && (
+                    <span className={cn(
+                      "text-xs px-1.5 py-0.5 rounded-full transition-colors",
+                      isActive 
+                        ? "bg-accent/20 text-accent" 
+                        : "bg-muted/50 text-muted-foreground/60"
+                    )}>
+                      {bookmakersInBonusMode.length}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
-      {/* Content Area */}
-      <div className="flex-1 min-w-0">
-        {renderContent()}
+        {/* Content Area */}
+        <div className="flex-1 min-w-0">
+          {renderContent()}
+        </div>
       </div>
     </div>
   );
