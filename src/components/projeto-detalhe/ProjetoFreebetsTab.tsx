@@ -735,18 +735,15 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
         </Card>
       </div>
 
-      {/* Gráficos + Freebets Disponíveis (lado a lado) */}
+      {/* Gráfico Curva de Extração + Freebets Disponíveis (lado a lado) */}
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-        {/* Gráficos */}
-        <div className="space-y-6">
-          <FreebetGraficos 
-            apostas={apostasNoPeriodo} 
-            statsPorCasa={statsPorCasa}
-            formatCurrency={formatCurrency}
-            dateRange={dateRange}
-            freebets={freebetsNoPeriodo}
-          />
-        </div>
+        {/* Gráfico Principal */}
+        <FreebetGraficos 
+          apostas={apostasNoPeriodo} 
+          formatCurrency={formatCurrency}
+          dateRange={dateRange}
+          freebets={freebetsNoPeriodo}
+        />
 
         {/* Freebets Disponíveis - Container Lateral */}
         <div className="hidden lg:block">
@@ -791,6 +788,75 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
           </Card>
         </div>
       </div>
+
+      {/* Cards Resumo por Casa - Densidade Estratégica */}
+      {statsPorCasa.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-primary" />
+              Eficiência por Casa
+              <Badge variant="secondary" className="ml-2">{statsPorCasa.length} casas</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {statsPorCasa.slice(0, 8).map(stat => (
+                <div 
+                  key={stat.bookmaker_id} 
+                  className="p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
+                >
+                  {/* Header com logo e nome */}
+                  <div className="flex items-center gap-2 mb-3">
+                    {stat.logo_url ? (
+                      <img src={stat.logo_url} alt={stat.bookmaker_nome} className="h-8 w-8 rounded-lg object-contain bg-white p-0.5" />
+                    ) : (
+                      <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                        <Building2 className="h-4 w-4" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{stat.bookmaker_nome}</p>
+                      {stat.parceiro_nome && (
+                        <p className="text-[10px] text-muted-foreground truncate">{stat.parceiro_nome}</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Métricas principais - 3 valores estratégicos */}
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="p-1.5 rounded bg-amber-500/10">
+                      <p className="text-xs font-bold text-amber-400">{stat.total_freebets_recebidas}</p>
+                      <p className="text-[9px] text-muted-foreground">Recebidas</p>
+                    </div>
+                    <div className="p-1.5 rounded bg-emerald-500/10">
+                      <p className="text-xs font-bold text-emerald-400">{formatCurrency(stat.valor_total_extraido)}</p>
+                      <p className="text-[9px] text-muted-foreground">Extraído</p>
+                    </div>
+                    <div className={`p-1.5 rounded ${
+                      stat.taxa_extracao >= 70 ? 'bg-emerald-500/10' : 
+                      stat.taxa_extracao >= 50 ? 'bg-amber-500/10' : 'bg-red-500/10'
+                    }`}>
+                      <p className={`text-xs font-bold ${
+                        stat.taxa_extracao >= 70 ? 'text-emerald-400' : 
+                        stat.taxa_extracao >= 50 ? 'text-amber-400' : 'text-red-400'
+                      }`}>{stat.taxa_extracao.toFixed(0)}%</p>
+                      <p className="text-[9px] text-muted-foreground">Extração</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {statsPorCasa.length > 8 && (
+              <div className="mt-3 text-center">
+                <Button variant="ghost" size="sm" onClick={() => setActiveNavTab("por-casa")}>
+                  Ver todas as {statsPorCasa.length} casas
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Apostas Preview */}
       {apostasAtivas.length > 0 && (
