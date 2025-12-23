@@ -43,6 +43,10 @@ export interface ApostaOperacionalFreebet {
   parceiro_nome: string | null;
   gerou_freebet: boolean;
   valor_freebet_gerada: number | null;
+  // Campos adicionais para badges
+  estrategia: string | null;
+  lado_aposta: string | null;
+  contexto_operacional: string | null;
 }
 
 export interface BookmakerFreebetStats {
