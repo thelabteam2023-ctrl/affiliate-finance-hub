@@ -37,18 +37,17 @@ import {
 } from "./freebets";
 import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
 import { ApostaMultiplaDialog } from "@/components/projeto-detalhe/ApostaMultiplaDialog";
+import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, NavigationMode as FilterNavMode } from "./StandardTimeFilter";
+import { DateRange } from "react-day-picker";
 
 interface ProjetoFreebetsTabProps {
   projetoId: string;
-  periodFilter?: string;
-  customDateRange?: { start: Date; end: Date } | null;
   onDataChange?: () => void;
   refreshTrigger?: number;
 }
 
 type NavigationMode = "tabs" | "sidebar";
 type NavTabValue = "visao-geral" | "apostas" | "por-casa";
-type InternalPeriodFilter = "7dias" | "30dias" | "90dias" | "ano" | "tudo";
 
 const NAV_STORAGE_KEY = "freebets-nav-mode";
 
@@ -58,15 +57,7 @@ const NAV_ITEMS = [
   { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
 ];
 
-const PERIOD_OPTIONS: { value: InternalPeriodFilter; label: string }[] = [
-  { value: "7dias", label: "7 dias" },
-  { value: "30dias", label: "30 dias" },
-  { value: "90dias", label: "90 dias" },
-  { value: "ano", label: "Ano" },
-  { value: "tudo", label: "Todo Tempo" },
-];
-
-export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDateRange, onDataChange, refreshTrigger }: ProjetoFreebetsTabProps) {
+export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: ProjetoFreebetsTabProps) {
   const [loading, setLoading] = useState(true);
   const [freebets, setFreebets] = useState<FreebetRecebida[]>([]);
   const [bookmakersComFreebet, setBookmakersComFreebet] = useState<BookmakerComFreebet[]>([]);
@@ -75,7 +66,8 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
   const [casaFilter, setCasaFilter] = useState<string>("todas");
   
   // Internal period filter (local to this tab)
-  const [internalPeriod, setInternalPeriod] = useState<InternalPeriodFilter>("30dias");
+  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
+  const [internalDateRange, setInternalDateRange] = useState<DateRange | undefined>();
   
   // Navigation mode (sidebar vs tabs)
   const [navMode, setNavMode] = useState<NavigationMode>(() => {
@@ -109,23 +101,8 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
 
   // Calcular range de datas baseado no filtro interno
   const dateRange = useMemo(() => {
-    const now = new Date();
-    const today = startOfDay(now);
-    
-    switch (internalPeriod) {
-      case "7dias":
-        return { start: subDays(today, 7), end: endOfDay(now) };
-      case "30dias":
-        return { start: subDays(today, 30), end: endOfDay(now) };
-      case "90dias":
-        return { start: subDays(today, 90), end: endOfDay(now) };
-      case "ano":
-        return { start: startOfYear(now), end: endOfDay(now) };
-      case "tudo":
-      default:
-        return null;
-    }
-  }, [internalPeriod]);
+    return getDateRangeFromPeriod(internalPeriod, internalDateRange);
+  }, [internalPeriod, internalDateRange]);
 
   useEffect(() => {
     fetchData();
@@ -590,21 +567,14 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
     </Tooltip>
   );
 
-  // Period filter component
-  const periodFilterButtons = (
-    <div className="flex gap-1">
-      {PERIOD_OPTIONS.map((option) => (
-        <Button
-          key={option.value}
-          variant={internalPeriod === option.value ? "default" : "outline"}
-          size="sm"
-          onClick={() => setInternalPeriod(option.value)}
-          className="text-xs h-7 px-2"
-        >
-          {option.label}
-        </Button>
-      ))}
-    </div>
+  // Period filter component using StandardTimeFilter
+  const periodFilterComponent = (
+    <StandardTimeFilter
+      period={internalPeriod}
+      onPeriodChange={setInternalPeriod}
+      customDateRange={internalDateRange}
+      onCustomDateRangeChange={setInternalDateRange}
+    />
   );
 
   // Main content renderer based on active tab
@@ -1105,7 +1075,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
               ))}
             </TabsList>
             <div className="flex items-center gap-4">
-              {periodFilterButtons}
+              {periodFilterComponent}
               {modeToggle}
             </div>
           </div>
@@ -1140,7 +1110,7 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
     <div className="space-y-4">
       {/* Period Filter at top right */}
       <div className="flex justify-end">
-        {periodFilterButtons}
+        {periodFilterComponent}
       </div>
       
       <div className="flex gap-6">
