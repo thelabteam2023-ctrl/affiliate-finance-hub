@@ -66,6 +66,20 @@ interface SurebetDialogProps {
   activeTab?: string;
 }
 
+// Estrutura de perna armazenada no JSONB da surebet
+export interface SurebetPerna {
+  bookmaker_id: string;
+  bookmaker_nome: string;
+  selecao: string;
+  odd: number;
+  stake: number;
+  resultado: string | null;
+  lucro_prejuizo: number | null;
+  gerou_freebet: boolean;
+  valor_freebet_gerada: number | null;
+}
+
+// Estrutura interna do formulário (para edição)
 interface OddEntry {
   bookmaker_id: string;
   odd: string;
@@ -74,10 +88,11 @@ interface OddEntry {
   isReference: boolean;
   isManuallyEdited: boolean;
   resultado?: string | null;
-  aposta_id?: string;
+  lucro_prejuizo?: number | null;
   gerouFreebet?: boolean;
   valorFreebetGerada?: string;
   freebetStatus?: "PENDENTE" | "LIBERADA" | "NAO_LIBERADA" | null;
+  index?: number; // índice da perna para identificação
 }
 
 const ESPORTES = [
@@ -227,7 +242,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         setMercado(surebet.mercado || "");
         setObservacoes(surebet.observacoes || "");
         // Buscar apostas vinculadas passando o modelo correto
-        fetchLinkedApostas(surebet.id, surebet.modelo);
+        fetchLinkedPernas(surebet.id, surebet.modelo);
       } else {
         // CRÍTICO: Modo criação - SEMPRE resetar o formulário completamente
         resetForm();
@@ -338,62 +353,61 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       : ["Sim", "Não"];
   };
 
-  const fetchLinkedApostas = async (surebetId: string, surebetModelo: string) => {
-    const { data } = await supabase
-      .from("apostas")
-      .select(`
-        id, selecao, odd, stake, resultado, lucro_prejuizo,
-        bookmaker_id, gerou_freebet, valor_freebet_gerada,
-        bookmaker:bookmakers (nome, saldo_atual)
-      `)
-      .eq("surebet_id", surebetId);
+  // Carregar pernas do JSONB da surebet (novo modelo sem tabela apostas)
+  const fetchLinkedPernas = async (surebetId: string, surebetModelo: string) => {
+    const { data: surebetData } = await supabase
+      .from("surebets")
+      .select("pernas")
+      .eq("id", surebetId)
+      .single();
     
-    if (!data || data.length === 0) {
+    if (!surebetData?.pernas || !Array.isArray(surebetData.pernas) || surebetData.pernas.length === 0) {
       setLinkedApostas([]);
       return;
     }
 
-    // Ordenar pela ordem fixa do modelo (NUNCA por status ou resultado)
+    const pernas = surebetData.pernas as unknown as SurebetPerna[];
+    
+    // Ordenar pela ordem fixa do modelo
     const ordemFixa = getOrdemFixa(surebetModelo as "1-X-2" | "1-2");
-    const sortedData = [...data].sort((a, b) => {
+    const sortedPernas = [...pernas].sort((a, b) => {
       const indexA = ordemFixa.indexOf(a.selecao);
       const indexB = ordemFixa.indexOf(b.selecao);
-      // Se não encontrar na ordem fixa, usar ordem de criação (id)
       if (indexA === -1 && indexB === -1) return 0;
       if (indexA === -1) return 1;
       if (indexB === -1) return -1;
       return indexA - indexB;
     });
     
-    setLinkedApostas(sortedData);
+    // Converter para formato de linkedApostas para compatibilidade
+    const apostaLikeData = sortedPernas.map((perna, idx) => ({
+      id: `perna-${idx}`,
+      selecao: perna.selecao,
+      odd: perna.odd,
+      stake: perna.stake,
+      resultado: perna.resultado,
+      lucro_prejuizo: perna.lucro_prejuizo,
+      bookmaker_id: perna.bookmaker_id,
+      gerou_freebet: perna.gerou_freebet,
+      valor_freebet_gerada: perna.valor_freebet_gerada,
+      bookmaker: { nome: perna.bookmaker_nome, saldo_atual: 0 }
+    }));
     
-    // Buscar status de freebets associadas
-    const apostaIds = sortedData.map(a => a.id);
-    const { data: freebetsData } = await supabase
-      .from("freebets_recebidas")
-      .select("aposta_id, status")
-      .in("aposta_id", apostaIds);
+    setLinkedApostas(apostaLikeData);
     
-    const freebetStatusMap: Record<string, string> = {};
-    freebetsData?.forEach(fb => {
-      if (fb.aposta_id) {
-        freebetStatusMap[fb.aposta_id] = fb.status;
-      }
-    });
-    
-    // Popular o array de odds com os dados das apostas para cálculos
-    const newOdds: OddEntry[] = sortedData.map((aposta, index) => ({
-      bookmaker_id: aposta.bookmaker_id || "",
-      odd: aposta.odd?.toString() || "",
-      stake: aposta.stake?.toString() || "",
-      selecao: aposta.selecao,
+    // Popular o array de odds com os dados das pernas para cálculos
+    const newOdds: OddEntry[] = sortedPernas.map((perna, index) => ({
+      bookmaker_id: perna.bookmaker_id || "",
+      odd: perna.odd?.toString() || "",
+      stake: perna.stake?.toString() || "",
+      selecao: perna.selecao,
       isReference: index === 0,
-      isManuallyEdited: true, // Já foi salvo, não precisa recalcular automaticamente
-      resultado: aposta.resultado,
-      aposta_id: aposta.id,
-      gerouFreebet: aposta.gerou_freebet || false,
-      valorFreebetGerada: aposta.valor_freebet_gerada?.toString() || "",
-      freebetStatus: freebetStatusMap[aposta.id] as OddEntry["freebetStatus"] || null
+      isManuallyEdited: true,
+      resultado: perna.resultado,
+      lucro_prejuizo: perna.lucro_prejuizo,
+      gerouFreebet: perna.gerou_freebet || false,
+      valorFreebetGerada: perna.valor_freebet_gerada?.toString() || "",
+      index // índice para identificação
     }));
     
     setOdds(newOdds);
@@ -865,8 +879,23 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         const stakes = odds.map(o => parseFloat(o.stake) || 0);
         const stakeTotal = stakes.reduce((a, b) => a + b, 0);
         
-        // Create surebet
-        const { data: newSurebet, error: surebetError } = await supabase
+        // Criar pernas como estrutura JSONB interna (NÃO cria apostas)
+        const pernasToSave: SurebetPerna[] = odds.map((entry, idx) => ({
+          bookmaker_id: entry.bookmaker_id,
+          bookmaker_nome: getBookmakerNome(entry.bookmaker_id),
+          selecao: entry.selecao,
+          odd: parseFloat(entry.odd),
+          stake: stakes[idx],
+          resultado: null,
+          lucro_prejuizo: null,
+          gerou_freebet: entry.gerouFreebet || false,
+          valor_freebet_gerada: entry.gerouFreebet && entry.valorFreebetGerada 
+            ? parseFloat(entry.valorFreebetGerada) 
+            : null
+        }));
+        
+        // Create surebet com pernas embutidas
+        const { error: surebetError } = await supabase
           .from("surebets")
           .insert({
             user_id: user.id,
@@ -880,60 +909,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             roi_esperado: analysis?.roiEsperado || null,
             lucro_esperado: analysis?.guaranteedProfit || null,
             observacoes,
-            status: "PENDENTE"
-          })
-          .select()
-          .single();
+            status: "PENDENTE",
+            pernas: pernasToSave as any,
+            forma_registro: registroValues.forma_registro,
+            estrategia: registroValues.estrategia,
+            contexto_operacional: registroValues.contexto_operacional
+          });
 
         if (surebetError) throw surebetError;
-
-        // Create linked apostas usando valores diretamente dos campos
-        const apostasToCreate = odds.map((entry, index) => ({
-          user_id: user.id,
-          projeto_id: projetoId,
-          surebet_id: newSurebet.id,
-          bookmaker_id: entry.bookmaker_id,
-          data_aposta: new Date().toISOString(),
-          esporte,
-          evento,
-          mercado: modelo,
-          selecao: entry.selecao,
-          odd: parseFloat(entry.odd),
-          stake: stakes[index],
-          status: "PENDENTE",
-          estrategia: registroValues.estrategia,
-          forma_registro: registroValues.forma_registro,
-          contexto_operacional: registroValues.contexto_operacional,
-          modo_entrada: "PADRAO",
-          gerou_freebet: entry.gerouFreebet || false,
-          valor_freebet_gerada: entry.gerouFreebet && entry.valorFreebetGerada 
-            ? parseFloat(entry.valorFreebetGerada) 
-            : null
-        }));
-
-        const { data: apostasCriadas, error: apostasError } = await supabase
-          .from("apostas")
-          .insert(apostasToCreate)
-          .select("id, bookmaker_id, gerou_freebet, valor_freebet_gerada");
-
-        if (apostasError) throw apostasError;
-
-        // Registrar freebets geradas (se houver)
-        if (apostasCriadas) {
-          for (let i = 0; i < apostasCriadas.length; i++) {
-            const apostaCriada = apostasCriadas[i];
-            if (apostaCriada.gerou_freebet && apostaCriada.valor_freebet_gerada && apostaCriada.valor_freebet_gerada > 0) {
-              await registrarFreebetGerada(
-                apostaCriada.bookmaker_id,
-                apostaCriada.valor_freebet_gerada,
-                user.id,
-                projetoId,
-                apostaCriada.id,
-                "PENDENTE" // Aposta ainda pendente, freebet também pendente
-              );
-            }
-          }
-        }
 
         // NOTA: Não debitar saldo_atual na criação de apostas PENDENTES!
         // O modelo contábil correto é:
@@ -1157,25 +1140,36 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     }
   };
 
-  const handleLiquidarAposta = useCallback(async (apostaId: string, resultado: "GREEN" | "RED" | "VOID" | null) => {
+  // Liquidar perna por índice - atualiza JSONB na surebet
+  const handleLiquidarPerna = useCallback(async (pernaIndex: number, resultado: "GREEN" | "RED" | "VOID" | null) => {
+    if (!surebet) return;
+    
     try {
-      const aposta = linkedApostas.find(a => a.id === apostaId);
-      if (!aposta) return;
+      // Buscar pernas atuais da surebet
+      const { data: surebetData } = await supabase
+        .from("surebets")
+        .select("pernas")
+        .eq("id", surebet.id)
+        .single();
+      
+      if (!surebetData?.pernas) return;
+      
+      const pernas = surebetData.pernas as unknown as SurebetPerna[];
+      const perna = pernas[pernaIndex];
+      if (!perna) return;
 
-      const stake = parseFloat(aposta.stake) || 0;
-      const odd = parseFloat(aposta.odd) || 0;
-      const resultadoAnterior = aposta.resultado;
-      const bookmakerId = aposta.bookmaker_id;
+      const stake = perna.stake || 0;
+      const odd = perna.odd || 0;
+      const resultadoAnterior = perna.resultado;
+      const bookmakerId = perna.bookmaker_id;
 
       // Se o resultado não mudou, não fazer nada
       if (resultadoAnterior === resultado) return;
 
       let lucro: number | null = 0;
-      let status = "LIQUIDADA";
       
       if (resultado === null) {
         lucro = null;
-        status = "PENDENTE";
       } else if (resultado === "GREEN") {
         lucro = stake * (odd - 1);
       } else if (resultado === "RED") {
@@ -1185,13 +1179,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       }
 
       // ATUALIZAÇÃO DE SALDO DA CASA
-      // Modelo contábil correto:
-      // - saldo_atual NÃO é debitado na criação (aposta PENDENTE)
-      // - RED: debitar stake (perda confirmada)
-      // - GREEN: creditar lucro (stake * (odd - 1))
-      // - VOID: não muda saldo
-      
-      // Buscar saldo atual da casa
       const { data: bookmakerData } = await supabase
         .from("bookmakers")
         .select("saldo_atual")
@@ -1202,181 +1189,80 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       
       let novoSaldo = bookmakerData.saldo_atual;
 
-      // 1. REVERTER efeito do resultado ANTERIOR (se existia e era diferente de PENDENTE/null)
+      // 1. REVERTER efeito do resultado ANTERIOR
       if (resultadoAnterior && resultadoAnterior !== "PENDENTE") {
         if (resultadoAnterior === "GREEN") {
-          // GREEN anterior creditou lucro, reverter (debitar lucro)
           novoSaldo -= stake * (odd - 1);
         } else if (resultadoAnterior === "RED") {
-          // RED anterior debitou stake, reverter (creditar stake)
           novoSaldo += stake;
         }
-        // VOID não alterou saldo, não precisa reverter
       }
 
       // 2. APLICAR efeito do resultado NOVO
       if (resultado === "GREEN") {
-        // GREEN: creditar lucro (stake * (odd - 1))
         novoSaldo += stake * (odd - 1);
       } else if (resultado === "RED") {
-        // RED: debitar stake (perda confirmada)
         novoSaldo -= stake;
       }
-      // VOID e null: não alterar saldo
 
       // Atualizar saldo da casa
-      const { error: saldoError } = await supabase
+      await supabase
         .from("bookmakers")
         .update({ saldo_atual: novoSaldo })
         .eq("id", bookmakerId);
 
-      if (saldoError) throw saldoError;
+      // Atualizar perna no array
+      const novasPernas = [...pernas];
+      novasPernas[pernaIndex] = {
+        ...perna,
+        resultado,
+        lucro_prejuizo: lucro
+      };
 
-      // Atualizar aposta
-      const { error } = await supabase
-        .from("apostas")
-        .update({ 
-          resultado, 
-          lucro_prejuizo: lucro,
-          status
+      // Calcular totais
+      const todasLiquidadas = novasPernas.every(p => p.resultado && p.resultado !== "PENDENTE" && p.resultado !== null);
+      const lucroTotal = novasPernas.reduce((acc, p) => acc + (p.lucro_prejuizo || 0), 0);
+      const resultadoFinal = todasLiquidadas 
+        ? (lucroTotal > 0 ? "GREEN" : lucroTotal < 0 ? "RED" : "VOID")
+        : null;
+
+      // Atualizar surebet com pernas e status
+      await supabase
+        .from("surebets")
+        .update({
+          pernas: novasPernas as any,
+          status: todasLiquidadas ? "LIQUIDADA" : "PENDENTE",
+          resultado: resultadoFinal,
+          lucro_real: todasLiquidadas ? lucroTotal : null,
+          roi_real: todasLiquidadas && surebet.stake_total > 0 ? (lucroTotal / surebet.stake_total) * 100 : null
         })
-        .eq("id", apostaId);
+        .eq("id", surebet.id);
 
-      if (error) throw error;
+      // Atualizar estados locais
+      setOdds(prev => prev.map((o, idx) => 
+        idx === pernaIndex
+          ? { ...o, resultado, lucro_prejuizo: lucro }
+          : o
+      ));
 
-      // Gerenciar status de Freebet associada à aposta
-      const oddEntry = odds.find(o => o.aposta_id === apostaId);
-      const apostaGerouFreebet = aposta.gerou_freebet || oddEntry?.gerouFreebet;
-      
-      if (apostaGerouFreebet) {
-        const eraPendente = !resultadoAnterior || resultadoAnterior === "PENDENTE";
-        const agoraPendente = !resultado || resultado === null;
-        
-        if (eraPendente && !agoraPendente) {
-          // Aposta foi liquidada: liberar ou recusar freebet
-          if (resultado === "VOID") {
-            await recusarFreebetPendente(apostaId);
-          } else {
-            // GREEN ou RED liberam a freebet
-            await liberarFreebetPendente(apostaId);
-          }
-        } else if (!eraPendente && agoraPendente) {
-          // Aposta voltou para pendente: reverter freebet para pendente
-          await reverterFreebetParaPendente(apostaId);
-        } else if (!eraPendente && !agoraPendente) {
-          // Resultado mudou de um para outro (ex: GREEN -> VOID)
-          if (resultado === "VOID" && resultadoAnterior !== "VOID") {
-            // Estava liberada, agora deve ser recusada
-            const { data: freebetLiberada } = await supabase
-              .from("freebets_recebidas")
-              .select("id, bookmaker_id, valor")
-              .eq("aposta_id", apostaId)
-              .eq("status", "LIBERADA")
-              .maybeSingle();
-            
-            if (freebetLiberada) {
-              // Reverter saldo
-              const { data: bk } = await supabase
-                .from("bookmakers")
-                .select("saldo_freebet")
-                .eq("id", freebetLiberada.bookmaker_id)
-                .maybeSingle();
-              
-              if (bk) {
-                await supabase
-                  .from("bookmakers")
-                  .update({ saldo_freebet: Math.max(0, (bk.saldo_freebet || 0) - freebetLiberada.valor) })
-                  .eq("id", freebetLiberada.bookmaker_id);
-              }
-              
-              await supabase
-                .from("freebets_recebidas")
-                .update({ status: "NAO_LIBERADA" })
-                .eq("id", freebetLiberada.id);
-            }
-          } else if (resultado !== "VOID" && resultadoAnterior === "VOID") {
-            // Estava recusada, agora deve ser liberada
-            await liberarFreebetPendente(apostaId);
-          }
-        }
-        
-        // Atualizar status no estado local
-        setOdds(prev => prev.map(o => 
-          o.aposta_id === apostaId
-            ? { 
-                ...o, 
-                resultado,
-                freebetStatus: agoraPendente ? "PENDENTE" : (resultado === "VOID" ? "NAO_LIBERADA" : "LIBERADA")
-              }
-            : o
-        ));
-      } else {
-        // Atualizar o array de odds (sem freebet)
-        setOdds(prev => prev.map(o => 
-          o.aposta_id === apostaId
-            ? { ...o, resultado }
-            : o
-        ));
-      }
-
-      // Marcar que houve alterações (para chamar onSuccess ao fechar)
-      hasChangesRef.current = true;
-
-      // Atualizar estado local das apostas (sem recarregar do banco)
-      setLinkedApostas(prev => prev.map(a => 
-        a.id === apostaId 
+      setLinkedApostas(prev => prev.map((a, idx) => 
+        idx === pernaIndex
           ? { ...a, resultado, lucro_prejuizo: lucro }
           : a
       ));
-      
-      // Recalcular status da surebet
-      const { data: apostasAtualizadas } = await supabase
-        .from("apostas")
-        .select("resultado, lucro_prejuizo, stake, odd")
-        .eq("surebet_id", surebet!.id);
-      
-      if (apostasAtualizadas) {
-        const todasLiquidadas = apostasAtualizadas.every(a => a.resultado && a.resultado !== "PENDENTE" && a.resultado !== null);
-        
-        if (todasLiquidadas) {
-          const lucroTotal = apostasAtualizadas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
-          const resultadoFinal = lucroTotal > 0 ? "GREEN" : lucroTotal < 0 ? "RED" : "VOID";
-          
-          await supabase
-            .from("surebets")
-            .update({
-              status: "LIQUIDADA",
-              resultado: resultadoFinal,
-              lucro_real: lucroTotal,
-              roi_real: surebet!.stake_total > 0 ? (lucroTotal / surebet!.stake_total) * 100 : 0
-            })
-            .eq("id", surebet!.id);
-            
-          // Toast único quando todas as posições forem liquidadas
-          if (!toastShownRef.current) {
-            toastShownRef.current = true;
-            toast.success("Operação liquidada com sucesso!");
-          }
-        } else {
-          // Se nem todas estão liquidadas, voltar para PENDENTE
-          await supabase
-            .from("surebets")
-            .update({
-              status: "PENDENTE",
-              resultado: null,
-              lucro_real: null,
-              roi_real: null
-            })
-            .eq("id", surebet!.id);
-          
-          // Reset do toast flag para permitir novo toast quando completar
-          toastShownRef.current = false;
-        }
+
+      hasChangesRef.current = true;
+
+      if (todasLiquidadas && !toastShownRef.current) {
+        toastShownRef.current = true;
+        toast.success("Operação liquidada com sucesso!");
+      } else if (!todasLiquidadas) {
+        toastShownRef.current = false;
       }
     } catch (error: any) {
       toast.error("Erro: " + error.message);
     }
-  }, [linkedApostas, surebet]);
+  }, [surebet]);
 
   // Handler para fechamento do modal - chama onSuccess apenas aqui
   const handleDialogClose = useCallback((newOpen: boolean) => {
@@ -1579,7 +1465,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             </span>
                             
                             {/* Resultado (apenas em modo edição) */}
-                            {isEditing && entry.aposta_id && (
+                            {isEditing && (
                               <div className="flex items-center gap-1 transition-all duration-200">
                                 {entry.resultado ? (
                                   <>
@@ -1595,7 +1481,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                       variant="ghost"
                                       size="sm"
                                       className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground transition-all duration-150"
-                                      onClick={() => handleLiquidarAposta(entry.aposta_id!, null as any)}
+                                      onClick={() => handleLiquidarPerna(index, null as any)}
                                       title="Limpar resultado"
                                     >
                                       <RotateCcw className="h-3 w-3" />
@@ -1608,7 +1494,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                       size="sm" 
                                       variant="outline"
                                       className="h-6 w-6 p-0 text-emerald-500 hover:bg-emerald-500/20 transition-all duration-150 hover:scale-110"
-                                      onClick={() => handleLiquidarAposta(entry.aposta_id!, "GREEN")}
+                                      onClick={() => handleLiquidarPerna(index, "GREEN")}
                                       title="GREEN"
                                     >
                                       <CheckCircle2 className="h-3.5 w-3.5" />
@@ -1618,7 +1504,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                       size="sm" 
                                       variant="outline"
                                       className="h-6 w-6 p-0 text-red-500 hover:bg-red-500/20 transition-all duration-150 hover:scale-110"
-                                      onClick={() => handleLiquidarAposta(entry.aposta_id!, "RED")}
+                                      onClick={() => handleLiquidarPerna(index, "RED")}
                                       title="RED"
                                     >
                                       <XCircle className="h-3.5 w-3.5" />
@@ -1628,7 +1514,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                       size="sm" 
                                       variant="outline"
                                       className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-500/20 transition-all duration-150 hover:scale-110"
-                                      onClick={() => handleLiquidarAposta(entry.aposta_id!, "VOID")}
+                                      onClick={() => handleLiquidarPerna(index, "VOID")}
                                       title="VOID"
                                     >
                                       <span className="text-[10px] font-bold">V</span>

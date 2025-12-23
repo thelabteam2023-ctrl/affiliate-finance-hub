@@ -5312,16 +5312,20 @@ export type Database = {
       }
       surebets: {
         Row: {
+          contexto_operacional: string | null
           created_at: string
           data_operacao: string
           esporte: string
+          estrategia: string | null
           evento: string
+          forma_registro: string | null
           id: string
           lucro_esperado: number | null
           lucro_real: number | null
           mercado: string | null
           modelo: string
           observacoes: string | null
+          pernas: Json | null
           projeto_id: string
           resultado: string | null
           roi_esperado: number | null
@@ -5334,16 +5338,20 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          contexto_operacional?: string | null
           created_at?: string
           data_operacao?: string
           esporte: string
+          estrategia?: string | null
           evento: string
+          forma_registro?: string | null
           id?: string
           lucro_esperado?: number | null
           lucro_real?: number | null
           mercado?: string | null
           modelo?: string
           observacoes?: string | null
+          pernas?: Json | null
           projeto_id: string
           resultado?: string | null
           roi_esperado?: number | null
@@ -5356,16 +5364,20 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          contexto_operacional?: string | null
           created_at?: string
           data_operacao?: string
           esporte?: string
+          estrategia?: string | null
           evento?: string
+          forma_registro?: string | null
           id?: string
           lucro_esperado?: number | null
           lucro_real?: number | null
           mercado?: string | null
           modelo?: string
           observacoes?: string | null
+          pernas?: Json | null
           projeto_id?: string
           resultado?: string | null
           roi_esperado?: number | null
