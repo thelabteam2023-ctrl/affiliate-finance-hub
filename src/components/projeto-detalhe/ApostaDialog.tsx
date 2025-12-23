@@ -3450,34 +3450,37 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             </Tabs>
 
             {/* Resultado - Segmented control compacto */}
-            <div className="space-y-1.5">
-              <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Resultado</Label>
-              <div className="flex justify-center">
-                <div className="inline-flex rounded-md border border-border/40 bg-muted/20 p-0.5 gap-0.5">
-                  {[
-                    { value: "PENDENTE", label: "Pendente", selectedClass: "bg-muted text-foreground" },
-                    { value: "GREEN", label: "Green", selectedClass: "bg-emerald-500/20 text-emerald-500" },
-                    { value: "RED", label: "Red", selectedClass: "bg-red-500/20 text-red-500" },
-                    { value: "MEIO_GREEN", label: "½ Green", selectedClass: "bg-teal-500/20 text-teal-500" },
-                    { value: "MEIO_RED", label: "½ Red", selectedClass: "bg-orange-500/20 text-orange-500" },
-                    { value: "VOID", label: "Void", selectedClass: "bg-slate-500/20 text-slate-400" },
-                  ].map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setStatusResultado(option.value)}
-                      className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
-                        statusResultado === option.value 
-                          ? option.selectedClass
-                          : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/30"
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+            {/* Só exibir para Bookmaker (Sportsbooks). Para Exchange/Cobertura o resultado é calculado automaticamente */}
+            {tipoAposta === "bookmaker" && (
+              <div className="space-y-1.5">
+                <Label className="block text-center uppercase text-[10px] tracking-wider text-muted-foreground">Resultado</Label>
+                <div className="flex justify-center">
+                  <div className="inline-flex rounded-md border border-border/40 bg-muted/20 p-0.5 gap-0.5">
+                    {[
+                      { value: "PENDENTE", label: "Pendente", selectedClass: "bg-muted text-foreground" },
+                      { value: "GREEN", label: "Green", selectedClass: "bg-emerald-500/20 text-emerald-500" },
+                      { value: "RED", label: "Red", selectedClass: "bg-red-500/20 text-red-500" },
+                      { value: "MEIO_GREEN", label: "½ Green", selectedClass: "bg-teal-500/20 text-teal-500" },
+                      { value: "MEIO_RED", label: "½ Red", selectedClass: "bg-orange-500/20 text-orange-500" },
+                      { value: "VOID", label: "Void", selectedClass: "bg-slate-500/20 text-slate-400" },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setStatusResultado(option.value)}
+                        className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
+                          statusResultado === option.value 
+                            ? option.selectedClass
+                            : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/30"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Lucro/Prejuízo calculado automaticamente - só mostrar quando tem resultado e valores calculados válidos */}
             {statusResultado && statusResultado !== "PENDENTE" && tipoAposta === "bookmaker" && stake && odd && parseFloat(stake) > 0 && parseFloat(odd) > 1 && (
