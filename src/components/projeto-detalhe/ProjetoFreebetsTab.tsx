@@ -225,7 +225,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
           )
         `)
         .eq("projeto_id", projetoId)
-        .or("contexto_operacional.eq.FREEBET,gerou_freebet.eq.true")
+        .or("contexto_operacional.eq.FREEBET,gerou_freebet.eq.true,tipo_freebet.not.is.null")
         .is("cancelled_at", null)
         .order("data_aposta", { ascending: false });
 
@@ -243,7 +243,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
           )
         `)
         .eq("projeto_id", projetoId)
-        .or("contexto_operacional.eq.FREEBET,gerou_freebet.eq.true")
+        .or("contexto_operacional.eq.FREEBET,gerou_freebet.eq.true,tipo_freebet.not.is.null")
         .is("cancelled_at", null)
         .order("data_aposta", { ascending: false });
 
