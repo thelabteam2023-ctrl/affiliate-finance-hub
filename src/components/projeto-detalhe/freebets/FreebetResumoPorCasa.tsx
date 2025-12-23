@@ -164,13 +164,6 @@ export function FreebetResumoPorCasa({ stats, formatCurrency, viewMode = 'card' 
               </div>
             </div>
 
-            {/* Taxa de Conversão */}
-            <div className="flex items-center justify-between text-xs pt-2 border-t">
-              <span className="text-muted-foreground">Taxa de Conversão</span>
-              <span className={`font-semibold ${stat.taxa_conversao >= 50 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {stat.taxa_conversao.toFixed(0)}%
-              </span>
-            </div>
           </CardContent>
         </Card>
       ))}
