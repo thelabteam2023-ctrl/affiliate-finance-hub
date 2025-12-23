@@ -13,6 +13,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
 
+export type { DateRange };
 export type StandardPeriodFilter = "1dia" | "7dias" | "30dias" | "ano" | "custom";
 export type NavigationMode = "compact" | "gestao";
 

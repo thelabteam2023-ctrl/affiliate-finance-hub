@@ -676,8 +676,6 @@ export default function ProjetoDetalhe() {
           <ProjetoApostasTab 
             projetoId={id!} 
             onDataChange={triggerGlobalRefresh}
-            periodFilter={periodFilter}
-            dateRange={dateRange}
             refreshTrigger={refreshTrigger}
           />
         </TabsContent>
@@ -701,8 +699,6 @@ export default function ProjetoDetalhe() {
           <ProjetoSurebetTab 
             projetoId={id!} 
             onDataChange={triggerGlobalRefresh}
-            periodFilter={periodFilter}
-            dateRange={dateRange}
             refreshTrigger={refreshTrigger}
           />
         </TabsContent>
@@ -711,8 +707,6 @@ export default function ProjetoDetalhe() {
           <ProjetoValueBetTab 
             projetoId={id!} 
             onDataChange={triggerGlobalRefresh}
-            periodFilter={periodFilter}
-            dateRange={dateRange}
             refreshTrigger={refreshTrigger}
           />
         </TabsContent>
@@ -721,8 +715,6 @@ export default function ProjetoDetalhe() {
           <ProjetoDuploGreenTab 
             projetoId={id!} 
             onDataChange={triggerGlobalRefresh}
-            periodFilter={periodFilter}
-            dateRange={dateRange}
             refreshTrigger={refreshTrigger}
           />
         </TabsContent>

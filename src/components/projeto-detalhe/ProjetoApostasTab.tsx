@@ -37,8 +37,7 @@ import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import { DateRange } from "react-day-picker";
 import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ESTRATEGIAS_LIST, inferEstrategiaLegado, type ApostaEstrategia } from "@/lib/apostaConstants";
-
-type PeriodFilter = "hoje" | "ontem" | "7dias" | "mes" | "ano" | "todo" | "custom";
+import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 
 // Contextos de aposta para filtro unificado
 type ApostaContexto = "NORMAL" | "FREEBET" | "BONUS" | "SUREBET";
@@ -46,8 +45,6 @@ type ApostaContexto = "NORMAL" | "FREEBET" | "BONUS" | "SUREBET";
 interface ProjetoApostasTabProps {
   projetoId: string;
   onDataChange?: () => void;
-  periodFilter?: PeriodFilter;
-  dateRange?: DateRange;
   refreshTrigger?: number;
 }
 
@@ -216,7 +213,7 @@ function getSurebetContexto(
   return "NORMAL";
 }
 
-export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "todo", dateRange, refreshTrigger }: ProjetoApostasTabProps) {
+export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: ProjetoApostasTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [apostasMultiplas, setApostasMultiplas] = useState<ApostaMultipla[]>([]);
   const [surebets, setSurebets] = useState<Surebet[]>([]);
@@ -236,39 +233,19 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
   const [selectedSurebet, setSelectedSurebet] = useState<SurebetData | null>(null);
   const [bookmakers, setBookmakers] = useState<any[]>([]);
 
+  // Filtro de tempo interno
+  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
+  const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
+
   // Hook para pegar bookmakers com bônus ativo
   const { getBookmakersWithActiveBonus, bonuses } = useProjectBonuses({ projectId: projetoId });
   const bookmakersComBonusAtivo = useMemo(() => getBookmakersWithActiveBonus(), [bonuses]);
 
-  const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
-    const today = new Date();
-    
-    switch (periodFilter) {
-      case "hoje":
-        return { start: startOfDay(today), end: endOfDay(today) };
-      case "ontem":
-        const yesterday = subDays(today, 1);
-        return { start: startOfDay(yesterday), end: endOfDay(yesterday) };
-      case "7dias":
-        return { start: startOfDay(subDays(today, 7)), end: endOfDay(today) };
-      case "mes":
-        return { start: startOfMonth(today), end: endOfDay(today) };
-      case "ano":
-        return { start: startOfYear(today), end: endOfDay(today) };
-      case "custom":
-        return { 
-          start: dateRange?.from || null, 
-          end: dateRange?.to || dateRange?.from || null 
-        };
-      case "todo":
-      default:
-        return { start: null, end: null };
-    }
-  };
+  const dateRange = useMemo(() => getDateRangeFromPeriod(internalPeriod, internalDateRange), [internalPeriod, internalDateRange]);
 
   useEffect(() => {
     fetchAllApostas();
-  }, [projetoId, periodFilter, dateRange, refreshTrigger]);
+  }, [projetoId, internalPeriod, internalDateRange, refreshTrigger]);
 
   const fetchAllApostas = async () => {
     try {
@@ -303,8 +280,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
 
   const fetchApostas = async () => {
     try {
-      const { start, end } = getDateRangeFromFilter();
-      
       let query = supabase
         .from("apostas")
         .select(`
@@ -320,11 +295,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
         .eq("projeto_id", projetoId)
         .order("data_aposta", { ascending: false });
       
-      if (start) {
-        query = query.gte("data_aposta", start.toISOString());
-      }
-      if (end) {
-        query = query.lte("data_aposta", end.toISOString());
+      if (dateRange) {
+        query = query.gte("data_aposta", dateRange.start.toISOString());
+        query = query.lte("data_aposta", dateRange.end.toISOString());
       }
 
       const { data, error } = await query;
@@ -361,8 +334,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
 
   const fetchApostasMultiplas = async () => {
     try {
-      const { start, end } = getDateRangeFromFilter();
-      
       let query = supabase
         .from("apostas_multiplas")
         .select(`
@@ -378,11 +349,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
         .eq("projeto_id", projetoId)
         .order("data_aposta", { ascending: false });
       
-      if (start) {
-        query = query.gte("data_aposta", start.toISOString());
-      }
-      if (end) {
-        query = query.lte("data_aposta", end.toISOString());
+      if (dateRange) {
+        query = query.gte("data_aposta", dateRange.start.toISOString());
+        query = query.lte("data_aposta", dateRange.end.toISOString());
       }
 
       const { data, error } = await query;
@@ -400,19 +369,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
 
   const fetchSurebets = async () => {
     try {
-      const { start, end } = getDateRangeFromFilter();
-      
       let query = supabase
         .from("surebets")
         .select("*")
         .eq("projeto_id", projetoId)
         .order("data_operacao", { ascending: false });
       
-      if (start) {
-        query = query.gte("data_operacao", start.toISOString());
-      }
-      if (end) {
-        query = query.lte("data_operacao", end.toISOString());
+      if (dateRange) {
+        query = query.gte("data_operacao", dateRange.start.toISOString());
+        query = query.lte("data_operacao", dateRange.end.toISOString());
       }
 
       const { data, error } = await query;
@@ -668,6 +633,14 @@ export function ProjetoApostasTab({ projetoId, onDataChange, periodFilter = "tod
 
   return (
     <div className="space-y-4">
+      {/* Filtro de Tempo */}
+      <StandardTimeFilter
+        period={internalPeriod}
+        onPeriodChange={setInternalPeriod}
+        customDateRange={internalDateRange}
+        onCustomDateRangeChange={setInternalDateRange}
+      />
+
       {/* Info Banner - Livro Razão */}
       <div className="bg-muted/30 border rounded-lg p-3 text-sm text-muted-foreground flex items-center gap-2">
         <Target className="h-4 w-4 text-primary" />
