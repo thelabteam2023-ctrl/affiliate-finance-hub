@@ -17,7 +17,10 @@ import {
   Coins,
   Gift,
   Filter,
-  Zap
+  Zap,
+  TrendingUp,
+  CheckCircle2,
+  BarChart3
 } from "lucide-react";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { SurebetDialog } from "./SurebetDialog";
@@ -121,6 +124,7 @@ interface ApostaMultipla {
   observacoes: string | null;
   is_bonus_bet?: boolean;
   contexto_operacional?: string | null;
+  estrategia?: string | null;
   bookmaker?: {
     nome: string;
     parceiro_id: string;
@@ -603,8 +607,56 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
     };
   };
 
-  // Badge de contexto
-  const getContextoBadge = (contexto: ApostaContexto) => {
+  // Badge de estratégia (prioridade máxima quando gera freebet = Qualificadora)
+  const getEstrategiaBadge = (aposta: Aposta | ApostaMultipla) => {
+    // PRIORIDADE 1: Se gerou freebet, é uma Qualificadora
+    if (aposta.gerou_freebet) {
+      return (
+        <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30 text-[10px] px-1.5 py-0">
+          <TrendingUp className="h-2.5 w-2.5 mr-0.5" />
+          QB
+        </Badge>
+      );
+    }
+    
+    // PRIORIDADE 2: Outras estratégias (se definidas)
+    const estrategia = aposta.estrategia;
+    if (estrategia === "SUREBET") {
+      return (
+        <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-[10px] px-1.5 py-0">
+          <Shield className="h-2.5 w-2.5 mr-0.5" />
+          SB
+        </Badge>
+      );
+    }
+    if (estrategia === "DUPLO_GREEN") {
+      return (
+        <Badge className="bg-teal-500/20 text-teal-400 border-teal-500/30 text-[10px] px-1.5 py-0">
+          <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
+          DG
+        </Badge>
+      );
+    }
+    if (estrategia === "VALUEBET") {
+      return (
+        <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px] px-1.5 py-0">
+          <BarChart3 className="h-2.5 w-2.5 mr-0.5" />
+          VB
+        </Badge>
+      );
+    }
+    
+    // Nenhuma estratégia definida, retorna null
+    return null;
+  };
+
+  // Badge de contexto (origem do saldo - exibido apenas quando não há estratégia)
+  const getContextoBadge = (contexto: ApostaContexto, aposta?: Aposta | ApostaMultipla) => {
+    // Se a aposta gerou freebet, não mostrar badge de contexto (a estratégia Qualificadora já é mostrada)
+    if (aposta?.gerou_freebet) {
+      return null;
+    }
+    
     switch (contexto) {
       case "SUREBET":
         return (
@@ -845,8 +897,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
                         <p className="text-xs text-muted-foreground truncate">{aposta.esporte}</p>
                       </div>
                       <div className="flex gap-1 flex-shrink-0 items-center">
-                        {/* Badge de contexto */}
-                        {getContextoBadge(item.contexto)}
+                        {/* Badge de estratégia (prioridade) ou contexto (fallback) */}
+                        {getEstrategiaBadge(aposta) || getContextoBadge(item.contexto, aposta)}
                         {opType.label && (
                           <Badge className={`${opType.color} text-[10px] px-1.5 py-0`}>
                             {opType.type === "cobertura" && <Shield className="h-2.5 w-2.5 mr-0.5" />}
@@ -927,7 +979,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
                       </p>
                     </div>
                     <div className="flex gap-1 flex-shrink-0 items-center">
-                      {getContextoBadge(item.contexto)}
+                      {/* Badge de estratégia (prioridade) ou contexto (fallback) */}
+                      {getEstrategiaBadge(multipla) || getContextoBadge(item.contexto, multipla)}
                       <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30 text-[10px] px-1.5 py-0">
                         MULT
                       </Badge>
@@ -1013,7 +1066,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
                           else if (isMultipla) handleOpenMultiplaDialog(data);
                         }}
                       >
-                        <td className="p-3">{getContextoBadge(item.contexto) || <span className="text-muted-foreground">—</span>}</td>
+                        <td className="p-3">{(isSimples || isMultipla) ? (getEstrategiaBadge(data) || getContextoBadge(item.contexto, data)) : getContextoBadge(item.contexto) || <span className="text-muted-foreground">—</span>}</td>
                         <td className="p-3">
                           {(() => {
                             if (isSimples) {
