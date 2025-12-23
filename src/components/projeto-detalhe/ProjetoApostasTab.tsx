@@ -309,6 +309,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
           )
         `)
         .eq("projeto_id", projetoId)
+        .is("surebet_id", null) // CRÍTICO: Excluir pernas de surebet - elas são estrutura interna da operação
         .order("data_aposta", { ascending: false });
       
       if (dateRange) {
