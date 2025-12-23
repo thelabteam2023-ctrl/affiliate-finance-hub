@@ -555,7 +555,8 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
         existing.valor_total_extraido += Math.max(0, ap.lucro_prejuizo || 0);
       } else if (ap.resultado === "RED" || ap.resultado === "MEIO_RED") {
         existing.apostas_perdidas += 1;
-      } else {
+      } else if (ap.status === "PENDENTE" || !ap.resultado) {
+        // Só conta como pendente se realmente está pendente (não liquidada)
         existing.apostas_pendentes += 1;
       }
     });
