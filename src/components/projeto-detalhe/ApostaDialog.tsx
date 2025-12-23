@@ -3344,7 +3344,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             )}
 
             {/* Freebet Gerada - design moderno com toggle pill */}
-            {tipoAposta === "bookmaker" && !usarFreebetBookmaker && (
+            {/* Disponível para: Bookmaker (sem usar freebet), Exchange Back/Lay/Cobertura (sem usar freebet) */}
+            {((tipoAposta === "bookmaker" && !usarFreebetBookmaker) || 
+              (tipoAposta === "exchange" && tipoApostaExchangeBack === "normal" && tipoApostaBack === "normal")) && (
               <div className={`flex items-center justify-between py-3 px-4 rounded-lg transition-all duration-200 ${
                 gerouFreebet 
                   ? "bg-gradient-to-r from-emerald-500/15 to-emerald-500/5 border border-emerald-500/40" 
