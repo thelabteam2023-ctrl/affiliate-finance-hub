@@ -556,11 +556,23 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
   };
 
   const getOperationType = (aposta: Aposta): { type: "bookmaker" | "back" | "lay" | "cobertura"; label: string; color: string } => {
+    // Detectar Cobertura primeiro: modo EXCHANGE + tem lay_exchange + tem lay_odd
+    // Isso indica que é uma operação de cobertura (Back + Lay simultâneos)
+    const isCobertura = aposta.modo_entrada === "EXCHANGE" && 
+                        aposta.lay_exchange && 
+                        aposta.lay_odd !== null && 
+                        aposta.lay_odd !== undefined;
+    
+    if (isCobertura) {
+      return { type: "cobertura", label: "BACK/LAY", color: "bg-purple-500/20 text-purple-400 border-purple-500/30" };
+    }
+    
     if (aposta.modo_entrada === "EXCHANGE" || aposta.estrategia?.includes("EXCHANGE") || aposta.estrategia === "COBERTURA_LAY") {
       if (aposta.estrategia === "COBERTURA_LAY") {
-        return { type: "cobertura", label: "COB", color: "bg-purple-500/20 text-purple-400 border-purple-500/30" };
+        return { type: "cobertura", label: "BACK/LAY", color: "bg-purple-500/20 text-purple-400 border-purple-500/30" };
       }
-      if (aposta.estrategia === "EXCHANGE_LAY" || aposta.lay_odd) {
+      if (aposta.estrategia === "EXCHANGE_LAY" || (aposta.lay_odd && !aposta.lay_exchange)) {
+        // Lay simples: tem lay_odd mas NÃO tem lay_exchange
         return { type: "lay", label: "LAY", color: "bg-rose-500/20 text-rose-400 border-rose-500/30" };
       }
       return { type: "back", label: "BACK", color: "bg-sky-500/20 text-sky-400 border-sky-500/30" };
