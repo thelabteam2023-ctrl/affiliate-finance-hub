@@ -20,7 +20,7 @@ import {
 import { 
   Gift, Search, Building2, Target, CheckCircle2, Clock, 
   TrendingUp, Percent, LayoutGrid, List, Minimize2, BarChart3,
-  LayoutDashboard, History, PanelLeft, LayoutList
+  LayoutDashboard, History, PanelLeft, LayoutList, Zap
 } from "lucide-react";
 import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { useFreebetViewPreferences, FreebetSubTab } from "@/hooks/useFreebetViewPreferences";
@@ -473,20 +473,27 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
   const apostasAtivas = apostasFiltradas.filter(ap => ap.status === "PENDENTE" || ap.resultado === "PENDENTE");
   const apostasHistorico = apostasFiltradas.filter(ap => ap.status === "LIQUIDADA" && ap.resultado !== "PENDENTE");
 
-  // Métricas globais
+  // Métricas globais - separar EXTRAÇÕES de QUALIFICADORAS
   const metricas = useMemo(() => {
     const freebetsLiberadas = freebetsNoPeriodo.filter(fb => fb.status === "LIBERADA");
     const totalRecebido = freebetsLiberadas.reduce((acc, fb) => acc + fb.valor, 0);
     
-    // Filtrar apenas apostas de EXTRAÇÃO (que usam freebet)
-    const apostasExtracao = apostasNoPeriodo.filter(ap => ap.tipo_freebet);
+    // EXTRAÇÃO: aposta que USA freebet (tipo_freebet não null) E NÃO é qualificadora
+    const apostasExtracao = apostasNoPeriodo.filter(ap => ap.tipo_freebet && !ap.gerou_freebet);
     
-    const apostasFinalizadas = apostasExtracao.filter(ap => 
+    // QUALIFICADORAS: apostas que GERAM freebet
+    const apostasQualificadoras = apostasNoPeriodo.filter(ap => ap.gerou_freebet);
+    
+    const extracaoFinalizadas = apostasExtracao.filter(ap => 
       ap.status === "LIQUIDADA" && ap.resultado && ap.resultado !== "PENDENTE"
     );
     
-    // Calcular valor extraído considerando matched betting e todos os tipos de resultado
-    const totalExtraido = apostasFinalizadas.reduce((acc, ap) => {
+    const qualificadorasFinalizadas = apostasQualificadoras.filter(ap => 
+      ap.status === "LIQUIDADA" && ap.resultado && ap.resultado !== "PENDENTE"
+    );
+    
+    // Calcular valor extraído das apostas de EXTRAÇÃO
+    const totalExtraido = extracaoFinalizadas.reduce((acc, ap) => {
       const isGreen = ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN" || ap.resultado === "GREEN_BOOKMAKER";
       const isRed = ap.resultado === "RED" || ap.resultado === "MEIO_RED" || ap.resultado === "RED_BOOKMAKER";
       
@@ -503,27 +510,36 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
       return acc;
     }, 0);
     
+    // Calcular juice das QUALIFICADORAS (pode ser negativo - é o custo para conseguir a freebet)
+    const juiceQualificadoras = qualificadorasFinalizadas.reduce((acc, ap) => {
+      return acc + (ap.lucro_prejuizo || 0);
+    }, 0);
+    
     const taxaExtracao = totalRecebido > 0 ? (totalExtraido / totalRecebido) * 100 : 0;
-    const totalApostas = apostasExtracao.length;
-    const apostasGanhas = apostasExtracao.filter(ap => 
+    
+    // Contagens separadas
+    const totalExtracoes = apostasExtracao.length;
+    const totalQualificadoras = apostasQualificadoras.length;
+    
+    const extracoesGanhas = apostasExtracao.filter(ap => 
       ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN" || ap.resultado === "GREEN_BOOKMAKER"
     ).length;
-    const apostasPerdidas = apostasExtracao.filter(ap => 
-      ap.resultado === "RED" || ap.resultado === "MEIO_RED" || ap.resultado === "RED_BOOKMAKER"
-    ).length;
-    const apostasPendentes = apostasExtracao.filter(ap => 
+    const extracoesPendentes = apostasExtracao.filter(ap => 
       ap.status === "PENDENTE" || !ap.resultado
     ).length;
-    const taxaAcerto = totalApostas > 0 ? (apostasGanhas / totalApostas) * 100 : 0;
+    
+    const taxaAcerto = totalExtracoes > 0 ? (extracoesGanhas / totalExtracoes) * 100 : 0;
 
     return {
       totalRecebido,
       totalExtraido,
+      juiceQualificadoras,
+      lucroTotal: totalExtraido + juiceQualificadoras,
       taxaExtracao,
-      totalApostas,
-      apostasGanhas,
-      apostasPerdidas,
-      apostasPendentes,
+      totalExtracoes,
+      totalQualificadoras,
+      extracoesGanhas,
+      extracoesPendentes,
       taxaAcerto
     };
   }, [freebetsNoPeriodo, apostasNoPeriodo]);
@@ -559,14 +575,14 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
       casasMap.set(fb.bookmaker_id, existing);
     });
     
-    // Agregar apostas - SOMENTE apostas de EXTRAÇÃO (que usam freebet, não qualificadoras)
+    // Agregar apostas - SOMENTE apostas de EXTRAÇÃO (que usam freebet E não são qualificadoras)
     apostasNoPeriodo.forEach(ap => {
       const existing = casasMap.get(ap.bookmaker_id);
       if (!existing) return;
       
-      // Só conta como extração se a aposta USOU uma freebet (tipo_freebet não é null)
-      // Apostas qualificadoras (gerou_freebet = true, mas tipo_freebet = null) não contam como extração
-      if (!ap.tipo_freebet) return;
+      // Só conta como extração se a aposta USOU uma freebet E NÃO é qualificadora
+      // Apostas qualificadoras (gerou_freebet = true) não contam como extração
+      if (!ap.tipo_freebet || ap.gerou_freebet) return;
       
       existing.apostas_realizadas += 1;
       
@@ -719,7 +735,20 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-emerald-400">{formatCurrency(metricas.totalExtraido)}</div>
-            <p className="text-xs text-muted-foreground">{metricas.apostasGanhas} ganhas</p>
+            <p className="text-xs text-muted-foreground">{metricas.extracoesGanhas} extração(s)</p>
+          </CardContent>
+        </Card>
+
+        <Card className={metricas.juiceQualificadoras >= 0 ? "border-emerald-500/20 bg-emerald-500/5" : "border-red-500/20 bg-red-500/5"}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Juice Qualif.</CardTitle>
+            <Zap className="h-4 w-4 text-amber-400" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${metricas.juiceQualificadoras >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {formatCurrency(metricas.juiceQualificadoras)}
+            </div>
+            <p className="text-xs text-muted-foreground">{metricas.totalQualificadoras} qualificadora(s)</p>
           </CardContent>
         </Card>
 
@@ -738,13 +767,13 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Apostas</CardTitle>
+            <CardTitle className="text-sm font-medium">Extrações</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metricas.totalApostas}</div>
+            <div className="text-2xl font-bold">{metricas.totalExtracoes}</div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-yellow-400">{metricas.apostasPendentes}</span> pendentes
+              <span className="text-yellow-400">{metricas.extracoesPendentes}</span> pendentes
             </p>
           </CardContent>
         </Card>
