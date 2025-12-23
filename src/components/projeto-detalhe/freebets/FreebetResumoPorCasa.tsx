@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Building2, Gift, TrendingUp, Target, Trophy, XCircle, Percent } from "lucide-react";
+import { Building2, Gift, TrendingUp, Target, Percent } from "lucide-react";
 import { BookmakerFreebetStats } from "./types";
 
 interface FreebetResumoPorCasaProps {
@@ -138,28 +138,24 @@ export function FreebetResumoPorCasa({ stats, formatCurrency, viewMode = 'card' 
               />
             </div>
 
-            {/* Métricas de Apostas */}
-            <div className="grid grid-cols-4 gap-2 text-center pt-2 border-t">
+            {/* Métricas de Freebets - Simplificado */}
+            <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t">
               <div>
-                <p className="text-lg font-bold">{stat.apostas_realizadas}</p>
-                <p className="text-[10px] text-muted-foreground">Apostas</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold text-emerald-400">{stat.apostas_ganhas}</p>
+                <p className="text-lg font-bold text-amber-400">{stat.total_freebets_recebidas}</p>
                 <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
-                  <Trophy className="h-2.5 w-2.5" /> Ganhas
+                  <Gift className="h-2.5 w-2.5" /> Geradas
                 </p>
               </div>
               <div>
-                <p className="text-lg font-bold text-red-400">{stat.apostas_perdidas}</p>
+                <p className="text-lg font-bold">{stat.apostas_realizadas}</p>
                 <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
-                  <XCircle className="h-2.5 w-2.5" /> Perdidas
+                  <Target className="h-2.5 w-2.5" /> Extrações
                 </p>
               </div>
               <div>
                 <p className="text-lg font-bold text-yellow-400">{stat.apostas_pendentes}</p>
                 <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
-                  <Target className="h-2.5 w-2.5" /> Pend.
+                  Pendentes
                 </p>
               </div>
             </div>
