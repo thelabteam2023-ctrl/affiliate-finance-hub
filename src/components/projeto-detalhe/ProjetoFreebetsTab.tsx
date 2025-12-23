@@ -478,25 +478,38 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
     const freebetsLiberadas = freebetsNoPeriodo.filter(fb => fb.status === "LIBERADA");
     const totalRecebido = freebetsLiberadas.reduce((acc, fb) => acc + fb.valor, 0);
     
-    const apostasFinalizadas = apostasNoPeriodo.filter(ap => 
+    // Filtrar apenas apostas de EXTRAÇÃO (que usam freebet)
+    const apostasExtracao = apostasNoPeriodo.filter(ap => ap.tipo_freebet);
+    
+    const apostasFinalizadas = apostasExtracao.filter(ap => 
       ap.status === "LIQUIDADA" && ap.resultado && ap.resultado !== "PENDENTE"
     );
     
+    // Calcular valor extraído considerando matched betting
     const totalExtraido = apostasFinalizadas.reduce((acc, ap) => {
-      const lucro = ap.lucro_prejuizo || 0;
-      return acc + Math.max(0, lucro);
+      if (ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN") {
+        return acc + Math.max(0, ap.lucro_prejuizo || 0);
+      } else if (ap.resultado === "RED" || ap.resultado === "MEIO_RED") {
+        // Em matched betting, quando freebet perde, o lay ganha
+        if (ap.lay_odd && ap.lay_stake) {
+          const comissao = ap.lay_comissao || 0;
+          const lucroLay = ap.lay_stake * (1 - comissao / 100);
+          return acc + Math.max(0, lucroLay);
+        }
+      }
+      return acc;
     }, 0);
     
     const taxaExtracao = totalRecebido > 0 ? (totalExtraido / totalRecebido) * 100 : 0;
-    const totalApostas = apostasNoPeriodo.length;
-    const apostasGanhas = apostasNoPeriodo.filter(ap => 
+    const totalApostas = apostasExtracao.length;
+    const apostasGanhas = apostasExtracao.filter(ap => 
       ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN"
     ).length;
-    const apostasPerdidas = apostasNoPeriodo.filter(ap => 
+    const apostasPerdidas = apostasExtracao.filter(ap => 
       ap.resultado === "RED" || ap.resultado === "MEIO_RED"
     ).length;
-    const apostasPendentes = apostasNoPeriodo.filter(ap => 
-      ap.status === "PENDENTE" || ap.resultado === "PENDENTE"
+    const apostasPendentes = apostasExtracao.filter(ap => 
+      ap.status === "PENDENTE" || !ap.resultado
     ).length;
     const taxaAcerto = totalApostas > 0 ? (apostasGanhas / totalApostas) * 100 : 0;
 
@@ -543,20 +556,35 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
       casasMap.set(fb.bookmaker_id, existing);
     });
     
-    // Agregar apostas
+    // Agregar apostas - SOMENTE apostas de EXTRAÇÃO (que usam freebet, não qualificadoras)
     apostasNoPeriodo.forEach(ap => {
       const existing = casasMap.get(ap.bookmaker_id);
       if (!existing) return;
       
+      // Só conta como extração se a aposta USOU uma freebet (tipo_freebet não é null)
+      // Apostas qualificadoras (gerou_freebet = true, mas tipo_freebet = null) não contam como extração
+      if (!ap.tipo_freebet) return;
+      
       existing.apostas_realizadas += 1;
       
+      // Para matched betting: o valor extraído é calculado diferente
+      // Se a freebet ganha: lucro_prejuizo é positivo
+      // Se a freebet perde: o lay na exchange compensa, então ainda há extração
+      // O valor extraído real é: stake * (odd - 1) * taxa_conversao_tipica (~85%)
+      // Mas para simplificar, usamos o valor_retorno quando disponível ou calculamos
       if (ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN") {
         existing.apostas_ganhas += 1;
         existing.valor_total_extraido += Math.max(0, ap.lucro_prejuizo || 0);
       } else if (ap.resultado === "RED" || ap.resultado === "MEIO_RED") {
         existing.apostas_perdidas += 1;
+        // Em matched betting, mesmo quando a freebet "perde", há extração via lay
+        // O valor extraído aproximado é: stake * (1 - 1/lay_odd) * (1 - comissão)
+        if (ap.lay_odd && ap.lay_stake) {
+          const comissao = ap.lay_comissao || 0;
+          const lucroLay = ap.lay_stake * (1 - comissao / 100);
+          existing.valor_total_extraido += Math.max(0, lucroLay);
+        }
       } else if (ap.status === "PENDENTE" || !ap.resultado) {
-        // Só conta como pendente se realmente está pendente (não liquidada)
         existing.apostas_pendentes += 1;
       }
     });
