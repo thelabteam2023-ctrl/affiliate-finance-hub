@@ -567,11 +567,20 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
                         <ResultadoPill
                           apostaId={aposta.id}
                           bookmarkerId={aposta.bookmaker_id}
+                          layExchangeBookmakerId={aposta.lay_exchange && aposta.lay_odd ? aposta.lay_exchange : undefined}
                           resultado={aposta.resultado}
                           status={aposta.status}
                           stake={aposta.stake}
                           odd={aposta.odd}
-                          operationType="bookmaker"
+                          operationType={
+                            aposta.lay_exchange && aposta.lay_odd ? "cobertura" :
+                            aposta.modo_entrada?.toUpperCase() === "BACK" && aposta.back_em_exchange ? "back" :
+                            aposta.modo_entrada?.toUpperCase() === "LAY" ? "lay" : "bookmaker"
+                          }
+                          layLiability={aposta.lay_liability || undefined}
+                          layOdd={aposta.lay_odd || undefined}
+                          layStake={aposta.lay_stake || undefined}
+                          layComissao={aposta.lay_comissao || undefined}
                           gerouFreebet={aposta.gerou_freebet || false}
                           onResultadoUpdated={handleApostaUpdated}
                           onEditClick={() => handleOpenDialog(aposta)}

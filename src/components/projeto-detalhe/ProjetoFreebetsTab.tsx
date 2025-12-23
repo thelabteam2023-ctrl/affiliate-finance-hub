@@ -219,6 +219,8 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
           id, evento, mercado, selecao, odd, stake, lucro_prejuizo, valor_retorno,
           data_aposta, status, resultado, tipo_freebet, contexto_operacional,
           gerou_freebet, valor_freebet_gerada, bookmaker_id, estrategia, modo_entrada,
+          esporte, forma_registro, lay_exchange, lay_odd, lay_stake, lay_liability,
+          lay_comissao, back_comissao, back_em_exchange,
           bookmakers!apostas_bookmaker_id_fkey (
             nome, parceiros!bookmakers_parceiro_id_fkey (nome),
             bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
@@ -272,6 +274,16 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
         estrategia: ap.estrategia || null,
         lado_aposta: ap.modo_entrada || null,
         contexto_operacional: ap.contexto_operacional || null,
+        // Campos para ResultadoPill/edição (cobertura/lay)
+        lay_exchange: ap.lay_exchange || null,
+        lay_odd: ap.lay_odd || null,
+        lay_stake: ap.lay_stake || null,
+        lay_liability: ap.lay_liability || null,
+        lay_comissao: ap.lay_comissao || null,
+        back_comissao: ap.back_comissao || null,
+        back_em_exchange: ap.back_em_exchange || null,
+        esporte: ap.esporte || null,
+        forma_registro: ap.forma_registro || null,
       }));
 
       const multiplasFormatted: ApostaOperacionalFreebet[] = (apostasMultiplas || []).map((ap: any) => {
@@ -300,6 +312,16 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
           estrategia: ap.estrategia || null,
           lado_aposta: null, // Múltiplas não têm lado de aposta individual
           contexto_operacional: ap.contexto_operacional || null,
+          // Múltiplas não têm campos de lay/cobertura
+          lay_exchange: null,
+          lay_odd: null,
+          lay_stake: null,
+          lay_liability: null,
+          lay_comissao: null,
+          back_comissao: null,
+          back_em_exchange: null,
+          esporte: null,
+          forma_registro: ap.forma_registro || null,
         };
       });
 
@@ -344,6 +366,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
         selecoes: aposta.selecao.split(" + ").map(s => ({ descricao: s, selecao: s, odd: "1.00" })),
         estrategia: aposta.estrategia,
         contexto_operacional: aposta.contexto_operacional,
+        forma_registro: aposta.forma_registro,
         bookmaker: {
           nome: aposta.bookmaker_nome,
           bookmakers_catalogo: { logo_url: aposta.logo_url }
@@ -370,6 +393,16 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
         estrategia: aposta.estrategia,
         contexto_operacional: aposta.contexto_operacional,
         modo_entrada: aposta.lado_aposta,
+        esporte: aposta.esporte,
+        forma_registro: aposta.forma_registro,
+        // Campos de cobertura/lay
+        lay_exchange: aposta.lay_exchange,
+        lay_odd: aposta.lay_odd,
+        lay_stake: aposta.lay_stake,
+        lay_liability: aposta.lay_liability,
+        lay_comissao: aposta.lay_comissao,
+        back_comissao: aposta.back_comissao,
+        back_em_exchange: aposta.back_em_exchange,
         bookmaker: {
           nome: aposta.bookmaker_nome,
           bookmakers_catalogo: { logo_url: aposta.logo_url }

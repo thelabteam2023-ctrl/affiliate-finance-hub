@@ -117,6 +117,29 @@ function getTipoOperacionalBadge(aposta: ApostaOperacionalFreebet) {
   return null;
 }
 
+// Determina o operationType baseado nos dados da aposta
+function getOperationType(aposta: ApostaOperacionalFreebet): "bookmaker" | "back" | "lay" | "cobertura" {
+  const modoEntrada = aposta.lado_aposta?.toUpperCase();
+  
+  // Detectar Cobertura: tem lay_exchange + lay_odd
+  if (aposta.lay_exchange && aposta.lay_odd) {
+    return "cobertura";
+  }
+  
+  // Exchange Back
+  if (modoEntrada === "BACK" && aposta.back_em_exchange) {
+    return "back";
+  }
+  
+  // Exchange Lay
+  if (modoEntrada === "LAY") {
+    return "lay";
+  }
+  
+  // Default: bookmaker tradicional
+  return "bookmaker";
+}
+
 export function FreebetApostasList({ 
   apostas, 
   formatCurrency,
@@ -151,66 +174,77 @@ export function FreebetApostasList({
               </tr>
             </thead>
             <tbody>
-              {apostas.map((aposta) => (
-                <tr 
-                  key={aposta.id} 
-                  className="border-b hover:bg-muted/30 transition-colors"
-                >
-                  <td className="p-3">
-                    <div className="flex items-center gap-1 flex-wrap">
-                      {/* Badge de estratégia (prioridade) ou contexto (fallback) */}
-                      {getEstrategiaBadge(aposta) || getContextoBadge(aposta)}
-                      {/* Badge de tipo operacional */}
-                      {getTipoOperacionalBadge(aposta)}
-                      {/* Badge múltipla */}
-                      {aposta.tipo === "multipla" && (
-                        <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30 text-[10px] px-1.5 py-0">
-                          MULT
-                        </Badge>
+              {apostas.map((aposta) => {
+                const operationType = getOperationType(aposta);
+                
+                return (
+                  <tr 
+                    key={aposta.id} 
+                    className="border-b hover:bg-muted/30 transition-colors"
+                  >
+                    <td className="p-3">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {/* Badge de estratégia (prioridade) ou contexto (fallback) */}
+                        {getEstrategiaBadge(aposta) || getContextoBadge(aposta)}
+                        {/* Badge de tipo operacional */}
+                        {getTipoOperacionalBadge(aposta)}
+                        {/* Badge múltipla */}
+                        {aposta.tipo === "multipla" && (
+                          <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30 text-[10px] px-1.5 py-0">
+                            MULT
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3 max-w-[200px] truncate" title={aposta.evento}>
+                      {aposta.evento}
+                    </td>
+                    <td className="p-3 max-w-[150px] truncate" title={aposta.selecao}>
+                      {aposta.selecao}
+                    </td>
+                    <td className="p-3 text-right font-medium">
+                      @{aposta.odd.toFixed(2)}
+                    </td>
+                    <td className="p-3 text-right text-amber-400 font-medium">
+                      {formatCurrency(aposta.stake)}
+                    </td>
+                    <td className="p-3 text-right">
+                      {aposta.status === "LIQUIDADA" && aposta.lucro_prejuizo !== null ? (
+                        <span className={`font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {formatCurrency(aposta.lucro_prejuizo)}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
                       )}
-                    </div>
-                  </td>
-                  <td className="p-3 max-w-[200px] truncate" title={aposta.evento}>
-                    {aposta.evento}
-                  </td>
-                  <td className="p-3 max-w-[150px] truncate" title={aposta.selecao}>
-                    {aposta.selecao}
-                  </td>
-                  <td className="p-3 text-right font-medium">
-                    @{aposta.odd.toFixed(2)}
-                  </td>
-                  <td className="p-3 text-right text-amber-400 font-medium">
-                    {formatCurrency(aposta.stake)}
-                  </td>
-                  <td className="p-3 text-right">
-                    {aposta.status === "LIQUIDADA" && aposta.lucro_prejuizo !== null ? (
-                      <span className={`font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {formatCurrency(aposta.lucro_prejuizo)}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </td>
-                  <td className="p-3 max-w-[120px] truncate" title={aposta.bookmaker_nome}>
-                    {aposta.bookmaker_nome}
-                  </td>
-                  <td className="p-3 text-center">
-                    <ResultadoPill
-                      apostaId={aposta.id}
-                      bookmarkerId={aposta.bookmaker_id}
-                      resultado={aposta.resultado}
-                      status={aposta.status}
-                      stake={aposta.stake}
-                      odd={aposta.odd}
-                      onResultadoUpdated={onResultadoUpdated}
-                      onEditClick={() => onEditClick(aposta)}
-                    />
-                  </td>
-                  <td className="p-3 text-muted-foreground text-xs">
-                    {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="p-3 max-w-[120px] truncate" title={aposta.bookmaker_nome}>
+                      {aposta.bookmaker_nome}
+                    </td>
+                    <td className="p-3 text-center">
+                      <ResultadoPill
+                        apostaId={aposta.id}
+                        bookmarkerId={aposta.bookmaker_id}
+                        layExchangeBookmakerId={operationType === "cobertura" ? aposta.lay_exchange : undefined}
+                        resultado={aposta.resultado}
+                        status={aposta.status}
+                        stake={aposta.stake}
+                        odd={aposta.odd}
+                        operationType={operationType}
+                        layLiability={aposta.lay_liability || undefined}
+                        layOdd={aposta.lay_odd || undefined}
+                        layStake={aposta.lay_stake || undefined}
+                        layComissao={aposta.lay_comissao || undefined}
+                        gerouFreebet={aposta.gerou_freebet || false}
+                        onResultadoUpdated={onResultadoUpdated}
+                        onEditClick={() => onEditClick(aposta)}
+                      />
+                    </td>
+                    <td className="p-3 text-muted-foreground text-xs">
+                      {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
