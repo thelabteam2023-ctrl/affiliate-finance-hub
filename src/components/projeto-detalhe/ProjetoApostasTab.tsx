@@ -922,6 +922,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
                           layComissao={aposta.lay_comissao || undefined}
                           isFreebetExtraction={aposta.estrategia === "COBERTURA_LAY" && aposta.back_em_exchange === true}
                           gerouFreebet={aposta.gerou_freebet || false}
+                          valorFreebetGerada={aposta.valor_freebet_gerada || undefined}
                           onResultadoUpdated={handleApostaUpdated}
                           onEditClick={() => handleOpenDialog(aposta)}
                         />
