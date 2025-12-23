@@ -47,6 +47,16 @@ export interface ApostaOperacionalFreebet {
   estrategia: string | null;
   lado_aposta: string | null;
   contexto_operacional: string | null;
+  // Campos para ResultadoPill/edição (cobertura/lay)
+  lay_exchange: string | null;
+  lay_odd: number | null;
+  lay_stake: number | null;
+  lay_liability: number | null;
+  lay_comissao: number | null;
+  back_comissao: number | null;
+  back_em_exchange: boolean | null;
+  esporte: string | null;
+  forma_registro: string | null;
 }
 
 export interface BookmakerFreebetStats {

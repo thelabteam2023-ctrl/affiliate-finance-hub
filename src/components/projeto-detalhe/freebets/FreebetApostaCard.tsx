@@ -118,6 +118,29 @@ function getTipoOperacionalBadge(aposta: ApostaOperacionalFreebet) {
   return null;
 }
 
+// Determina o operationType baseado nos dados da aposta
+function getOperationType(aposta: ApostaOperacionalFreebet): "bookmaker" | "back" | "lay" | "cobertura" {
+  const modoEntrada = aposta.lado_aposta?.toUpperCase();
+  
+  // Detectar Cobertura: tem lay_exchange + lay_odd
+  if (aposta.lay_exchange && aposta.lay_odd) {
+    return "cobertura";
+  }
+  
+  // Exchange Back
+  if (modoEntrada === "BACK" && aposta.back_em_exchange) {
+    return "back";
+  }
+  
+  // Exchange Lay
+  if (modoEntrada === "LAY") {
+    return "lay";
+  }
+  
+  // Default: bookmaker tradicional
+  return "bookmaker";
+}
+
 export function FreebetApostaCard({ 
   aposta, 
   compact = false, 
@@ -125,6 +148,8 @@ export function FreebetApostaCard({
   onResultadoUpdated,
   onEditClick
 }: FreebetApostaCardProps) {
+  
+  const operationType = getOperationType(aposta);
   
   // Compact mode - row style
   if (compact) {
@@ -168,10 +193,17 @@ export function FreebetApostaCard({
           <ResultadoPill
             apostaId={aposta.id}
             bookmarkerId={aposta.bookmaker_id}
+            layExchangeBookmakerId={operationType === "cobertura" ? aposta.lay_exchange : undefined}
             resultado={aposta.resultado}
             status={aposta.status}
             stake={aposta.stake}
             odd={aposta.odd}
+            operationType={operationType}
+            layLiability={aposta.lay_liability || undefined}
+            layOdd={aposta.lay_odd || undefined}
+            layStake={aposta.lay_stake || undefined}
+            layComissao={aposta.lay_comissao || undefined}
+            gerouFreebet={aposta.gerou_freebet || false}
             onResultadoUpdated={onResultadoUpdated}
             onEditClick={() => onEditClick(aposta)}
           />
@@ -205,10 +237,17 @@ export function FreebetApostaCard({
             <ResultadoPill
               apostaId={aposta.id}
               bookmarkerId={aposta.bookmaker_id}
+              layExchangeBookmakerId={operationType === "cobertura" ? aposta.lay_exchange : undefined}
               resultado={aposta.resultado}
               status={aposta.status}
               stake={aposta.stake}
               odd={aposta.odd}
+              operationType={operationType}
+              layLiability={aposta.lay_liability || undefined}
+              layOdd={aposta.lay_odd || undefined}
+              layStake={aposta.lay_stake || undefined}
+              layComissao={aposta.lay_comissao || undefined}
+              gerouFreebet={aposta.gerou_freebet || false}
               onResultadoUpdated={onResultadoUpdated}
               onEditClick={() => onEditClick(aposta)}
             />
