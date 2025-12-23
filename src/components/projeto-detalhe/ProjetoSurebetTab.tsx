@@ -16,7 +16,6 @@ import {
   BarChart3,
   Info
 } from "lucide-react";
-import { DateRange } from "react-day-picker";
 import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { SurebetDialog } from "./SurebetDialog";
@@ -35,14 +34,11 @@ import {
   Cell
 } from "recharts";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-type PeriodFilter = "hoje" | "ontem" | "7dias" | "mes" | "ano" | "todo" | "custom";
+import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 
 interface ProjetoSurebetTabProps {
   projetoId: string;
   onDataChange?: () => void;
-  periodFilter?: PeriodFilter;
-  dateRange?: DateRange;
   refreshTrigger?: number;
 }
 
@@ -78,7 +74,7 @@ interface Bookmaker {
   } | null;
 }
 
-export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "todo", dateRange, refreshTrigger }: ProjetoSurebetTabProps) {
+export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: ProjetoSurebetTabProps) {
   const [surebets, setSurebets] = useState<Surebet[]>([]);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,35 +82,15 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "tod
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedSurebet, setSelectedSurebet] = useState<Surebet | null>(null);
 
-  const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
-    const today = new Date();
-    
-    switch (periodFilter) {
-      case "hoje":
-        return { start: startOfDay(today), end: endOfDay(today) };
-      case "ontem":
-        const yesterday = subDays(today, 1);
-        return { start: startOfDay(yesterday), end: endOfDay(yesterday) };
-      case "7dias":
-        return { start: startOfDay(subDays(today, 7)), end: endOfDay(today) };
-      case "mes":
-        return { start: startOfMonth(today), end: endOfDay(today) };
-      case "ano":
-        return { start: startOfYear(today), end: endOfDay(today) };
-      case "custom":
-        return { 
-          start: dateRange?.from || null, 
-          end: dateRange?.to || dateRange?.from || null 
-        };
-      case "todo":
-      default:
-        return { start: null, end: null };
-    }
-  };
+  // Filtro de tempo interno
+  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
+  const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
+
+  const dateRange = useMemo(() => getDateRangeFromPeriod(internalPeriod, internalDateRange), [internalPeriod, internalDateRange]);
 
   useEffect(() => {
     fetchData();
-  }, [projetoId, periodFilter, dateRange, refreshTrigger]);
+  }, [projetoId, internalPeriod, internalDateRange, refreshTrigger]);
 
   const fetchData = async () => {
     try {
@@ -127,19 +103,15 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "tod
 
   const fetchSurebets = async () => {
     try {
-      const { start, end } = getDateRangeFromFilter();
-      
       let query = supabase
         .from("surebets")
         .select("*")
         .eq("projeto_id", projetoId)
         .order("data_operacao", { ascending: false });
       
-      if (start) {
-        query = query.gte("data_operacao", start.toISOString());
-      }
-      if (end) {
-        query = query.lte("data_operacao", end.toISOString());
+      if (dateRange) {
+        query = query.gte("data_operacao", dateRange.start.toISOString());
+        query = query.lte("data_operacao", dateRange.end.toISOString());
       }
 
       const { data: surebetsData, error } = await query;
@@ -310,6 +282,14 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, periodFilter = "tod
 
   return (
     <div className="space-y-4">
+      {/* Filtro de Tempo */}
+      <StandardTimeFilter
+        period={internalPeriod}
+        onPeriodChange={setInternalPeriod}
+        customDateRange={internalDateRange}
+        onCustomDateRangeChange={setInternalDateRange}
+      />
+
       {/* KPIs Resumo */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>

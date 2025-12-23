@@ -27,7 +27,6 @@ import {
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ApostaDialog } from "./ApostaDialog";
-import { DateRange } from "react-day-picker";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import {
   ResponsiveContainer,
@@ -41,14 +40,11 @@ import {
   Bar,
   Cell,
 } from "recharts";
-
-type PeriodFilter = "hoje" | "ontem" | "7dias" | "mes" | "ano" | "todo" | "custom";
+import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 
 interface ProjetoValueBetTabProps {
   projetoId: string;
   onDataChange?: () => void;
-  periodFilter?: PeriodFilter;
-  dateRange?: DateRange;
   refreshTrigger?: number;
 }
 
@@ -100,8 +96,6 @@ function ResultadoBadge({ resultado }: { resultado: string | null }) {
 export function ProjetoValueBetTab({ 
   projetoId, 
   onDataChange, 
-  periodFilter = "todo", 
-  dateRange,
   refreshTrigger
 }: ProjetoValueBetTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
@@ -112,35 +106,15 @@ export function ProjetoValueBetTab({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
 
-  const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
-    const today = new Date();
-    
-    switch (periodFilter) {
-      case "hoje":
-        return { start: startOfDay(today), end: endOfDay(today) };
-      case "ontem":
-        const yesterday = subDays(today, 1);
-        return { start: startOfDay(yesterday), end: endOfDay(yesterday) };
-      case "7dias":
-        return { start: startOfDay(subDays(today, 7)), end: endOfDay(today) };
-      case "mes":
-        return { start: startOfMonth(today), end: endOfDay(today) };
-      case "ano":
-        return { start: startOfYear(today), end: endOfDay(today) };
-      case "custom":
-        return { 
-          start: dateRange?.from || null, 
-          end: dateRange?.to || dateRange?.from || null 
-        };
-      case "todo":
-      default:
-        return { start: null, end: null };
-    }
-  };
+  // Filtro de tempo interno
+  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
+  const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
+
+  const dateRange = useMemo(() => getDateRangeFromPeriod(internalPeriod, internalDateRange), [internalPeriod, internalDateRange]);
 
   useEffect(() => {
     fetchData();
-  }, [projetoId, periodFilter, dateRange, refreshTrigger]);
+  }, [projetoId, internalPeriod, internalDateRange, refreshTrigger]);
 
   const fetchData = async () => {
     try {
@@ -153,8 +127,6 @@ export function ProjetoValueBetTab({
 
   const fetchApostas = async () => {
     try {
-      const { start, end } = getDateRangeFromFilter();
-      
       // Query simples sem joins complexos para evitar erros de tipo
       let query = supabase
         .from("apostas")
@@ -163,8 +135,10 @@ export function ProjetoValueBetTab({
         .eq("estrategia", APOSTA_ESTRATEGIA.VALUEBET)
         .order("data_aposta", { ascending: false });
       
-      if (start) query = query.gte("data_aposta", start.toISOString());
-      if (end) query = query.lte("data_aposta", end.toISOString());
+      if (dateRange) {
+        query = query.gte("data_aposta", dateRange.start.toISOString());
+        query = query.lte("data_aposta", dateRange.end.toISOString());
+      }
 
       const { data, error } = await query;
       if (error) throw error;
@@ -315,6 +289,14 @@ export function ProjetoValueBetTab({
 
   return (
     <div className="space-y-4">
+      {/* Filtro de Tempo */}
+      <StandardTimeFilter
+        period={internalPeriod}
+        onPeriodChange={setInternalPeriod}
+        customDateRange={internalDateRange}
+        onCustomDateRangeChange={setInternalDateRange}
+      />
+
       {/* Banner informativo */}
       <Card className="border-purple-500/20 bg-purple-500/5">
         <CardContent className="p-4">
