@@ -735,14 +735,62 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
         </Card>
       </div>
 
-      {/* Gráficos */}
-      <FreebetGraficos 
-        apostas={apostasNoPeriodo} 
-        statsPorCasa={statsPorCasa}
-        formatCurrency={formatCurrency}
-        dateRange={dateRange}
-        freebets={freebetsNoPeriodo}
-      />
+      {/* Gráficos + Freebets Disponíveis (lado a lado) */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+        {/* Gráficos */}
+        <div className="space-y-6">
+          <FreebetGraficos 
+            apostas={apostasNoPeriodo} 
+            statsPorCasa={statsPorCasa}
+            formatCurrency={formatCurrency}
+            dateRange={dateRange}
+            freebets={freebetsNoPeriodo}
+          />
+        </div>
+
+        {/* Freebets Disponíveis - Container Lateral */}
+        <div className="hidden lg:block">
+          <Card className="sticky top-4 border-amber-500/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Gift className="h-4 w-4 text-amber-400" />
+                Freebets Disponíveis
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {bookmakersComFreebet.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-4 text-center">Nenhuma freebet disponível</p>
+              ) : (
+                <>
+                  {bookmakersComFreebet.map(bk => (
+                    <div 
+                      key={bk.id} 
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors"
+                    >
+                      {bk.logo_url ? (
+                        <img src={bk.logo_url} alt={bk.nome} className="h-5 w-5 rounded object-contain bg-white p-0.5" />
+                      ) : (
+                        <Gift className="h-4 w-4 text-amber-400" />
+                      )}
+                      <span className="text-sm font-medium truncate flex-1">{bk.nome}</span>
+                      <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs shrink-0">
+                        {formatCurrency(bk.saldo_freebet)}
+                      </Badge>
+                    </div>
+                  ))}
+                  {/* Total */}
+                  <div className="pt-2 mt-2 border-t border-amber-500/20">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Total</span>
+                      <span className="font-bold text-amber-400">{formatCurrency(totalFreebetDisponivel)}</span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Recent Apostas Preview */}
       {apostasAtivas.length > 0 && (
