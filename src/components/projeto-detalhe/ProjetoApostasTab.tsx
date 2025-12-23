@@ -681,12 +681,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
           </Badge>
         );
       case "NORMAL":
-        return (
-          <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] px-1.5 py-0">
-            <Coins className="h-2.5 w-2.5 mr-0.5" />
-            SR
-          </Badge>
-        );
+        // Contexto normal não precisa de badge - é o padrão
+        return null;
       default:
         return null;
     }
@@ -864,20 +860,14 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
               };
               
               return (
-                <div key={sb.id} className="relative">
-                  {getContextoBadge(item.contexto) && (
-                    <div className="absolute top-2 left-2 z-10">
-                      {getContextoBadge(item.contexto)}
-                    </div>
-                  )}
-                  <SurebetCard
-                    surebet={surebetData}
-                    onEdit={(surebet) => {
-                      setSelectedSurebet(surebet);
-                      setDialogSurebetOpen(true);
-                    }}
-                  />
-                </div>
+                <SurebetCard
+                  key={sb.id}
+                  surebet={surebetData}
+                  onEdit={(surebet) => {
+                    setSelectedSurebet(surebet);
+                    setDialogSurebetOpen(true);
+                  }}
+                />
               );
             }
             
