@@ -1,12 +1,10 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  BarChart, Bar, XAxis, YAxis, 
-  CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell 
-} from "recharts";
-import { PieChart as PieChartIcon, BarChart3 } from "lucide-react";
-import { ApostaOperacionalFreebet, BookmakerFreebetStats, BookmakerChartData, FreebetRecebida } from "./types";
+import { BarChart3, PieChart as PieChartIcon } from "lucide-react";
+import { ApostaOperacionalFreebet, BookmakerFreebetStats, FreebetRecebida } from "./types";
 import { CurvaExtracaoChart } from "./CurvaExtracaoChart";
+import { ModernBarChart } from "@/components/ui/modern-bar-chart";
+import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
 
 interface FreebetGraficosProps {
   apostas: ApostaOperacionalFreebet[];
@@ -16,23 +14,21 @@ interface FreebetGraficosProps {
   freebets?: FreebetRecebida[];
 }
 
-const COLORS = ['#22c55e', '#ef4444', '#eab308', '#6366f1', '#f97316', '#14b8a6'];
-
 export function FreebetGraficos({ apostas, statsPorCasa, formatCurrency, dateRange, freebets = [] }: FreebetGraficosProps) {
-  // Comparativo por casa
-  const comparativoCasas = useMemo((): BookmakerChartData[] => {
+  // Comparativo por casa - preparado para ModernBarChart
+  const comparativoCasas = useMemo(() => {
     return statsPorCasa
       .sort((a, b) => b.valor_total_extraido - a.valor_total_extraido)
       .slice(0, 8)
       .map(stat => ({
-        nome: stat.bookmaker_nome.length > 12 ? stat.bookmaker_nome.slice(0, 12) + '...' : stat.bookmaker_nome,
+        nome: stat.bookmaker_nome.length > 10 ? stat.bookmaker_nome.slice(0, 10) + '...' : stat.bookmaker_nome,
         recebido: stat.valor_total_recebido,
         extraido: stat.valor_total_extraido,
         taxa: stat.taxa_extracao
       }));
   }, [statsPorCasa]);
 
-  // Taxa de conversão (ganhas vs perdidas)
+  // Taxa de conversão (ganhas vs perdidas) - preparado para ModernDonutChart
   const taxaConversaoData = useMemo(() => {
     const apostasFinalizadas = apostas.filter(ap => ap.status === "LIQUIDADA" && ap.resultado !== "PENDENTE");
     const ganhas = apostasFinalizadas.filter(ap => ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN").length;
@@ -48,29 +44,23 @@ export function FreebetGraficos({ apostas, statsPorCasa, formatCurrency, dateRan
     ].filter(d => d.value > 0);
   }, [apostas]);
 
-  // Casas disponíveis para filtro
-  const casasDisponiveis = useMemo(() => {
-    return [...new Set(apostas.map(ap => ap.bookmaker_nome))];
-  }, [apostas]);
+  // Taxa de extração por casa - preparado para ModernBarChart horizontal
+  const taxaExtracaoData = useMemo(() => {
+    return statsPorCasa
+      .filter(stat => stat.valor_total_recebido > 0)
+      .sort((a, b) => b.taxa_extracao - a.taxa_extracao)
+      .slice(0, 8)
+      .map(stat => ({
+        nome: stat.bookmaker_nome.length > 10 ? stat.bookmaker_nome.slice(0, 10) + '...' : stat.bookmaker_nome,
+        taxa: Math.round(stat.taxa_extracao),
+        fullName: stat.bookmaker_nome
+      }));
+  }, [statsPorCasa]);
 
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-popover border rounded-lg shadow-lg p-3">
-          <p className="text-sm font-medium">{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {entry.name}: {typeof entry.value === 'number' && entry.name !== 'Taxa' 
-                ? formatCurrency(entry.value) 
-                : `${entry.value.toFixed(0)}%`}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
+  // Total de apostas para o centro do donut
+  const totalApostas = taxaConversaoData.reduce((acc, d) => acc + d.value, 0);
+  const apostasGanhas = taxaConversaoData.find(d => d.name === 'Ganhas')?.value || 0;
+  const taxaAcerto = totalApostas > 0 ? Math.round((apostasGanhas / totalApostas) * 100) : 0;
 
   if (apostas.length === 0 && freebets.length === 0) {
     return (
@@ -89,11 +79,10 @@ export function FreebetGraficos({ apostas, statsPorCasa, formatCurrency, dateRan
         freebets={freebets}
         formatCurrency={formatCurrency}
         dateRange={dateRange}
-        casasDisponiveis={casasDisponiveis}
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Comparativo por Casa */}
+        {/* Comparativo por Casa - ModernBarChart */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -102,23 +91,29 @@ export function FreebetGraficos({ apostas, statsPorCasa, formatCurrency, dateRan
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={comparativoCasas} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis type="number" tick={{ fontSize: 10 }} />
-                  <YAxis dataKey="nome" type="category" tick={{ fontSize: 10 }} width={80} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend />
-                  <Bar dataKey="recebido" name="Recebido" fill="#f59e0b" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="extraido" name="Extraído" fill="#22c55e" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {comparativoCasas.length > 0 ? (
+              <ModernBarChart
+                data={comparativoCasas}
+                categoryKey="nome"
+                bars={[
+                  { dataKey: "recebido", label: "Recebido", gradientStart: "#f59e0b", gradientEnd: "#d97706" },
+                  { dataKey: "extraido", label: "Extraído", gradientStart: "#22c55e", gradientEnd: "#16a34a" }
+                ]}
+                height={220}
+                barSize={16}
+                showLabels={false}
+                showLegend={true}
+                formatValue={formatCurrency}
+              />
+            ) : (
+              <div className="h-[220px] flex items-center justify-center text-muted-foreground text-sm">
+                Sem dados por casa
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Taxa de Conversão */}
+        {/* Taxa de Conversão - ModernDonutChart */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -127,63 +122,52 @@ export function FreebetGraficos({ apostas, statsPorCasa, formatCurrency, dateRan
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={taxaConversaoData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    labelLine={false}
-                  >
-                    {taxaConversaoData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            {taxaConversaoData.length > 0 ? (
+              <ModernDonutChart
+                data={taxaConversaoData}
+                height={220}
+                innerRadius={55}
+                outerRadius={80}
+                showLabels={true}
+                showLegend={false}
+                centerValue={taxaAcerto}
+                centerLabel="Acerto"
+              />
+            ) : (
+              <div className="h-[220px] flex items-center justify-center text-muted-foreground text-sm">
+                Sem dados de resultados
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
       {/* Taxa de Extração por Casa */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-amber-400" />
-            Taxa de Extração por Casa
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={comparativoCasas}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="nome" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} />
-                <Tooltip 
-                  formatter={(value: number) => [`${value.toFixed(1)}%`, 'Taxa']}
-                />
-                <Bar dataKey="taxa" name="Taxa de Extração" radius={[4, 4, 0, 0]}>
-                  {comparativoCasas.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.taxa >= 70 ? '#22c55e' : entry.taxa >= 50 ? '#f59e0b' : '#ef4444'} 
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      {taxaExtracaoData.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-amber-400" />
+              Taxa de Extração por Casa
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ModernBarChart
+              data={taxaExtracaoData}
+              categoryKey="nome"
+              bars={[
+                { dataKey: "taxa", label: "Taxa %", gradientStart: "#8b5cf6", gradientEnd: "#7c3aed" }
+              ]}
+              height={180}
+              barSize={24}
+              showLabels={true}
+              showLegend={false}
+              formatValue={(v) => `${v}%`}
+              formatTooltip={(dataKey, value) => `${value}%`}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

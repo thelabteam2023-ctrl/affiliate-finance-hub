@@ -29,7 +29,6 @@ interface CurvaExtracaoChartProps {
   freebets: FreebetRecebida[];
   formatCurrency: (value: number) => string;
   dateRange: { start: Date; end: Date } | null;
-  casasDisponiveis: string[];
 }
 
 type Granularidade = "dia" | "semana" | "mes";
@@ -49,22 +48,9 @@ export function CurvaExtracaoChart({
   apostas, 
   freebets,
   formatCurrency, 
-  dateRange,
-  casasDisponiveis
+  dateRange
 }: CurvaExtracaoChartProps) {
   const [granularidade, setGranularidade] = useState<Granularidade>("dia");
-  const [casaFilter, setCasaFilter] = useState<string>("todas");
-
-  // Filtrar dados por casa
-  const apostasFiltradas = useMemo(() => {
-    if (casaFilter === "todas") return apostas;
-    return apostas.filter(ap => ap.bookmaker_nome === casaFilter);
-  }, [apostas, casaFilter]);
-
-  const freebetsFiltradas = useMemo(() => {
-    if (casaFilter === "todas") return freebets;
-    return freebets.filter(fb => fb.bookmaker_nome === casaFilter);
-  }, [freebets, casaFilter]);
 
   // Gerar dados do gráfico baseado na granularidade
   const chartData = useMemo((): DataPoint[] => {
@@ -108,7 +94,7 @@ export function CurvaExtracaoChart({
       const intervalEnd = granularidade === "dia" ? intervalStart : getIntervalEnd(intervalDate);
 
       // Freebets recebidas no intervalo
-      const freebetsNoIntervalo = freebetsFiltradas.filter(fb => {
+      const freebetsNoIntervalo = freebets.filter(fb => {
         if (fb.status !== "LIBERADA") return false;
         const fbDate = startOfDay(parseISO(fb.data_recebida));
         if (granularidade === "dia") {
@@ -121,7 +107,7 @@ export function CurvaExtracaoChart({
       freebetAcumulada += freebetRecebida;
 
       // Valor extraído no intervalo (lucro líquido de apostas freebet)
-      const apostasNoIntervalo = apostasFiltradas.filter(ap => {
+      const apostasNoIntervalo = apostas.filter(ap => {
         if (ap.status !== "LIQUIDADA") return false;
         const apDate = startOfDay(parseISO(ap.data_aposta));
         if (granularidade === "dia") {
@@ -156,7 +142,7 @@ export function CurvaExtracaoChart({
         potencialNaoExtraido
       };
     });
-  }, [apostasFiltradas, freebetsFiltradas, dateRange, granularidade]);
+  }, [apostas, freebets, dateRange, granularidade]);
 
   // Métricas resumo
   const metricas = useMemo(() => {
@@ -260,60 +246,17 @@ export function CurvaExtracaoChart({
             </TooltipProvider>
           </div>
 
-          {/* Filtros */}
-          <div className="flex items-center gap-2">
-            <Select value={granularidade} onValueChange={(v) => setGranularidade(v as Granularidade)}>
-              <SelectTrigger className="w-[110px] h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="dia">Por Dia</SelectItem>
-                <SelectItem value="semana">Por Semana</SelectItem>
-                <SelectItem value="mes">Por Mês</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={casaFilter} onValueChange={setCasaFilter}>
-              <SelectTrigger className="w-[140px] h-8 text-xs">
-                <SelectValue placeholder="Casa" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todas as Casas</SelectItem>
-                {casasDisponiveis.map(casa => (
-                  <SelectItem key={casa} value={casa}>{casa}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* KPIs resumo */}
-        <div className="grid grid-cols-3 gap-4 mt-4">
-          <div className="text-center p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-            <p className="text-xs text-muted-foreground">FB Recebida</p>
-            <p className="text-lg font-bold text-amber-400">{formatCurrency(metricas.totalRecebido)}</p>
-          </div>
-          <div className="text-center p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-            <p className="text-xs text-muted-foreground">Valor Extraído</p>
-            <p className="text-lg font-bold text-emerald-400">{formatCurrency(metricas.totalExtraido)}</p>
-          </div>
-          <div className={`text-center p-3 rounded-lg border ${
-            metricas.eficienciaFinal >= 70 ? 'bg-emerald-500/10 border-emerald-500/20' :
-            metricas.eficienciaFinal >= 50 ? 'bg-amber-500/10 border-amber-500/20' :
-            'bg-red-500/10 border-red-500/20'
-          }`}>
-            <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-              <Percent className="h-3 w-3" />
-              Eficiência
-            </p>
-            <p className={`text-lg font-bold ${
-              metricas.eficienciaFinal >= 70 ? 'text-emerald-400' :
-              metricas.eficienciaFinal >= 50 ? 'text-amber-400' :
-              'text-red-400'
-            }`}>
-              {metricas.eficienciaFinal.toFixed(1)}%
-            </p>
-          </div>
+          {/* Filtro de Granularidade */}
+          <Select value={granularidade} onValueChange={(v) => setGranularidade(v as Granularidade)}>
+            <SelectTrigger className="w-[110px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="dia">Por Dia</SelectItem>
+              <SelectItem value="semana">Por Semana</SelectItem>
+              <SelectItem value="mes">Por Mês</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </CardHeader>
 
