@@ -40,6 +40,9 @@ interface DataPoint {
   freebetAcumulada: number;
   valorExtraido: number;
   valorExtraidoAcumulado: number;
+  juiceQualificadora: number;
+  juiceQualificadoraAcumulado: number;
+  lucroTotalAcumulado: number;
   eficiencia: number;
   potencialNaoExtraido: number;
 }
@@ -88,6 +91,7 @@ export function CurvaExtracaoChart({
 
     let freebetAcumulada = 0;
     let valorExtraidoAcumulado = 0;
+    let juiceQualificadoraAcumulado = 0;
 
     return intervals.map(intervalDate => {
       const intervalStart = getIntervalStart(intervalDate);
@@ -106,7 +110,7 @@ export function CurvaExtracaoChart({
       const freebetRecebida = freebetsNoIntervalo.reduce((acc, fb) => acc + fb.valor, 0);
       freebetAcumulada += freebetRecebida;
 
-      // Valor extraído no intervalo (lucro líquido de apostas freebet)
+      // Apostas no intervalo
       const apostasNoIntervalo = apostas.filter(ap => {
         if (ap.status !== "LIQUIDADA") return false;
         const apDate = startOfDay(parseISO(ap.data_aposta));
@@ -116,12 +120,22 @@ export function CurvaExtracaoChart({
         return apDate >= intervalStart && apDate <= intervalEnd;
       });
 
-      // Considerar resultado líquido (ganhos - perdas)
-      const valorExtraido = apostasNoIntervalo.reduce((acc, ap) => {
+      // EXTRAÇÃO: apostas que usam freebet E não são qualificadoras
+      const apostasExtracao = apostasNoIntervalo.filter(ap => ap.tipo_freebet && !ap.gerou_freebet);
+      const valorExtraido = apostasExtracao.reduce((acc, ap) => {
         return acc + (ap.lucro_prejuizo || 0);
       }, 0);
-
       valorExtraidoAcumulado += valorExtraido;
+
+      // JUICE: apostas qualificadoras (geram freebet)
+      const apostasQualificadoras = apostasNoIntervalo.filter(ap => ap.gerou_freebet);
+      const juiceQualificadora = apostasQualificadoras.reduce((acc, ap) => {
+        return acc + (ap.lucro_prejuizo || 0);
+      }, 0);
+      juiceQualificadoraAcumulado += juiceQualificadora;
+
+      // Lucro total = extração + juice
+      const lucroTotalAcumulado = valorExtraidoAcumulado + juiceQualificadoraAcumulado;
 
       // Eficiência: Valor Extraído Acumulado / Freebet Recebida Acumulada
       const eficiencia = freebetAcumulada > 0 
@@ -138,6 +152,9 @@ export function CurvaExtracaoChart({
         freebetAcumulada,
         valorExtraido,
         valorExtraidoAcumulado,
+        juiceQualificadora,
+        juiceQualificadoraAcumulado,
+        lucroTotalAcumulado,
         eficiencia,
         potencialNaoExtraido
       };
@@ -163,14 +180,14 @@ export function CurvaExtracaoChart({
       if (!data) return null;
 
       return (
-        <div className="bg-popover/95 backdrop-blur-sm border rounded-lg shadow-xl p-4 min-w-[220px]">
+        <div className="bg-popover/95 backdrop-blur-sm border rounded-lg shadow-xl p-4 min-w-[240px]">
           <p className="text-sm font-semibold border-b pb-2 mb-2">{label}</p>
           
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-xs text-amber-400 flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                FB Acumulada
+                FB Recebida
               </span>
               <span className="text-sm font-medium">{formatCurrency(data.freebetAcumulada)}</span>
             </div>
@@ -178,13 +195,33 @@ export function CurvaExtracaoChart({
             <div className="flex justify-between items-center">
               <span className="text-xs text-emerald-400 flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                Extraído Acum.
+                Extração
               </span>
               <span className="text-sm font-medium">{formatCurrency(data.valorExtraidoAcumulado)}</span>
             </div>
 
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-violet-400 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-violet-400"></span>
+                Juice Qualif.
+              </span>
+              <span className={`text-sm font-medium ${data.juiceQualificadoraAcumulado >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {formatCurrency(data.juiceQualificadoraAcumulado)}
+              </span>
+            </div>
+
             <div className="flex justify-between items-center border-t pt-2">
-              <span className="text-xs text-muted-foreground">Eficiência</span>
+              <span className="text-xs text-cyan-400 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+                Lucro Total
+              </span>
+              <span className={`text-sm font-bold ${data.lucroTotalAcumulado >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {formatCurrency(data.lucroTotalAcumulado)}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center text-muted-foreground">
+              <span className="text-xs">Eficiência</span>
               <Badge className={`text-xs ${
                 data.eficiencia >= 70 ? 'bg-emerald-500/20 text-emerald-400' :
                 data.eficiencia >= 50 ? 'bg-amber-500/20 text-amber-400' :
@@ -192,11 +229,6 @@ export function CurvaExtracaoChart({
               }`}>
                 {data.eficiencia.toFixed(1)}%
               </Badge>
-            </div>
-
-            <div className="flex justify-between items-center text-muted-foreground">
-              <span className="text-xs">Potencial não extraído</span>
-              <span className="text-xs">{formatCurrency(data.potencialNaoExtraido)}</span>
             </div>
           </div>
         </div>
@@ -312,14 +344,35 @@ export function CurvaExtracaoChart({
                 fill="url(#gradientFreebet)"
               />
               
-              {/* Área sombreada para valor extraído */}
+              {/* Área sombreada para valor extraído (extrações) */}
               <Area
                 type="monotone"
                 dataKey="valorExtraidoAcumulado"
-                name="Valor Extraído"
+                name="Extração"
                 stroke="#22c55e"
-                strokeWidth={2.5}
+                strokeWidth={2}
                 fill="url(#gradientExtraido)"
+              />
+
+              {/* Linha para juice das qualificadoras */}
+              <Line
+                type="monotone"
+                dataKey="juiceQualificadoraAcumulado"
+                name="Juice Qualif."
+                stroke="#8b5cf6"
+                strokeWidth={2}
+                dot={false}
+                strokeDasharray="4 2"
+              />
+
+              {/* Linha para lucro total (extração + juice) */}
+              <Line
+                type="monotone"
+                dataKey="lucroTotalAcumulado"
+                name="Lucro Total"
+                stroke="#06b6d4"
+                strokeWidth={2.5}
+                dot={false}
               />
 
               {/* Linha de referência para meta de 70% */}
@@ -346,10 +399,13 @@ export function CurvaExtracaoChart({
           <p className="text-xs text-muted-foreground">
             <strong className="text-foreground">Como interpretar:</strong> A área 
             <span className="text-amber-400 font-medium"> laranja </span>
-            representa o total acumulado de Freebets recebidas. A área 
+            representa o total de Freebets recebidas. A área 
             <span className="text-emerald-400 font-medium"> verde </span>
-            representa o valor efetivamente extraído. A diferença entre as duas áreas é o 
-            potencial não convertido. Uma eficiência acima de 70% é considerada excelente.
+            é o valor extraído das freebets. A linha
+            <span className="text-violet-400 font-medium"> roxa </span>
+            mostra o juice das qualificadoras. A linha
+            <span className="text-cyan-400 font-medium"> ciano </span>
+            é o lucro total (extração + juice).
           </p>
         </div>
       </CardContent>
