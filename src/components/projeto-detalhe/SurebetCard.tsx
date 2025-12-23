@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BadgeRow } from "@/components/ui/badge-row";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronUp, Clock, CheckCircle2, ArrowLeftRight } from "lucide-react";
@@ -85,14 +86,17 @@ export function SurebetCard({ surebet, onEdit, defaultExpanded = false }: Surebe
       <CardHeader className="pb-2 pt-3 px-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0 gap-1">
+            <BadgeRow className="mb-1">
+              <Badge 
+                variant="outline" 
+                className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0.5 gap-1 shrink-0"
+              >
                 <ArrowLeftRight className="h-2.5 w-2.5" />
                 SUREBET
               </Badge>
               <Badge 
                 variant="outline" 
-                className={`text-[10px] px-1.5 py-0 gap-0.5 ${
+                className={`text-[10px] px-1.5 py-0.5 gap-1 shrink-0 ${
                   isLiquidada 
                     ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
                     : "bg-blue-500/20 text-blue-400 border-blue-500/30"
@@ -105,7 +109,7 @@ export function SurebetCard({ surebet, onEdit, defaultExpanded = false }: Surebe
                 )}
                 {surebet.status}
               </Badge>
-            </div>
+            </BadgeRow>
             <CardTitle 
               className="text-sm uppercase truncate cursor-pointer hover:text-primary"
               onClick={() => onEdit?.(surebet)}
