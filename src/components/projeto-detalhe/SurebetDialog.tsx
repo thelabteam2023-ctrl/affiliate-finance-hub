@@ -23,7 +23,7 @@ import {
   Gift
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
+import { RegistroApostaFields, RegistroApostaValues } from "./RegistroApostaFields";
 
 interface Bookmaker {
   id: string;
@@ -156,13 +156,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   const [observacoes, setObservacoes] = useState("");
   const [saving, setSaving] = useState(false);
   
-  // Registro explícito - sugestões da aba ativa
+  // Registro explícito - SurebetDialog é SEMPRE para surebets
+  // Forma de registro é sempre ARBITRAGEM, estratégia é sempre SUREBET
   const [registroValues, setRegistroValues] = useState<RegistroApostaValues>(() => {
-    const suggestions = getSuggestionsForTab(activeTab);
     return {
-      forma_registro: suggestions.forma_registro || 'ARBITRAGEM',
-      estrategia: suggestions.estrategia || 'SUREBET',
-      contexto_operacional: suggestions.contexto_operacional || 'NORMAL',
+      forma_registro: 'ARBITRAGEM',
+      estrategia: 'SUREBET',
+      contexto_operacional: 'NORMAL',
     };
   });
   
@@ -330,12 +330,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       bookmaker_id: "", odd: "", stake: "", selecao: sel, isReference: i === 0, isManuallyEdited: false
     })));
     setLinkedApostas([]);
-    // Reset registro values com sugestões da aba ativa
-    const suggestions = getSuggestionsForTab(activeTab);
+    // Reset registro values - SurebetDialog é SEMPRE para surebets
     setRegistroValues({
-      forma_registro: suggestions.forma_registro || 'ARBITRAGEM',
-      estrategia: suggestions.estrategia || 'SUREBET',
-      contexto_operacional: suggestions.contexto_operacional || 'NORMAL',
+      forma_registro: 'ARBITRAGEM',
+      estrategia: 'SUREBET',
+      contexto_operacional: 'NORMAL',
     });
   };
   
