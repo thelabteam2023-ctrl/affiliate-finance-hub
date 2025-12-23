@@ -27,6 +27,7 @@ import {
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ApostaDialog } from "./ApostaDialog";
+import { ResultadoPill } from "./ResultadoPill";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import {
   ResponsiveContainer,
@@ -81,31 +82,7 @@ interface Aposta {
   back_comissao?: number | null;
 }
 
-function ResultadoBadge({ resultado }: { resultado: string | null }) {
-  const getColor = (r: string | null) => {
-    switch (r) {
-      case "GREEN": return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
-      case "RED": return "bg-red-500/20 text-red-400 border-red-500/30";
-      case "MEIO_GREEN": return "bg-teal-500/20 text-teal-400 border-teal-500/30";
-      case "MEIO_RED": return "bg-orange-500/20 text-orange-400 border-orange-500/30";
-      case "VOID": return "bg-gray-500/20 text-gray-400 border-gray-500/30";
-      default: return "bg-blue-500/20 text-blue-400 border-blue-500/30";
-    }
-  };
-  
-  const getLabel = (r: string | null) => {
-    switch (r) {
-      case "GREEN": return "Green";
-      case "RED": return "Red";
-      case "MEIO_GREEN": return "½ Green";
-      case "MEIO_RED": return "½ Red";
-      case "VOID": return "Void";
-      default: return "Pendente";
-    }
-  };
-
-  return <Badge className={getColor(resultado)}>{getLabel(resultado)}</Badge>;
-}
+// Componente ResultadoBadge removido - agora usamos ResultadoPill para permitir edição inline
 
 export function ProjetoValueBetTab({ 
   projetoId, 
@@ -509,7 +486,22 @@ export function ProjetoValueBetTab({
                         <p className="font-medium text-sm truncate">{aposta.evento}</p>
                         <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
                       </div>
-                      <ResultadoBadge resultado={aposta.resultado} />
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <ResultadoPill
+                          apostaId={aposta.id}
+                          bookmarkerId={aposta.bookmaker_id}
+                          resultado={aposta.resultado}
+                          status={aposta.status}
+                          stake={aposta.stake}
+                          odd={aposta.odd}
+                          operationType="bookmaker"
+                          onResultadoUpdated={handleApostaUpdated}
+                          onEditClick={() => {
+                            setSelectedAposta(aposta);
+                            setDialogOpen(true);
+                          }}
+                        />
+                      </div>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">{aposta.selecao}</span>
@@ -556,13 +548,26 @@ export function ProjetoValueBetTab({
                       <p className="text-xs text-muted-foreground">{formatCurrency(aposta.stake)}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 ml-4">
+                  <div className="flex items-center gap-3 ml-4" onClick={(e) => e.stopPropagation()}>
                     {aposta.lucro_prejuizo !== null && (
                       <span className={`text-sm font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                         {formatCurrency(aposta.lucro_prejuizo)}
                       </span>
                     )}
-                    <ResultadoBadge resultado={aposta.resultado} />
+                    <ResultadoPill
+                      apostaId={aposta.id}
+                      bookmarkerId={aposta.bookmaker_id}
+                      resultado={aposta.resultado}
+                      status={aposta.status}
+                      stake={aposta.stake}
+                      odd={aposta.odd}
+                      operationType="bookmaker"
+                      onResultadoUpdated={handleApostaUpdated}
+                      onEditClick={() => {
+                        setSelectedAposta(aposta);
+                        setDialogOpen(true);
+                      }}
+                    />
                   </div>
                 </div>
               ))}
