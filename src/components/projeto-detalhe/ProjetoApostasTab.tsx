@@ -882,43 +882,46 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
                   className="hover:border-primary/50 transition-colors cursor-default"
                 >
                   <CardHeader className="pb-1 pt-3 px-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <CardTitle className="text-sm truncate">{aposta.evento}</CardTitle>
-                        <p className="text-xs text-muted-foreground truncate">{aposta.esporte}</p>
-                      </div>
-                      <div className="flex gap-1 flex-shrink-0 items-center">
-                        {/* Badge de estratégia (prioridade) ou contexto (fallback) */}
-                        {getEstrategiaBadge(aposta) || getContextoBadge(item.contexto, aposta)}
-                        {opType.label && (
-                          <Badge className={`${opType.color} text-[10px] px-1.5 py-0`}>
-                            {opType.type === "cobertura" && <Shield className="h-2.5 w-2.5 mr-0.5" />}
-                            {opType.type === "back" && <ArrowUp className="h-2.5 w-2.5 mr-0.5" />}
-                            {opType.type === "lay" && <ArrowDown className="h-2.5 w-2.5 mr-0.5" />}
-                            {opType.label}
-                          </Badge>
-                        )}
-                        <ResultadoPill
-                          apostaId={aposta.id}
-                          bookmarkerId={aposta.bookmaker_id}
-                          layExchangeBookmakerId={opType.type === "cobertura" ? aposta.lay_exchange : undefined}
-                          resultado={aposta.resultado}
-                          status={aposta.status}
-                          stake={aposta.stake}
-                          odd={aposta.odd}
-                          operationType={opType.type}
-                          layLiability={aposta.lay_liability || undefined}
-                          layOdd={aposta.lay_odd || undefined}
-                          layStake={aposta.lay_stake || undefined}
-                          layComissao={aposta.lay_comissao || undefined}
-                          isFreebetExtraction={aposta.estrategia === "COBERTURA_LAY" && aposta.back_em_exchange === true}
-                          gerouFreebet={aposta.gerou_freebet || false}
-                          valorFreebetGerada={aposta.valor_freebet_gerada || undefined}
-                          onResultadoUpdated={handleApostaUpdated}
-                          onEditClick={() => handleOpenDialog(aposta)}
-                        />
-                      </div>
+                    {/* Badges à esquerda - padrão unificado */}
+                    <div className="flex items-center gap-1 mb-1 flex-wrap">
+                      {getEstrategiaBadge(aposta) || getContextoBadge(item.contexto, aposta)}
+                      {opType.label && (
+                        <Badge className={`${opType.color} text-[10px] px-1.5 py-0`}>
+                          {opType.type === "cobertura" && <Shield className="h-2.5 w-2.5 mr-0.5" />}
+                          {opType.type === "back" && <ArrowUp className="h-2.5 w-2.5 mr-0.5" />}
+                          {opType.type === "lay" && <ArrowDown className="h-2.5 w-2.5 mr-0.5" />}
+                          {opType.label}
+                        </Badge>
+                      )}
+                      <ResultadoPill
+                        apostaId={aposta.id}
+                        bookmarkerId={aposta.bookmaker_id}
+                        layExchangeBookmakerId={opType.type === "cobertura" ? aposta.lay_exchange : undefined}
+                        resultado={aposta.resultado}
+                        status={aposta.status}
+                        stake={aposta.stake}
+                        odd={aposta.odd}
+                        operationType={opType.type}
+                        layLiability={aposta.lay_liability || undefined}
+                        layOdd={aposta.lay_odd || undefined}
+                        layStake={aposta.lay_stake || undefined}
+                        layComissao={aposta.lay_comissao || undefined}
+                        isFreebetExtraction={aposta.estrategia === "COBERTURA_LAY" && aposta.back_em_exchange === true}
+                        gerouFreebet={aposta.gerou_freebet || false}
+                        valorFreebetGerada={aposta.valor_freebet_gerada || undefined}
+                        onResultadoUpdated={handleApostaUpdated}
+                        onEditClick={() => handleOpenDialog(aposta)}
+                      />
                     </div>
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle 
+                        className="text-sm truncate cursor-pointer hover:text-primary"
+                        onClick={() => handleOpenDialog(aposta)}
+                      >
+                        {aposta.evento}
+                      </CardTitle>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">{aposta.esporte}</p>
                   </CardHeader>
                   <CardContent className="pt-1 pb-3 px-3">
                     <div className="space-y-1">
@@ -961,33 +964,31 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
                 onClick={() => handleOpenMultiplaDialog(multipla)}
               >
                 <CardHeader className="pb-1 pt-3 px-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <CardTitle className="text-sm truncate">
-                        Múltipla {multipla.tipo_multipla}
-                      </CardTitle>
-                      <p className="text-xs text-muted-foreground">
-                        {multipla.selecoes.length} seleções
-                      </p>
-                    </div>
-                    <div className="flex gap-1 flex-shrink-0 items-center">
-                      {/* Badge de estratégia (prioridade) ou contexto (fallback) */}
-                      {getEstrategiaBadge(multipla) || getContextoBadge(item.contexto, multipla)}
-                      <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30 text-[10px] px-1.5 py-0">
-                        MULT
-                      </Badge>
-                      <ResultadoPill
-                        apostaId={multipla.id}
-                        bookmarkerId={multipla.bookmaker_id}
-                        resultado={multipla.resultado}
-                        status={multipla.status}
-                        stake={multipla.stake}
-                        odd={multipla.odd_final}
-                        onResultadoUpdated={handleApostaUpdated}
-                        onEditClick={() => handleOpenMultiplaDialog(multipla)}
-                      />
-                    </div>
+                  {/* Badges à esquerda - padrão unificado */}
+                  <div className="flex items-center gap-1 mb-1 flex-wrap">
+                    {getEstrategiaBadge(multipla) || getContextoBadge(item.contexto, multipla)}
+                    <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30 text-[10px] px-1.5 py-0">
+                      MULT
+                    </Badge>
+                    <ResultadoPill
+                      apostaId={multipla.id}
+                      bookmarkerId={multipla.bookmaker_id}
+                      resultado={multipla.resultado}
+                      status={multipla.status}
+                      stake={multipla.stake}
+                      odd={multipla.odd_final}
+                      onResultadoUpdated={handleApostaUpdated}
+                      onEditClick={() => handleOpenMultiplaDialog(multipla)}
+                    />
                   </div>
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="text-sm truncate">
+                      Múltipla {multipla.tipo_multipla}
+                    </CardTitle>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {multipla.selecoes.length} seleções
+                  </p>
                 </CardHeader>
                 <CardContent className="pt-1 pb-3 px-3">
                   <div className="space-y-1">
