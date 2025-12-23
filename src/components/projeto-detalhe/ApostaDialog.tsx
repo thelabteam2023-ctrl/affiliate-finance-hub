@@ -463,9 +463,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const [coberturaLucroGarantido, setCoberturaLucroGarantido] = useState<number | null>(null);
   const [coberturaTaxaExtracao, setCoberturaTaxaExtracao] = useState<number | null>(null);
 
-  // Freebet tracking
+  // Freebet tracking - geral
   const [gerouFreebet, setGerouFreebet] = useState(false);
   const [valorFreebetGerada, setValorFreebetGerada] = useState("");
+  
+  // Freebet tracking - específico para Cobertura (Back e Lay separados)
+  const [gerouFreebetBack, setGerouFreebetBack] = useState(false);
+  const [valorFreebetGeradaBack, setValorFreebetGeradaBack] = useState("");
+  const [gerouFreebetLay, setGerouFreebetLay] = useState(false);
+  const [valorFreebetGeradaLay, setValorFreebetGeradaLay] = useState("");
 
   // Registro de Aposta - Campos EXPLÍCITOS (Prompt Oficial)
   const [registroValues, setRegistroValues] = useState<RegistroApostaValues>({
@@ -590,6 +596,18 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               setTipoApostaBack("freebet_sr");
             } else {
               setTipoApostaBack("normal");
+            }
+            // Restaurar Gerou Freebet Back/Lay a partir das observações
+            const obs = aposta.observacoes || "";
+            const fbBackMatch = obs.match(/FB BACK:\s*([\d.]+)/);
+            const fbLayMatch = obs.match(/FB LAY:\s*([\d.]+)/);
+            if (fbBackMatch) {
+              setGerouFreebetBack(true);
+              setValorFreebetGeradaBack(fbBackMatch[1]);
+            }
+            if (fbLayMatch) {
+              setGerouFreebetLay(true);
+              setValorFreebetGeradaLay(fbLayMatch[1]);
             }
           } else if (aposta.estrategia === "EXCHANGE_LAY" || 
                      (aposta.lay_odd && !aposta.lay_exchange && aposta.modo_entrada === "EXCHANGE")) {
@@ -900,6 +918,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     setTipoApostaExchangeBack("normal");
     setGerouFreebet(false);
     setValorFreebetGerada("");
+    setGerouFreebetBack(false);
+    setValorFreebetGeradaBack("");
+    setGerouFreebetLay(false);
+    setValorFreebetGeradaLay("");
     // Reset registro values to null (will be populated by suggestions)
     setRegistroValues({
       forma_registro: null,
@@ -1369,6 +1391,20 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           }
         }
 
+        // Para cobertura, combinar informações de freebet de ambos os lados
+        const coberturaGerouFreebet = gerouFreebetBack || gerouFreebetLay;
+        const coberturaValorFreebet = (gerouFreebetBack && valorFreebetGeradaBack ? parseFloat(valorFreebetGeradaBack) : 0) +
+                                       (gerouFreebetLay && valorFreebetGeradaLay ? parseFloat(valorFreebetGeradaLay) : 0);
+        
+        // Adicionar info de qual lado gerou freebet nas observações (se houver)
+        let obsCobertura = observacoes || "";
+        if (gerouFreebetBack && valorFreebetGeradaBack) {
+          obsCobertura += (obsCobertura ? " | " : "") + `FB BACK: ${valorFreebetGeradaBack}`;
+        }
+        if (gerouFreebetLay && valorFreebetGeradaLay) {
+          obsCobertura += (obsCobertura ? " | " : "") + `FB LAY: ${valorFreebetGeradaLay}`;
+        }
+
         apostaData = {
           ...commonData,
           bookmaker_id: coberturaBackBookmakerId,
@@ -1385,6 +1421,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           back_em_exchange: tipoApostaBack !== "normal",
           back_comissao: null,
           tipo_freebet: tipoApostaBack,
+          // Sobrescrever gerou_freebet para cobertura
+          gerou_freebet: coberturaGerouFreebet,
+          valor_freebet_gerada: coberturaGerouFreebet && coberturaValorFreebet > 0 ? coberturaValorFreebet : null,
+          observacoes: obsCobertura || null,
         };
       } else {
         // ===== MODO EXCHANGE (Back ou Lay simples) =====
@@ -3128,6 +3168,51 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 * Stake da freebet não volta
                               </p>
                             )}
+                            {/* Gerou Freebet Back - só aparece se não está usando freebet */}
+                            {tipoApostaBack === "normal" && (
+                              <div className={`mt-2 pt-2 border-t border-emerald-500/20 flex items-center justify-between ${
+                                gerouFreebetBack ? "bg-emerald-500/10 -mx-2 px-2 py-1.5 rounded" : ""
+                              }`}>
+                                <button
+                                  type="button"
+                                  onClick={() => setGerouFreebetBack(!gerouFreebetBack)}
+                                  className="flex items-center gap-2 group"
+                                >
+                                  <div className={`relative w-8 h-[18px] rounded-full transition-all duration-200 ${
+                                    gerouFreebetBack 
+                                      ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]" 
+                                      : "bg-muted-foreground/30"
+                                  }`}>
+                                    <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-all duration-200 ${
+                                      gerouFreebetBack 
+                                        ? "left-[16px]" 
+                                        : "left-[2px]"
+                                    }`} />
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Gift className={`h-3 w-3 transition-colors ${
+                                      gerouFreebetBack ? "text-emerald-400" : "text-muted-foreground"
+                                    }`} />
+                                    <span className={`text-[10px] font-medium transition-colors ${
+                                      gerouFreebetBack ? "text-emerald-400" : "text-muted-foreground"
+                                    }`}>
+                                      Gerou FB
+                                    </span>
+                                  </div>
+                                </button>
+                                {gerouFreebetBack && (
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0.01"
+                                    value={valorFreebetGeradaBack}
+                                    onChange={(e) => setValorFreebetGeradaBack(e.target.value)}
+                                    placeholder="Valor"
+                                    className="w-20 h-6 text-xs text-center border-emerald-500/30"
+                                  />
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -3233,6 +3318,49 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 <span>Responsabilidade excede o saldo disponível!</span>
                               </div>
                             )}
+                            {/* Gerou Freebet Lay */}
+                            <div className={`mt-2 pt-2 border-t border-rose-500/20 flex items-center justify-between ${
+                              gerouFreebetLay ? "bg-rose-500/10 -mx-2 px-2 py-1.5 rounded" : ""
+                            }`}>
+                              <button
+                                type="button"
+                                onClick={() => setGerouFreebetLay(!gerouFreebetLay)}
+                                className="flex items-center gap-2 group"
+                              >
+                                <div className={`relative w-8 h-[18px] rounded-full transition-all duration-200 ${
+                                  gerouFreebetLay 
+                                    ? "bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.4)]" 
+                                    : "bg-muted-foreground/30"
+                                }`}>
+                                  <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-all duration-200 ${
+                                    gerouFreebetLay 
+                                      ? "left-[16px]" 
+                                      : "left-[2px]"
+                                  }`} />
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Gift className={`h-3 w-3 transition-colors ${
+                                    gerouFreebetLay ? "text-rose-400" : "text-muted-foreground"
+                                  }`} />
+                                  <span className={`text-[10px] font-medium transition-colors ${
+                                    gerouFreebetLay ? "text-rose-400" : "text-muted-foreground"
+                                  }`}>
+                                    Gerou FB
+                                  </span>
+                                </div>
+                              </button>
+                              {gerouFreebetLay && (
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0.01"
+                                  value={valorFreebetGeradaLay}
+                                  onChange={(e) => setValorFreebetGeradaLay(e.target.value)}
+                                  placeholder="Valor"
+                                  className="w-20 h-6 text-xs text-center border-rose-500/30"
+                                />
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
