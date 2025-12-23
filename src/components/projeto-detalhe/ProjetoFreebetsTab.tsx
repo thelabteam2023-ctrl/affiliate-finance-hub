@@ -84,8 +84,8 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
   const [selectedApostaMultipla, setSelectedApostaMultipla] = useState<any>(null);
   const [bookmakers, setBookmakers] = useState<any[]>([]);
   
-  // View mode for "Eficiência por Casa" section
-  const [eficienciaViewMode, setEficienciaViewMode] = useState<'card' | 'list'>('card');
+  // View mode for "Por Casa" tab
+  const [porCasaViewMode, setPorCasaViewMode] = useState<'card' | 'list'>('card');
 
   // Preferências de visualização (persistidas)
   const { 
@@ -633,11 +633,29 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
         {activeNavTab === "visao-geral" && renderVisaoGeral()}
         {activeNavTab === "apostas" && renderApostas()}
         {activeNavTab === "por-casa" && (
-          <FreebetResumoPorCasa 
-            stats={statsPorCasa} 
-            formatCurrency={formatCurrency}
-            viewMode={viewMode}
-          />
+          <div className="space-y-4">
+            {/* Header com toggle */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold">Análise por Casa</h3>
+                <Badge variant="secondary">{statsPorCasa.length} casas</Badge>
+              </div>
+              <ToggleGroup type="single" value={porCasaViewMode} onValueChange={(v) => v && setPorCasaViewMode(v as 'card' | 'list')}>
+                <ToggleGroupItem value="card" aria-label="Cards" size="sm">
+                  <LayoutGrid className="h-4 w-4" />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="list" aria-label="Lista" size="sm">
+                  <List className="h-4 w-4" />
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+            <FreebetResumoPorCasa 
+              stats={statsPorCasa} 
+              formatCurrency={formatCurrency}
+              viewMode={porCasaViewMode}
+            />
+          </div>
         )}
       </div>
     );
@@ -781,139 +799,6 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
           </Card>
         </div>
       </div>
-
-      {/* Cards Resumo por Casa - Densidade Estratégica */}
-      {statsPorCasa.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-primary" />
-                Eficiência por Casa
-                <Badge variant="secondary" className="ml-2">{statsPorCasa.length} casas</Badge>
-              </CardTitle>
-              
-              {/* Toggle Card/Lista */}
-              <ToggleGroup type="single" value={eficienciaViewMode} onValueChange={(v) => v && setEficienciaViewMode(v as 'card' | 'list')}>
-                <ToggleGroupItem value="card" aria-label="Cards" size="sm">
-                  <LayoutGrid className="h-4 w-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="list" aria-label="Lista" size="sm">
-                  <List className="h-4 w-4" />
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {eficienciaViewMode === 'list' ? (
-              /* Modo Lista */
-              <div className="space-y-2">
-                {statsPorCasa.slice(0, 8).map(stat => (
-                  <div 
-                    key={stat.bookmaker_id} 
-                    className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
-                  >
-                    {/* Logo */}
-                    {stat.logo_url ? (
-                      <img src={stat.logo_url} alt={stat.bookmaker_nome} className="h-8 w-8 rounded-lg object-contain bg-white p-0.5 shrink-0" />
-                    ) : (
-                      <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                        <Building2 className="h-4 w-4" />
-                      </div>
-                    )}
-                    
-                    {/* Nome e Parceiro */}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm truncate">{stat.bookmaker_nome}</p>
-                      {stat.parceiro_nome && (
-                        <p className="text-[10px] text-muted-foreground truncate">{stat.parceiro_nome}</p>
-                      )}
-                    </div>
-                    
-                    {/* Métricas inline - coloridas */}
-                    <div className="flex items-center gap-3">
-                      <div className="px-2.5 py-1 rounded bg-amber-500/10 text-center min-w-[60px]">
-                        <p className="text-xs font-bold text-amber-400">{stat.total_freebets_recebidas}</p>
-                        <p className="text-[8px] text-muted-foreground">Recebidas</p>
-                      </div>
-                      <div className="px-2.5 py-1 rounded bg-emerald-500/10 text-center min-w-[80px]">
-                        <p className="text-xs font-bold text-emerald-400">{formatCurrency(stat.valor_total_extraido)}</p>
-                        <p className="text-[8px] text-muted-foreground">Extraído</p>
-                      </div>
-                      <div className={`px-2.5 py-1 rounded text-center min-w-[50px] ${
-                        stat.taxa_extracao >= 70 ? 'bg-emerald-500/10' : 
-                        stat.taxa_extracao >= 50 ? 'bg-amber-500/10' : 'bg-red-500/10'
-                      }`}>
-                        <p className={`text-xs font-bold ${
-                          stat.taxa_extracao >= 70 ? 'text-emerald-400' : 
-                          stat.taxa_extracao >= 50 ? 'text-amber-400' : 'text-red-400'
-                        }`}>{stat.taxa_extracao.toFixed(0)}%</p>
-                        <p className="text-[8px] text-muted-foreground">Extração</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              /* Modo Card */
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {statsPorCasa.slice(0, 8).map(stat => (
-                  <div 
-                    key={stat.bookmaker_id} 
-                    className="p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
-                  >
-                    {/* Header com logo e nome */}
-                    <div className="flex items-center gap-2 mb-3">
-                      {stat.logo_url ? (
-                        <img src={stat.logo_url} alt={stat.bookmaker_nome} className="h-8 w-8 rounded-lg object-contain bg-white p-0.5" />
-                      ) : (
-                        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                          <Building2 className="h-4 w-4" />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm truncate">{stat.bookmaker_nome}</p>
-                        {stat.parceiro_nome && (
-                          <p className="text-[10px] text-muted-foreground truncate">{stat.parceiro_nome}</p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Métricas principais - 3 valores estratégicos */}
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="p-1.5 rounded bg-amber-500/10">
-                        <p className="text-xs font-bold text-amber-400">{stat.total_freebets_recebidas}</p>
-                        <p className="text-[9px] text-muted-foreground">Recebidas</p>
-                      </div>
-                      <div className="p-1.5 rounded bg-emerald-500/10">
-                        <p className="text-xs font-bold text-emerald-400">{formatCurrency(stat.valor_total_extraido)}</p>
-                        <p className="text-[9px] text-muted-foreground">Extraído</p>
-                      </div>
-                      <div className={`p-1.5 rounded ${
-                        stat.taxa_extracao >= 70 ? 'bg-emerald-500/10' : 
-                        stat.taxa_extracao >= 50 ? 'bg-amber-500/10' : 'bg-red-500/10'
-                      }`}>
-                        <p className={`text-xs font-bold ${
-                          stat.taxa_extracao >= 70 ? 'text-emerald-400' : 
-                          stat.taxa_extracao >= 50 ? 'text-amber-400' : 'text-red-400'
-                        }`}>{stat.taxa_extracao.toFixed(0)}%</p>
-                        <p className="text-[9px] text-muted-foreground">Extração</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {statsPorCasa.length > 8 && (
-              <div className="mt-3 text-center">
-                <Button variant="ghost" size="sm" onClick={() => setActiveNavTab("por-casa")}>
-                  Ver todas as {statsPorCasa.length} casas
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
     </div>
   );
