@@ -235,6 +235,7 @@ export function FreebetApostasList({
                         layStake={aposta.lay_stake || undefined}
                         layComissao={aposta.lay_comissao || undefined}
                         gerouFreebet={aposta.gerou_freebet || false}
+                        valorFreebetGerada={aposta.valor_freebet_gerada || undefined}
                         onResultadoUpdated={onResultadoUpdated}
                         onEditClick={() => onEditClick(aposta)}
                       />

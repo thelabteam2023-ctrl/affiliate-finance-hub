@@ -582,6 +582,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
                           layStake={aposta.lay_stake || undefined}
                           layComissao={aposta.lay_comissao || undefined}
                           gerouFreebet={aposta.gerou_freebet || false}
+                          valorFreebetGerada={aposta.valor_freebet_gerada || undefined}
                           onResultadoUpdated={handleApostaUpdated}
                           onEditClick={() => handleOpenDialog(aposta)}
                         />

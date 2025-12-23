@@ -27,6 +27,7 @@ interface ResultadoPillProps {
   layComissao?: number;
   isFreebetExtraction?: boolean; // true quando é extração de freebet (SNR/SR)
   gerouFreebet?: boolean; // true se a aposta gerou freebet
+  valorFreebetGerada?: number; // valor da freebet gerada (para fallback de criação)
   onResultadoUpdated: () => void;
   onEditClick: () => void;
 }
@@ -83,6 +84,7 @@ export function ResultadoPill({
   layComissao = 5,
   isFreebetExtraction = false,
   gerouFreebet = false,
+  valorFreebetGerada,
   onResultadoUpdated,
   onEditClick,
 }: ResultadoPillProps) {
@@ -577,6 +579,49 @@ export function ResultadoPill({
                   .from("bookmakers")
                   .update({ saldo_freebet: novoSaldoFreebet })
                   .eq("id", freebetPendente.bookmaker_id);
+              }
+            } else if (valorFreebetGerada && valorFreebetGerada > 0) {
+              // FALLBACK: Registro não existe, criar agora e liberar
+              // Buscar dados da aposta para obter user_id e projeto_id
+              const { data: apostaData } = await supabase
+                .from("apostas")
+                .select("user_id, projeto_id, workspace_id, data_aposta")
+                .eq("id", apostaId)
+                .maybeSingle();
+              
+              if (apostaData) {
+                // Criar registro em freebets_recebidas já como LIBERADA
+                await supabase
+                  .from("freebets_recebidas")
+                  .insert({
+                    bookmaker_id: bookmarkerId,
+                    projeto_id: apostaData.projeto_id,
+                    user_id: apostaData.user_id,
+                    workspace_id: apostaData.workspace_id,
+                    valor: valorFreebetGerada,
+                    motivo: "Aposta qualificadora",
+                    data_recebida: apostaData.data_aposta,
+                    status: "LIBERADA",
+                    aposta_id: apostaId,
+                    utilizada: false,
+                  });
+                
+                // Incrementar saldo_freebet do bookmaker
+                const { data: bookmaker } = await supabase
+                  .from("bookmakers")
+                  .select("saldo_freebet")
+                  .eq("id", bookmarkerId)
+                  .maybeSingle();
+                
+                if (bookmaker) {
+                  const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + valorFreebetGerada;
+                  await supabase
+                    .from("bookmakers")
+                    .update({ saldo_freebet: novoSaldoFreebet })
+                    .eq("id", bookmarkerId);
+                }
+                
+                console.log(`[ResultadoPill] Fallback: Criado freebet de ${valorFreebetGerada} para bookmaker ${bookmarkerId}`);
               }
             }
           }

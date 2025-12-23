@@ -915,39 +915,6 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
         </Card>
       )}
 
-      {/* Recent Apostas Preview */}
-      {apostasAtivas.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary" />
-              Apostas Pendentes
-              <Badge variant="secondary" className="ml-2">{apostasAtivas.length}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {apostasAtivas.slice(0, 6).map(aposta => (
-                <FreebetApostaCard 
-                  key={aposta.id} 
-                  aposta={aposta} 
-                  compact={true}
-                  formatCurrency={formatCurrency}
-                  onResultadoUpdated={handleApostaUpdated}
-                  onEditClick={handleEditClick}
-                />
-              ))}
-            </div>
-            {apostasAtivas.length > 6 && (
-              <div className="mt-4 text-center">
-                <Button variant="ghost" size="sm" onClick={() => setActiveNavTab("apostas")}>
-                  Ver todas as {apostasAtivas.length} apostas
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 
