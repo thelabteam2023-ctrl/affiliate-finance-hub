@@ -218,7 +218,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
         .select(`
           id, evento, mercado, selecao, odd, stake, lucro_prejuizo, valor_retorno,
           data_aposta, status, resultado, tipo_freebet, contexto_operacional,
-          gerou_freebet, valor_freebet_gerada, bookmaker_id,
+          gerou_freebet, valor_freebet_gerada, bookmaker_id, estrategia, modo_entrada,
           bookmakers!apostas_bookmaker_id_fkey (
             nome, parceiros!bookmakers_parceiro_id_fkey (nome),
             bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
@@ -236,7 +236,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
         .select(`
           id, selecoes, odd_final, stake, lucro_prejuizo, valor_retorno,
           data_aposta, status, resultado, tipo_freebet, contexto_operacional,
-          gerou_freebet, valor_freebet_gerada, bookmaker_id,
+          gerou_freebet, valor_freebet_gerada, bookmaker_id, estrategia,
           bookmakers!apostas_multiplas_bookmaker_id_fkey (
             nome, parceiros!bookmakers_parceiro_id_fkey (nome),
             bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
@@ -269,6 +269,9 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
         parceiro_nome: ap.bookmakers?.parceiros?.nome || null,
         gerou_freebet: ap.gerou_freebet || false,
         valor_freebet_gerada: ap.valor_freebet_gerada || null,
+        estrategia: ap.estrategia || null,
+        lado_aposta: ap.modo_entrada || null,
+        contexto_operacional: ap.contexto_operacional || null,
       }));
 
       const multiplasFormatted: ApostaOperacionalFreebet[] = (apostasMultiplas || []).map((ap: any) => {
@@ -294,6 +297,9 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
           parceiro_nome: ap.bookmakers?.parceiros?.nome || null,
           gerou_freebet: ap.gerou_freebet || false,
           valor_freebet_gerada: ap.valor_freebet_gerada || null,
+          estrategia: ap.estrategia || null,
+          lado_aposta: null, // Múltiplas não têm lado de aposta individual
+          contexto_operacional: ap.contexto_operacional || null,
         };
       });
 

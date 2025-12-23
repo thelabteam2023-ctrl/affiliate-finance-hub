@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Gift, Target } from "lucide-react";
+import { Gift, Target, TrendingUp, Shield, CheckCircle2, BarChart3 } from "lucide-react";
 import { ApostaOperacionalFreebet } from "./types";
 import { ResultadoPill } from "../ResultadoPill";
 
@@ -19,6 +19,103 @@ function parseLocalDateTime(dateString: string): Date {
   if (!dateString) return new Date();
   const date = new Date(dateString);
   return date;
+}
+
+// Badge de estratégia (prioridade máxima quando gera freebet = Qualificadora)
+function getEstrategiaBadge(aposta: ApostaOperacionalFreebet) {
+  // PRIORIDADE 1: Se gerou freebet, é uma Qualificadora
+  if (aposta.gerou_freebet) {
+    return (
+      <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30 text-[10px] px-1.5 py-0">
+        <TrendingUp className="h-2.5 w-2.5 mr-0.5" />
+        QB
+      </Badge>
+    );
+  }
+  
+  // PRIORIDADE 2: Outras estratégias (se definidas)
+  const estrategia = aposta.estrategia;
+  if (estrategia === "SUREBET") {
+    return (
+      <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-[10px] px-1.5 py-0">
+        <Shield className="h-2.5 w-2.5 mr-0.5" />
+        SB
+      </Badge>
+    );
+  }
+  if (estrategia === "DUPLO_GREEN") {
+    return (
+      <Badge className="bg-teal-500/20 text-teal-400 border-teal-500/30 text-[10px] px-1.5 py-0">
+        <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
+        DG
+      </Badge>
+    );
+  }
+  if (estrategia === "VALUEBET") {
+    return (
+      <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px] px-1.5 py-0">
+        <BarChart3 className="h-2.5 w-2.5 mr-0.5" />
+        VB
+      </Badge>
+    );
+  }
+  
+  // Nenhuma estratégia definida, retorna null
+  return null;
+}
+
+// Badge de contexto (origem do saldo - exibido apenas quando não há estratégia de Qualificadora)
+function getContextoBadge(aposta: ApostaOperacionalFreebet) {
+  // Se gerou freebet, não mostrar badge de contexto (a estratégia Qualificadora já é mostrada)
+  if (aposta.gerou_freebet) {
+    return null;
+  }
+  
+  // Se usa freebet (contexto operacional FREEBET ou tipo_freebet definido)
+  if (aposta.contexto_operacional === "FREEBET" || aposta.tipo_freebet) {
+    return (
+      <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">
+        <Gift className="h-2.5 w-2.5 mr-0.5" />
+        FB
+      </Badge>
+    );
+  }
+  
+  return null;
+}
+
+// Badge de tipo operacional (BACK, LAY, BACK/LAY)
+function getTipoOperacionalBadge(aposta: ApostaOperacionalFreebet) {
+  const ladoAposta = aposta.lado_aposta?.toUpperCase();
+  const mercado = aposta.mercado?.toUpperCase();
+  
+  // Verifica se é cobertura (BACK/LAY)
+  if (mercado?.includes("COBERTURA") || ladoAposta === "COBERTURA") {
+    return (
+      <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30 text-[10px] px-1.5 py-0">
+        <Shield className="h-2.5 w-2.5 mr-0.5" />
+        BACK/LAY
+      </Badge>
+    );
+  }
+  
+  if (ladoAposta === "BACK") {
+    return (
+      <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] px-1.5 py-0">
+        BACK
+      </Badge>
+    );
+  }
+  
+  if (ladoAposta === "LAY") {
+    return (
+      <Badge className="bg-rose-500/20 text-rose-400 border-rose-500/30 text-[10px] px-1.5 py-0">
+        LAY
+      </Badge>
+    );
+  }
+  
+  return null;
 }
 
 export function FreebetApostaCard({ 
@@ -56,12 +153,17 @@ export function FreebetApostaCard({
           )}
         </div>
         
-        {/* Badge + ResultadoPill */}
+        {/* Badges + ResultadoPill */}
         <div className="flex items-center gap-1">
-          {aposta.gerou_freebet ? (
-            <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px] px-1.5 py-0">Q</Badge>
-          ) : (
-            <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">FB</Badge>
+          {/* Badge de estratégia (prioridade) ou contexto (fallback) */}
+          {getEstrategiaBadge(aposta) || getContextoBadge(aposta)}
+          {/* Badge de tipo operacional */}
+          {getTipoOperacionalBadge(aposta)}
+          {/* Badge múltipla */}
+          {aposta.tipo === "multipla" && (
+            <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30 text-[10px] px-1.5 py-0">
+              MULT
+            </Badge>
           )}
           <ResultadoPill
             apostaId={aposta.id}
@@ -90,22 +192,14 @@ export function FreebetApostaCard({
             </p>
           </div>
           <div className="flex gap-1 flex-shrink-0 items-center">
+            {/* Badge de estratégia (prioridade) ou contexto (fallback) */}
+            {getEstrategiaBadge(aposta) || getContextoBadge(aposta)}
+            {/* Badge de tipo operacional */}
+            {getTipoOperacionalBadge(aposta)}
             {/* Badge de tipo múltipla */}
             {aposta.tipo === "multipla" && (
               <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30 text-[10px] px-1.5 py-0">
                 MULT
-              </Badge>
-            )}
-            {/* Badge de contexto Freebet */}
-            {aposta.gerou_freebet ? (
-              <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px] px-1.5 py-0">
-                <Target className="h-2.5 w-2.5 mr-0.5" />
-                Q
-              </Badge>
-            ) : (
-              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">
-                <Gift className="h-2.5 w-2.5 mr-0.5" />
-                FB
               </Badge>
             )}
             <ResultadoPill
