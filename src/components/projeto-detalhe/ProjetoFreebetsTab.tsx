@@ -91,6 +91,9 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
   const [selectedAposta, setSelectedAposta] = useState<any>(null);
   const [selectedApostaMultipla, setSelectedApostaMultipla] = useState<any>(null);
   const [bookmakers, setBookmakers] = useState<any[]>([]);
+  
+  // View mode for "Eficiência por Casa" section
+  const [eficienciaViewMode, setEficienciaViewMode] = useState<'card' | 'list'>('card');
 
   // Preferências de visualização (persistidas)
   const { 
@@ -604,37 +607,6 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
     </div>
   );
 
-  // Freebets disponíveis sidebar component
-  const freebetsDisponiveisSidebar = (
-    <div className="space-y-2">
-      <h4 className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider mb-3">
-        Freebets Disponíveis
-      </h4>
-      {bookmakersComFreebet.length === 0 ? (
-        <p className="text-xs text-muted-foreground py-2">Nenhuma freebet disponível</p>
-      ) : (
-        <div className="space-y-1">
-          {bookmakersComFreebet.map(bk => (
-            <div 
-              key={bk.id} 
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors"
-            >
-              {bk.logo_url ? (
-                <img src={bk.logo_url} alt={bk.nome} className="h-5 w-5 rounded object-contain bg-white p-0.5" />
-              ) : (
-                <Gift className="h-4 w-4 text-amber-400" />
-              )}
-              <span className="text-sm font-medium truncate flex-1">{bk.nome}</span>
-              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs shrink-0">
-                {formatCurrency(bk.saldo_freebet)}
-              </Badge>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
   // Main content renderer based on active tab
   const renderMainContent = () => {
     const contentClass = cn(
@@ -762,17 +734,24 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
                   {bookmakersComFreebet.map(bk => (
                     <div 
                       key={bk.id} 
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors"
+                      className="px-3 py-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors"
                     >
-                      {bk.logo_url ? (
-                        <img src={bk.logo_url} alt={bk.nome} className="h-5 w-5 rounded object-contain bg-white p-0.5" />
-                      ) : (
-                        <Gift className="h-4 w-4 text-amber-400" />
-                      )}
-                      <span className="text-sm font-medium truncate flex-1">{bk.nome}</span>
-                      <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs shrink-0">
-                        {formatCurrency(bk.saldo_freebet)}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        {bk.logo_url ? (
+                          <img src={bk.logo_url} alt={bk.nome} className="h-6 w-6 rounded object-contain bg-white p-0.5" />
+                        ) : (
+                          <Gift className="h-5 w-5 text-amber-400" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{bk.nome}</p>
+                          {bk.parceiro_nome && (
+                            <p className="text-[10px] text-muted-foreground truncate">{bk.parceiro_nome}</p>
+                          )}
+                        </div>
+                        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs font-bold shrink-0">
+                          {formatCurrency(bk.saldo_freebet)}
+                        </Badge>
+                      </div>
                     </div>
                   ))}
                   {/* Total */}
@@ -793,60 +772,124 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
       {statsPorCasa.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-primary" />
-              Eficiência por Casa
-              <Badge variant="secondary" className="ml-2">{statsPorCasa.length} casas</Badge>
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary" />
+                Eficiência por Casa
+                <Badge variant="secondary" className="ml-2">{statsPorCasa.length} casas</Badge>
+              </CardTitle>
+              
+              {/* Toggle Card/Lista */}
+              <ToggleGroup type="single" value={eficienciaViewMode} onValueChange={(v) => v && setEficienciaViewMode(v as 'card' | 'list')}>
+                <ToggleGroupItem value="card" aria-label="Cards" size="sm">
+                  <LayoutGrid className="h-4 w-4" />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="list" aria-label="Lista" size="sm">
+                  <List className="h-4 w-4" />
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {statsPorCasa.slice(0, 8).map(stat => (
-                <div 
-                  key={stat.bookmaker_id} 
-                  className="p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
-                >
-                  {/* Header com logo e nome */}
-                  <div className="flex items-center gap-2 mb-3">
+            {eficienciaViewMode === 'list' ? (
+              /* Modo Lista */
+              <div className="space-y-2">
+                {statsPorCasa.slice(0, 8).map(stat => (
+                  <div 
+                    key={stat.bookmaker_id} 
+                    className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
+                  >
+                    {/* Logo */}
                     {stat.logo_url ? (
-                      <img src={stat.logo_url} alt={stat.bookmaker_nome} className="h-8 w-8 rounded-lg object-contain bg-white p-0.5" />
+                      <img src={stat.logo_url} alt={stat.bookmaker_nome} className="h-8 w-8 rounded-lg object-contain bg-white p-0.5 shrink-0" />
                     ) : (
-                      <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                      <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
                         <Building2 className="h-4 w-4" />
                       </div>
                     )}
+                    
+                    {/* Nome e Parceiro */}
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm truncate">{stat.bookmaker_nome}</p>
                       {stat.parceiro_nome && (
                         <p className="text-[10px] text-muted-foreground truncate">{stat.parceiro_nome}</p>
                       )}
                     </div>
+                    
+                    {/* Métricas inline - coloridas */}
+                    <div className="flex items-center gap-3">
+                      <div className="px-2.5 py-1 rounded bg-amber-500/10 text-center min-w-[60px]">
+                        <p className="text-xs font-bold text-amber-400">{stat.total_freebets_recebidas}</p>
+                        <p className="text-[8px] text-muted-foreground">Recebidas</p>
+                      </div>
+                      <div className="px-2.5 py-1 rounded bg-emerald-500/10 text-center min-w-[80px]">
+                        <p className="text-xs font-bold text-emerald-400">{formatCurrency(stat.valor_total_extraido)}</p>
+                        <p className="text-[8px] text-muted-foreground">Extraído</p>
+                      </div>
+                      <div className={`px-2.5 py-1 rounded text-center min-w-[50px] ${
+                        stat.taxa_extracao >= 70 ? 'bg-emerald-500/10' : 
+                        stat.taxa_extracao >= 50 ? 'bg-amber-500/10' : 'bg-red-500/10'
+                      }`}>
+                        <p className={`text-xs font-bold ${
+                          stat.taxa_extracao >= 70 ? 'text-emerald-400' : 
+                          stat.taxa_extracao >= 50 ? 'text-amber-400' : 'text-red-400'
+                        }`}>{stat.taxa_extracao.toFixed(0)}%</p>
+                        <p className="text-[8px] text-muted-foreground">Extração</p>
+                      </div>
+                    </div>
                   </div>
-                  
-                  {/* Métricas principais - 3 valores estratégicos */}
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="p-1.5 rounded bg-amber-500/10">
-                      <p className="text-xs font-bold text-amber-400">{stat.total_freebets_recebidas}</p>
-                      <p className="text-[9px] text-muted-foreground">Recebidas</p>
+                ))}
+              </div>
+            ) : (
+              /* Modo Card */
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {statsPorCasa.slice(0, 8).map(stat => (
+                  <div 
+                    key={stat.bookmaker_id} 
+                    className="p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
+                  >
+                    {/* Header com logo e nome */}
+                    <div className="flex items-center gap-2 mb-3">
+                      {stat.logo_url ? (
+                        <img src={stat.logo_url} alt={stat.bookmaker_nome} className="h-8 w-8 rounded-lg object-contain bg-white p-0.5" />
+                      ) : (
+                        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                          <Building2 className="h-4 w-4" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">{stat.bookmaker_nome}</p>
+                        {stat.parceiro_nome && (
+                          <p className="text-[10px] text-muted-foreground truncate">{stat.parceiro_nome}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="p-1.5 rounded bg-emerald-500/10">
-                      <p className="text-xs font-bold text-emerald-400">{formatCurrency(stat.valor_total_extraido)}</p>
-                      <p className="text-[9px] text-muted-foreground">Extraído</p>
-                    </div>
-                    <div className={`p-1.5 rounded ${
-                      stat.taxa_extracao >= 70 ? 'bg-emerald-500/10' : 
-                      stat.taxa_extracao >= 50 ? 'bg-amber-500/10' : 'bg-red-500/10'
-                    }`}>
-                      <p className={`text-xs font-bold ${
-                        stat.taxa_extracao >= 70 ? 'text-emerald-400' : 
-                        stat.taxa_extracao >= 50 ? 'text-amber-400' : 'text-red-400'
-                      }`}>{stat.taxa_extracao.toFixed(0)}%</p>
-                      <p className="text-[9px] text-muted-foreground">Extração</p>
+                    
+                    {/* Métricas principais - 3 valores estratégicos */}
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="p-1.5 rounded bg-amber-500/10">
+                        <p className="text-xs font-bold text-amber-400">{stat.total_freebets_recebidas}</p>
+                        <p className="text-[9px] text-muted-foreground">Recebidas</p>
+                      </div>
+                      <div className="p-1.5 rounded bg-emerald-500/10">
+                        <p className="text-xs font-bold text-emerald-400">{formatCurrency(stat.valor_total_extraido)}</p>
+                        <p className="text-[9px] text-muted-foreground">Extraído</p>
+                      </div>
+                      <div className={`p-1.5 rounded ${
+                        stat.taxa_extracao >= 70 ? 'bg-emerald-500/10' : 
+                        stat.taxa_extracao >= 50 ? 'bg-amber-500/10' : 'bg-red-500/10'
+                      }`}>
+                        <p className={`text-xs font-bold ${
+                          stat.taxa_extracao >= 70 ? 'text-emerald-400' : 
+                          stat.taxa_extracao >= 50 ? 'text-amber-400' : 'text-red-400'
+                        }`}>{stat.taxa_extracao.toFixed(0)}%</p>
+                        <p className="text-[9px] text-muted-foreground">Extração</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
             {statsPorCasa.length > 8 && (
               <div className="mt-3 text-center">
                 <Button variant="ghost" size="sm" onClick={() => setActiveNavTab("por-casa")}>
@@ -1134,9 +1177,6 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
               })}
             </nav>
           </div>
-
-          {/* Freebets Disponíveis */}
-          {freebetsDisponiveisSidebar}
         </div>
 
         {/* Content Area */}
