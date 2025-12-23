@@ -485,11 +485,14 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
       ap.status === "LIQUIDADA" && ap.resultado && ap.resultado !== "PENDENTE"
     );
     
-    // Calcular valor extraído considerando matched betting
+    // Calcular valor extraído considerando matched betting e todos os tipos de resultado
     const totalExtraido = apostasFinalizadas.reduce((acc, ap) => {
-      if (ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN") {
+      const isGreen = ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN" || ap.resultado === "GREEN_BOOKMAKER";
+      const isRed = ap.resultado === "RED" || ap.resultado === "MEIO_RED" || ap.resultado === "RED_BOOKMAKER";
+      
+      if (isGreen) {
         return acc + Math.max(0, ap.lucro_prejuizo || 0);
-      } else if (ap.resultado === "RED" || ap.resultado === "MEIO_RED") {
+      } else if (isRed) {
         // Em matched betting, quando freebet perde, o lay ganha
         if (ap.lay_odd && ap.lay_stake) {
           const comissao = ap.lay_comissao || 0;
@@ -503,10 +506,10 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
     const taxaExtracao = totalRecebido > 0 ? (totalExtraido / totalRecebido) * 100 : 0;
     const totalApostas = apostasExtracao.length;
     const apostasGanhas = apostasExtracao.filter(ap => 
-      ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN"
+      ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN" || ap.resultado === "GREEN_BOOKMAKER"
     ).length;
     const apostasPerdidas = apostasExtracao.filter(ap => 
-      ap.resultado === "RED" || ap.resultado === "MEIO_RED"
+      ap.resultado === "RED" || ap.resultado === "MEIO_RED" || ap.resultado === "RED_BOOKMAKER"
     ).length;
     const apostasPendentes = apostasExtracao.filter(ap => 
       ap.status === "PENDENTE" || !ap.resultado
@@ -567,22 +570,25 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
       
       existing.apostas_realizadas += 1;
       
-      // Para matched betting: o valor extraído é calculado diferente
-      // Se a freebet ganha: lucro_prejuizo é positivo
-      // Se a freebet perde: o lay na exchange compensa, então ainda há extração
-      // O valor extraído real é: stake * (odd - 1) * taxa_conversao_tipica (~85%)
-      // Mas para simplificar, usamos o valor_retorno quando disponível ou calculamos
-      if (ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN") {
+      // Verificar resultado - considerar todos os tipos de GREEN/RED
+      const isGreen = ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN" || ap.resultado === "GREEN_BOOKMAKER";
+      const isRed = ap.resultado === "RED" || ap.resultado === "MEIO_RED" || ap.resultado === "RED_BOOKMAKER";
+      
+      // Para matched betting com freebet:
+      // O "valor extraído" é o lucro líquido da operação de extração
+      if (isGreen) {
         existing.apostas_ganhas += 1;
+        // Lucro positivo: freebet ganhou, usamos o valor direto
         existing.valor_total_extraido += Math.max(0, ap.lucro_prejuizo || 0);
-      } else if (ap.resultado === "RED" || ap.resultado === "MEIO_RED") {
+      } else if (isRed) {
         existing.apostas_perdidas += 1;
-        // Em matched betting, mesmo quando a freebet "perde", há extração via lay
-        // O valor extraído aproximado é: stake * (1 - 1/lay_odd) * (1 - comissão)
-        if (ap.lay_odd && ap.lay_stake) {
+        // Freebet perdeu, mas houve extração via lay na exchange
+        if (ap.lay_stake && ap.lay_odd) {
           const comissao = ap.lay_comissao || 0;
           const lucroLay = ap.lay_stake * (1 - comissao / 100);
           existing.valor_total_extraido += Math.max(0, lucroLay);
+        } else {
+          existing.valor_total_extraido += Math.max(0, ap.lucro_prejuizo || 0);
         }
       } else if (ap.status === "PENDENTE" || !ap.resultado) {
         existing.apostas_pendentes += 1;
@@ -852,14 +858,6 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
                 <List className="h-4 w-4" />
               </ToggleGroupItem>
             </ToggleGroup>
-            
-            <div className="flex items-center gap-2">
-              <Switch id="compact" checked={compactMode} onCheckedChange={toggleCompactMode} />
-              <Label htmlFor="compact" className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1">
-                <Minimize2 className="h-3 w-3" />
-                Compacto
-              </Label>
-            </div>
           </div>
         </div>
       </CardHeader>
