@@ -65,6 +65,20 @@ interface Aposta {
   observacoes: string | null;
   bookmaker_id: string;
   bookmaker_nome?: string;
+  // Campos adicionais para edição correta
+  modo_entrada?: string;
+  gerou_freebet?: boolean;
+  valor_freebet_gerada?: number | null;
+  tipo_freebet?: string | null;
+  forma_registro?: string | null;
+  contexto_operacional?: string | null;
+  lay_exchange?: string | null;
+  lay_odd?: number | null;
+  lay_stake?: number | null;
+  lay_liability?: number | null;
+  lay_comissao?: number | null;
+  back_em_exchange?: boolean;
+  back_comissao?: number | null;
 }
 
 function ResultadoBadge({ resultado }: { resultado: string | null }) {
@@ -127,10 +141,15 @@ export function ProjetoValueBetTab({
 
   const fetchApostas = async () => {
     try {
-      // Query simples sem joins complexos para evitar erros de tipo
       let query = supabase
         .from("apostas")
-        .select("id, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id")
+        .select(`
+          id, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, 
+          status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id,
+          modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
+          contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
+          back_em_exchange, back_comissao
+        `)
         .eq("projeto_id", projetoId)
         .eq("estrategia", APOSTA_ESTRATEGIA.VALUEBET)
         .order("data_aposta", { ascending: false });
@@ -143,7 +162,6 @@ export function ProjetoValueBetTab({
       const { data, error } = await query;
       if (error) throw error;
       
-      // Buscar nomes dos bookmakers separadamente
       const bookmakerIds = [...new Set((data || []).map((a: { bookmaker_id: string }) => a.bookmaker_id))];
       
       let bookmakerMap = new Map<string, string>();
@@ -156,38 +174,8 @@ export function ProjetoValueBetTab({
         bookmakerMap = new Map((bookmakers || []).map((b: { id: string; nome: string }) => [b.id, b.nome]));
       }
       
-      const mappedApostas: Aposta[] = (data || []).map((a: {
-        id: string;
-        data_aposta: string;
-        esporte: string;
-        evento: string;
-        mercado: string | null;
-        selecao: string;
-        odd: number;
-        stake: number;
-        estrategia: string | null;
-        status: string;
-        resultado: string | null;
-        lucro_prejuizo: number | null;
-        valor_retorno: number | null;
-        observacoes: string | null;
-        bookmaker_id: string;
-      }) => ({
-        id: a.id,
-        data_aposta: a.data_aposta,
-        esporte: a.esporte,
-        evento: a.evento,
-        mercado: a.mercado,
-        selecao: a.selecao,
-        odd: a.odd,
-        stake: a.stake,
-        estrategia: a.estrategia,
-        status: a.status,
-        resultado: a.resultado,
-        lucro_prejuizo: a.lucro_prejuizo,
-        valor_retorno: a.valor_retorno,
-        observacoes: a.observacoes,
-        bookmaker_id: a.bookmaker_id,
+      const mappedApostas: Aposta[] = (data || []).map((a: any) => ({
+        ...a,
         bookmaker_nome: bookmakerMap.get(a.bookmaker_id) || "Desconhecida"
       }));
       

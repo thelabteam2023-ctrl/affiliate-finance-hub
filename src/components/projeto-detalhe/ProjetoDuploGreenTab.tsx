@@ -66,6 +66,20 @@ interface Aposta {
   observacoes: string | null;
   bookmaker_id: string;
   bookmaker_nome?: string;
+  // Campos adicionais para edição correta
+  modo_entrada?: string;
+  gerou_freebet?: boolean;
+  valor_freebet_gerada?: number | null;
+  tipo_freebet?: string | null;
+  forma_registro?: string | null;
+  contexto_operacional?: string | null;
+  lay_exchange?: string | null;
+  lay_odd?: number | null;
+  lay_stake?: number | null;
+  lay_liability?: number | null;
+  lay_comissao?: number | null;
+  back_em_exchange?: boolean;
+  back_comissao?: number | null;
 }
 
 function ResultadoBadge({ resultado }: { resultado: string | null }) {
@@ -130,7 +144,13 @@ export function ProjetoDuploGreenTab({
     try {
       let query = supabase
         .from("apostas")
-        .select("id, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id")
+        .select(`
+          id, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, 
+          status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id,
+          modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
+          contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
+          back_em_exchange, back_comissao
+        `)
         .eq("projeto_id", projetoId)
         .eq("estrategia", APOSTA_ESTRATEGIA.DUPLO_GREEN)
         .order("data_aposta", { ascending: false });
@@ -155,23 +175,7 @@ export function ProjetoDuploGreenTab({
         bookmakerMap = new Map((bookmakers || []).map((b: { id: string; nome: string }) => [b.id, b.nome]));
       }
       
-      const mappedApostas: Aposta[] = (data || []).map((a: {
-        id: string;
-        data_aposta: string;
-        esporte: string;
-        evento: string;
-        mercado: string | null;
-        selecao: string;
-        odd: number;
-        stake: number;
-        estrategia: string | null;
-        status: string;
-        resultado: string | null;
-        lucro_prejuizo: number | null;
-        valor_retorno: number | null;
-        observacoes: string | null;
-        bookmaker_id: string;
-      }) => ({
+      const mappedApostas: Aposta[] = (data || []).map((a: any) => ({
         ...a,
         bookmaker_nome: bookmakerMap.get(a.bookmaker_id) || "Desconhecida"
       }));

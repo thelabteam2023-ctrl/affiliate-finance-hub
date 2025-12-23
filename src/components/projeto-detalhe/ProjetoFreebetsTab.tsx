@@ -342,6 +342,8 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
         gerou_freebet: aposta.gerou_freebet,
         valor_freebet_gerada: aposta.valor_freebet_gerada,
         selecoes: aposta.selecao.split(" + ").map(s => ({ descricao: s, selecao: s, odd: "1.00" })),
+        estrategia: aposta.estrategia,
+        contexto_operacional: aposta.contexto_operacional,
         bookmaker: {
           nome: aposta.bookmaker_nome,
           bookmakers_catalogo: { logo_url: aposta.logo_url }
@@ -365,6 +367,9 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
         tipo_freebet: aposta.tipo_freebet,
         gerou_freebet: aposta.gerou_freebet,
         valor_freebet_gerada: aposta.valor_freebet_gerada,
+        estrategia: aposta.estrategia,
+        contexto_operacional: aposta.contexto_operacional,
+        modo_entrada: aposta.lado_aposta,
         bookmaker: {
           nome: aposta.bookmaker_nome,
           bookmakers_catalogo: { logo_url: aposta.logo_url }
