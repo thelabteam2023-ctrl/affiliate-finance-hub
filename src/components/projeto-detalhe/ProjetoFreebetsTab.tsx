@@ -47,7 +47,7 @@ interface ProjetoFreebetsTabProps {
 }
 
 type NavigationMode = "tabs" | "sidebar";
-type NavTabValue = "visao-geral" | "apostas" | "por-casa" | "graficos";
+type NavTabValue = "visao-geral" | "apostas" | "por-casa";
 type InternalPeriodFilter = "7dias" | "30dias" | "90dias" | "ano" | "tudo";
 
 const NAV_STORAGE_KEY = "freebets-nav-mode";
@@ -56,7 +56,6 @@ const NAV_ITEMS = [
   { value: "visao-geral" as NavTabValue, label: "Visão Geral", icon: LayoutDashboard },
   { value: "apostas" as NavTabValue, label: "Apostas", icon: Target },
   { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
-  { value: "graficos" as NavTabValue, label: "Gráficos", icon: BarChart3 },
 ];
 
 const PERIOD_OPTIONS: { value: InternalPeriodFilter; label: string }[] = [
@@ -654,22 +653,13 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
             viewMode={viewMode}
           />
         )}
-        {activeNavTab === "graficos" && (
-          <FreebetGraficos 
-            apostas={apostasNoPeriodo} 
-            statsPorCasa={statsPorCasa}
-            formatCurrency={formatCurrency}
-            dateRange={dateRange}
-            freebets={freebetsNoPeriodo}
-          />
-        )}
       </div>
     );
   };
 
   // Visão Geral content
   const renderVisaoGeral = () => (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* KPIs - Métricas de Período */}
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
         <Card className="border-amber-500/20 bg-amber-500/5">
@@ -744,6 +734,15 @@ export function ProjetoFreebetsTab({ projetoId, periodFilter = "tudo", customDat
           </CardContent>
         </Card>
       </div>
+
+      {/* Gráficos */}
+      <FreebetGraficos 
+        apostas={apostasNoPeriodo} 
+        statsPorCasa={statsPorCasa}
+        formatCurrency={formatCurrency}
+        dateRange={dateRange}
+        freebets={freebetsNoPeriodo}
+      />
 
       {/* Recent Apostas Preview */}
       {apostasAtivas.length > 0 && (
