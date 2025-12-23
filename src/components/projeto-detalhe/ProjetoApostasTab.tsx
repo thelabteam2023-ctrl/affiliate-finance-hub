@@ -996,9 +996,20 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
                       >
                         <td className="p-3">{getContextoBadge(item.contexto) || <span className="text-muted-foreground">—</span>}</td>
                         <td className="p-3">
-                          <Badge variant="outline" className="text-xs">
-                            {item.tipo === "simples" ? "Simples" : item.tipo === "multipla" ? "Múltipla" : "Surebet"}
-                          </Badge>
+                          {(() => {
+                            if (isSimples) {
+                              const opInfo = getOperationType(data);
+                              if (opInfo.label) {
+                                return <Badge className={`text-xs ${opInfo.color}`}>{opInfo.label}</Badge>;
+                              }
+                              return <Badge variant="outline" className="text-xs">BACK</Badge>;
+                            } else if (isMultipla) {
+                              return <Badge variant="outline" className="text-xs">Múltipla</Badge>;
+                            } else {
+                              // Surebet
+                              return <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-xs">Surebet</Badge>;
+                            }
+                          })()}
                         </td>
                         <td className="p-3 max-w-[200px] truncate">
                           {isSimples ? data.evento : isMultipla ? `Múltipla ${data.tipo_multipla}` : data.evento}
