@@ -289,13 +289,15 @@ export function ProjetoValueBetTab({
 
   return (
     <div className="space-y-4">
-      {/* Filtro de Tempo */}
-      <StandardTimeFilter
-        period={internalPeriod}
-        onPeriodChange={setInternalPeriod}
-        customDateRange={internalDateRange}
-        onCustomDateRangeChange={setInternalDateRange}
-      />
+      {/* Filtro de Tempo - Alinhado à direita */}
+      <div className="flex justify-end">
+        <StandardTimeFilter
+          period={internalPeriod}
+          onPeriodChange={setInternalPeriod}
+          customDateRange={internalDateRange}
+          onCustomDateRangeChange={setInternalDateRange}
+        />
+      </div>
 
       {/* Banner informativo */}
       <Card className="border-purple-500/20 bg-purple-500/5">

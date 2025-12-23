@@ -633,13 +633,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
 
   return (
     <div className="space-y-4">
-      {/* Filtro de Tempo */}
-      <StandardTimeFilter
-        period={internalPeriod}
-        onPeriodChange={setInternalPeriod}
-        customDateRange={internalDateRange}
-        onCustomDateRangeChange={setInternalDateRange}
-      />
+      {/* Filtro de Tempo - Alinhado à direita */}
+      <div className="flex justify-end">
+        <StandardTimeFilter
+          period={internalPeriod}
+          onPeriodChange={setInternalPeriod}
+          customDateRange={internalDateRange}
+          onCustomDateRangeChange={setInternalDateRange}
+        />
+      </div>
 
       {/* Info Banner - Livro Razão */}
       <div className="bg-muted/30 border rounded-lg p-3 text-sm text-muted-foreground flex items-center gap-2">
