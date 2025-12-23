@@ -72,6 +72,8 @@ interface Aposta {
   gerou_freebet?: boolean;
   valor_freebet_gerada?: number | null;
   tipo_freebet?: string | null;
+  forma_registro?: string | null;
+  contexto_operacional?: string | null;
 }
 
 interface Bookmaker {
@@ -564,8 +566,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         if (aposta.modo_entrada === "EXCHANGE" || aposta.back_em_exchange) {
           // Exchange mode
           setTipoAposta("exchange");
-          // Determinar se é Back, Lay ou Cobertura baseado na estratégia
-          if (aposta.estrategia === "COBERTURA_LAY") {
+          
+          // Detectar Cobertura: modo EXCHANGE + tem lay_exchange + tem lay_odd
+          // Isso indica que é uma operação de cobertura (Back + Lay simultâneos)
+          const isCobertura = aposta.modo_entrada === "EXCHANGE" && 
+                              aposta.lay_exchange && 
+                              aposta.lay_odd !== null && 
+                              aposta.lay_odd !== undefined;
+          
+          if (isCobertura) {
             setTipoOperacaoExchange("cobertura");
             setCoberturaBackBookmakerId(aposta.bookmaker_id || "");
             setCoberturaBackOdd(aposta.odd?.toString() || "");
@@ -574,7 +583,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             setCoberturaLayOdd(aposta.lay_odd?.toString() || "");
             setCoberturaLayComissao(aposta.lay_comissao?.toString() || "5");
             // Restaurar tipo de freebet da aposta salva
-            const tipoFreebet = (aposta as any).tipo_freebet as string | null;
+            const tipoFreebet = aposta.tipo_freebet as string | null;
             if (tipoFreebet === "freebet_snr") {
               setTipoApostaBack("freebet_snr");
             } else if (tipoFreebet === "freebet_sr") {
@@ -582,19 +591,31 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             } else {
               setTipoApostaBack("normal");
             }
-          } else if (aposta.estrategia === "EXCHANGE_LAY") {
+          } else if (aposta.estrategia === "EXCHANGE_LAY" || 
+                     (aposta.lay_odd && !aposta.lay_exchange && aposta.modo_entrada === "EXCHANGE")) {
+            // Lay simples: tem lay_odd mas não tem lay_exchange (exchange de destino)
             setTipoOperacaoExchange("lay");
-            setExchangeOdd(aposta.lay_odd?.toString() || "");
+            setExchangeOdd(aposta.lay_odd?.toString() || aposta.odd?.toString() || "");
             setExchangeStake(aposta.lay_stake?.toString() || aposta.stake?.toString() || "");
             setExchangeLiability(aposta.lay_liability || null);
             setExchangeBookmakerId(aposta.bookmaker_id || "");
             setExchangeComissao(aposta.lay_comissao?.toString() || "5");
           } else {
+            // Back simples em exchange
             setTipoOperacaoExchange("back");
             setExchangeOdd(aposta.odd?.toString() || "");
             setExchangeStake(aposta.stake?.toString() || "");
             setExchangeBookmakerId(aposta.bookmaker_id || "");
             setExchangeComissao(aposta.back_comissao?.toString() || "5");
+            // Restaurar tipo de freebet para Exchange Back
+            const tipoFreebet = aposta.tipo_freebet as string | null;
+            if (tipoFreebet === "freebet_snr") {
+              setTipoApostaExchangeBack("freebet_snr");
+            } else if (tipoFreebet === "freebet_sr") {
+              setTipoApostaExchangeBack("freebet_sr");
+            } else {
+              setTipoApostaExchangeBack("normal");
+            }
           }
         } else if (aposta.modo_entrada === "LAYBACK") {
           // Legado: Bookmaker + Lay em exchange -> migrar para Cobertura
@@ -621,6 +642,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         if (aposta.tipo_freebet && aposta.tipo_freebet !== "normal" && aposta.modo_entrada === "PADRAO") {
           setUsarFreebetBookmaker(true);
         }
+        
+        // Restaurar campos de registro (estrategia, forma_registro, contexto_operacional)
+        setRegistroValues({
+          forma_registro: (aposta.forma_registro as FormaRegistro) || null,
+          estrategia: (aposta.estrategia as ApostaEstrategia) || null,
+          contexto_operacional: (aposta.contexto_operacional as ContextoOperacional) || null,
+        });
       } else {
         resetForm();
       }
