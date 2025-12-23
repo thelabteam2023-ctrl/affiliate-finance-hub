@@ -1089,13 +1089,25 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
                           {formatCurrency(isSimples || isMultipla ? data.stake : data.stake_total)}
                         </td>
                         <td className="p-3 text-right">
-                          {data.lucro_prejuizo !== null ? (
-                            <span className={data.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                              {formatCurrency(data.lucro_prejuizo)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
+                          {(() => {
+                            const isSurebetItem = item.tipo === "surebet";
+                            let lucro: number | null | undefined;
+                            
+                            if (isSurebetItem) {
+                              const sb = data as Surebet;
+                              lucro = sb.status === "LIQUIDADA" ? sb.lucro_real : sb.lucro_esperado;
+                            } else {
+                              lucro = data.lucro_prejuizo;
+                            }
+                            
+                            return lucro !== null && lucro !== undefined ? (
+                              <span className={lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                                {formatCurrency(lucro)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            );
+                          })()}
                         </td>
                         <td className="p-3 text-center">
                           <Badge className={data.status === "LIQUIDADA" ? "bg-emerald-500/20 text-emerald-400" : "bg-blue-500/20 text-blue-400"}>
