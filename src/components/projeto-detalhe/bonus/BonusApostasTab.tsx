@@ -71,6 +71,8 @@ interface Aposta {
   gerou_freebet?: boolean;
   valor_freebet_gerada?: number | null;
   tipo_freebet?: string | null;
+  forma_registro?: string | null;
+  contexto_operacional?: string | null;
   is_bonus_bet?: boolean;
   bookmaker?: {
     nome: string;
