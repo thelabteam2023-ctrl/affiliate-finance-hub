@@ -1036,8 +1036,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
                     <th className="text-left p-3 font-medium">Contexto</th>
                     <th className="text-left p-3 font-medium">Tipo</th>
                     <th className="text-left p-3 font-medium">Evento</th>
-                    <th className="text-left p-3 font-medium">Seleção</th>
-                    <th className="text-right p-3 font-medium">Odd</th>
+                    <th className="text-left p-3 font-medium">Seleção / Pernas</th>
+                    <th className="text-right p-3 font-medium">Odds</th>
                     <th className="text-right p-3 font-medium">Stake</th>
                     <th className="text-right p-3 font-medium">P/L</th>
                     <th className="text-center p-3 font-medium">Status</th>
@@ -1079,11 +1079,35 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
                         <td className="p-3 max-w-[200px] truncate">
                           {isSimples ? data.evento : isMultipla ? `Múltipla ${data.tipo_multipla}` : data.evento}
                         </td>
-                        <td className="p-3 max-w-[150px] truncate text-muted-foreground">
-                          {isSimples ? data.selecao : isMultipla ? `${data.selecoes.length} seleções` : data.modelo}
+                        <td className="p-3 max-w-[200px]">
+                          {isSimples ? (
+                            <span className="truncate">{data.selecao}</span>
+                          ) : isMultipla ? (
+                            <span className="truncate">{data.selecoes.length} seleções</span>
+                          ) : (
+                            // Surebet: mostrar pernas resumidas
+                            <div className="flex flex-col gap-0.5 text-xs">
+                              {(data as Surebet).pernas?.map((perna, idx) => (
+                                <span key={perna.id} className="truncate">
+                                  {perna.bookmaker?.nome || 'Casa'}: {perna.selecao}
+                                </span>
+                              )) || <span className="text-muted-foreground">{data.modelo}</span>}
+                            </div>
+                          )}
                         </td>
                         <td className="p-3 text-right font-mono">
-                          @{(isSimples ? data.odd : isMultipla ? data.odd_final : data.roi_esperado || 0).toFixed(2)}
+                          {isSimples ? (
+                            <span>@{data.odd.toFixed(2)}</span>
+                          ) : isMultipla ? (
+                            <span>@{data.odd_final.toFixed(2)}</span>
+                          ) : (
+                            // Surebet: mostrar odds de cada perna
+                            <div className="flex flex-col gap-0.5 text-xs">
+                              {(data as Surebet).pernas?.map((perna, idx) => (
+                                <span key={perna.id}>@{perna.odd.toFixed(2)}</span>
+                              )) || <span className="text-muted-foreground">—</span>}
+                            </div>
+                          )}
                         </td>
                         <td className="p-3 text-right">
                           {formatCurrency(isSimples || isMultipla ? data.stake : data.stake_total)}
