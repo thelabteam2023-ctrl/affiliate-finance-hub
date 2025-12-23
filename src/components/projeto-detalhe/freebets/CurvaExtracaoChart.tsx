@@ -343,16 +343,6 @@ export function CurvaExtracaoChart({
                 strokeWidth={2}
                 fill="url(#gradientFreebet)"
               />
-              
-              {/* Área sombreada para valor extraído (extrações) */}
-              <Area
-                type="monotone"
-                dataKey="valorExtraidoAcumulado"
-                name="Extração"
-                stroke="#22c55e"
-                strokeWidth={2}
-                fill="url(#gradientExtraido)"
-              />
 
               {/* Linha para juice das qualificadoras */}
               <Line
@@ -370,7 +360,7 @@ export function CurvaExtracaoChart({
                 type="monotone"
                 dataKey="lucroTotalAcumulado"
                 name="Lucro Total"
-                stroke="#06b6d4"
+                stroke="#22c55e"
                 strokeWidth={2.5}
                 dot={false}
               />
@@ -399,12 +389,10 @@ export function CurvaExtracaoChart({
           <p className="text-xs text-muted-foreground">
             <strong className="text-foreground">Como interpretar:</strong> A área 
             <span className="text-amber-400 font-medium"> laranja </span>
-            representa o total de Freebets recebidas. A área 
-            <span className="text-emerald-400 font-medium"> verde </span>
-            é o valor extraído das freebets. A linha
+            representa o total de Freebets recebidas. A linha
             <span className="text-violet-400 font-medium"> roxa </span>
             mostra o juice das qualificadoras. A linha
-            <span className="text-cyan-400 font-medium"> ciano </span>
+            <span className="text-emerald-400 font-medium"> verde </span>
             é o lucro total (extração + juice).
           </p>
         </div>
