@@ -2285,7 +2285,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               <RegistroApostaFields
                 values={registroValues}
                 onChange={setRegistroValues}
-                suggestions={getSuggestionsForTab(activeTab)}
+                suggestions={aposta ? undefined : getSuggestionsForTab(activeTab)}
                 compact
               />
             </div>
