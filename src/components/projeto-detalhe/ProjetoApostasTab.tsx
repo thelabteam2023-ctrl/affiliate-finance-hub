@@ -77,6 +77,7 @@ interface Aposta {
   tipo_freebet?: string | null;
   is_bonus_bet?: boolean;
   surebet_id?: string | null;
+  contexto_operacional?: string | null;
   bookmaker?: {
     nome: string;
     parceiro_id: string;
@@ -119,6 +120,7 @@ interface ApostaMultipla {
   data_aposta: string;
   observacoes: string | null;
   is_bonus_bet?: boolean;
+  contexto_operacional?: string | null;
   bookmaker?: {
     nome: string;
     parceiro_id: string;
@@ -178,6 +180,16 @@ function getApostaContexto(
   aposta: Aposta | ApostaMultipla,
   bookmakersComBonusAtivo: string[]
 ): ApostaContexto {
+  // PRIORIDADE 1: Se tem contexto_operacional explícito salvo no BD, usar diretamente
+  if ('contexto_operacional' in aposta && aposta.contexto_operacional) {
+    const ctx = aposta.contexto_operacional as ApostaContexto;
+    if (["NORMAL", "FREEBET", "BONUS", "SUREBET"].includes(ctx)) {
+      return ctx;
+    }
+  }
+  
+  // FALLBACK para registros legados sem contexto_operacional:
+  
   // Verifica se é parte de uma surebet (apostas simples only)
   if ('surebet_id' in aposta && aposta.surebet_id) {
     return "SUREBET";
@@ -613,6 +625,13 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
           <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px] px-1.5 py-0">
             <Coins className="h-2.5 w-2.5 mr-0.5" />
             BN
+          </Badge>
+        );
+      case "NORMAL":
+        return (
+          <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] px-1.5 py-0">
+            <Coins className="h-2.5 w-2.5 mr-0.5" />
+            SR
           </Badge>
         );
       default:
