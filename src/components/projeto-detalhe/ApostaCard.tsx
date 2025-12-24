@@ -333,7 +333,8 @@ export function ApostaCard({
             <span className="text-xs text-muted-foreground">
               {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
             </span>
-            {(aposta.bookmaker_nome || aposta.operador_nome) && (
+            {/* Só mostra casa/vínculo para apostas simples (sem pernas) */}
+            {!hasPernas && (aposta.bookmaker_nome || aposta.operador_nome) && (
               (() => {
                 const label = [aposta.bookmaker_nome, aposta.operador_nome].filter(Boolean).join(" • ");
                 return (
