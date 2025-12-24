@@ -94,7 +94,7 @@ interface EvolucaoLucroChartProps {
 function EvolucaoLucroChart({ data, accentColor }: EvolucaoLucroChartProps) {
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">
+      <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
         Sem dados para exibir
       </div>
     );
@@ -109,7 +109,7 @@ function EvolucaoLucroChart({ data, accentColor }: EvolucaoLucroChartProps) {
   const fillColor = isPositive ? "hsl(var(--chart-2))" : "hsl(var(--destructive))";
 
   return (
-    <ResponsiveContainer width="100%" height={220}>
+    <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -166,7 +166,7 @@ interface CasasMaisUtilizadasCardProps {
 
 function CasasMaisUtilizadasCard({ casas, accentColor, logoMap }: CasasMaisUtilizadasCardProps) {
   const topCasas = useMemo(() => 
-    [...casas].sort((a, b) => b.volume - a.volume).slice(0, 8), 
+    [...casas].sort((a, b) => b.volume - a.volume).slice(0, 6), 
     [casas]
   );
 
@@ -184,7 +184,7 @@ function CasasMaisUtilizadasCard({ casas, accentColor, logoMap }: CasasMaisUtili
 
   if (topCasas.length === 0) {
     return (
-      <Card>
+      <Card className="h-full">
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
             <Building2 className="h-4 w-4" style={{ color: accentColor }} />
@@ -192,7 +192,7 @@ function CasasMaisUtilizadasCard({ casas, accentColor, logoMap }: CasasMaisUtili
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center h-[180px] text-sm text-muted-foreground">
+          <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">
             Nenhuma casa registrada
           </div>
         </CardContent>
@@ -415,9 +415,9 @@ export function VisaoGeralCharts({ apostas, accentColor = "hsl(var(--primary))",
   const isPositive = lastAccumulated >= 0;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      {/* Gráfico de Área — Evolução do Lucro */}
-      <Card>
+    <div className="grid gap-4 lg:grid-cols-3">
+      {/* Gráfico de Área — Evolução do Lucro (PROTAGONISTA - 2 colunas) */}
+      <Card className="lg:col-span-2">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -438,11 +438,13 @@ export function VisaoGeralCharts({ apostas, accentColor = "hsl(var(--primary))",
           <CardDescription className="text-xs">Lucro/Prejuízo acumulado ao longo do tempo</CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
-          <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} />
+          <div className="h-[280px]">
+            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} />
+          </div>
         </CardContent>
       </Card>
 
-      {/* Card — Casas Mais Utilizadas */}
+      {/* Card — Casas Mais Utilizadas (CONTEXTUAL - 1 coluna) */}
       <CasasMaisUtilizadasCard casas={casasData} accentColor={accentColor} logoMap={logoMap} />
     </div>
   );
