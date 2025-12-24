@@ -43,6 +43,7 @@ import { ApostaCard } from "./ApostaCard";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
+import { CalendarioLucros } from "./CalendarioLucros";
 import { cn } from "@/lib/utils";
 
 interface ProjetoDuploGreenTabProps {
@@ -606,7 +607,14 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       </div>
       
       {metricas.total > 0 && (
-        <VisaoGeralCharts apostas={apostas} accentColor="#84cc16" logoMap={logoMap} />
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <VisaoGeralCharts apostas={apostas} accentColor="#84cc16" logoMap={logoMap} />
+          </div>
+          <div className="lg:col-span-1">
+            <CalendarioLucros apostas={apostas} accentColor="emerald" />
+          </div>
+        </div>
       )}
     </div>
   );
