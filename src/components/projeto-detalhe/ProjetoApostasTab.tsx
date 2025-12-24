@@ -22,7 +22,8 @@ import {
   CheckCircle2,
   BarChart3,
   Clock,
-  History
+  History,
+  Info
 } from "lucide-react";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { SurebetDialog } from "./SurebetDialog";
@@ -872,11 +873,18 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
         />
       </div>
 
-      {/* Info Banner - Livro Razão */}
-      <div className="bg-muted/30 border rounded-lg p-3 text-sm text-muted-foreground flex items-center gap-2">
-        <Target className="h-4 w-4 text-primary" />
-        <span><strong>Apostas Livres</strong> — Registro completo de todas as apostas do projeto. Use os filtros de contexto para visualizar apostas normais, com freebet ou bônus.</span>
-      </div>
+      {/* Banner Info - Padronizado */}
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="py-3">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-primary">Visão Especializada:</span> Registro completo de todas as apostas do projeto. 
+              Use os filtros de contexto para visualizar apostas normais, com freebet ou bônus.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Gráficos com calendário integrado */}
       {(apostas.length > 0 || apostasMultiplas.length > 0) && (
