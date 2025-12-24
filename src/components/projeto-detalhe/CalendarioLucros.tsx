@@ -1,0 +1,251 @@
+import { useMemo, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { 
+  format, 
+  startOfMonth, 
+  endOfMonth, 
+  eachDayOfInterval, 
+  isSameMonth, 
+  isSameDay, 
+  addMonths, 
+  subMonths,
+  startOfWeek,
+  endOfWeek,
+  getDay
+} from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+
+interface ApostaData {
+  data_aposta: string;
+  resultado: string | null;
+  lucro_prejuizo: number | null;
+}
+
+interface CalendarioLucrosProps {
+  apostas: ApostaData[];
+  titulo?: string;
+  accentColor?: string;
+}
+
+export function CalendarioLucros({ 
+  apostas, 
+  titulo = "Calendário de Lucros",
+  accentColor = "purple"
+}: CalendarioLucrosProps) {
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Agrupar lucro por dia
+  const lucroPorDia = useMemo(() => {
+    const mapa = new Map<string, { lucro: number; count: number }>();
+    
+    apostas.forEach((aposta) => {
+      // Só considerar apostas com resultado definido (liquidadas)
+      if (!aposta.resultado || aposta.resultado === "PENDENTE") return;
+      
+      const dataKey = format(new Date(aposta.data_aposta), "yyyy-MM-dd");
+      const atual = mapa.get(dataKey) || { lucro: 0, count: 0 };
+      
+      mapa.set(dataKey, {
+        lucro: atual.lucro + (aposta.lucro_prejuizo || 0),
+        count: atual.count + 1
+      });
+    });
+    
+    return mapa;
+  }, [apostas]);
+
+  // Calcular dias do mês para exibição
+  const diasDoMes = useMemo(() => {
+    const inicio = startOfMonth(currentMonth);
+    const fim = endOfMonth(currentMonth);
+    
+    // Pegar o início da semana do primeiro dia do mês
+    const inicioSemana = startOfWeek(inicio, { weekStartsOn: 0 }); // Domingo
+    // Pegar o fim da semana do último dia do mês
+    const fimSemana = endOfWeek(fim, { weekStartsOn: 0 });
+    
+    return eachDayOfInterval({ start: inicioSemana, end: fimSemana });
+  }, [currentMonth]);
+
+  // Estatísticas do mês
+  const estatisticasMes = useMemo(() => {
+    let lucroTotal = 0;
+    let totalApostas = 0;
+    
+    apostas.forEach((aposta) => {
+      const dataAposta = new Date(aposta.data_aposta);
+      if (isSameMonth(dataAposta, currentMonth)) {
+        if (aposta.resultado && aposta.resultado !== "PENDENTE") {
+          lucroTotal += aposta.lucro_prejuizo || 0;
+          totalApostas++;
+        }
+      }
+    });
+    
+    return { lucroTotal, totalApostas };
+  }, [apostas, currentMonth]);
+
+  const formatCurrency = (value: number) => {
+    if (Math.abs(value) >= 1000) {
+      return `${value >= 0 ? "" : "-"}${(Math.abs(value) / 1000).toFixed(1)}K`;
+    }
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value);
+  };
+
+  const formatFullCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
+
+  const hoje = new Date();
+  const diasSemana = ["D", "S", "T", "Q", "Q", "S", "S"];
+
+  const irParaHoje = () => {
+    setCurrentMonth(new Date());
+  };
+
+  const accentClasses = {
+    purple: "border-purple-500/20",
+    emerald: "border-emerald-500/20",
+    blue: "border-blue-500/20",
+    amber: "border-amber-500/20"
+  };
+
+  return (
+    <Card className={cn("", accentClasses[accentColor as keyof typeof accentClasses] || accentClasses.purple)}>
+      <CardHeader className="py-3 pb-2">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          {titulo}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0 pb-4">
+        {/* Navegação do mês */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium min-w-[120px] text-center capitalize">
+              {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={irParaHoje}
+          >
+            Hoje
+          </Button>
+        </div>
+
+        {/* Calendário */}
+        <div className="grid grid-cols-7 gap-1">
+          {/* Cabeçalho dos dias da semana */}
+          {diasSemana.map((dia, idx) => (
+            <div 
+              key={idx} 
+              className="text-center text-xs text-muted-foreground font-medium py-1"
+            >
+              {dia}
+            </div>
+          ))}
+
+          {/* Dias do mês */}
+          {diasDoMes.map((dia, idx) => {
+            const dataKey = format(dia, "yyyy-MM-dd");
+            const dadosDia = lucroPorDia.get(dataKey);
+            const lucro = dadosDia?.lucro || 0;
+            const temApostas = dadosDia && dadosDia.count > 0;
+            const isHoje = isSameDay(dia, hoje);
+            const isMesAtual = isSameMonth(dia, currentMonth);
+
+            let bgClass = "";
+            let textClass = "text-muted-foreground";
+
+            if (temApostas && isMesAtual) {
+              if (lucro > 0) {
+                bgClass = "bg-emerald-500/20";
+                textClass = "text-emerald-400";
+              } else if (lucro < 0) {
+                bgClass = "bg-red-500/20";
+                textClass = "text-red-400";
+              } else {
+                bgClass = "bg-muted/40";
+                textClass = "text-muted-foreground";
+              }
+            }
+
+            return (
+              <div
+                key={idx}
+                className={cn(
+                  "relative aspect-square flex flex-col items-center justify-center rounded text-xs p-0.5",
+                  bgClass,
+                  isHoje && "ring-1 ring-primary",
+                  !isMesAtual && "opacity-30"
+                )}
+              >
+                <span className={cn(
+                  "font-medium",
+                  !isMesAtual ? "text-muted-foreground/50" : "text-foreground"
+                )}>
+                  {format(dia, "d")}
+                </span>
+                {temApostas && isMesAtual && (
+                  <span className={cn("text-[10px] font-medium tabular-nums", textClass)}>
+                    {formatCurrency(lucro)}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Resumo do mês */}
+        <div className="grid grid-cols-2 gap-2 mt-4">
+          <div className="bg-muted/40 rounded px-3 py-2">
+            <div className="text-xs text-muted-foreground">Lucro do mês</div>
+            <div className={cn(
+              "text-sm font-semibold tabular-nums",
+              estatisticasMes.lucroTotal > 0 ? "text-emerald-400" : 
+              estatisticasMes.lucroTotal < 0 ? "text-red-400" : "text-muted-foreground"
+            )}>
+              {formatFullCurrency(estatisticasMes.lucroTotal)}
+            </div>
+          </div>
+          <div className="bg-muted/40 rounded px-3 py-2">
+            <div className="text-xs text-muted-foreground">Apostas do mês</div>
+            <div className="text-sm font-semibold tabular-nums text-foreground">
+              {estatisticasMes.totalApostas}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

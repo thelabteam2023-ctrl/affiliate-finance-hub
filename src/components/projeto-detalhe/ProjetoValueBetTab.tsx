@@ -43,6 +43,7 @@ import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateR
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { ApostaCard } from "./ApostaCard";
 import { ValueBetStatisticsCard } from "./ValueBetStatisticsCard";
+import { CalendarioLucros } from "./CalendarioLucros";
 import { cn } from "@/lib/utils";
 
 interface ProjetoValueBetTabProps {
@@ -683,6 +684,9 @@ export function ProjetoValueBetTab({
           <div className="grid gap-4 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <ValueBetStatisticsCard apostas={apostas} />
+            </div>
+            <div className="lg:col-span-1">
+              <CalendarioLucros apostas={apostas} accentColor="purple" />
             </div>
           </div>
         </div>

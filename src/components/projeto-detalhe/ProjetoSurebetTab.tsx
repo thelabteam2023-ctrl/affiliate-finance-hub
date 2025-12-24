@@ -38,6 +38,7 @@ import { SurebetDialog } from "./SurebetDialog";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
+import { CalendarioLucros } from "./CalendarioLucros";
 import { parsePernaFromJson, PernaArbitragem } from "@/types/apostasUnificada";
 import { cn } from "@/lib/utils";
 
@@ -511,20 +512,34 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
 
       {/* Gráficos - Usando componente reutilizável */}
       {surebets.length > 0 && (
-        <VisaoGeralCharts 
-          apostas={surebets.map(s => ({
-            data_aposta: s.data_operacao,
-            lucro_prejuizo: s.lucro_real,
-            stake: s.stake_total,
-            bookmaker_nome: s.pernas?.[0]?.bookmaker_nome || "—",
-            pernas: s.pernas?.map(p => ({
-              bookmaker_nome: p.bookmaker_nome,
-              stake: p.stake
-            }))
-          }))} 
-          accentColor="hsl(var(--primary))"
-          logoMap={logoMap}
-        />
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <VisaoGeralCharts 
+              apostas={surebets.map(s => ({
+                data_aposta: s.data_operacao,
+                lucro_prejuizo: s.lucro_real,
+                stake: s.stake_total,
+                bookmaker_nome: s.pernas?.[0]?.bookmaker_nome || "—",
+                pernas: s.pernas?.map(p => ({
+                  bookmaker_nome: p.bookmaker_nome,
+                  stake: p.stake
+                }))
+              }))} 
+              accentColor="hsl(var(--primary))"
+              logoMap={logoMap}
+            />
+          </div>
+          <div className="lg:col-span-1">
+            <CalendarioLucros 
+              apostas={surebets.map(s => ({
+                data_aposta: s.data_operacao,
+                resultado: s.resultado,
+                lucro_prejuizo: s.lucro_real
+              }))} 
+              accentColor="blue" 
+            />
+          </div>
+        </div>
       )}
 
       {/* Banner Info */}
