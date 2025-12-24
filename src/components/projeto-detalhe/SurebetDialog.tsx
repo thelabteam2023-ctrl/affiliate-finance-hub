@@ -22,7 +22,10 @@ import {
   Wallet,
   RotateCcw,
   ArrowLeftRight,
-  Gift
+  Gift,
+  Plus,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
@@ -186,6 +189,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   
   // Saldos em aposta por bookmaker (para calcular saldo livre)
   const [saldosEmAposta, setSaldosEmAposta] = useState<Record<string, number>>({});
+  
+  // Estado para controlar expansão de resultados avançados por perna
+  const [expandedResultados, setExpandedResultados] = useState<Record<number, boolean>>({});
 
   // Buscar saldos em aposta (apostas pendentes) para cada bookmaker
   const fetchSaldosEmAposta = async () => {
@@ -323,6 +329,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       bookmaker_id: "", odd: "", stake: "", selecao: sel, isReference: i === 0, isManuallyEdited: false
     })));
     setLinkedApostas([]);
+    setExpandedResultados({}); // Reset expansão de resultados avançados
     // Reset registro values - usa sugestões baseadas na aba ativa
     const suggestions = getSuggestionsForTab(activeTab);
     setRegistroValues({
@@ -753,10 +760,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     };
   }, [odds, arredondarAtivado, arredondarValor]);
 
-  // Análise de resultado REAL (quando resolvida - posições marcadas como GREEN/RED/VOID)
+  // Análise de resultado REAL (quando resolvida - posições marcadas como GREEN/RED/VOID/MEIO_GREEN/MEIO_RED)
   const analysisReal = useMemo(() => {
     // Verificar se todas as posições têm resultado
-    const todasResolvidas = odds.every(o => o.resultado && ["GREEN", "RED", "VOID"].includes(o.resultado));
+    const resultadosValidos = ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"];
+    const todasResolvidas = odds.every(o => o.resultado && resultadosValidos.includes(o.resultado));
     
     if (!todasResolvidas) {
       return { isResolved: false, lucroReal: 0, roiReal: 0 };
@@ -773,9 +781,15 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       if (o.resultado === "GREEN") {
         // GREEN = ganha (retorno - stakes de todas as pernas)
         lucroReal += stake * odd;
+      } else if (o.resultado === "MEIO_GREEN") {
+        // MEIO_GREEN = ganha metade do lucro potencial + devolve metade da stake
+        lucroReal += stake + (stake * (odd - 1)) / 2;
       } else if (o.resultado === "RED") {
         // RED = perde a stake
         // Não adiciona nada ao retorno
+      } else if (o.resultado === "MEIO_RED") {
+        // MEIO_RED = perde metade da stake
+        lucroReal += stake / 2;
       } else if (o.resultado === "VOID") {
         // VOID = devolve a stake
         lucroReal += stake;
@@ -1127,7 +1141,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   };
 
   // Liquidar perna por índice - atualiza JSONB na tabela unificada
-  const handleLiquidarPerna = useCallback(async (pernaIndex: number, resultado: "GREEN" | "RED" | "VOID" | null) => {
+  const handleLiquidarPerna = useCallback(async (pernaIndex: number, resultado: "GREEN" | "RED" | "VOID" | "MEIO_GREEN" | "MEIO_RED" | null) => {
     if (!surebet) return;
     
     try {
@@ -1158,8 +1172,12 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         lucro = null;
       } else if (resultado === "GREEN") {
         lucro = stake * (odd - 1);
+      } else if (resultado === "MEIO_GREEN") {
+        lucro = (stake * (odd - 1)) / 2;
       } else if (resultado === "RED") {
         lucro = -stake;
+      } else if (resultado === "MEIO_RED") {
+        lucro = -stake / 2;
       } else if (resultado === "VOID") {
         lucro = 0;
       }
@@ -1179,16 +1197,24 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       if (resultadoAnterior && resultadoAnterior !== "PENDENTE") {
         if (resultadoAnterior === "GREEN") {
           novoSaldo -= stake * (odd - 1);
+        } else if (resultadoAnterior === "MEIO_GREEN") {
+          novoSaldo -= (stake * (odd - 1)) / 2;
         } else if (resultadoAnterior === "RED") {
           novoSaldo += stake;
+        } else if (resultadoAnterior === "MEIO_RED") {
+          novoSaldo += stake / 2;
         }
       }
 
       // 2. APLICAR efeito do resultado NOVO
       if (resultado === "GREEN") {
         novoSaldo += stake * (odd - 1);
+      } else if (resultado === "MEIO_GREEN") {
+        novoSaldo += (stake * (odd - 1)) / 2;
       } else if (resultado === "RED") {
         novoSaldo -= stake;
+      } else if (resultado === "MEIO_RED") {
+        novoSaldo -= stake / 2;
       }
 
       // Atualizar saldo da casa
@@ -1454,15 +1480,19 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             
                             {/* Resultado (apenas em modo edição) */}
                             {isEditing && (
-                              <div className="flex items-center gap-1 transition-all duration-200">
+                              <div className="flex flex-col gap-1 transition-all duration-200">
                                 {entry.resultado ? (
-                                  <>
+                                  <div className="flex items-center gap-1">
                                     <Badge className={`text-xs transition-all duration-200 animate-scale-in ${
                                       entry.resultado === "GREEN" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40" :
+                                      entry.resultado === "MEIO_GREEN" ? "bg-teal-500/20 text-teal-400 border-teal-500/40" :
                                       entry.resultado === "RED" ? "bg-red-500/20 text-red-400 border-red-500/40" :
+                                      entry.resultado === "MEIO_RED" ? "bg-orange-500/20 text-orange-400 border-orange-500/40" :
                                       "bg-gray-500/20 text-gray-400 border-gray-500/40"
                                     }`}>
-                                      {entry.resultado}
+                                      {entry.resultado === "MEIO_GREEN" ? "½ Green" : 
+                                       entry.resultado === "MEIO_RED" ? "½ Red" : 
+                                       entry.resultado}
                                     </Badge>
                                     <Button
                                       type="button"
@@ -1474,39 +1504,88 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                     >
                                       <RotateCcw className="h-3 w-3" />
                                     </Button>
-                                  </>
+                                  </div>
                                 ) : (
-                                  <div className="flex gap-1">
-                                    <Button 
-                                      type="button"
-                                      size="sm" 
-                                      variant="outline"
-                                      className="h-6 w-6 p-0 text-emerald-500 hover:bg-emerald-500/20 transition-all duration-150 hover:scale-110"
-                                      onClick={() => handleLiquidarPerna(index, "GREEN")}
-                                      title="GREEN"
-                                    >
-                                      <CheckCircle2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                    <Button 
-                                      type="button"
-                                      size="sm" 
-                                      variant="outline"
-                                      className="h-6 w-6 p-0 text-red-500 hover:bg-red-500/20 transition-all duration-150 hover:scale-110"
-                                      onClick={() => handleLiquidarPerna(index, "RED")}
-                                      title="RED"
-                                    >
-                                      <XCircle className="h-3.5 w-3.5" />
-                                    </Button>
-                                    <Button 
-                                      type="button"
-                                      size="sm" 
-                                      variant="outline"
-                                      className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-500/20 transition-all duration-150 hover:scale-110"
-                                      onClick={() => handleLiquidarPerna(index, "VOID")}
-                                      title="VOID"
-                                    >
-                                      <span className="text-[10px] font-bold">V</span>
-                                    </Button>
+                                  <div className="flex flex-col gap-1">
+                                    {/* Botões principais: Green, Red, Void */}
+                                    <div className="flex gap-1 items-center">
+                                      <Button 
+                                        type="button"
+                                        size="sm" 
+                                        variant="outline"
+                                        className="h-6 w-6 p-0 text-emerald-500 hover:bg-emerald-500/20 transition-all duration-150 hover:scale-110"
+                                        onClick={() => handleLiquidarPerna(index, "GREEN")}
+                                        title="GREEN"
+                                      >
+                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button 
+                                        type="button"
+                                        size="sm" 
+                                        variant="outline"
+                                        className="h-6 w-6 p-0 text-red-500 hover:bg-red-500/20 transition-all duration-150 hover:scale-110"
+                                        onClick={() => handleLiquidarPerna(index, "RED")}
+                                        title="RED"
+                                      >
+                                        <XCircle className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button 
+                                        type="button"
+                                        size="sm" 
+                                        variant="outline"
+                                        className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-500/20 transition-all duration-150 hover:scale-110"
+                                        onClick={() => handleLiquidarPerna(index, "VOID")}
+                                        title="VOID"
+                                      >
+                                        <span className="text-[10px] font-bold">V</span>
+                                      </Button>
+                                      
+                                      {/* Botão de expandir resultados avançados */}
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground transition-all duration-150"
+                                        onClick={() => setExpandedResultados(prev => ({
+                                          ...prev,
+                                          [index]: !prev[index]
+                                        }))}
+                                        title={expandedResultados[index] ? "Recolher" : "Resultados avançados"}
+                                      >
+                                        {expandedResultados[index] ? (
+                                          <ChevronUp className="h-3.5 w-3.5" />
+                                        ) : (
+                                          <Plus className="h-3.5 w-3.5" />
+                                        )}
+                                      </Button>
+                                    </div>
+                                    
+                                    {/* Botões avançados: Meio Green, Meio Red */}
+                                    {expandedResultados[index] && (
+                                      <div className="flex gap-1 items-center pl-0.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                                        <span className="text-[9px] text-muted-foreground mr-0.5">Parcial:</span>
+                                        <Button 
+                                          type="button"
+                                          size="sm" 
+                                          variant="outline"
+                                          className="h-5 px-1.5 text-[10px] text-teal-400 border-teal-500/30 hover:bg-teal-500/20 transition-all duration-150"
+                                          onClick={() => handleLiquidarPerna(index, "MEIO_GREEN")}
+                                          title="½ GREEN"
+                                        >
+                                          ½G
+                                        </Button>
+                                        <Button 
+                                          type="button"
+                                          size="sm" 
+                                          variant="outline"
+                                          className="h-5 px-1.5 text-[10px] text-orange-400 border-orange-500/30 hover:bg-orange-500/20 transition-all duration-150"
+                                          onClick={() => handleLiquidarPerna(index, "MEIO_RED")}
+                                          title="½ RED"
+                                        >
+                                          ½R
+                                        </Button>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                               </div>
