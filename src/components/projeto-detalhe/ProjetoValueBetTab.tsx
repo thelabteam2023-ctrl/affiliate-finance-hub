@@ -26,7 +26,10 @@ import {
   List,
   LayoutDashboard,
   PanelLeft,
-  LayoutList
+  LayoutList,
+  Clock,
+  History,
+  ArrowUpDown
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -89,6 +92,9 @@ const NAV_ITEMS = [
   { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
 ];
 
+// Ordenação para Por Casa
+type SortField = "volume" | "lucro" | "count" | "roi";
+
 export function ProjetoValueBetTab({ 
   projetoId, 
   onDataChange, 
@@ -101,6 +107,12 @@ export function ProjetoValueBetTab({
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
+
+  // Sub-abas Abertas/Histórico
+  const [apostasSubTab, setApostasSubTab] = useState<"abertas" | "historico">("abertas");
+  
+  // Ordenação Por Casa
+  const [porCasaSort, setPorCasaSort] = useState<SortField>("volume");
 
   // Navigation mode
   const [navMode, setNavMode] = useState<NavigationMode>(() => {

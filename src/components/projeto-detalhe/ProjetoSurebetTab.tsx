@@ -19,7 +19,10 @@ import {
   Info,
   LayoutDashboard,
   PanelLeft,
-  LayoutList
+  LayoutList,
+  Clock,
+  History,
+  ArrowUpDown
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -79,6 +82,9 @@ const NAV_ITEMS = [
   { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
 ];
 
+// Ordenação para Por Casa
+type SortField = "volume" | "lucro" | "operacoes" | "roi";
+
 export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: ProjetoSurebetTabProps) {
   const [surebets, setSurebets] = useState<Surebet[]>([]);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
@@ -86,6 +92,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedSurebet, setSelectedSurebet] = useState<Surebet | null>(null);
+
+  // Sub-abas Abertas/Histórico
+  const [operacoesSubTab, setOperacoesSubTab] = useState<"abertas" | "historico">("abertas");
+  
+  // Ordenação Por Casa
+  const [porCasaSort, setPorCasaSort] = useState<SortField>("volume");
 
   // Navigation mode
   const [navMode, setNavMode] = useState<NavigationMode>(() => {

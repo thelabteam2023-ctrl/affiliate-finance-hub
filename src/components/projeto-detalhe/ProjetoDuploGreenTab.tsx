@@ -28,7 +28,10 @@ import {
   LayoutDashboard,
   PanelLeft,
   LayoutList,
-  Users
+  Users,
+  Clock,
+  History,
+  ArrowUpDown
 } from "lucide-react";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -131,6 +134,9 @@ function ResultadoBadge({ resultado }: { resultado: string | null }) {
   return <Badge className={getColor(resultado)}>{getLabel(resultado)}</Badge>;
 }
 
+// Ordenação para Por Casa
+type SortField = "volume" | "lucro" | "apostas" | "roi";
+
 export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }: ProjetoDuploGreenTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
@@ -142,6 +148,12 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   const [surebetDialogOpen, setSurebetDialogOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
   const [selectedSurebet, setSelectedSurebet] = useState<any>(null);
+  
+  // Sub-abas Abertas/Histórico
+  const [apostasSubTab, setApostasSubTab] = useState<"abertas" | "historico">("abertas");
+  
+  // Ordenação Por Casa
+  const [porCasaSort, setPorCasaSort] = useState<SortField>("volume");
 
   const [navMode, setNavMode] = useState<NavigationMode>(() => {
     const saved = localStorage.getItem(NAV_STORAGE_KEY);
@@ -394,10 +406,30 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
     return null;
   };
 
-  const apostasFiltradas = useMemo(() => apostas.filter(a => {
+  // Separar apostas em abertas e histórico
+  const apostasAbertas = useMemo(() => apostas.filter(a => !a.resultado || a.resultado === "PENDENTE"), [apostas]);
+  const apostasHistorico = useMemo(() => apostas.filter(a => a.resultado && a.resultado !== "PENDENTE"), [apostas]);
+  
+  // Aplicar filtros na lista atual (abertas ou histórico)
+  const apostasListaAtual = apostasSubTab === "abertas" ? apostasAbertas : apostasHistorico;
+  
+  const apostasFiltradas = useMemo(() => apostasListaAtual.filter(a => {
     const matchesSearch = a.evento.toLowerCase().includes(searchTerm.toLowerCase()) || a.esporte.toLowerCase().includes(searchTerm.toLowerCase()) || a.selecao.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch && (resultadoFilter === "all" || a.resultado === resultadoFilter);
-  }), [apostas, searchTerm, resultadoFilter]);
+  }), [apostasListaAtual, searchTerm, resultadoFilter]);
+  
+  // Ordenar casaData conforme filtro selecionado
+  const casaDataSorted = useMemo(() => {
+    return [...casaData].sort((a, b) => {
+      switch (porCasaSort) {
+        case "lucro": return b.lucro - a.lucro;
+        case "apostas": return b.apostas - a.apostas;
+        case "roi": return b.roi - a.roi;
+        case "volume":
+        default: return b.volume - a.volume;
+      }
+    });
+  }, [casaData, porCasaSort]);
 
   const formatCurrency = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
   const formatPercent = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
@@ -488,16 +520,82 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
 
   const renderApostas = () => (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center gap-2"><Zap className="h-5 w-5 text-lime-400" />Apostas Duplo Green<Badge variant="secondary">{apostasFiltradas.length}</Badge></h3>
-        <div className="flex flex-wrap gap-2 items-center">
-          <div className="relative"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 w-[180px]" /></div>
-          <Select value={resultadoFilter} onValueChange={setResultadoFilter}><SelectTrigger className="w-[130px]"><SelectValue placeholder="Resultado" /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem><SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem><SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">½ Green</SelectItem><SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">½ Red</SelectItem><SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem><SelectItem value="PENDENTE" className="hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground">Pendente</SelectItem></SelectContent></Select>
-          <div className="flex border rounded-md"><Button variant={viewMode === "cards" ? "secondary" : "ghost"} size="icon" onClick={() => setViewMode("cards")} className="rounded-r-none"><LayoutGrid className="h-4 w-4" /></Button><Button variant={viewMode === "list" ? "secondary" : "ghost"} size="icon" onClick={() => setViewMode("list")} className="rounded-l-none"><List className="h-4 w-4" /></Button></div>
+      {/* Sub-abas Abertas / Histórico */}
+      <div className="flex items-center justify-between border-b pb-2">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setApostasSubTab("abertas")}
+            className={cn(
+              "flex items-center gap-1.5 text-sm font-medium pb-2 border-b-2 transition-colors -mb-[10px]",
+              apostasSubTab === "abertas"
+                ? "border-lime-500 text-lime-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Clock className="h-4 w-4" />
+            Abertas
+            <Badge variant="secondary" className="ml-1 text-xs">{apostasAbertas.length}</Badge>
+          </button>
+          <button
+            onClick={() => setApostasSubTab("historico")}
+            className={cn(
+              "flex items-center gap-1.5 text-sm font-medium pb-2 border-b-2 transition-colors -mb-[10px]",
+              apostasSubTab === "historico"
+                ? "border-lime-500 text-lime-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <History className="h-4 w-4" />
+            Histórico
+            <Badge variant="secondary" className="ml-1 text-xs">{apostasHistorico.length}</Badge>
+          </button>
         </div>
       </div>
+
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Zap className="h-5 w-5 text-lime-400" />
+          {apostasSubTab === "abertas" ? "Apostas Abertas" : "Histórico de Apostas"}
+          <Badge variant="secondary">{apostasFiltradas.length}</Badge>
+        </h3>
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 w-[180px]" />
+          </div>
+          {apostasSubTab === "historico" && (
+            <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder="Resultado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
+                <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
+                <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">½ Green</SelectItem>
+                <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">½ Red</SelectItem>
+                <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          <div className="flex border rounded-md">
+            <Button variant={viewMode === "cards" ? "secondary" : "ghost"} size="icon" onClick={() => setViewMode("cards")} className="rounded-r-none">
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button variant={viewMode === "list" ? "secondary" : "ghost"} size="icon" onClick={() => setViewMode("list")} className="rounded-l-none">
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {apostasFiltradas.length === 0 ? (
-        <Card><CardContent className="text-center py-8 text-muted-foreground"><Zap className="h-12 w-12 mx-auto mb-4 opacity-50" /><p>Nenhuma aposta Duplo Green encontrada</p></CardContent></Card>
+        <Card>
+          <CardContent className="text-center py-8 text-muted-foreground">
+            <Zap className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>{apostasSubTab === "abertas" ? "Nenhuma aposta aberta" : "Nenhuma aposta no histórico"}</p>
+          </CardContent>
+        </Card>
       ) : viewMode === "cards" ? (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {apostasFiltradas.map((aposta) => (
@@ -531,12 +629,31 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
 
   const renderPorCasa = () => (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Building2 className="h-5 w-5 text-lime-400" />
-        <h3 className="text-lg font-semibold">Análise por Casa</h3>
-        <Badge variant="secondary">{casaData.length} casas</Badge>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Building2 className="h-5 w-5 text-lime-400" />
+          <h3 className="text-lg font-semibold">Análise por Casa</h3>
+          <Badge variant="secondary">{casaDataSorted.length} casas</Badge>
+        </div>
+        
+        {/* Filtros discretos */}
+        <div className="flex items-center gap-1.5">
+          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+          <Select value={porCasaSort} onValueChange={(v) => setPorCasaSort(v as SortField)}>
+            <SelectTrigger className="h-7 w-[110px] text-xs border-muted/50">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="volume" className="text-xs">Volume</SelectItem>
+              <SelectItem value="lucro" className="text-xs">Lucro</SelectItem>
+              <SelectItem value="apostas" className="text-xs">Qtd Apostas</SelectItem>
+              <SelectItem value="roi" className="text-xs">ROI</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-      {casaData.length === 0 ? (
+      
+      {casaDataSorted.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
@@ -545,7 +662,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {casaData.map((casa) => {
+          {casaDataSorted.map((casa) => {
             const logoUrl = getLogoUrl(casa.casa);
             return (
             <Tooltip key={casa.casa}>
