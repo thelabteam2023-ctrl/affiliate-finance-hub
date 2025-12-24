@@ -26,6 +26,7 @@ import {
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
+import { StakeRoundingSelect, StakeRoundingBadge, applyStakeRounding, isRoundingActive, type StakeRoundingValue } from "@/components/ui/stake-rounding-select";
 
 interface Bookmaker {
   id: string;
@@ -170,9 +171,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     };
   });
   
-  // Arredondamento de stakes
-  const [arredondarAtivado, setArredondarAtivado] = useState(false);
-  const [arredondarValor, setArredondarValor] = useState("1");
+  // Arredondamento de stakes (novo padrão com Select)
+  const [stakeRounding, setStakeRounding] = useState<StakeRoundingValue>("none");
   
   // Odds entries (2 for binary, 3 for 1X2)
   const [odds, setOdds] = useState<OddEntry[]>([
@@ -315,8 +315,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     setEsporte("Futebol");
     setModelo("1-2");
     setObservacoes("");
-    setArredondarAtivado(false);
-    setArredondarValor("1");
+    setStakeRounding("none");
     const defaultSelecoes = getSelecoesPorMercado("", "1-2");
     setOdds(defaultSelecoes.map((sel, i) => ({
       bookmaker_id: "", odd: "", stake: "", selecao: sel, isReference: i === 0, isManuallyEdited: false
@@ -331,11 +330,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     });
   };
   
-  // Função de arredondamento
+  // Função de arredondamento (usa o novo helper)
   const arredondarStake = (valor: number): number => {
-    if (!arredondarAtivado) return valor;
-    const fator = parseFloat(arredondarValor) || 1;
-    return Math.round(valor / fator) * fator;
+    return applyStakeRounding(valor, stakeRounding);
   };
 
   // Ordem fixa para cada modelo - nunca muda
@@ -527,9 +524,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     odds.map(o => o.isReference).join(','),
     // Quando a stake da referência mudar
     odds.find(o => o.isReference)?.stake,
-    // Configurações de arredondamento
-    arredondarAtivado,
-    arredondarValor,
+    // Configuração de arredondamento
+    stakeRounding,
     // Modo edição
     isEditing
   ]);
@@ -750,7 +746,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       validOddsCount,
       hasPartialData: validOddsCount > 0
     };
-  }, [odds, arredondarAtivado, arredondarValor]);
+  }, [odds, stakeRounding]);
 
   // Análise de resultado REAL (quando resolvida - posições marcadas como GREEN/RED/VOID)
   const analysisReal = useMemo(() => {
@@ -1770,30 +1766,15 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   })}
                 </div>
                 
-                {/* Opções de Arredondamento - apenas em criação */}
+                {/* Controle de Arredondamento de Stake - apenas em criação */}
                 {!isEditing && (
-                  <div className="flex items-center gap-4 pt-2 border-t">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="arredondar-checkbox"
-                        checked={arredondarAtivado}
-                        onChange={(e) => setArredondarAtivado(e.target.checked)}
-                        className="h-4 w-4 cursor-pointer accent-primary rounded"
-                      />
-                      <Label htmlFor="arredondar-checkbox" className="text-sm cursor-pointer">
-                        Arredondar até:
-                      </Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={arredondarValor}
-                        onChange={(e) => setArredondarValor(e.target.value)}
-                        disabled={!arredondarAtivado}
-                        className="h-8 w-16"
-                      />
-                    </div>
+                  <div className="pt-2 border-t">
+                    <StakeRoundingSelect
+                      value={stakeRounding}
+                      onChange={setStakeRounding}
+                      showLabel={true}
+                      compact={true}
+                    />
                   </div>
                 )}
               </div>
@@ -1812,7 +1793,12 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               <CardContent className="space-y-2 px-3 pb-3">
                 {/* Stake Total */}
                 <div className="p-2 rounded-lg bg-primary/10 border border-primary/30">
-                  <p className="text-[10px] text-muted-foreground">Stake Total</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] text-muted-foreground">Stake Total</p>
+                    {!isEditing && isRoundingActive(stakeRounding) && (
+                      <StakeRoundingBadge value={stakeRounding} />
+                    )}
+                  </div>
                   <p className="text-lg font-bold text-primary">
                     {analysis.stakeTotal > 0 ? formatCurrency(analysis.stakeTotal) : "—"}
                   </p>
