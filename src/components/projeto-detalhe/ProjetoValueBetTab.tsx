@@ -75,6 +75,7 @@ interface Aposta {
   lay_comissao?: number | null;
   back_em_exchange?: boolean;
   back_comissao?: number | null;
+  pernas?: any[] | null;
 }
 
 type NavigationMode = "tabs" | "sidebar";
@@ -142,7 +143,7 @@ export function ProjetoValueBetTab({
           status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id,
           modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
           contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
-          back_em_exchange, back_comissao
+          back_em_exchange, back_comissao, pernas
         `)
         .eq("projeto_id", projetoId)
         .eq("estrategia", APOSTA_ESTRATEGIA.VALUEBET)
