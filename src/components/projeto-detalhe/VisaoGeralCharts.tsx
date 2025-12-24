@@ -44,12 +44,16 @@ interface VinculoDetalhe {
   vinculo: string;
   apostas: number;
   volume: number;
+  lucro: number;
+  roi: number;
 }
 
 interface CasaUsada {
   casa: string;
   apostas: number;
   volume: number;
+  lucro: number;
+  roi: number;
   vinculos: VinculoDetalhe[];
 }
 
@@ -159,7 +163,7 @@ interface CasasMaisUtilizadasCardProps {
 
 function CasasMaisUtilizadasCard({ casas, accentColor }: CasasMaisUtilizadasCardProps) {
   const topCasas = useMemo(() => 
-    [...casas].sort((a, b) => b.volume - a.volume).slice(0, 6), 
+    [...casas].sort((a, b) => b.volume - a.volume).slice(0, 8), 
     [casas]
   );
 
@@ -195,6 +199,7 @@ function CasasMaisUtilizadasCard({ casas, accentColor }: CasasMaisUtilizadasCard
       <CardContent className="space-y-3">
         {topCasas.map((casa, idx) => {
           const barWidth = (casa.volume / maxVolume) * 100;
+          const roiColor = casa.roi >= 0 ? "text-emerald-500" : "text-red-500";
           return (
             <Tooltip key={casa.casa}>
               <TooltipTrigger asChild>
@@ -202,11 +207,12 @@ function CasasMaisUtilizadasCard({ casas, accentColor }: CasasMaisUtilizadasCard
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground w-4">{idx + 1}.</span>
-                      <span className="font-medium truncate max-w-[120px]">{casa.casa}</span>
+                      <span className="font-medium truncate max-w-[100px]">{casa.casa}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-xs">
-                      <span className="text-muted-foreground">{casa.apostas} apostas</span>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-muted-foreground">{casa.apostas}</span>
                       <span className="font-medium">{formatCurrency(casa.volume)}</span>
+                      <span className={`font-semibold ${roiColor}`}>{casa.roi.toFixed(1)}%</span>
                     </div>
                   </div>
                   <div className="h-1.5 rounded-full bg-muted overflow-hidden">
@@ -215,28 +221,39 @@ function CasasMaisUtilizadasCard({ casas, accentColor }: CasasMaisUtilizadasCard
                       style={{
                         width: `${barWidth}%`,
                         backgroundColor: accentColor,
-                        opacity: 1 - idx * 0.12,
+                        opacity: 1 - idx * 0.08,
                       }}
                     />
                   </div>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="left" className="text-xs space-y-2 max-w-[250px]">
+              <TooltipContent side="left" className="text-xs space-y-2 max-w-[280px]">
                 <p className="font-semibold border-b pb-1 mb-1">{casa.casa}</p>
-                <div className="flex items-center justify-between text-muted-foreground">
-                  <span>Total:</span>
-                  <span className="font-medium text-foreground">{casa.apostas} apostas · {formatCurrency(casa.volume)}</span>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-muted-foreground">
+                  <span>Apostas:</span>
+                  <span className="text-right font-medium text-foreground">{casa.apostas}</span>
+                  <span>Volume:</span>
+                  <span className="text-right font-medium text-foreground">{formatCurrency(casa.volume)}</span>
+                  <span>Lucro:</span>
+                  <span className={`text-right font-medium ${casa.lucro >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    {casa.lucro >= 0 ? '+' : ''}{formatCurrency(casa.lucro)}
+                  </span>
+                  <span>ROI:</span>
+                  <span className={`text-right font-semibold ${roiColor}`}>{casa.roi.toFixed(2)}%</span>
                 </div>
                 {casa.vinculos.length > 0 && (
-                  <div className="space-y-1 pt-1 border-t">
+                  <div className="space-y-1 pt-2 border-t">
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <Users className="h-3 w-3" />
                       <span className="font-medium">Por vínculo:</span>
                     </div>
                     {casa.vinculos.slice(0, 5).map((v) => (
-                      <div key={v.vinculo} className="flex items-center justify-between pl-4">
-                        <span className="truncate max-w-[100px]">{v.vinculo}</span>
-                        <span className="text-muted-foreground">{v.apostas} · {formatCurrency(v.volume)}</span>
+                      <div key={v.vinculo} className="grid grid-cols-[1fr_auto_auto] gap-2 pl-4 items-center">
+                        <span className="truncate">{v.vinculo}</span>
+                        <span className="text-muted-foreground text-right">{formatCurrency(v.volume)}</span>
+                        <span className={`font-medium text-right ${v.roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          {v.roi.toFixed(1)}%
+                        </span>
                       </div>
                     ))}
                     {casa.vinculos.length > 5 && (
@@ -279,14 +296,15 @@ export function VisaoGeralCharts({ apostas, accentColor = "hsl(var(--primary))" 
   // Casas mais utilizadas (por volume) — agrupa por CASA, com detalhamento por vínculo
   // Formato esperado: "PARIMATCH - RAFAEL GOMES" → Casa = "PARIMATCH", Vínculo = "RAFAEL GOMES"
   const casasData = useMemo((): CasaUsada[] => {
-    // Estrutura: casa → { total, vinculos: Map<vinculo, { apostas, volume }> }
+    // Estrutura: casa → { total, vinculos: Map<vinculo, { apostas, volume, lucro }> }
     const casaMap = new Map<string, { 
       apostas: number; 
-      volume: number; 
-      vinculos: Map<string, { apostas: number; volume: number }> 
+      volume: number;
+      lucro: number;
+      vinculos: Map<string, { apostas: number; volume: number; lucro: number }> 
     }>();
 
-    const processEntry = (nomeCompleto: string, stake: number) => {
+    const processEntry = (nomeCompleto: string, stake: number, lucro: number) => {
       // Extrair casa e vínculo do nome (formato: "CASA - VÍNCULO")
       const separatorIdx = nomeCompleto.indexOf(" - ");
       let casa: string;
@@ -301,19 +319,21 @@ export function VisaoGeralCharts({ apostas, accentColor = "hsl(var(--primary))" 
       }
 
       if (!casaMap.has(casa)) {
-        casaMap.set(casa, { apostas: 0, volume: 0, vinculos: new Map() });
+        casaMap.set(casa, { apostas: 0, volume: 0, lucro: 0, vinculos: new Map() });
       }
       const casaData = casaMap.get(casa)!;
       casaData.apostas += 1;
       casaData.volume += stake;
+      casaData.lucro += lucro;
 
       // Agregar por vínculo
       if (!casaData.vinculos.has(vinculo)) {
-        casaData.vinculos.set(vinculo, { apostas: 0, volume: 0 });
+        casaData.vinculos.set(vinculo, { apostas: 0, volume: 0, lucro: 0 });
       }
       const vinculoData = casaData.vinculos.get(vinculo)!;
       vinculoData.apostas += 1;
       vinculoData.volume += stake;
+      vinculoData.lucro += lucro;
     };
 
     apostas.forEach((a) => {
@@ -322,25 +342,37 @@ export function VisaoGeralCharts({ apostas, accentColor = "hsl(var(--primary))" 
         a.pernas.forEach((perna) => {
           const nomeCompleto = perna.bookmaker_nome || "Desconhecida";
           const pernaStake = typeof perna.stake === "number" ? perna.stake : 0;
-          processEntry(nomeCompleto, pernaStake);
+          const pernaLucro = typeof perna.lucro_prejuizo === "number" ? perna.lucro_prejuizo : 0;
+          processEntry(nomeCompleto, pernaStake, pernaLucro);
         });
       } else {
         // Aposta simples — usa bookmaker_nome diretamente
         const nomeCompleto = a.bookmaker_nome || "Desconhecida";
-        processEntry(nomeCompleto, getStake(a));
+        const lucro = a.lucro_prejuizo || 0;
+        processEntry(nomeCompleto, getStake(a), lucro);
       }
     });
 
-    return Array.from(casaMap.entries()).map(([casa, data]) => ({
-      casa,
-      apostas: data.apostas,
-      volume: data.volume,
-      vinculos: Array.from(data.vinculos.entries()).map(([vinculo, v]) => ({
-        vinculo,
-        apostas: v.apostas,
-        volume: v.volume,
-      })).sort((a, b) => b.volume - a.volume),
-    }));
+    return Array.from(casaMap.entries()).map(([casa, data]) => {
+      const roi = data.volume > 0 ? (data.lucro / data.volume) * 100 : 0;
+      return {
+        casa,
+        apostas: data.apostas,
+        volume: data.volume,
+        lucro: data.lucro,
+        roi,
+        vinculos: Array.from(data.vinculos.entries()).map(([vinculo, v]) => {
+          const vinculoRoi = v.volume > 0 ? (v.lucro / v.volume) * 100 : 0;
+          return {
+            vinculo,
+            apostas: v.apostas,
+            volume: v.volume,
+            lucro: v.lucro,
+            roi: vinculoRoi,
+          };
+        }).sort((a, b) => b.volume - a.volume),
+      };
+    });
   }, [apostas]);
 
   const lastAccumulated = evolucaoData[evolucaoData.length - 1]?.acumulado ?? 0;

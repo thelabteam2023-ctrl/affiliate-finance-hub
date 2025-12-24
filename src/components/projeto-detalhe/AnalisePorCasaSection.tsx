@@ -258,11 +258,11 @@ export function AnalisePorCasaSection({ bookmakerAnalises, lucroTotalCiclo, proj
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Layers className="h-4 w-4" />
-              Ranking por Score de Longevidade
+              Ranking por Score de Longevidade (Top 8)
             </h4>
             {bookmakerAnalises
               .sort((a, b) => b.scoreLongevidade - a.scoreLongevidade)
-              .slice(0, 6)
+              .slice(0, 8)
               .map(casa => (
                 <div key={casa.bookmaker_id} className="flex items-center gap-3">
                   <span className="text-sm font-medium w-32 truncate">{casa.bookmaker_nome}</span>
@@ -274,8 +274,11 @@ export function AnalisePorCasaSection({ bookmakerAnalises, lucroTotalCiclo, proj
                       '[&>div]:bg-red-500'
                     }`}
                   />
-                  <span className={`text-sm font-bold w-12 text-right ${getScoreColor(casa.scoreLongevidade)}`}>
+                  <span className={`text-sm font-bold w-8 text-right ${getScoreColor(casa.scoreLongevidade)}`}>
                     {casa.scoreLongevidade.toFixed(0)}
+                  </span>
+                  <span className={`text-xs font-medium w-14 text-right ${casa.roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    {casa.roi.toFixed(1)}%
                   </span>
                   {getClassificacaoBadge(casa.classificacaoLongevidade)}
                 </div>
