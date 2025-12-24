@@ -28,6 +28,7 @@ import {
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ApostaDialog } from "./ApostaDialog";
+import { SurebetDialog } from "./SurebetDialog";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import {
   ResponsiveContainer,
@@ -80,6 +81,25 @@ interface Aposta {
   lay_comissao?: number | null;
   back_em_exchange?: boolean;
   back_comissao?: number | null;
+  // Campos para Surebet/Arbitragem
+  pernas?: any[];
+  stake_total?: number;
+  spread_calculado?: number;
+  roi_esperado?: number;
+  roi_real?: number;
+  lucro_esperado?: number;
+  modelo?: string;
+}
+
+interface Bookmaker {
+  id: string;
+  nome: string;
+  saldo_atual: number;
+  saldo_freebet?: number;
+  parceiro_id?: string;
+  bookmaker_catalogo_id?: string;
+  parceiro?: { nome: string } | null;
+  bookmakers_catalogo?: { logo_url: string | null } | null;
 }
 
 function ResultadoBadge({ resultado }: { resultado: string | null }) {
@@ -114,12 +134,15 @@ export function ProjetoDuploGreenTab({
   refreshTrigger
 }: ProjetoDuploGreenTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
+  const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [surebetDialogOpen, setSurebetDialogOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
+  const [selectedSurebet, setSelectedSurebet] = useState<any>(null);
 
   // Filtro de tempo interno
   const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
@@ -134,9 +157,27 @@ export function ProjetoDuploGreenTab({
   const fetchData = async () => {
     try {
       setLoading(true);
-      await fetchApostas();
+      await Promise.all([fetchApostas(), fetchBookmakers()]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBookmakers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("bookmakers")
+        .select(`
+          id, nome, saldo_atual, saldo_freebet, parceiro_id, bookmaker_catalogo_id,
+          parceiro:parceiros (nome),
+          bookmakers_catalogo (logo_url)
+        `)
+        .eq("projeto_id", projetoId);
+      
+      if (error) throw error;
+      setBookmakers(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar bookmakers:", error);
     }
   };
 
@@ -150,7 +191,8 @@ export function ProjetoDuploGreenTab({
           status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id,
           modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
           contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
-          back_em_exchange, back_comissao
+          back_em_exchange, back_comissao,
+          pernas, stake_total, spread_calculado, roi_esperado, roi_real, lucro_esperado, modelo
         `)
         .eq("projeto_id", projetoId)
         .eq("estrategia", APOSTA_ESTRATEGIA.DUPLO_GREEN)
@@ -265,6 +307,35 @@ export function ProjetoDuploGreenTab({
   const handleApostaUpdated = () => {
     fetchData();
     onDataChange?.();
+  };
+
+  // Handler para abrir o dialog correto baseado no forma_registro
+  const handleOpenAposta = (aposta: Aposta) => {
+    if (aposta.forma_registro === "ARBITRAGEM") {
+      // Se foi criada como surebet/arbitragem, abrir SurebetDialog
+      setSelectedSurebet({
+        id: aposta.id,
+        evento: aposta.evento,
+        esporte: aposta.esporte,
+        modelo: aposta.modelo || "SUREBET",
+        stake_total: aposta.stake_total || aposta.stake || 0,
+        spread_calculado: aposta.spread_calculado || 0,
+        roi_esperado: aposta.roi_esperado || 0,
+        roi_real: aposta.roi_real || 0,
+        lucro_esperado: aposta.lucro_esperado || 0,
+        lucro_real: aposta.lucro_prejuizo || 0,
+        status: aposta.status,
+        resultado: aposta.resultado,
+        data_operacao: aposta.data_aposta,
+        observacoes: aposta.observacoes,
+        pernas: aposta.pernas || [],
+      });
+      setSurebetDialogOpen(true);
+    } else {
+      // Aposta simples - abrir ApostaDialog
+      setSelectedAposta(aposta);
+      setDialogOpen(true);
+    }
   };
 
   if (loading) {
@@ -501,10 +572,7 @@ export function ProjetoDuploGreenTab({
                 <Card 
                   key={aposta.id} 
                   className="cursor-pointer hover:border-lime-500/30 transition-colors"
-                  onClick={() => {
-                    setSelectedAposta(aposta);
-                    setDialogOpen(true);
-                  }}
+                  onClick={() => handleOpenAposta(aposta)}
                 >
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start mb-2">
@@ -512,7 +580,14 @@ export function ProjetoDuploGreenTab({
                         <p className="font-medium text-sm truncate">{aposta.evento}</p>
                         <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
                       </div>
-                      <ResultadoBadge resultado={aposta.resultado} />
+                      <div className="flex items-center gap-1">
+                        {aposta.forma_registro === "ARBITRAGEM" && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 border-cyan-500/30 text-cyan-400">
+                            ARB
+                          </Badge>
+                        )}
+                        <ResultadoBadge resultado={aposta.resultado} />
+                      </div>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">{aposta.selecao}</span>
@@ -541,17 +616,21 @@ export function ProjetoDuploGreenTab({
                 <div
                   key={aposta.id}
                   className="flex items-center justify-between p-3 rounded-lg border hover:border-lime-500/30 cursor-pointer transition-colors"
-                  onClick={() => {
-                    setSelectedAposta(aposta);
-                    setDialogOpen(true);
-                  }}
+                  onClick={() => handleOpenAposta(aposta)}
                 >
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div className="text-xs text-muted-foreground w-16">
                       {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{aposta.evento}</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-sm font-medium truncate">{aposta.evento}</p>
+                        {aposta.forma_registro === "ARBITRAGEM" && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 border-cyan-500/30 text-cyan-400">
+                            ARB
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">{aposta.selecao}</p>
                     </div>
                     <div className="text-right">
@@ -574,11 +653,14 @@ export function ProjetoDuploGreenTab({
         </CardContent>
       </Card>
 
-      {/* Dialog de Edição de Aposta */}
+      {/* Dialog de Edição de Aposta Simples */}
       {selectedAposta && (
         <ApostaDialog
           open={dialogOpen}
-          onOpenChange={setDialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) setSelectedAposta(null);
+          }}
           projetoId={projetoId}
           aposta={selectedAposta as any}
           onSuccess={handleApostaUpdated}
@@ -586,6 +668,20 @@ export function ProjetoDuploGreenTab({
           activeTab="duplogreen"
         />
       )}
+
+      {/* Dialog de Edição de Surebet/Arbitragem */}
+      <SurebetDialog
+        open={surebetDialogOpen}
+        onOpenChange={(open) => {
+          setSurebetDialogOpen(open);
+          if (!open) setSelectedSurebet(null);
+        }}
+        projetoId={projetoId}
+        bookmakers={bookmakers}
+        surebet={selectedSurebet}
+        onSuccess={handleApostaUpdated}
+        activeTab="duplogreen"
+      />
     </div>
   );
 }
