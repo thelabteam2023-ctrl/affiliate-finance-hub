@@ -83,6 +83,7 @@ interface Aposta {
   is_bonus_bet?: boolean;
   surebet_id?: string | null;
   contexto_operacional?: string | null;
+  forma_registro?: string | null;
   bookmaker?: {
     nome: string;
     parceiro_id: string;
@@ -127,6 +128,7 @@ interface ApostaMultipla {
   is_bonus_bet?: boolean;
   contexto_operacional?: string | null;
   estrategia?: string | null;
+  forma_registro?: string | null;
   bookmaker?: {
     nome: string;
     parceiro_id: string;
@@ -1096,8 +1098,31 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
                         key={data.id} 
                         className="border-b hover:bg-muted/30 cursor-pointer"
                         onClick={() => {
-                          if (isSimples) handleOpenDialog(data);
-                          else if (isMultipla) handleOpenMultiplaDialog(data);
+                          if (isSimples) {
+                            handleOpenDialog(data);
+                            return;
+                          }
+                          if (isMultipla) {
+                            handleOpenMultiplaDialog(data);
+                            return;
+                          }
+
+                          // Surebet
+                          const sb = data as Surebet;
+                          const surebetData: SurebetData = {
+                            ...(sb as any),
+                            lucro_real: sb.lucro_prejuizo,
+                            pernas: sb.pernas?.map((p) => ({
+                              id: p.id,
+                              selecao: p.selecao,
+                              odd: p.odd,
+                              stake: p.stake,
+                              resultado: p.resultado,
+                              bookmaker_nome: p.bookmaker?.nome || "—",
+                            })),
+                          };
+                          setSelectedSurebet(surebetData);
+                          setDialogSurebetOpen(true);
                         }}
                       >
                         <td className="p-3">{(isSimples || isMultipla) ? (getEstrategiaBadge(data) || getContextoBadge(item.contexto, data)) : getContextoBadge(item.contexto) || <span className="text-muted-foreground">—</span>}</td>
@@ -1228,6 +1253,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
           gerou_freebet: selectedAposta.gerou_freebet,
           valor_freebet_gerada: selectedAposta.valor_freebet_gerada,
           tipo_freebet: selectedAposta.tipo_freebet,
+          forma_registro: selectedAposta.forma_registro || "SIMPLES",
+          contexto_operacional: selectedAposta.contexto_operacional || "NORMAL",
         } : null}
         onSuccess={handleApostaUpdated}
       />
@@ -1253,6 +1280,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
           tipo_freebet: selectedApostaMultipla.tipo_freebet,
           gerou_freebet: selectedApostaMultipla.gerou_freebet,
           valor_freebet_gerada: selectedApostaMultipla.valor_freebet_gerada,
+          estrategia: selectedApostaMultipla.estrategia || null,
+          forma_registro: selectedApostaMultipla.forma_registro || "MULTIPLA",
+          contexto_operacional: selectedApostaMultipla.contexto_operacional || "NORMAL",
         } : null}
         onSuccess={handleApostaUpdated}
       />

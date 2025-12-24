@@ -63,6 +63,7 @@ interface ApostaMultipla {
   observacoes: string | null;
   estrategia?: string | null;
   forma_registro?: string | null;
+  contexto_operacional?: string | null;
 }
 
 interface Bookmaker {
@@ -161,6 +162,14 @@ export function ApostaMultiplaDialog({
       setStatusResultado(aposta.resultado || "PENDENTE");
       setDataAposta(aposta.data_aposta.slice(0, 16));
       setObservacoes(aposta.observacoes || "");
+
+      // Restaurar campos de registro
+      const suggestions = getSuggestionsForTab(activeTab);
+      setRegistroValues({
+        forma_registro: (aposta.forma_registro as any) || "MULTIPLA",
+        estrategia: (aposta.estrategia as any) || (suggestions.estrategia || (defaultEstrategia as any)),
+        contexto_operacional: (aposta.contexto_operacional as any) || (suggestions.contexto_operacional || "NORMAL"),
+      });
 
       // Parse selecoes from JSONB
       const parsedSelecoes = aposta.selecoes || [];
