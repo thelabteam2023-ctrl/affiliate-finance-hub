@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -19,7 +17,6 @@ import {
   LayoutDashboard,
   Target,
   Link2,
-  CalendarIcon,
   DollarSign,
   TrendingUp,
   TrendingDown,
@@ -42,8 +39,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { format, differenceInDays, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { differenceInDays } from "date-fns";
 import { ProjetoDashboardTab } from "@/components/projeto-detalhe/ProjetoDashboardTab";
 import { ProjetoApostasTab } from "@/components/projeto-detalhe/ProjetoApostasTab";
 import { ProjetoVinculosTab } from "@/components/projeto-detalhe/ProjetoVinculosTab";
@@ -56,7 +52,6 @@ import { ProjetoDuploGreenTab } from "@/components/projeto-detalhe/ProjetoDuploG
 import { ProjetoBonusArea } from "@/components/projeto-detalhe/bonus";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar";
-import { DateRange } from "react-day-picker";
 
 interface Projeto {
   id: string;
@@ -91,7 +86,7 @@ interface ApostasResumo {
   roi_percentual: number;
 }
 
-type PeriodFilter = "hoje" | "ontem" | "7dias" | "mes" | "ano" | "todo" | "custom";
+// Tipo removido - cada aba gerencia seu próprio filtro de período
 
 export default function ProjetoDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -105,10 +100,7 @@ export default function ProjetoDetalhe() {
   // Project favorites
   const { isFavorite, toggleFavorite } = useProjectFavorites();
   
-  // Period filter state
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("todo");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  // KPIs sempre mostram dados completos (sem filtro de período - cada aba usa seu próprio)
   const [activeTab, setActiveTab] = useState("apostas");
   
   // Refresh trigger - incrementado toda vez que uma aposta/bonus é criado
@@ -124,31 +116,11 @@ export default function ProjetoDetalhe() {
     refreshResultado();
   };
 
-  // Helper to get date range from filter - MUST be defined before use
+  // KPIs sempre mostram dados completos do projeto (sem filtro de período no nível da página)
+  // Cada aba tem seu próprio filtro interno (padrão Bônus/Freebets)
   const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
-    const today = new Date();
-    
-    switch (periodFilter) {
-      case "hoje":
-        return { start: startOfDay(today), end: endOfDay(today) };
-      case "ontem":
-        const yesterday = subDays(today, 1);
-        return { start: startOfDay(yesterday), end: endOfDay(yesterday) };
-      case "7dias":
-        return { start: startOfDay(subDays(today, 7)), end: endOfDay(today) };
-      case "mes":
-        return { start: startOfMonth(today), end: endOfDay(today) };
-      case "ano":
-        return { start: startOfYear(today), end: endOfDay(today) };
-      case "custom":
-        return { 
-          start: dateRange?.from || null, 
-          end: dateRange?.to || dateRange?.from || null 
-        };
-      case "todo":
-      default:
-        return { start: null, end: null };
-    }
+    // Sempre retorna todo o período para KPIs de resumo
+    return { start: null, end: null };
   };
 
   // Get date range for resultado hook
@@ -167,13 +139,9 @@ export default function ProjetoDetalhe() {
     }
   }, [id]);
 
-  // Refetch KPIs when period changes
-  useEffect(() => {
-    if (id && projeto) {
-      fetchApostasResumo();
-    }
-  }, [periodFilter, dateRange]);
-
+  // Refetch KPIs apenas quando projeto mudar (sem dependência de filtro de período)
+  // As abas usam seus próprios filtros internos
+  
   const fetchApostasResumo = async () => {
     try {
       const { start, end } = getDateRangeFromFilter();
@@ -272,39 +240,7 @@ export default function ProjetoDetalhe() {
     }
   };
 
-  const handlePeriodChange = (period: PeriodFilter) => {
-    setPeriodFilter(period);
-    if (period !== "custom") {
-      setDateRange(undefined);
-    }
-  };
-
-  const handleDateRangeSelect = (range: DateRange | undefined) => {
-    setDateRange(range);
-    if (range?.from) {
-      setPeriodFilter("custom");
-    }
-  };
-
-  const getPeriodLabel = (): string => {
-    switch (periodFilter) {
-      case "hoje": return "Hoje";
-      case "ontem": return "Ontem";
-      case "7dias": return "7 dias";
-      case "mes": return "Este mês";
-      case "ano": return "Este ano";
-      case "todo": return "Todo período";
-      case "custom":
-        if (dateRange?.from && dateRange?.to) {
-          return `${format(dateRange.from, "dd/MM")} - ${format(dateRange.to, "dd/MM")}`;
-        }
-        if (dateRange?.from) {
-          return format(dateRange.from, "dd/MM/yyyy");
-        }
-        return "Período";
-      default: return "Todo período";
-    }
-  };
+  // Funções de período removidas - cada aba usa seu próprio StandardTimeFilter interno
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -434,55 +370,7 @@ export default function ProjetoDetalhe() {
         </div>
       </div>
 
-      {/* Period Filters - Stays in header area */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-muted-foreground">Período:</span>
-        <div className="flex flex-wrap gap-1">
-          {[
-            { value: "hoje", label: "Hoje" },
-            { value: "ontem", label: "Ontem" },
-            { value: "7dias", label: "7 dias" },
-            { value: "mes", label: "Mês" },
-            { value: "ano", label: "Ano" },
-            { value: "todo", label: "Tudo" },
-          ].map((period) => (
-            <Button
-              key={period.value}
-              variant={periodFilter === period.value ? "default" : "outline"}
-              size="sm"
-              onClick={() => handlePeriodChange(period.value as PeriodFilter)}
-              className="h-8"
-            >
-              {period.label}
-            </Button>
-          ))}
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant={periodFilter === "custom" ? "default" : "outline"}
-                size="sm"
-                className="h-8"
-              >
-                <CalendarIcon className="h-4 w-4 mr-1" />
-                {periodFilter === "custom" ? getPeriodLabel() : "Período"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="range"
-                selected={dateRange}
-                onSelect={(range) => {
-                  handleDateRangeSelect(range);
-                  if (range?.to) setCalendarOpen(false);
-                }}
-                locale={ptBR}
-                initialFocus
-                className={cn("p-3 pointer-events-auto")}
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
+      {/* Filtro de período removido - cada aba usa seu próprio StandardTimeFilter interno (padrão Bônus/Freebets) */}
 
       {/* KPIs Resumo - Only show on performance tabs */}
       {showKpis && (
@@ -655,8 +543,6 @@ export default function ProjetoDetalhe() {
         <TabsContent value="visao-geral">
           <ProjetoDashboardTab 
             projetoId={id!} 
-            periodFilter={periodFilter}
-            dateRange={dateRange}
           />
         </TabsContent>
 
