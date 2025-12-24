@@ -296,20 +296,20 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
 
   const fetchApostas = async () => {
     try {
+      // Usa tabela unificada para apostas simples (excluindo surebets/arbitragem)
       let query = supabase
-        .from("apostas")
+        .from("apostas_unificada")
         .select(`
-          *,
-          bookmaker:bookmakers (
-            nome,
-            parceiro_id,
-            bookmaker_catalogo_id,
-            parceiro:parceiros (nome),
-            bookmakers_catalogo (logo_url)
-          )
+          id, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia,
+          status, resultado, valor_retorno, lucro_prejuizo, observacoes, bookmaker_id,
+          modo_entrada, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
+          back_comissao, back_em_exchange, gerou_freebet, valor_freebet_gerada,
+          tipo_freebet, is_bonus_bet, contexto_operacional, forma_registro
         `)
         .eq("projeto_id", projetoId)
-        .is("surebet_id", null) // CRÍTICO: Excluir pernas de surebet - elas são estrutura interna da operação
+        .eq("forma_registro", "SIMPLES")
+        .neq("estrategia", "SUREBET") // Excluir surebets que são exibidas separadamente
+        .is("cancelled_at", null)
         .order("data_aposta", { ascending: false });
       
       if (dateRange) {
@@ -321,26 +321,49 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
 
       if (error) throw error;
       
-      const apostasComLayInfo = await Promise.all((data || []).map(async (aposta) => {
+      // Buscar bookmakers para montar informações
+      const bookmakerIds = [...new Set((data || []).map((a: any) => a.bookmaker_id).filter(Boolean))];
+      let bookmakerMap = new Map<string, any>();
+      
+      if (bookmakerIds.length > 0) {
+        const { data: bookmakers } = await supabase
+          .from("bookmakers")
+          .select(`
+            id, nome, parceiro_id, bookmaker_catalogo_id,
+            parceiro:parceiros (nome),
+            bookmakers_catalogo (logo_url)
+          `)
+          .in("id", bookmakerIds);
+        
+        bookmakerMap = new Map((bookmakers || []).map((b: any) => [b.id, b]));
+      }
+
+      // Buscar lay_bookmaker para apostas com cobertura
+      const apostasComLayInfo = await Promise.all((data || []).map(async (aposta: any) => {
+        const bookmaker = aposta.bookmaker_id ? bookmakerMap.get(aposta.bookmaker_id) : null;
+        let lay_bookmaker = null;
+        
         if (aposta.lay_exchange && aposta.estrategia === "COBERTURA_LAY") {
           const { data: layBookmakerData } = await supabase
             .from("bookmakers")
             .select(`
-              nome,
-              parceiro_id,
-              bookmaker_catalogo_id,
+              nome, parceiro_id, bookmaker_catalogo_id,
               parceiro:parceiros (nome),
               bookmakers_catalogo (logo_url)
             `)
             .eq("id", aposta.lay_exchange)
             .single();
           
-          return {
-            ...aposta,
-            lay_bookmaker: layBookmakerData
-          };
+          lay_bookmaker = layBookmakerData;
         }
-        return aposta;
+        
+        return {
+          ...aposta,
+          odd: aposta.odd ?? 0,
+          stake: aposta.stake ?? 0,
+          bookmaker,
+          lay_bookmaker
+        };
       }));
       
       setApostas(apostasComLayInfo || []);
@@ -351,19 +374,18 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
 
   const fetchApostasMultiplas = async () => {
     try {
+      // Usa tabela unificada para apostas múltiplas
       let query = supabase
-        .from("apostas_multiplas")
+        .from("apostas_unificada")
         .select(`
-          *,
-          bookmaker:bookmakers (
-            nome,
-            parceiro_id,
-            bookmaker_catalogo_id,
-            parceiro:parceiros (nome),
-            bookmakers_catalogo (logo_url)
-          )
+          id, data_aposta, stake, odd_final, lucro_prejuizo, valor_retorno,
+          status, resultado, observacoes, bookmaker_id, estrategia,
+          tipo_freebet, gerou_freebet, valor_freebet_gerada, is_bonus_bet,
+          contexto_operacional, forma_registro, selecoes, tipo_multipla, retorno_potencial
         `)
         .eq("projeto_id", projetoId)
+        .eq("forma_registro", "MULTIPLA")
+        .is("cancelled_at", null)
         .order("data_aposta", { ascending: false });
       
       if (dateRange) {
@@ -375,9 +397,29 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
 
       if (error) throw error;
       
+      // Buscar bookmakers
+      const bookmakerIds = [...new Set((data || []).map((a: any) => a.bookmaker_id).filter(Boolean))];
+      let bookmakerMap = new Map<string, any>();
+      
+      if (bookmakerIds.length > 0) {
+        const { data: bookmakers } = await supabase
+          .from("bookmakers")
+          .select(`
+            id, nome, parceiro_id, bookmaker_catalogo_id,
+            parceiro:parceiros (nome),
+            bookmakers_catalogo (logo_url)
+          `)
+          .in("id", bookmakerIds);
+        
+        bookmakerMap = new Map((bookmakers || []).map((b: any) => [b.id, b]));
+      }
+      
       setApostasMultiplas((data || []).map((am: any) => ({
         ...am,
-        selecoes: Array.isArray(am.selecoes) ? am.selecoes : []
+        odd_final: am.odd_final ?? 0,
+        stake: am.stake ?? 0,
+        selecoes: Array.isArray(am.selecoes) ? am.selecoes : [],
+        bookmaker: am.bookmaker_id ? bookmakerMap.get(am.bookmaker_id) : null
       })));
     } catch (error: any) {
       console.error("Erro ao carregar apostas múltiplas:", error.message);
@@ -386,48 +428,61 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
 
   const fetchSurebets = async () => {
     try {
+      // Usa tabela unificada para surebets/arbitragem
       let query = supabase
-        .from("surebets")
-        .select("*")
+        .from("apostas_unificada")
+        .select(`
+          id, evento, esporte, modelo, stake_total, spread_calculado,
+          roi_esperado, roi_real, lucro_esperado, lucro_prejuizo as lucro_real,
+          status, resultado, data_aposta, observacoes, created_at, pernas
+        `)
         .eq("projeto_id", projetoId)
-        .order("data_operacao", { ascending: false });
+        .eq("forma_registro", "ARBITRAGEM")
+        .is("cancelled_at", null)
+        .order("data_aposta", { ascending: false });
       
       if (dateRange) {
-        query = query.gte("data_operacao", dateRange.start.toISOString());
-        query = query.lte("data_operacao", dateRange.end.toISOString());
+        query = query.gte("data_aposta", dateRange.start.toISOString());
+        query = query.lte("data_aposta", dateRange.end.toISOString());
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
       
-      const surebetsComPernas = await Promise.all((data || []).map(async (surebet) => {
-        const { data: pernasData } = await supabase
-          .from("apostas")
-          .select(`
-            id,
-            bookmaker_id,
-            selecao,
-            odd,
-            stake,
-            resultado,
-            tipo_freebet,
-            gerou_freebet,
-            is_bonus_bet,
-            bookmaker:bookmakers (
-              nome,
-              parceiro:parceiros (nome)
-            )
-          `)
-          .eq("surebet_id", surebet.id);
-        
-        return {
-          ...surebet,
-          pernas: pernasData || []
-        };
-      }));
+      // Buscar nomes de bookmakers para as pernas
+      const allBookmakerIds = new Set<string>();
+      (data || []).forEach((sb: any) => {
+        const pernas = Array.isArray(sb.pernas) ? sb.pernas : [];
+        pernas.forEach((p: any) => {
+          if (p.bookmaker_id) allBookmakerIds.add(p.bookmaker_id);
+        });
+      });
       
-      setSurebets(surebetsComPernas);
+      let bookmakerMap = new Map<string, { nome: string; parceiro?: { nome: string } }>();
+      if (allBookmakerIds.size > 0) {
+        const { data: bookmakers } = await supabase
+          .from("bookmakers")
+          .select("id, nome, parceiro:parceiros (nome)")
+          .in("id", Array.from(allBookmakerIds));
+        
+        bookmakerMap = new Map((bookmakers || []).map((b: any) => [b.id, { nome: b.nome, parceiro: b.parceiro }]));
+      }
+      
+      const surebetsFormatadas = (data || []).map((sb: any) => {
+        const pernas = Array.isArray(sb.pernas) ? sb.pernas : [];
+        return {
+          ...sb,
+          data_operacao: sb.data_aposta,
+          stake_total: sb.stake_total ?? 0,
+          pernas: pernas.map((p: any) => ({
+            ...p,
+            bookmaker: bookmakerMap.get(p.bookmaker_id) || { nome: "Desconhecida" }
+          }))
+        };
+      });
+      
+      setSurebets(surebetsFormatadas);
     } catch (error: any) {
       console.error("Erro ao carregar surebets:", error.message);
     }

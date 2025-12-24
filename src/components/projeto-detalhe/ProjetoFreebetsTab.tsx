@@ -213,90 +213,64 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
 
   const fetchApostasOperacionais = async () => {
     try {
-      const { data: apostasSimples, error: errorSimples } = await supabase
-        .from("apostas")
+      // Usa tabela unificada para apostas de freebet
+      const { data: apostasUnificadas, error: errorUnificadas } = await supabase
+        .from("apostas_unificada")
         .select(`
           id, evento, mercado, selecao, odd, stake, lucro_prejuizo, valor_retorno,
           data_aposta, status, resultado, tipo_freebet, contexto_operacional,
           gerou_freebet, valor_freebet_gerada, bookmaker_id, estrategia, modo_entrada,
           esporte, forma_registro, lay_exchange, lay_odd, lay_stake, lay_liability,
-          lay_comissao, back_comissao, back_em_exchange,
-          bookmakers!apostas_bookmaker_id_fkey (
-            nome, parceiros!bookmakers_parceiro_id_fkey (nome),
-            bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
-          )
+          lay_comissao, back_comissao, back_em_exchange, selecoes, tipo_multipla
         `)
         .eq("projeto_id", projetoId)
         .or("contexto_operacional.eq.FREEBET,gerou_freebet.eq.true,tipo_freebet.not.is.null")
         .is("cancelled_at", null)
         .order("data_aposta", { ascending: false });
 
-      if (errorSimples) throw errorSimples;
+      if (errorUnificadas) throw errorUnificadas;
 
-      const { data: apostasMultiplas, error: errorMultiplas } = await supabase
-        .from("apostas_multiplas")
-        .select(`
-          id, selecoes, odd_final, stake, lucro_prejuizo, valor_retorno,
-          data_aposta, status, resultado, tipo_freebet, contexto_operacional,
-          gerou_freebet, valor_freebet_gerada, bookmaker_id, estrategia,
-          bookmakers!apostas_multiplas_bookmaker_id_fkey (
-            nome, parceiros!bookmakers_parceiro_id_fkey (nome),
+      // Buscar nomes dos bookmakers
+      const bookmakerIds = [...new Set((apostasUnificadas || []).map((a: any) => a.bookmaker_id).filter(Boolean))];
+      let bookmakerMap = new Map<string, { nome: string; parceiro_nome: string | null; logo_url: string | null }>();
+      
+      if (bookmakerIds.length > 0) {
+        const { data: bookmakers } = await supabase
+          .from("bookmakers")
+          .select(`
+            id, nome,
+            parceiros!bookmakers_parceiro_id_fkey (nome),
             bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
-          )
-        `)
-        .eq("projeto_id", projetoId)
-        .or("contexto_operacional.eq.FREEBET,gerou_freebet.eq.true,tipo_freebet.not.is.null")
-        .is("cancelled_at", null)
-        .order("data_aposta", { ascending: false });
+          `)
+          .in("id", bookmakerIds);
+        
+        bookmakerMap = new Map((bookmakers || []).map((b: any) => [
+          b.id, 
+          { 
+            nome: b.nome, 
+            parceiro_nome: b.parceiros?.nome || null, 
+            logo_url: b.bookmakers_catalogo?.logo_url || null 
+          }
+        ]));
+      }
 
-      if (errorMultiplas) throw errorMultiplas;
-
-      const simplesFormatted: ApostaOperacionalFreebet[] = (apostasSimples || []).map((ap: any) => ({
-        id: ap.id,
-        tipo: "simples" as const,
-        evento: ap.evento,
-        mercado: ap.mercado,
-        selecao: ap.selecao,
-        odd: ap.odd,
-        stake: ap.stake,
-        lucro_prejuizo: ap.lucro_prejuizo,
-        valor_retorno: ap.valor_retorno,
-        data_aposta: ap.data_aposta,
-        status: ap.status,
-        resultado: ap.resultado,
-        tipo_freebet: ap.tipo_freebet,
-        bookmaker_id: ap.bookmaker_id,
-        bookmaker_nome: ap.bookmakers?.nome || "Desconhecida",
-        logo_url: ap.bookmakers?.bookmakers_catalogo?.logo_url || null,
-        parceiro_nome: ap.bookmakers?.parceiros?.nome || null,
-        gerou_freebet: ap.gerou_freebet || false,
-        valor_freebet_gerada: ap.valor_freebet_gerada || null,
-        estrategia: ap.estrategia || null,
-        lado_aposta: ap.modo_entrada || null,
-        contexto_operacional: ap.contexto_operacional || null,
-        // Campos para ResultadoPill/edição (cobertura/lay)
-        lay_exchange: ap.lay_exchange || null,
-        lay_odd: ap.lay_odd || null,
-        lay_stake: ap.lay_stake || null,
-        lay_liability: ap.lay_liability || null,
-        lay_comissao: ap.lay_comissao || null,
-        back_comissao: ap.back_comissao || null,
-        back_em_exchange: ap.back_em_exchange || null,
-        esporte: ap.esporte || null,
-        forma_registro: ap.forma_registro || null,
-      }));
-
-      const multiplasFormatted: ApostaOperacionalFreebet[] = (apostasMultiplas || []).map((ap: any) => {
+      const todasApostas: ApostaOperacionalFreebet[] = (apostasUnificadas || []).map((ap: any) => {
+        const bkInfo = ap.bookmaker_id ? bookmakerMap.get(ap.bookmaker_id) : null;
+        const isMultipla = ap.forma_registro === 'MULTIPLA' || ap.tipo_multipla;
         const selecoes = Array.isArray(ap.selecoes) ? ap.selecoes : [];
-        const primeiraSelecao = selecoes[0] || {};
+        
         return {
           id: ap.id,
-          tipo: "multipla" as const,
-          evento: primeiraSelecao.evento || `Múltipla (${selecoes.length} seleções)`,
-          mercado: primeiraSelecao.mercado || null,
-          selecao: selecoes.map((s: any) => s.selecao).join(" + ") || "Múltipla",
-          odd: ap.odd_final,
-          stake: ap.stake,
+          tipo: isMultipla ? "multipla" as const : "simples" as const,
+          evento: isMultipla 
+            ? (selecoes[0]?.evento || `Múltipla (${selecoes.length} seleções)`)
+            : (ap.evento || ""),
+          mercado: isMultipla ? (selecoes[0]?.mercado || null) : ap.mercado,
+          selecao: isMultipla 
+            ? selecoes.map((s: any) => s.selecao || s.descricao).join(" + ") 
+            : (ap.selecao || ""),
+          odd: ap.odd ?? ap.odd_final ?? 0,
+          stake: ap.stake ?? 0,
           lucro_prejuizo: ap.lucro_prejuizo,
           valor_retorno: ap.valor_retorno,
           data_aposta: ap.data_aposta,
@@ -304,30 +278,25 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
           resultado: ap.resultado,
           tipo_freebet: ap.tipo_freebet,
           bookmaker_id: ap.bookmaker_id,
-          bookmaker_nome: ap.bookmakers?.nome || "Desconhecida",
-          logo_url: ap.bookmakers?.bookmakers_catalogo?.logo_url || null,
-          parceiro_nome: ap.bookmakers?.parceiros?.nome || null,
+          bookmaker_nome: bkInfo?.nome || "Desconhecida",
+          logo_url: bkInfo?.logo_url || null,
+          parceiro_nome: bkInfo?.parceiro_nome || null,
           gerou_freebet: ap.gerou_freebet || false,
           valor_freebet_gerada: ap.valor_freebet_gerada || null,
           estrategia: ap.estrategia || null,
-          lado_aposta: null, // Múltiplas não têm lado de aposta individual
+          lado_aposta: ap.modo_entrada || null,
           contexto_operacional: ap.contexto_operacional || null,
-          // Múltiplas não têm campos de lay/cobertura
-          lay_exchange: null,
-          lay_odd: null,
-          lay_stake: null,
-          lay_liability: null,
-          lay_comissao: null,
-          back_comissao: null,
-          back_em_exchange: null,
-          esporte: null,
+          lay_exchange: ap.lay_exchange || null,
+          lay_odd: ap.lay_odd || null,
+          lay_stake: ap.lay_stake || null,
+          lay_liability: ap.lay_liability || null,
+          lay_comissao: ap.lay_comissao || null,
+          back_comissao: ap.back_comissao || null,
+          back_em_exchange: ap.back_em_exchange || null,
+          esporte: ap.esporte || null,
           forma_registro: ap.forma_registro || null,
         };
       });
-
-      const todasApostas = [...simplesFormatted, ...multiplasFormatted].sort(
-        (a, b) => new Date(b.data_aposta).getTime() - new Date(a.data_aposta).getTime()
-      );
 
       setApostasOperacionais(todasApostas);
     } catch (error: any) {
