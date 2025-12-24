@@ -182,16 +182,9 @@ export function GlobalActionsBar({
               Aposta Múltipla
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={() => setSurebetDialogOpen(true)}
-              disabled={activeTab === 'duplogreen'}
-              className={activeTab === 'duplogreen' ? 'opacity-50 cursor-not-allowed' : ''}
-            >
+            <DropdownMenuItem onClick={() => setSurebetDialogOpen(true)}>
               <ArrowLeftRight className="mr-2 h-4 w-4" />
               Surebet
-              {activeTab === 'duplogreen' && (
-                <span className="ml-2 text-xs text-muted-foreground">(use Aposta Simples)</span>
-              )}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
