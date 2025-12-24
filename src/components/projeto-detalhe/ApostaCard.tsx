@@ -152,8 +152,8 @@ export function ApostaCard({
   const stake = hasPernas ? (aposta.stake_total ?? aposta.stake) : aposta.stake;
   const displayOdd = aposta.odd_final ?? aposta.odd ?? 0;
   
-  // Para apostas múltiplas, extrair evento da primeira seleção se evento vazio
-  const displayEvento = aposta.evento || (hasSelecoes ? aposta.selecoes![0].descricao : '');
+  // Para apostas múltiplas, exibir "MÚLTIPLA" como título
+  const displayEvento = isMultipla ? 'MÚLTIPLA' : (aposta.evento || '');
   
   const roi = stake > 0 && aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined
     ? (aposta.lucro_prejuizo / stake) * 100 
@@ -204,7 +204,7 @@ export function ApostaCard({
           
           {/* Evento e Seleção */}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate uppercase">{displayEvento || 'Aposta Múltipla'}</p>
+            <p className="text-sm font-medium truncate uppercase">{displayEvento || 'Aposta'}</p>
             {hasPernas ? (
               <ApostaPernasInline pernas={aposta.pernas as Perna[]} className="truncate" />
             ) : hasSelecoes ? (
@@ -277,7 +277,7 @@ export function ApostaCard({
         
         {/* Identificação: Evento e Esporte */}
         <div className="mb-2">
-          <p className="font-medium text-sm truncate uppercase">{displayEvento || 'Aposta Múltipla'}</p>
+          <p className="font-medium text-sm truncate uppercase">{displayEvento || 'Aposta'}</p>
           <p className="text-xs text-muted-foreground">{aposta.esporte || (isMultipla ? `${aposta.selecoes?.length || 2} SELEÇÕES` : '')}</p>
         </div>
         
