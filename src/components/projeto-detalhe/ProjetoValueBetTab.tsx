@@ -80,6 +80,7 @@ interface Aposta {
   back_em_exchange?: boolean;
   back_comissao?: number | null;
   pernas?: any[] | null;
+  modelo?: string | null;
 }
 
 type NavigationMode = "tabs" | "sidebar";
@@ -156,7 +157,7 @@ export function ProjetoValueBetTab({
           status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id,
           modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
           contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
-          back_em_exchange, back_comissao, pernas
+          back_em_exchange, back_comissao, pernas, modelo
         `)
         .eq("projeto_id", projetoId)
         .eq("estrategia", APOSTA_ESTRATEGIA.VALUEBET)
@@ -463,18 +464,10 @@ export function ProjetoValueBetTab({
             <ApostaCard
               key={aposta.id}
               aposta={{
-                id: aposta.id,
+                ...aposta,
                 evento: aposta.evento || '',
                 esporte: aposta.esporte || '',
-                selecao: aposta.selecao,
-                odd: aposta.odd,
-                stake: aposta.stake,
-                data_aposta: aposta.data_aposta,
-                resultado: aposta.resultado,
-                status: aposta.status,
-                lucro_prejuizo: aposta.lucro_prejuizo,
-                estrategia: aposta.estrategia,
-                bookmaker_nome: aposta.bookmaker_nome,
+                pernas: aposta.pernas ?? undefined,
               }}
               estrategia="VALUEBET"
               onClick={() => {
@@ -491,18 +484,10 @@ export function ProjetoValueBetTab({
             <ApostaCard
               key={aposta.id}
               aposta={{
-                id: aposta.id,
+                ...aposta,
                 evento: aposta.evento || '',
                 esporte: aposta.esporte || '',
-                selecao: aposta.selecao,
-                odd: aposta.odd,
-                stake: aposta.stake,
-                data_aposta: aposta.data_aposta,
-                resultado: aposta.resultado,
-                status: aposta.status,
-                lucro_prejuizo: aposta.lucro_prejuizo,
-                estrategia: aposta.estrategia,
-                bookmaker_nome: aposta.bookmaker_nome,
+                pernas: aposta.pernas ?? undefined,
               }}
               estrategia="VALUEBET"
               onClick={() => {
