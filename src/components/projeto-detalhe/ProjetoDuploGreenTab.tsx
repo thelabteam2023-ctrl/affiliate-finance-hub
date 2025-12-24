@@ -27,7 +27,8 @@ import {
   Zap,
   LayoutDashboard,
   PanelLeft,
-  LayoutList
+  LayoutList,
+  Users
 } from "lucide-react";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -263,13 +264,110 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
     return { total, totalStake, lucroTotal, greens, reds, taxaAcerto, roi, porCasa };
   }, [apostas]);
 
-  // casaData for renderPorCasa (keeping for that section)
-  const casaData = useMemo(() => {
-    return Object.entries(metricas.porCasa).map(([casa, data]) => ({
-      casa, lucro: data.lucro, count: data.count, stake: data.stake,
-      roi: data.stake > 0 ? (data.lucro / data.stake) * 100 : 0
-    })).sort((a, b) => b.lucro - a.lucro);
-  }, [metricas]);
+  // Interface para vínculos dentro de cada casa
+  interface VinculoData {
+    vinculo: string;
+    apostas: number;
+    volume: number;
+    lucro: number;
+    roi: number;
+  }
+
+  interface CasaAgregada {
+    casa: string;
+    apostas: number;
+    volume: number;
+    lucro: number;
+    roi: number;
+    vinculos: VinculoData[];
+  }
+
+  // casaData agregado por CASA (não por vínculo)
+  const casaData = useMemo((): CasaAgregada[] => {
+    // Estrutura: casa → { total, vinculos: Map<vinculo, dados> }
+    const casaMap = new Map<string, {
+      apostas: number;
+      volume: number;
+      lucro: number;
+      vinculos: Map<string, { apostas: number; volume: number; lucro: number }>;
+    }>();
+
+    const extractCasaVinculo = (nomeCompleto: string) => {
+      const separatorIdx = nomeCompleto.indexOf(" - ");
+      if (separatorIdx > 0) {
+        return {
+          casa: nomeCompleto.substring(0, separatorIdx).trim(),
+          vinculo: nomeCompleto.substring(separatorIdx + 3).trim()
+        };
+      }
+      return { casa: nomeCompleto, vinculo: "Principal" };
+    };
+
+    const processEntry = (nomeCompleto: string, stake: number, lucro: number) => {
+      const { casa, vinculo } = extractCasaVinculo(nomeCompleto);
+
+      if (!casaMap.has(casa)) {
+        casaMap.set(casa, { apostas: 0, volume: 0, lucro: 0, vinculos: new Map() });
+      }
+      const casaEntry = casaMap.get(casa)!;
+      casaEntry.apostas += 1;
+      casaEntry.volume += stake;
+      casaEntry.lucro += lucro;
+
+      if (!casaEntry.vinculos.has(vinculo)) {
+        casaEntry.vinculos.set(vinculo, { apostas: 0, volume: 0, lucro: 0 });
+      }
+      const vinculoEntry = casaEntry.vinculos.get(vinculo)!;
+      vinculoEntry.apostas += 1;
+      vinculoEntry.volume += stake;
+      vinculoEntry.lucro += lucro;
+    };
+
+    apostas.forEach((a) => {
+      const pernas = Array.isArray(a.pernas) ? a.pernas : [];
+
+      if (pernas.length > 0) {
+        const lucroPorPernaFallback =
+          a.status === "LIQUIDADA" ? Number(a.lucro_prejuizo || 0) / Math.max(pernas.length, 1) : 0;
+
+        pernas.forEach((p: any) => {
+          const nomeCompleto = p?.bookmaker_nome || "Desconhecida";
+          const stake = Number(p?.stake || 0);
+          const lucro = typeof p?.lucro_prejuizo === "number" ? p.lucro_prejuizo : lucroPorPernaFallback;
+          processEntry(nomeCompleto, stake, lucro);
+        });
+        return;
+      }
+
+      // Aposta simples
+      const nomeCompleto = a.bookmaker_nome || "Desconhecida";
+      const stake = typeof a.stake_total === "number" ? a.stake_total : (a.stake || 0);
+      processEntry(nomeCompleto, stake, a.lucro_prejuizo || 0);
+    });
+
+    return Array.from(casaMap.entries())
+      .map(([casa, data]) => {
+        const roi = data.volume > 0 ? (data.lucro / data.volume) * 100 : 0;
+        return {
+          casa,
+          apostas: data.apostas,
+          volume: data.volume,
+          lucro: data.lucro,
+          roi,
+          vinculos: Array.from(data.vinculos.entries())
+            .map(([vinculo, v]) => ({
+              vinculo,
+              apostas: v.apostas,
+              volume: v.volume,
+              lucro: v.lucro,
+              roi: v.volume > 0 ? (v.lucro / v.volume) * 100 : 0,
+            }))
+            .sort((a, b) => b.volume - a.volume),
+        };
+      })
+      .sort((a, b) => b.volume - a.volume)
+      .slice(0, 8);
+  }, [apostas]);
 
   const apostasFiltradas = useMemo(() => apostas.filter(a => {
     const matchesSearch = a.evento.toLowerCase().includes(searchTerm.toLowerCase()) || a.esporte.toLowerCase().includes(searchTerm.toLowerCase()) || a.selecao.toLowerCase().includes(searchTerm.toLowerCase());
@@ -408,11 +506,107 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
 
   const renderPorCasa = () => (
     <div className="space-y-4">
-      <div className="flex items-center gap-2"><Building2 className="h-5 w-5 text-lime-400" /><h3 className="text-lg font-semibold">Análise por Casa</h3><Badge variant="secondary">{casaData.length} casas</Badge></div>
-      {casaData.length === 0 ? <Card><CardContent className="flex flex-col items-center justify-center py-12 text-center"><Building2 className="h-12 w-12 text-muted-foreground mb-4" /><h3 className="text-lg font-semibold">Nenhuma casa registrada</h3></CardContent></Card> : (
+      <div className="flex items-center gap-2">
+        <Building2 className="h-5 w-5 text-lime-400" />
+        <h3 className="text-lg font-semibold">Análise por Casa</h3>
+        <Badge variant="secondary">{casaData.length} casas</Badge>
+      </div>
+      {casaData.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold">Nenhuma casa registrada</h3>
+          </CardContent>
+        </Card>
+      ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {casaData.map((casa) => (
-            <Card key={casa.casa} className={casa.lucro >= 0 ? "border-emerald-500/20" : "border-red-500/20"}><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">{casa.casa}</CardTitle></CardHeader><CardContent><div className="space-y-2"><div className="flex justify-between text-sm"><span className="text-muted-foreground">Apostas</span><span className="font-medium">{casa.count}</span></div><div className="flex justify-between text-sm"><span className="text-muted-foreground">Volume</span><span className="font-medium">{formatCurrency(casa.stake)}</span></div><div className="flex justify-between text-sm"><span className="text-muted-foreground">Lucro</span><span className={`font-medium ${casa.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatCurrency(casa.lucro)}</span></div><div className="flex justify-between text-sm"><span className="text-muted-foreground">ROI</span><span className={`font-medium ${casa.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatPercent(casa.roi)}</span></div></div></CardContent></Card>
+            <Tooltip key={casa.casa}>
+              <TooltipTrigger asChild>
+                <Card className={`cursor-default transition-colors hover:border-lime-500/30 ${casa.lucro >= 0 ? "border-emerald-500/20" : "border-red-500/20"}`}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-lime-400" />
+                      {casa.casa}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Apostas</span>
+                        <span className="font-medium tabular-nums">{casa.apostas}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Volume</span>
+                        <span className="font-medium tabular-nums">{formatCurrency(casa.volume)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Lucro</span>
+                        <span className={`font-medium tabular-nums ${casa.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {casa.lucro >= 0 ? '+' : ''}{formatCurrency(casa.lucro)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">ROI</span>
+                        <span className={`font-semibold tabular-nums ${casa.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {formatPercent(casa.roi)}
+                        </span>
+                      </div>
+                    </div>
+                    {casa.vinculos.length > 1 && (
+                      <div className="mt-3 pt-2 border-t flex items-center gap-1 text-xs text-muted-foreground">
+                        <Users className="h-3 w-3" />
+                        <span>{casa.vinculos.length} vínculos</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs max-w-[320px] space-y-2">
+                <p className="font-semibold border-b pb-1">{casa.casa}</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-muted-foreground">
+                  <span>Total Apostas:</span>
+                  <span className="text-right font-medium text-foreground">{casa.apostas}</span>
+                  <span>Volume Total:</span>
+                  <span className="text-right font-medium text-foreground">{formatCurrency(casa.volume)}</span>
+                  <span>Lucro Total:</span>
+                  <span className={`text-right font-medium ${casa.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {casa.lucro >= 0 ? '+' : ''}{formatCurrency(casa.lucro)}
+                  </span>
+                  <span>ROI:</span>
+                  <span className={`text-right font-semibold ${casa.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {formatPercent(casa.roi)}
+                  </span>
+                </div>
+                {casa.vinculos.length > 0 && (
+                  <div className="space-y-1.5 pt-2 border-t">
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Users className="h-3 w-3" />
+                      <span className="font-medium">Detalhamento por vínculo:</span>
+                    </div>
+                    <div className="grid grid-cols-[1fr_50px_70px_55px] gap-x-2 text-[10px] text-muted-foreground border-b pb-1">
+                      <span>Vínculo</span>
+                      <span className="text-right">Qtd</span>
+                      <span className="text-right">Volume</span>
+                      <span className="text-right">ROI</span>
+                    </div>
+                    {casa.vinculos.slice(0, 5).map((v) => (
+                      <div key={v.vinculo} className="grid grid-cols-[1fr_50px_70px_55px] gap-x-2 items-center">
+                        <span className="truncate">{v.vinculo}</span>
+                        <span className="text-right text-muted-foreground tabular-nums">{v.apostas}</span>
+                        <span className="text-right text-muted-foreground tabular-nums">{formatCurrency(v.volume)}</span>
+                        <span className={`text-right font-medium tabular-nums ${v.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {v.roi >= 0 ? '+' : ''}{v.roi.toFixed(1)}%
+                        </span>
+                      </div>
+                    ))}
+                    {casa.vinculos.length > 5 && (
+                      <div className="text-muted-foreground">+{casa.vinculos.length - 5} vínculos...</div>
+                    )}
+                  </div>
+                )}
+              </TooltipContent>
+            </Tooltip>
           ))}
         </div>
       )}
