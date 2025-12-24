@@ -25,6 +25,7 @@ import {
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { SurebetDialog } from "./SurebetDialog";
 import { ApostaPernasResumo, ApostaPernasInline, Perna } from "./ApostaPernasResumo";
+import { ApostaCard } from "./ApostaCard";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
@@ -1001,15 +1002,16 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
 
             // Card de Múltipla
             const multipla = item.data as ApostaMultipla;
+            const multiplaRoi = multipla.stake > 0 && multipla.lucro_prejuizo !== null ? (multipla.lucro_prejuizo / multipla.stake) * 100 : null;
             return (
               <Card 
                 key={multipla.id}
                 className="hover:border-primary/50 transition-colors cursor-pointer"
                 onClick={() => handleOpenMultiplaDialog(multipla)}
               >
-                <CardHeader className="pb-1 pt-3 px-3">
-                  {/* Badges à esquerda - padrão unificado */}
-                  <div className="flex items-center gap-1 mb-1 flex-wrap">
+                <CardContent className="p-4">
+                  {/* Badges */}
+                  <div className="flex items-center gap-1 mb-2 flex-wrap">
                     {getEstrategiaBadge(multipla) || getContextoBadge(item.contexto, multipla)}
                     <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30 text-[10px] px-1.5 py-0">
                       MULT
@@ -1025,43 +1027,38 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
                       onEditClick={() => handleOpenMultiplaDialog(multipla)}
                     />
                   </div>
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-sm truncate">
+                  {/* Identificação */}
+                  <div className="mb-2">
+                    <p className="font-medium text-sm truncate uppercase">
                       Múltipla {multipla.tipo_multipla}
-                    </CardTitle>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {multipla.selecoes.length} seleções
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {multipla.selecoes.length} seleções
-                  </p>
-                </CardHeader>
-                <CardContent className="pt-1 pb-3 px-3">
-                  <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground line-clamp-2">
-                      {multipla.selecoes.map(s => s.descricao).join(" + ")}
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Odd Final</span>
-                      <span className="font-medium">@{multipla.odd_final.toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Stake</span>
-                      <span className="font-medium">{formatCurrency(multipla.stake)}</span>
-                    </div>
-                    {multipla.lucro_prejuizo !== null && multipla.status === "LIQUIDADA" && (
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">P/L</span>
-                        <span className={`font-medium ${multipla.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {formatCurrency(multipla.lucro_prejuizo)}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
-                      <span className="text-muted-foreground">
-                        {format(parseLocalDateTime(multipla.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
-                      </span>
-                      <span className="text-muted-foreground truncate ml-2 max-w-[100px]">
-                        {multipla.bookmaker?.nome}
-                      </span>
+                  {/* Seleções */}
+                  <div className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                    {multipla.selecoes.map(s => s.descricao).join(" + ")}
+                  </div>
+                  {/* Rodapé */}
+                  <div className="flex justify-between items-center pt-2 border-t">
+                    <span className="text-xs text-muted-foreground">
+                      {format(parseLocalDateTime(multipla.data_aposta), "dd/MM/yy", { locale: ptBR })}
+                    </span>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">@{multipla.odd_final.toFixed(2)} · {formatCurrency(multipla.stake)}</p>
+                      {multipla.lucro_prejuizo !== null && multipla.status === "LIQUIDADA" && (
+                        <div className="flex items-center gap-2 justify-end">
+                          <span className={`text-sm font-medium ${multipla.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {formatCurrency(multipla.lucro_prejuizo)}
+                          </span>
+                          {multiplaRoi !== null && (
+                            <span className={`text-xs ${multiplaRoi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              ({multiplaRoi >= 0 ? '+' : ''}{multiplaRoi.toFixed(1)}%)
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>

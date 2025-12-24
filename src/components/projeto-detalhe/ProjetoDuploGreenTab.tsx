@@ -38,6 +38,7 @@ import { ptBR } from "date-fns/locale";
 import { ApostaDialog } from "./ApostaDialog";
 import { SurebetDialog } from "./SurebetDialog";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
+import { ApostaCard } from "./ApostaCard";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
@@ -598,104 +599,32 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
         </Card>
       ) : viewMode === "cards" ? (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {apostasFiltradas.map((aposta) => {
-            const stake = aposta.pernas && aposta.pernas.length > 1 ? (aposta.stake_total ?? aposta.stake) : aposta.stake;
-            const roi = stake > 0 && aposta.lucro_prejuizo !== null ? (aposta.lucro_prejuizo / stake) * 100 : null;
-            return (
-              <Card key={aposta.id} className="cursor-pointer hover:border-lime-500/30 transition-colors" onClick={() => handleOpenAposta(aposta)}>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-1 mb-2">
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-teal-500/30 text-teal-400 bg-teal-500/20 flex items-center gap-0.5">
-                      <Zap className="h-2.5 w-2.5" />DG
-                    </Badge>
-                    {aposta.pernas && aposta.pernas.length > 1 && (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400">
-                        {getModeloOperacao(aposta.pernas as Perna[])}
-                      </Badge>
-                    )}
-                    <ResultadoBadge resultado={aposta.resultado} />
-                  </div>
-                  <div className="mb-2">
-                    <p className="font-medium text-sm truncate uppercase">{aposta.evento}</p>
-                    <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
-                  </div>
-                  {aposta.pernas && aposta.pernas.length > 1 ? (
-                    <ApostaPernasResumo pernas={aposta.pernas as Perna[]} variant="card" showStake showResultado className="mb-2" />
-                  ) : (
-                    <div className="flex justify-between items-center text-sm mb-2">
-                      <span className="text-muted-foreground">{aposta.selecao}</span>
-                      <span className="font-medium">@{(aposta.odd ?? 0).toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center pt-2 border-t">
-                    <span className="text-xs text-muted-foreground">{format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}</span>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Stake: {formatCurrency(stake)}</p>
-                      {aposta.lucro_prejuizo !== null && (
-                        <div className="flex items-center gap-2 justify-end">
-                          <span className={`text-sm font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {formatCurrency(aposta.lucro_prejuizo)}
-                          </span>
-                          {roi !== null && (
-                            <span className={`text-xs ${roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {apostasFiltradas.map((aposta) => (
+            <ApostaCard
+              key={aposta.id}
+              aposta={{
+                ...aposta,
+                pernas: aposta.pernas as Perna[],
+              }}
+              estrategia="DUPLO_GREEN"
+              onClick={() => handleOpenAposta(aposta)}
+              variant="card"
+            />
+          ))}
         </div>
       ) : (
         <div className="space-y-2">
           {apostasFiltradas.map((aposta) => (
-            <div 
-              key={aposta.id} 
-              className="flex items-center justify-between p-3 rounded-lg border hover:border-lime-500/30 cursor-pointer transition-colors" 
+            <ApostaCard
+              key={aposta.id}
+              aposta={{
+                ...aposta,
+                pernas: aposta.pernas as Perna[],
+              }}
+              estrategia="DUPLO_GREEN"
               onClick={() => handleOpenAposta(aposta)}
-            >
-              <div className="flex items-center gap-4 flex-1 min-w-0">
-                <div className="flex items-center gap-1">
-                  <Badge variant="outline" className="bg-teal-500/20 text-teal-400 border-teal-500/30 text-[10px] px-1.5 py-0 flex items-center gap-0.5">
-                    <Zap className="h-2.5 w-2.5" />
-                    DG
-                  </Badge>
-                  {aposta.pernas && aposta.pernas.length > 1 && (
-                    <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">
-                      {getModeloOperacao(aposta.pernas as Perna[])}
-                    </Badge>
-                  )}
-                  <ResultadoBadge resultado={aposta.resultado} />
-                </div>
-                <div className="text-xs text-muted-foreground w-20">
-                  {format(new Date(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate uppercase">{aposta.evento}</p>
-                  {aposta.pernas && aposta.pernas.length > 1 ? (
-                    <ApostaPernasInline pernas={aposta.pernas as Perna[]} className="truncate" />
-                  ) : (
-                    <p className="text-xs text-muted-foreground truncate">{aposta.selecao} @{(aposta.odd ?? 0).toFixed(2)}</p>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency(aposta.pernas && aposta.pernas.length > 1 ? (aposta.stake_total ?? aposta.stake) : aposta.stake)}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 ml-4">
-                {aposta.lucro_prejuizo !== null && (
-                  <span className={`text-sm font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {formatCurrency(aposta.lucro_prejuizo)}
-                  </span>
-                )}
-              </div>
-            </div>
+              variant="list"
+            />
           ))}
         </div>
       )}
