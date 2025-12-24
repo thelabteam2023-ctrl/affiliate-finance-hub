@@ -285,7 +285,7 @@ export function ApostaCard({
                 {getModeloOperacao(aposta.pernas as Perna[])}
               </Badge>
             )}
-            <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={onQuickResolve} />
+            <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
           </div>
           
           {/* Data */}
@@ -368,7 +368,7 @@ export function ApostaCard({
               {getModeloOperacao(aposta.pernas as Perna[])}
             </Badge>
           )}
-          <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={onQuickResolve} />
+          <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
         </div>
         
         {/* Identificação: Evento e Esporte */}
