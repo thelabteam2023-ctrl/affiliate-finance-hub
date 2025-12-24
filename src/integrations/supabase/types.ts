@@ -1720,6 +1720,13 @@ export type Database = {
             referencedColumns: ["operador_projeto_id"]
           },
           {
+            foreignKeyName: "entregas_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_lucro_operador"
+            referencedColumns: ["operador_projeto_id"]
+          },
+          {
             foreignKeyName: "entregas_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -2941,6 +2948,13 @@ export type Database = {
             referencedColumns: ["operador_projeto_id"]
           },
           {
+            foreignKeyName: "pagamentos_propostos_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_lucro_operador"
+            referencedColumns: ["operador_projeto_id"]
+          },
+          {
             foreignKeyName: "pagamentos_propostos_pagamento_id_fkey"
             columns: ["pagamento_id"]
             isOneToOne: false
@@ -3992,6 +4006,13 @@ export type Database = {
             columns: ["operador_projeto_id"]
             isOneToOne: false
             referencedRelation: "v_operadores_sem_entrega"
+            referencedColumns: ["operador_projeto_id"]
+          },
+          {
+            foreignKeyName: "projeto_ciclos_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_lucro_operador"
             referencedColumns: ["operador_projeto_id"]
           },
           {
@@ -5316,6 +5337,13 @@ export type Database = {
             referencedColumns: ["operador_projeto_id"]
           },
           {
+            foreignKeyName: "projeto_ciclos_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_lucro_operador"
+            referencedColumns: ["operador_projeto_id"]
+          },
+          {
             foreignKeyName: "projeto_ciclos_projeto_id_fkey"
             columns: ["projeto_id"]
             isOneToOne: false
@@ -5471,6 +5499,13 @@ export type Database = {
             columns: ["operador_projeto_id"]
             isOneToOne: false
             referencedRelation: "v_operadores_sem_entrega"
+            referencedColumns: ["operador_projeto_id"]
+          },
+          {
+            foreignKeyName: "entregas_operador_projeto_id_fkey"
+            columns: ["operador_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_lucro_operador"
             referencedColumns: ["operador_projeto_id"]
           },
           {
@@ -6072,6 +6107,63 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
             referencedColumns: ["parceiro_id"]
+          },
+        ]
+      }
+      v_projeto_lucro_operador: {
+        Row: {
+          apostas_ganhas: number | null
+          auth_user_id: string | null
+          base_calculo: string | null
+          faixas_escalonadas: Json | null
+          faturamento_projeto: number | null
+          frequencia_entrega: string | null
+          lucro_projeto: number | null
+          meta_percentual: number | null
+          meta_valor: number | null
+          modelo_pagamento: string | null
+          operador_id: string | null
+          operador_nome: string | null
+          operador_projeto_id: string | null
+          percentual: number | null
+          profile_id: string | null
+          projeto_id: string | null
+          projeto_nome: string | null
+          status: string | null
+          tipo_meta: string | null
+          total_apostas: number | null
+          total_depositado: number | null
+          total_sacado: number | null
+          valor_fixo: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "operadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_performance"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_workspace"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
           },
         ]
       }

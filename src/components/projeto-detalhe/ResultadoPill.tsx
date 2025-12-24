@@ -521,7 +521,7 @@ export function ResultadoPill({
 
       // Atualizar a aposta no banco
       const { error } = await supabase
-        .from("apostas")
+        .from("apostas_unificada")
         .update({
           resultado: novoResultado,
           status: "LIQUIDADA",
@@ -584,7 +584,7 @@ export function ResultadoPill({
               // FALLBACK: Registro não existe, criar agora e liberar
               // Buscar dados da aposta para obter user_id e projeto_id
               const { data: apostaData } = await supabase
-                .from("apostas")
+                .from("apostas_unificada")
                 .select("user_id, projeto_id, workspace_id, data_aposta")
                 .eq("id", apostaId)
                 .maybeSingle();

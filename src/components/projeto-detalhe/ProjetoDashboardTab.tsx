@@ -145,158 +145,75 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
       setLoading(true);
       const { start, end } = getDateRangeFromFilter();
       
-      // Fetch apostas simples - EXCLUIR pernas de surebet (surebet_id IS NULL)
-      let querySimples = supabase
-        .from("apostas")
+      // Usar apostas_unificada como fonte única
+      let query = supabase
+        .from("apostas_unificada")
         .select(`
           id, 
           data_aposta, 
           lucro_prejuizo, 
           resultado, 
           stake,
+          stake_total,
           esporte,
           bookmaker_id,
-          surebet_id,
-          bookmakers!inner(nome, parceiro_id, parceiros(nome), bookmakers_catalogo(logo_url))
-        `)
-        .eq("projeto_id", projetoId)
-        .is("surebet_id", null) // CRÍTICO: Excluir pernas de surebet
-        .order("data_aposta", { ascending: true });
-
-      if (start) {
-        querySimples = querySimples.gte("data_aposta", start.toISOString());
-      }
-      if (end) {
-        querySimples = querySimples.lte("data_aposta", end.toISOString());
-      }
-
-      // Fetch apostas múltiplas
-      let queryMultiplas = supabase
-        .from("apostas_multiplas")
-        .select(`
-          id,
-          data_aposta,
-          lucro_prejuizo,
-          resultado,
-          stake,
-          selecoes,
-          bookmaker_id,
-          bookmakers!inner(nome, parceiro_id, parceiros(nome), bookmakers_catalogo(logo_url))
+          forma_registro,
+          estrategia
         `)
         .eq("projeto_id", projetoId)
         .order("data_aposta", { ascending: true });
 
       if (start) {
-        queryMultiplas = queryMultiplas.gte("data_aposta", start.toISOString());
+        query = query.gte("data_aposta", start.toISOString());
       }
       if (end) {
-        queryMultiplas = queryMultiplas.lte("data_aposta", end.toISOString());
+        query = query.lte("data_aposta", end.toISOString());
       }
 
-      // Fetch surebets - cada surebet é UMA entrada, não as pernas individuais
-      let querySurebets = supabase
-        .from("surebets")
-        .select(`
-          id,
-          data_operacao,
-          lucro_real,
-          resultado,
-          stake_total,
-          esporte
-        `)
-        .eq("projeto_id", projetoId)
-        .order("data_operacao", { ascending: true });
+      const { data, error } = await query;
 
-      if (start) {
-        querySurebets = querySurebets.gte("data_operacao", start.toISOString());
-      }
-      if (end) {
-        querySurebets = querySurebets.lte("data_operacao", end.toISOString());
-      }
-
-      const [
-        { data: dataSimples, error: errorSimples }, 
-        { data: dataMultiplas, error: errorMultiplas },
-        { data: dataSurebets, error: errorSurebets }
-      ] = await Promise.all([querySimples, queryMultiplas, querySurebets]);
-
-      if (errorSimples) throw errorSimples;
-      if (errorMultiplas) throw errorMultiplas;
-      if (errorSurebets) throw errorSurebets;
+      if (error) throw error;
       
-      // Transform apostas simples (já excluindo pernas de surebet)
-      const apostasSimples: ApostaUnificada[] = (dataSimples || []).map((item: any) => ({
-        id: item.id,
-        data_aposta: item.data_aposta,
-        lucro_prejuizo: item.lucro_prejuizo,
-        resultado: item.resultado,
-        stake: item.stake,
-        esporte: item.esporte,
-        bookmaker_id: item.bookmaker_id,
-        bookmaker_nome: item.bookmakers?.nome || 'Desconhecida',
-        parceiro_nome: item.bookmakers?.parceiros?.nome || null,
-        logo_url: item.bookmakers?.bookmakers_catalogo?.logo_url || null,
-      }));
+      // Buscar bookmaker names
+      const bookmakerIds = [...new Set((data || []).map(a => a.bookmaker_id).filter(Boolean))];
+      let bookmakerMap: Record<string, { nome: string; parceiro_nome: string | null; logo_url: string | null }> = {};
       
-      // Transform apostas múltiplas - 1 entrada por múltipla (não por seleção para contagem)
-      const apostasMultiplas: ApostaUnificada[] = (dataMultiplas || []).map((item: any) => {
-        // Extrair esporte da primeira seleção se possível
-        const selecoes = Array.isArray(item.selecoes) ? item.selecoes : [];
-        let esporte = "Múltipla";
-        if (selecoes.length > 0) {
-          const esporteMatch = selecoes[0]?.descricao?.match(/^\[([^\]]+)\]/);
-          esporte = esporteMatch ? esporteMatch[1] : "Múltipla";
-        }
+      if (bookmakerIds.length > 0) {
+        const { data: bookmakers } = await supabase
+          .from("bookmakers")
+          .select("id, nome, parceiros(nome), bookmakers_catalogo(logo_url)")
+          .in("id", bookmakerIds);
+        
+        bookmakerMap = (bookmakers || []).reduce((acc: any, bk: any) => {
+          acc[bk.id] = {
+            nome: bk.nome,
+            parceiro_nome: bk.parceiros?.nome || null,
+            logo_url: bk.bookmakers_catalogo?.logo_url || null
+          };
+          return acc;
+        }, {});
+      }
+      
+      // Transform para formato unificado
+      const apostasTransformadas: ApostaUnificada[] = (data || []).map((item: any) => {
+        const bkInfo = bookmakerMap[item.bookmaker_id] || { nome: 'Desconhecida', parceiro_nome: null, logo_url: null };
+        const stake = item.forma_registro === 'ARBITRAGEM' ? item.stake_total : item.stake;
         
         return {
           id: item.id,
           data_aposta: item.data_aposta,
           lucro_prejuizo: item.lucro_prejuizo,
           resultado: item.resultado,
-          stake: item.stake,
-          esporte: esporte,
-          bookmaker_id: item.bookmaker_id,
-          bookmaker_nome: item.bookmakers?.nome || 'Desconhecida',
-          parceiro_nome: item.bookmakers?.parceiros?.nome || null,
-          logo_url: item.bookmakers?.bookmakers_catalogo?.logo_url || null,
+          stake: stake || 0,
+          esporte: item.esporte || item.estrategia || 'N/A',
+          bookmaker_id: item.bookmaker_id || 'unknown',
+          bookmaker_nome: item.forma_registro === 'ARBITRAGEM' ? 'Arbitragem' : bkInfo.nome,
+          parceiro_nome: bkInfo.parceiro_nome,
+          logo_url: bkInfo.logo_url,
         };
       });
       
-      // Transform surebets - 1 entrada por surebet (resultado consolidado do card)
-      const apostasSurebets: ApostaUnificada[] = (dataSurebets || []).map((item: any) => {
-        // Determinar resultado consolidado baseado no lucro real
-        let resultadoConsolidado = item.resultado;
-        if (!resultadoConsolidado || resultadoConsolidado === "PENDENTE") {
-          // Se não tem resultado definido, mantém PENDENTE
-          resultadoConsolidado = "PENDENTE";
-        } else if (resultadoConsolidado === "LIQUIDADO") {
-          // Se liquidado, classificar baseado no lucro
-          const lucro = item.lucro_real || 0;
-          if (lucro > 0) resultadoConsolidado = "GREEN";
-          else if (lucro < 0) resultadoConsolidado = "RED";
-          else resultadoConsolidado = "VOID";
-        }
-        
-        return {
-          id: item.id,
-          data_aposta: item.data_operacao,
-          lucro_prejuizo: item.lucro_real,
-          resultado: resultadoConsolidado,
-          stake: item.stake_total,
-          esporte: item.esporte || "Surebet",
-          bookmaker_id: "surebet", // Placeholder - surebets usam múltiplas casas
-          bookmaker_nome: "Surebet",
-          parceiro_nome: null,
-          logo_url: null,
-        };
-      });
-      
-      // Combinar todas as apostas
-      const todasApostas = [...apostasSimples, ...apostasMultiplas, ...apostasSurebets].sort(
-        (a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()
-      );
-      
-      setApostasUnificadas(todasApostas);
+      setApostasUnificadas(apostasTransformadas);
     } catch (error) {
       console.error("Erro ao carregar apostas:", error);
     } finally {
