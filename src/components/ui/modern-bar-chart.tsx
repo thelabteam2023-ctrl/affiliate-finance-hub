@@ -181,8 +181,8 @@ export function ModernBarChart({
         <BarChart 
           data={data} 
           margin={{ top: 25, right: 10, left: 0, bottom: 5 }}
-          barCategoryGap="8%"
-          barGap={-1}
+          barCategoryGap="15%"
+          barGap={0}
         >
           <defs>
             {bars.map((bar, index) => (
@@ -245,8 +245,8 @@ export function ModernBarChart({
               key={bar.dataKey}
               dataKey={bar.dataKey}
               fill={`url(#barGradient-${bar.dataKey})`}
-              radius={[4, 4, 4, 4]}
-              maxBarSize={barSize + 12}
+              radius={[3, 3, 0, 0]}
+              maxBarSize={barSize}
               animationBegin={barIndex * 100}
               animationDuration={800}
               animationEasing="ease-out"
