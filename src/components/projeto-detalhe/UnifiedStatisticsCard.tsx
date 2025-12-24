@@ -410,75 +410,112 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       reembolsadas: d.reembolsadas,
     }));
 
+    if (chartData.length === 0) {
+      return (
+        <div className="text-center py-8 text-muted-foreground text-sm">
+          Nenhuma aposta registrada
+        </div>
+      );
+    }
+
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         {/* Gráfico de Lucros por Faixa */}
-        <div className="h-[180px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-              <XAxis 
-                dataKey="faixa" 
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                axisLine={{ stroke: "hsl(var(--border))" }}
-              />
-              <YAxis 
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                axisLine={{ stroke: "hsl(var(--border))" }}
-                tickFormatter={(v) => `R$${v}`}
-              />
-              <RechartsTooltip 
-                contentStyle={{ 
-                  backgroundColor: "hsl(var(--popover))", 
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px",
-                  fontSize: "11px"
-                }}
-                formatter={(value: number) => [formatCurrency(value), "Lucro"]}
-              />
-              <Bar dataKey="lucro" radius={[4, 4, 0, 0]}>
-                {chartData.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={entry.lucro >= 0 ? "hsl(142, 76%, 36%)" : "hsl(0, 84%, 60%)"} 
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <div>
+          <div className="text-xs font-medium text-muted-foreground mb-2">Lucro por Faixa de Cotação</div>
+          <div className="h-[140px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart 
+                data={chartData} 
+                margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                barCategoryGap="20%"
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} opacity={0.3} />
+                <XAxis 
+                  dataKey="faixa" 
+                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis 
+                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v) => `R$${v}`}
+                  width={50}
+                />
+                <RechartsTooltip 
+                  contentStyle={{ 
+                    backgroundColor: "hsl(var(--popover))", 
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                    fontSize: "12px"
+                  }}
+                  formatter={(value: number) => [formatCurrency(value), "Lucro"]}
+                  labelStyle={{ color: "hsl(var(--muted-foreground))" }}
+                />
+                <Bar dataKey="lucro" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                  {chartData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.lucro >= 0 ? "hsl(var(--chart-2))" : "hsl(var(--destructive))"} 
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        {/* Gráfico Comparativo */}
-        <div className="h-[160px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-              <XAxis 
-                dataKey="faixa" 
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                axisLine={{ stroke: "hsl(var(--border))" }}
-              />
-              <YAxis 
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                axisLine={{ stroke: "hsl(var(--border))" }}
-              />
-              <RechartsTooltip 
-                contentStyle={{ 
-                  backgroundColor: "hsl(var(--popover))", 
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px",
-                  fontSize: "11px"
-                }}
-              />
-              <Legend 
-                wrapperStyle={{ fontSize: "10px" }}
-                iconSize={8}
-              />
-              <Bar dataKey="ganhas" name="Ganhas" fill="hsl(142, 76%, 36%)" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="perdidas" name="Perdidas" fill="hsl(0, 84%, 60%)" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="reembolsadas" name="Reembolsadas" fill="hsl(var(--muted-foreground))" radius={[2, 2, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        {/* Gráfico Comparativo - Ganhas / Perdidas / Reembolsadas */}
+        <div>
+          <div className="text-xs font-medium text-muted-foreground mb-2">Distribuição por Resultado</div>
+          <div className="h-[140px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart 
+                data={chartData} 
+                margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                barCategoryGap="15%"
+                barGap={2}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} opacity={0.3} />
+                <XAxis 
+                  dataKey="faixa" 
+                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis 
+                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={30}
+                  allowDecimals={false}
+                />
+                <RechartsTooltip 
+                  contentStyle={{ 
+                    backgroundColor: "hsl(var(--popover))", 
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                    fontSize: "12px"
+                  }}
+                  labelStyle={{ color: "hsl(var(--muted-foreground))" }}
+                />
+                <Legend 
+                  verticalAlign="top"
+                  align="right"
+                  height={24}
+                  iconType="square"
+                  iconSize={10}
+                  wrapperStyle={{ fontSize: "11px", paddingBottom: "4px" }}
+                  formatter={(value) => <span style={{ color: "hsl(var(--foreground))", marginLeft: 4 }}>{value}</span>}
+                />
+                <Bar dataKey="ganhas" name="Ganhas" fill="hsl(var(--chart-2))" radius={[3, 3, 0, 0]} maxBarSize={30} />
+                <Bar dataKey="perdidas" name="Perdidas" fill="hsl(var(--destructive))" radius={[3, 3, 0, 0]} maxBarSize={30} />
+                <Bar dataKey="reembolsadas" name="Reemb." fill="hsl(var(--muted-foreground))" radius={[3, 3, 0, 0]} maxBarSize={30} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
     );
