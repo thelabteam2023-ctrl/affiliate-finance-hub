@@ -543,6 +543,266 @@ export type Database = {
           },
         ]
       }
+      apostas_unificada: {
+        Row: {
+          aposta_relacionada_id: string | null
+          back_comissao: number | null
+          back_em_exchange: boolean | null
+          bookmaker_id: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          contexto_operacional: string
+          created_at: string
+          data_aposta: string
+          esporte: string | null
+          estrategia: string
+          evento: string | null
+          forma_registro: string
+          gerou_freebet: boolean | null
+          id: string
+          is_bonus_bet: boolean | null
+          lado_aposta: string | null
+          lay_comissao: number | null
+          lay_exchange: string | null
+          lay_liability: number | null
+          lay_odd: number | null
+          lay_stake: number | null
+          legacy_id: string | null
+          legacy_table: string | null
+          lucro_esperado: number | null
+          lucro_prejuizo: number | null
+          mercado: string | null
+          modelo: string | null
+          modo_entrada: string | null
+          observacoes: string | null
+          odd: number | null
+          odd_final: number | null
+          pernas: Json | null
+          projeto_id: string
+          resultado: string | null
+          retorno_potencial: number | null
+          roi_esperado: number | null
+          roi_real: number | null
+          selecao: string | null
+          selecoes: Json | null
+          spread_calculado: number | null
+          stake: number | null
+          stake_total: number | null
+          status: string
+          surebet_legado_id: string | null
+          tipo_freebet: string | null
+          tipo_multipla: string | null
+          updated_at: string
+          user_id: string
+          valor_freebet_gerada: number | null
+          valor_retorno: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          aposta_relacionada_id?: string | null
+          back_comissao?: number | null
+          back_em_exchange?: boolean | null
+          bookmaker_id?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          contexto_operacional?: string
+          created_at?: string
+          data_aposta?: string
+          esporte?: string | null
+          estrategia?: string
+          evento?: string | null
+          forma_registro?: string
+          gerou_freebet?: boolean | null
+          id?: string
+          is_bonus_bet?: boolean | null
+          lado_aposta?: string | null
+          lay_comissao?: number | null
+          lay_exchange?: string | null
+          lay_liability?: number | null
+          lay_odd?: number | null
+          lay_stake?: number | null
+          legacy_id?: string | null
+          legacy_table?: string | null
+          lucro_esperado?: number | null
+          lucro_prejuizo?: number | null
+          mercado?: string | null
+          modelo?: string | null
+          modo_entrada?: string | null
+          observacoes?: string | null
+          odd?: number | null
+          odd_final?: number | null
+          pernas?: Json | null
+          projeto_id: string
+          resultado?: string | null
+          retorno_potencial?: number | null
+          roi_esperado?: number | null
+          roi_real?: number | null
+          selecao?: string | null
+          selecoes?: Json | null
+          spread_calculado?: number | null
+          stake?: number | null
+          stake_total?: number | null
+          status?: string
+          surebet_legado_id?: string | null
+          tipo_freebet?: string | null
+          tipo_multipla?: string | null
+          updated_at?: string
+          user_id: string
+          valor_freebet_gerada?: number | null
+          valor_retorno?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          aposta_relacionada_id?: string | null
+          back_comissao?: number | null
+          back_em_exchange?: boolean | null
+          bookmaker_id?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          contexto_operacional?: string
+          created_at?: string
+          data_aposta?: string
+          esporte?: string | null
+          estrategia?: string
+          evento?: string | null
+          forma_registro?: string
+          gerou_freebet?: boolean | null
+          id?: string
+          is_bonus_bet?: boolean | null
+          lado_aposta?: string | null
+          lay_comissao?: number | null
+          lay_exchange?: string | null
+          lay_liability?: number | null
+          lay_odd?: number | null
+          lay_stake?: number | null
+          legacy_id?: string | null
+          legacy_table?: string | null
+          lucro_esperado?: number | null
+          lucro_prejuizo?: number | null
+          mercado?: string | null
+          modelo?: string | null
+          modo_entrada?: string | null
+          observacoes?: string | null
+          odd?: number | null
+          odd_final?: number | null
+          pernas?: Json | null
+          projeto_id?: string
+          resultado?: string | null
+          retorno_potencial?: number | null
+          roi_esperado?: number | null
+          roi_real?: number | null
+          selecao?: string | null
+          selecoes?: Json | null
+          spread_calculado?: number | null
+          stake?: number | null
+          stake_total?: number | null
+          status?: string
+          surebet_legado_id?: string | null
+          tipo_freebet?: string | null
+          tipo_multipla?: string | null
+          updated_at?: string
+          user_id?: string
+          valor_freebet_gerada?: number | null
+          valor_retorno?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apostas_unificada_aposta_relacionada_id_fkey"
+            columns: ["aposta_relacionada_id"]
+            isOneToOne: false
+            referencedRelation: "apostas_unificada"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_aposta_relacionada_id_fkey"
+            columns: ["aposta_relacionada_id"]
+            isOneToOne: false
+            referencedRelation: "v_apostas_compat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_aposta_relacionada_id_fkey"
+            columns: ["aposta_relacionada_id"]
+            isOneToOne: false
+            referencedRelation: "v_apostas_multiplas_compat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_aposta_relacionada_id_fkey"
+            columns: ["aposta_relacionada_id"]
+            isOneToOne: false
+            referencedRelation: "v_surebets_compat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_disponivel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_painel_operacional"
+            referencedColumns: ["entidade_id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: Database["public"]["Enums"]["audit_action"]
@@ -5935,6 +6195,381 @@ export type Database = {
         }
         Relationships: []
       }
+      v_apostas_compat: {
+        Row: {
+          aposta_relacionada_id: string | null
+          back_comissao: number | null
+          back_em_exchange: boolean | null
+          bookmaker_id: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          contexto_operacional: string | null
+          created_at: string | null
+          data_aposta: string | null
+          esporte: string | null
+          estrategia: string | null
+          evento: string | null
+          forma_registro: string | null
+          gerou_freebet: boolean | null
+          id: string | null
+          is_bonus_bet: boolean | null
+          lay_comissao: number | null
+          lay_exchange: string | null
+          lay_liability: number | null
+          lay_odd: number | null
+          lay_stake: number | null
+          lucro_prejuizo: number | null
+          mercado: string | null
+          modo_entrada: string | null
+          observacoes: string | null
+          odd: number | null
+          projeto_id: string | null
+          resultado: string | null
+          selecao: string | null
+          stake: number | null
+          status: string | null
+          surebet_id: string | null
+          tipo_freebet: string | null
+          updated_at: string | null
+          user_id: string | null
+          valor_freebet_gerada: number | null
+          valor_retorno: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          aposta_relacionada_id?: string | null
+          back_comissao?: number | null
+          back_em_exchange?: boolean | null
+          bookmaker_id?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          contexto_operacional?: string | null
+          created_at?: string | null
+          data_aposta?: string | null
+          esporte?: string | null
+          estrategia?: string | null
+          evento?: string | null
+          forma_registro?: string | null
+          gerou_freebet?: boolean | null
+          id?: string | null
+          is_bonus_bet?: boolean | null
+          lay_comissao?: number | null
+          lay_exchange?: string | null
+          lay_liability?: number | null
+          lay_odd?: number | null
+          lay_stake?: number | null
+          lucro_prejuizo?: number | null
+          mercado?: string | null
+          modo_entrada?: string | null
+          observacoes?: string | null
+          odd?: number | null
+          projeto_id?: string | null
+          resultado?: string | null
+          selecao?: string | null
+          stake?: number | null
+          status?: string | null
+          surebet_id?: never
+          tipo_freebet?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          valor_freebet_gerada?: number | null
+          valor_retorno?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          aposta_relacionada_id?: string | null
+          back_comissao?: number | null
+          back_em_exchange?: boolean | null
+          bookmaker_id?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          contexto_operacional?: string | null
+          created_at?: string | null
+          data_aposta?: string | null
+          esporte?: string | null
+          estrategia?: string | null
+          evento?: string | null
+          forma_registro?: string | null
+          gerou_freebet?: boolean | null
+          id?: string | null
+          is_bonus_bet?: boolean | null
+          lay_comissao?: number | null
+          lay_exchange?: string | null
+          lay_liability?: number | null
+          lay_odd?: number | null
+          lay_stake?: number | null
+          lucro_prejuizo?: number | null
+          mercado?: string | null
+          modo_entrada?: string | null
+          observacoes?: string | null
+          odd?: number | null
+          projeto_id?: string | null
+          resultado?: string | null
+          selecao?: string | null
+          stake?: number | null
+          status?: string | null
+          surebet_id?: never
+          tipo_freebet?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          valor_freebet_gerada?: number | null
+          valor_retorno?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apostas_unificada_aposta_relacionada_id_fkey"
+            columns: ["aposta_relacionada_id"]
+            isOneToOne: false
+            referencedRelation: "apostas_unificada"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_aposta_relacionada_id_fkey"
+            columns: ["aposta_relacionada_id"]
+            isOneToOne: false
+            referencedRelation: "v_apostas_compat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_aposta_relacionada_id_fkey"
+            columns: ["aposta_relacionada_id"]
+            isOneToOne: false
+            referencedRelation: "v_apostas_multiplas_compat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_aposta_relacionada_id_fkey"
+            columns: ["aposta_relacionada_id"]
+            isOneToOne: false
+            referencedRelation: "v_surebets_compat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_disponivel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_painel_operacional"
+            referencedColumns: ["entidade_id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_apostas_multiplas_compat: {
+        Row: {
+          bookmaker_id: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          contexto_operacional: string | null
+          created_at: string | null
+          data_aposta: string | null
+          estrategia: string | null
+          forma_registro: string | null
+          gerou_freebet: boolean | null
+          id: string | null
+          is_bonus_bet: boolean | null
+          lucro_prejuizo: number | null
+          observacoes: string | null
+          odd_final: number | null
+          projeto_id: string | null
+          resultado: string | null
+          retorno_potencial: number | null
+          selecoes: Json | null
+          stake: number | null
+          status: string | null
+          tipo_freebet: string | null
+          tipo_multipla: string | null
+          updated_at: string | null
+          user_id: string | null
+          valor_freebet_gerada: number | null
+          valor_retorno: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          bookmaker_id?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          contexto_operacional?: string | null
+          created_at?: string | null
+          data_aposta?: string | null
+          estrategia?: string | null
+          forma_registro?: string | null
+          gerou_freebet?: boolean | null
+          id?: string | null
+          is_bonus_bet?: boolean | null
+          lucro_prejuizo?: number | null
+          observacoes?: string | null
+          odd_final?: number | null
+          projeto_id?: string | null
+          resultado?: string | null
+          retorno_potencial?: number | null
+          selecoes?: Json | null
+          stake?: number | null
+          status?: string | null
+          tipo_freebet?: string | null
+          tipo_multipla?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          valor_freebet_gerada?: number | null
+          valor_retorno?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          bookmaker_id?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          contexto_operacional?: string | null
+          created_at?: string | null
+          data_aposta?: string | null
+          estrategia?: string | null
+          forma_registro?: string | null
+          gerou_freebet?: boolean | null
+          id?: string | null
+          is_bonus_bet?: boolean | null
+          lucro_prejuizo?: number | null
+          observacoes?: string | null
+          odd_final?: number | null
+          projeto_id?: string | null
+          resultado?: string | null
+          retorno_potencial?: number | null
+          selecoes?: Json | null
+          stake?: number | null
+          status?: string | null
+          tipo_freebet?: string | null
+          tipo_multipla?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          valor_freebet_gerada?: number | null
+          valor_retorno?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_disponivel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_painel_operacional"
+            referencedColumns: ["entidade_id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_bookmaker_disponibilidade: {
         Row: {
           bookmaker_status: string | null
@@ -7416,6 +8051,116 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_operadores_workspace"
             referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      v_surebets_compat: {
+        Row: {
+          contexto_operacional: string | null
+          created_at: string | null
+          data_operacao: string | null
+          esporte: string | null
+          estrategia: string | null
+          evento: string | null
+          forma_registro: string | null
+          id: string | null
+          lucro_esperado: number | null
+          lucro_real: number | null
+          mercado: string | null
+          modelo: string | null
+          observacoes: string | null
+          pernas: Json | null
+          projeto_id: string | null
+          resultado: string | null
+          roi_esperado: number | null
+          roi_real: number | null
+          spread: number | null
+          stake_total: number | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          contexto_operacional?: string | null
+          created_at?: string | null
+          data_operacao?: string | null
+          esporte?: string | null
+          estrategia?: string | null
+          evento?: string | null
+          forma_registro?: string | null
+          id?: string | null
+          lucro_esperado?: number | null
+          lucro_real?: number | null
+          mercado?: string | null
+          modelo?: string | null
+          observacoes?: string | null
+          pernas?: Json | null
+          projeto_id?: string | null
+          resultado?: string | null
+          roi_esperado?: number | null
+          roi_real?: number | null
+          spread?: number | null
+          stake_total?: number | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          contexto_operacional?: string | null
+          created_at?: string | null
+          data_operacao?: string | null
+          esporte?: string | null
+          estrategia?: string | null
+          evento?: string | null
+          forma_registro?: string | null
+          id?: string | null
+          lucro_esperado?: number | null
+          lucro_real?: number | null
+          mercado?: string | null
+          modelo?: string | null
+          observacoes?: string | null
+          pernas?: Json | null
+          projeto_id?: string | null
+          resultado?: string | null
+          roi_esperado?: number | null
+          roi_real?: number | null
+          spread?: number | null
+          stake_total?: number | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apostas_unificada_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_apostas_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_projeto_resumo"
+            referencedColumns: ["projeto_id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
           },
         ]
       }
