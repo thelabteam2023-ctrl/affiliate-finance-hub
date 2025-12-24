@@ -42,6 +42,7 @@ import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { ApostaCard } from "./ApostaCard";
+import { ValueBetStatisticsCard } from "./ValueBetStatisticsCard";
 import { cn } from "@/lib/utils";
 
 interface ProjetoValueBetTabProps {
@@ -675,9 +676,12 @@ export function ProjetoValueBetTab({
         </Card>
       </div>
 
-      {/* Gráficos - Usando novo componente reutilizável */}
+      {/* Gráficos e Estatísticas */}
       {metricas.total > 0 && (
-        <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" logoMap={logoMap} />
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" logoMap={logoMap} />
+          <ValueBetStatisticsCard apostas={apostas} />
+        </div>
       )}
     </div>
   );
