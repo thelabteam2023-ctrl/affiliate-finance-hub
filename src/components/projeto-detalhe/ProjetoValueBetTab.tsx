@@ -64,6 +64,8 @@ interface Aposta {
   selecao: string;
   odd: number;
   stake: number;
+  // Quando a aposta é registrada como ARBITRAGEM (multi-pernas), o volume fica aqui
+  stake_total?: number | null;
   estrategia: string | null;
   status: string;
   resultado: string | null;
@@ -148,7 +150,7 @@ export function ProjetoValueBetTab({
       let query = supabase
         .from("apostas_unificada")
         .select(`
-          id, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, 
+          id, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, estrategia, 
           status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id,
           modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
           contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
@@ -193,11 +195,11 @@ export function ProjetoValueBetTab({
   };
 
   const metricas = useMemo(() => {
-    const todasApostas = apostas.map(a => ({ 
-      stake: a.stake, 
-      lucro: a.lucro_prejuizo, 
-      resultado: a.resultado, 
-      bookmaker: a.bookmaker_nome 
+    const todasApostas = apostas.map((a) => ({
+      stake: typeof a.stake_total === "number" ? a.stake_total : a.stake,
+      lucro: a.lucro_prejuizo,
+      resultado: a.resultado,
+      bookmaker: a.bookmaker_nome,
     }));
 
     const total = todasApostas.length;
