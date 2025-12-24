@@ -16,7 +16,7 @@ import {
   BarChart3,
   Info
 } from "lucide-react";
-import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear, format } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { SurebetDialog } from "./SurebetDialog";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
@@ -30,11 +30,11 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
-  Legend,
   Cell
 } from "recharts";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
+import { parsePernaFromJson, PernaArbitragem } from "@/types/apostasUnificada";
 
 interface ProjetoSurebetTabProps {
   projetoId: string;
@@ -42,6 +42,7 @@ interface ProjetoSurebetTabProps {
   refreshTrigger?: number;
 }
 
+// Interface de compatibilidade para o componente SurebetCard
 interface Surebet {
   id: string;
   data_operacao: string;
@@ -103,70 +104,74 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
 
   const fetchSurebets = async () => {
     try {
+      // Buscar da nova tabela unificada - operações de arbitragem
       let query = supabase
-        .from("surebets")
+        .from("apostas_unificada")
         .select("*")
         .eq("projeto_id", projetoId)
-        .order("data_operacao", { ascending: false });
+        .eq("forma_registro", "ARBITRAGEM")
+        .order("data_aposta", { ascending: false });
       
       if (dateRange) {
-        query = query.gte("data_operacao", dateRange.start.toISOString());
-        query = query.lte("data_operacao", dateRange.end.toISOString());
+        query = query.gte("data_aposta", dateRange.start.toISOString());
+        query = query.lte("data_aposta", dateRange.end.toISOString());
       }
 
-      const { data: surebetsData, error } = await query;
+      const { data: arbitragensData, error } = await query;
 
       if (error) throw error;
       
-      // Buscar pernas (apostas) de cada surebet
-      if (surebetsData && surebetsData.length > 0) {
-        const surebetIds = surebetsData.map(s => s.id);
+      // Mapear para o formato esperado pelo SurebetCard (compatibilidade)
+      if (arbitragensData && arbitragensData.length > 0) {
+        const surebetsFormatadas: Surebet[] = arbitragensData.map(arb => {
+          const pernas = parsePernaFromJson(arb.pernas);
+          
+          // Ordenar pernas por seleção
+          const pernasOrdenadas = [...pernas].sort((a, b) => {
+            const order: Record<string, number> = { 
+              "Casa": 1, "1": 1,
+              "Empate": 2, "X": 2,
+              "Fora": 3, "2": 3
+            };
+            return (order[a.selecao] || 99) - (order[b.selecao] || 99);
+          });
+
+          // Converter pernas para o formato do SurebetPerna
+          const pernasSurebetCard: SurebetPerna[] = pernasOrdenadas.map((p, idx) => ({
+            id: `perna-${idx}`,
+            selecao: p.selecao,
+            odd: p.odd,
+            stake: p.stake,
+            resultado: p.resultado,
+            bookmaker_nome: p.bookmaker_nome || "—"
+          }));
+
+          return {
+            id: arb.id,
+            data_operacao: arb.data_aposta,
+            evento: arb.evento || "",
+            esporte: arb.esporte || "",
+            modelo: arb.modelo || "1-2",
+            mercado: arb.mercado,
+            stake_total: arb.stake_total || 0,
+            spread_calculado: arb.spread_calculado,
+            roi_esperado: arb.roi_esperado,
+            lucro_esperado: arb.lucro_esperado,
+            lucro_real: arb.lucro_prejuizo,
+            roi_real: arb.roi_real,
+            status: arb.status,
+            resultado: arb.resultado,
+            observacoes: arb.observacoes,
+            pernas: pernasSurebetCard
+          };
+        });
         
-        const { data: pernasData, error: pernasError } = await supabase
-          .from("apostas")
-          .select(`
-            id,
-            surebet_id,
-            selecao,
-            odd,
-            stake,
-            resultado,
-            bookmaker:bookmakers (nome)
-          `)
-          .in("surebet_id", surebetIds);
-        
-        if (pernasError) throw pernasError;
-        
-        // Mapear pernas para cada surebet
-        const surebetsComPernas = surebetsData.map(surebet => ({
-          ...surebet,
-          pernas: (pernasData || [])
-            .filter(p => p.surebet_id === surebet.id)
-            .map(p => ({
-              id: p.id,
-              selecao: p.selecao,
-              odd: p.odd,
-              stake: p.stake,
-              resultado: p.resultado,
-              bookmaker_nome: (p.bookmaker as any)?.nome || "—"
-            }))
-            .sort((a, b) => {
-              // Ordenar: Casa/1 primeiro, depois Empate/X, depois Fora/2
-              const order: Record<string, number> = { 
-                "Casa": 1, "1": 1,
-                "Empate": 2, "X": 2,
-                "Fora": 3, "2": 3
-              };
-              return (order[a.selecao] || 99) - (order[b.selecao] || 99);
-            })
-        }));
-        
-        setSurebets(surebetsComPernas);
+        setSurebets(surebetsFormatadas);
       } else {
         setSurebets([]);
       }
     } catch (error: any) {
-      console.error("Erro ao carregar surebets:", error.message);
+      console.error("Erro ao carregar arbitragens:", error.message);
     }
   };
 

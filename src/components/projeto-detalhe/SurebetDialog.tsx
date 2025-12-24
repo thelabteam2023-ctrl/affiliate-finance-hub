@@ -354,20 +354,20 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       : ["Sim", "Não"];
   };
 
-  // Carregar pernas do JSONB da surebet (novo modelo sem tabela apostas)
+  // Carregar pernas do JSONB da operação (nova tabela unificada)
   const fetchLinkedPernas = async (surebetId: string, surebetModelo: string) => {
-    const { data: surebetData } = await supabase
-      .from("surebets")
+    const { data: operacaoData } = await supabase
+      .from("apostas_unificada")
       .select("pernas")
       .eq("id", surebetId)
       .single();
     
-    if (!surebetData?.pernas || !Array.isArray(surebetData.pernas) || surebetData.pernas.length === 0) {
+    if (!operacaoData?.pernas || !Array.isArray(operacaoData.pernas) || operacaoData.pernas.length === 0) {
       setLinkedApostas([]);
       return;
     }
 
-    const pernas = surebetData.pernas as unknown as SurebetPerna[];
+    const pernas = operacaoData.pernas as unknown as SurebetPerna[];
     
     // Ordenar pela ordem fixa do modelo
     const ordemFixa = getOrdemFixa(surebetModelo as "1-X-2" | "1-2");
@@ -861,9 +861,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       if (!user) throw new Error("Usuário não autenticado");
 
       if (isEditing && surebet) {
-        // Update surebet
+        // Update na tabela unificada
         const { error } = await supabase
-          .from("surebets")
+          .from("apostas_unificada")
           .update({
             evento,
             esporte,
@@ -874,13 +874,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           .eq("id", surebet.id);
 
         if (error) throw error;
-        toast.success("Surebet atualizada!");
+        toast.success("Operação atualizada!");
       } else {
         // Calcular stake total e valores das stakes diretamente dos campos
         const stakes = odds.map(o => parseFloat(o.stake) || 0);
         const stakeTotal = stakes.reduce((a, b) => a + b, 0);
         
-        // Criar pernas como estrutura JSONB interna (NÃO cria apostas)
+        // Criar pernas como estrutura JSONB interna
         const pernasToSave: SurebetPerna[] = odds.map((entry, idx) => ({
           bookmaker_id: entry.bookmaker_id,
           bookmaker_nome: getBookmakerNome(entry.bookmaker_id),
@@ -895,12 +895,15 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             : null
         }));
         
-        // Create surebet com pernas embutidas
-        const { error: surebetError } = await supabase
-          .from("surebets")
+        // Inserir na tabela unificada
+        const { error: insertError } = await supabase
+          .from("apostas_unificada")
           .insert({
             user_id: user.id,
             projeto_id: projetoId,
+            forma_registro: 'ARBITRAGEM',
+            estrategia: registroValues.estrategia,
+            contexto_operacional: registroValues.contexto_operacional,
             evento,
             esporte,
             modelo,
@@ -911,22 +914,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             lucro_esperado: analysis?.guaranteedProfit || null,
             observacoes,
             status: "PENDENTE",
+            resultado: "PENDENTE",
             pernas: pernasToSave as any,
-            forma_registro: registroValues.forma_registro,
-            estrategia: registroValues.estrategia,
-            contexto_operacional: registroValues.contexto_operacional
+            data_aposta: new Date().toISOString()
           });
 
-        if (surebetError) throw surebetError;
+        if (insertError) throw insertError;
 
-        // NOTA: Não debitar saldo_atual na criação de apostas PENDENTES!
-        // O modelo contábil correto é:
-        // - saldo_atual = saldo total real (só muda na liquidação)
-        // - "Em Aposta" = soma das stakes pendentes (calculado dinamicamente)
-        // - "Livre" = saldo_atual - Em Aposta
-        // O débito só ocorre na liquidação (RED) ou crédito (GREEN/VOID)
-
-        toast.success("Surebet registrada com sucesso!");
+        toast.success("Operação registrada com sucesso!");
       }
 
       onSuccess();
@@ -978,24 +973,15 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         }
       }
       
-      // CRÍTICO: Deletar PRIMEIRO as pernas (apostas vinculadas) antes de deletar a surebet
-      // Isso evita que as pernas fiquem órfãs e apareçam como apostas independentes
-      const { error: pernasError } = await supabase
-        .from("apostas")
-        .delete()
-        .eq("surebet_id", surebet.id);
-
-      if (pernasError) throw pernasError;
-
-      // Agora deletar a surebet principal
+      // Deletar da tabela unificada
       const { error } = await supabase
-        .from("surebets")
+        .from("apostas_unificada")
         .delete()
         .eq("id", surebet.id);
 
       if (error) throw error;
       
-      toast.success("Surebet excluída!");
+      toast.success("Operação excluída!");
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
@@ -1141,21 +1127,21 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     }
   };
 
-  // Liquidar perna por índice - atualiza JSONB na surebet
+  // Liquidar perna por índice - atualiza JSONB na tabela unificada
   const handleLiquidarPerna = useCallback(async (pernaIndex: number, resultado: "GREEN" | "RED" | "VOID" | null) => {
     if (!surebet) return;
     
     try {
-      // Buscar pernas atuais da surebet
-      const { data: surebetData } = await supabase
-        .from("surebets")
+      // Buscar pernas atuais da operação na tabela unificada
+      const { data: operacaoData } = await supabase
+        .from("apostas_unificada")
         .select("pernas")
         .eq("id", surebet.id)
         .single();
       
-      if (!surebetData?.pernas) return;
+      if (!operacaoData?.pernas) return;
       
-      const pernas = surebetData.pernas as unknown as SurebetPerna[];
+      const pernas = operacaoData.pernas as unknown as SurebetPerna[];
       const perna = pernas[pernaIndex];
       if (!perna) return;
 
@@ -1227,14 +1213,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         ? (lucroTotal > 0 ? "GREEN" : lucroTotal < 0 ? "RED" : "VOID")
         : null;
 
-      // Atualizar surebet com pernas e status
+      // Atualizar operação na tabela unificada com pernas e status
       await supabase
-        .from("surebets")
+        .from("apostas_unificada")
         .update({
           pernas: novasPernas as any,
           status: todasLiquidadas ? "LIQUIDADA" : "PENDENTE",
           resultado: resultadoFinal,
-          lucro_real: todasLiquidadas ? lucroTotal : null,
+          lucro_prejuizo: todasLiquidadas ? lucroTotal : null,
           roi_real: todasLiquidadas && surebet.stake_total > 0 ? (lucroTotal / surebet.stake_total) * 100 : null
         })
         .eq("id", surebet.id);
