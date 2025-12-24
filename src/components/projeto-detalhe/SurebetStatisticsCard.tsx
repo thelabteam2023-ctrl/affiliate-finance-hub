@@ -444,8 +444,8 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
           <div className="space-y-2">
             <SectionHeader title="Casas" />
             <StatCell 
-              label="Casas mais usadas" 
-              value={stats.top3Casas.slice(0, 2).map(c => c.casa).join(", ") || "-"}
+              label="Casa mais usada" 
+              value={stats.top3Casas[0]?.casa || "-"}
               tooltipContent={stats.top3Casas.length > 0 ? (
                 <RankingTooltip 
                   title="Top Casas por Uso"
