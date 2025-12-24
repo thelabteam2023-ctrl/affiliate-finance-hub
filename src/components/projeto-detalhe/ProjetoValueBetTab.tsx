@@ -29,7 +29,8 @@ import {
   LayoutList,
   Clock,
   History,
-  ArrowUpDown
+  ArrowUpDown,
+  Users
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -101,7 +102,35 @@ const NAV_ITEMS = [
 ];
 
 // Ordenação para Por Casa
-type SortField = "volume" | "lucro" | "count" | "roi";
+type SortField = "volume" | "lucro" | "apostas" | "roi";
+
+interface Bookmaker {
+  id: string;
+  nome: string;
+  saldo_atual: number;
+  saldo_freebet?: number;
+  parceiro_id?: string;
+  bookmaker_catalogo_id?: string;
+  parceiro?: { nome: string } | null;
+  bookmakers_catalogo?: { logo_url: string | null } | null;
+}
+
+interface VinculoData {
+  vinculo: string;
+  apostas: number;
+  volume: number;
+  lucro: number;
+  roi: number;
+}
+
+interface CasaAgregada {
+  casa: string;
+  apostas: number;
+  volume: number;
+  lucro: number;
+  roi: number;
+  vinculos: VinculoData[];
+}
 
 export function ProjetoValueBetTab({ 
   projetoId, 
@@ -109,6 +138,7 @@ export function ProjetoValueBetTab({
   refreshTrigger
 }: ProjetoValueBetTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
+  const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
@@ -152,9 +182,22 @@ export function ProjetoValueBetTab({
   const fetchData = async () => {
     try {
       setLoading(true);
-      await fetchApostas();
+      await Promise.all([fetchApostas(), fetchBookmakers()]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBookmakers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("bookmakers")
+        .select(`id, nome, saldo_atual, saldo_freebet, parceiro_id, bookmaker_catalogo_id, parceiro:parceiros (nome), bookmakers_catalogo (logo_url)`)
+        .eq("projeto_id", projetoId);
+      if (error) throw error;
+      setBookmakers(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar bookmakers:", error);
     }
   };
 
@@ -245,18 +288,111 @@ export function ProjetoValueBetTab({
     return { total, totalStake, lucroTotal, greens, reds, taxaAcerto, roi, porCasa };
   }, [apostas]);
 
-  // casaData para renderPorCasa (mantido para essa seção)
-  const casaData = useMemo(() => {
-    return Object.entries(metricas.porCasa)
-      .map(([casa, data]) => ({
-        casa,
-        lucro: data.lucro,
-        count: data.count,
-        stake: data.stake,
-        roi: data.stake > 0 ? (data.lucro / data.stake) * 100 : 0
-      }))
-      .sort((a, b) => b.lucro - a.lucro);
-  }, [metricas]);
+  // casaData agregado por CASA (não por vínculo) - Padrão unificado
+  const casaData = useMemo((): CasaAgregada[] => {
+    const casaMap = new Map<string, {
+      apostas: number;
+      volume: number;
+      lucro: number;
+      vinculos: Map<string, { apostas: number; volume: number; lucro: number }>;
+    }>();
+
+    const extractCasaVinculo = (nomeCompleto: string) => {
+      const separatorIdx = nomeCompleto.indexOf(" - ");
+      if (separatorIdx > 0) {
+        return {
+          casa: nomeCompleto.substring(0, separatorIdx).trim(),
+          vinculo: nomeCompleto.substring(separatorIdx + 3).trim()
+        };
+      }
+      return { casa: nomeCompleto, vinculo: "Principal" };
+    };
+
+    const processEntry = (nomeCompleto: string, stake: number, lucro: number) => {
+      const { casa, vinculo } = extractCasaVinculo(nomeCompleto);
+
+      if (!casaMap.has(casa)) {
+        casaMap.set(casa, { apostas: 0, volume: 0, lucro: 0, vinculos: new Map() });
+      }
+      const casaEntry = casaMap.get(casa)!;
+      casaEntry.apostas += 1;
+      casaEntry.volume += stake;
+      casaEntry.lucro += lucro;
+
+      if (!casaEntry.vinculos.has(vinculo)) {
+        casaEntry.vinculos.set(vinculo, { apostas: 0, volume: 0, lucro: 0 });
+      }
+      const vinculoEntry = casaEntry.vinculos.get(vinculo)!;
+      vinculoEntry.apostas += 1;
+      vinculoEntry.volume += stake;
+      vinculoEntry.lucro += lucro;
+    };
+
+    apostas.forEach((a) => {
+      const nomeCompleto = a.bookmaker_nome || "Desconhecida";
+      const stake = typeof a.stake_total === "number" ? a.stake_total : (a.stake || 0);
+      processEntry(nomeCompleto, stake, a.lucro_prejuizo || 0);
+    });
+
+    return Array.from(casaMap.entries())
+      .map(([casa, data]) => {
+        const roi = data.volume > 0 ? (data.lucro / data.volume) * 100 : 0;
+        return {
+          casa,
+          apostas: data.apostas,
+          volume: data.volume,
+          lucro: data.lucro,
+          roi,
+          vinculos: Array.from(data.vinculos.entries())
+            .map(([vinculo, v]) => ({
+              vinculo,
+              apostas: v.apostas,
+              volume: v.volume,
+              lucro: v.lucro,
+              roi: v.volume > 0 ? (v.lucro / v.volume) * 100 : 0,
+            }))
+            .sort((a, b) => b.volume - a.volume),
+        };
+      })
+      .sort((a, b) => b.volume - a.volume)
+      .slice(0, 8);
+  }, [apostas]);
+
+  // Mapa de logos por nome do catálogo (case-insensitive)
+  const logoMap = useMemo(() => {
+    const map = new Map<string, string | null>();
+    bookmakers.forEach(bk => {
+      const nomeParts = bk.nome.split(" - ");
+      const baseName = nomeParts[0].trim().toUpperCase();
+      const logoUrl = bk.bookmakers_catalogo?.logo_url || null;
+      if (logoUrl && !map.has(baseName)) {
+        map.set(baseName, logoUrl);
+      }
+    });
+    return map;
+  }, [bookmakers]);
+
+  const getLogoUrl = (casaName: string) => {
+    const upperName = casaName.toUpperCase();
+    if (logoMap.has(upperName)) return logoMap.get(upperName);
+    for (const [key, value] of logoMap.entries()) {
+      if (upperName.includes(key) || key.includes(upperName)) return value;
+    }
+    return null;
+  };
+
+  // Ordenar casaData conforme filtro selecionado
+  const casaDataSorted = useMemo(() => {
+    return [...casaData].sort((a, b) => {
+      switch (porCasaSort) {
+        case "lucro": return b.lucro - a.lucro;
+        case "apostas": return b.apostas - a.apostas;
+        case "roi": return b.roi - a.roi;
+        case "volume":
+        default: return b.volume - a.volume;
+      }
+    });
+  }, [casaData, porCasaSort]);
 
   // Separar apostas em abertas e histórico
   const apostasAbertas = useMemo(() => apostas.filter(a => !a.resultado || a.resultado === "PENDENTE"), [apostas]);
@@ -606,16 +742,34 @@ export function ProjetoValueBetTab({
     </div>
   );
 
-  // Render Por Casa
+  // Render Por Casa - Padrão unificado com Duplo Green
   const renderPorCasa = () => (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Building2 className="h-5 w-5 text-purple-400" />
-        <h3 className="text-lg font-semibold">Análise por Casa</h3>
-        <Badge variant="secondary">{casaData.length} casas</Badge>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Building2 className="h-5 w-5 text-purple-400" />
+          <h3 className="text-lg font-semibold">Análise por Casa</h3>
+          <Badge variant="secondary">{casaDataSorted.length} casas</Badge>
+        </div>
+        
+        {/* Filtros discretos */}
+        <div className="flex items-center gap-1.5">
+          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+          <Select value={porCasaSort} onValueChange={(v) => setPorCasaSort(v as SortField)}>
+            <SelectTrigger className="h-7 w-[110px] text-xs border-muted/50">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="volume" className="text-xs">Volume</SelectItem>
+              <SelectItem value="lucro" className="text-xs">Lucro</SelectItem>
+              <SelectItem value="apostas" className="text-xs">Qtd Apostas</SelectItem>
+              <SelectItem value="roi" className="text-xs">ROI</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-
-      {casaData.length === 0 ? (
+      
+      {casaDataSorted.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
@@ -627,37 +781,103 @@ export function ProjetoValueBetTab({
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {casaData.map((casa) => (
-            <Card key={casa.casa} className={casa.lucro >= 0 ? "border-emerald-500/20" : "border-red-500/20"}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">{casa.casa}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Apostas</span>
-                    <span className="font-medium">{casa.count}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Volume</span>
-                    <span className="font-medium">{formatCurrency(casa.stake)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Lucro</span>
-                    <span className={`font-medium ${casa.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {formatCurrency(casa.lucro)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">ROI</span>
-                    <span className={`font-medium ${casa.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {formatPercent(casa.roi)}
-                    </span>
-                  </div>
+          {casaDataSorted.map((casa) => {
+            const logoUrl = getLogoUrl(casa.casa);
+            return (
+            <Tooltip key={casa.casa}>
+              <TooltipTrigger asChild>
+                <Card className={`cursor-default transition-colors hover:border-purple-500/30 ${casa.lucro >= 0 ? "border-emerald-500/20" : "border-red-500/20"}`}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
+                        {logoUrl ? (
+                          <img src={logoUrl} alt={casa.casa} className="w-6 h-6 object-contain" />
+                        ) : (
+                          <Building2 className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <span className="truncate">{casa.casa}</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Apostas</span>
+                        <span className="font-medium tabular-nums">{casa.apostas}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Volume</span>
+                        <span className="font-medium tabular-nums">{formatCurrency(casa.volume)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Lucro</span>
+                        <span className={`font-medium tabular-nums ${casa.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {casa.lucro >= 0 ? '+' : ''}{formatCurrency(casa.lucro)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">ROI</span>
+                        <span className={`font-semibold tabular-nums ${casa.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {formatPercent(casa.roi)}
+                        </span>
+                      </div>
+                    </div>
+                    {casa.vinculos.length > 1 && (
+                      <div className="mt-3 pt-2 border-t flex items-center gap-1 text-xs text-muted-foreground">
+                        <Users className="h-3 w-3" />
+                        <span>{casa.vinculos.length} vínculos</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs max-w-[320px] space-y-2">
+                <p className="font-semibold border-b pb-1">{casa.casa}</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-muted-foreground">
+                  <span>Total Apostas:</span>
+                  <span className="text-right font-medium text-foreground">{casa.apostas}</span>
+                  <span>Volume Total:</span>
+                  <span className="text-right font-medium text-foreground">{formatCurrency(casa.volume)}</span>
+                  <span>Lucro Total:</span>
+                  <span className={`text-right font-medium ${casa.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {casa.lucro >= 0 ? '+' : ''}{formatCurrency(casa.lucro)}
+                  </span>
+                  <span>ROI:</span>
+                  <span className={`text-right font-semibold ${casa.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {formatPercent(casa.roi)}
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+                {casa.vinculos.length > 0 && (
+                  <div className="space-y-1.5 pt-2 border-t">
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Users className="h-3 w-3" />
+                      <span className="font-medium">Detalhamento por vínculo:</span>
+                    </div>
+                    <div className="grid grid-cols-[1fr_50px_70px_55px] gap-x-2 text-[10px] text-muted-foreground border-b pb-1">
+                      <span>Vínculo</span>
+                      <span className="text-right">Qtd</span>
+                      <span className="text-right">Volume</span>
+                      <span className="text-right">ROI</span>
+                    </div>
+                    {casa.vinculos.slice(0, 5).map((v) => (
+                      <div key={v.vinculo} className="grid grid-cols-[1fr_50px_70px_55px] gap-x-2 items-center">
+                        <span className="truncate">{v.vinculo}</span>
+                        <span className="text-right text-muted-foreground tabular-nums">{v.apostas}</span>
+                        <span className="text-right text-muted-foreground tabular-nums">{formatCurrency(v.volume)}</span>
+                        <span className={`text-right font-medium tabular-nums ${v.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {v.roi >= 0 ? '+' : ''}{v.roi.toFixed(1)}%
+                        </span>
+                      </div>
+                    ))}
+                    {casa.vinculos.length > 5 && (
+                      <div className="text-muted-foreground">+{casa.vinculos.length - 5} vínculos...</div>
+                    )}
+                  </div>
+                )}
+              </TooltipContent>
+            </Tooltip>
+            );
+          })}
         </div>
       )}
     </div>
