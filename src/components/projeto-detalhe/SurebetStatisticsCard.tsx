@@ -71,7 +71,7 @@ const StatCell = ({
 };
 
 const SectionHeader = ({ title }: { title: string }) => (
-  <div className="col-span-3 mt-2 first:mt-0">
+  <div className="mt-3 first:mt-0">
     <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
       {title}
     </span>
@@ -325,129 +325,132 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0 pb-3">
-        <div className="grid grid-cols-3 gap-2">
-          {/* ROI */}
-          <SectionHeader title="ROI" />
-          <StatCell 
-            label="ROI médio/operação" 
-            value={formatPercent(stats.roiMedioPorOperacao)} 
-            valueClass={stats.roiMedioPorOperacao >= 0 ? "text-emerald-400" : "text-red-400"}
-            tooltip="Lucro total ÷ Stake total das operações resolvidas"
-          />
-          <StatCell 
-            label="ROI médio mensal" 
-            value={formatPercent(stats.roiMedioMensal)} 
-            valueClass={stats.roiMedioMensal >= 0 ? "text-emerald-400" : "text-red-400"}
-            tooltip="Média dos ROIs mensais"
-          />
+        {/* Layout em 3 colunas principais */}
+        <div className="grid grid-cols-3 gap-4">
+          {/* COLUNA 1: ROI + Resultados + Capital */}
+          <div className="space-y-2">
+            <SectionHeader title="ROI" />
+            <StatCell 
+              label="ROI médio/operação" 
+              value={formatPercent(stats.roiMedioPorOperacao)} 
+              valueClass={stats.roiMedioPorOperacao >= 0 ? "text-emerald-400" : "text-red-400"}
+              tooltip="Lucro total ÷ Stake total das operações resolvidas"
+            />
+            <StatCell 
+              label="ROI médio mensal" 
+              value={formatPercent(stats.roiMedioMensal)} 
+              valueClass={stats.roiMedioMensal >= 0 ? "text-emerald-400" : "text-red-400"}
+              tooltip="Média dos ROIs mensais"
+            />
 
-          {/* Resultados */}
-          <SectionHeader title="Resultados" />
-          <StatCell 
-            label="Eventos lucrativos" 
-            value={stats.eventosLucrativos} 
-            valueClass="text-emerald-400"
-            tooltip="Operações com lucro > 0"
-          />
-          <StatCell 
-            label="Eventos deficitários" 
-            value={stats.eventosDeficitarios} 
-            valueClass="text-red-400"
-            tooltip="Operações com lucro < 0"
-          />
+            <SectionHeader title="Resultados" />
+            <StatCell 
+              label="Eventos lucrativos" 
+              value={stats.eventosLucrativos} 
+              valueClass="text-emerald-400"
+              tooltip="Operações com lucro > 0"
+            />
+            <StatCell 
+              label="Eventos deficitários" 
+              value={stats.eventosDeficitarios} 
+              valueClass="text-red-400"
+              tooltip="Operações com lucro < 0"
+            />
 
-          {/* Capital */}
-          <SectionHeader title="Capital" />
-          <StatCell 
-            label="Stake média/operação" 
-            value={formatCurrency(stats.stakeMedia)}
-            tooltip="Stake total ÷ Nº de operações"
-          />
-          <StatCell 
-            label="Stake média diária" 
-            value={formatCurrency(stats.stakeTotalDiaria)}
-            tooltip="Stake total ÷ Dias com operações"
-          />
+            <SectionHeader title="Capital" />
+            <StatCell 
+              label="Stake média/operação" 
+              value={formatCurrency(stats.stakeMedia)}
+              tooltip="Stake total ÷ Nº de operações"
+            />
+            <StatCell 
+              label="Stake média diária" 
+              value={formatCurrency(stats.stakeTotalDiaria)}
+              tooltip="Stake total ÷ Dias com operações"
+            />
+          </div>
 
-          {/* Casas */}
-          <SectionHeader title="Casas" />
-          <StatCell 
-            label="Casas mais usadas" 
-            value={stats.top3Casas.slice(0, 2).map(c => c.casa).join(", ") || "-"}
-            tooltip={stats.top3Casas.map(c => `${c.casa}: ${c.operacoes} ops`).join(" | ")}
-          />
-          <StatCell 
-            label="Casas utilizadas" 
-            value={stats.casasDistintas}
-            tooltip="Total de casas distintas"
-          />
-          <StatCell 
-            label="Maior lucro (casa)" 
-            value={stats.casaMaiorLucro ? stats.casaMaiorLucro.casa : "-"}
-            valueClass="text-emerald-400"
-            tooltip={stats.casaMaiorLucro ? `${formatCurrency(stats.casaMaiorLucro.lucro)}` : undefined}
-          />
-          <StatCell 
-            label="Maior ROI (casa)" 
-            value={stats.casaMaiorRoi ? `${stats.casaMaiorRoi.casa}` : "-"}
-            valueClass="text-emerald-400"
-            tooltip={stats.casaMaiorRoi ? `ROI: ${formatPercent(stats.casaMaiorRoi.roi)}` : undefined}
-          />
-          <StatCell 
-            label="Maior void (casa)" 
-            value={stats.casaMaiorVoid ? stats.casaMaiorVoid.casa : "-"}
-            tooltip={stats.casaMaiorVoid ? `Taxa: ${stats.casaMaiorVoid.taxa.toFixed(1)}%` : undefined}
-          />
-          <StatCell 
-            label="Maior slippage (casa)" 
-            value={stats.casaMaiorSlippage && stats.casaMaiorSlippage.slippage > 0 ? stats.casaMaiorSlippage.casa : "-"}
-            valueClass={stats.casaMaiorSlippage && stats.casaMaiorSlippage.slippage > 0 ? "text-amber-400" : ""}
-            tooltip={stats.casaMaiorSlippage ? `Slippage: ${stats.casaMaiorSlippage.slippage.toFixed(2)}%` : undefined}
-          />
+          {/* COLUNA 2: Casas */}
+          <div className="space-y-2">
+            <SectionHeader title="Casas" />
+            <StatCell 
+              label="Casas mais usadas" 
+              value={stats.top3Casas.slice(0, 2).map(c => c.casa).join(", ") || "-"}
+              tooltip={stats.top3Casas.map(c => `${c.casa}: ${c.operacoes} ops`).join(" | ")}
+            />
+            <StatCell 
+              label="Casas utilizadas" 
+              value={stats.casasDistintas}
+              tooltip="Total de casas distintas"
+            />
+            <StatCell 
+              label="Maior lucro (casa)" 
+              value={stats.casaMaiorLucro ? stats.casaMaiorLucro.casa : "-"}
+              valueClass="text-emerald-400"
+              tooltip={stats.casaMaiorLucro ? `${formatCurrency(stats.casaMaiorLucro.lucro)}` : undefined}
+            />
+            <StatCell 
+              label="Maior ROI (casa)" 
+              value={stats.casaMaiorRoi ? `${stats.casaMaiorRoi.casa}` : "-"}
+              valueClass="text-emerald-400"
+              tooltip={stats.casaMaiorRoi ? `ROI: ${formatPercent(stats.casaMaiorRoi.roi)}` : undefined}
+            />
+            <StatCell 
+              label="Maior void (casa)" 
+              value={stats.casaMaiorVoid ? stats.casaMaiorVoid.casa : "-"}
+              tooltip={stats.casaMaiorVoid ? `Taxa: ${stats.casaMaiorVoid.taxa.toFixed(1)}%` : undefined}
+            />
+            <StatCell 
+              label="Maior slippage (casa)" 
+              value={stats.casaMaiorSlippage && stats.casaMaiorSlippage.slippage > 0 ? stats.casaMaiorSlippage.casa : "-"}
+              valueClass={stats.casaMaiorSlippage && stats.casaMaiorSlippage.slippage > 0 ? "text-amber-400" : ""}
+              tooltip={stats.casaMaiorSlippage ? `Slippage: ${stats.casaMaiorSlippage.slippage.toFixed(2)}%` : undefined}
+            />
+          </div>
 
-          {/* Risco */}
-          <SectionHeader title="Risco" />
-          <StatCell 
-            label="Maior prejuízo unitário" 
-            value={formatCurrency(stats.maiorPrejuizoUnitario)} 
-            valueClass="text-red-400"
-            tooltip="Maior perda em uma única operação"
-          />
-          <StatCell 
-            label="Maior prejuízo diário" 
-            value={formatCurrency(stats.maiorPrejuizoDiario)} 
-            valueClass="text-red-400"
-            tooltip="Maior soma negativa em um único dia"
-          />
+          {/* COLUNA 3: Risco + Eficiência + Qualidade */}
+          <div className="space-y-2">
+            <SectionHeader title="Risco" />
+            <StatCell 
+              label="Maior prejuízo unitário" 
+              value={formatCurrency(stats.maiorPrejuizoUnitario)} 
+              valueClass="text-red-400"
+              tooltip="Maior perda em uma única operação"
+            />
+            <StatCell 
+              label="Maior prejuízo diário" 
+              value={formatCurrency(stats.maiorPrejuizoDiario)} 
+              valueClass="text-red-400"
+              tooltip="Maior soma negativa em um único dia"
+            />
 
-          {/* Eficiência */}
-          <SectionHeader title="Eficiência" />
-          <StatCell 
-            label="Lucro por R$1.000" 
-            value={formatCurrency(stats.lucroPorMilAlocados)}
-            valueClass={stats.lucroPorMilAlocados >= 0 ? "text-emerald-400" : "text-red-400"}
-            tooltip="(Lucro ÷ Stake) × 1.000"
-          />
-          <StatCell 
-            label="Lucro por casa ativa" 
-            value={formatCurrency(stats.lucroPorCasaAtiva)}
-            valueClass={stats.lucroPorCasaAtiva >= 0 ? "text-emerald-400" : "text-red-400"}
-            tooltip="Lucro total ÷ Casas utilizadas"
-          />
+            <SectionHeader title="Eficiência" />
+            <StatCell 
+              label="Lucro por R$1.000" 
+              value={formatCurrency(stats.lucroPorMilAlocados)}
+              valueClass={stats.lucroPorMilAlocados >= 0 ? "text-emerald-400" : "text-red-400"}
+              tooltip="(Lucro ÷ Stake) × 1.000"
+            />
+            <StatCell 
+              label="Lucro por casa ativa" 
+              value={formatCurrency(stats.lucroPorCasaAtiva)}
+              valueClass={stats.lucroPorCasaAtiva >= 0 ? "text-emerald-400" : "text-red-400"}
+              tooltip="Lucro total ÷ Casas utilizadas"
+            />
 
-          {/* Qualidade */}
-          <SectionHeader title="Qualidade" />
-          <StatCell 
-            label="Surebets ROI > 2,5%" 
-            value={`${stats.percentRoiMaior25.toFixed(1)}%`}
-            valueClass={stats.percentRoiMaior25 >= 50 ? "text-emerald-400" : ""}
-            tooltip="% de operações com ROI individual > 2,5%"
-          />
-          <StatCell 
-            label="Média de odds" 
-            value={stats.mediaOdds.toFixed(2)}
-            tooltip="Média de todas as odds das pernas"
-          />
+            <SectionHeader title="Qualidade" />
+            <StatCell 
+              label="Surebets ROI > 2,5%" 
+              value={`${stats.percentRoiMaior25.toFixed(1)}%`}
+              valueClass={stats.percentRoiMaior25 >= 50 ? "text-emerald-400" : ""}
+              tooltip="% de operações com ROI individual > 2,5%"
+            />
+            <StatCell 
+              label="Média de odds" 
+              value={stats.mediaOdds.toFixed(2)}
+              tooltip="Média de todas as odds das pernas"
+            />
+          </div>
         </div>
       </CardContent>
     </Card>
