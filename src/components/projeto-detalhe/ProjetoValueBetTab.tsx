@@ -437,12 +437,12 @@ export function ProjetoValueBetTab({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="GREEN">Green</SelectItem>
-                  <SelectItem value="RED">Red</SelectItem>
-                  <SelectItem value="MEIO_GREEN">½ Green</SelectItem>
-                  <SelectItem value="MEIO_RED">½ Red</SelectItem>
-                  <SelectItem value="VOID">Void</SelectItem>
-                  <SelectItem value="PENDENTE">Pendente</SelectItem>
+                  <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
+                  <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
+                  <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">½ Green</SelectItem>
+                  <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">½ Red</SelectItem>
+                  <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
+                  <SelectItem value="PENDENTE" className="hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground">Pendente</SelectItem>
                 </SelectContent>
               </Select>
               <div className="flex border rounded-md">

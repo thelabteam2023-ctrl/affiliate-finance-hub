@@ -856,11 +856,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="GREEN">Green</SelectItem>
-                <SelectItem value="RED">Red</SelectItem>
-                <SelectItem value="MEIO_GREEN">Meio Green</SelectItem>
-                <SelectItem value="MEIO_RED">Meio Red</SelectItem>
-                <SelectItem value="VOID">Void</SelectItem>
+                <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
+                <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
+                <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">Meio Green</SelectItem>
+                <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">Meio Red</SelectItem>
+                <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
               </SelectContent>
             </Select>
             
