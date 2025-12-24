@@ -144,12 +144,13 @@ interface Surebet {
   evento: string;
   esporte: string;
   modelo: string;
+  estrategia: string | null;
   stake_total: number;
   spread_calculado: number | null;
   roi_esperado: number | null;
   roi_real: number | null;
   lucro_esperado: number | null;
-  lucro_real: number | null;
+  lucro_prejuizo: number | null;
   status: string;
   resultado: string | null;
   data_operacao: string;
@@ -434,8 +435,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
         .from("apostas_unificada")
         .select(`
           id, evento, esporte, modelo, stake_total, spread_calculado,
-          roi_esperado, roi_real, lucro_esperado, lucro_prejuizo as lucro_real,
-          status, resultado, data_aposta, observacoes, created_at, pernas
+          roi_esperado, roi_real, lucro_esperado, lucro_prejuizo,
+          status, resultado, data_aposta, observacoes, created_at, pernas, estrategia
         `)
         .eq("projeto_id", projetoId)
         .eq("forma_registro", "ARBITRAGEM")
@@ -905,6 +906,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
               
               const surebetData: SurebetData = {
                 ...sb,
+                lucro_real: sb.lucro_prejuizo,
                 pernas: sb.pernas?.map(p => ({
                   id: p.id,
                   selecao: p.selecao,
@@ -1179,7 +1181,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
                             
                             if (isSurebetItem) {
                               const sb = data as Surebet;
-                              lucro = sb.status === "LIQUIDADA" ? sb.lucro_real : sb.lucro_esperado;
+                              lucro = sb.status === "LIQUIDADA" ? sb.lucro_prejuizo : sb.lucro_esperado;
                             } else {
                               lucro = data.lucro_prejuizo;
                             }
