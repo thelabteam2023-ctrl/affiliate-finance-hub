@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { BarChart3, TrendingUp, TrendingDown, Target, DollarSign, Activity, Flame, Award } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 
 interface Aposta {
   id: string;
@@ -17,6 +16,17 @@ interface Aposta {
 interface ValueBetStatisticsCardProps {
   apostas: Aposta[];
 }
+
+const StatCell = ({ label, value, valueClass = "" }: { 
+  label: string; 
+  value: string | number; 
+  valueClass?: string 
+}) => (
+  <div className="flex items-center justify-between bg-muted/40 rounded px-3 py-1.5">
+    <span className="text-muted-foreground text-xs">{label}</span>
+    <span className={`font-medium tabular-nums text-xs ${valueClass}`}>{value}</span>
+  </div>
+);
 
 export function ValueBetStatisticsCard({ apostas }: ValueBetStatisticsCardProps) {
   const stats = useMemo(() => {
@@ -118,126 +128,33 @@ export function ValueBetStatisticsCard({ apostas }: ValueBetStatisticsCardProps)
       <CardHeader className="py-3">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <BarChart3 className="h-4 w-4 text-purple-400" />
-          Estatísticas Avançadas
+          Estatísticas
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0 pb-4 space-y-3 text-sm">
-        {/* Resultados */}
-        <div>
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
-            <Target className="h-3 w-3" />
-            Resultados
-          </span>
-          <div className="grid grid-cols-4 gap-x-4 gap-y-1">
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground text-xs">Vencedoras</span>
-              <span className="font-medium text-emerald-400 tabular-nums">{stats.vencedoras}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground text-xs">Perdedoras</span>
-              <span className="font-medium text-red-400 tabular-nums">{stats.perdedoras}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground text-xs">Reembolsadas</span>
-              <span className="font-medium text-slate-400 tabular-nums">{stats.reembolsadas}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground text-xs">Em curso</span>
-              <span className="font-medium text-blue-400 tabular-nums">{stats.emCurso}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Valores + Séries */}
-        <div className="grid grid-cols-2 gap-6 pt-2 border-t border-border/50">
-          <div>
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
-              <DollarSign className="h-3 w-3" />
-              Valores
-            </span>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-xs">Em jogo</span>
-                <span className="font-medium tabular-nums text-xs">{formatCurrency(stats.valorEmJogo)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-xs">Em curso</span>
-                <span className="font-medium text-blue-400 tabular-nums text-xs">{formatCurrency(stats.valorEmCurso)}</span>
-              </div>
-            </div>
-          </div>
-          <div>
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
-              <Flame className="h-3 w-3" />
-              Séries
-            </span>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-xs">Máx. vitórias</span>
-                <div className="flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3 text-emerald-400" />
-                  <span className="font-medium text-emerald-400 tabular-nums">{stats.maxVitorias}</span>
-                </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-xs">Máx. derrotas</span>
-                <div className="flex items-center gap-1">
-                  <TrendingDown className="h-3 w-3 text-red-400" />
-                  <span className="font-medium text-red-400 tabular-nums">{stats.maxDerrotas}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Métricas Gerais */}
-        <div className="pt-2 border-t border-border/50">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
-            <Activity className="h-3 w-3" />
-            Métricas Gerais
-          </span>
-          <div className="grid grid-cols-4 gap-x-4 gap-y-1">
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground text-xs">Valor médio</span>
-              <span className="font-medium tabular-nums text-xs">{formatCurrency(stats.valorMedio)}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground text-xs">Valor máximo</span>
-              <span className="font-medium tabular-nums text-xs">{formatCurrency(stats.valorMaximo)}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground text-xs">Cotação média</span>
-              <span className="font-medium tabular-nums">{stats.cotacaoMedia.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground text-xs">Maior odd ganha</span>
-              <span className="font-medium text-emerald-400 tabular-nums">
-                {stats.maiorCotacaoGanha > 0 ? stats.maiorCotacaoGanha.toFixed(2) : "-"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Extremos */}
-        <div className="pt-2 border-t border-border/50">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
-            <Award className="h-3 w-3" />
-            Extremos
-          </span>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground text-xs">Maior lucro</span>
-              <span className="font-medium text-emerald-400 tabular-nums text-xs">
-                {stats.maiorLucro > 0 ? `+${formatCurrency(stats.maiorLucro)}` : formatCurrency(stats.maiorLucro)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground text-xs">Maior perda</span>
-              <span className="font-medium text-red-400 tabular-nums text-xs">
-                {formatCurrency(stats.maiorPerda)}
-              </span>
-            </div>
-          </div>
+      <CardContent className="pt-0 pb-3">
+        <div className="grid grid-cols-2 gap-2">
+          <StatCell label="Vencedoras" value={stats.vencedoras} valueClass="text-emerald-400" />
+          <StatCell label="Perdedoras" value={stats.perdedoras} valueClass="text-red-400" />
+          <StatCell label="Reembolsadas" value={stats.reembolsadas} />
+          <StatCell label="Em curso" value={stats.emCurso} valueClass="text-blue-400" />
+          <StatCell label="Valor em jogo" value={formatCurrency(stats.valorEmJogo)} />
+          <StatCell label="Valor em curso" value={formatCurrency(stats.valorEmCurso)} valueClass="text-blue-400" />
+          <StatCell label="Máx. vitórias" value={stats.maxVitorias} valueClass="text-emerald-400" />
+          <StatCell label="Máx. derrotas" value={stats.maxDerrotas} valueClass="text-red-400" />
+          <StatCell label="Valor médio" value={formatCurrency(stats.valorMedio)} />
+          <StatCell label="Valor máximo" value={formatCurrency(stats.valorMaximo)} />
+          <StatCell label="Cotação média" value={stats.cotacaoMedia.toFixed(2)} />
+          <StatCell 
+            label="Maior odd ganha" 
+            value={stats.maiorCotacaoGanha > 0 ? stats.maiorCotacaoGanha.toFixed(2) : "-"} 
+            valueClass="text-emerald-400" 
+          />
+          <StatCell 
+            label="Maior lucro" 
+            value={stats.maiorLucro > 0 ? `+${formatCurrency(stats.maiorLucro)}` : formatCurrency(stats.maiorLucro)} 
+            valueClass="text-emerald-400" 
+          />
+          <StatCell label="Maior perda" value={formatCurrency(stats.maiorPerda)} valueClass="text-red-400" />
         </div>
       </CardContent>
     </Card>
