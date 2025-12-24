@@ -181,8 +181,8 @@ export function ModernBarChart({
         <BarChart 
           data={data} 
           margin={{ top: 25, right: 10, left: 0, bottom: 5 }}
-          barCategoryGap="25%"
-          barGap={4}
+          barCategoryGap="12%"
+          barGap={1}
         >
           <defs>
             {bars.map((bar, index) => (
