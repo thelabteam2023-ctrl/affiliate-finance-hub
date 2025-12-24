@@ -323,8 +323,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     resolveMarketForSport: resolvePrintMarket
   } = useImportBetPrint();
 
-  // Track if mercado/selecao came from print (to bypass dependencies)
+  // Track if mercado/selecao came from print or edit (to bypass dependencies)
   const [mercadoFromPrint, setMercadoFromPrint] = useState(false);
+  const [mercadoFromEdit, setMercadoFromEdit] = useState(false);
   const [selecaoFromPrint, setSelecaoFromPrint] = useState(false);
   // Store pending market intention for later resolution
   const [pendingMercadoIntencao, setPendingMercadoIntencao] = useState<string | null>(null);
@@ -486,9 +487,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const [layStake, setLayStake] = useState<number | null>(null);
   const [layLiability, setLayLiability] = useState<number | null>(null);
 
-  // Get available markets - include print market if not in list
+  // Get available markets - include print/edit market if not in list
   const baseMercados = esporte ? MERCADOS_POR_ESPORTE[esporte] || MERCADOS_POR_ESPORTE["Outro"] : [];
-  const mercadosDisponiveis = mercadoFromPrint && mercado && !baseMercados.includes(mercado)
+  const mercadosDisponiveis = (mercadoFromPrint || mercadoFromEdit) && mercado && !baseMercados.includes(mercado)
     ? [mercado, ...baseMercados]
     : baseMercados;
 
@@ -564,11 +565,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         const savedMercado = aposta.mercado || "";
         const savedSelecao = aposta.selecao || "";
         
-        // Set mercado and selecao (simplified - no more handicap fields)
-        setTimeout(() => {
-          setMercado(savedMercado);
-          setSelecao(savedSelecao);
-        }, 50);
+        // Set mercado and selecao (include in available list)
+        setMercado(savedMercado);
+        setSelecao(savedSelecao);
+        if (savedMercado) {
+          setMercadoFromEdit(true);
+        }
 
         // Determinar tipo de aposta baseado nos dados salvos
         if (aposta.modo_entrada === "EXCHANGE" || aposta.back_em_exchange) {
@@ -700,7 +702,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   }, [exchangeBookmakerId, bookmakers]);
 
   useEffect(() => {
-    if (!aposta) {
+    if (!aposta && !mercadoFromPrint && !mercadoFromEdit) {
       setMercado("");
       setSelecao("");
     }
@@ -933,6 +935,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     // Clear print import data
     clearPrintData();
     setMercadoFromPrint(false);
+    setMercadoFromEdit(false);
     setSelecaoFromPrint(false);
   };
 
@@ -3467,12 +3470,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 <div className="flex justify-center">
                   <div className="inline-flex rounded-md border border-border/40 bg-muted/20 p-0.5 gap-0.5">
                     {[
-                      { value: "PENDENTE", label: "Pendente", selectedClass: "bg-muted text-foreground" },
-                      { value: "GREEN", label: "Green", selectedClass: "bg-emerald-500/20 text-emerald-500" },
-                      { value: "RED", label: "Red", selectedClass: "bg-red-500/20 text-red-500" },
-                      { value: "MEIO_GREEN", label: "½ Green", selectedClass: "bg-teal-500/20 text-teal-500" },
-                      { value: "MEIO_RED", label: "½ Red", selectedClass: "bg-orange-500/20 text-orange-500" },
-                      { value: "VOID", label: "Void", selectedClass: "bg-slate-500/20 text-slate-400" },
+                      { value: "PENDENTE", label: "Pendente", selectedClass: "bg-muted text-foreground", hoverClass: "hover:bg-muted/50 hover:text-foreground" },
+                      { value: "GREEN", label: "Green", selectedClass: "bg-emerald-500/20 text-emerald-500", hoverClass: "hover:bg-emerald-500/20 hover:text-emerald-500" },
+                      { value: "RED", label: "Red", selectedClass: "bg-red-500/20 text-red-500", hoverClass: "hover:bg-red-500/20 hover:text-red-500" },
+                      { value: "MEIO_GREEN", label: "½ Green", selectedClass: "bg-teal-500/20 text-teal-500", hoverClass: "hover:bg-teal-500/20 hover:text-teal-500" },
+                      { value: "MEIO_RED", label: "½ Red", selectedClass: "bg-orange-500/20 text-orange-500", hoverClass: "hover:bg-orange-500/20 hover:text-orange-500" },
+                      { value: "VOID", label: "Void", selectedClass: "bg-slate-500/20 text-slate-400", hoverClass: "hover:bg-slate-500/20 hover:text-slate-400" },
                     ].map((option) => (
                       <button
                         key={option.value}
@@ -3481,7 +3484,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
                           statusResultado === option.value 
                             ? option.selectedClass
-                            : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/30"
+                            : `text-muted-foreground/60 ${option.hoverClass}`
                         }`}
                       >
                         {option.label}
