@@ -81,6 +81,10 @@ interface Aposta {
   back_comissao?: number | null;
   pernas?: any[] | null;
   modelo?: string | null;
+  // Campos para apostas múltiplas
+  selecoes?: { descricao: string; odd: number | string; resultado?: string }[] | null;
+  tipo_multipla?: string | null;
+  odd_final?: number | null;
 }
 
 type NavigationMode = "tabs" | "sidebar";
@@ -157,7 +161,7 @@ export function ProjetoValueBetTab({
           status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id,
           modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
           contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
-          back_em_exchange, back_comissao, pernas, modelo
+          back_em_exchange, back_comissao, pernas, modelo, selecoes, tipo_multipla, odd_final
         `)
         .eq("projeto_id", projetoId)
         .eq("estrategia", APOSTA_ESTRATEGIA.VALUEBET)
@@ -468,6 +472,7 @@ export function ProjetoValueBetTab({
                 evento: aposta.evento || '',
                 esporte: aposta.esporte || '',
                 pernas: aposta.pernas ?? undefined,
+                selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
               }}
               estrategia="VALUEBET"
               onClick={() => {
@@ -488,6 +493,7 @@ export function ProjetoValueBetTab({
                 evento: aposta.evento || '',
                 esporte: aposta.esporte || '',
                 pernas: aposta.pernas ?? undefined,
+                selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
               }}
               estrategia="VALUEBET"
               onClick={() => {
