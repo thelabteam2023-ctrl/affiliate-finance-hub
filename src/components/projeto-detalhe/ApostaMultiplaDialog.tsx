@@ -550,7 +550,7 @@ export function ApostaMultiplaDialog({
       if (aposta) {
         // Update
         const { error } = await supabase
-          .from("apostas_multiplas")
+          .from("apostas_unificada")
           .update(apostaData)
           .eq("id", aposta.id);
 
@@ -625,7 +625,7 @@ export function ApostaMultiplaDialog({
       } else {
         // Insert - capturar o ID da aposta inserida
         const { data: insertedData, error } = await supabase
-          .from("apostas_multiplas")
+          .from("apostas_unificada")
           .insert(apostaData)
           .select("id")
           .single();
@@ -1018,7 +1018,7 @@ export function ApostaMultiplaDialog({
       // PENDENTE: não alterou saldo, não precisa reverter
 
       const { error } = await supabase
-        .from("apostas_multiplas")
+        .from("apostas_unificada")
         .delete()
         .eq("id", aposta.id);
 

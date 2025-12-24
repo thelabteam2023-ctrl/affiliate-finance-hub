@@ -1513,7 +1513,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         
         
         const { error } = await supabase
-          .from("apostas")
+          .from("apostas_unificada")
           .update(apostaData)
           .eq("id", aposta.id);
         if (error) throw error;
@@ -1670,7 +1670,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       } else {
         // Insert - capturar o ID da aposta inserida
         const { data: insertedData, error } = await supabase
-          .from("apostas")
+          .from("apostas_unificada")
           .insert(apostaData)
           .select("id")
           .single();
@@ -2196,7 +2196,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       }
       
       const { error } = await supabase
-        .from("apostas")
+        .from("apostas_unificada")
         .delete()
         .eq("id", aposta.id);
 
