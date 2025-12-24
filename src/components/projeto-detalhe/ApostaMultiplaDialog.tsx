@@ -38,6 +38,7 @@ import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Card, CardContent } from "@/components/ui/card";
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
+import { getFirstLastName } from "@/lib/utils";
 
 interface Selecao {
   descricao: string;
@@ -428,12 +429,6 @@ export function ApostaMultiplaDialog({
     }).format(value);
   };
 
-  const getFirstLastName = (fullName: string): string => {
-    if (!fullName) return "";
-    const parts = fullName.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0];
-    return `${parts[0]} ${parts[parts.length - 1]}`;
-  };
 
   const handleSelecaoChange = (
     index: number,

@@ -47,7 +47,7 @@ import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-f
 import { ESTRATEGIAS_LIST, inferEstrategiaLegado, type ApostaEstrategia } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
-import { cn } from "@/lib/utils";
+import { cn, getFirstLastName } from "@/lib/utils";
 
 // Contextos de aposta para filtro unificado
 type ApostaContexto = "NORMAL" | "FREEBET" | "BONUS" | "SUREBET";
@@ -715,12 +715,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
     return new Date(year, month - 1, day, hours || 0, minutes || 0);
   };
 
-  const getFirstLastName = (fullName: string): string => {
-    if (!fullName) return "";
-    const parts = fullName.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0];
-    return `${parts[0]} ${parts[parts.length - 1]}`;
-  };
 
   const getOperationType = (aposta: Aposta): { type: "bookmaker" | "back" | "lay" | "cobertura"; label: string; color: string } => {
     // Detectar Cobertura primeiro: modo EXCHANGE + tem lay_exchange + tem lay_odd

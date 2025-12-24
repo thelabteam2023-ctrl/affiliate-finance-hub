@@ -44,15 +44,7 @@ import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { ApostaCard } from "./ApostaCard";
 import { ValueBetStatisticsCard } from "./ValueBetStatisticsCard";
 
-import { cn } from "@/lib/utils";
-
-// Helper para exibir apenas primeiro nome + último sobrenome
-const getFirstLastName = (fullName: string): string => {
-  if (!fullName) return "";
-  const parts = fullName.trim().split(/\s+/);
-  if (parts.length <= 2) return fullName;
-  return `${parts[0]} ${parts[parts.length - 1]}`;
-};
+import { cn, getFirstLastName } from "@/lib/utils";
 
 interface ProjetoValueBetTabProps {
   projetoId: string;
