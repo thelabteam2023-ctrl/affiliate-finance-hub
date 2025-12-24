@@ -959,13 +959,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       let pendingStakes: Record<string, number> = {};
       if (bookmakerIds.length > 0) {
         const { data: pendingBets } = await supabase
-          .from("apostas")
+          .from("apostas_unificada")
           .select("bookmaker_id, stake")
           .in("bookmaker_id", bookmakerIds)
-          .eq("status", "PENDENTE");
+          .eq("status", "PENDENTE")
+          .not("bookmaker_id", "is", null);
 
         pendingStakes = (pendingBets || []).reduce((acc, bet) => {
-          acc[bet.bookmaker_id] = (acc[bet.bookmaker_id] || 0) + (bet.stake || 0);
+          acc[bet.bookmaker_id!] = (acc[bet.bookmaker_id!] || 0) + (bet.stake || 0);
           return acc;
         }, {} as Record<string, number>);
       }

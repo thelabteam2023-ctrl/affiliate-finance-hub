@@ -83,28 +83,13 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
         .eq("status", "CONFIRMADO")
         .in("origem_bookmaker_id", bookmakerIds);
 
-      // Lucro de apostas simples (excluindo surebet legs)
-      const { data: apostasSimples } = await supabase
-        .from("apostas")
+      // Lucro de apostas usando apostas_unificada
+      const { data: apostasData } = await supabase
+        .from("apostas_unificada")
         .select("bookmaker_id, lucro_prejuizo")
         .eq("projeto_id", projetoId)
         .eq("status", "LIQUIDADA")
-        .is("surebet_id", null)
-        .in("bookmaker_id", bookmakerIds);
-
-      // Lucro de surebets (usar lucro_real consolidado, não pernas individuais)
-      const { data: surebets } = await supabase
-        .from("surebets")
-        .select("id, lucro_real")
-        .eq("projeto_id", projetoId)
-        .eq("status", "LIQUIDADA");
-
-      // Buscar pernas de surebet para mapear bookmaker -> surebet
-      const { data: surebetPernas } = await supabase
-        .from("apostas")
-        .select("bookmaker_id, surebet_id")
-        .eq("projeto_id", projetoId)
-        .not("surebet_id", "is", null)
+        .not("bookmaker_id", "is", null)
         .in("bookmaker_id", bookmakerIds);
 
       // Agregar dados por bookmaker
@@ -124,36 +109,12 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
           (saquesMap[s.origem_bookmaker_id] || 0) + Number(s.valor);
       });
 
-      // Agregar lucro de apostas simples
-      apostasSimples?.forEach((a) => {
-        lucroMap[a.bookmaker_id] =
-          (lucroMap[a.bookmaker_id] || 0) + Number(a.lucro_prejuizo || 0);
-      });
-
-      // Mapear surebets para bookmakers (distribuir lucro proporcionalmente)
-      const surebetLucroMap: Record<string, number> = {};
-      surebets?.forEach((s) => {
-        surebetLucroMap[s.id] = Number(s.lucro_real || 0);
-      });
-
-      // Para cada bookmaker, somar sua participação nas surebets
-      const surebetBookmakerMap: Record<string, Set<string>> = {};
-      surebetPernas?.forEach((p) => {
-        if (p.surebet_id) {
-          if (!surebetBookmakerMap[p.surebet_id]) {
-            surebetBookmakerMap[p.surebet_id] = new Set();
-          }
-          surebetBookmakerMap[p.surebet_id].add(p.bookmaker_id);
+      // Agregar lucro de apostas
+      apostasData?.forEach((a) => {
+        if (a.bookmaker_id) {
+          lucroMap[a.bookmaker_id] =
+            (lucroMap[a.bookmaker_id] || 0) + Number(a.lucro_prejuizo || 0);
         }
-      });
-
-      // Distribuir lucro de surebet proporcionalmente entre bookmakers
-      Object.entries(surebetBookmakerMap).forEach(([surebetId, bookmakers]) => {
-        const lucroSurebet = surebetLucroMap[surebetId] || 0;
-        const lucroPorBookmaker = lucroSurebet / bookmakers.size;
-        bookmakers.forEach((bkId) => {
-          lucroMap[bkId] = (lucroMap[bkId] || 0) + lucroPorBookmaker;
-        });
       });
 
       // Montar dados do histórico

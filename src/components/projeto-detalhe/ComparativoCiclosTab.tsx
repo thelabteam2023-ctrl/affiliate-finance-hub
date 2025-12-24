@@ -93,25 +93,13 @@ export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
           // Ajustar data fim para incluir o dia inteiro (timestamp com hora 23:59:59)
           const dataFimAjustada = `${dataFim}T23:59:59.999Z`;
           
-          const [apostasResult, apostasMultiplasResult, surebetsResult, perdasResult] = await Promise.all([
+          const [apostasResult, perdasResult] = await Promise.all([
             supabase
-              .from("apostas")
-              .select("lucro_prejuizo, stake, status")
+              .from("apostas_unificada")
+              .select("lucro_prejuizo, stake, stake_total, status, forma_registro")
               .eq("projeto_id", projetoId)
               .gte("data_aposta", ciclo.data_inicio)
               .lte("data_aposta", dataFimAjustada),
-            supabase
-              .from("apostas_multiplas")
-              .select("lucro_prejuizo, stake, resultado")
-              .eq("projeto_id", projetoId)
-              .gte("data_aposta", ciclo.data_inicio)
-              .lte("data_aposta", dataFimAjustada),
-            supabase
-              .from("surebets")
-              .select("lucro_real, stake_total, status")
-              .eq("projeto_id", projetoId)
-              .gte("data_evento", ciclo.data_inicio)
-              .lte("data_evento", dataFimAjustada),
             supabase
               .from("projeto_perdas")
               .select("valor, status")
@@ -122,20 +110,19 @@ export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
           ]);
 
           const apostas = apostasResult.data || [];
-          const apostasMultiplas = apostasMultiplasResult.data || [];
-          const surebets = surebetsResult.data || [];
           const perdas = perdasResult.data || [];
 
-          const qtdApostas = apostas.length + apostasMultiplas.length + surebets.length;
-          const volume = 
-            apostas.reduce((acc, a) => acc + (a.stake || 0), 0) +
-            apostasMultiplas.reduce((acc, a) => acc + (a.stake || 0), 0) +
-            surebets.reduce((acc, a) => acc + (a.stake_total || 0), 0);
+          const qtdApostas = apostas.length;
+          const volume = apostas.reduce((acc, a) => {
+            if (a.forma_registro === 'ARBITRAGEM') {
+              return acc + (a.stake_total || 0);
+            }
+            return acc + (a.stake || 0);
+          }, 0);
           
-          const lucroBrutoCalculado = 
-            apostas.filter(a => a.status === "LIQUIDADA").reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
-            apostasMultiplas.filter(a => ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"].includes(a.resultado || "")).reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
-            surebets.filter(a => a.status === "LIQUIDADA").reduce((acc, a) => acc + (a.lucro_real || 0), 0);
+          const lucroBrutoCalculado = apostas
+            .filter(a => a.status === "LIQUIDADA")
+            .reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
 
           const perdasConfirmadas = perdas.reduce((acc, p) => acc + p.valor, 0);
           
