@@ -38,6 +38,7 @@ import { ResultadoPill } from "./ResultadoPill";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
+import { ApostaCard } from "./ApostaCard";
 import { cn } from "@/lib/utils";
 
 interface ProjetoValueBetTabProps {
@@ -459,114 +460,57 @@ export function ProjetoValueBetTab({
       ) : viewMode === "cards" ? (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {apostasFiltradas.map((aposta) => (
-            <Card 
-              key={aposta.id} 
-              className="cursor-pointer hover:border-purple-500/30 transition-colors"
+            <ApostaCard
+              key={aposta.id}
+              aposta={{
+                id: aposta.id,
+                evento: aposta.evento || '',
+                esporte: aposta.esporte || '',
+                selecao: aposta.selecao,
+                odd: aposta.odd,
+                stake: aposta.stake,
+                data_aposta: aposta.data_aposta,
+                resultado: aposta.resultado,
+                status: aposta.status,
+                lucro_prejuizo: aposta.lucro_prejuizo,
+                estrategia: aposta.estrategia,
+                bookmaker_nome: aposta.bookmaker_nome,
+              }}
+              estrategia="VALUEBET"
               onClick={() => {
                 setSelectedAposta(aposta);
                 setDialogOpen(true);
               }}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-1 mb-2">
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 flex items-center gap-0.5">
-                    <TrendingUp className="h-2.5 w-2.5" />
-                    VB
-                  </Badge>
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <ResultadoPill
-                      apostaId={aposta.id}
-                      bookmarkerId={aposta.bookmaker_id}
-                      resultado={aposta.resultado}
-                      status={aposta.status}
-                      stake={aposta.stake}
-                      odd={aposta.odd}
-                      operationType="bookmaker"
-                      onResultadoUpdated={handleApostaUpdated}
-                      onEditClick={() => {
-                        setSelectedAposta(aposta);
-                        setDialogOpen(true);
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="mb-2">
-                  <p className="font-medium text-sm truncate uppercase">{aposta.evento}</p>
-                  <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">{aposta.selecao}</span>
-                  <span className="font-medium">@{aposta.odd.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center mt-2 pt-2 border-t">
-                  <span className="text-xs text-muted-foreground">
-                    {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
-                  </span>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Stake: {formatCurrency(aposta.stake)}</p>
-                    {aposta.lucro_prejuizo !== null && (
-                      <p className={`text-sm font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {formatCurrency(aposta.lucro_prejuizo)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              variant="card"
+            />
           ))}
         </div>
       ) : (
         <div className="space-y-2">
           {apostasFiltradas.map((aposta) => (
-            <div
+            <ApostaCard
               key={aposta.id}
-              className="flex items-center justify-between p-3 rounded-lg border hover:border-purple-500/30 cursor-pointer transition-colors"
+              aposta={{
+                id: aposta.id,
+                evento: aposta.evento || '',
+                esporte: aposta.esporte || '',
+                selecao: aposta.selecao,
+                odd: aposta.odd,
+                stake: aposta.stake,
+                data_aposta: aposta.data_aposta,
+                resultado: aposta.resultado,
+                status: aposta.status,
+                lucro_prejuizo: aposta.lucro_prejuizo,
+                estrategia: aposta.estrategia,
+                bookmaker_nome: aposta.bookmaker_nome,
+              }}
+              estrategia="VALUEBET"
               onClick={() => {
                 setSelectedAposta(aposta);
                 setDialogOpen(true);
               }}
-            >
-              <div className="flex items-center gap-4 flex-1 min-w-0">
-                <div className="flex items-center gap-1">
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 flex items-center gap-0.5">
-                    <TrendingUp className="h-2.5 w-2.5" />
-                    VB
-                  </Badge>
-                </div>
-                <div className="text-xs text-muted-foreground w-16">
-                  {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate uppercase">{aposta.evento}</p>
-                  <p className="text-xs text-muted-foreground">{aposta.selecao}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm">@{aposta.odd.toFixed(2)}</p>
-                  <p className="text-xs text-muted-foreground">{formatCurrency(aposta.stake)}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 ml-4" onClick={(e) => e.stopPropagation()}>
-                {aposta.lucro_prejuizo !== null && (
-                  <span className={`text-sm font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {formatCurrency(aposta.lucro_prejuizo)}
-                  </span>
-                )}
-                <ResultadoPill
-                  apostaId={aposta.id}
-                  bookmarkerId={aposta.bookmaker_id}
-                  resultado={aposta.resultado}
-                  status={aposta.status}
-                  stake={aposta.stake}
-                  odd={aposta.odd}
-                  operationType="bookmaker"
-                  onResultadoUpdated={handleApostaUpdated}
-                  onEditClick={() => {
-                    setSelectedAposta(aposta);
-                    setDialogOpen(true);
-                  }}
-                />
-              </div>
-            </div>
+              variant="list"
+            />
           ))}
         </div>
       )}
