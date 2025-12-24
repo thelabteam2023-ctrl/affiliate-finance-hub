@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import {
   Dialog,
   DialogContent,
@@ -300,6 +301,7 @@ const getMoneylineSelecoes = (esporte: string | undefined, mandante: string, vis
 // Removed EXCHANGES list - now using bookmakers list for Exchange tab
 
 export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess, defaultEstrategia = 'PUNTER', activeTab = 'apostas' }: ApostaDialogProps) {
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -1250,8 +1252,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       let apostaData: any;
 
       // Dados comuns a todos os tipos
+      if (!workspaceId) {
+        toast.error("Workspace não identificado. Tente recarregar a página.");
+        return;
+      }
+      
       const commonData = {
         user_id: userData.user.id,
+        workspace_id: workspaceId,
         projeto_id: projetoId,
         data_aposta: dataAposta,
         esporte,
