@@ -141,8 +141,8 @@ export function ValueBetStatisticsCard({ apostas }: ValueBetStatisticsCardProps)
           <StatCell label="Perdedoras" value={stats.perdedoras} valueClass="text-red-400" />
           <StatCell label="Reembolsadas" value={stats.reembolsadas} />
           <StatCell label="Em curso" value={stats.emCurso} valueClass="text-blue-400" />
-          <StatCell label="Valor em jogo" value={formatCurrency(stats.valorEmJogo)} />
-          <StatCell label="Valor em curso" value={formatCurrency(stats.valorEmCurso)} valueClass="text-blue-400" />
+          <StatCell label="Valor Total Apostado" value={formatCurrency(stats.valorEmJogo)} />
+          <StatCell label="Valor em apostas em curso" value={formatCurrency(stats.valorEmCurso)} valueClass="text-blue-400" />
           <StatCell label="Máx. vitórias" value={stats.maxVitorias} valueClass="text-emerald-400" />
           <StatCell label="Máx. derrotas" value={stats.maxDerrotas} valueClass="text-red-400" />
           <StatCell label="Valor médio" value={formatCurrency(stats.valorMedio)} />
