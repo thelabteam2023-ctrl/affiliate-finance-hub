@@ -524,7 +524,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               stake: p.stake
             }))
           }))} 
-          accentColor="hsl(var(--primary))" 
+          accentColor="hsl(var(--primary))"
+          logoMap={logoMap}
         />
       )}
 

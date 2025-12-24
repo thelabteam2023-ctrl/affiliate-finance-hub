@@ -611,7 +611,7 @@ export function ProjetoValueBetTab({
 
       {/* Gráficos - Usando novo componente reutilizável */}
       {metricas.total > 0 && (
-        <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" />
+        <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" logoMap={logoMap} />
       )}
     </div>
   );
