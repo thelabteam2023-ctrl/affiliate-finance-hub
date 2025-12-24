@@ -263,16 +263,27 @@ export default function ProjetoDetalhe() {
 
       setProjeto(projetoData);
 
-      // Fetch project summary from view
-      const { data: resumoData } = await supabase
-        .from("v_projeto_resumo")
-        .select("operadores_ativos, total_gasto_operadores")
+      // Fetch operator count from operador_projetos
+      const { data: opData } = await supabase
+        .from("operador_projetos")
+        .select("id")
         .eq("projeto_id", id)
-        .maybeSingle();
+        .eq("status", "ATIVO");
 
-      if (resumoData) {
-        setResumo(resumoData as ProjetoResumo);
-      }
+      const operadoresAtivos = opData?.length || 0;
+
+      // Fetch total paid to operators
+      const { data: pagamentosData } = await supabase
+        .from("cash_ledger")
+        .select("valor")
+        .eq("tipo_transacao", "PAGAMENTO_OPERADOR");
+
+      const totalGastoOperadores = pagamentosData?.reduce((acc, p) => acc + Number(p.valor || 0), 0) || 0;
+
+      setResumo({
+        operadores_ativos: operadoresAtivos,
+        total_gasto_operadores: totalGastoOperadores,
+      });
 
       // Fetch apostas summary (will use period filter)
       await fetchApostasResumo();

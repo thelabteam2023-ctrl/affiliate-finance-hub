@@ -296,12 +296,6 @@ export function getSuggestionsForTab(activeTab: string): Partial<RegistroApostaV
       estrategia: 'DUPLO_GREEN',
       contexto_operacional: 'NORMAL',
     },
-    // Aba Matched Betting
-    matched: {
-      forma_registro: 'SIMPLES',
-      estrategia: 'MATCHED_BETTING',
-      contexto_operacional: 'NORMAL',
-    },
     // Aba Apostas Livres - estratégia NÃO definida (usuário escolhe)
     apostas: {
       forma_registro: 'SIMPLES',

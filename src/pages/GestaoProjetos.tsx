@@ -96,15 +96,19 @@ export default function GestaoProjetos() {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from("v_projeto_resumo")
+        .from("projetos")
         .select("*");
 
       if (error) throw error;
-      // Map projeto_id to id for consistency
+      // Map to Projeto interface
       const mapped = (data || []).map((proj: any) => ({
-        ...proj,
-        id: proj.projeto_id || proj.id,
+        id: proj.id,
+        nome: proj.nome,
         descricao: proj.descricao || null,
+        status: proj.status,
+        data_inicio: proj.data_inicio,
+        data_fim_prevista: proj.data_fim_prevista,
+        orcamento_inicial: proj.orcamento_inicial || 0,
       }));
       setProjetos(mapped);
     } catch (error: any) {

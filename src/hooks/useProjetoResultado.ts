@@ -150,27 +150,15 @@ async function fetchGrossProfitFromBets(
   if (dataInicio) querySurebets = querySurebets.gte('data_operacao', dataInicio.toISOString());
   if (dataFim) querySurebets = querySurebets.lte('data_operacao', dataFim.toISOString());
 
-  // 4. Matched Betting Rounds
-  let queryMB = supabase
-    .from('matched_betting_rounds')
-    .select('lucro_real')
-    .eq('projeto_id', projetoId)
-    .eq('status', 'LIQUIDADA');
-  
-  if (dataInicio) queryMB = queryMB.gte('data_evento', dataInicio.toISOString());
-  if (dataFim) queryMB = queryMB.lte('data_evento', dataFim.toISOString());
-
-  const [simples, multiplas, surebets, mb] = await Promise.all([
+  const [simples, multiplas, surebets] = await Promise.all([
     querySimples,
     queryMultiplas,
     querySurebets,
-    queryMB,
   ]);
 
   lucroTotal += simples.data?.reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0) || 0;
   lucroTotal += multiplas.data?.reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0) || 0;
   lucroTotal += surebets.data?.reduce((acc, a) => acc + Number(a.lucro_real || 0), 0) || 0;
-  lucroTotal += mb.data?.reduce((acc, a) => acc + Number(a.lucro_real || 0), 0) || 0;
 
   return lucroTotal;
 }
