@@ -598,7 +598,11 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
         </Card>
       </div>
 
-      {/* Banner Info - Abaixo dos KPIs */}
+      {metricas.total > 0 && (
+        <VisaoGeralCharts apostas={apostas} accentColor="#84cc16" logoMap={logoMap} />
+      )}
+
+      {/* Banner Info - No final da página */}
       <Card className="border-lime-500/30 bg-lime-500/5">
         <CardContent className="py-3">
           <div className="flex items-start gap-2">
@@ -610,10 +614,6 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           </div>
         </CardContent>
       </Card>
-      
-      {metricas.total > 0 && (
-        <VisaoGeralCharts apostas={apostas} accentColor="#84cc16" logoMap={logoMap} />
-      )}
     </div>
   );
 

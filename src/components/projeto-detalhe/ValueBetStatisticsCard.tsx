@@ -6,6 +6,7 @@ interface Aposta {
   id: string;
   data_aposta: string;
   odd: number;
+  odd_final?: number | null;
   stake: number;
   stake_total?: number | null;
   resultado: string | null;
@@ -80,13 +81,16 @@ export function ValueBetStatisticsCard({ apostas }: ValueBetStatisticsCardProps)
     const valorMedio = stakes.length > 0 ? stakes.reduce((a, b) => a + b, 0) / stakes.length : 0;
     const valorMaximo = stakes.length > 0 ? Math.max(...stakes) : 0;
 
-    const odds = apostas.filter(a => a.odd > 0).map(a => a.odd);
+    // Usa odd_final para múltiplas, senão odd normal
+    const getEffectiveOdd = (a: Aposta) => a.odd_final ?? a.odd ?? 0;
+    
+    const odds = apostas.filter(a => getEffectiveOdd(a) > 0).map(a => getEffectiveOdd(a));
     const cotacaoMedia = odds.length > 0 ? odds.reduce((a, b) => a + b, 0) / odds.length : 0;
 
-    // Maior cotação ganha
+    // Maior cotação ganha (considera odd_final para múltiplas)
     const apostasGanhas = apostas.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN");
     const maiorCotacaoGanha = apostasGanhas.length > 0 
-      ? Math.max(...apostasGanhas.map(a => a.odd || 0)) 
+      ? Math.max(...apostasGanhas.map(a => getEffectiveOdd(a))) 
       : 0;
 
     // Extremos

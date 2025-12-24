@@ -660,7 +660,15 @@ export function ProjetoValueBetTab({
         </Card>
       </div>
 
-      {/* Banner Info - Abaixo dos KPIs */}
+      {/* Gráficos e Estatísticas */}
+      {metricas.total > 0 && (
+        <div className="space-y-4">
+          <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" logoMap={logoMap} />
+          <ValueBetStatisticsCard apostas={apostas} />
+        </div>
+      )}
+
+      {/* Banner Info - No final da página */}
       <Card className="border-purple-500/30 bg-purple-500/5">
         <CardContent className="py-3">
           <div className="flex items-start gap-2">
@@ -672,14 +680,6 @@ export function ProjetoValueBetTab({
           </div>
         </CardContent>
       </Card>
-
-      {/* Gráficos e Estatísticas */}
-      {metricas.total > 0 && (
-        <div className="space-y-4">
-          <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" logoMap={logoMap} />
-          <ValueBetStatisticsCard apostas={apostas} />
-        </div>
-      )}
     </div>
   );
 

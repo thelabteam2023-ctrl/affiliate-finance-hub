@@ -873,19 +873,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
         />
       </div>
 
-      {/* Banner Info - Padronizado */}
-      <Card className="border-primary/30 bg-primary/5">
-        <CardContent className="py-3">
-          <div className="flex items-start gap-2">
-            <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-            <p className="text-xs text-muted-foreground">
-              <span className="font-medium text-primary">Visão Especializada:</span> Registro completo de todas as apostas do projeto. 
-              Use os filtros de contexto para visualizar apostas normais, com freebet ou bônus.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Gráficos com calendário integrado */}
       {(apostas.length > 0 || apostasMultiplas.length > 0) && (
         <VisaoGeralCharts 
@@ -1368,6 +1355,19 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
           </CardContent>
         </Card>
       )}
+
+      {/* Banner Info - No final da página */}
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="py-3">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-primary">Visão Especializada:</span> Registro completo de todas as apostas do projeto. 
+              Use os filtros de contexto para visualizar apostas normais, com freebet ou bônus.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Dialogs */}
       <ApostaDialog
