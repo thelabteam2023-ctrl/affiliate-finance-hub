@@ -148,6 +148,11 @@ export function ApostaCard({
   const hasPernas = aposta.pernas && aposta.pernas.length > 1;
   const hasSelecoes = aposta.selecoes && aposta.selecoes.length > 1;
   const isMultipla = hasSelecoes || !!aposta.tipo_multipla;
+  const isSimples = !isMultipla && !hasPernas;
+  
+  // Label para múltiplas: DUPLA, TRIPLA, etc.
+  const numSelecoes = aposta.selecoes?.length || (aposta.tipo_multipla === 'DUPLA' ? 2 : aposta.tipo_multipla === 'TRIPLA' ? 3 : 2);
+  const tipoMultiplaLabel = numSelecoes === 2 ? 'DUPLA' : numSelecoes === 3 ? 'TRIPLA' : `${numSelecoes}x`;
   
   const stake = hasPernas ? (aposta.stake_total ?? aposta.stake) : aposta.stake;
   const displayOdd = aposta.odd_final ?? aposta.odd ?? 0;
@@ -181,7 +186,12 @@ export function ApostaCard({
             {isMultipla && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 bg-purple-500/20 flex items-center gap-0.5">
                 <Layers className="h-2.5 w-2.5" />
-                MÚLTIPLA
+                {tipoMultiplaLabel}
+              </Badge>
+            )}
+            {isSimples && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/30 text-blue-400 bg-blue-500/20">
+                SIMPLES
               </Badge>
             )}
             {hasPernas && aposta.modelo && (
@@ -208,11 +218,11 @@ export function ApostaCard({
             {hasPernas ? (
               <ApostaPernasInline pernas={aposta.pernas as Perna[]} className="truncate" />
             ) : hasSelecoes ? (
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="text-xs text-muted-foreground truncate uppercase">
                 {aposta.selecoes!.map(s => `${s.descricao} @${Number(s.odd).toFixed(2)}`).join(' + ')}
               </p>
             ) : (
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="text-xs text-muted-foreground truncate uppercase">
                 {aposta.selecao} @{displayOdd.toFixed(2)}
               </p>
             )}
@@ -259,7 +269,12 @@ export function ApostaCard({
           {isMultipla && (
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 bg-purple-500/20 flex items-center gap-0.5">
               <Layers className="h-2.5 w-2.5" />
-              MÚLTIPLA
+              {tipoMultiplaLabel}
+            </Badge>
+          )}
+          {isSimples && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/30 text-blue-400 bg-blue-500/20">
+              SIMPLES
             </Badge>
           )}
           {hasPernas && aposta.modelo && (
@@ -294,7 +309,7 @@ export function ApostaCard({
           <div className="space-y-1 mb-2">
             {aposta.selecoes!.map((sel, idx) => (
               <div key={idx} className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground truncate flex-1">{sel.descricao}</span>
+                <span className="text-muted-foreground truncate flex-1 uppercase">{sel.descricao}</span>
                 <div className="flex items-center gap-2">
                   <span className="font-medium">@{Number(sel.odd).toFixed(2)}</span>
                   <ResultadoBadge resultado={sel.resultado} />
@@ -307,7 +322,7 @@ export function ApostaCard({
           </div>
         ) : (
           <div className="flex justify-between items-center text-sm mb-2">
-            <span className="text-muted-foreground truncate">{aposta.selecao}</span>
+            <span className="text-muted-foreground truncate uppercase">{aposta.selecao}</span>
             <span className="font-medium">@{displayOdd.toFixed(2)}</span>
           </div>
         )}
