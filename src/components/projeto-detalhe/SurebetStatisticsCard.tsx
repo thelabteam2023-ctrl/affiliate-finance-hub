@@ -180,23 +180,45 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
       roi: data.stake > 0 ? (data.lucro / data.stake) * 100 : 0,
     }));
 
+    // Casas ordenadas por lucro
+    const casasOrdenadasPorLucro = Array.from(casaStats.entries())
+      .sort((a, b) => b[1].lucro - a[1].lucro);
+    
+    // Top 3 casas maior lucro
+    const top3MaiorLucro = casasOrdenadasPorLucro.slice(0, 3).map(([casa, data]) => ({
+      casa,
+      lucro: data.lucro,
+    }));
+    
+    // Top 3 casas menor lucro
+    const top3MenorLucro = casasOrdenadasPorLucro.slice(-3).reverse().map(([casa, data]) => ({
+      casa,
+      lucro: data.lucro,
+    }));
+
     // Casa com maior lucro
-    const casaMaiorLucro = casasOrdenadas.length > 0 
-      ? casasOrdenadas.reduce((a, b) => a[1].lucro > b[1].lucro ? a : b)
+    const casaMaiorLucro = casasOrdenadasPorLucro.length > 0 
+      ? { casa: casasOrdenadasPorLucro[0][0], lucro: casasOrdenadasPorLucro[0][1].lucro }
+      : null;
+    
+    // Casa com menor lucro
+    const casaMenorLucro = casasOrdenadasPorLucro.length > 0 
+      ? { casa: casasOrdenadasPorLucro[casasOrdenadasPorLucro.length - 1][0], lucro: casasOrdenadasPorLucro[casasOrdenadasPorLucro.length - 1][1].lucro }
       : null;
 
     // Casa com maior ROI
-    const casasComRoi = casasOrdenadas.filter(([_, data]) => data.stake > 0);
-    const casaMaiorRoi = casasComRoi.length > 0 
-      ? casasComRoi.reduce((a, b) => {
-          const roiA = a[1].stake > 0 ? (a[1].lucro / a[1].stake) * 100 : 0;
-          const roiB = b[1].stake > 0 ? (b[1].lucro / b[1].stake) * 100 : 0;
-          return roiA > roiB ? a : b;
-        })
-      : null;
-    const roiMaiorCasa = casaMaiorRoi 
-      ? (casaMaiorRoi[1].lucro / casaMaiorRoi[1].stake) * 100 
-      : 0;
+    const casasComRoi = casasOrdenadas.filter(([_, data]) => data.stake > 0)
+      .map(([casa, data]) => ({
+        casa,
+        roi: (data.lucro / data.stake) * 100,
+      }))
+      .sort((a, b) => b.roi - a.roi);
+    
+    const casaMaiorRoi = casasComRoi.length > 0 ? casasComRoi[0] : null;
+    
+    // Casa com menor ROI e top 3 menor ROI
+    const casaMenorRoi = casasComRoi.length > 0 ? casasComRoi[casasComRoi.length - 1] : null;
+    const top3MenorRoi = casasComRoi.slice(-3).reverse();
 
     // Casa com maior incidência de Void
     const casasComVoid = casasOrdenadas.filter(([_, data]) => data.voids > 0);
@@ -283,8 +305,13 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
       stakeTotalDiaria,
       // Casas
       top3Casas,
-      casaMaiorLucro: casaMaiorLucro ? { casa: casaMaiorLucro[0], lucro: casaMaiorLucro[1].lucro } : null,
-      casaMaiorRoi: casaMaiorRoi ? { casa: casaMaiorRoi[0], roi: roiMaiorCasa } : null,
+      top3MaiorLucro,
+      top3MenorLucro,
+      top3MenorRoi,
+      casaMaiorLucro,
+      casaMenorLucro,
+      casaMaiorRoi,
+      casaMenorRoi,
       casaMaiorVoid: casaMaiorVoid ? { casa: casaMaiorVoid[0], taxa: taxaVoidMaior } : null,
       casaMaiorSlippage: casaMaiorSlippage ? { casa: casaMaiorSlippage[0], slippage: slippageMaiorCasa } : null,
       // Risco
@@ -387,13 +414,31 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
               label="Maior lucro (casa)" 
               value={stats.casaMaiorLucro ? stats.casaMaiorLucro.casa : "-"}
               valueClass="text-emerald-400"
-              tooltip={stats.casaMaiorLucro ? `${formatCurrency(stats.casaMaiorLucro.lucro)}` : undefined}
+              tooltip={stats.top3MaiorLucro.length > 0 
+                ? `Top 3: ${stats.top3MaiorLucro.map(c => `${c.casa}: ${formatCurrency(c.lucro)}`).join(" | ")}`
+                : undefined}
             />
             <StatCell 
               label="Maior ROI (casa)" 
-              value={stats.casaMaiorRoi ? `${stats.casaMaiorRoi.casa}` : "-"}
+              value={stats.casaMaiorRoi ? stats.casaMaiorRoi.casa : "-"}
               valueClass="text-emerald-400"
               tooltip={stats.casaMaiorRoi ? `ROI: ${formatPercent(stats.casaMaiorRoi.roi)}` : undefined}
+            />
+            <StatCell 
+              label="Menor lucro (casa)" 
+              value={stats.casaMenorLucro ? stats.casaMenorLucro.casa : "-"}
+              valueClass="text-red-400"
+              tooltip={stats.top3MenorLucro.length > 0 
+                ? `Top 3: ${stats.top3MenorLucro.map(c => `${c.casa}: ${formatCurrency(c.lucro)}`).join(" | ")}`
+                : undefined}
+            />
+            <StatCell 
+              label="Menor ROI (casa)" 
+              value={stats.casaMenorRoi ? stats.casaMenorRoi.casa : "-"}
+              valueClass="text-red-400"
+              tooltip={stats.top3MenorRoi.length > 0 
+                ? `Top 3: ${stats.top3MenorRoi.map(c => `${c.casa}: ROI ${formatPercent(c.roi)}`).join(" | ")}`
+                : undefined}
             />
           </div>
 
