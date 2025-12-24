@@ -297,19 +297,24 @@ export function ProjetoValueBetTab({
       vinculos: Map<string, { apostas: number; volume: number; lucro: number }>;
     }>();
 
-    const extractCasaVinculo = (nomeCompleto: string) => {
-      const separatorIdx = nomeCompleto.indexOf(" - ");
+    const extractCasaVinculo = (bookmakerNome: string, operadorNome?: string) => {
+      // Primeiro tenta extrair do formato "CASA - Operador" no nome do bookmaker
+      const separatorIdx = bookmakerNome.indexOf(" - ");
       if (separatorIdx > 0) {
         return {
-          casa: nomeCompleto.substring(0, separatorIdx).trim(),
-          vinculo: nomeCompleto.substring(separatorIdx + 3).trim()
+          casa: bookmakerNome.substring(0, separatorIdx).trim(),
+          vinculo: bookmakerNome.substring(separatorIdx + 3).trim()
         };
       }
-      return { casa: nomeCompleto, vinculo: "Principal" };
+      // Se não tem separador, usa o operador_nome como vínculo
+      return { 
+        casa: bookmakerNome, 
+        vinculo: operadorNome || "Sem vínculo" 
+      };
     };
 
-    const processEntry = (nomeCompleto: string, stake: number, lucro: number) => {
-      const { casa, vinculo } = extractCasaVinculo(nomeCompleto);
+    const processEntry = (bookmakerNome: string, operadorNome: string | undefined, stake: number, lucro: number) => {
+      const { casa, vinculo } = extractCasaVinculo(bookmakerNome, operadorNome);
 
       if (!casaMap.has(casa)) {
         casaMap.set(casa, { apostas: 0, volume: 0, lucro: 0, vinculos: new Map() });
@@ -329,9 +334,9 @@ export function ProjetoValueBetTab({
     };
 
     apostas.forEach((a) => {
-      const nomeCompleto = a.bookmaker_nome || "Desconhecida";
+      const bookmakerNome = a.bookmaker_nome || "Desconhecida";
       const stake = typeof a.stake_total === "number" ? a.stake_total : (a.stake || 0);
-      processEntry(nomeCompleto, stake, a.lucro_prejuizo || 0);
+      processEntry(bookmakerNome, a.operador_nome, stake, a.lucro_prejuizo || 0);
     });
 
     return Array.from(casaMap.entries())
