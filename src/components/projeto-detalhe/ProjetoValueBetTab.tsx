@@ -42,7 +42,7 @@ import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { ApostaCard } from "./ApostaCard";
-import { ValueBetStatisticsCard } from "./ValueBetStatisticsCard";
+import { UnifiedStatisticsCard } from "./UnifiedStatisticsCard";
 
 import { cn, getFirstLastName } from "@/lib/utils";
 
@@ -674,11 +674,7 @@ export function ProjetoValueBetTab({
       {metricas.total > 0 && (
         <>
           <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" logoMap={logoMap} />
-          <div className="grid gap-4 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <ValueBetStatisticsCard apostas={apostas} />
-            </div>
-          </div>
+          <UnifiedStatisticsCard apostas={apostas} />
         </>
       )}
 
