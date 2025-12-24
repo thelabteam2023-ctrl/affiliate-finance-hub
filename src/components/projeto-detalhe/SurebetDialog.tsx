@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -147,6 +148,7 @@ const SELECOES_BINARIO = ["Sim", "Não"];
 
 export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, surebet, onSuccess, activeTab = 'surebet' }: SurebetDialogProps) {
   const isEditing = !!surebet;
+  const { workspaceId } = useWorkspace();
   
   // Form state
   const [evento, setEvento] = useState("");
@@ -884,10 +886,16 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         }));
         
         // Inserir na tabela unificada
+        if (!workspaceId) {
+          toast.error("Workspace não identificado. Tente recarregar a página.");
+          return;
+        }
+        
         const { error: insertError } = await supabase
           .from("apostas_unificada")
           .insert({
             user_id: user.id,
+            workspace_id: workspaceId,
             projeto_id: projetoId,
             forma_registro: 'ARBITRAGEM',
             estrategia: registroValues.estrategia,
