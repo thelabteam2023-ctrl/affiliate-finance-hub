@@ -660,12 +660,12 @@ export function ProjetoValueBetTab({
         </Card>
       </div>
 
-      {/* Gráficos e Estatísticas - Grid lado a lado */}
+      {/* Gráficos e Estatísticas */}
       {metricas.total > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <>
           <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" logoMap={logoMap} />
           <ValueBetStatisticsCard apostas={apostas} />
-        </div>
+        </>
       )}
 
       {/* Banner Info - No final da página */}
