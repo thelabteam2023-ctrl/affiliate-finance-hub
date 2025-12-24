@@ -369,6 +369,31 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       .slice(0, 8);
   }, [apostas]);
 
+  // Mapa de logos por nome do catálogo (case-insensitive)
+  const logoMap = useMemo(() => {
+    const map = new Map<string, string | null>();
+    bookmakers.forEach(bk => {
+      // Extract base name (before " - ") for the logo mapping
+      const nomeParts = bk.nome.split(" - ");
+      const baseName = nomeParts[0].trim().toUpperCase();
+      const logoUrl = bk.bookmakers_catalogo?.logo_url || null;
+      if (logoUrl && !map.has(baseName)) {
+        map.set(baseName, logoUrl);
+      }
+    });
+    return map;
+  }, [bookmakers]);
+
+  const getLogoUrl = (casaName: string) => {
+    const upperName = casaName.toUpperCase();
+    if (logoMap.has(upperName)) return logoMap.get(upperName);
+    // Try partial match
+    for (const [key, value] of logoMap.entries()) {
+      if (upperName.includes(key) || key.includes(upperName)) return value;
+    }
+    return null;
+  };
+
   const apostasFiltradas = useMemo(() => apostas.filter(a => {
     const matchesSearch = a.evento.toLowerCase().includes(searchTerm.toLowerCase()) || a.esporte.toLowerCase().includes(searchTerm.toLowerCase()) || a.selecao.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch && (resultadoFilter === "all" || a.resultado === resultadoFilter);
@@ -456,7 +481,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       </div>
       
       {metricas.total > 0 && (
-        <VisaoGeralCharts apostas={apostas} accentColor="#84cc16" />
+        <VisaoGeralCharts apostas={apostas} accentColor="#84cc16" logoMap={logoMap} />
       )}
     </div>
   );
@@ -520,14 +545,22 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {casaData.map((casa) => (
+          {casaData.map((casa) => {
+            const logoUrl = getLogoUrl(casa.casa);
+            return (
             <Tooltip key={casa.casa}>
               <TooltipTrigger asChild>
                 <Card className={`cursor-default transition-colors hover:border-lime-500/30 ${casa.lucro >= 0 ? "border-emerald-500/20" : "border-red-500/20"}`}>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-lime-400" />
-                      {casa.casa}
+                    <CardTitle className="text-sm font-medium flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
+                        {logoUrl ? (
+                          <img src={logoUrl} alt={casa.casa} className="w-6 h-6 object-contain" />
+                        ) : (
+                          <Building2 className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <span className="truncate">{casa.casa}</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -607,7 +640,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
                 )}
               </TooltipContent>
             </Tooltip>
-          ))}
+          )})}
         </div>
       )}
     </div>

@@ -54,6 +54,7 @@ interface CasaUsada {
   volume: number;
   lucro: number;
   roi: number;
+  logo_url?: string | null;
   vinculos: VinculoDetalhe[];
 }
 
@@ -66,6 +67,7 @@ interface VisaoGeralChartsProps {
   apostas: ApostaBase[];
   accentColor?: string;
   title?: string;
+  logoMap?: Map<string, string | null>;
 }
 
 // =====================================================
@@ -159,13 +161,26 @@ function EvolucaoLucroChart({ data, accentColor }: EvolucaoLucroChartProps) {
 interface CasasMaisUtilizadasCardProps {
   casas: CasaUsada[];
   accentColor: string;
+  logoMap?: Map<string, string | null>;
 }
 
-function CasasMaisUtilizadasCard({ casas, accentColor }: CasasMaisUtilizadasCardProps) {
+function CasasMaisUtilizadasCard({ casas, accentColor, logoMap }: CasasMaisUtilizadasCardProps) {
   const topCasas = useMemo(() => 
     [...casas].sort((a, b) => b.volume - a.volume).slice(0, 8), 
     [casas]
   );
+
+  const getLogoUrl = (casaName: string) => {
+    if (!logoMap) return null;
+    // Try exact match first
+    if (logoMap.has(casaName)) return logoMap.get(casaName);
+    // Try case-insensitive match
+    const upperName = casaName.toUpperCase();
+    for (const [key, value] of logoMap.entries()) {
+      if (key.toUpperCase() === upperName) return value;
+    }
+    return null;
+  };
 
   if (topCasas.length === 0) {
     return (
@@ -198,8 +213,9 @@ function CasasMaisUtilizadasCard({ casas, accentColor }: CasasMaisUtilizadasCard
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Header row */}
-        <div className="grid grid-cols-[auto_1fr_60px_90px_70px] gap-2 items-center text-xs text-muted-foreground border-b pb-2">
+        <div className="grid grid-cols-[auto_24px_1fr_60px_90px_70px] gap-2 items-center text-xs text-muted-foreground border-b pb-2">
           <span className="w-5"></span>
+          <span></span>
           <span>Casa</span>
           <span className="text-right">Qtd</span>
           <span className="text-right">Volume</span>
@@ -209,12 +225,20 @@ function CasasMaisUtilizadasCard({ casas, accentColor }: CasasMaisUtilizadasCard
         {topCasas.map((casa, idx) => {
           const barWidth = (casa.volume / maxVolume) * 100;
           const roiColor = casa.roi >= 0 ? "text-emerald-500" : "text-red-500";
+          const logoUrl = getLogoUrl(casa.casa);
           return (
             <Tooltip key={casa.casa}>
               <TooltipTrigger asChild>
                 <div className="space-y-1.5 cursor-default">
-                  <div className="grid grid-cols-[auto_1fr_60px_90px_70px] gap-2 items-center text-sm">
+                  <div className="grid grid-cols-[auto_24px_1fr_60px_90px_70px] gap-2 items-center text-sm">
                     <span className="text-xs text-muted-foreground w-5">{idx + 1}.</span>
+                    <div className="w-6 h-6 rounded bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt={casa.casa} className="w-5 h-5 object-contain" />
+                      ) : (
+                        <Building2 className="w-3 h-3 text-muted-foreground" />
+                      )}
+                    </div>
                     <span className="font-medium truncate">{casa.casa}</span>
                     <span className="text-right text-muted-foreground tabular-nums">{casa.apostas}</span>
                     <span className="text-right font-medium tabular-nums">{formatCurrency(casa.volume)}</span>
@@ -222,7 +246,7 @@ function CasasMaisUtilizadasCard({ casas, accentColor }: CasasMaisUtilizadasCard
                       {casa.roi >= 0 ? '+' : ''}{casa.roi.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="h-1 rounded-full bg-muted overflow-hidden ml-5">
+                  <div className="h-1 rounded-full bg-muted overflow-hidden ml-12">
                     <div
                       className="h-full rounded-full transition-all duration-300"
                       style={{
@@ -286,7 +310,7 @@ function CasasMaisUtilizadasCard({ casas, accentColor }: CasasMaisUtilizadasCard
 // COMPONENTE PRINCIPAL
 // =====================================================
 
-export function VisaoGeralCharts({ apostas, accentColor = "hsl(var(--primary))" }: VisaoGeralChartsProps) {
+export function VisaoGeralCharts({ apostas, accentColor = "hsl(var(--primary))", logoMap }: VisaoGeralChartsProps) {
   // Evolução do lucro acumulado
   const evolucaoData = useMemo(() => {
     const sorted = [...apostas].sort(
@@ -419,7 +443,7 @@ export function VisaoGeralCharts({ apostas, accentColor = "hsl(var(--primary))" 
       </Card>
 
       {/* Card — Casas Mais Utilizadas */}
-      <CasasMaisUtilizadasCard casas={casasData} accentColor={accentColor} />
+      <CasasMaisUtilizadasCard casas={casasData} accentColor={accentColor} logoMap={logoMap} />
     </div>
   );
 }
