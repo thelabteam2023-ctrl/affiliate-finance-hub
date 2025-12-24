@@ -1,8 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { TrendingUp, TrendingDown, Building2, Users } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { TrendingUp, TrendingDown, Building2, Users, Calendar } from "lucide-react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -14,6 +16,7 @@ import {
 } from "recharts";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { CalendarioLucros } from "./CalendarioLucros";
 
 // =====================================================
 // TIPOS
@@ -68,6 +71,7 @@ interface VisaoGeralChartsProps {
   accentColor?: string;
   title?: string;
   logoMap?: Map<string, string | null>;
+  showCalendar?: boolean;
 }
 
 // =====================================================
@@ -310,8 +314,8 @@ function CasasMaisUtilizadasCard({ casas, accentColor, logoMap }: CasasMaisUtili
 // COMPONENTE PRINCIPAL
 // =====================================================
 
-export function VisaoGeralCharts({ apostas, accentColor = "hsl(var(--primary))", logoMap }: VisaoGeralChartsProps) {
-  // Evolução do lucro acumulado
+export function VisaoGeralCharts({ apostas, accentColor = "hsl(var(--primary))", logoMap, showCalendar = true }: VisaoGeralChartsProps) {
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const evolucaoData = useMemo(() => {
     const sorted = [...apostas].sort(
       (a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()
@@ -428,12 +432,35 @@ export function VisaoGeralCharts({ apostas, accentColor = "hsl(var(--primary))",
               )}
               <CardTitle className="text-sm font-medium">Evolução do Lucro</CardTitle>
             </div>
-            <Badge
-              variant="outline"
-              className={isPositive ? "border-emerald-500/30 text-emerald-500" : "border-red-500/30 text-red-500"}
-            >
-              {formatCurrency(lastAccumulated)}
-            </Badge>
+            <div className="flex items-center gap-2">
+              {showCalendar && (
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <CalendarioLucros 
+                      apostas={apostas.map(a => ({
+                        data_aposta: a.data_aposta,
+                        resultado: null,
+                        lucro_prejuizo: a.lucro_prejuizo
+                      }))} 
+                      titulo="Calendário de Lucros"
+                      accentColor="purple"
+                      compact
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
+              <Badge
+                variant="outline"
+                className={isPositive ? "border-emerald-500/30 text-emerald-500" : "border-red-500/30 text-red-500"}
+              >
+                {formatCurrency(lastAccumulated)}
+              </Badge>
+            </div>
           </div>
           <CardDescription className="text-xs">Lucro/Prejuízo acumulado ao longo do tempo</CardDescription>
         </CardHeader>
