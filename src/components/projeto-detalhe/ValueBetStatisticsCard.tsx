@@ -115,124 +115,129 @@ export function ValueBetStatisticsCard({ apostas }: ValueBetStatisticsCardProps)
 
   return (
     <Card className="border-purple-500/20">
-      <CardHeader className="pb-3">
+      <CardHeader className="py-3">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <BarChart3 className="h-4 w-4 text-purple-400" />
           Estatísticas Avançadas
         </CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+      <CardContent className="pt-0 pb-4 space-y-3 text-sm">
         {/* Resultados */}
-        <div className="col-span-2 pb-2 border-b border-border/50">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+        <div>
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
             <Target className="h-3 w-3" />
             Resultados
           </span>
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Vencedoras</span>
-          <span className="font-medium text-emerald-400 tabular-nums">{stats.vencedoras}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Perdedoras</span>
-          <span className="font-medium text-red-400 tabular-nums">{stats.perdedoras}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Reembolsadas</span>
-          <span className="font-medium text-slate-400 tabular-nums">{stats.reembolsadas}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Em curso</span>
-          <span className="font-medium text-blue-400 tabular-nums">{stats.emCurso}</span>
-        </div>
-
-        {/* Valores */}
-        <div className="col-span-2 pb-2 pt-2 border-b border-border/50">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-            <DollarSign className="h-3 w-3" />
-            Valores
-          </span>
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Valor em jogo</span>
-          <span className="font-medium tabular-nums">{formatCurrency(stats.valorEmJogo)}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Valor em curso</span>
-          <span className="font-medium text-blue-400 tabular-nums">{formatCurrency(stats.valorEmCurso)}</span>
-        </div>
-
-        {/* Séries */}
-        <div className="col-span-2 pb-2 pt-2 border-b border-border/50">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-            <Flame className="h-3 w-3" />
-            Séries
-          </span>
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Máx. vitórias</span>
-          <div className="flex items-center gap-1.5">
-            <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
-            <span className="font-medium text-emerald-400 tabular-nums">{stats.maxVitorias}</span>
+          <div className="grid grid-cols-4 gap-x-4 gap-y-1">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground text-xs">Vencedoras</span>
+              <span className="font-medium text-emerald-400 tabular-nums">{stats.vencedoras}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground text-xs">Perdedoras</span>
+              <span className="font-medium text-red-400 tabular-nums">{stats.perdedoras}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground text-xs">Reembolsadas</span>
+              <span className="font-medium text-slate-400 tabular-nums">{stats.reembolsadas}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground text-xs">Em curso</span>
+              <span className="font-medium text-blue-400 tabular-nums">{stats.emCurso}</span>
+            </div>
           </div>
         </div>
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Máx. derrotas</span>
-          <div className="flex items-center gap-1.5">
-            <TrendingDown className="h-3.5 w-3.5 text-red-400" />
-            <span className="font-medium text-red-400 tabular-nums">{stats.maxDerrotas}</span>
+
+        {/* Valores + Séries */}
+        <div className="grid grid-cols-2 gap-6 pt-2 border-t border-border/50">
+          <div>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
+              <DollarSign className="h-3 w-3" />
+              Valores
+            </span>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-xs">Em jogo</span>
+                <span className="font-medium tabular-nums text-xs">{formatCurrency(stats.valorEmJogo)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-xs">Em curso</span>
+                <span className="font-medium text-blue-400 tabular-nums text-xs">{formatCurrency(stats.valorEmCurso)}</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
+              <Flame className="h-3 w-3" />
+              Séries
+            </span>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-xs">Máx. vitórias</span>
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3 text-emerald-400" />
+                  <span className="font-medium text-emerald-400 tabular-nums">{stats.maxVitorias}</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-xs">Máx. derrotas</span>
+                <div className="flex items-center gap-1">
+                  <TrendingDown className="h-3 w-3 text-red-400" />
+                  <span className="font-medium text-red-400 tabular-nums">{stats.maxDerrotas}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Métricas Gerais */}
-        <div className="col-span-2 pb-2 pt-2 border-b border-border/50">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+        <div className="pt-2 border-t border-border/50">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
             <Activity className="h-3 w-3" />
             Métricas Gerais
           </span>
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Valor médio</span>
-          <span className="font-medium tabular-nums">{formatCurrency(stats.valorMedio)}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Valor máximo</span>
-          <span className="font-medium tabular-nums">{formatCurrency(stats.valorMaximo)}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Cotação média</span>
-          <span className="font-medium tabular-nums">{stats.cotacaoMedia.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Maior odd ganha</span>
-          <span className="font-medium text-emerald-400 tabular-nums">
-            {stats.maiorCotacaoGanha > 0 ? stats.maiorCotacaoGanha.toFixed(2) : "-"}
-          </span>
+          <div className="grid grid-cols-4 gap-x-4 gap-y-1">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground text-xs">Valor médio</span>
+              <span className="font-medium tabular-nums text-xs">{formatCurrency(stats.valorMedio)}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground text-xs">Valor máximo</span>
+              <span className="font-medium tabular-nums text-xs">{formatCurrency(stats.valorMaximo)}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground text-xs">Cotação média</span>
+              <span className="font-medium tabular-nums">{stats.cotacaoMedia.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground text-xs">Maior odd ganha</span>
+              <span className="font-medium text-emerald-400 tabular-nums">
+                {stats.maiorCotacaoGanha > 0 ? stats.maiorCotacaoGanha.toFixed(2) : "-"}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Extremos */}
-        <div className="col-span-2 pb-2 pt-2 border-b border-border/50">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+        <div className="pt-2 border-t border-border/50">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
             <Award className="h-3 w-3" />
             Extremos
           </span>
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Maior lucro</span>
-          <span className="font-medium text-emerald-400 tabular-nums">
-            {stats.maiorLucro > 0 ? `+${formatCurrency(stats.maiorLucro)}` : formatCurrency(stats.maiorLucro)}
-          </span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Maior perda</span>
-          <span className="font-medium text-red-400 tabular-nums">
-            {formatCurrency(stats.maiorPerda)}
-          </span>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground text-xs">Maior lucro</span>
+              <span className="font-medium text-emerald-400 tabular-nums text-xs">
+                {stats.maiorLucro > 0 ? `+${formatCurrency(stats.maiorLucro)}` : formatCurrency(stats.maiorLucro)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground text-xs">Maior perda</span>
+              <span className="font-medium text-red-400 tabular-nums text-xs">
+                {formatCurrency(stats.maiorPerda)}
+              </span>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
