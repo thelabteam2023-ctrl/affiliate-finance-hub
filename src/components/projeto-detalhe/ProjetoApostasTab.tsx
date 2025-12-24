@@ -933,15 +933,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
               const aposta = item.data as Aposta;
               const displayInfo = getApostaDisplayInfo(aposta);
               const opType = displayInfo.badgeType;
+              const roi = aposta.stake > 0 && aposta.lucro_prejuizo !== null ? (aposta.lucro_prejuizo / aposta.stake) * 100 : null;
             
               return (
-                <Card 
-                  key={aposta.id} 
-                  className="hover:border-primary/50 transition-colors cursor-default"
-                >
-                  <CardHeader className="pb-1 pt-3 px-3">
-                    {/* Badges à esquerda - padrão unificado */}
-                    <div className="flex items-center gap-1 mb-1 flex-wrap">
+                <Card key={aposta.id} className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => handleOpenDialog(aposta)}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-1 mb-2 flex-wrap">
                       {getEstrategiaBadge(aposta) || getContextoBadge(item.contexto, aposta)}
                       {opType.label && (
                         <Badge className={`${opType.color} text-[10px] px-1.5 py-0`}>
@@ -971,41 +968,30 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
                         onEditClick={() => handleOpenDialog(aposta)}
                       />
                     </div>
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle 
-                        className="text-sm truncate cursor-pointer hover:text-primary uppercase"
-                        onClick={() => handleOpenDialog(aposta)}
-                      >
-                        {aposta.evento}
-                      </CardTitle>
+                    <div className="mb-2">
+                      <p className="font-medium text-sm truncate uppercase">{aposta.evento}</p>
+                      <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">{aposta.esporte}</p>
-                  </CardHeader>
-                  <CardContent className="pt-1 pb-3 px-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground truncate flex-1">{aposta.selecao}</span>
-                        <span className="font-medium ml-2">@{aposta.odd.toFixed(2)}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Stake</span>
-                        <span className="font-medium">{formatCurrency(aposta.stake)}</span>
-                      </div>
-                      {aposta.lucro_prejuizo !== null && aposta.status === "LIQUIDADA" && (
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">P/L</span>
-                          <span className={`font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {formatCurrency(aposta.lucro_prejuizo)}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
-                        <span className="text-muted-foreground">
-                          {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
-                        </span>
-                        <span className="text-muted-foreground truncate ml-2 max-w-[100px]">
-                          {displayInfo.primaryLine}
-                        </span>
+                    <div className="flex justify-between items-center text-sm mb-2">
+                      <span className="text-muted-foreground truncate">{aposta.selecao}</span>
+                      <span className="font-medium">@{aposta.odd.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t">
+                      <span className="text-xs text-muted-foreground">{format(parseLocalDateTime(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}</span>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Stake: {formatCurrency(aposta.stake)}</p>
+                        {aposta.lucro_prejuizo !== null && aposta.status === "LIQUIDADA" && (
+                          <div className="flex items-center gap-2 justify-end">
+                            <span className={`text-sm font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {formatCurrency(aposta.lucro_prejuizo)}
+                            </span>
+                            {roi !== null && (
+                              <span className={`text-xs ${roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
