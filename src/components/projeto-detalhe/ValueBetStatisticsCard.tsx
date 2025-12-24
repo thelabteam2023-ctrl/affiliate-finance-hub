@@ -119,9 +119,6 @@ export function ValueBetStatisticsCard({ apostas }: ValueBetStatisticsCardProps)
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <BarChart3 className="h-4 w-4 text-purple-400" />
           Estatísticas Avançadas
-          <Badge variant="outline" className="ml-auto text-[10px] border-purple-500/30 text-purple-400">
-            Exclusivo ValueBet
-          </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
