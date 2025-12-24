@@ -43,12 +43,14 @@ const StatCell = ({
   label, 
   value, 
   valueClass = "",
-  tooltip 
+  tooltip,
+  tooltipContent
 }: { 
   label: string; 
   value: string | number; 
   valueClass?: string;
   tooltip?: string;
+  tooltipContent?: React.ReactNode;
 }) => {
   const content = (
     <div className="flex items-center justify-between bg-muted/40 rounded px-3 py-1.5">
@@ -57,18 +59,56 @@ const StatCell = ({
     </div>
   );
 
-  if (tooltip) {
+  if (tooltip || tooltipContent) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>{content}</TooltipTrigger>
-        <TooltipContent side="top" className="text-xs max-w-xs">
-          {tooltip}
+        <TooltipContent 
+          side="top" 
+          className="text-xs max-w-xs bg-popover/95 backdrop-blur-sm border-border/50 shadow-xl"
+        >
+          {tooltipContent || tooltip}
         </TooltipContent>
       </Tooltip>
     );
   }
   return content;
 };
+
+interface RankingItem {
+  label: string;
+  value: string;
+  valueClass?: string;
+}
+
+const RankingTooltip = ({ 
+  title, 
+  items 
+}: { 
+  title: string; 
+  items: RankingItem[];
+}) => (
+  <div className="space-y-2 py-1">
+    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/30 pb-1.5">
+      {title}
+    </div>
+    <div className="space-y-1">
+      {items.map((item, index) => (
+        <div key={index} className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center justify-center w-4 h-4 rounded-full bg-muted text-[9px] font-bold">
+              {index + 1}
+            </span>
+            <span className="text-xs font-medium">{item.label}</span>
+          </div>
+          <span className={`text-xs font-semibold tabular-nums ${item.valueClass || ''}`}>
+            {item.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 const SectionHeader = ({ title }: { title: string }) => (
   <div className="mt-3 first:mt-0">
@@ -403,7 +443,15 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
             <StatCell 
               label="Casas mais usadas" 
               value={stats.top3Casas.slice(0, 2).map(c => c.casa).join(", ") || "-"}
-              tooltip={stats.top3Casas.map(c => `${c.casa}: ${c.operacoes} ops`).join(" | ")}
+              tooltipContent={stats.top3Casas.length > 0 ? (
+                <RankingTooltip 
+                  title="Top Casas por Uso"
+                  items={stats.top3Casas.map(c => ({
+                    label: c.casa,
+                    value: `${c.operacoes} ops`,
+                  }))}
+                />
+              ) : undefined}
             />
             <StatCell 
               label="Casas utilizadas" 
@@ -414,9 +462,16 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
               label="Maior lucro (casa)" 
               value={stats.casaMaiorLucro ? stats.casaMaiorLucro.casa : "-"}
               valueClass="text-emerald-400"
-              tooltip={stats.top3MaiorLucro.length > 0 
-                ? `Top 3: ${stats.top3MaiorLucro.map(c => `${c.casa}: ${formatCurrency(c.lucro)}`).join(" | ")}`
-                : undefined}
+              tooltipContent={stats.top3MaiorLucro.length > 0 ? (
+                <RankingTooltip 
+                  title="Top 3 Maior Lucro"
+                  items={stats.top3MaiorLucro.map(c => ({
+                    label: c.casa,
+                    value: formatCurrency(c.lucro),
+                    valueClass: c.lucro >= 0 ? "text-emerald-400" : "text-red-400",
+                  }))}
+                />
+              ) : undefined}
             />
             <StatCell 
               label="Maior ROI (casa)" 
@@ -428,17 +483,31 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
               label="Menor lucro (casa)" 
               value={stats.casaMenorLucro ? stats.casaMenorLucro.casa : "-"}
               valueClass="text-red-400"
-              tooltip={stats.top3MenorLucro.length > 0 
-                ? `Top 3: ${stats.top3MenorLucro.map(c => `${c.casa}: ${formatCurrency(c.lucro)}`).join(" | ")}`
-                : undefined}
+              tooltipContent={stats.top3MenorLucro.length > 0 ? (
+                <RankingTooltip 
+                  title="Top 3 Menor Lucro"
+                  items={stats.top3MenorLucro.map(c => ({
+                    label: c.casa,
+                    value: formatCurrency(c.lucro),
+                    valueClass: c.lucro >= 0 ? "text-emerald-400" : "text-red-400",
+                  }))}
+                />
+              ) : undefined}
             />
             <StatCell 
               label="Menor ROI (casa)" 
               value={stats.casaMenorRoi ? stats.casaMenorRoi.casa : "-"}
               valueClass="text-red-400"
-              tooltip={stats.top3MenorRoi.length > 0 
-                ? `Top 3: ${stats.top3MenorRoi.map(c => `${c.casa}: ROI ${formatPercent(c.roi)}`).join(" | ")}`
-                : undefined}
+              tooltipContent={stats.top3MenorRoi.length > 0 ? (
+                <RankingTooltip 
+                  title="Top 3 Menor ROI"
+                  items={stats.top3MenorRoi.map(c => ({
+                    label: c.casa,
+                    value: formatPercent(c.roi),
+                    valueClass: c.roi >= 0 ? "text-emerald-400" : "text-red-400",
+                  }))}
+                />
+              ) : undefined}
             />
           </div>
 
