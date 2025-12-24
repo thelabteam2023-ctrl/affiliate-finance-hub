@@ -181,11 +181,16 @@ export function GlobalActionsBar({
               <Layers className="mr-2 h-4 w-4" />
               Aposta Múltipla
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setSurebetDialogOpen(true)}>
-              <ArrowLeftRight className="mr-2 h-4 w-4" />
-              Surebet
-            </DropdownMenuItem>
+            {/* Ocultar Surebet quando na aba ValueBet */}
+            {activeTab !== "valuebet" && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setSurebetDialogOpen(true)}>
+                  <ArrowLeftRight className="mr-2 h-4 w-4" />
+                  Surebet
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 
