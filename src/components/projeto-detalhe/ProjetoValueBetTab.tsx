@@ -270,6 +270,7 @@ export function ProjetoValueBetTab({
     const total = todasApostas.length;
     const totalStake = todasApostas.reduce((acc, a) => acc + a.stake, 0);
     const lucroTotal = todasApostas.reduce((acc, a) => acc + (a.lucro || 0), 0);
+    const pendentes = todasApostas.filter(a => !a.resultado || a.resultado === "PENDENTE").length;
     const greens = todasApostas.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
     const reds = todasApostas.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
     const liquidadas = todasApostas.filter(a => a.resultado && a.resultado !== "PENDENTE").length;
@@ -285,7 +286,7 @@ export function ProjetoValueBetTab({
       porCasa[casa].count++;
     });
 
-    return { total, totalStake, lucroTotal, greens, reds, taxaAcerto, roi, porCasa };
+    return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa };
   }, [apostas]);
 
   // casaData agregado por CASA (não por vínculo) - Padrão unificado
@@ -560,9 +561,11 @@ export function ProjetoValueBetTab({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metricas.total}</div>
-            <p className="text-xs text-muted-foreground">
-              {metricas.greens} G · {metricas.reds} R
-            </p>
+            <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs">
+              <span className="text-blue-400">{metricas.pendentes} Pendentes</span>
+              <span className="text-emerald-500">{metricas.greens} G</span>
+              <span className="text-red-500">{metricas.reds} R</span>
+            </div>
           </CardContent>
         </Card>
 
