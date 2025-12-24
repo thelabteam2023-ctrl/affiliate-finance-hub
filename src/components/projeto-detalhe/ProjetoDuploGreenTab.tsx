@@ -225,21 +225,32 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
 
   const metricas = useMemo(() => {
     const total = apostas.length;
-    const totalStake = apostas.reduce((acc, a) => acc + a.stake, 0);
+
+    // CORREÇÃO: para apostas multi-pernas (ARBITRAGEM), o volume fica em stake_total.
+    // A estratégia define a contabilização; a forma_registro define apenas a estrutura.
+    const getStakeVolume = (a: Aposta) => {
+      const value =
+        typeof a.stake_total === "number" ? a.stake_total : typeof a.stake === "number" ? a.stake : 0;
+      return Number.isFinite(value) ? value : 0;
+    };
+
+    const totalStake = apostas.reduce((acc, a) => acc + getStakeVolume(a), 0);
     const lucroTotal = apostas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
-    const greens = apostas.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
-    const reds = apostas.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
-    const liquidadas = apostas.filter(a => a.resultado && a.resultado !== "PENDENTE").length;
+    const greens = apostas.filter((a) => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
+    const reds = apostas.filter((a) => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
+    const liquidadas = apostas.filter((a) => a.resultado && a.resultado !== "PENDENTE").length;
     const taxaAcerto = liquidadas > 0 ? (greens / liquidadas) * 100 : 0;
     const roi = totalStake > 0 ? (lucroTotal / totalStake) * 100 : 0;
+
     const porCasa: Record<string, { stake: number; lucro: number; count: number }> = {};
-    apostas.forEach(a => {
+    apostas.forEach((a) => {
       const casa = a.bookmaker_nome || "Desconhecida";
       if (!porCasa[casa]) porCasa[casa] = { stake: 0, lucro: 0, count: 0 };
-      porCasa[casa].stake += a.stake;
+      porCasa[casa].stake += getStakeVolume(a);
       porCasa[casa].lucro += a.lucro_prejuizo || 0;
       porCasa[casa].count++;
     });
+
     return { total, totalStake, lucroTotal, greens, reds, taxaAcerto, roi, porCasa };
   }, [apostas]);
 
