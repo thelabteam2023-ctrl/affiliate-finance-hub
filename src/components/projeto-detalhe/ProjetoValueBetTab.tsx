@@ -21,7 +21,6 @@ import {
   Percent, 
   Building2,
   DollarSign,
-  BarChart3,
   Info,
   LayoutGrid,
   List,
@@ -29,24 +28,13 @@ import {
   PanelLeft,
   LayoutList
 } from "lucide-react";
-import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ApostaDialog } from "./ApostaDialog";
 import { ResultadoPill } from "./ResultadoPill";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  BarChart,
-  Bar,
-  Cell,
-} from "recharts";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
+import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { cn } from "@/lib/utils";
 
 interface ProjetoValueBetTabProps {
@@ -223,22 +211,7 @@ export function ProjetoValueBetTab({
     return { total, totalStake, lucroTotal, greens, reds, taxaAcerto, roi, porCasa };
   }, [apostas]);
 
-  const evolutionData = useMemo(() => {
-    const todas = apostas
-      .map(a => ({ data: a.data_aposta, lucro: a.lucro_prejuizo || 0 }))
-      .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
-
-    let acumulado = 0;
-    return todas.map(a => {
-      acumulado += a.lucro;
-      return {
-        data: format(new Date(a.data), "dd/MM", { locale: ptBR }),
-        lucro: a.lucro,
-        acumulado
-      };
-    });
-  }, [apostas]);
-
+  // casaData para renderPorCasa (mantido para essa seção)
   const casaData = useMemo(() => {
     return Object.entries(metricas.porCasa)
       .map(([casa, data]) => ({
@@ -401,65 +374,9 @@ export function ProjetoValueBetTab({
         </Card>
       </div>
 
-      {/* Gráficos */}
+      {/* Gráficos - Usando novo componente reutilizável */}
       {metricas.total > 0 && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-purple-400" />
-                Evolução do Lucro
-              </CardTitle>
-              <CardDescription>Lucro acumulado ao longo do tempo</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={evolutionData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="data" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `R$${v}`} />
-                    <RechartsTooltip 
-                      formatter={(value: number) => [formatCurrency(value), "Acumulado"]}
-                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
-                    />
-                    <Line type="monotone" dataKey="acumulado" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-purple-400" />
-                Eficiência por Casa
-              </CardTitle>
-              <CardDescription>Lucro por bookmaker</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={casaData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `R$${v}`} />
-                    <YAxis dataKey="casa" type="category" stroke="hsl(var(--muted-foreground))" fontSize={10} width={80} />
-                    <RechartsTooltip 
-                      formatter={(value: number) => [formatCurrency(value), "Lucro"]}
-                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
-                    />
-                    <Bar dataKey="lucro" radius={[0, 4, 4, 0]}>
-                      {casaData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.lucro >= 0 ? "hsl(var(--chart-2))" : "hsl(var(--destructive))"} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" />
       )}
     </div>
   );

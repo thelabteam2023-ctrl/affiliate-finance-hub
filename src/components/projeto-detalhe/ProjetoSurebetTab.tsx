@@ -16,7 +16,6 @@ import {
   List,
   Plus,
   Building2,
-  BarChart3,
   Info,
   LayoutDashboard,
   PanelLeft,
@@ -26,19 +25,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { SurebetDialog } from "./SurebetDialog";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip as RechartsTooltip, 
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  Cell
-} from "recharts";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
+import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { parsePernaFromJson, PernaArbitragem } from "@/types/apostasUnificada";
 import { cn } from "@/lib/utils";
 
@@ -257,7 +245,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi };
   }, [surebets]);
 
-  // Dados para gráfico de eficiência por casa
+  // eficienciaPorCasa - mantido para renderPorCasa
   const eficienciaPorCasa = useMemo(() => {
     const casaMap = new Map<string, { lucro: number; volume: number; operacoes: number }>();
     
@@ -284,33 +272,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       }))
       .sort((a, b) => b.lucro - a.lucro)
       .slice(0, 10);
-  }, [surebets]);
-
-  // Dados para gráfico de evolução de lucro
-  const evolucaoLucro = useMemo(() => {
-    const surebetsOrdenadas = [...surebets]
-      .filter(s => s.status === "LIQUIDADA")
-      .sort((a, b) => new Date(a.data_operacao).getTime() - new Date(b.data_operacao).getTime());
-
-    let lucroAcumulado = 0;
-    const dataMap = new Map<string, { lucro: number; operacoes: number }>();
-
-    surebetsOrdenadas.forEach(s => {
-      const dateKey = format(new Date(s.data_operacao), "dd/MM", { locale: ptBR });
-      lucroAcumulado += s.lucro_real || 0;
-      
-      const existing = dataMap.get(dateKey) || { lucro: 0, operacoes: 0 };
-      dataMap.set(dateKey, {
-        lucro: lucroAcumulado,
-        operacoes: existing.operacoes + 1
-      });
-    });
-
-    return Array.from(dataMap.entries()).map(([data, valores]) => ({
-      data,
-      lucro: valores.lucro,
-      operacoes: valores.operacoes
-    }));
   }, [surebets]);
 
   // Navigation handlers
@@ -427,74 +388,17 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         </Card>
       </div>
 
-      {/* Gráficos */}
+      {/* Gráficos - Usando componente reutilizável */}
       {surebets.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                <CardTitle className="text-sm font-medium">Evolução do Lucro</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {evolucaoLucro.length > 0 ? (
-                <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={evolucaoLucro}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="data" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(value) => `R$${value}`} className="text-muted-foreground" />
-                    <RechartsTooltip
-                      contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: '6px' }}
-                      formatter={(value: number) => [formatCurrency(value), 'Lucro Acumulado']}
-                    />
-                    <Line type="monotone" dataKey="lucro" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 3 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">
-                  Nenhuma surebet liquidada no período
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-                <CardTitle className="text-sm font-medium">Eficiência por Casa</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {eficienciaPorCasa.length > 0 ? (
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={eficienciaPorCasa} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(value) => `R$${value}`} className="text-muted-foreground" />
-                    <YAxis type="category" dataKey="casa" tick={{ fontSize: 10 }} width={80} className="text-muted-foreground" />
-                    <RechartsTooltip
-                      contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: '6px' }}
-                      formatter={(value: number, name: string) => {
-                        if (name === 'lucro') return [formatCurrency(value), 'Lucro'];
-                        return [value, name];
-                      }}
-                    />
-                    <Bar dataKey="lucro" radius={[0, 4, 4, 0]}>
-                      {eficienciaPorCasa.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.lucro >= 0 ? 'hsl(142, 76%, 36%)' : 'hsl(0, 84%, 60%)'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">
-                  Nenhuma surebet com pernas registradas
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <VisaoGeralCharts 
+          apostas={surebets.map(s => ({
+            data_aposta: s.data_operacao,
+            lucro_prejuizo: s.lucro_real,
+            stake: s.stake_total,
+            bookmaker_nome: s.pernas?.[0]?.bookmaker_nome || "—"
+          }))} 
+          accentColor="hsl(var(--primary))" 
+        />
       )}
 
       {/* Banner Info */}

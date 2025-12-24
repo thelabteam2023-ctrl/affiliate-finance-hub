@@ -21,7 +21,6 @@ import {
   Percent, 
   Building2,
   DollarSign,
-  BarChart3,
   Info,
   LayoutGrid,
   List,
@@ -36,19 +35,8 @@ import { ApostaDialog } from "./ApostaDialog";
 import { SurebetDialog } from "./SurebetDialog";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  BarChart,
-  Bar,
-  Cell,
-} from "recharts";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
+import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { cn } from "@/lib/utils";
 
 interface ProjetoDuploGreenTabProps {
@@ -254,15 +242,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
     return { total, totalStake, lucroTotal, greens, reds, taxaAcerto, roi, porCasa };
   }, [apostas]);
 
-  const evolutionData = useMemo(() => {
-    const sorted = [...apostas].sort((a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime());
-    let acumulado = 0;
-    return sorted.map(a => {
-      acumulado += a.lucro_prejuizo || 0;
-      return { data: format(new Date(a.data_aposta), "dd/MM", { locale: ptBR }), acumulado };
-    });
-  }, [apostas]);
-
+  // casaData for renderPorCasa (keeping for that section)
   const casaData = useMemo(() => {
     return Object.entries(metricas.porCasa).map(([casa, data]) => ({
       casa, lucro: data.lucro, count: data.count, stake: data.stake,
@@ -297,18 +277,67 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
 
   const renderVisaoGeral = () => (
     <div className="space-y-6">
-      <Card className="border-lime-500/20 bg-lime-500/5"><CardContent className="p-4"><div className="flex items-start gap-3"><Info className="h-5 w-5 text-lime-400 mt-0.5 shrink-0" /><p className="text-sm text-lime-200"><strong>Visão especializada Duplo Green:</strong> Estratégia coordenada para obter múltiplos greens. As mesmas apostas também aparecem em <strong>Apostas Livres</strong>.</p></div></CardContent></Card>
+      <Card className="border-lime-500/20 bg-lime-500/5">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-lime-400 mt-0.5 shrink-0" />
+            <p className="text-sm text-lime-200">
+              <strong>Visão especializada Duplo Green:</strong> Estratégia coordenada para obter múltiplos greens. 
+              As mesmas apostas também aparecem em <strong>Apostas Livres</strong>.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+      
       <div className="grid gap-4 md:grid-cols-4">
-        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Apostas DG</CardTitle><Zap className="h-4 w-4 text-lime-400" /></CardHeader><CardContent><div className="text-2xl font-bold">{metricas.total}</div><p className="text-xs text-muted-foreground">{metricas.greens} G · {metricas.reds} R</p></CardContent></Card>
-        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Volume</CardTitle><DollarSign className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{formatCurrency(metricas.totalStake)}</div><p className="text-xs text-muted-foreground">Total apostado</p></CardContent></Card>
-        <Card className={metricas.lucroTotal >= 0 ? "border-emerald-500/20" : "border-red-500/20"}><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Lucro/Prejuízo</CardTitle><TrendingUp className={`h-4 w-4 ${metricas.lucroTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`} /></CardHeader><CardContent><div className={`text-2xl font-bold ${metricas.lucroTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatCurrency(metricas.lucroTotal)}</div><p className="text-xs text-muted-foreground">Taxa: {metricas.taxaAcerto.toFixed(1)}%</p></CardContent></Card>
-        <Card className={metricas.roi >= 0 ? "border-emerald-500/20" : "border-red-500/20"}><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">ROI</CardTitle><Percent className={`h-4 w-4 ${metricas.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`} /></CardHeader><CardContent><div className={`text-2xl font-bold ${metricas.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatPercent(metricas.roi)}</div><p className="text-xs text-muted-foreground">Retorno sobre investimento</p></CardContent></Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Apostas DG</CardTitle>
+            <Zap className="h-4 w-4 text-lime-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metricas.total}</div>
+            <p className="text-xs text-muted-foreground">{metricas.greens} G · {metricas.reds} R</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Volume</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(metricas.totalStake)}</div>
+            <p className="text-xs text-muted-foreground">Total apostado</p>
+          </CardContent>
+        </Card>
+        <Card className={metricas.lucroTotal >= 0 ? "border-emerald-500/20" : "border-red-500/20"}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Lucro/Prejuízo</CardTitle>
+            <TrendingUp className={`h-4 w-4 ${metricas.lucroTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`} />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${metricas.lucroTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {formatCurrency(metricas.lucroTotal)}
+            </div>
+            <p className="text-xs text-muted-foreground">Taxa: {metricas.taxaAcerto.toFixed(1)}%</p>
+          </CardContent>
+        </Card>
+        <Card className={metricas.roi >= 0 ? "border-emerald-500/20" : "border-red-500/20"}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">ROI</CardTitle>
+            <Percent className={`h-4 w-4 ${metricas.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`} />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${metricas.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {formatPercent(metricas.roi)}
+            </div>
+            <p className="text-xs text-muted-foreground">Retorno sobre investimento</p>
+          </CardContent>
+        </Card>
       </div>
+      
       {metricas.total > 0 && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><BarChart3 className="h-4 w-4 text-lime-400" />Evolução do Lucro</CardTitle></CardHeader><CardContent><div className="h-[200px]"><ResponsiveContainer width="100%" height="100%"><LineChart data={evolutionData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis dataKey="data" stroke="hsl(var(--muted-foreground))" fontSize={12} /><YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `R$${v}`} /><RechartsTooltip formatter={(v: number) => [formatCurrency(v), "Acumulado"]} contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} /><Line type="monotone" dataKey="acumulado" stroke="#84cc16" strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer></div></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Building2 className="h-4 w-4 text-lime-400" />Eficiência por Casa</CardTitle></CardHeader><CardContent><div className="h-[200px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={casaData} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `R$${v}`} /><YAxis dataKey="casa" type="category" stroke="hsl(var(--muted-foreground))" fontSize={10} width={80} /><RechartsTooltip formatter={(v: number) => [formatCurrency(v), "Lucro"]} contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} /><Bar dataKey="lucro" radius={[0, 4, 4, 0]}>{casaData.map((e, i) => <Cell key={`cell-${i}`} fill={e.lucro >= 0 ? "#84cc16" : "hsl(var(--destructive))"} />)}</Bar></BarChart></ResponsiveContainer></div></CardContent></Card>
-        </div>
+        <VisaoGeralCharts apostas={apostas} accentColor="#84cc16" />
       )}
     </div>
   );
