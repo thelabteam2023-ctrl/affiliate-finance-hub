@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { SurebetDialog } from "./SurebetDialog";
+import { ApostaPernasResumo, ApostaPernasInline, Perna } from "./ApostaPernasResumo";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
@@ -1141,13 +1142,17 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
                             <span className="truncate">{data.selecoes.length} seleções</span>
                           ) : (
                             // Surebet: mostrar pernas resumidas
-                            <div className="flex flex-col gap-0.5 text-xs">
-                              {(data as Surebet).pernas?.map((perna, idx) => (
-                                <span key={perna.id} className="truncate">
-                                  {perna.bookmaker?.nome || 'Casa'}: {perna.selecao}
-                                </span>
-                              )) || <span className="text-muted-foreground">{data.modelo}</span>}
-                            </div>
+                            <ApostaPernasResumo 
+                              pernas={(data as Surebet).pernas?.map(p => ({
+                                bookmaker_nome: p.bookmaker?.nome || 'Casa',
+                                selecao: p.selecao,
+                                odd: p.odd,
+                                stake: p.stake,
+                                resultado: p.resultado
+                              })) || []}
+                              variant="compact"
+                              showResultado={false}
+                            />
                           )}
                         </td>
                         <td className="p-3 text-right font-mono">
