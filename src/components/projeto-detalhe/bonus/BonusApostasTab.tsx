@@ -565,7 +565,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
                   <CardHeader className="pb-1 pt-3 px-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <CardTitle className="text-sm truncate">{aposta.evento}</CardTitle>
+                        <CardTitle className="text-sm truncate uppercase">{aposta.evento}</CardTitle>
                         <p className="text-xs text-muted-foreground truncate">{aposta.esporte}</p>
                       </div>
                       <div className="flex gap-1 flex-shrink-0 items-center">

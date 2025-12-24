@@ -157,7 +157,7 @@ export function FreebetApostaCard({
       <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-accent/5 transition-colors">
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{aposta.evento}</p>
+          <p className="text-sm font-medium truncate uppercase">{aposta.evento}</p>
           <p className="text-xs text-muted-foreground truncate">{aposta.selecao}</p>
         </div>
         
@@ -219,7 +219,7 @@ export function FreebetApostaCard({
       <CardHeader className="pb-1 pt-3 px-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <CardTitle className="text-sm truncate">{aposta.evento}</CardTitle>
+            <CardTitle className="text-sm truncate uppercase">{aposta.evento}</CardTitle>
             <p className="text-xs text-muted-foreground truncate">
               {aposta.mercado || (aposta.tipo === "multipla" ? `${aposta.selecao.split(" + ").length} seleções` : "Aposta")}
             </p>
