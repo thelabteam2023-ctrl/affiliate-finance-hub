@@ -231,67 +231,80 @@ export function MatchedBettingRoundDialog({
         return;
       }
 
-      const roundData = {
+      // Buscar nome dos bookmakers para armazenar nas pernas
+      const bookmakerNomes: Record<string, string> = {};
+      for (const p of pernas.filter(p => p.bookmaker_id)) {
+        const bk = bookmakers.find(b => b.id === p.bookmaker_id);
+        if (bk) bookmakerNomes[p.bookmaker_id] = bk.nome;
+      }
+
+      // Calcular stake total
+      const backPerna = pernas.find(p => p.tipo_aposta === "BACK");
+      const layPerna = pernas.find(p => p.tipo_aposta === "LAY");
+      const stakeTotal = (backPerna?.stake || 0) + (layPerna?.stake || 0);
+
+      // Criar estrutura de pernas para JSONB
+      const pernasToSave = pernas.filter(p => p.bookmaker_id).map(p => ({
+        bookmaker_id: p.bookmaker_id,
+        bookmaker_nome: bookmakerNomes[p.bookmaker_id] || "",
+        selecao: p.selecao || data.evento,
+        odd: p.odd,
+        stake: p.stake,
+        resultado: p.resultado || null,
+        lucro_prejuizo: p.lucro_prejuizo || null,
+        gerou_freebet: false,
+        valor_freebet_gerada: null,
+        tipo_aposta: p.tipo_aposta,
+        comissao_exchange: p.comissao_exchange,
+        is_free_bet: p.is_free_bet,
+        liability: p.liability,
+      }));
+
+      const apostaData = {
         user_id: userData.user.id,
         projeto_id: projetoId,
-        tipo_round: data.tipo_round,
+        forma_registro: "MATCHED_BETTING",
+        estrategia: data.tipo_round === "FREE_BET" ? "EXTRACAO_FREEBET" : "MATCHED_BETTING",
+        contexto_operacional: "NORMAL",
         evento: data.evento,
         esporte: data.esporte,
         mercado: data.mercado,
-        data_evento: data.data_evento.toISOString(),
-        status: data.status,
+        data_aposta: data.data_evento.toISOString(),
+        status: data.status === "CONCLUIDO" ? "LIQUIDADA" : "PENDENTE",
+        resultado: data.status === "CONCLUIDO" ? "GREEN" : "PENDENTE",
         lucro_esperado: lucroEsperado,
+        stake_total: stakeTotal,
+        pernas: pernasToSave as any,
         observacoes: data.observacoes || null,
+        modelo: data.tipo_round, // QUALIFYING_BET, FREE_BET, CASHBACK_EXTRACTION
+        // Campos para back/lay
+        bookmaker_id: backPerna?.bookmaker_id || null,
+        odd: backPerna?.odd || null,
+        stake: backPerna?.stake || null,
+        lay_exchange: layPerna?.bookmaker_id || null,
+        lay_odd: layPerna?.odd || null,
+        lay_stake: layPerna?.stake || null,
+        lay_liability: layPerna?.liability || null,
+        lay_comissao: layPerna?.comissao_exchange || null,
+        tipo_freebet: backPerna?.is_free_bet ? "freebet_snr" : null,
       };
-
-      let roundId: string;
 
       if (round) {
         // Update
         const { error } = await supabase
-          .from("matched_betting_rounds")
-          .update(roundData)
+          .from("apostas_unificada")
+          .update(apostaData)
           .eq("id", round.id);
 
         if (error) throw error;
-        roundId = round.id;
-
-        // Delete existing pernas and recreate
-        await supabase
-          .from("matched_betting_pernas")
-          .delete()
-          .eq("round_id", round.id);
       } else {
         // Insert
-        const { data: newRound, error } = await supabase
-          .from("matched_betting_rounds")
-          .insert(roundData)
-          .select()
-          .single();
+        const { error } = await supabase
+          .from("apostas_unificada")
+          .insert(apostaData);
 
         if (error) throw error;
-        roundId = newRound.id;
       }
-
-      // Insert pernas
-      const pernasData = pernas.filter(p => p.bookmaker_id).map(p => ({
-        round_id: roundId,
-        bookmaker_id: p.bookmaker_id,
-        tipo_aposta: p.tipo_aposta,
-        selecao: p.selecao || data.evento,
-        odd: p.odd,
-        stake: p.stake,
-        comissao_exchange: p.comissao_exchange,
-        is_free_bet: p.is_free_bet,
-        liability: p.liability,
-        status: p.status,
-      }));
-
-      const { error: pernasError } = await supabase
-        .from("matched_betting_pernas")
-        .insert(pernasData);
-
-      if (pernasError) throw pernasError;
 
       toast.success(round ? "Round atualizado!" : "Round criado!");
       onSuccess();
