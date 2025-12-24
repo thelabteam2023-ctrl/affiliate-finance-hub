@@ -39,6 +39,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+interface PernaFromJson {
+  bookmaker_id: string;
+  bookmaker_nome?: string;
+  tipo_aposta: string;
+  selecao: string;
+  odd: number;
+  stake: number;
+  is_free_bet?: boolean;
+  resultado?: string | null;
+  lucro_prejuizo?: number | null;
+}
+
 interface Round {
   id: string;
   tipo_round: string;
@@ -51,21 +63,7 @@ interface Round {
   lucro_real: number | null;
   promocao_id: string | null;
   created_at: string;
-  pernas?: Perna[];
-}
-
-interface Perna {
-  id: string;
-  tipo_aposta: string;
-  selecao: string;
-  odd: number;
-  stake: number;
-  is_free_bet: boolean;
-  resultado: string | null;
-  lucro_prejuizo: number | null;
-  bookmaker: {
-    nome: string;
-  };
+  pernas: PernaFromJson[];
 }
 
 interface Resumo {
@@ -104,32 +102,55 @@ export function ProjetoMatchedBettingTab({ projetoId }: ProjetoMatchedBettingTab
     try {
       setLoading(true);
       
-      // Fetch rounds with pernas
+      // Fetch rounds from apostas_unificada where forma_registro = 'MATCHED_BETTING'
       const { data: roundsData, error: roundsError } = await supabase
-        .from("matched_betting_rounds")
-        .select(`
-          *,
-          pernas:matched_betting_pernas(
-            *,
-            bookmaker:bookmakers(nome)
-          )
-        `)
+        .from("apostas_unificada")
+        .select("*")
         .eq("projeto_id", projetoId)
+        .eq("forma_registro", "MATCHED_BETTING")
         .order("created_at", { ascending: false });
 
       if (roundsError) throw roundsError;
-      setRounds((roundsData || []) as Round[]);
 
-      // Fetch resumo
-      const { data: resumoData } = await supabase
-        .from("v_matched_betting_resumo")
-        .select("*")
-        .eq("projeto_id", projetoId)
-        .maybeSingle();
+      // Transform data to Round interface
+      const transformedRounds: Round[] = (roundsData || []).map((row) => {
+        const pernas = Array.isArray(row.pernas) ? (row.pernas as unknown as PernaFromJson[]) : [];
+        return {
+          id: row.id,
+          tipo_round: row.modelo || "QUALIFYING_BET",
+          evento: row.evento || "",
+          esporte: row.esporte || "",
+          mercado: row.mercado || "",
+          data_evento: row.data_aposta,
+          status: row.status,
+          lucro_esperado: row.lucro_esperado,
+          lucro_real: row.lucro_prejuizo,
+          promocao_id: null,
+          created_at: row.created_at,
+          pernas,
+        };
+      });
 
-      if (resumoData) {
-        setResumo(resumoData as Resumo);
-      }
+      setRounds(transformedRounds);
+
+      // Calculate resumo from the fetched data
+      const totalRounds = transformedRounds.length;
+      const roundsConcluidos = transformedRounds.filter(r => r.status === "LIQUIDADA").length;
+      const qualifyingBets = transformedRounds.filter(r => r.tipo_round === "QUALIFYING_BET").length;
+      const freeBets = transformedRounds.filter(r => r.tipo_round === "FREE_BET").length;
+      const lucroTotal = transformedRounds.reduce((acc, r) => acc + (r.lucro_real || 0), 0);
+      const lucroMedio = roundsConcluidos > 0 ? lucroTotal / roundsConcluidos : 0;
+      const taxaSucesso = totalRounds > 0 ? (roundsConcluidos / totalRounds) * 100 : 0;
+
+      setResumo({
+        total_rounds: totalRounds,
+        rounds_concluidos: roundsConcluidos,
+        qualifying_bets: qualifyingBets,
+        free_bets: freeBets,
+        lucro_total: lucroTotal,
+        lucro_medio: lucroMedio,
+        taxa_sucesso: taxaSucesso,
+      });
 
     } catch (error: any) {
       toast.error("Erro ao carregar dados: " + error.message);
@@ -143,7 +164,7 @@ export function ProjetoMatchedBettingTab({ projetoId }: ProjetoMatchedBettingTab
     
     try {
       const { error } = await supabase
-        .from("matched_betting_rounds")
+        .from("apostas_unificada")
         .delete()
         .eq("id", roundToDelete);
 
@@ -360,13 +381,13 @@ export function ProjetoMatchedBettingTab({ projetoId }: ProjetoMatchedBettingTab
                 {/* Pernas */}
                 {round.pernas && round.pernas.length > 0 && (
                   <div className="space-y-2">
-                    {round.pernas.map((perna) => (
-                      <div key={perna.id} className="flex justify-between items-center text-sm bg-muted/50 rounded px-2 py-1">
+                    {round.pernas.map((perna, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-sm bg-muted/50 rounded px-2 py-1">
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">
                             {perna.tipo_aposta}
                           </Badge>
-                          <span className="truncate max-w-[100px]">{perna.bookmaker?.nome}</span>
+                          <span className="truncate max-w-[100px]">{perna.bookmaker_nome || "—"}</span>
                         </div>
                         <div className="text-right">
                           <div className="font-medium">@{perna.odd}</div>
