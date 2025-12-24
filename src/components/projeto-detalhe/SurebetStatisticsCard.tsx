@@ -395,17 +395,6 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
               valueClass="text-emerald-400"
               tooltip={stats.casaMaiorRoi ? `ROI: ${formatPercent(stats.casaMaiorRoi.roi)}` : undefined}
             />
-            <StatCell 
-              label="Maior void (casa)" 
-              value={stats.casaMaiorVoid ? stats.casaMaiorVoid.casa : "-"}
-              tooltip={stats.casaMaiorVoid ? `Taxa: ${stats.casaMaiorVoid.taxa.toFixed(1)}%` : undefined}
-            />
-            <StatCell 
-              label="Maior slippage (casa)" 
-              value={stats.casaMaiorSlippage && stats.casaMaiorSlippage.slippage > 0 ? stats.casaMaiorSlippage.casa : "-"}
-              valueClass={stats.casaMaiorSlippage && stats.casaMaiorSlippage.slippage > 0 ? "text-amber-400" : ""}
-              tooltip={stats.casaMaiorSlippage ? `Slippage: ${stats.casaMaiorSlippage.slippage.toFixed(2)}%` : undefined}
-            />
           </div>
 
           {/* COLUNA 3: Risco + Eficiência + Qualidade */}
