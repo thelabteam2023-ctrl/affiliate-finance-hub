@@ -511,9 +511,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         </Card>
       </div>
 
-      {/* Gráficos e Estatísticas em 2 colunas */}
+      {/* Gráficos - layout igual ao ValueBet */}
       {surebets.length > 0 && (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <>
           <VisaoGeralCharts 
             apostas={surebets.map(s => ({
               data_aposta: s.data_operacao,
@@ -529,7 +529,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             logoMap={logoMap}
           />
           <SurebetStatisticsCard surebets={surebets} />
-        </div>
+        </>
       )}
 
       {/* Banner Info */}
