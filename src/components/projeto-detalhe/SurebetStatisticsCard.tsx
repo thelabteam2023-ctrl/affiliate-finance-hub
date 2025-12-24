@@ -224,14 +224,14 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
     const casasOrdenadasPorLucro = Array.from(casaStats.entries())
       .sort((a, b) => b[1].lucro - a[1].lucro);
     
-    // Top 3 casas maior lucro
-    const top3MaiorLucro = casasOrdenadasPorLucro.slice(0, 3).map(([casa, data]) => ({
+    // Top 5 casas maior lucro
+    const top5MaiorLucro = casasOrdenadasPorLucro.slice(0, 5).map(([casa, data]) => ({
       casa,
       lucro: data.lucro,
     }));
     
-    // Top 3 casas menor lucro
-    const top3MenorLucro = casasOrdenadasPorLucro.slice(-3).reverse().map(([casa, data]) => ({
+    // Top 5 casas menor lucro
+    const top5MenorLucro = casasOrdenadasPorLucro.slice(-5).reverse().map(([casa, data]) => ({
       casa,
       lucro: data.lucro,
     }));
@@ -348,8 +348,8 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
       stakeTotalDiaria,
       // Casas
       top3Casas,
-      top3MaiorLucro,
-      top3MenorLucro,
+      top5MaiorLucro,
+      top5MenorLucro,
       top3MenorRoi,
       casaMaiorLucro,
       casaMenorLucro,
@@ -465,10 +465,10 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
               label="Maior lucro (casa)" 
               value={stats.casaMaiorLucro ? stats.casaMaiorLucro.casa : "-"}
               valueClass="text-emerald-400"
-              tooltipContent={stats.top3MaiorLucro.length > 0 ? (
+              tooltipContent={stats.top5MaiorLucro.length > 0 ? (
                 <RankingTooltip 
-                  title="Top 3 Maior Lucro"
-                  items={stats.top3MaiorLucro.map(c => ({
+                  title="Top 5 Maior Lucro"
+                  items={stats.top5MaiorLucro.map(c => ({
                     label: c.casa,
                     value: formatCurrency(c.lucro),
                     valueClass: c.lucro >= 0 ? "text-emerald-400" : "text-red-400",
@@ -486,10 +486,10 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
               label="Menor lucro (casa)" 
               value={stats.casaMenorLucro ? stats.casaMenorLucro.casa : "-"}
               valueClass="text-red-400"
-              tooltipContent={stats.top3MenorLucro.length > 0 ? (
+              tooltipContent={stats.top5MenorLucro.length > 0 ? (
                 <RankingTooltip 
-                  title="Top 3 Menor Lucro"
-                  items={stats.top3MenorLucro.map(c => ({
+                  title="Top 5 Menor Lucro"
+                  items={stats.top5MenorLucro.map(c => ({
                     label: c.casa,
                     value: formatCurrency(c.lucro),
                     valueClass: c.lucro >= 0 ? "text-emerald-400" : "text-red-400",
