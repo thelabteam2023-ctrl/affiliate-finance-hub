@@ -232,6 +232,27 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
 
     const porCasa: Record<string, { stake: number; lucro: number; count: number }> = {};
     apostas.forEach((a) => {
+      const pernas = Array.isArray(a.pernas) ? a.pernas : [];
+
+      // Multi-pernas: cada perna conta separadamente para a casa correspondente
+      if (pernas.length > 0) {
+        const lucroPorPernaFallback =
+          a.status === "LIQUIDADA" ? Number(a.lucro_prejuizo || 0) / Math.max(pernas.length, 1) : 0;
+
+        pernas.forEach((p: any) => {
+          const casa = p?.bookmaker_nome || "Desconhecida";
+          if (!porCasa[casa]) porCasa[casa] = { stake: 0, lucro: 0, count: 0 };
+
+          porCasa[casa].stake += Number(p?.stake || 0);
+          porCasa[casa].lucro +=
+            typeof p?.lucro_prejuizo === "number" ? p.lucro_prejuizo : lucroPorPernaFallback;
+          porCasa[casa].count += 1;
+        });
+
+        return;
+      }
+
+      // Aposta simples
       const casa = a.bookmaker_nome || "Desconhecida";
       if (!porCasa[casa]) porCasa[casa] = { stake: 0, lucro: 0, count: 0 };
       porCasa[casa].stake += getStakeVolume(a);
