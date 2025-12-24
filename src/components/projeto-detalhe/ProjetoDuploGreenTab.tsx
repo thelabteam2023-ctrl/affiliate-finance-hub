@@ -23,8 +23,7 @@ import {
   Info,
   LayoutGrid,
   List,
-  Zap,
-  Plus
+  Zap
 } from "lucide-react";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -121,7 +120,6 @@ export function ProjetoDuploGreenTab({
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
-  const [novaApostaDialogOpen, setNovaApostaDialogOpen] = useState(false);
 
   // Filtro de tempo interno
   const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
@@ -267,12 +265,6 @@ export function ProjetoDuploGreenTab({
     onDataChange?.();
   };
 
-  const handleNovaApostaSuccess = () => {
-    setNovaApostaDialogOpen(false);
-    fetchData();
-    onDataChange?.();
-  };
-
   if (loading) {
     return (
       <div className="space-y-4">
@@ -286,16 +278,8 @@ export function ProjetoDuploGreenTab({
 
   return (
     <div className="space-y-4">
-      {/* Header com filtro e botão de nova aposta */}
-      <div className="flex items-center justify-between">
-        <Button 
-          size="sm" 
-          onClick={() => setNovaApostaDialogOpen(true)}
-          className="h-9"
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          Nova Aposta Duplo Green
-        </Button>
+      {/* Filtro de Tempo - Alinhado à direita */}
+      <div className="flex justify-end">
         <StandardTimeFilter
           period={internalPeriod}
           onPeriodChange={setInternalPeriod}
@@ -600,17 +584,6 @@ export function ProjetoDuploGreenTab({
           activeTab="duplogreen"
         />
       )}
-
-      {/* Dialog de Nova Aposta Duplo Green */}
-      <ApostaDialog
-        open={novaApostaDialogOpen}
-        onOpenChange={setNovaApostaDialogOpen}
-        projetoId={projetoId}
-        aposta={null}
-        onSuccess={handleNovaApostaSuccess}
-        defaultEstrategia={APOSTA_ESTRATEGIA.DUPLO_GREEN}
-        activeTab="duplogreen"
-      />
     </div>
   );
 }
