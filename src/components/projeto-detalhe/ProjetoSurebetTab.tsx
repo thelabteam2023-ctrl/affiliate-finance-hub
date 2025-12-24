@@ -286,6 +286,13 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       .slice(0, 10);
   }, [surebets]);
 
+  // Separar surebets em abertas e histórico
+  const surebetsAbertas = useMemo(() => surebets.filter(s => !s.resultado || s.resultado === "PENDENTE" || s.status === "PENDENTE"), [surebets]);
+  const surebetsHistorico = useMemo(() => surebets.filter(s => s.resultado && s.resultado !== "PENDENTE" && s.status !== "PENDENTE"), [surebets]);
+  
+  // Lista baseada na sub-aba selecionada
+  const surebetsListaAtual = operacoesSubTab === "abertas" ? surebetsAbertas : surebetsHistorico;
+
   // Navigation handlers
   const handleModeToggle = () => {
     setIsTransitioning(true);
@@ -435,11 +442,43 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   // Render Operações
   const renderOperacoes = () => (
     <div className="space-y-4">
+      {/* Sub-abas Abertas / Histórico */}
+      <div className="flex items-center justify-between border-b pb-2">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setOperacoesSubTab("abertas")}
+            className={cn(
+              "flex items-center gap-1.5 text-sm font-medium pb-2 border-b-2 transition-colors -mb-[10px]",
+              operacoesSubTab === "abertas"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Clock className="h-4 w-4" />
+            Abertas
+            <Badge variant="secondary" className="ml-1 text-xs">{surebetsAbertas.length}</Badge>
+          </button>
+          <button
+            onClick={() => setOperacoesSubTab("historico")}
+            className={cn(
+              "flex items-center gap-1.5 text-sm font-medium pb-2 border-b-2 transition-colors -mb-[10px]",
+              operacoesSubTab === "historico"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <History className="h-4 w-4" />
+            Histórico
+            <Badge variant="secondary" className="ml-1 text-xs">{surebetsHistorico.length}</Badge>
+          </button>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Target className="h-5 w-5 text-primary" />
-          Operações de Surebet
-          <Badge variant="secondary">{surebets.length}</Badge>
+          {operacoesSubTab === "abertas" ? "Operações Abertas" : "Histórico de Operações"}
+          <Badge variant="secondary">{surebetsListaAtual.length}</Badge>
         </h3>
         <div className="flex items-center gap-2">
           <Button
@@ -464,20 +503,24 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         </div>
       </div>
 
-      {surebets.length === 0 ? (
+      {surebetsListaAtual.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Calculator className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold">Nenhuma Surebet registrada</h3>
+            <h3 className="text-lg font-semibold">
+              {operacoesSubTab === "abertas" ? "Nenhuma operação aberta" : "Nenhuma operação no histórico"}
+            </h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Clique em "Nova Arbitragem" para criar uma operação de arbitragem ou extração de bônus.
+              {operacoesSubTab === "abertas" 
+                ? "Clique em \"Nova Arbitragem\" para criar uma operação."
+                : "Operações finalizadas aparecerão aqui."}
             </p>
           </CardContent>
         </Card>
       ) : (
         <ScrollArea className="h-[calc(100vh-400px)]">
           <div className={viewMode === "cards" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-2"}>
-            {surebets.map((surebet) => (
+            {surebetsListaAtual.map((surebet) => (
               <SurebetCard
                 key={surebet.id}
                 surebet={surebet}

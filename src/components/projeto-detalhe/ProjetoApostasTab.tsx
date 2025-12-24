@@ -20,7 +20,9 @@ import {
   Zap,
   TrendingUp,
   CheckCircle2,
-  BarChart3
+  BarChart3,
+  Clock,
+  History
 } from "lucide-react";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { SurebetDialog } from "./SurebetDialog";
@@ -43,6 +45,7 @@ import { DateRange } from "react-day-picker";
 import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ESTRATEGIAS_LIST, inferEstrategiaLegado, type ApostaEstrategia } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
+import { cn } from "@/lib/utils";
 
 // Contextos de aposta para filtro unificado
 type ApostaContexto = "NORMAL" | "FREEBET" | "BONUS" | "SUREBET";
@@ -246,6 +249,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
   const [estrategiaFilter, setEstrategiaFilter] = useState<string>("all");
   const [tipoFilter, setTipoFilter] = useState<"todas" | "simples" | "multiplas" | "surebets">("todas");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const [apostasSubTab, setApostasSubTab] = useState<"abertas" | "historico">("abertas");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMultiplaOpen, setDialogMultiplaOpen] = useState(false);
   const [dialogSurebetOpen, setDialogSurebetOpen] = useState(false);
@@ -499,7 +503,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
   };
 
   // Filtrar e unificar apostas com contexto
-  const apostasUnificadas: ApostaUnificada[] = useMemo(() => {
+  const apostasUnificadasBase: ApostaUnificada[] = useMemo(() => {
     const result: ApostaUnificada[] = [];
     
     // Apostas simples
@@ -576,6 +580,27 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
     // Ordenar por data
     return result.sort((a, b) => new Date(b.data_aposta).getTime() - new Date(a.data_aposta).getTime());
   }, [apostas, apostasMultiplas, surebets, bookmakersComBonusAtivo, searchTerm, statusFilter, resultadoFilter, contextoFilter, estrategiaFilter, tipoFilter]);
+
+  // Helper para verificar se um item está pendente
+  const isItemPendente = (item: ApostaUnificada): boolean => {
+    if (item.tipo === "simples") {
+      const aposta = item.data as Aposta;
+      return !aposta.resultado || aposta.resultado === "PENDENTE" || aposta.status === "PENDENTE";
+    } else if (item.tipo === "multipla") {
+      const multipla = item.data as ApostaMultipla;
+      return !multipla.resultado || multipla.resultado === "PENDENTE" || multipla.status === "PENDENTE";
+    } else {
+      const surebet = item.data as Surebet;
+      return !surebet.resultado || surebet.resultado === "PENDENTE" || surebet.status === "PENDENTE";
+    }
+  };
+
+  // Separar apostas em abertas e histórico
+  const apostasAbertasList = useMemo(() => apostasUnificadasBase.filter(isItemPendente), [apostasUnificadasBase]);
+  const apostasHistoricoList = useMemo(() => apostasUnificadasBase.filter(item => !isItemPendente(item)), [apostasUnificadasBase]);
+  
+  // Lista final baseada na sub-aba selecionada
+  const apostasUnificadas = apostasSubTab === "abertas" ? apostasAbertasList : apostasHistoricoList;
 
   // Contadores por contexto
   const contadores = useMemo(() => {
@@ -789,6 +814,38 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
         <span><strong>Apostas Livres</strong> — Registro completo de todas as apostas do projeto. Use os filtros de contexto para visualizar apostas normais, com freebet ou bônus.</span>
       </div>
 
+      {/* Sub-abas Abertas / Histórico */}
+      <div className="flex items-center justify-between border-b pb-2">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setApostasSubTab("abertas")}
+            className={cn(
+              "flex items-center gap-1.5 text-sm font-medium pb-2 border-b-2 transition-colors -mb-[10px]",
+              apostasSubTab === "abertas"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Clock className="h-4 w-4" />
+            Abertas
+            <Badge variant="secondary" className="ml-1 text-xs">{apostasAbertasList.length}</Badge>
+          </button>
+          <button
+            onClick={() => setApostasSubTab("historico")}
+            className={cn(
+              "flex items-center gap-1.5 text-sm font-medium pb-2 border-b-2 transition-colors -mb-[10px]",
+              apostasSubTab === "historico"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <History className="h-4 w-4" />
+            Histórico
+            <Badge variant="secondary" className="ml-1 text-xs">{apostasHistoricoList.length}</Badge>
+          </button>
+        </div>
+      </div>
+
       {/* Filtros e Ações */}
       <Card>
         <CardContent className="pt-4">
@@ -844,29 +901,22 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
               </SelectContent>
             </Select>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[130px] h-9">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos Status</SelectItem>
-                <SelectItem value="PENDENTE">Pendente</SelectItem>
-                <SelectItem value="LIQUIDADA">Liquidada</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
-              <SelectTrigger className="w-[140px] h-9">
-                <SelectValue placeholder="Resultado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
-                <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
-                <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">Meio Green</SelectItem>
-                <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">Meio Red</SelectItem>
-                <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Filtro de Resultado - só no histórico */}
+            {apostasSubTab === "historico" && (
+              <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
+                <SelectTrigger className="w-[140px] h-9">
+                  <SelectValue placeholder="Resultado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
+                  <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
+                  <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">Meio Green</SelectItem>
+                  <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">Meio Red</SelectItem>
+                  <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
             
             {/* Filtro de Estratégia */}
             <Select value={estrategiaFilter} onValueChange={setEstrategiaFilter}>
@@ -891,11 +941,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
           <CardContent className="pt-6">
             <div className="text-center py-10">
               <Target className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-4 text-lg font-semibold">Nenhuma aposta encontrada</h3>
+              <h3 className="mt-4 text-lg font-semibold">
+                {apostasSubTab === "abertas" ? "Nenhuma aposta aberta" : "Nenhuma aposta no histórico"}
+              </h3>
               <p className="text-muted-foreground">
-                {searchTerm || statusFilter !== "all" || resultadoFilter !== "all" || contextoFilter !== "all"
+                {searchTerm || resultadoFilter !== "all" || contextoFilter !== "all"
                   ? "Tente ajustar os filtros"
-                  : "Registre sua primeira aposta"}
+                  : apostasSubTab === "abertas" 
+                    ? "Registre uma nova aposta" 
+                    : "Apostas finalizadas aparecerão aqui"}
               </p>
             </div>
           </CardContent>
