@@ -554,8 +554,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         const eventoParts = aposta.evento?.split(" x ") || [];
         setMandante(eventoParts[0] || aposta.evento || "");
         setVisitante(eventoParts[1] || "");
-        setOdd(aposta.odd.toString());
-        setStake(aposta.stake.toString());
+        setOdd(aposta.odd?.toString() || "");
+        setStake(aposta.stake?.toString() || "");
         setStatusResultado(aposta.resultado || aposta.status);
         setValorRetorno(aposta.valor_retorno?.toString() || "");
         setObservacoes(aposta.observacoes || "");
