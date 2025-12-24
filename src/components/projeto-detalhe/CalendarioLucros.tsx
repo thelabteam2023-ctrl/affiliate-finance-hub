@@ -28,12 +28,14 @@ interface CalendarioLucrosProps {
   apostas: ApostaData[];
   titulo?: string;
   accentColor?: string;
+  compact?: boolean;
 }
 
 export function CalendarioLucros({ 
   apostas, 
   titulo = "Calendário de Lucros",
-  accentColor = "purple"
+  accentColor = "purple",
+  compact = false
 }: CalendarioLucrosProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -42,8 +44,13 @@ export function CalendarioLucros({
     const mapa = new Map<string, { lucro: number; count: number }>();
     
     apostas.forEach((aposta) => {
-      // Só considerar apostas com resultado definido (liquidadas)
-      if (!aposta.resultado || aposta.resultado === "PENDENTE") return;
+      // Considerar todas as apostas que têm lucro_prejuizo (liquidadas)
+      // Se resultado for null/undefined, usa lucro_prejuizo como critério
+      const isLiquidada = aposta.resultado 
+        ? aposta.resultado !== "PENDENTE" 
+        : aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined;
+      
+      if (!isLiquidada) return;
       
       const dataKey = format(new Date(aposta.data_aposta), "yyyy-MM-dd");
       const atual = mapa.get(dataKey) || { lucro: 0, count: 0 };
@@ -78,7 +85,11 @@ export function CalendarioLucros({
     apostas.forEach((aposta) => {
       const dataAposta = new Date(aposta.data_aposta);
       if (isSameMonth(dataAposta, currentMonth)) {
-        if (aposta.resultado && aposta.resultado !== "PENDENTE") {
+        const isLiquidada = aposta.resultado 
+          ? aposta.resultado !== "PENDENTE" 
+          : aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined;
+        
+        if (isLiquidada) {
           lucroTotal += aposta.lucro_prejuizo || 0;
           totalApostas++;
         }
@@ -120,6 +131,85 @@ export function CalendarioLucros({
     blue: "border-blue-500/20",
     amber: "border-amber-500/20"
   };
+
+  if (compact) {
+    return (
+      <div className="p-4 min-w-[320px]">
+        {/* Navegação do mês */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium min-w-[120px] text-center capitalize">
+              {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={irParaHoje}
+          >
+            Hoje
+          </Button>
+        </div>
+
+        {/* Calendário */}
+        <div className="grid grid-cols-7 gap-1">
+          {diasSemana.map((dia, idx) => (
+            <div key={idx} className="text-center text-xs text-muted-foreground font-medium py-1">{dia}</div>
+          ))}
+          {diasDoMes.map((dia, idx) => {
+            const dataKey = format(dia, "yyyy-MM-dd");
+            const dadosDia = lucroPorDia.get(dataKey);
+            const lucro = dadosDia?.lucro || 0;
+            const temApostas = dadosDia && dadosDia.count > 0;
+            const isHoje = isSameDay(dia, hoje);
+            const isMesAtual = isSameMonth(dia, currentMonth);
+            let bgClass = "";
+            let textClass = "text-muted-foreground";
+            if (temApostas && isMesAtual) {
+              if (lucro > 0) { bgClass = "bg-emerald-500/20"; textClass = "text-emerald-400"; }
+              else if (lucro < 0) { bgClass = "bg-red-500/20"; textClass = "text-red-400"; }
+              else { bgClass = "bg-muted/40"; }
+            }
+            return (
+              <div key={idx} className={cn("relative aspect-square flex flex-col items-center justify-center rounded text-xs p-0.5", bgClass, isHoje && "ring-1 ring-primary", !isMesAtual && "opacity-30")}>
+                <span className={cn("font-medium", !isMesAtual ? "text-muted-foreground/50" : "text-foreground")}>{format(dia, "d")}</span>
+                {temApostas && isMesAtual && <span className={cn("text-[10px] font-medium tabular-nums", textClass)}>{formatCurrency(lucro)}</span>}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Resumo */}
+        <div className="grid grid-cols-2 gap-2 mt-4">
+          <div className="bg-muted/40 rounded px-3 py-2">
+            <div className="text-xs text-muted-foreground">Lucro do mês</div>
+            <div className={cn("text-sm font-semibold tabular-nums", estatisticasMes.lucroTotal > 0 ? "text-emerald-400" : estatisticasMes.lucroTotal < 0 ? "text-red-400" : "text-muted-foreground")}>{formatFullCurrency(estatisticasMes.lucroTotal)}</div>
+          </div>
+          <div className="bg-muted/40 rounded px-3 py-2">
+            <div className="text-xs text-muted-foreground">Apostas do mês</div>
+            <div className="text-sm font-semibold tabular-nums text-foreground">{estatisticasMes.totalApostas}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card className={cn("", accentClasses[accentColor as keyof typeof accentClasses] || accentClasses.purple)}>

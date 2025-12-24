@@ -45,7 +45,7 @@ import { DateRange } from "react-day-picker";
 import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ESTRATEGIAS_LIST, inferEstrategiaLegado, type ApostaEstrategia } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
-import { CalendarioLucros } from "./CalendarioLucros";
+import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { cn } from "@/lib/utils";
 
 // Contextos de aposta para filtro unificado
@@ -878,27 +878,27 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
         <span><strong>Apostas Livres</strong> — Registro completo de todas as apostas do projeto. Use os filtros de contexto para visualizar apostas normais, com freebet ou bônus.</span>
       </div>
 
-      {/* Calendário de Lucros */}
+      {/* Gráficos com calendário integrado */}
       {(apostas.length > 0 || apostasMultiplas.length > 0) && (
-        <div className="grid gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-1">
-            <CalendarioLucros 
-              apostas={[
-                ...apostas.map(a => ({
-                  data_aposta: a.data_aposta,
-                  resultado: a.resultado,
-                  lucro_prejuizo: a.lucro_prejuizo
-                })),
-                ...apostasMultiplas.map(a => ({
-                  data_aposta: a.data_aposta,
-                  resultado: a.resultado,
-                  lucro_prejuizo: a.lucro_prejuizo
-                }))
-              ]} 
-            />
-          </div>
-        </div>
+        <VisaoGeralCharts 
+          apostas={[
+            ...apostas.map(a => ({
+              data_aposta: a.data_aposta,
+              lucro_prejuizo: a.lucro_prejuizo,
+              stake: a.stake,
+              bookmaker_nome: a.bookmaker?.nome || "—"
+            })),
+            ...apostasMultiplas.map(a => ({
+              data_aposta: a.data_aposta,
+              lucro_prejuizo: a.lucro_prejuizo,
+              stake: a.stake,
+              bookmaker_nome: a.bookmaker?.nome || "Múltipla"
+            }))
+          ]} 
+          accentColor="hsl(var(--primary))"
+        />
       )}
+
 
       {/* Sub-abas Abertas / Histórico */}
       <div className="flex items-center justify-between border-b pb-2">
