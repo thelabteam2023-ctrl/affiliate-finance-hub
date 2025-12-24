@@ -678,9 +678,13 @@ export function ProjetoValueBetTab({
 
       {/* Gráficos e Estatísticas */}
       {metricas.total > 0 && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" logoMap={logoMap} />
-          <ValueBetStatisticsCard apostas={apostas} />
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <ValueBetStatisticsCard apostas={apostas} />
+            </div>
+          </div>
         </div>
       )}
     </div>
