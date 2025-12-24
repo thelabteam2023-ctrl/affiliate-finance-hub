@@ -25,6 +25,7 @@ export interface SurebetData {
   esporte: string;
   modelo: string;
   mercado?: string | null;
+  estrategia?: string | null;
   stake_total: number;
   spread_calculado: number | null;
   roi_esperado: number | null;
@@ -89,10 +90,14 @@ export function SurebetCard({ surebet, onEdit, defaultExpanded = false }: Surebe
             <BadgeRow className="mb-1">
               <Badge 
                 variant="outline" 
-                className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0.5 gap-1 shrink-0"
+                className={`text-[10px] px-1.5 py-0.5 gap-1 shrink-0 ${
+                  surebet.estrategia === "DUPLO_GREEN"
+                    ? "bg-teal-500/20 text-teal-400 border-teal-500/30"
+                    : "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                }`}
               >
                 <ArrowLeftRight className="h-2.5 w-2.5" />
-                SUREBET
+                {surebet.estrategia === "DUPLO_GREEN" ? "DUPLO GREEN" : "SUREBET"}
               </Badge>
               <Badge 
                 variant="outline" 
