@@ -493,6 +493,9 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
     const extracoesGanhas = apostasExtracao.filter(ap => 
       ap.resultado === "GREEN" || ap.resultado === "MEIO_GREEN" || ap.resultado === "GREEN_BOOKMAKER"
     ).length;
+    const extracoesPerdidas = apostasExtracao.filter(ap => 
+      ap.resultado === "RED" || ap.resultado === "MEIO_RED" || ap.resultado === "RED_BOOKMAKER"
+    ).length;
     const extracoesPendentes = apostasExtracao.filter(ap => 
       ap.status === "PENDENTE" || !ap.resultado
     ).length;
@@ -508,6 +511,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
       totalExtracoes,
       totalQualificadoras,
       extracoesGanhas,
+      extracoesPerdidas,
       extracoesPendentes,
       taxaAcerto
     };
@@ -741,9 +745,11 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metricas.totalExtracoes}</div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-yellow-400">{metricas.extracoesPendentes}</span> pendentes
-            </p>
+            <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs">
+              <span className="text-blue-400">{metricas.extracoesPendentes} Pendentes</span>
+              <span className="text-emerald-500">{metricas.extracoesGanhas} G</span>
+              <span className="text-red-500">{metricas.extracoesPerdidas} R</span>
+            </div>
           </CardContent>
         </Card>
 

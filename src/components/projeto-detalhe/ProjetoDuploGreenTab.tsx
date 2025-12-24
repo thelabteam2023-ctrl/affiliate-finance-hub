@@ -257,6 +257,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
 
     const totalStake = apostas.reduce((acc, a) => acc + getStakeVolume(a), 0);
     const lucroTotal = apostas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+    const pendentes = apostas.filter((a) => !a.resultado || a.resultado === "PENDENTE").length;
     const greens = apostas.filter((a) => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
     const reds = apostas.filter((a) => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
     const liquidadas = apostas.filter((a) => a.resultado && a.resultado !== "PENDENTE").length;
@@ -293,7 +294,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       porCasa[casa].count++;
     });
 
-    return { total, totalStake, lucroTotal, greens, reds, taxaAcerto, roi, porCasa };
+    return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa };
   }, [apostas]);
 
   // Interface para vínculos dentro de cada casa
@@ -493,7 +494,11 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metricas.total}</div>
-            <p className="text-xs text-muted-foreground">{metricas.greens} G · {metricas.reds} R</p>
+            <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs">
+              <span className="text-blue-400">{metricas.pendentes} Pendentes</span>
+              <span className="text-emerald-500">{metricas.greens} G</span>
+              <span className="text-red-500">{metricas.reds} R</span>
+            </div>
           </CardContent>
         </Card>
         <Card>
