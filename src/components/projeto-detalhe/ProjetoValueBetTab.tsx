@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -22,7 +24,10 @@ import {
   BarChart3,
   Info,
   LayoutGrid,
-  List
+  List,
+  LayoutDashboard,
+  PanelLeft,
+  LayoutList
 } from "lucide-react";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -36,12 +41,13 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   BarChart,
   Bar,
   Cell,
 } from "recharts";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
+import { cn } from "@/lib/utils";
 
 interface ProjetoValueBetTabProps {
   projetoId: string;
@@ -66,7 +72,6 @@ interface Aposta {
   observacoes: string | null;
   bookmaker_id: string;
   bookmaker_nome?: string;
-  // Campos adicionais para edição correta
   modo_entrada?: string;
   gerou_freebet?: boolean;
   valor_freebet_gerada?: number | null;
@@ -82,7 +87,16 @@ interface Aposta {
   back_comissao?: number | null;
 }
 
-// Componente ResultadoBadge removido - agora usamos ResultadoPill para permitir edição inline
+type NavigationMode = "tabs" | "sidebar";
+type NavTabValue = "visao-geral" | "apostas" | "por-casa";
+
+const NAV_STORAGE_KEY = "valuebet-nav-mode";
+
+const NAV_ITEMS = [
+  { value: "visao-geral" as NavTabValue, label: "Visão Geral", icon: LayoutDashboard },
+  { value: "apostas" as NavTabValue, label: "Apostas", icon: Target },
+  { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
+];
 
 export function ProjetoValueBetTab({ 
   projetoId, 
@@ -97,11 +111,24 @@ export function ProjetoValueBetTab({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
 
+  // Navigation mode
+  const [navMode, setNavMode] = useState<NavigationMode>(() => {
+    const saved = localStorage.getItem(NAV_STORAGE_KEY);
+    return (saved === "tabs" ? "tabs" : "sidebar") as NavigationMode;
+  });
+  const [activeNavTab, setActiveNavTab] = useState<NavTabValue>("visao-geral");
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
   // Filtro de tempo interno
   const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
   const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
 
   const dateRange = useMemo(() => getDateRangeFromPeriod(internalPeriod, internalDateRange), [internalPeriod, internalDateRange]);
+
+  // Save nav mode preference
+  useEffect(() => {
+    localStorage.setItem(NAV_STORAGE_KEY, navMode);
+  }, [navMode]);
 
   useEffect(() => {
     fetchData();
@@ -118,7 +145,6 @@ export function ProjetoValueBetTab({
 
   const fetchApostas = async () => {
     try {
-      // Usa tabela unificada filtrando por estratégia VALUEBET
       let query = supabase
         .from("apostas_unificada")
         .select(`
@@ -217,6 +243,7 @@ export function ProjetoValueBetTab({
         casa,
         lucro: data.lucro,
         count: data.count,
+        stake: data.stake,
         roi: data.stake > 0 ? (data.lucro / data.stake) * 100 : 0
       }))
       .sort((a, b) => b.lucro - a.lucro);
@@ -240,34 +267,68 @@ export function ProjetoValueBetTab({
     }).format(value);
   };
 
+  const formatPercent = (value: number) => {
+    return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+  };
+
   const handleApostaUpdated = () => {
     fetchData();
     onDataChange?.();
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)}
-        </div>
-        <Skeleton className="h-64" />
-      </div>
-    );
-  }
+  // Navigation handlers
+  const handleModeToggle = () => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setNavMode(prev => prev === "tabs" ? "sidebar" : "tabs");
+      setTimeout(() => setIsTransitioning(false), 50);
+    }, 150);
+  };
 
-  return (
-    <div className="space-y-4">
-      {/* Filtro de Tempo - Alinhado à direita */}
-      <div className="flex justify-end">
-        <StandardTimeFilter
-          period={internalPeriod}
-          onPeriodChange={setInternalPeriod}
-          customDateRange={internalDateRange}
-          onCustomDateRangeChange={setInternalDateRange}
-        />
-      </div>
+  const handleNavTabChange = (value: string) => {
+    if (value !== activeNavTab) {
+      setIsTransitioning(true);
+      setActiveNavTab(value as NavTabValue);
+      setTimeout(() => setIsTransitioning(false), 180);
+    }
+  };
 
+  // Mode toggle button
+  const modeToggle = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleModeToggle}
+          className="h-8 w-8 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/50 transition-colors"
+        >
+          {navMode === "tabs" ? (
+            <PanelLeft className="h-4 w-4" />
+          ) : (
+            <LayoutList className="h-4 w-4" />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="text-xs">
+        {navMode === "tabs" ? "Modo Gestão" : "Modo Compacto"}
+      </TooltipContent>
+    </Tooltip>
+  );
+
+  // Period filter component
+  const periodFilterComponent = (
+    <StandardTimeFilter
+      period={internalPeriod}
+      onPeriodChange={setInternalPeriod}
+      customDateRange={internalDateRange}
+      onCustomDateRangeChange={setInternalDateRange}
+    />
+  );
+
+  // Render Visão Geral
+  const renderVisaoGeral = () => (
+    <div className="space-y-6">
       {/* Banner informativo */}
       <Card className="border-purple-500/20 bg-purple-500/5">
         <CardContent className="p-4">
@@ -331,7 +392,7 @@ export function ProjetoValueBetTab({
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${metricas.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {metricas.roi.toFixed(2)}%
+              {formatPercent(metricas.roi)}
             </div>
             <p className="text-xs text-muted-foreground">Retorno sobre investimento</p>
           </CardContent>
@@ -356,21 +417,11 @@ export function ProjetoValueBetTab({
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="data" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `R$${v}`} />
-                    <Tooltip 
+                    <RechartsTooltip 
                       formatter={(value: number) => [formatCurrency(value), "Acumulado"]}
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }}
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="acumulado" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={2}
-                      dot={false}
-                    />
+                    <Line type="monotone" dataKey="acumulado" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -392,20 +443,13 @@ export function ProjetoValueBetTab({
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `R$${v}`} />
                     <YAxis dataKey="casa" type="category" stroke="hsl(var(--muted-foreground))" fontSize={10} width={80} />
-                    <Tooltip 
+                    <RechartsTooltip 
                       formatter={(value: number) => [formatCurrency(value), "Lucro"]}
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }}
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
                     />
                     <Bar dataKey="lucro" radius={[0, 4, 4, 0]}>
                       {casaData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={entry.lucro >= 0 ? "hsl(var(--chart-2))" : "hsl(var(--destructive))"} 
-                        />
+                        <Cell key={`cell-${index}`} fill={entry.lucro >= 0 ? "hsl(var(--chart-2))" : "hsl(var(--destructive))"} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -415,162 +459,89 @@ export function ProjetoValueBetTab({
           </Card>
         </div>
       )}
+    </div>
+  );
 
-      {/* Filtros e listagem */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <CardTitle className="text-base">Apostas ValueBet</CardTitle>
-            <div className="flex flex-wrap gap-2 items-center">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 w-[180px]"
-                />
-              </div>
-              <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Resultado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
-                  <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
-                  <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">½ Green</SelectItem>
-                  <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">½ Red</SelectItem>
-                  <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
-                  <SelectItem value="PENDENTE" className="hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground">Pendente</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="flex border rounded-md">
-                <Button
-                  variant={viewMode === "cards" ? "secondary" : "ghost"}
-                  size="icon"
-                  onClick={() => setViewMode("cards")}
-                  className="rounded-r-none"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "secondary" : "ghost"}
-                  size="icon"
-                  onClick={() => setViewMode("list")}
-                  className="rounded-l-none"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+  // Render Apostas
+  const renderApostas = () => (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Target className="h-5 w-5 text-purple-400" />
+          Apostas ValueBet
+          <Badge variant="secondary">{apostasFiltradas.length}</Badge>
+        </h3>
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 w-[180px]"
+            />
           </div>
-        </CardHeader>
-        <CardContent>
-          {apostasFiltradas.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nenhuma aposta ValueBet encontrada</p>
-              <p className="text-sm mt-1">Crie apostas com estratégia ValueBet para visualizá-las aqui</p>
-            </div>
-          ) : viewMode === "cards" ? (
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {apostasFiltradas.map((aposta) => (
-                <Card 
-                  key={aposta.id} 
-                  className="cursor-pointer hover:border-purple-500/30 transition-colors"
-                  onClick={() => {
-                    setSelectedAposta(aposta);
-                    setDialogOpen(true);
-                  }}
-                >
-                  <CardContent className="p-4">
-                    {/* Badges na linha acima - padrão unificado */}
-                    <div className="flex items-center gap-1 mb-2">
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 flex items-center gap-0.5">
-                        <TrendingUp className="h-2.5 w-2.5" />
-                        VB
-                      </Badge>
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <ResultadoPill
-                          apostaId={aposta.id}
-                          bookmarkerId={aposta.bookmaker_id}
-                          resultado={aposta.resultado}
-                          status={aposta.status}
-                          stake={aposta.stake}
-                          odd={aposta.odd}
-                          operationType="bookmaker"
-                          onResultadoUpdated={handleApostaUpdated}
-                          onEditClick={() => {
-                            setSelectedAposta(aposta);
-                            setDialogOpen(true);
-                          }}
-                        />
-                      </div>
-                    </div>
-                    {/* Evento e Esporte */}
-                    <div className="mb-2">
-                      <p className="font-medium text-sm truncate uppercase">{aposta.evento}</p>
-                      <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">{aposta.selecao}</span>
-                      <span className="font-medium">@{aposta.odd.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center mt-2 pt-2 border-t">
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
-                      </span>
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Stake: {formatCurrency(aposta.stake)}</p>
-                        {aposta.lucro_prejuizo !== null && (
-                          <p className={`text-sm font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {formatCurrency(aposta.lucro_prejuizo)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {apostasFiltradas.map((aposta) => (
-                <div
-                  key={aposta.id}
-                  className="flex items-center justify-between p-3 rounded-lg border hover:border-purple-500/30 cursor-pointer transition-colors"
-                  onClick={() => {
-                    setSelectedAposta(aposta);
-                    setDialogOpen(true);
-                  }}
-                >
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    {/* Badges à esquerda - padrão unificado */}
-                    <div className="flex items-center gap-1">
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 flex items-center gap-0.5">
-                        <TrendingUp className="h-2.5 w-2.5" />
-                        VB
-                      </Badge>
-                    </div>
-                    <div className="text-xs text-muted-foreground w-16">
-                      {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate uppercase">{aposta.evento}</p>
-                      <p className="text-xs text-muted-foreground">{aposta.selecao}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm">@{aposta.odd.toFixed(2)}</p>
-                      <p className="text-xs text-muted-foreground">{formatCurrency(aposta.stake)}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 ml-4" onClick={(e) => e.stopPropagation()}>
-                    {aposta.lucro_prejuizo !== null && (
-                      <span className={`text-sm font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {formatCurrency(aposta.lucro_prejuizo)}
-                      </span>
-                    )}
+          <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Resultado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
+              <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
+              <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">½ Green</SelectItem>
+              <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">½ Red</SelectItem>
+              <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
+              <SelectItem value="PENDENTE" className="hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground">Pendente</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex border rounded-md">
+            <Button
+              variant={viewMode === "cards" ? "secondary" : "ghost"}
+              size="icon"
+              onClick={() => setViewMode("cards")}
+              className="rounded-r-none"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "secondary" : "ghost"}
+              size="icon"
+              onClick={() => setViewMode("list")}
+              className="rounded-l-none"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {apostasFiltradas.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-8 text-muted-foreground">
+            <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Nenhuma aposta ValueBet encontrada</p>
+            <p className="text-sm mt-1">Crie apostas com estratégia ValueBet para visualizá-las aqui</p>
+          </CardContent>
+        </Card>
+      ) : viewMode === "cards" ? (
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {apostasFiltradas.map((aposta) => (
+            <Card 
+              key={aposta.id} 
+              className="cursor-pointer hover:border-purple-500/30 transition-colors"
+              onClick={() => {
+                setSelectedAposta(aposta);
+                setDialogOpen(true);
+              }}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center gap-1 mb-2">
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 flex items-center gap-0.5">
+                    <TrendingUp className="h-2.5 w-2.5" />
+                    VB
+                  </Badge>
+                  <div onClick={(e) => e.stopPropagation()}>
                     <ResultadoPill
                       apostaId={aposta.id}
                       bookmarkerId={aposta.bookmaker_id}
@@ -587,13 +558,259 @@ export function ProjetoValueBetTab({
                     />
                   </div>
                 </div>
-              ))}
+                <div className="mb-2">
+                  <p className="font-medium text-sm truncate uppercase">{aposta.evento}</p>
+                  <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">{aposta.selecao}</span>
+                  <span className="font-medium">@{aposta.odd.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center mt-2 pt-2 border-t">
+                  <span className="text-xs text-muted-foreground">
+                    {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
+                  </span>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Stake: {formatCurrency(aposta.stake)}</p>
+                    {aposta.lucro_prejuizo !== null && (
+                      <p className={`text-sm font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {formatCurrency(aposta.lucro_prejuizo)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {apostasFiltradas.map((aposta) => (
+            <div
+              key={aposta.id}
+              className="flex items-center justify-between p-3 rounded-lg border hover:border-purple-500/30 cursor-pointer transition-colors"
+              onClick={() => {
+                setSelectedAposta(aposta);
+                setDialogOpen(true);
+              }}
+            >
+              <div className="flex items-center gap-4 flex-1 min-w-0">
+                <div className="flex items-center gap-1">
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 flex items-center gap-0.5">
+                    <TrendingUp className="h-2.5 w-2.5" />
+                    VB
+                  </Badge>
+                </div>
+                <div className="text-xs text-muted-foreground w-16">
+                  {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate uppercase">{aposta.evento}</p>
+                  <p className="text-xs text-muted-foreground">{aposta.selecao}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm">@{aposta.odd.toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground">{formatCurrency(aposta.stake)}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 ml-4" onClick={(e) => e.stopPropagation()}>
+                {aposta.lucro_prejuizo !== null && (
+                  <span className={`text-sm font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {formatCurrency(aposta.lucro_prejuizo)}
+                  </span>
+                )}
+                <ResultadoPill
+                  apostaId={aposta.id}
+                  bookmarkerId={aposta.bookmaker_id}
+                  resultado={aposta.resultado}
+                  status={aposta.status}
+                  stake={aposta.stake}
+                  odd={aposta.odd}
+                  operationType="bookmaker"
+                  onResultadoUpdated={handleApostaUpdated}
+                  onEditClick={() => {
+                    setSelectedAposta(aposta);
+                    setDialogOpen(true);
+                  }}
+                />
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
-      {/* Dialog de Aposta */}
+  // Render Por Casa
+  const renderPorCasa = () => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Building2 className="h-5 w-5 text-purple-400" />
+        <h3 className="text-lg font-semibold">Análise por Casa</h3>
+        <Badge variant="secondary">{casaData.length} casas</Badge>
+      </div>
+
+      {casaData.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold">Nenhuma casa registrada</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Registre apostas para ver a análise por casa.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {casaData.map((casa) => (
+            <Card key={casa.casa} className={casa.lucro >= 0 ? "border-emerald-500/20" : "border-red-500/20"}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">{casa.casa}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Apostas</span>
+                    <span className="font-medium">{casa.count}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Volume</span>
+                    <span className="font-medium">{formatCurrency(casa.stake)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Lucro</span>
+                    <span className={`font-medium ${casa.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {formatCurrency(casa.lucro)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">ROI</span>
+                    <span className={`font-medium ${casa.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {formatPercent(casa.roi)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  // Main content renderer
+  const renderMainContent = () => {
+    const contentClass = cn(
+      "transition-all duration-200 ease-out",
+      isTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
+    );
+
+    return (
+      <div className={cn("min-h-[400px]", contentClass)}>
+        {activeNavTab === "visao-geral" && renderVisaoGeral()}
+        {activeNavTab === "apostas" && renderApostas()}
+        {activeNavTab === "por-casa" && renderPorCasa()}
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-4">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)}
+        </div>
+        <Skeleton className="h-64" />
+      </div>
+    );
+  }
+
+  // Mode: Tabs
+  if (navMode === "tabs") {
+    return (
+      <div className="space-y-6">
+        <Tabs value={activeNavTab} onValueChange={handleNavTabChange} className="space-y-6">
+          <div className="flex items-center justify-between border-b border-border/50">
+            <TabsList className="bg-transparent border-0 rounded-none p-0 h-auto gap-6">
+              {NAV_ITEMS.map((item) => (
+                <TabsTrigger
+                  key={item.value}
+                  value={item.value}
+                  className="bg-transparent border-0 rounded-none px-1 pb-3 pt-1 h-auto shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground/70 data-[state=active]:text-foreground transition-colors"
+                >
+                  <item.icon className="h-4 w-4 mr-2 opacity-60" />
+                  {item.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            <div className="flex items-center gap-4">
+              {periodFilterComponent}
+              {modeToggle}
+            </div>
+          </div>
+
+          <TabsContent value={activeNavTab} className="mt-0">
+            {renderMainContent()}
+          </TabsContent>
+        </Tabs>
+
+        {selectedAposta && (
+          <ApostaDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            projetoId={projetoId}
+            aposta={selectedAposta as any}
+            onSuccess={handleApostaUpdated}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Mode: Sidebar
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        {periodFilterComponent}
+      </div>
+      
+      <div className="flex gap-6">
+        <div className="w-52 shrink-0 space-y-6">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
+                Navegação
+              </span>
+              {modeToggle}
+            </div>
+            <nav className="space-y-1">
+              {NAV_ITEMS.map((item) => {
+                const isActive = activeNavTab === item.value;
+                return (
+                  <button
+                    key={item.value}
+                    onClick={() => handleNavTabChange(item.value)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                      isActive
+                        ? "bg-accent/10 text-foreground shadow-sm"
+                        : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-accent" : "opacity-60")} />
+                    <span className="flex-1 text-left">{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          {renderMainContent()}
+        </div>
+      </div>
+
       {selectedAposta && (
         <ApostaDialog
           open={dialogOpen}

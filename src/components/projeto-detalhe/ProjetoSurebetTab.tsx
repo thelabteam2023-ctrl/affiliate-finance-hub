@@ -4,6 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Calculator, 
   Target, 
@@ -14,7 +17,10 @@ import {
   Plus,
   Building2,
   BarChart3,
-  Info
+  Info,
+  LayoutDashboard,
+  PanelLeft,
+  LayoutList
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -32,9 +38,9 @@ import {
   Line,
   Cell
 } from "recharts";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { parsePernaFromJson, PernaArbitragem } from "@/types/apostasUnificada";
+import { cn } from "@/lib/utils";
 
 interface ProjetoSurebetTabProps {
   projetoId: string;
@@ -42,7 +48,6 @@ interface ProjetoSurebetTabProps {
   refreshTrigger?: number;
 }
 
-// Interface de compatibilidade para o componente SurebetCard
 interface Surebet {
   id: string;
   data_operacao: string;
@@ -75,6 +80,17 @@ interface Bookmaker {
   } | null;
 }
 
+type NavigationMode = "tabs" | "sidebar";
+type NavTabValue = "visao-geral" | "operacoes" | "por-casa";
+
+const NAV_STORAGE_KEY = "surebet-nav-mode";
+
+const NAV_ITEMS = [
+  { value: "visao-geral" as NavTabValue, label: "Visão Geral", icon: LayoutDashboard },
+  { value: "operacoes" as NavTabValue, label: "Operações", icon: Target },
+  { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
+];
+
 export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: ProjetoSurebetTabProps) {
   const [surebets, setSurebets] = useState<Surebet[]>([]);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
@@ -83,11 +99,24 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedSurebet, setSelectedSurebet] = useState<Surebet | null>(null);
 
+  // Navigation mode
+  const [navMode, setNavMode] = useState<NavigationMode>(() => {
+    const saved = localStorage.getItem(NAV_STORAGE_KEY);
+    return (saved === "tabs" ? "tabs" : "sidebar") as NavigationMode;
+  });
+  const [activeNavTab, setActiveNavTab] = useState<NavTabValue>("visao-geral");
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
   // Filtro de tempo interno
   const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
   const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
 
   const dateRange = useMemo(() => getDateRangeFromPeriod(internalPeriod, internalDateRange), [internalPeriod, internalDateRange]);
+
+  // Save nav mode preference
+  useEffect(() => {
+    localStorage.setItem(NAV_STORAGE_KEY, navMode);
+  }, [navMode]);
 
   useEffect(() => {
     fetchData();
@@ -104,7 +133,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
 
   const fetchSurebets = async () => {
     try {
-      // Buscar da nova tabela unificada - operações de arbitragem
       let query = supabase
         .from("apostas_unificada")
         .select("*")
@@ -121,12 +149,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
 
       if (error) throw error;
       
-      // Mapear para o formato esperado pelo SurebetCard (compatibilidade)
       if (arbitragensData && arbitragensData.length > 0) {
         const surebetsFormatadas: Surebet[] = arbitragensData.map(arb => {
           const pernas = parsePernaFromJson(arb.pernas);
           
-          // Ordenar pernas por seleção
           const pernasOrdenadas = [...pernas].sort((a, b) => {
             const order: Record<string, number> = { 
               "Casa": 1, "1": 1,
@@ -136,7 +162,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             return (order[a.selecao] || 99) - (order[b.selecao] || 99);
           });
 
-          // Converter pernas para o formato do SurebetPerna
           const pernasSurebetCard: SurebetPerna[] = pernasOrdenadas.map((p, idx) => ({
             id: `perna-${idx}`,
             selecao: p.selecao,
@@ -236,7 +261,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       surebet.pernas?.forEach(perna => {
         const casa = perna.bookmaker_nome;
         const existing = casaMap.get(casa) || { lucro: 0, volume: 0, operacoes: 0 };
-        // Lucro proporcional à participação da perna
         const lucroPerna = (surebet.lucro_real || 0) / (surebet.pernas?.length || 1);
         casaMap.set(casa, {
           lucro: existing.lucro + lucroPerna,
@@ -285,19 +309,60 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     }));
   }, [surebets]);
 
-  return (
-    <div className="space-y-4">
-      {/* Filtro de Tempo - Alinhado à direita */}
-      <div className="flex justify-end">
-        <StandardTimeFilter
-          period={internalPeriod}
-          onPeriodChange={setInternalPeriod}
-          customDateRange={internalDateRange}
-          onCustomDateRangeChange={setInternalDateRange}
-        />
-      </div>
+  // Navigation handlers
+  const handleModeToggle = () => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setNavMode(prev => prev === "tabs" ? "sidebar" : "tabs");
+      setTimeout(() => setIsTransitioning(false), 50);
+    }, 150);
+  };
 
-      {/* KPIs Resumo */}
+  const handleNavTabChange = (value: string) => {
+    if (value !== activeNavTab) {
+      setIsTransitioning(true);
+      setActiveNavTab(value as NavTabValue);
+      setTimeout(() => setIsTransitioning(false), 180);
+    }
+  };
+
+  // Mode toggle button
+  const modeToggle = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleModeToggle}
+          className="h-8 w-8 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/50 transition-colors"
+        >
+          {navMode === "tabs" ? (
+            <PanelLeft className="h-4 w-4" />
+          ) : (
+            <LayoutList className="h-4 w-4" />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="text-xs">
+        {navMode === "tabs" ? "Modo Gestão" : "Modo Compacto"}
+      </TooltipContent>
+    </Tooltip>
+  );
+
+  // Period filter component
+  const periodFilterComponent = (
+    <StandardTimeFilter
+      period={internalPeriod}
+      onPeriodChange={setInternalPeriod}
+      customDateRange={internalDateRange}
+      onCustomDateRangeChange={setInternalDateRange}
+    />
+  );
+
+  // Render Visão Geral
+  const renderVisaoGeral = () => (
+    <div className="space-y-6">
+      {/* KPIs */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -358,27 +423,14 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         </Card>
       </div>
 
-      {/* Gráficos de Análise */}
+      {/* Gráficos */}
       {surebets.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2">
-          {/* Gráfico de Evolução de Lucro */}
           <Card>
             <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-sm font-medium">Evolução do Lucro</CardTitle>
-                </div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="text-xs">Lucro acumulado das surebets liquidadas ao longo do tempo</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Evolução do Lucro</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -386,31 +438,13 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={evolucaoLucro}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis 
-                      dataKey="data" 
-                      tick={{ fontSize: 10 }} 
-                      className="text-muted-foreground"
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 10 }} 
-                      tickFormatter={(value) => `R$${value}`}
-                      className="text-muted-foreground"
-                    />
+                    <XAxis dataKey="data" tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(value) => `R$${value}`} className="text-muted-foreground" />
                     <RechartsTooltip
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--popover))', 
-                        borderColor: 'hsl(var(--border))',
-                        borderRadius: '6px'
-                      }}
+                      contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: '6px' }}
                       formatter={(value: number) => [formatCurrency(value), 'Lucro Acumulado']}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="lucro" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={2}
-                      dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 3 }}
-                    />
+                    <Line type="monotone" dataKey="lucro" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
@@ -421,24 +455,11 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             </CardContent>
           </Card>
 
-          {/* Gráfico de Eficiência por Casa */}
           <Card>
             <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-sm font-medium">Eficiência por Casa</CardTitle>
-                </div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="text-xs">Lucro gerado por cada casa de apostas em operações de surebet</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Eficiência por Casa</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -446,37 +467,18 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={eficienciaPorCasa} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" className="stroke-border" horizontal={false} />
-                    <XAxis 
-                      type="number" 
-                      tick={{ fontSize: 10 }}
-                      tickFormatter={(value) => `R$${value}`}
-                      className="text-muted-foreground"
-                    />
-                    <YAxis 
-                      type="category" 
-                      dataKey="casa" 
-                      tick={{ fontSize: 10 }}
-                      width={80}
-                      className="text-muted-foreground"
-                    />
+                    <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(value) => `R$${value}`} className="text-muted-foreground" />
+                    <YAxis type="category" dataKey="casa" tick={{ fontSize: 10 }} width={80} className="text-muted-foreground" />
                     <RechartsTooltip
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--popover))', 
-                        borderColor: 'hsl(var(--border))',
-                        borderRadius: '6px'
-                      }}
+                      contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: '6px' }}
                       formatter={(value: number, name: string) => {
                         if (name === 'lucro') return [formatCurrency(value), 'Lucro'];
                         return [value, name];
                       }}
-                      labelFormatter={(label) => `Casa: ${label}`}
                     />
                     <Bar dataKey="lucro" radius={[0, 4, 4, 0]}>
                       {eficienciaPorCasa.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`}
-                          fill={entry.lucro >= 0 ? 'hsl(142, 76%, 36%)' : 'hsl(0, 84%, 60%)'}
-                        />
+                        <Cell key={`cell-${index}`} fill={entry.lucro >= 0 ? 'hsl(142, 76%, 36%)' : 'hsl(0, 84%, 60%)'} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -491,63 +493,66 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         </div>
       )}
 
-      {/* Aviso Informativo */}
+      {/* Banner Info */}
       <Card className="border-blue-500/30 bg-blue-500/5">
         <CardContent className="py-3">
           <div className="flex items-start gap-2">
             <Info className="h-4 w-4 text-blue-400 mt-0.5 shrink-0" />
             <p className="text-xs text-muted-foreground">
               <span className="font-medium text-blue-400">Visão Especializada:</span> Esta aba exibe apenas operações de Surebet. 
-              As apostas individuais de cada surebet também aparecem na aba "Apostas Livres" com o contexto <Badge variant="outline" className="ml-1 h-4 text-[10px] border-cyan-500/30 text-cyan-400">Surebet</Badge>
+              As apostas individuais de cada surebet também aparecem na aba "Apostas Livres".
             </p>
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
 
-      {/* Ações */}
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => setViewMode(viewMode === "cards" ? "list" : "cards")}
-            >
-              {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
-            </Button>
-            <Button 
-              size="sm" 
-              className="h-9"
-              onClick={() => {
-                setSelectedSurebet(null);
-                setDialogOpen(true);
-              }}
-            >
-              <Plus className="mr-1 h-4 w-4" />
-              Nova Arbitragem
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+  // Render Operações
+  const renderOperacoes = () => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Target className="h-5 w-5 text-primary" />
+          Operações de Surebet
+          <Badge variant="secondary">{surebets.length}</Badge>
+        </h3>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={() => setViewMode(viewMode === "cards" ? "list" : "cards")}
+          >
+            {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+          </Button>
+          <Button 
+            size="sm" 
+            className="h-9"
+            onClick={() => {
+              setSelectedSurebet(null);
+              setDialogOpen(true);
+            }}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            Nova Arbitragem
+          </Button>
+        </div>
+      </div>
 
-      {/* Lista de Surebets */}
       {surebets.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Calculator className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold">Nenhuma Surebet registrada</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Clique em "Nova Surebet" para criar uma operação de arbitragem ou extração de bônus.
+              Clique em "Nova Arbitragem" para criar uma operação de arbitragem ou extração de bônus.
             </p>
           </CardContent>
         </Card>
       ) : (
-        <ScrollArea className="h-[calc(100vh-500px)]">
-          <div className={viewMode === "cards" 
-            ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" 
-            : "space-y-2"
-          }>
+        <ScrollArea className="h-[calc(100vh-400px)]">
+          <div className={viewMode === "cards" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-2"}>
             {surebets.map((surebet) => (
               <SurebetCard
                 key={surebet.id}
@@ -561,16 +566,186 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           </div>
         </ScrollArea>
       )}
+    </div>
+  );
 
-      {/* Dialog */}
+  // Render Por Casa
+  const renderPorCasa = () => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Building2 className="h-5 w-5 text-primary" />
+        <h3 className="text-lg font-semibold">Análise por Casa</h3>
+        <Badge variant="secondary">{eficienciaPorCasa.length} casas</Badge>
+      </div>
+
+      {eficienciaPorCasa.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold">Nenhuma casa registrada</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Registre operações para ver a análise por casa.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {eficienciaPorCasa.map((casa) => (
+            <Card key={casa.casa} className={casa.lucro >= 0 ? "border-emerald-500/20" : "border-red-500/20"}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">{casa.casa}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Operações</span>
+                    <span className="font-medium">{casa.operacoes}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Volume</span>
+                    <span className="font-medium">{formatCurrency(casa.volume)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Lucro</span>
+                    <span className={`font-medium ${casa.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {formatCurrency(casa.lucro)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">ROI</span>
+                    <span className={`font-medium ${casa.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {formatPercent(casa.roi)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  // Main content renderer
+  const renderMainContent = () => {
+    const contentClass = cn(
+      "transition-all duration-200 ease-out",
+      isTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
+    );
+
+    return (
+      <div className={cn("min-h-[400px]", contentClass)}>
+        {activeNavTab === "visao-geral" && renderVisaoGeral()}
+        {activeNavTab === "operacoes" && renderOperacoes()}
+        {activeNavTab === "por-casa" && renderPorCasa()}
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-4">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)}
+        </div>
+        <Skeleton className="h-96" />
+      </div>
+    );
+  }
+
+  // Mode: Tabs
+  if (navMode === "tabs") {
+    return (
+      <div className="space-y-6">
+        <Tabs value={activeNavTab} onValueChange={handleNavTabChange} className="space-y-6">
+          <div className="flex items-center justify-between border-b border-border/50">
+            <TabsList className="bg-transparent border-0 rounded-none p-0 h-auto gap-6">
+              {NAV_ITEMS.map((item) => (
+                <TabsTrigger
+                  key={item.value}
+                  value={item.value}
+                  className="bg-transparent border-0 rounded-none px-1 pb-3 pt-1 h-auto shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground/70 data-[state=active]:text-foreground transition-colors"
+                >
+                  <item.icon className="h-4 w-4 mr-2 opacity-60" />
+                  {item.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            <div className="flex items-center gap-4">
+              {periodFilterComponent}
+              {modeToggle}
+            </div>
+          </div>
+
+          <TabsContent value={activeNavTab} className="mt-0">
+            {renderMainContent()}
+          </TabsContent>
+        </Tabs>
+
+        <SurebetDialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) setSelectedSurebet(null);
+          }}
+          projetoId={projetoId}
+          bookmakers={bookmakers}
+          surebet={selectedSurebet}
+          onSuccess={handleDataChange}
+        />
+      </div>
+    );
+  }
+
+  // Mode: Sidebar
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        {periodFilterComponent}
+      </div>
+      
+      <div className="flex gap-6">
+        <div className="w-52 shrink-0 space-y-6">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
+                Navegação
+              </span>
+              {modeToggle}
+            </div>
+            <nav className="space-y-1">
+              {NAV_ITEMS.map((item) => {
+                const isActive = activeNavTab === item.value;
+                return (
+                  <button
+                    key={item.value}
+                    onClick={() => handleNavTabChange(item.value)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                      isActive
+                        ? "bg-accent/10 text-foreground shadow-sm"
+                        : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-accent" : "opacity-60")} />
+                    <span className="flex-1 text-left">{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          {renderMainContent()}
+        </div>
+      </div>
+
       <SurebetDialog
         open={dialogOpen}
         onOpenChange={(open) => {
           setDialogOpen(open);
-          // CRÍTICO: Limpar surebet selecionada quando dialog fecha
-          if (!open) {
-            setSelectedSurebet(null);
-          }
+          if (!open) setSelectedSurebet(null);
         }}
         projetoId={projetoId}
         bookmakers={bookmakers}
