@@ -516,7 +516,7 @@ export function ProjetoDuploGreenTab({
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">{aposta.selecao}</span>
-                      <span className="font-medium">@{aposta.odd.toFixed(2)}</span>
+                      <span className="font-medium">@{(aposta.odd ?? 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center mt-2 pt-2 border-t">
                       <span className="text-xs text-muted-foreground">
@@ -555,7 +555,7 @@ export function ProjetoDuploGreenTab({
                       <p className="text-xs text-muted-foreground">{aposta.selecao}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm">@{aposta.odd.toFixed(2)}</p>
+                      <p className="text-sm">@{(aposta.odd ?? 0).toFixed(2)}</p>
                       <p className="text-xs text-muted-foreground">{formatCurrency(aposta.stake)}</p>
                     </div>
                   </div>
