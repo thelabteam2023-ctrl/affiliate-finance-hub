@@ -327,11 +327,18 @@ export function ApostaCard({
           </div>
         )}
         
-        {/* Rodapé: Data, Stake, Lucro, ROI */}
+        {/* Rodapé: Data, Casa, Stake, Lucro, ROI */}
         <div className="flex justify-between items-center pt-2 border-t">
-          <span className="text-xs text-muted-foreground">
-            {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
-          </span>
+          <div className="flex flex-col">
+            <span className="text-xs text-muted-foreground">
+              {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
+            </span>
+            {aposta.bookmaker_nome && (
+              <span className="text-[10px] text-muted-foreground/70 truncate max-w-[120px]">
+                {aposta.bookmaker_nome}
+              </span>
+            )}
+          </div>
           <div className="text-right">
             <p className="text-xs text-muted-foreground">Stake: {formatCurrency(stake)}</p>
             {aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined && (
