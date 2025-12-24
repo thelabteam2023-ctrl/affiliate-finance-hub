@@ -1,13 +1,9 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BadgeRow } from "@/components/ui/badge-row";
-import { Separator } from "@/components/ui/separator";
-import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronUp, Clock, CheckCircle2, ArrowLeftRight } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ArrowLeftRight, Zap, CheckCircle2, Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface SurebetPerna {
   id: string;
@@ -41,32 +37,49 @@ export interface SurebetData {
 interface SurebetCardProps {
   surebet: SurebetData;
   onEdit?: (surebet: SurebetData) => void;
-  defaultExpanded?: boolean;
+  className?: string;
 }
 
-export function SurebetCard({ surebet, onEdit, defaultExpanded = false }: SurebetCardProps) {
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
+function ResultadoBadge({ resultado }: { resultado: string | null | undefined }) {
+  const getConfig = (r: string | null | undefined) => {
+    switch (r) {
+      case "GREEN": return { label: "Green", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", icon: CheckCircle2 };
+      case "RED": return { label: "Red", color: "bg-red-500/20 text-red-400 border-red-500/30", icon: CheckCircle2 };
+      case "VOID": return { label: "Void", color: "bg-gray-500/20 text-gray-400 border-gray-500/30", icon: CheckCircle2 };
+      default: return { label: "Pendente", color: "bg-blue-500/20 text-blue-400 border-blue-500/30", icon: Clock };
+    }
   };
+  
+  const config = getConfig(resultado);
+  const Icon = config.icon;
+  
+  return (
+    <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", config.color)}>
+      <Icon className="h-2.5 w-2.5" />
+      {config.label}
+    </Badge>
+  );
+}
 
-  const formatPercent = (value: number | null) => {
-    if (value === null) return "-";
-    return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
-  };
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
 
-  const getSelecaoLabel = (selecao: string) => {
-    const labels: Record<string, string> = {
-      "Casa": "1", "1": "1",
-      "Empate": "X", "X": "X",
-      "Fora": "2", "2": "2"
-    };
-    return labels[selecao] || selecao;
-  };
+export function SurebetCard({ surebet, onEdit, className }: SurebetCardProps) {
+  const isDuploGreen = surebet.estrategia === "DUPLO_GREEN";
+  const isLiquidada = surebet.status === "LIQUIDADA";
+  
+  const lucroExibir = isLiquidada ? surebet.lucro_real : surebet.lucro_esperado;
+  const roiExibir = isLiquidada ? surebet.roi_real : surebet.roi_esperado;
+  
+  const estrategiaConfig = isDuploGreen 
+    ? { label: "DG", icon: Zap, color: "text-teal-400", bgColor: "bg-teal-500/20", borderColor: "border-teal-500/30" }
+    : { label: "SUREBET", icon: ArrowLeftRight, color: "text-amber-400", bgColor: "bg-amber-500/20", borderColor: "border-amber-500/30" };
+  
+  const Icon = estrategiaConfig.icon;
 
   const parseLocalDateTime = (dateString: string): Date => {
     if (!dateString) return new Date();
@@ -77,156 +90,76 @@ export function SurebetCard({ surebet, onEdit, defaultExpanded = false }: Surebe
     return new Date(year, month - 1, day, hours || 0, minutes || 0);
   };
 
-  const isLiquidada = surebet.status === "LIQUIDADA";
-  const lucroExibir = isLiquidada ? surebet.lucro_real : surebet.lucro_esperado;
-  const roiExibir = isLiquidada ? surebet.roi_real : surebet.roi_esperado;
-
   return (
-    <Card className="cursor-pointer hover:border-primary/50 transition-colors border-l-2 border-l-amber-500">
-      {/* Header compacto - sempre visível */}
-      <CardHeader className="pb-2 pt-3 px-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <BadgeRow className="mb-1">
-              <Badge 
-                variant="outline" 
-                className={`text-[10px] px-1.5 py-0.5 gap-1 shrink-0 ${
-                  surebet.estrategia === "DUPLO_GREEN"
-                    ? "bg-teal-500/20 text-teal-400 border-teal-500/30"
-                    : "bg-amber-500/20 text-amber-400 border-amber-500/30"
-                }`}
-              >
-                <ArrowLeftRight className="h-2.5 w-2.5" />
-                {surebet.estrategia === "DUPLO_GREEN" ? "DUPLO GREEN" : "SUREBET"}
-              </Badge>
-              <Badge 
-                variant="outline" 
-                className={`text-[10px] px-1.5 py-0.5 gap-1 shrink-0 ${
-                  isLiquidada 
-                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
-                    : "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                }`}
-              >
-                {isLiquidada ? (
-                  <CheckCircle2 className="h-2.5 w-2.5" />
-                ) : (
-                  <Clock className="h-2.5 w-2.5" />
-                )}
-                {surebet.status}
-              </Badge>
-            </BadgeRow>
-            <CardTitle 
-              className="text-sm uppercase truncate cursor-pointer hover:text-primary"
-              onClick={() => onEdit?.(surebet)}
-            >
-              {surebet.evento}
-            </CardTitle>
-            <p className="text-[10px] text-muted-foreground">
-              {surebet.esporte} • {surebet.modelo}{surebet.mercado ? ` • ${surebet.mercado}` : ""}
-            </p>
-          </div>
-          {/* Botão expandir */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0 flex-shrink-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsExpanded(!isExpanded);
-            }}
-          >
-            {isExpanded ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </Button>
+    <Card 
+      className={cn("cursor-pointer transition-colors hover:border-primary/30", className)}
+      onClick={() => onEdit?.(surebet)}
+    >
+      <CardContent className="p-4">
+        {/* Header: Badges */}
+        <div className="flex items-center gap-1 mb-2 flex-wrap">
+          <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", estrategiaConfig.bgColor, estrategiaConfig.color, estrategiaConfig.borderColor)}>
+            <Icon className="h-2.5 w-2.5" />
+            {estrategiaConfig.label}
+          </Badge>
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
+            {surebet.modelo}
+          </Badge>
+          <ResultadoBadge resultado={isLiquidada ? surebet.resultado : null} />
         </div>
-      </CardHeader>
-
-      <CardContent className="px-3 pb-3 pt-0 space-y-2">
-        {/* Resumo compacto - sempre visível */}
-        <div className="grid grid-cols-3 gap-2 text-xs">
-          <div>
-            <span className="text-muted-foreground text-[10px]">Stake</span>
-            <p className="font-medium">{formatCurrency(surebet.stake_total)}</p>
-          </div>
-          <div>
-            <span className="text-muted-foreground text-[10px]">
-              {isLiquidada ? "ROI Real" : "ROI Esp."}
-            </span>
-            <p className={`font-medium ${(roiExibir || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-              {formatPercent(roiExibir)}
-            </p>
-          </div>
-          <div>
-            <span className="text-muted-foreground text-[10px]">
-              {isLiquidada ? "Lucro" : "Lucro Esp."}
-            </span>
-            <p className={`font-medium ${(lucroExibir || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-              {formatCurrency(lucroExibir || 0)}
-            </p>
-          </div>
+        
+        {/* Identificação: Evento e Esporte */}
+        <div className="mb-2">
+          <p className="font-medium text-sm truncate uppercase">{surebet.evento || 'Operação'}</p>
+          <p className="text-xs text-muted-foreground">
+            {surebet.esporte}{surebet.mercado ? ` • ${surebet.mercado}` : ''}
+          </p>
         </div>
-
-        {/* Posições/Pernas expandíveis */}
-        <Collapsible open={isExpanded}>
-          <CollapsibleContent className="space-y-1.5 pt-2">
-            <Separator className="mb-2" />
-            {surebet.pernas && surebet.pernas.length > 0 ? (
-              surebet.pernas.map((perna) => (
-                <div 
-                  key={perna.id} 
-                  className="flex items-center justify-between gap-2 text-xs bg-muted/30 rounded-md px-2 py-1.5"
-                >
-                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                    <span className="font-bold text-primary w-3 flex-shrink-0 text-center">
-                      {getSelecaoLabel(perna.selecao)}
-                    </span>
-                    <span className="text-muted-foreground">–</span>
-                    <span className="font-medium truncate uppercase text-[11px]">
-                      {perna.bookmaker_nome}
-                    </span>
-                    <span className="text-muted-foreground text-[10px]">•</span>
-                    <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                      {perna.odd.toFixed(2)}
-                    </span>
-                    <span className="text-muted-foreground text-[10px]">•</span>
-                    <span className="text-[10px] font-medium flex-shrink-0">
-                      {formatCurrency(perna.stake)}
-                    </span>
-                  </div>
-                  {/* Badge de Resultado */}
+        
+        {/* Detalhamento: Pernas */}
+        {surebet.pernas && surebet.pernas.length > 0 && (
+          <div className="space-y-1 mb-2">
+            {surebet.pernas.map((perna) => (
+              <div key={perna.id} className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground truncate flex-1 uppercase text-xs">
+                  <span className="text-primary font-semibold">{perna.selecao}</span>
+                  {" "}
+                  {perna.bookmaker_nome}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-xs">@{perna.odd.toFixed(2)}</span>
                   {perna.resultado && (
-                    <Badge 
-                      variant="outline" 
-                      className={`text-[9px] px-1 py-0 flex-shrink-0 ${
-                        perna.resultado === "GREEN" 
-                          ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
-                          : perna.resultado === "RED"
-                          ? "bg-red-500/20 text-red-400 border-red-500/30"
-                          : "bg-gray-500/20 text-gray-400 border-gray-500/30"
-                      }`}
-                    >
-                      {perna.resultado}
-                    </Badge>
+                    <ResultadoBadge resultado={perna.resultado} />
                   )}
                 </div>
-              ))
-            ) : (
-              <p className="text-xs text-muted-foreground text-center py-2">
-                Nenhuma posição registrada
-              </p>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {/* Rodapé: Data, Stake, Lucro, ROI */}
+        <div className="flex justify-between items-center pt-2 border-t">
+          <div className="flex flex-col">
+            <span className="text-xs text-muted-foreground">
+              {format(parseLocalDateTime(surebet.data_operacao), "dd/MM/yy", { locale: ptBR })}
+            </span>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">Stake: {formatCurrency(surebet.stake_total)}</p>
+            {lucroExibir !== null && lucroExibir !== undefined && (
+              <div className="flex items-center gap-2 justify-end">
+                <span className={cn("text-sm font-medium", lucroExibir >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                  {formatCurrency(lucroExibir)}
+                </span>
+                {roiExibir !== null && roiExibir !== undefined && (
+                  <span className={cn("text-xs", roiExibir >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                    ({roiExibir >= 0 ? '+' : ''}{roiExibir.toFixed(1)}%)
+                  </span>
+                )}
+              </div>
             )}
-            
-            {/* Data */}
-            <div className="flex justify-end pt-1">
-              <span className="text-[10px] text-muted-foreground">
-                {format(parseLocalDateTime(surebet.data_operacao), "dd/MM HH:mm", { locale: ptBR })}
-              </span>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
