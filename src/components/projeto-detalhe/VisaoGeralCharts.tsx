@@ -17,6 +17,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarioLucros } from "./CalendarioLucros";
+import { getFirstLastName } from "@/lib/utils";
 
 // =====================================================
 // TIPOS
@@ -361,7 +362,8 @@ export function VisaoGeralCharts({
       
       if (separatorIdx > 0) {
         casa = nomeCompleto.substring(0, separatorIdx).trim();
-        vinculo = nomeCompleto.substring(separatorIdx + 3).trim();
+        const vinculoRaw = nomeCompleto.substring(separatorIdx + 3).trim();
+        vinculo = getFirstLastName(vinculoRaw);
       } else {
         casa = nomeCompleto;
         vinculo = "Principal";

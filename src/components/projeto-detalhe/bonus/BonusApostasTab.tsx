@@ -39,6 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getFirstLastName } from "@/lib/utils";
 
 interface BonusApostasTabProps {
   projetoId: string;
@@ -414,12 +415,6 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     return new Date(year, month - 1, day, hours || 0, minutes || 0);
   };
 
-  const getFirstLastName = (fullName: string): string => {
-    if (!fullName) return "";
-    const parts = fullName.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0];
-    return `${parts[0]} ${parts[parts.length - 1]}`;
-  };
 
   const handleOpenDialog = (aposta: Aposta | null) => {
     setSelectedAposta(aposta);

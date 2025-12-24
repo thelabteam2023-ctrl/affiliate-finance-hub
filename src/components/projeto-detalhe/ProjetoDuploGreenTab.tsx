@@ -45,7 +45,7 @@ import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 
-import { cn } from "@/lib/utils";
+import { cn, getFirstLastName } from "@/lib/utils";
 
 interface ProjetoDuploGreenTabProps {
   projetoId: string;
@@ -398,9 +398,10 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
     const extractCasaVinculo = (nomeCompleto: string) => {
       const separatorIdx = nomeCompleto.indexOf(" - ");
       if (separatorIdx > 0) {
+        const vinculoRaw = nomeCompleto.substring(separatorIdx + 3).trim();
         return {
           casa: nomeCompleto.substring(0, separatorIdx).trim(),
-          vinculo: nomeCompleto.substring(separatorIdx + 3).trim()
+          vinculo: getFirstLastName(vinculoRaw)
         };
       }
       return { casa: nomeCompleto, vinculo: "Principal" };
