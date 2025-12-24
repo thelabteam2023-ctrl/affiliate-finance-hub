@@ -184,8 +184,8 @@ export function GlobalActionsBar({
                 Aposta Múltipla
               </DropdownMenuItem>
             )}
-            {/* Ocultar Surebet nas abas ValueBet e Surebet (pois já usa Aposta Simples com estratégia fixa) */}
-            {activeTab !== "valuebet" && activeTab !== "surebet" && (
+            {/* Ocultar Surebet na aba ValueBet */}
+            {activeTab !== "valuebet" && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setSurebetDialogOpen(true)}>
