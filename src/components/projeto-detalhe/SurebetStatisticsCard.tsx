@@ -315,16 +315,21 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
     const casasDistintas = casaStats.size;
     
     // Estatísticas por VÍNCULO (bookmaker_id) - não por nome de casa
+    // IMPORTANTE: 1 surebet = 1 operação por vínculo, independente do número de pernas
     const vinculoStats = new Map<string, {
       id: string;
       nome: string;
-      operacoes: number;
+      operacoes: number; // contagem de surebets em que o vínculo participou
       lucro: number;
       stake: number;
     }>();
 
     surebets.forEach(s => {
       const numPernas = s.pernas?.length || 1;
+      
+      // Identificar vínculos únicos que participaram desta surebet
+      const vinculosNestaSurebet = new Set<string>();
+      
       s.pernas?.forEach(perna => {
         const bookmarkerId = perna.bookmaker_id;
         if (!bookmarkerId) return;
@@ -338,10 +343,21 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
             stake: 0 
           });
         }
+        
         const entry = vinculoStats.get(bookmarkerId)!;
-        entry.operacoes += 1;
         entry.stake += perna.stake;
         entry.lucro += (s.lucro_real || 0) / numPernas;
+        
+        // Marcar que este vínculo participou desta surebet
+        vinculosNestaSurebet.add(bookmarkerId);
+      });
+      
+      // Incrementar +1 operação para cada vínculo único que participou desta surebet
+      vinculosNestaSurebet.forEach(bookmarkerId => {
+        const entry = vinculoStats.get(bookmarkerId);
+        if (entry) {
+          entry.operacoes += 1;
+        }
       });
     });
 
@@ -357,6 +373,7 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
     const vinculoMaiorLucro = vinculosOrdenados.length > 0 ? vinculosOrdenados[0] : null;
     const vinculoMenorLucro = vinculosOrdenados.length > 0 ? vinculosOrdenados[vinculosOrdenados.length - 1] : null;
     
+    // Média de surebets por vínculo
     const totalOperacoesVinculos = Array.from(vinculoStats.values()).reduce((acc, v) => acc + v.operacoes, 0);
     const mediaOperacoesPorVinculo = totalVinculosAtivos > 0 
       ? totalOperacoesVinculos / totalVinculosAtivos 
@@ -600,53 +617,68 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
               value={formatCurrency(stats.lucroPorVinculoAtivo)}
               valueClass={stats.lucroPorVinculoAtivo >= 0 ? "text-emerald-400" : "text-red-400"}
               tooltipContent={(
-                <div className="space-y-2 py-1 min-w-[220px]">
+                <div className="space-y-2.5 py-1.5 min-w-[300px]">
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/30 pb-1.5">
                     Detalhes por Vínculo
                   </div>
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex justify-between">
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
                       <span className="text-muted-foreground">Vínculos utilizados:</span>
                       <span className="font-semibold">{stats.totalVinculosAtivos}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Total de surebets:</span>
+                      <span className="font-semibold">{surebets.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
                       <span className="text-muted-foreground">Lucro total:</span>
                       <span className={`font-semibold ${stats.lucroTotalGeral >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                         {formatCurrency(stats.lucroTotalGeral)}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Ops/vínculo (média):</span>
+                    <div className="flex justify-between items-center">
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground">Operações/vínculo:</span>
+                        <span className="text-[10px] text-muted-foreground/70">Média de surebets por vínculo</span>
+                      </div>
                       <span className="font-semibold">{stats.mediaOperacoesPorVinculo.toFixed(1)}</span>
                     </div>
                   </div>
                   {stats.vinculoMaiorLucro && (
-                    <div className="pt-1.5 border-t border-border/30">
-                      <div className="flex justify-between text-xs">
+                    <div className="pt-2 border-t border-border/30">
+                      <div className="flex justify-between items-center text-xs">
                         <span className="text-muted-foreground">Melhor vínculo:</span>
-                        <span className="font-semibold text-emerald-400 truncate max-w-[120px]" title={stats.vinculoMaiorLucro.nome}>
+                        <span className="font-semibold text-emerald-400 truncate max-w-[180px]" title={stats.vinculoMaiorLucro.nome}>
                           {stats.vinculoMaiorLucro.nome}
                         </span>
                       </div>
-                      <div className="flex justify-between text-xs mt-0.5">
+                      <div className="flex justify-between items-center text-xs mt-1">
                         <span className="text-muted-foreground">Lucro:</span>
                         <span className="font-semibold text-emerald-400">{formatCurrency(stats.vinculoMaiorLucro.lucro)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs mt-0.5">
+                        <span className="text-muted-foreground">Surebets:</span>
+                        <span className="font-semibold">{stats.vinculoMaiorLucro.operacoes}</span>
                       </div>
                     </div>
                   )}
                   {stats.vinculoMenorLucro && stats.vinculoMenorLucro.id !== stats.vinculoMaiorLucro?.id && (
-                    <div className="pt-1.5 border-t border-border/30">
-                      <div className="flex justify-between text-xs">
+                    <div className="pt-2 border-t border-border/30">
+                      <div className="flex justify-between items-center text-xs">
                         <span className="text-muted-foreground">Pior vínculo:</span>
-                        <span className="font-semibold text-red-400 truncate max-w-[120px]" title={stats.vinculoMenorLucro.nome}>
+                        <span className="font-semibold text-red-400 truncate max-w-[180px]" title={stats.vinculoMenorLucro.nome}>
                           {stats.vinculoMenorLucro.nome}
                         </span>
                       </div>
-                      <div className="flex justify-between text-xs mt-0.5">
+                      <div className="flex justify-between items-center text-xs mt-1">
                         <span className="text-muted-foreground">Lucro:</span>
                         <span className={`font-semibold ${stats.vinculoMenorLucro.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                           {formatCurrency(stats.vinculoMenorLucro.lucro)}
                         </span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs mt-0.5">
+                        <span className="text-muted-foreground">Surebets:</span>
+                        <span className="font-semibold">{stats.vinculoMenorLucro.operacoes}</span>
                       </div>
                     </div>
                   )}
