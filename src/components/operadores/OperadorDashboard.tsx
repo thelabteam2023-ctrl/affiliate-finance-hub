@@ -128,21 +128,21 @@ export function OperadorDashboard() {
     try {
       setLoading(true);
       
-      // Fetch operadores comparativos
+      // Fetch operadores comparativos - usar type assertion por view recriada
       const { data: opData, error: opError } = await supabase
-        .from("v_operador_comparativo")
+        .from("v_operador_comparativo" as any)
         .select("*");
 
       if (opError) throw opError;
-      setOperadores(opData || []);
+      setOperadores((opData || []) as any);
 
       // Fetch projetos com detalhes de lucro
       const { data: projData, error: projError } = await supabase
-        .from("v_projeto_lucro_operador")
+        .from("v_projeto_lucro_operador" as any)
         .select("*");
 
       if (projError) throw projError;
-      setProjetosOperadores(projData || []);
+      setProjetosOperadores((projData || []) as any);
 
       // Fetch projetos para filtro
       const { data: projListData, error: projListError } = await supabase

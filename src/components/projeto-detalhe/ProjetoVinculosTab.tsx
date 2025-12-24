@@ -187,36 +187,22 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       let saldoEmAposta: Record<string, number> = {};
       
       if (bookmakerIds.length > 0) {
-        // Fetch apostas simples
-        const { data: apostasSimples } = await supabase
-          .from("apostas")
+        // Usar apostas_unificada
+        const { data: apostasData } = await supabase
+          .from("apostas_unificada")
           .select("bookmaker_id, stake, status")
           .eq("projeto_id", projetoId)
+          .not("bookmaker_id", "is", null)
           .in("bookmaker_id", bookmakerIds);
 
-        // Fetch apostas multiplas
-        const { data: apostasMultiplas } = await supabase
-          .from("apostas_multiplas")
-          .select("bookmaker_id, stake, status")
-          .eq("projeto_id", projetoId)
-          .in("bookmaker_id", bookmakerIds);
-
-        // Process apostas simples
-        if (apostasSimples) {
-          apostasSimples.forEach((a: any) => {
-            apostasCount[a.bookmaker_id] = (apostasCount[a.bookmaker_id] || 0) + 1;
-            if (a.status === "PENDENTE") {
-              saldoEmAposta[a.bookmaker_id] = (saldoEmAposta[a.bookmaker_id] || 0) + (a.stake || 0);
-            }
-          });
-        }
-        
-        // Process apostas multiplas (1 multipla = 1 aposta)
-        if (apostasMultiplas) {
-          apostasMultiplas.forEach((a: any) => {
-            apostasCount[a.bookmaker_id] = (apostasCount[a.bookmaker_id] || 0) + 1;
-            if (a.status === "PENDENTE") {
-              saldoEmAposta[a.bookmaker_id] = (saldoEmAposta[a.bookmaker_id] || 0) + (a.stake || 0);
+        // Process apostas
+        if (apostasData) {
+          apostasData.forEach((a: any) => {
+            if (a.bookmaker_id) {
+              apostasCount[a.bookmaker_id] = (apostasCount[a.bookmaker_id] || 0) + 1;
+              if (a.status === "PENDENTE") {
+                saldoEmAposta[a.bookmaker_id] = (saldoEmAposta[a.bookmaker_id] || 0) + (a.stake || 0);
+              }
             }
           });
         }

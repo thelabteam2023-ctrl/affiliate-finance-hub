@@ -186,32 +186,20 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   // Buscar saldos em aposta (apostas pendentes) para cada bookmaker
   const fetchSaldosEmAposta = async () => {
     try {
-      // Buscar apostas simples pendentes
-      const { data: apostasSimples } = await supabase
-        .from("apostas")
+      // Usar apostas_unificada para buscar apostas pendentes
+      const { data: apostasData } = await supabase
+        .from("apostas_unificada")
         .select("bookmaker_id, stake")
         .eq("projeto_id", projetoId)
-        .eq("status", "PENDENTE");
-
-      // Buscar apostas múltiplas pendentes
-      const { data: apostasMultiplas } = await supabase
-        .from("apostas_multiplas")
-        .select("bookmaker_id, stake")
-        .eq("projeto_id", projetoId)
-        .eq("status", "PENDENTE");
+        .eq("status", "PENDENTE")
+        .not("bookmaker_id", "is", null);
 
       // Calcular saldo em aposta por bookmaker
       const saldos: Record<string, number> = {};
       
-      apostasSimples?.forEach((aposta) => {
+      apostasData?.forEach((aposta) => {
         if (aposta.bookmaker_id) {
-          saldos[aposta.bookmaker_id] = (saldos[aposta.bookmaker_id] || 0) + Number(aposta.stake);
-        }
-      });
-      
-      apostasMultiplas?.forEach((aposta) => {
-        if (aposta.bookmaker_id) {
-          saldos[aposta.bookmaker_id] = (saldos[aposta.bookmaker_id] || 0) + Number(aposta.stake);
+          saldos[aposta.bookmaker_id] = (saldos[aposta.bookmaker_id] || 0) + Number(aposta.stake || 0);
         }
       });
       

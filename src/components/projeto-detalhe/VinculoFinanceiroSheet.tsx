@@ -77,17 +77,10 @@ export function VinculoFinanceiroSheet({
     try {
       setLoading(true);
 
-      // Buscar apostas
+      // Buscar apostas usando apostas_unificada
       const { data: apostas } = await supabase
-        .from("apostas")
+        .from("apostas_unificada")
         .select("lucro_prejuizo, stake, status, data_aposta")
-        .eq("projeto_id", projetoId)
-        .eq("bookmaker_id", bookmaker.id);
-
-      // Buscar apostas múltiplas
-      const { data: apostasMultiplas } = await supabase
-        .from("apostas_multiplas")
-        .select("lucro_prejuizo, stake, resultado, data_aposta")
         .eq("projeto_id", projetoId)
         .eq("bookmaker_id", bookmaker.id);
 
@@ -126,16 +119,11 @@ export function VinculoFinanceiroSheet({
         .filter(a => a.status === "LIQUIDADA")
         .reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0);
 
-      const lucroMultiplas = (apostasMultiplas || [])
-        .filter(a => ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"].includes(a.resultado || ""))
-        .reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0);
-
-      setLucroTotal(lucroApostas + lucroMultiplas);
+      setLucroTotal(lucroApostas);
       setVolumeTotal(
-        (apostas || []).reduce((acc, a) => acc + Number(a.stake || 0), 0) +
-        (apostasMultiplas || []).reduce((acc, a) => acc + Number(a.stake || 0), 0)
+        (apostas || []).reduce((acc, a) => acc + Number(a.stake || 0), 0)
       );
-      setQtdApostas((apostas || []).length + (apostasMultiplas || []).length);
+      setQtdApostas((apostas || []).length);
       setTotalDepositado((depositos || []).reduce((acc, d) => acc + Number(d.valor), 0));
       setTotalSacado((saques || []).reduce((acc, s) => acc + Number(s.valor), 0));
 
