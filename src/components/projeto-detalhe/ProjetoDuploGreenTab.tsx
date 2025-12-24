@@ -142,8 +142,9 @@ export function ProjetoDuploGreenTab({
 
   const fetchApostas = async () => {
     try {
+      // Usa tabela unificada filtrando por estratégia DUPLO_GREEN
       let query = supabase
-        .from("apostas")
+        .from("apostas_unificada")
         .select(`
           id, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, 
           status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id,
@@ -153,6 +154,7 @@ export function ProjetoDuploGreenTab({
         `)
         .eq("projeto_id", projetoId)
         .eq("estrategia", APOSTA_ESTRATEGIA.DUPLO_GREEN)
+        .is("cancelled_at", null)
         .order("data_aposta", { ascending: false });
       
       if (dateRange) {
@@ -163,7 +165,7 @@ export function ProjetoDuploGreenTab({
       const { data, error } = await query;
       if (error) throw error;
       
-      const bookmakerIds = [...new Set((data || []).map((a: { bookmaker_id: string }) => a.bookmaker_id))];
+      const bookmakerIds = [...new Set((data || []).map((a: { bookmaker_id: string | null }) => a.bookmaker_id).filter(Boolean))];
       
       let bookmakerMap = new Map<string, string>();
       if (bookmakerIds.length > 0) {
@@ -177,7 +179,7 @@ export function ProjetoDuploGreenTab({
       
       const mappedApostas: Aposta[] = (data || []).map((a: any) => ({
         ...a,
-        bookmaker_nome: bookmakerMap.get(a.bookmaker_id) || "Desconhecida"
+        bookmaker_nome: a.bookmaker_id ? (bookmakerMap.get(a.bookmaker_id) || "Desconhecida") : "Desconhecida"
       }));
       
       setApostas(mappedApostas);
