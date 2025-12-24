@@ -19,6 +19,16 @@ import { ptBR } from "date-fns/locale";
 // TIPOS
 // =====================================================
 
+interface Perna {
+  bookmaker_id?: string;
+  bookmaker_nome?: string;
+  stake?: number;
+  lucro_prejuizo?: number;
+  resultado?: string;
+  odd?: number;
+  selecao?: string;
+}
+
 interface ApostaBase {
   data_aposta: string;
   lucro_prejuizo: number | null;
@@ -26,6 +36,8 @@ interface ApostaBase {
   stake_total?: number | null;
   bookmaker_nome?: string;
   bookmaker_id?: string | null;
+  pernas?: Perna[] | null;
+  forma_registro?: string;
 }
 
 interface CasaUsada {
@@ -244,17 +256,31 @@ export function VisaoGeralCharts({ apostas, accentColor = "hsl(var(--primary))" 
     return Array.from(dataMap.entries()).map(([data, acc]) => ({ data, acumulado: acc }));
   }, [apostas]);
 
-  // Casas mais utilizadas (por volume)
+  // Casas mais utilizadas (por volume) — itera sobre pernas em apostas multi-pernas
   const casasData = useMemo(() => {
     const casaMap = new Map<string, { apostas: number; volume: number }>();
 
     apostas.forEach((a) => {
-      const casa = a.bookmaker_nome || "Desconhecida";
-      const existing = casaMap.get(casa) || { apostas: 0, volume: 0 };
-      casaMap.set(casa, {
-        apostas: existing.apostas + 1,
-        volume: existing.volume + getStake(a),
-      });
+      // Se tem pernas (aposta multi-pernas), itera sobre cada perna
+      if (a.pernas && Array.isArray(a.pernas) && a.pernas.length > 0) {
+        a.pernas.forEach((perna) => {
+          const casa = perna.bookmaker_nome || "Desconhecida";
+          const pernaStake = typeof perna.stake === "number" ? perna.stake : 0;
+          const existing = casaMap.get(casa) || { apostas: 0, volume: 0 };
+          casaMap.set(casa, {
+            apostas: existing.apostas + 1,
+            volume: existing.volume + pernaStake,
+          });
+        });
+      } else {
+        // Aposta simples — usa bookmaker_nome diretamente
+        const casa = a.bookmaker_nome || "Desconhecida";
+        const existing = casaMap.get(casa) || { apostas: 0, volume: 0 };
+        casaMap.set(casa, {
+          apostas: existing.apostas + 1,
+          volume: existing.volume + getStake(a),
+        });
+      }
     });
 
     return Array.from(casaMap.entries()).map(([casa, data]) => ({
