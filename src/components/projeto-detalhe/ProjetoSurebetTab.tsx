@@ -511,28 +511,24 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         </Card>
       </div>
 
-      {/* Gráficos e Estatísticas lado a lado */}
+      {/* Gráficos e Estatísticas em 2 colunas */}
       {surebets.length > 0 && (
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <VisaoGeralCharts 
-              apostas={surebets.map(s => ({
-                data_aposta: s.data_operacao,
-                lucro_prejuizo: s.lucro_real,
-                stake: s.stake_total,
-                bookmaker_nome: s.pernas?.[0]?.bookmaker_nome || "—",
-                pernas: s.pernas?.map(p => ({
-                  bookmaker_nome: p.bookmaker_nome,
-                  stake: p.stake
-                }))
-              }))} 
-              accentColor="hsl(var(--primary))"
-              logoMap={logoMap}
-            />
-          </div>
-          <div>
-            <SurebetStatisticsCard surebets={surebets} />
-          </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <VisaoGeralCharts 
+            apostas={surebets.map(s => ({
+              data_aposta: s.data_operacao,
+              lucro_prejuizo: s.lucro_real,
+              stake: s.stake_total,
+              bookmaker_nome: s.pernas?.[0]?.bookmaker_nome || "—",
+              pernas: s.pernas?.map(p => ({
+                bookmaker_nome: p.bookmaker_nome,
+                stake: p.stake
+              }))
+            }))} 
+            accentColor="hsl(var(--primary))"
+            logoMap={logoMap}
+          />
+          <SurebetStatisticsCard surebets={surebets} />
         </div>
       )}
 
