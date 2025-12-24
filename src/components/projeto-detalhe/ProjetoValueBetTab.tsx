@@ -230,28 +230,37 @@ export function ProjetoValueBetTab({
       
       const bookmakerIds = [...new Set((data || []).map((a: { bookmaker_id: string | null }) => a.bookmaker_id).filter(Boolean))];
       
-      let bookmakerMap = new Map<string, { nome: string; parceiroNome: string | null }>();
+      let bookmakerMap = new Map<string, { nome: string; loginUsername: string | null; parceiroNome: string | null }>();
       if (bookmakerIds.length > 0) {
         const { data: bookmakers } = await supabase
           .from("bookmakers")
-          .select("id, nome, parceiro:parceiros(nome)")
+          .select("id, nome, login_username, parceiro:parceiros(nome)")
           .in("id", bookmakerIds);
 
         bookmakerMap = new Map(
           (bookmakers || []).map((b: any) => [
             b.id,
-            { nome: b.nome, parceiroNome: b.parceiro?.nome ?? null },
+            { 
+              nome: b.nome, 
+              loginUsername: b.login_username ?? null,
+              parceiroNome: b.parceiro?.nome ?? null 
+            },
           ])
         );
       }
 
       const mappedApostas: Aposta[] = (data || []).map((a: any) => {
         const bkInfo = a.bookmaker_id ? bookmakerMap.get(a.bookmaker_id) : null;
+        // Construir nome completo: "CASA - USUARIO" se login_username existir
+        let bookmakerNomeCompleto = bkInfo?.nome ?? "Desconhecida";
+        if (bkInfo?.loginUsername) {
+          bookmakerNomeCompleto = `${bkInfo.nome} - ${bkInfo.loginUsername}`;
+        }
         return {
           ...a,
           odd: a.odd ?? 0,
           stake: a.stake ?? 0,
-          bookmaker_nome: bkInfo?.nome ?? "Desconhecida",
+          bookmaker_nome: bookmakerNomeCompleto,
           operador_nome: bkInfo?.parceiroNome ?? undefined,
         };
       });
