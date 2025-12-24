@@ -258,8 +258,15 @@ export function ProjetoValueBetTab({
       .sort((a, b) => b.lucro - a.lucro);
   }, [metricas]);
 
+  // Separar apostas em abertas e histórico
+  const apostasAbertas = useMemo(() => apostas.filter(a => !a.resultado || a.resultado === "PENDENTE"), [apostas]);
+  const apostasHistorico = useMemo(() => apostas.filter(a => a.resultado && a.resultado !== "PENDENTE"), [apostas]);
+  
+  // Aplicar filtros na lista atual (abertas ou histórico)
+  const apostasListaAtual = apostasSubTab === "abertas" ? apostasAbertas : apostasHistorico;
+  
   const apostasFiltradas = useMemo(() => {
-    return apostas.filter(a => {
+    return apostasListaAtual.filter(a => {
       const matchesSearch = 
         (a.evento || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (a.esporte || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -267,7 +274,7 @@ export function ProjetoValueBetTab({
       const matchesResultado = resultadoFilter === "all" || a.resultado === resultadoFilter;
       return matchesSearch && matchesResultado;
     });
-  }, [apostas, searchTerm, resultadoFilter]);
+  }, [apostasListaAtual, searchTerm, resultadoFilter]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -468,10 +475,42 @@ export function ProjetoValueBetTab({
   // Render Apostas
   const renderApostas = () => (
     <div className="space-y-4">
+      {/* Sub-abas Abertas / Histórico */}
+      <div className="flex items-center justify-between border-b pb-2">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setApostasSubTab("abertas")}
+            className={cn(
+              "flex items-center gap-1.5 text-sm font-medium pb-2 border-b-2 transition-colors -mb-[10px]",
+              apostasSubTab === "abertas"
+                ? "border-purple-500 text-purple-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Clock className="h-4 w-4" />
+            Abertas
+            <Badge variant="secondary" className="ml-1 text-xs">{apostasAbertas.length}</Badge>
+          </button>
+          <button
+            onClick={() => setApostasSubTab("historico")}
+            className={cn(
+              "flex items-center gap-1.5 text-sm font-medium pb-2 border-b-2 transition-colors -mb-[10px]",
+              apostasSubTab === "historico"
+                ? "border-purple-500 text-purple-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <History className="h-4 w-4" />
+            Histórico
+            <Badge variant="secondary" className="ml-1 text-xs">{apostasHistorico.length}</Badge>
+          </button>
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Target className="h-5 w-5 text-purple-400" />
-          Apostas ValueBet
+          {apostasSubTab === "abertas" ? "Apostas Abertas" : "Histórico de Apostas"}
           <Badge variant="secondary">{apostasFiltradas.length}</Badge>
         </h3>
         <div className="flex flex-wrap gap-2 items-center">
@@ -484,20 +523,21 @@ export function ProjetoValueBetTab({
               className="pl-9 w-[180px]"
             />
           </div>
-          <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
-            <SelectTrigger className="w-[130px]">
-              <SelectValue placeholder="Resultado" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
-              <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
-              <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">½ Green</SelectItem>
-              <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">½ Red</SelectItem>
-              <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
-              <SelectItem value="PENDENTE" className="hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground">Pendente</SelectItem>
-            </SelectContent>
-          </Select>
+          {apostasSubTab === "historico" && (
+            <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder="Resultado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
+                <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
+                <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">½ Green</SelectItem>
+                <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">½ Red</SelectItem>
+                <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <div className="flex border rounded-md">
             <Button
               variant={viewMode === "cards" ? "secondary" : "ghost"}
@@ -523,8 +563,7 @@ export function ProjetoValueBetTab({
         <Card>
           <CardContent className="text-center py-8 text-muted-foreground">
             <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Nenhuma aposta ValueBet encontrada</p>
-            <p className="text-sm mt-1">Crie apostas com estratégia ValueBet para visualizá-las aqui</p>
+            <p>{apostasSubTab === "abertas" ? "Nenhuma aposta aberta" : "Nenhuma aposta no histórico"}</p>
           </CardContent>
         </Card>
       ) : viewMode === "cards" ? (
