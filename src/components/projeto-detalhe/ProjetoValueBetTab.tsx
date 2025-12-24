@@ -240,9 +240,9 @@ export function ProjetoValueBetTab({
   const apostasFiltradas = useMemo(() => {
     return apostas.filter(a => {
       const matchesSearch = 
-        a.evento.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        a.esporte.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        a.selecao.toLowerCase().includes(searchTerm.toLowerCase());
+        (a.evento || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (a.esporte || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (a.selecao || '').toLowerCase().includes(searchTerm.toLowerCase());
       const matchesResultado = resultadoFilter === "all" || a.resultado === resultadoFilter;
       return matchesSearch && matchesResultado;
     });
