@@ -29,6 +29,7 @@ import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from
 import { ptBR } from "date-fns/locale";
 import { ApostaDialog } from "./ApostaDialog";
 import { SurebetDialog } from "./SurebetDialog";
+import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import {
   ResponsiveContainer,
@@ -581,6 +582,11 @@ export function ProjetoDuploGreenTab({
                         <Zap className="h-2.5 w-2.5" />
                         DG
                       </Badge>
+                      {aposta.pernas && aposta.pernas.length > 1 && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400">
+                          {getModeloOperacao(aposta.pernas as Perna[])}
+                        </Badge>
+                      )}
                       <ResultadoBadge resultado={aposta.resultado} />
                     </div>
                     {/* Evento e Esporte */}
@@ -588,16 +594,31 @@ export function ProjetoDuploGreenTab({
                       <p className="font-medium text-sm truncate">{aposta.evento}</p>
                       <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
                     </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">{aposta.selecao}</span>
-                      <span className="font-medium">@{(aposta.odd ?? 0).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center mt-2 pt-2 border-t">
+                    
+                    {/* Exibição de pernas para apostas multi-casa */}
+                    {aposta.pernas && aposta.pernas.length > 1 ? (
+                      <ApostaPernasResumo 
+                        pernas={aposta.pernas as Perna[]} 
+                        variant="card" 
+                        showStake={true}
+                        showResultado={true}
+                        className="mb-2"
+                      />
+                    ) : (
+                      <div className="flex justify-between items-center text-sm mb-2">
+                        <span className="text-muted-foreground">{aposta.selecao}</span>
+                        <span className="font-medium">@{(aposta.odd ?? 0).toFixed(2)}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between items-center pt-2 border-t">
                       <span className="text-xs text-muted-foreground">
                         {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
                       </span>
                       <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Stake: {formatCurrency(aposta.stake)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Stake: {formatCurrency(aposta.pernas && aposta.pernas.length > 1 ? (aposta.stake_total ?? aposta.stake) : aposta.stake)}
+                        </p>
                         {aposta.lucro_prejuizo !== null && (
                           <p className={`text-sm font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                             {formatCurrency(aposta.lucro_prejuizo)}
@@ -624,6 +645,11 @@ export function ProjetoDuploGreenTab({
                         <Zap className="h-2.5 w-2.5" />
                         DG
                       </Badge>
+                      {aposta.pernas && aposta.pernas.length > 1 && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400">
+                          {getModeloOperacao(aposta.pernas as Perna[])}
+                        </Badge>
+                      )}
                       <ResultadoBadge resultado={aposta.resultado} />
                     </div>
                     <div className="text-xs text-muted-foreground w-16">
@@ -631,11 +657,24 @@ export function ProjetoDuploGreenTab({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{aposta.evento}</p>
-                      <p className="text-xs text-muted-foreground">{aposta.selecao}</p>
+                      {/* Exibir pernas ou seleção simples */}
+                      {aposta.pernas && aposta.pernas.length > 1 ? (
+                        <ApostaPernasInline pernas={aposta.pernas as Perna[]} className="truncate" />
+                      ) : (
+                        <p className="text-xs text-muted-foreground">{aposta.selecao}</p>
+                      )}
                     </div>
                     <div className="text-right">
-                      <p className="text-sm">@{(aposta.odd ?? 0).toFixed(2)}</p>
-                      <p className="text-xs text-muted-foreground">{formatCurrency(aposta.stake)}</p>
+                      {aposta.pernas && aposta.pernas.length > 1 ? (
+                        <p className="text-xs text-muted-foreground">
+                          {formatCurrency(aposta.stake_total ?? aposta.stake)}
+                        </p>
+                      ) : (
+                        <>
+                          <p className="text-sm">@{(aposta.odd ?? 0).toFixed(2)}</p>
+                          <p className="text-xs text-muted-foreground">{formatCurrency(aposta.stake)}</p>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-3 ml-4">

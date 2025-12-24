@@ -485,11 +485,12 @@ export function ProjetoValueBetTab({
                   }}
                 >
                   <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{aposta.evento}</p>
-                        <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
-                      </div>
+                    {/* Badges na linha acima - padrão unificado */}
+                    <div className="flex items-center gap-1 mb-2">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 flex items-center gap-0.5">
+                        <TrendingUp className="h-2.5 w-2.5" />
+                        VB
+                      </Badge>
                       <div onClick={(e) => e.stopPropagation()}>
                         <ResultadoPill
                           apostaId={aposta.id}
@@ -506,6 +507,11 @@ export function ProjetoValueBetTab({
                           }}
                         />
                       </div>
+                    </div>
+                    {/* Evento e Esporte */}
+                    <div className="mb-2">
+                      <p className="font-medium text-sm truncate">{aposta.evento}</p>
+                      <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">{aposta.selecao}</span>
@@ -540,6 +546,13 @@ export function ProjetoValueBetTab({
                   }}
                 >
                   <div className="flex items-center gap-4 flex-1 min-w-0">
+                    {/* Badges à esquerda - padrão unificado */}
+                    <div className="flex items-center gap-1">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 flex items-center gap-0.5">
+                        <TrendingUp className="h-2.5 w-2.5" />
+                        VB
+                      </Badge>
+                    </div>
                     <div className="text-xs text-muted-foreground w-16">
                       {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
                     </div>
