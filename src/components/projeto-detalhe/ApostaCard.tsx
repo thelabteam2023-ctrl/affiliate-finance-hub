@@ -333,9 +333,9 @@ export function ApostaCard({
             <span className="text-xs text-muted-foreground">
               {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
             </span>
-            {aposta.bookmaker_nome && (
+            {(aposta.bookmaker_nome || aposta.operador_nome) && (
               <span className="text-[10px] text-muted-foreground/70 truncate max-w-[120px]">
-                {aposta.bookmaker_nome}
+                {[aposta.bookmaker_nome, aposta.operador_nome].filter(Boolean).join(' • ')}
               </span>
             )}
           </div>
