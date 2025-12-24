@@ -71,7 +71,7 @@ const StatCell = ({
 };
 
 const SectionHeader = ({ title }: { title: string }) => (
-  <div className="col-span-2 mt-2 first:mt-0">
+  <div className="col-span-3 mt-2 first:mt-0">
     <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
       {title}
     </span>
@@ -325,7 +325,7 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0 pb-3">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {/* ROI */}
           <SectionHeader title="ROI" />
           <StatCell 
