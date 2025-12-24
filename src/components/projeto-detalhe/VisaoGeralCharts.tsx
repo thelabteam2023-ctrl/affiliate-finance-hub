@@ -72,6 +72,8 @@ interface VisaoGeralChartsProps {
   title?: string;
   logoMap?: Map<string, string | null>;
   showCalendar?: boolean;
+  showEvolucaoChart?: boolean;
+  showCasasCard?: boolean;
 }
 
 // =====================================================
@@ -314,7 +316,14 @@ function CasasMaisUtilizadasCard({ casas, accentColor, logoMap }: CasasMaisUtili
 // COMPONENTE PRINCIPAL
 // =====================================================
 
-export function VisaoGeralCharts({ apostas, accentColor = "hsl(var(--primary))", logoMap, showCalendar = true }: VisaoGeralChartsProps) {
+export function VisaoGeralCharts({ 
+  apostas, 
+  accentColor = "hsl(var(--primary))", 
+  logoMap, 
+  showCalendar = true,
+  showEvolucaoChart = true,
+  showCasasCard = true 
+}: VisaoGeralChartsProps) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const evolucaoData = useMemo(() => {
     const sorted = [...apostas].sort(
@@ -418,6 +427,74 @@ export function VisaoGeralCharts({ apostas, accentColor = "hsl(var(--primary))",
   const lastAccumulated = evolucaoData[evolucaoData.length - 1]?.acumulado ?? 0;
   const isPositive = lastAccumulated >= 0;
 
+  // Se só vai mostrar um dos dois, não precisa do grid de 3 colunas
+  const showBoth = showEvolucaoChart && showCasasCard;
+
+  if (!showEvolucaoChart && !showCasasCard) {
+    return null;
+  }
+
+  // Só casas
+  if (!showEvolucaoChart && showCasasCard) {
+    return <CasasMaisUtilizadasCard casas={casasData} accentColor={accentColor} logoMap={logoMap} />;
+  }
+
+  // Só evolução
+  if (showEvolucaoChart && !showCasasCard) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {isPositive ? (
+                <TrendingUp className="h-4 w-4 text-emerald-500" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-red-500" />
+              )}
+              <CardTitle className="text-sm font-medium">Evolução do Lucro</CardTitle>
+            </div>
+            <div className="flex items-center gap-2">
+              {showCalendar && (
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <CalendarioLucros 
+                      apostas={apostas.map(a => ({
+                        data_aposta: a.data_aposta,
+                        resultado: null,
+                        lucro_prejuizo: a.lucro_prejuizo
+                      }))} 
+                      titulo="Calendário de Lucros"
+                      accentColor="purple"
+                      compact
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
+              <Badge
+                variant="outline"
+                className={isPositive ? "border-emerald-500/30 text-emerald-500" : "border-red-500/30 text-red-500"}
+              >
+                {formatCurrency(lastAccumulated)}
+              </Badge>
+            </div>
+          </div>
+          <CardDescription className="text-xs">Lucro/Prejuízo acumulado ao longo do tempo</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="h-[280px]">
+            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Ambos
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       {/* Gráfico de Área — Evolução do Lucro (PROTAGONISTA - 2 colunas) */}
