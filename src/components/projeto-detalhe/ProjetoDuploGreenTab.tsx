@@ -581,11 +581,10 @@ export function ProjetoDuploGreenTab({
                         <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
                       </div>
                       <div className="flex items-center gap-1">
-                        {aposta.forma_registro === "ARBITRAGEM" && (
-                          <Badge variant="outline" className="text-[10px] px-1 py-0 border-cyan-500/30 text-cyan-400">
-                            ARB
-                          </Badge>
-                        )}
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-lime-500/30 text-lime-400 flex items-center gap-0.5">
+                          <Zap className="h-2.5 w-2.5" />
+                          DG
+                        </Badge>
                         <ResultadoBadge resultado={aposta.resultado} />
                       </div>
                     </div>
@@ -625,11 +624,10 @@ export function ProjetoDuploGreenTab({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">
                         <p className="text-sm font-medium truncate">{aposta.evento}</p>
-                        {aposta.forma_registro === "ARBITRAGEM" && (
-                          <Badge variant="outline" className="text-[10px] px-1 py-0 border-cyan-500/30 text-cyan-400">
-                            ARB
-                          </Badge>
-                        )}
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-lime-500/30 text-lime-400 flex items-center gap-0.5">
+                          <Zap className="h-2.5 w-2.5" />
+                          DG
+                        </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">{aposta.selecao}</p>
                     </div>
