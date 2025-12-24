@@ -584,27 +584,14 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           {operacoesSubTab === "abertas" ? "Operações Abertas" : "Histórico de Operações"}
           <Badge variant="secondary">{surebetsListaAtual.length}</Badge>
         </h3>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => setViewMode(viewMode === "cards" ? "list" : "cards")}
-          >
-            {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
-          </Button>
-          <Button 
-            size="sm" 
-            className="h-9"
-            onClick={() => {
-              setSelectedSurebet(null);
-              setDialogOpen(true);
-            }}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            Nova Arbitragem
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-9 w-9"
+          onClick={() => setViewMode(viewMode === "cards" ? "list" : "cards")}
+        >
+          {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+        </Button>
       </div>
 
       {surebetsListaAtual.length === 0 ? (
@@ -616,7 +603,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             </h3>
             <p className="text-sm text-muted-foreground mt-1">
               {operacoesSubTab === "abertas" 
-                ? "Clique em \"Nova Arbitragem\" para criar uma operação."
+                ? "Use o botão \"Nova Aposta\" para registrar uma operação."
                 : "Operações finalizadas aparecerão aqui."}
             </p>
           </CardContent>

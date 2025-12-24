@@ -177,15 +177,15 @@ export function GlobalActionsBar({
               <Target className="mr-2 h-4 w-4" />
               Aposta Simples
             </DropdownMenuItem>
-            {/* Ocultar Aposta Múltipla na aba Duplo Green */}
-            {activeTab !== "duplogreen" && (
+            {/* Ocultar Aposta Múltipla na aba Duplo Green e Surebet */}
+            {activeTab !== "duplogreen" && activeTab !== "surebet" && (
               <DropdownMenuItem onClick={() => setMultiplaDialogOpen(true)}>
                 <Layers className="mr-2 h-4 w-4" />
                 Aposta Múltipla
               </DropdownMenuItem>
             )}
-            {/* Ocultar Surebet na aba ValueBet */}
-            {activeTab !== "valuebet" && (
+            {/* Ocultar Surebet nas abas ValueBet e Surebet (pois já usa Aposta Simples com estratégia fixa) */}
+            {activeTab !== "valuebet" && activeTab !== "surebet" && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setSurebetDialogOpen(true)}>
