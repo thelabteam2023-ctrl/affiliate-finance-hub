@@ -44,7 +44,7 @@ import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { useImportBetPrint } from "@/hooks/useImportBetPrint";
 import { BetPrintDetectedFields } from "./BetPrintDetectedFields";
 import { RegistroApostaFields, RegistroApostaValues, validateRegistroAposta, getSuggestionsForTab } from "./RegistroApostaFields";
-import { FORMA_REGISTRO, APOSTA_ESTRATEGIA, CONTEXTO_OPERACIONAL, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional } from "@/lib/apostaConstants";
+import { FORMA_REGISTRO, APOSTA_ESTRATEGIA, CONTEXTO_OPERACIONAL, isAbaEstrategiaFixa, getEstrategiaFromTab, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional } from "@/lib/apostaConstants";
 
 interface Aposta {
   id: string;
@@ -2339,6 +2339,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 values={registroValues}
                 onChange={setRegistroValues}
                 suggestions={aposta ? undefined : getSuggestionsForTab(activeTab)}
+                lockedEstrategia={!aposta && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : undefined}
                 compact
               />
             </div>

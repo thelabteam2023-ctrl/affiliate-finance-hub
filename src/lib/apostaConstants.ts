@@ -156,6 +156,25 @@ export const ESTRATEGIAS_LIST = [
 ] as const;
 
 /**
+ * Abas especializadas que definem estratégia fixa (não editável)
+ * A aba 'apostas' é a única com estratégia livre (editável)
+ */
+export const ABAS_ESTRATEGIA_FIXA = [
+  'freebets',
+  'bonus', 
+  'surebet',
+  'valuebet',
+  'duplogreen',
+] as const;
+
+/**
+ * Verifica se a aba atual requer estratégia fixa (não editável)
+ */
+export const isAbaEstrategiaFixa = (activeTab: string): boolean => {
+  return ABAS_ESTRATEGIA_FIXA.includes(activeTab as any);
+};
+
+/**
  * Mapeia a aba ativa para a estratégia default
  */
 export const getEstrategiaFromTab = (activeTab: string): ApostaEstrategia => {
