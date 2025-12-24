@@ -16,11 +16,9 @@ export type Estrategia =
   | "PUNTER"
   | "SUREBET"
   | "VALUEBET"
-  | "DUTCHING"
-  | "MATCHED_BETTING"
-  | "DUPLO_GREEN"
-  | "FREEBET"
-  | "PROMOCAO";
+  | "EXTRACAO_FREEBET"
+  | "EXTRACAO_BONUS"
+  | "DUPLO_GREEN";
 
 // Contextos operacionais
 export type ContextoOperacional = "NORMAL" | "FREEBET" | "BONUS";

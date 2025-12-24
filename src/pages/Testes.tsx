@@ -147,21 +147,11 @@ export default function Testes() {
           await supabase.from("pagamentos_propostos").delete().in("operador_projeto_id", opProjetoIds);
         }
 
-        // Buscar matched_betting_rounds para apagar pernas
-        const { data: mbRounds } = await supabase
-          .from("matched_betting_rounds")
-          .select("id")
-          .in("projeto_id", projetoIds);
-
-        if (mbRounds && mbRounds.length > 0) {
-          const roundIds = mbRounds.map(r => r.id);
-          await supabase.from("matched_betting_pernas").delete().in("round_id", roundIds);
-        }
-
-        // Apagar matched_betting_rounds
-        await supabase.from("matched_betting_rounds").delete().in("projeto_id", projetoIds);
-
         // Apagar ciclos do projeto
+        await supabase.from("projeto_ciclos").delete().in("projeto_id", projetoIds);
+
+        // Apagar perdas do projeto
+        await supabase.from("projeto_perdas").delete().in("projeto_id", projetoIds);
         await supabase.from("projeto_ciclos").delete().in("projeto_id", projetoIds);
 
         // Apagar perdas do projeto

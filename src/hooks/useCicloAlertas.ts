@@ -61,7 +61,7 @@ export function useCicloAlertas() {
 
       for (const ciclo of ciclos) {
         // Buscar todas as apostas do período
-        const [apostasResult, apostasMultiplasResult, surebetsResult, matchedBettingResult] = await Promise.all([
+        const [apostasResult, apostasMultiplasResult, surebetsResult] = await Promise.all([
           supabase
             .from("apostas")
             .select("lucro_prejuizo, stake, status")
@@ -79,19 +79,12 @@ export function useCicloAlertas() {
             .select("lucro_real, stake_total, status")
             .eq("projeto_id", ciclo.projeto_id)
             .gte("data_evento", ciclo.data_inicio)
-            .lte("data_evento", ciclo.data_fim_prevista),
-          supabase
-            .from("matched_betting_rounds")
-            .select("lucro_real, status")
-            .eq("projeto_id", ciclo.projeto_id)
-            .gte("data_evento", ciclo.data_inicio)
             .lte("data_evento", ciclo.data_fim_prevista)
         ]);
 
         const apostas = apostasResult.data || [];
         const apostasMultiplas = apostasMultiplasResult.data || [];
         const surebets = surebetsResult.data || [];
-        const matchedBetting = matchedBettingResult.data || [];
 
         // Calcular volume total (todas as apostas, independente de status)
         const volumeTotal = 
@@ -103,8 +96,7 @@ export function useCicloAlertas() {
         const lucroTotal = 
           apostas.filter(a => a.status === "LIQUIDADA").reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
           apostasMultiplas.filter(a => ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"].includes(a.resultado || "")).reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
-          surebets.filter(a => a.status === "LIQUIDADA").reduce((acc, a) => acc + (a.lucro_real || 0), 0) +
-          matchedBetting.filter(a => a.status === "FINALIZADO").reduce((acc, a) => acc + (a.lucro_real || 0), 0);
+          surebets.filter(a => a.status === "LIQUIDADA").reduce((acc, a) => acc + (a.lucro_real || 0), 0);
 
         // Definir valor acumulado baseado na métrica (sem TURNOVER)
         let valorAcumuladoReal = 0;

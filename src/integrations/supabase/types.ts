@@ -364,13 +364,6 @@ export type Database = {
             referencedColumns: ["projeto_id"]
           },
           {
-            foreignKeyName: "apostas_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
             foreignKeyName: "apostas_surebet_id_fkey"
             columns: ["surebet_id"]
             isOneToOne: false
@@ -525,13 +518,6 @@ export type Database = {
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "apostas_multiplas_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
           },
           {
@@ -785,13 +771,6 @@ export type Database = {
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "apostas_unificada_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
           },
           {
@@ -1117,13 +1096,6 @@ export type Database = {
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "bookmakers_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
           },
           {
@@ -2346,13 +2318,6 @@ export type Database = {
             referencedColumns: ["projeto_id"]
           },
           {
-            foreignKeyName: "freebets_recebidas_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
             foreignKeyName: "freebets_recebidas_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -2707,275 +2672,6 @@ export type Database = {
           success?: boolean
         }
         Relationships: []
-      }
-      matched_betting_pernas: {
-        Row: {
-          bookmaker_id: string
-          comissao_exchange: number | null
-          created_at: string
-          id: string
-          is_free_bet: boolean
-          liability: number | null
-          lucro_prejuizo: number | null
-          odd: number
-          resultado: string | null
-          retorno: number | null
-          round_id: string
-          selecao: string
-          stake: number
-          status: string
-          tipo_aposta: string
-        }
-        Insert: {
-          bookmaker_id: string
-          comissao_exchange?: number | null
-          created_at?: string
-          id?: string
-          is_free_bet?: boolean
-          liability?: number | null
-          lucro_prejuizo?: number | null
-          odd: number
-          resultado?: string | null
-          retorno?: number | null
-          round_id: string
-          selecao: string
-          stake: number
-          status?: string
-          tipo_aposta: string
-        }
-        Update: {
-          bookmaker_id?: string
-          comissao_exchange?: number | null
-          created_at?: string
-          id?: string
-          is_free_bet?: boolean
-          liability?: number | null
-          lucro_prejuizo?: number | null
-          odd?: number
-          resultado?: string | null
-          retorno?: number | null
-          round_id?: string
-          selecao?: string
-          stake?: number
-          status?: string
-          tipo_aposta?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "matched_betting_pernas_bookmaker_id_fkey"
-            columns: ["bookmaker_id"]
-            isOneToOne: false
-            referencedRelation: "bookmakers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "matched_betting_pernas_bookmaker_id_fkey"
-            columns: ["bookmaker_id"]
-            isOneToOne: false
-            referencedRelation: "v_bookmaker_disponibilidade"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "matched_betting_pernas_bookmaker_id_fkey"
-            columns: ["bookmaker_id"]
-            isOneToOne: false
-            referencedRelation: "v_bookmaker_saldo_disponivel"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "matched_betting_pernas_bookmaker_id_fkey"
-            columns: ["bookmaker_id"]
-            isOneToOne: false
-            referencedRelation: "v_bookmakers_aguardando_saque"
-            referencedColumns: ["bookmaker_id"]
-          },
-          {
-            foreignKeyName: "matched_betting_pernas_bookmaker_id_fkey"
-            columns: ["bookmaker_id"]
-            isOneToOne: false
-            referencedRelation: "v_painel_operacional"
-            referencedColumns: ["entidade_id"]
-          },
-          {
-            foreignKeyName: "matched_betting_pernas_round_id_fkey"
-            columns: ["round_id"]
-            isOneToOne: false
-            referencedRelation: "matched_betting_rounds"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      matched_betting_promocoes: {
-        Row: {
-          bookmaker_catalogo_id: string | null
-          created_at: string
-          data_expiracao: string | null
-          id: string
-          nome: string
-          observacoes: string | null
-          odd_minima: number | null
-          rollover: number | null
-          stake_returned: boolean
-          status: string
-          tipo: string
-          updated_at: string
-          user_id: string
-          valor_bonus: number
-          valor_minimo_aposta: number | null
-          workspace_id: string | null
-        }
-        Insert: {
-          bookmaker_catalogo_id?: string | null
-          created_at?: string
-          data_expiracao?: string | null
-          id?: string
-          nome: string
-          observacoes?: string | null
-          odd_minima?: number | null
-          rollover?: number | null
-          stake_returned?: boolean
-          status?: string
-          tipo?: string
-          updated_at?: string
-          user_id: string
-          valor_bonus: number
-          valor_minimo_aposta?: number | null
-          workspace_id?: string | null
-        }
-        Update: {
-          bookmaker_catalogo_id?: string | null
-          created_at?: string
-          data_expiracao?: string | null
-          id?: string
-          nome?: string
-          observacoes?: string | null
-          odd_minima?: number | null
-          rollover?: number | null
-          stake_returned?: boolean
-          status?: string
-          tipo?: string
-          updated_at?: string
-          user_id?: string
-          valor_bonus?: number
-          valor_minimo_aposta?: number | null
-          workspace_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "matched_betting_promocoes_bookmaker_catalogo_id_fkey"
-            columns: ["bookmaker_catalogo_id"]
-            isOneToOne: false
-            referencedRelation: "bookmakers_catalogo"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "matched_betting_promocoes_bookmaker_catalogo_id_fkey"
-            columns: ["bookmaker_catalogo_id"]
-            isOneToOne: false
-            referencedRelation: "v_community_bookmaker_stats"
-            referencedColumns: ["bookmaker_catalogo_id"]
-          },
-          {
-            foreignKeyName: "matched_betting_promocoes_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      matched_betting_rounds: {
-        Row: {
-          created_at: string
-          data_evento: string
-          esporte: string
-          evento: string
-          id: string
-          lucro_esperado: number | null
-          lucro_real: number | null
-          mercado: string
-          observacoes: string | null
-          projeto_id: string
-          promocao_id: string | null
-          status: string
-          tipo_round: string
-          updated_at: string
-          user_id: string
-          workspace_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          data_evento: string
-          esporte: string
-          evento: string
-          id?: string
-          lucro_esperado?: number | null
-          lucro_real?: number | null
-          mercado: string
-          observacoes?: string | null
-          projeto_id: string
-          promocao_id?: string | null
-          status?: string
-          tipo_round?: string
-          updated_at?: string
-          user_id: string
-          workspace_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          data_evento?: string
-          esporte?: string
-          evento?: string
-          id?: string
-          lucro_esperado?: number | null
-          lucro_real?: number | null
-          mercado?: string
-          observacoes?: string | null
-          projeto_id?: string
-          promocao_id?: string | null
-          status?: string
-          tipo_round?: string
-          updated_at?: string
-          user_id?: string
-          workspace_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "matched_betting_rounds_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "projetos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "matched_betting_rounds_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "matched_betting_rounds_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "matched_betting_rounds_promocao_id_fkey"
-            columns: ["promocao_id"]
-            isOneToOne: false
-            referencedRelation: "matched_betting_promocoes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "matched_betting_rounds_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       moderation_logs: {
         Row: {
@@ -3346,13 +3042,6 @@ export type Database = {
             referencedColumns: ["projeto_id"]
           },
           {
-            foreignKeyName: "operador_projetos_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
             foreignKeyName: "operador_projetos_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -3585,13 +3274,6 @@ export type Database = {
             referencedColumns: ["projeto_id"]
           },
           {
-            foreignKeyName: "pagamentos_operador_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
             foreignKeyName: "pagamentos_operador_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -3771,13 +3453,6 @@ export type Database = {
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "pagamentos_propostos_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
           },
           {
@@ -4194,13 +3869,6 @@ export type Database = {
             referencedColumns: ["projeto_id"]
           },
           {
-            foreignKeyName: "participacao_ciclos_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
             foreignKeyName: "participacao_ciclos_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -4585,13 +4253,6 @@ export type Database = {
             referencedColumns: ["projeto_id"]
           },
           {
-            foreignKeyName: "project_bookmaker_link_bonuses_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
             foreignKeyName: "project_bookmaker_link_bonuses_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -4635,13 +4296,6 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "project_favorites_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
           },
           {
@@ -4775,13 +4429,6 @@ export type Database = {
             referencedColumns: ["projeto_id"]
           },
           {
-            foreignKeyName: "projeto_bookmaker_historico_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
             foreignKeyName: "projeto_bookmaker_historico_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -4912,13 +4559,6 @@ export type Database = {
             referencedColumns: ["projeto_id"]
           },
           {
-            foreignKeyName: "projeto_ciclos_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
             foreignKeyName: "projeto_ciclos_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -5001,13 +4641,6 @@ export type Database = {
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "projeto_conciliacoes_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
           },
           {
@@ -5116,13 +4749,6 @@ export type Database = {
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "projeto_perdas_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
           },
           {
@@ -5662,13 +5288,6 @@ export type Database = {
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "surebets_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
           },
           {
@@ -6398,13 +6017,6 @@ export type Database = {
             referencedColumns: ["projeto_id"]
           },
           {
-            foreignKeyName: "apostas_unificada_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
             foreignKeyName: "apostas_unificada_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -6555,13 +6167,6 @@ export type Database = {
             referencedColumns: ["projeto_id"]
           },
           {
-            foreignKeyName: "apostas_unificada_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
             foreignKeyName: "apostas_unificada_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -6625,13 +6230,6 @@ export type Database = {
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "bookmakers_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
           },
           {
@@ -6708,13 +6306,6 @@ export type Database = {
             referencedColumns: ["projeto_id"]
           },
           {
-            foreignKeyName: "bookmakers_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
             foreignKeyName: "bookmakers_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -6785,13 +6376,6 @@ export type Database = {
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "bookmakers_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
           },
           {
@@ -6893,13 +6477,6 @@ export type Database = {
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "projeto_ciclos_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
           },
         ]
@@ -7102,13 +6679,6 @@ export type Database = {
             referencedRelation: "v_projeto_apostas_resumo"
             referencedColumns: ["projeto_id"]
           },
-          {
-            foreignKeyName: "operador_projetos_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
         ]
       }
       v_indicacoes_workspace: {
@@ -7211,42 +6781,6 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
-      }
-      v_matched_betting_resumo: {
-        Row: {
-          free_bets: number | null
-          lucro_medio: number | null
-          lucro_total: number | null
-          projeto_id: string | null
-          qualifying_bets: number | null
-          rounds_concluidos: number | null
-          taxa_sucesso: number | null
-          total_rounds: number | null
-          user_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "matched_betting_rounds_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "projetos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "matched_betting_rounds_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "matched_betting_rounds_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-        ]
       }
       v_movimentacoes_indicacao_workspace: {
         Row: {
@@ -7516,13 +7050,6 @@ export type Database = {
             referencedRelation: "v_projeto_apostas_resumo"
             referencedColumns: ["projeto_id"]
           },
-          {
-            foreignKeyName: "operador_projetos_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
         ]
       }
       v_operadores_workspace: {
@@ -7657,13 +7184,6 @@ export type Database = {
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "bookmakers_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
           },
           {
@@ -7887,83 +7407,7 @@ export type Database = {
             referencedRelation: "v_projeto_apostas_resumo"
             referencedColumns: ["projeto_id"]
           },
-          {
-            foreignKeyName: "operador_projetos_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
-            referencedColumns: ["projeto_id"]
-          },
         ]
-      }
-      v_projeto_resumo: {
-        Row: {
-          conciliado: boolean | null
-          data_fim_prevista: string | null
-          data_fim_real: string | null
-          data_inicio: string | null
-          descricao: string | null
-          lucro_operacional: number | null
-          nome: string | null
-          operadores_ativos: number | null
-          orcamento_inicial: number | null
-          perdas_confirmadas: number | null
-          projeto_id: string | null
-          saldo_bookmakers: number | null
-          saldo_irrecuperavel: number | null
-          status: string | null
-          tem_investimento_crypto: boolean | null
-          total_bookmakers: number | null
-          total_depositado: number | null
-          total_gasto_operadores: number | null
-          total_sacado: number | null
-          user_id: string | null
-        }
-        Insert: {
-          conciliado?: boolean | null
-          data_fim_prevista?: string | null
-          data_fim_real?: string | null
-          data_inicio?: string | null
-          descricao?: string | null
-          lucro_operacional?: never
-          nome?: string | null
-          operadores_ativos?: never
-          orcamento_inicial?: number | null
-          perdas_confirmadas?: never
-          projeto_id?: string | null
-          saldo_bookmakers?: never
-          saldo_irrecuperavel?: never
-          status?: string | null
-          tem_investimento_crypto?: boolean | null
-          total_bookmakers?: never
-          total_depositado?: never
-          total_gasto_operadores?: never
-          total_sacado?: never
-          user_id?: string | null
-        }
-        Update: {
-          conciliado?: boolean | null
-          data_fim_prevista?: string | null
-          data_fim_real?: string | null
-          data_inicio?: string | null
-          descricao?: string | null
-          lucro_operacional?: never
-          nome?: string | null
-          operadores_ativos?: never
-          orcamento_inicial?: number | null
-          perdas_confirmadas?: never
-          projeto_id?: string | null
-          saldo_bookmakers?: never
-          saldo_irrecuperavel?: never
-          status?: string | null
-          tem_investimento_crypto?: boolean | null
-          total_bookmakers?: never
-          total_depositado?: never
-          total_gasto_operadores?: never
-          total_sacado?: never
-          user_id?: string | null
-        }
-        Relationships: []
       }
       v_roi_investidores: {
         Row: {
@@ -8146,13 +7590,6 @@ export type Database = {
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "v_projeto_apostas_resumo"
-            referencedColumns: ["projeto_id"]
-          },
-          {
-            foreignKeyName: "apostas_unificada_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "v_projeto_resumo"
             referencedColumns: ["projeto_id"]
           },
           {
