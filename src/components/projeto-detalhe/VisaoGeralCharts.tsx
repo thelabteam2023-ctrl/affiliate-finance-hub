@@ -40,10 +40,17 @@ interface ApostaBase {
   forma_registro?: string;
 }
 
+interface VinculoDetalhe {
+  vinculo: string;
+  apostas: number;
+  volume: number;
+}
+
 interface CasaUsada {
   casa: string;
   apostas: number;
   volume: number;
+  vinculos: VinculoDetalhe[];
 }
 
 interface EvolucaoData {
@@ -214,16 +221,29 @@ function CasasMaisUtilizadasCard({ casas, accentColor }: CasasMaisUtilizadasCard
                   </div>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="left" className="text-xs space-y-1 max-w-[200px]">
-                <p className="font-semibold">{casa.casa}</p>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Users className="h-3 w-3" />
-                  <span>{casa.apostas} apostas realizadas</span>
+              <TooltipContent side="left" className="text-xs space-y-2 max-w-[250px]">
+                <p className="font-semibold border-b pb-1 mb-1">{casa.casa}</p>
+                <div className="flex items-center justify-between text-muted-foreground">
+                  <span>Total:</span>
+                  <span className="font-medium text-foreground">{casa.apostas} apostas · {formatCurrency(casa.volume)}</span>
                 </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <TrendingUp className="h-3 w-3" />
-                  <span>Volume: {formatCurrency(casa.volume)}</span>
-                </div>
+                {casa.vinculos.length > 0 && (
+                  <div className="space-y-1 pt-1 border-t">
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Users className="h-3 w-3" />
+                      <span className="font-medium">Por vínculo:</span>
+                    </div>
+                    {casa.vinculos.slice(0, 5).map((v) => (
+                      <div key={v.vinculo} className="flex items-center justify-between pl-4">
+                        <span className="truncate max-w-[100px]">{v.vinculo}</span>
+                        <span className="text-muted-foreground">{v.apostas} · {formatCurrency(v.volume)}</span>
+                      </div>
+                    ))}
+                    {casa.vinculos.length > 5 && (
+                      <div className="text-muted-foreground pl-4">+{casa.vinculos.length - 5} vínculos...</div>
+                    )}
+                  </div>
+                )}
               </TooltipContent>
             </Tooltip>
           );
@@ -256,30 +276,58 @@ export function VisaoGeralCharts({ apostas, accentColor = "hsl(var(--primary))" 
     return Array.from(dataMap.entries()).map(([data, acc]) => ({ data, acumulado: acc }));
   }, [apostas]);
 
-  // Casas mais utilizadas (por volume) — itera sobre pernas em apostas multi-pernas
-  const casasData = useMemo(() => {
-    const casaMap = new Map<string, { apostas: number; volume: number }>();
+  // Casas mais utilizadas (por volume) — agrupa por CASA, com detalhamento por vínculo
+  // Formato esperado: "PARIMATCH - RAFAEL GOMES" → Casa = "PARIMATCH", Vínculo = "RAFAEL GOMES"
+  const casasData = useMemo((): CasaUsada[] => {
+    // Estrutura: casa → { total, vinculos: Map<vinculo, { apostas, volume }> }
+    const casaMap = new Map<string, { 
+      apostas: number; 
+      volume: number; 
+      vinculos: Map<string, { apostas: number; volume: number }> 
+    }>();
+
+    const processEntry = (nomeCompleto: string, stake: number) => {
+      // Extrair casa e vínculo do nome (formato: "CASA - VÍNCULO")
+      const separatorIdx = nomeCompleto.indexOf(" - ");
+      let casa: string;
+      let vinculo: string;
+      
+      if (separatorIdx > 0) {
+        casa = nomeCompleto.substring(0, separatorIdx).trim();
+        vinculo = nomeCompleto.substring(separatorIdx + 3).trim();
+      } else {
+        casa = nomeCompleto;
+        vinculo = "Principal";
+      }
+
+      if (!casaMap.has(casa)) {
+        casaMap.set(casa, { apostas: 0, volume: 0, vinculos: new Map() });
+      }
+      const casaData = casaMap.get(casa)!;
+      casaData.apostas += 1;
+      casaData.volume += stake;
+
+      // Agregar por vínculo
+      if (!casaData.vinculos.has(vinculo)) {
+        casaData.vinculos.set(vinculo, { apostas: 0, volume: 0 });
+      }
+      const vinculoData = casaData.vinculos.get(vinculo)!;
+      vinculoData.apostas += 1;
+      vinculoData.volume += stake;
+    };
 
     apostas.forEach((a) => {
       // Se tem pernas (aposta multi-pernas), itera sobre cada perna
       if (a.pernas && Array.isArray(a.pernas) && a.pernas.length > 0) {
         a.pernas.forEach((perna) => {
-          const casa = perna.bookmaker_nome || "Desconhecida";
+          const nomeCompleto = perna.bookmaker_nome || "Desconhecida";
           const pernaStake = typeof perna.stake === "number" ? perna.stake : 0;
-          const existing = casaMap.get(casa) || { apostas: 0, volume: 0 };
-          casaMap.set(casa, {
-            apostas: existing.apostas + 1,
-            volume: existing.volume + pernaStake,
-          });
+          processEntry(nomeCompleto, pernaStake);
         });
       } else {
         // Aposta simples — usa bookmaker_nome diretamente
-        const casa = a.bookmaker_nome || "Desconhecida";
-        const existing = casaMap.get(casa) || { apostas: 0, volume: 0 };
-        casaMap.set(casa, {
-          apostas: existing.apostas + 1,
-          volume: existing.volume + getStake(a),
-        });
+        const nomeCompleto = a.bookmaker_nome || "Desconhecida";
+        processEntry(nomeCompleto, getStake(a));
       }
     });
 
@@ -287,6 +335,11 @@ export function VisaoGeralCharts({ apostas, accentColor = "hsl(var(--primary))" 
       casa,
       apostas: data.apostas,
       volume: data.volume,
+      vinculos: Array.from(data.vinculos.entries()).map(([vinculo, v]) => ({
+        vinculo,
+        apostas: v.apostas,
+        volume: v.volume,
+      })).sort((a, b) => b.volume - a.volume),
     }));
   }, [apostas]);
 
