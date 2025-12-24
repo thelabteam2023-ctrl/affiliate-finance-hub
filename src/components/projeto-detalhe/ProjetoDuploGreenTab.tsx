@@ -575,18 +575,18 @@ export function ProjetoDuploGreenTab({
                   onClick={() => handleOpenAposta(aposta)}
                 >
                   <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{aposta.evento}</p>
-                        <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-lime-500/30 text-lime-400 flex items-center gap-0.5">
-                          <Zap className="h-2.5 w-2.5" />
-                          DG
-                        </Badge>
-                        <ResultadoBadge resultado={aposta.resultado} />
-                      </div>
+                    {/* Badges na linha acima */}
+                    <div className="flex items-center gap-1 mb-2">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-lime-500/30 text-lime-400 flex items-center gap-0.5">
+                        <Zap className="h-2.5 w-2.5" />
+                        DG
+                      </Badge>
+                      <ResultadoBadge resultado={aposta.resultado} />
+                    </div>
+                    {/* Evento e Esporte */}
+                    <div className="mb-2">
+                      <p className="font-medium text-sm truncate">{aposta.evento}</p>
+                      <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">{aposta.selecao}</span>
@@ -618,17 +618,19 @@ export function ProjetoDuploGreenTab({
                   onClick={() => handleOpenAposta(aposta)}
                 >
                   <div className="flex items-center gap-4 flex-1 min-w-0">
+                    {/* Badges à esquerda */}
+                    <div className="flex items-center gap-1">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-lime-500/30 text-lime-400 flex items-center gap-0.5">
+                        <Zap className="h-2.5 w-2.5" />
+                        DG
+                      </Badge>
+                      <ResultadoBadge resultado={aposta.resultado} />
+                    </div>
                     <div className="text-xs text-muted-foreground w-16">
                       {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm font-medium truncate">{aposta.evento}</p>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-lime-500/30 text-lime-400 flex items-center gap-0.5">
-                          <Zap className="h-2.5 w-2.5" />
-                          DG
-                        </Badge>
-                      </div>
+                      <p className="text-sm font-medium truncate">{aposta.evento}</p>
                       <p className="text-xs text-muted-foreground">{aposta.selecao}</p>
                     </div>
                     <div className="text-right">
@@ -642,7 +644,6 @@ export function ProjetoDuploGreenTab({
                         {formatCurrency(aposta.lucro_prejuizo)}
                       </span>
                     )}
-                    <ResultadoBadge resultado={aposta.resultado} />
                   </div>
                 </div>
               ))}
