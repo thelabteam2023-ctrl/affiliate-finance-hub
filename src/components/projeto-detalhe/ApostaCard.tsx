@@ -334,9 +334,17 @@ export function ApostaCard({
               {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
             </span>
             {(aposta.bookmaker_nome || aposta.operador_nome) && (
-              <span className="text-[10px] text-muted-foreground/70 truncate max-w-[120px]">
-                {[aposta.bookmaker_nome, aposta.operador_nome].filter(Boolean).join(' • ')}
-              </span>
+              (() => {
+                const label = [aposta.bookmaker_nome, aposta.operador_nome].filter(Boolean).join(" • ");
+                return (
+                  <span
+                    title={label}
+                    className="text-[10px] text-muted-foreground/70 truncate max-w-[180px]"
+                  >
+                    {label}
+                  </span>
+                );
+              })()
             )}
           </div>
           <div className="text-right">

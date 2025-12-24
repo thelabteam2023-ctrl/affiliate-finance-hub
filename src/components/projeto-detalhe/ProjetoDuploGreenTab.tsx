@@ -67,6 +67,7 @@ interface Aposta {
   observacoes: string | null;
   bookmaker_id: string;
   bookmaker_nome?: string;
+  operador_nome?: string;
   modo_entrada?: string;
   gerou_freebet?: boolean;
   valor_freebet_gerada?: number | null;
@@ -213,13 +214,31 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       if (error) throw error;
       
       const bookmakerIds = [...new Set((data || []).map((a: any) => a.bookmaker_id).filter(Boolean))];
-      let bookmakerMap = new Map<string, string>();
+      let bookmakerMap = new Map<string, { nome: string; parceiroNome: string | null }>();
       if (bookmakerIds.length > 0) {
-        const { data: bks } = await supabase.from("bookmakers").select("id, nome").in("id", bookmakerIds);
-        bookmakerMap = new Map((bks || []).map((b: any) => [b.id, b.nome]));
+        const { data: bks } = await supabase
+          .from("bookmakers")
+          .select("id, nome, parceiro:parceiros(nome)")
+          .in("id", bookmakerIds);
+
+        bookmakerMap = new Map(
+          (bks || []).map((b: any) => [
+            b.id,
+            { nome: b.nome, parceiroNome: b.parceiro?.nome ?? null },
+          ])
+        );
       }
-      
-      setApostas((data || []).map((a: any) => ({ ...a, bookmaker_nome: a.bookmaker_id ? (bookmakerMap.get(a.bookmaker_id) || "Desconhecida") : "Desconhecida" })));
+
+      setApostas(
+        (data || []).map((a: any) => {
+          const bkInfo = a.bookmaker_id ? bookmakerMap.get(a.bookmaker_id) : null;
+          return {
+            ...a,
+            bookmaker_nome: bkInfo?.nome ?? "Desconhecida",
+            operador_nome: bkInfo?.parceiroNome ?? undefined,
+          };
+        })
+      );
     } catch (error) {
       console.error("Erro ao carregar apostas Duplo Green:", error);
     }
