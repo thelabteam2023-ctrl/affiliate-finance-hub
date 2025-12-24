@@ -88,14 +88,19 @@ const formatPercent = (value: number) => {
   return `${sign}${value.toFixed(2)}%`;
 };
 
-// Faixas de valor para análise
+// Faixas de valor para análise (incrementos de 50, até 500+)
 const VALUE_RANGES = [
-  { min: 0, max: 50, label: "R$ 0-50" },
-  { min: 50, max: 100, label: "R$ 50-100" },
-  { min: 100, max: 250, label: "R$ 100-250" },
-  { min: 250, max: 500, label: "R$ 250-500" },
-  { min: 500, max: 1000, label: "R$ 500-1k" },
-  { min: 1000, max: Infinity, label: "R$ 1k+" },
+  { min: 0, max: 50, label: "R$ 0-49,99" },
+  { min: 50, max: 100, label: "R$ 50-99,99" },
+  { min: 100, max: 150, label: "R$ 100-149,99" },
+  { min: 150, max: 200, label: "R$ 150-199,99" },
+  { min: 200, max: 250, label: "R$ 200-249,99" },
+  { min: 250, max: 300, label: "R$ 250-299,99" },
+  { min: 300, max: 350, label: "R$ 300-349,99" },
+  { min: 350, max: 400, label: "R$ 350-399,99" },
+  { min: 400, max: 450, label: "R$ 400-449,99" },
+  { min: 450, max: 500, label: "R$ 450-499,99" },
+  { min: 500, max: Infinity, label: "R$ 500+" },
 ];
 
 // Faixas de cotação (incrementos de 0.40, até 6+)
