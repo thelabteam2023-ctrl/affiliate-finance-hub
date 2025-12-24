@@ -34,6 +34,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ApostaDialog } from "./ApostaDialog";
+import { ApostaMultiplaDialog } from "./ApostaMultiplaDialog";
 import { ResultadoPill } from "./ResultadoPill";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
@@ -111,8 +112,12 @@ export function ProjetoValueBetTab({
   const [searchTerm, setSearchTerm] = useState("");
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
+
+  const [dialogMultiplaOpen, setDialogMultiplaOpen] = useState(false);
+  const [selectedApostaMultipla, setSelectedApostaMultipla] = useState<any | null>(null);
 
   // Sub-abas Abertas/Histórico
   const [apostasSubTab, setApostasSubTab] = useState<"abertas" | "historico">("abertas");
@@ -263,6 +268,56 @@ export function ProjetoValueBetTab({
 
   const formatPercent = (value: number) => {
     return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+  };
+
+  const toApostaMultiplaEdit = (a: Aposta) => {
+    const selecoes = Array.isArray(a.selecoes) ? a.selecoes : [];
+
+    return {
+      id: a.id,
+      tipo_multipla: (a.tipo_multipla as any) || (selecoes.length === 3 ? "TRIPLA" : "DUPLA"),
+      stake: typeof a.stake === "number" ? a.stake : (a.stake_total ?? 0),
+      odd_final: a.odd_final ?? 0,
+      retorno_potencial: null,
+      lucro_prejuizo: a.lucro_prejuizo ?? null,
+      valor_retorno: a.valor_retorno ?? null,
+      selecoes: selecoes.map((s: any) => ({
+        descricao: s?.descricao || "",
+        odd: String(s?.odd ?? ""),
+        resultado: s?.resultado,
+      })),
+      status: a.status,
+      resultado: a.resultado ?? null,
+      bookmaker_id: a.bookmaker_id,
+      tipo_freebet: a.tipo_freebet ?? null,
+      gerou_freebet: Boolean(a.gerou_freebet),
+      valor_freebet_gerada: a.valor_freebet_gerada ?? null,
+      data_aposta: a.data_aposta,
+      observacoes: a.observacoes ?? null,
+      estrategia: a.estrategia ?? APOSTA_ESTRATEGIA.VALUEBET,
+      forma_registro: a.forma_registro ?? "MULTIPLA",
+      contexto_operacional: a.contexto_operacional ?? "NORMAL",
+    } as any;
+  };
+
+  const openEditDialog = (a: Aposta) => {
+    const isMultipla =
+      a.forma_registro === "MULTIPLA" ||
+      Boolean(a.tipo_multipla) ||
+      (Array.isArray(a.selecoes) && a.selecoes.length > 0);
+
+    if (isMultipla) {
+      setDialogOpen(false);
+      setSelectedAposta(null);
+      setSelectedApostaMultipla(toApostaMultiplaEdit(a));
+      setDialogMultiplaOpen(true);
+      return;
+    }
+
+    setDialogMultiplaOpen(false);
+    setSelectedApostaMultipla(null);
+    setSelectedAposta(a);
+    setDialogOpen(true);
   };
 
   const handleApostaUpdated = () => {
@@ -475,10 +530,7 @@ export function ProjetoValueBetTab({
                 selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
               }}
               estrategia="VALUEBET"
-              onClick={() => {
-                setSelectedAposta(aposta);
-                setDialogOpen(true);
-              }}
+              onClick={() => openEditDialog(aposta)}
               variant="card"
             />
           ))}
@@ -496,10 +548,7 @@ export function ProjetoValueBetTab({
                 selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
               }}
               estrategia="VALUEBET"
-              onClick={() => {
-                setSelectedAposta(aposta);
-                setDialogOpen(true);
-              }}
+              onClick={() => openEditDialog(aposta)}
               variant="list"
             />
           ))}
@@ -632,6 +681,23 @@ export function ProjetoValueBetTab({
               contexto_operacional: selectedAposta.contexto_operacional || "NORMAL",
             } as any}
             onSuccess={handleApostaUpdated}
+            defaultEstrategia={APOSTA_ESTRATEGIA.VALUEBET}
+            activeTab="valuebet"
+          />
+        )}
+
+        {selectedApostaMultipla && (
+          <ApostaMultiplaDialog
+            open={dialogMultiplaOpen}
+            onOpenChange={(open) => {
+              setDialogMultiplaOpen(open);
+              if (!open) setSelectedApostaMultipla(null);
+            }}
+            projetoId={projetoId}
+            aposta={selectedApostaMultipla}
+            onSuccess={handleApostaUpdated}
+            defaultEstrategia={APOSTA_ESTRATEGIA.VALUEBET}
+            activeTab="valuebet"
           />
         )}
       </div>
@@ -693,6 +759,23 @@ export function ProjetoValueBetTab({
             contexto_operacional: selectedAposta.contexto_operacional || "NORMAL",
           } as any}
           onSuccess={handleApostaUpdated}
+          defaultEstrategia={APOSTA_ESTRATEGIA.VALUEBET}
+          activeTab="valuebet"
+        />
+      )}
+
+      {selectedApostaMultipla && (
+        <ApostaMultiplaDialog
+          open={dialogMultiplaOpen}
+          onOpenChange={(open) => {
+            setDialogMultiplaOpen(open);
+            if (!open) setSelectedApostaMultipla(null);
+          }}
+          projetoId={projetoId}
+          aposta={selectedApostaMultipla}
+          onSuccess={handleApostaUpdated}
+          defaultEstrategia={APOSTA_ESTRATEGIA.VALUEBET}
+          activeTab="valuebet"
         />
       )}
     </div>
