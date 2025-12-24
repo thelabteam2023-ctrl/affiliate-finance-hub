@@ -1806,6 +1806,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         .from("freebets_recebidas")
         .insert({
           user_id: userId,
+          workspace_id: workspaceId,
           projeto_id: projetoId,
           bookmaker_id: bookmakerIdFreebet,
           valor: valor,

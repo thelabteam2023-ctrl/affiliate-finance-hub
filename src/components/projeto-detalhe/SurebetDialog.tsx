@@ -1029,6 +1029,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         .from("freebets_recebidas")
         .insert({
           user_id: userId,
+          workspace_id: workspaceId,
           projeto_id: projetoIdFreebet,
           bookmaker_id: bookmakerIdFreebet,
           valor: valor,

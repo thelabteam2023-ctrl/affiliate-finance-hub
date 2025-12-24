@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import {
   Dialog,
   DialogContent,
@@ -98,6 +99,7 @@ export function ApostaMultiplaDialog({
   defaultEstrategia = 'PUNTER',
   activeTab = 'apostas',
 }: ApostaMultiplaDialogProps) {
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -522,8 +524,14 @@ export function ApostaMultiplaDialog({
           resultado: s.resultado || "PENDENTE",
         }));
 
+      if (!workspaceId) {
+        toast.error("Workspace não identificado");
+        return;
+      }
+
       const apostaData = {
         user_id: user.id,
+        workspace_id: workspaceId,
         projeto_id: projetoId,
         bookmaker_id: bookmakerId,
         tipo_multipla: tipoMultipla,
@@ -763,6 +771,7 @@ export function ApostaMultiplaDialog({
         bookmaker_id: bkId,
         projeto_id: projetoId,
         user_id: userId,
+        workspace_id: workspaceId,
         valor: valor,
         motivo: "Gerada por aposta múltipla",
         data_recebida: new Date().toISOString(),
