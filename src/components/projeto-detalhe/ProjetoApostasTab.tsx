@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -501,6 +501,69 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
     fetchAllApostas();
     onDataChange?.();
   };
+
+  // Resolução rápida de apostas simples (sem pernas multi)
+  const handleQuickResolve = useCallback(async (apostaId: string, resultado: string) => {
+    try {
+      const aposta = apostas.find(a => a.id === apostaId);
+      if (!aposta) return;
+
+      const stake = typeof aposta.stake === "number" ? aposta.stake : 0;
+      const odd = aposta.odd || 1;
+      let lucro: number;
+
+      switch (resultado) {
+        case "GREEN":
+          lucro = stake * (odd - 1);
+          break;
+        case "RED":
+          lucro = -stake;
+          break;
+        case "MEIO_GREEN":
+          lucro = (stake * (odd - 1)) / 2;
+          break;
+        case "MEIO_RED":
+          lucro = -stake / 2;
+          break;
+        case "VOID":
+          lucro = 0;
+          break;
+        default:
+          lucro = 0;
+      }
+
+      const { error } = await supabase
+        .from("apostas_unificada")
+        .update({
+          resultado,
+          lucro_prejuizo: lucro,
+          status: "LIQUIDADA",
+        })
+        .eq("id", apostaId);
+
+      if (error) throw error;
+
+      setApostas(prev => prev.map(a => 
+        a.id === apostaId 
+          ? { ...a, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
+          : a
+      ));
+
+      const resultLabel = {
+        GREEN: "Green",
+        RED: "Red",
+        MEIO_GREEN: "½ Green",
+        MEIO_RED: "½ Red",
+        VOID: "Void"
+      }[resultado] || resultado;
+
+      toast.success(`Aposta marcada como ${resultLabel}`);
+      onDataChange?.();
+    } catch (error: any) {
+      console.error("Erro ao atualizar aposta:", error);
+      toast.error("Erro ao atualizar resultado");
+    }
+  }, [apostas, onDataChange]);
 
   // Filtrar e unificar apostas com contexto
   const apostasUnificadasBase: ApostaUnificada[] = useMemo(() => {
