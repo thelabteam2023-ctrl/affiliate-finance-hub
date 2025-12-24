@@ -246,17 +246,20 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
       ? { casa: casasOrdenadasPorLucro[casasOrdenadasPorLucro.length - 1][0], lucro: casasOrdenadasPorLucro[casasOrdenadasPorLucro.length - 1][1].lucro }
       : null;
 
-    // Casa com maior ROI
-    const casasComRoi = casasOrdenadas.filter(([_, data]) => data.stake > 0)
+    // Casa com maior ROI (mínimo 10 operações)
+    const MIN_OPERACOES_ROI = 10;
+    const casasComRoi = casasOrdenadas
+      .filter(([_, data]) => data.stake > 0 && data.operacoes >= MIN_OPERACOES_ROI)
       .map(([casa, data]) => ({
         casa,
         roi: (data.lucro / data.stake) * 100,
+        operacoes: data.operacoes,
       }))
       .sort((a, b) => b.roi - a.roi);
     
     const casaMaiorRoi = casasComRoi.length > 0 ? casasComRoi[0] : null;
     
-    // Casa com menor ROI e top 3 menor ROI
+    // Casa com menor ROI e top 3 menor ROI (mínimo 10 operações)
     const casaMenorRoi = casasComRoi.length > 0 ? casasComRoi[casasComRoi.length - 1] : null;
     const top3MenorRoi = casasComRoi.slice(-3).reverse();
 
