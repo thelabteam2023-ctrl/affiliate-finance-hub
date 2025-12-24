@@ -98,14 +98,22 @@ const VALUE_RANGES = [
   { min: 1000, max: Infinity, label: "R$ 1k+" },
 ];
 
-// Faixas de cotação
+// Faixas de cotação (incrementos de 0.40, até 6+)
 const ODD_RANGES = [
-  { min: 1.0, max: 1.5, label: "1.0-1.5" },
-  { min: 1.5, max: 2.0, label: "1.5-2.0" },
-  { min: 2.0, max: 2.5, label: "2.0-2.5" },
-  { min: 2.5, max: 3.0, label: "2.5-3.0" },
-  { min: 3.0, max: 4.0, label: "3.0-4.0" },
-  { min: 4.0, max: Infinity, label: "4.0+" },
+  { min: 1.00, max: 1.40, label: "1.00-1.39" },
+  { min: 1.40, max: 1.80, label: "1.40-1.79" },
+  { min: 1.80, max: 2.20, label: "1.80-2.19" },
+  { min: 2.20, max: 2.60, label: "2.20-2.59" },
+  { min: 2.60, max: 3.00, label: "2.60-2.99" },
+  { min: 3.00, max: 3.40, label: "3.00-3.39" },
+  { min: 3.40, max: 3.80, label: "3.40-3.79" },
+  { min: 3.80, max: 4.20, label: "3.80-4.19" },
+  { min: 4.20, max: 4.60, label: "4.20-4.59" },
+  { min: 4.60, max: 5.00, label: "4.60-4.99" },
+  { min: 5.00, max: 5.40, label: "5.00-5.39" },
+  { min: 5.40, max: 5.80, label: "5.40-5.79" },
+  { min: 5.80, max: 6.00, label: "5.80-5.99" },
+  { min: 6.00, max: Infinity, label: "6+" },
 ];
 
 export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60%)" }: UnifiedStatisticsCardProps) {
