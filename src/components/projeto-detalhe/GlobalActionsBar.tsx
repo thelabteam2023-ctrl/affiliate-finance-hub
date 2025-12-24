@@ -177,8 +177,8 @@ export function GlobalActionsBar({
               <Target className="mr-2 h-4 w-4" />
               Aposta Simples
             </DropdownMenuItem>
-            {/* Ocultar Aposta Múltipla nas abas Duplo Green e ValueBet não se aplica aqui - só Duplo Green */}
-            {activeTab !== "duplo-green" && (
+            {/* Ocultar Aposta Múltipla na aba Duplo Green */}
+            {activeTab !== "duplogreen" && (
               <DropdownMenuItem onClick={() => setMultiplaDialogOpen(true)}>
                 <Layers className="mr-2 h-4 w-4" />
                 Aposta Múltipla
