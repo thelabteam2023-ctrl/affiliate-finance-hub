@@ -67,6 +67,7 @@ interface Aposta {
   observacoes: string | null;
   bookmaker_id: string;
   bookmaker_nome?: string;
+  operador_nome?: string;
   modo_entrada?: string;
   gerou_freebet?: boolean;
   valor_freebet_gerada?: number | null;
@@ -183,22 +184,31 @@ export function ProjetoValueBetTab({
       
       const bookmakerIds = [...new Set((data || []).map((a: { bookmaker_id: string | null }) => a.bookmaker_id).filter(Boolean))];
       
-      let bookmakerMap = new Map<string, string>();
+      let bookmakerMap = new Map<string, { nome: string; parceiroNome: string | null }>();
       if (bookmakerIds.length > 0) {
         const { data: bookmakers } = await supabase
           .from("bookmakers")
-          .select("id, nome")
+          .select("id, nome, parceiro:parceiros(nome)")
           .in("id", bookmakerIds);
-        
-        bookmakerMap = new Map((bookmakers || []).map((b: { id: string; nome: string }) => [b.id, b.nome]));
+
+        bookmakerMap = new Map(
+          (bookmakers || []).map((b: any) => [
+            b.id,
+            { nome: b.nome, parceiroNome: b.parceiro?.nome ?? null },
+          ])
+        );
       }
-      
-      const mappedApostas: Aposta[] = (data || []).map((a: any) => ({
-        ...a,
-        odd: a.odd ?? 0,
-        stake: a.stake ?? 0,
-        bookmaker_nome: a.bookmaker_id ? (bookmakerMap.get(a.bookmaker_id) || "Desconhecida") : "Desconhecida"
-      }));
+
+      const mappedApostas: Aposta[] = (data || []).map((a: any) => {
+        const bkInfo = a.bookmaker_id ? bookmakerMap.get(a.bookmaker_id) : null;
+        return {
+          ...a,
+          odd: a.odd ?? 0,
+          stake: a.stake ?? 0,
+          bookmaker_nome: bkInfo?.nome ?? "Desconhecida",
+          operador_nome: bkInfo?.parceiroNome ?? undefined,
+        };
+      });
       
       setApostas(mappedApostas);
     } catch (error: unknown) {
