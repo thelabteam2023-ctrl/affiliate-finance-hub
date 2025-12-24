@@ -148,16 +148,15 @@ function ResultadoBadge({ resultado, apostaId, onQuickResolve }: ResultadoBadgeP
     return (
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-          <Badge 
-            variant="outline" 
+          <button 
             className={cn(
-              "text-[10px] px-1.5 py-0 flex items-center gap-0.5 cursor-pointer hover:bg-blue-500/30 transition-colors",
-              config.color
+              "inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0 text-[10px] font-medium cursor-pointer transition-colors",
+              "bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30"
             )}
           >
             <Icon className="h-2.5 w-2.5" />
             {config.label}
-          </Badge>
+          </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-[140px]" onClick={(e) => e.stopPropagation()}>
           <DropdownMenuItem 
