@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
+import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
 
 interface Bookmaker {
   id: string;
@@ -1278,6 +1279,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               onChange={setRegistroValues}
               suggestions={!isEditing ? getSuggestionsForTab(activeTab) : undefined}
               disabled={isEditing ? { forma_registro: true, estrategia: true, contexto_operacional: true } : undefined}
+              lockedEstrategia={!isEditing && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : undefined}
             />
 
             {/* Cabeçalho */}

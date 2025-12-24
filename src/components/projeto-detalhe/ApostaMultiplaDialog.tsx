@@ -37,6 +37,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Card, CardContent } from "@/components/ui/card";
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
+import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
 
 interface Selecao {
   descricao: string;
@@ -1068,6 +1069,8 @@ export function ApostaMultiplaDialog({
             <RegistroApostaFields
               values={registroValues}
               onChange={setRegistroValues}
+              suggestions={aposta ? undefined : getSuggestionsForTab(activeTab)}
+              lockedEstrategia={!aposta && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : undefined}
             />
 
             {/* Bookmaker / Vínculo */}
