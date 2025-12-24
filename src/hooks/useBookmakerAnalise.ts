@@ -290,11 +290,12 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
       const bookmakerIds = bookmakers.map(b => b.id);
 
       // Query base para apostas - using apostas_unificada
+      // IMPORTANTE: Incluir todas estratégias que podem ter multi-pernas (forma_registro = ARBITRAGEM)
       let apostasQuery = supabase
         .from("apostas_unificada")
-        .select("bookmaker_id, lucro_prejuizo, stake, stake_total, status, data_aposta, estrategia, pernas")
+        .select("bookmaker_id, lucro_prejuizo, stake, stake_total, status, data_aposta, estrategia, pernas, forma_registro")
         .eq("projeto_id", projetoId)
-        .in("estrategia", ["SIMPLES", "SUREBET"]); // Include SUREBET for pernas
+        .in("estrategia", ["SIMPLES", "SUREBET", "DUPLO_GREEN", "VALUEBET"]); // Incluir todas estratégias relevantes
 
       let apostasMultiplasQuery = supabase
         .from("apostas_unificada")
@@ -377,22 +378,31 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
       const ciclos = ciclosResult.data || [];
       const projeto = projetoResult.data;
 
-      // Process surebets from apostas (estrategia = SUREBET) - pernas are in JSON
-      const surebetBookmakerData: Record<string, { lucro: number; volume: number; qtdApostas: number }> = {};
+      // Process apostas com pernas (multi-pernas: SUREBET, DUPLO_GREEN, VALUEBET com forma_registro = ARBITRAGEM)
+      // REGRA: Cada perna é uma unidade operacional independente para análise por casa
+      const pernasBookmakerData: Record<string, { lucro: number; volume: number; qtdApostas: number; datas: string[] }> = {};
       
       apostas.forEach((a: any) => {
-        if (a.estrategia === "SUREBET" && a.pernas) {
-          const pernas = Array.isArray(a.pernas) ? a.pernas : [];
-          const lucroPerPerna = a.status === "LIQUIDADA" ? (Number(a.lucro_prejuizo || 0) / Math.max(pernas.length, 1)) : 0;
-          
+        const pernas = Array.isArray(a.pernas) ? a.pernas : [];
+        const temPernas = pernas.length > 0;
+        
+        // Se tem pernas, itera sobre cada perna individualmente
+        if (temPernas) {
           pernas.forEach((p: any) => {
-            if (p.bookmaker_id && bookmakerIds.includes(p.bookmaker_id)) {
-              if (!surebetBookmakerData[p.bookmaker_id]) {
-                surebetBookmakerData[p.bookmaker_id] = { lucro: 0, volume: 0, qtdApostas: 0 };
+            const bkId = p.bookmaker_id;
+            if (bkId && bookmakerIds.includes(bkId)) {
+              if (!pernasBookmakerData[bkId]) {
+                pernasBookmakerData[bkId] = { lucro: 0, volume: 0, qtdApostas: 0, datas: [] };
               }
-              surebetBookmakerData[p.bookmaker_id].lucro += lucroPerPerna;
-              surebetBookmakerData[p.bookmaker_id].volume += Number(p.stake || 0);
-              surebetBookmakerData[p.bookmaker_id].qtdApostas += 1;
+              // Lucro da perna (se disponível no JSON) ou lucro proporcional
+              const lucroPerna = typeof p.lucro_prejuizo === 'number' 
+                ? p.lucro_prejuizo 
+                : (a.status === "LIQUIDADA" ? (Number(a.lucro_prejuizo || 0) / Math.max(pernas.length, 1)) : 0);
+              
+              pernasBookmakerData[bkId].lucro += lucroPerna;
+              pernasBookmakerData[bkId].volume += Number(p.stake || 0);
+              pernasBookmakerData[bkId].qtdApostas += 1;
+              pernasBookmakerData[bkId].datas.push(a.data_aposta);
             }
           });
         }
@@ -430,9 +440,13 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
         };
       });
 
-      // Agregar apostas simples (INCLUINDO pernas de surebet - cada perna = 1 aposta)
+      // Agregar apostas SIMPLES (sem pernas - usa bookmaker_id diretamente)
       apostas.forEach(a => {
-        if (bookmakerData[a.bookmaker_id]) {
+        const pernas = Array.isArray(a.pernas) ? a.pernas : [];
+        const temPernas = pernas.length > 0;
+        
+        // Só processa aqui se NÃO tem pernas (apostas simples)
+        if (!temPernas && a.bookmaker_id && bookmakerData[a.bookmaker_id]) {
           if (a.status === "LIQUIDADA") {
             bookmakerData[a.bookmaker_id].lucro += Number(a.lucro_prejuizo || 0);
           }
@@ -469,11 +483,25 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
         }
       });
 
-      // NOTA: Surebets NÃO adicionam contagem extra de apostas
-      // Cada perna de surebet já está na tabela 'apostas' e foi contada acima
-      // A distribuição de lucro de surebets é feita apenas se lucro_prejuizo 
-      // individual das pernas estiver vazio (depende do modelo de dados)
-      // Por ora, mantemos apenas o mapeamento para referência sem adicionar contagens
+      // Mesclar dados de pernas (multi-pernas) no bookmakerData
+      // Cada perna já foi processada individualmente acima
+      Object.entries(pernasBookmakerData).forEach(([bkId, data]) => {
+        if (bookmakerData[bkId]) {
+          bookmakerData[bkId].lucro += data.lucro;
+          bookmakerData[bkId].volume += data.volume;
+          bookmakerData[bkId].qtdApostas += data.qtdApostas;
+          
+          // Atualizar datas
+          data.datas.forEach(dataAposta => {
+            if (!bookmakerData[bkId].primeiraAposta || dataAposta < bookmakerData[bkId].primeiraAposta!) {
+              bookmakerData[bkId].primeiraAposta = dataAposta;
+            }
+            if (!bookmakerData[bkId].ultimaAposta || dataAposta > bookmakerData[bkId].ultimaAposta!) {
+              bookmakerData[bkId].ultimaAposta = dataAposta;
+            }
+          });
+        }
+      });
 
       // Agregar perdas operacionais e rastrear datas
       perdas.forEach(p => {
