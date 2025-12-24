@@ -101,7 +101,7 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
         
         // Fetch bets from bookmakers in bonus mode or marked as bonus bets
         const { data, error } = await supabase
-          .from("apostas")
+          .from("apostas_unificada")
           .select("id, data_aposta, stake, lucro_prejuizo, bookmaker_id, is_bonus_bet")
           .eq("projeto_id", projetoId)
           .gte("data_aposta", startDate.split('T')[0])

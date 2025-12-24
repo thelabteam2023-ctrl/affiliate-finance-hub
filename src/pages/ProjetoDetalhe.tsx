@@ -178,57 +178,34 @@ export default function ProjetoDetalhe() {
     try {
       const { start, end } = getDateRangeFromFilter();
       
-      // Build query for apostas simples with date filter
-      let querySimples = supabase
-        .from("apostas")
+      // Build query for apostas_unificada (all types combined)
+      let query = supabase
+        .from("apostas_unificada")
         .select("stake, lucro_prejuizo, status, resultado")
         .eq("projeto_id", id);
       
       if (start) {
-        querySimples = querySimples.gte("data_aposta", start.toISOString());
+        query = query.gte("data_aposta", start.toISOString());
       }
       if (end) {
-        querySimples = querySimples.lte("data_aposta", end.toISOString());
+        query = query.lte("data_aposta", end.toISOString());
       }
       
-      // Build query for apostas multiplas with date filter
-      let queryMultiplas = supabase
-        .from("apostas_multiplas")
-        .select("stake, lucro_prejuizo, status, resultado")
-        .eq("projeto_id", id);
+      const { data: todasApostas, error } = await query;
       
-      if (start) {
-        queryMultiplas = queryMultiplas.gte("data_aposta", start.toISOString());
-      }
-      if (end) {
-        queryMultiplas = queryMultiplas.lte("data_aposta", end.toISOString());
-      }
-      
-      const [{ data: apostasSimples, error: errorSimples }, { data: apostasMultiplas, error: errorMultiplas }] = await Promise.all([
-        querySimples,
-        queryMultiplas
-      ]);
-      
-      if (errorSimples) throw errorSimples;
-      if (errorMultiplas) throw errorMultiplas;
-      
-      // Combine both types
-      const todasApostas = [
-        ...(apostasSimples || []),
-        ...(apostasMultiplas || [])
-      ];
+      if (error) throw error;
       
       // Calculate summary from all apostas
       const summary: ApostasResumo = {
-        total_apostas: todasApostas.length,
-        apostas_pendentes: todasApostas.filter(a => a.status === "PENDENTE").length,
-        greens: todasApostas.filter(a => a.resultado === "GREEN").length,
-        reds: todasApostas.filter(a => a.resultado === "RED").length,
-        voids: todasApostas.filter(a => a.resultado === "VOID").length,
-        meio_greens: todasApostas.filter(a => a.resultado === "MEIO_GREEN" || a.resultado === "HALF").length,
-        meio_reds: todasApostas.filter(a => a.resultado === "MEIO_RED").length,
-        total_stake: todasApostas.reduce((acc, a) => acc + Number(a.stake || 0), 0),
-        lucro_total: todasApostas.reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0),
+        total_apostas: (todasApostas || []).length,
+        apostas_pendentes: (todasApostas || []).filter(a => a.status === "PENDENTE").length,
+        greens: (todasApostas || []).filter(a => a.resultado === "GREEN").length,
+        reds: (todasApostas || []).filter(a => a.resultado === "RED").length,
+        voids: (todasApostas || []).filter(a => a.resultado === "VOID").length,
+        meio_greens: (todasApostas || []).filter(a => a.resultado === "MEIO_GREEN" || a.resultado === "HALF").length,
+        meio_reds: (todasApostas || []).filter(a => a.resultado === "MEIO_RED").length,
+        total_stake: (todasApostas || []).reduce((acc, a) => acc + Number(a.stake || 0), 0),
+        lucro_total: (todasApostas || []).reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0),
         roi_percentual: 0
       };
       

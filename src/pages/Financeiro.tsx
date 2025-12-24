@@ -306,7 +306,7 @@ export default function Financeiro() {
         supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, indicadores_referral(nome)"),
         supabase.from("bookmakers").select("saldo_atual, saldo_freebet, saldo_irrecuperavel, status, projeto_id").in("status", ["ativo", "ATIVO", "EM_USO", "AGUARDANDO_SAQUE"]),
         supabase.from("bookmakers").select("saldo_atual, saldo_irrecuperavel, projeto_id, projetos(nome)").in("status", ["ativo", "ATIVO", "EM_USO", "AGUARDANDO_SAQUE"]),
-        supabase.from("apostas").select("lucro_prejuizo, data_aposta").not("resultado", "is", null),
+        supabase.from("apostas_unificada").select("lucro_prejuizo, data_aposta").not("resultado", "is", null),
         supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("status", "ativo"),
         supabase
           .from("parcerias")

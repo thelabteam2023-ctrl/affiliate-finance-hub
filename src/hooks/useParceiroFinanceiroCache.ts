@@ -162,24 +162,16 @@ export function useParceiroFinanceiroCache() {
 
     let apostasMap = new Map<string, number>();
     if (bookmakerIds.length > 0) {
-      const { data: apostasSimples } = await supabase
-        .from("apostas")
+      const { data: apostasData } = await supabase
+        .from("apostas_unificada")
         .select("bookmaker_id")
         .in("bookmaker_id", bookmakerIds);
 
-      apostasSimples?.forEach((a) => {
-        const current = apostasMap.get(a.bookmaker_id) || 0;
-        apostasMap.set(a.bookmaker_id, current + 1);
-      });
-
-      const { data: apostasMultiplas } = await supabase
-        .from("apostas_multiplas")
-        .select("bookmaker_id")
-        .in("bookmaker_id", bookmakerIds);
-
-      apostasMultiplas?.forEach((a) => {
-        const current = apostasMap.get(a.bookmaker_id) || 0;
-        apostasMap.set(a.bookmaker_id, current + 1);
+      apostasData?.forEach((a) => {
+        if (a.bookmaker_id) {
+          const current = apostasMap.get(a.bookmaker_id) || 0;
+          apostasMap.set(a.bookmaker_id, current + 1);
+        }
       });
     }
 
