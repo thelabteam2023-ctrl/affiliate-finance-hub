@@ -38,6 +38,7 @@ import { SurebetDialog } from "./SurebetDialog";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
+import { SurebetStatisticsCard } from "./SurebetStatisticsCard";
 
 import { parsePernaFromJson, PernaArbitragem } from "@/types/apostasUnificada";
 import { cn } from "@/lib/utils";
@@ -510,22 +511,29 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         </Card>
       </div>
 
-      {/* Gráficos - Usando componente reutilizável */}
+      {/* Gráficos e Estatísticas lado a lado */}
       {surebets.length > 0 && (
-        <VisaoGeralCharts 
-          apostas={surebets.map(s => ({
-            data_aposta: s.data_operacao,
-            lucro_prejuizo: s.lucro_real,
-            stake: s.stake_total,
-            bookmaker_nome: s.pernas?.[0]?.bookmaker_nome || "—",
-            pernas: s.pernas?.map(p => ({
-              bookmaker_nome: p.bookmaker_nome,
-              stake: p.stake
-            }))
-          }))} 
-          accentColor="hsl(var(--primary))"
-          logoMap={logoMap}
-        />
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <VisaoGeralCharts 
+              apostas={surebets.map(s => ({
+                data_aposta: s.data_operacao,
+                lucro_prejuizo: s.lucro_real,
+                stake: s.stake_total,
+                bookmaker_nome: s.pernas?.[0]?.bookmaker_nome || "—",
+                pernas: s.pernas?.map(p => ({
+                  bookmaker_nome: p.bookmaker_nome,
+                  stake: p.stake
+                }))
+              }))} 
+              accentColor="hsl(var(--primary))"
+              logoMap={logoMap}
+            />
+          </div>
+          <div>
+            <SurebetStatisticsCard surebets={surebets} />
+          </div>
+        </div>
       )}
 
       {/* Banner Info */}
