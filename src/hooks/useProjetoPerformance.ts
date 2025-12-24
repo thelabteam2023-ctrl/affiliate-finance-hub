@@ -38,47 +38,24 @@ export function useProjetoPerformance({
 
   const fetchLucroApostas = useCallback(async (historicalBookmakerIds?: Set<string>): Promise<number> => {
     const { dataInicio, dataFim } = periodo;
-    let lucroTotal = 0;
 
-    // 1. Apostas simples (excluindo pernas de surebet) - usar LIQUIDADA
-    let querySimples = supabase
-      .from('apostas')
-      .select('lucro_prejuizo')
-      .eq('status', 'LIQUIDADA')
-      .is('surebet_id', null);
-    if (projetoId) querySimples = querySimples.eq('projeto_id', projetoId);
-    if (dataInicio) querySimples = querySimples.gte('data_aposta', dataInicio.toISOString());
-    if (dataFim) querySimples = querySimples.lte('data_aposta', dataFim.toISOString());
-
-    // 2. Apostas múltiplas - usar LIQUIDADA
-    let queryMultiplas = supabase
-      .from('apostas_multiplas')
+    // Usar apostas_unificada como fonte única de verdade
+    let query = supabase
+      .from('apostas_unificada')
       .select('lucro_prejuizo')
       .eq('status', 'LIQUIDADA');
-    if (projetoId) queryMultiplas = queryMultiplas.eq('projeto_id', projetoId);
-    if (dataInicio) queryMultiplas = queryMultiplas.gte('data_aposta', dataInicio.toISOString());
-    if (dataFim) queryMultiplas = queryMultiplas.lte('data_aposta', dataFim.toISOString());
+    if (projetoId) query = query.eq('projeto_id', projetoId);
+    if (dataInicio) query = query.gte('data_aposta', dataInicio.toISOString());
+    if (dataFim) query = query.lte('data_aposta', dataFim.toISOString());
 
-    // 3. Surebets - usar LIQUIDADA e lucro_real (já consolidado, evita double-counting)
-    let querySurebets = supabase
-      .from('surebets')
-      .select('lucro_real')
-      .eq('status', 'LIQUIDADA');
-    if (projetoId) querySurebets = querySurebets.eq('projeto_id', projetoId);
-    if (dataInicio) querySurebets = querySurebets.gte('data_operacao', dataInicio.toISOString());
-    if (dataFim) querySurebets = querySurebets.lte('data_operacao', dataFim.toISOString());
+    const { data, error } = await query;
 
-    const [simples, multiplas, surebets] = await Promise.all([
-      querySimples,
-      queryMultiplas,
-      querySurebets,
-    ]);
+    if (error) {
+      console.error('Erro ao buscar lucro das apostas:', error);
+      return 0;
+    }
 
-    lucroTotal += simples.data?.reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0) || 0;
-    lucroTotal += multiplas.data?.reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0) || 0;
-    lucroTotal += surebets.data?.reduce((acc, a) => acc + Number(a.lucro_real || 0), 0) || 0;
-
-    return lucroTotal;
+    return data?.reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0) || 0;
   }, [projetoId, periodo]);
 
   const fetchCashFlow = useCallback(async (historicalBookmakerIds?: Set<string>): Promise<{ depositos: number; saques: number }> => {

@@ -117,50 +117,24 @@ async function fetchGrossProfitFromBets(
   dataInicio: Date | null, 
   dataFim: Date | null
 ): Promise<number> {
-  let lucroTotal = 0;
-
-  // 1. Apostas simples (excluindo pernas de surebet) - USAR status LIQUIDADA
-  let querySimples = supabase
-    .from('apostas')
-    .select('lucro_prejuizo')
-    .eq('projeto_id', projetoId)
-    .eq('status', 'LIQUIDADA')
-    .is('surebet_id', null);
-  
-  if (dataInicio) querySimples = querySimples.gte('data_aposta', dataInicio.toISOString());
-  if (dataFim) querySimples = querySimples.lte('data_aposta', dataFim.toISOString());
-
-  // 2. Apostas múltiplas - USAR status LIQUIDADA
-  let queryMultiplas = supabase
-    .from('apostas_multiplas')
+  // Usar apostas_unificada como fonte única de verdade
+  let query = supabase
+    .from('apostas_unificada')
     .select('lucro_prejuizo')
     .eq('projeto_id', projetoId)
     .eq('status', 'LIQUIDADA');
   
-  if (dataInicio) queryMultiplas = queryMultiplas.gte('data_aposta', dataInicio.toISOString());
-  if (dataFim) queryMultiplas = queryMultiplas.lte('data_aposta', dataFim.toISOString());
+  if (dataInicio) query = query.gte('data_aposta', dataInicio.toISOString());
+  if (dataFim) query = query.lte('data_aposta', dataFim.toISOString());
 
-  // 3. Surebets (lucro consolidado)
-  let querySurebets = supabase
-    .from('surebets')
-    .select('lucro_real')
-    .eq('projeto_id', projetoId)
-    .eq('status', 'LIQUIDADA');
-  
-  if (dataInicio) querySurebets = querySurebets.gte('data_operacao', dataInicio.toISOString());
-  if (dataFim) querySurebets = querySurebets.lte('data_operacao', dataFim.toISOString());
+  const { data, error } = await query;
 
-  const [simples, multiplas, surebets] = await Promise.all([
-    querySimples,
-    queryMultiplas,
-    querySurebets,
-  ]);
+  if (error) {
+    console.error('Erro ao buscar lucro das apostas:', error);
+    return 0;
+  }
 
-  lucroTotal += simples.data?.reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0) || 0;
-  lucroTotal += multiplas.data?.reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0) || 0;
-  lucroTotal += surebets.data?.reduce((acc, a) => acc + Number(a.lucro_real || 0), 0) || 0;
-
-  return lucroTotal;
+  return data?.reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0) || 0;
 }
 
 async function fetchTotalStaked(
@@ -168,47 +142,30 @@ async function fetchTotalStaked(
   dataInicio: Date | null, 
   dataFim: Date | null
 ): Promise<number> {
-  let totalStaked = 0;
-
-  // Apostas simples
-  let querySimples = supabase
-    .from('apostas')
-    .select('stake')
-    .eq('projeto_id', projetoId)
-    .is('surebet_id', null);
-  
-  if (dataInicio) querySimples = querySimples.gte('data_aposta', dataInicio.toISOString());
-  if (dataFim) querySimples = querySimples.lte('data_aposta', dataFim.toISOString());
-
-  // Apostas múltiplas
-  let queryMultiplas = supabase
-    .from('apostas_multiplas')
-    .select('stake')
+  // Usar apostas_unificada como fonte única de verdade
+  // stake para apostas simples, stake_total para arbitragens
+  let query = supabase
+    .from('apostas_unificada')
+    .select('stake, stake_total, forma_registro')
     .eq('projeto_id', projetoId);
   
-  if (dataInicio) queryMultiplas = queryMultiplas.gte('data_aposta', dataInicio.toISOString());
-  if (dataFim) queryMultiplas = queryMultiplas.lte('data_aposta', dataFim.toISOString());
+  if (dataInicio) query = query.gte('data_aposta', dataInicio.toISOString());
+  if (dataFim) query = query.lte('data_aposta', dataFim.toISOString());
 
-  // Surebets
-  let querySurebets = supabase
-    .from('surebets')
-    .select('stake_total')
-    .eq('projeto_id', projetoId);
-  
-  if (dataInicio) querySurebets = querySurebets.gte('data_operacao', dataInicio.toISOString());
-  if (dataFim) querySurebets = querySurebets.lte('data_operacao', dataFim.toISOString());
+  const { data, error } = await query;
 
-  const [simples, multiplas, surebets] = await Promise.all([
-    querySimples,
-    queryMultiplas,
-    querySurebets,
-  ]);
+  if (error) {
+    console.error('Erro ao buscar stake total:', error);
+    return 0;
+  }
 
-  totalStaked += simples.data?.reduce((acc, a) => acc + Number(a.stake || 0), 0) || 0;
-  totalStaked += multiplas.data?.reduce((acc, a) => acc + Number(a.stake || 0), 0) || 0;
-  totalStaked += surebets.data?.reduce((acc, a) => acc + Number(a.stake_total || 0), 0) || 0;
-
-  return totalStaked;
+  return data?.reduce((acc, a) => {
+    // Para arbitragens, usar stake_total; para outras, usar stake
+    if (a.forma_registro === 'ARBITRAGEM') {
+      return acc + Number(a.stake_total || 0);
+    }
+    return acc + Number(a.stake || 0);
+  }, 0) || 0;
 }
 
 async function fetchOperationalLosses(
