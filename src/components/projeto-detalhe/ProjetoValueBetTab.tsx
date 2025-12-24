@@ -510,7 +510,7 @@ export function ProjetoValueBetTab({
                     </div>
                     {/* Evento e Esporte */}
                     <div className="mb-2">
-                      <p className="font-medium text-sm truncate">{aposta.evento}</p>
+                      <p className="font-medium text-sm truncate uppercase">{aposta.evento}</p>
                       <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
                     </div>
                     <div className="flex justify-between items-center text-sm">
@@ -557,7 +557,7 @@ export function ProjetoValueBetTab({
                       {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{aposta.evento}</p>
+                      <p className="text-sm font-medium truncate uppercase">{aposta.evento}</p>
                       <p className="text-xs text-muted-foreground">{aposta.selecao}</p>
                     </div>
                     <div className="text-right">

@@ -971,7 +971,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
                     </div>
                     <div className="flex items-start justify-between gap-2">
                       <CardTitle 
-                        className="text-sm truncate cursor-pointer hover:text-primary"
+                        className="text-sm truncate cursor-pointer hover:text-primary uppercase"
                         onClick={() => handleOpenDialog(aposta)}
                       >
                         {aposta.evento}

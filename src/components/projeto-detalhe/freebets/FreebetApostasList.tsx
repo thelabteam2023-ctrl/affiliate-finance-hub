@@ -196,7 +196,7 @@ export function FreebetApostasList({
                         )}
                       </div>
                     </td>
-                    <td className="p-3 max-w-[200px] truncate" title={aposta.evento}>
+                    <td className="p-3 max-w-[200px] truncate uppercase" title={aposta.evento}>
                       {aposta.evento}
                     </td>
                     <td className="p-3 max-w-[150px] truncate" title={aposta.selecao}>

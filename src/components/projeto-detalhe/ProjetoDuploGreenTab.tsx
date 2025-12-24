@@ -591,7 +591,7 @@ export function ProjetoDuploGreenTab({
                     </div>
                     {/* Evento e Esporte */}
                     <div className="mb-2">
-                      <p className="font-medium text-sm truncate">{aposta.evento}</p>
+                      <p className="font-medium text-sm truncate uppercase">{aposta.evento}</p>
                       <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
                     </div>
                     
@@ -656,7 +656,7 @@ export function ProjetoDuploGreenTab({
                       {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{aposta.evento}</p>
+                      <p className="text-sm font-medium truncate uppercase">{aposta.evento}</p>
                       {/* Exibir pernas ou seleção simples */}
                       {aposta.pernas && aposta.pernas.length > 1 ? (
                         <ApostaPernasInline pernas={aposta.pernas as Perna[]} className="truncate" />
