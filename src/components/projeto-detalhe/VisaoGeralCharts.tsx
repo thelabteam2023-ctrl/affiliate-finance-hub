@@ -189,7 +189,7 @@ function CasasMaisUtilizadasCard({ casas, accentColor }: CasasMaisUtilizadasCard
 
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <Building2 className="h-4 w-4" style={{ color: accentColor }} />
           <CardTitle className="text-sm font-medium">Casas Mais Utilizadas</CardTitle>
@@ -197,25 +197,32 @@ function CasasMaisUtilizadasCard({ casas, accentColor }: CasasMaisUtilizadasCard
         <CardDescription className="text-xs">Por volume apostado</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        {/* Header row */}
+        <div className="grid grid-cols-[auto_1fr_60px_90px_70px] gap-2 items-center text-xs text-muted-foreground border-b pb-2">
+          <span className="w-5"></span>
+          <span>Casa</span>
+          <span className="text-right">Qtd</span>
+          <span className="text-right">Volume</span>
+          <span className="text-right">ROI</span>
+        </div>
+        
         {topCasas.map((casa, idx) => {
           const barWidth = (casa.volume / maxVolume) * 100;
           const roiColor = casa.roi >= 0 ? "text-emerald-500" : "text-red-500";
           return (
             <Tooltip key={casa.casa}>
               <TooltipTrigger asChild>
-                <div className="space-y-1 cursor-default">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground w-4">{idx + 1}.</span>
-                      <span className="font-medium truncate max-w-[100px]">{casa.casa}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="text-muted-foreground">{casa.apostas}</span>
-                      <span className="font-medium">{formatCurrency(casa.volume)}</span>
-                      <span className={`font-semibold ${roiColor}`}>{casa.roi.toFixed(1)}%</span>
-                    </div>
+                <div className="space-y-1.5 cursor-default">
+                  <div className="grid grid-cols-[auto_1fr_60px_90px_70px] gap-2 items-center text-sm">
+                    <span className="text-xs text-muted-foreground w-5">{idx + 1}.</span>
+                    <span className="font-medium truncate">{casa.casa}</span>
+                    <span className="text-right text-muted-foreground tabular-nums">{casa.apostas}</span>
+                    <span className="text-right font-medium tabular-nums">{formatCurrency(casa.volume)}</span>
+                    <span className={`text-right font-semibold tabular-nums ${roiColor}`}>
+                      {casa.roi >= 0 ? '+' : ''}{casa.roi.toFixed(1)}%
+                    </span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-1 rounded-full bg-muted overflow-hidden ml-5">
                     <div
                       className="h-full rounded-full transition-all duration-300"
                       style={{
@@ -227,7 +234,7 @@ function CasasMaisUtilizadasCard({ casas, accentColor }: CasasMaisUtilizadasCard
                   </div>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="left" className="text-xs space-y-2 max-w-[280px]">
+              <TooltipContent side="left" className="text-xs space-y-2 max-w-[300px]">
                 <p className="font-semibold border-b pb-1 mb-1">{casa.casa}</p>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-muted-foreground">
                   <span>Apostas:</span>
@@ -242,22 +249,27 @@ function CasasMaisUtilizadasCard({ casas, accentColor }: CasasMaisUtilizadasCard
                   <span className={`text-right font-semibold ${roiColor}`}>{casa.roi.toFixed(2)}%</span>
                 </div>
                 {casa.vinculos.length > 0 && (
-                  <div className="space-y-1 pt-2 border-t">
-                    <div className="flex items-center gap-1 text-muted-foreground">
+                  <div className="space-y-1.5 pt-2 border-t">
+                    <div className="flex items-center gap-1 text-muted-foreground mb-2">
                       <Users className="h-3 w-3" />
                       <span className="font-medium">Por vínculo:</span>
                     </div>
+                    <div className="grid grid-cols-[1fr_60px_60px] gap-x-2 text-[10px] text-muted-foreground border-b pb-1 mb-1">
+                      <span>Vínculo</span>
+                      <span className="text-right">Volume</span>
+                      <span className="text-right">ROI</span>
+                    </div>
                     {casa.vinculos.slice(0, 5).map((v) => (
-                      <div key={v.vinculo} className="grid grid-cols-[1fr_auto_auto] gap-2 pl-4 items-center">
+                      <div key={v.vinculo} className="grid grid-cols-[1fr_60px_60px] gap-x-2 items-center">
                         <span className="truncate">{v.vinculo}</span>
-                        <span className="text-muted-foreground text-right">{formatCurrency(v.volume)}</span>
-                        <span className={`font-medium text-right ${v.roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                          {v.roi.toFixed(1)}%
+                        <span className="text-right text-muted-foreground tabular-nums">{formatCurrency(v.volume)}</span>
+                        <span className={`text-right font-medium tabular-nums ${v.roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          {v.roi >= 0 ? '+' : ''}{v.roi.toFixed(1)}%
                         </span>
                       </div>
                     ))}
                     {casa.vinculos.length > 5 && (
-                      <div className="text-muted-foreground pl-4">+{casa.vinculos.length - 5} vínculos...</div>
+                      <div className="text-muted-foreground">+{casa.vinculos.length - 5} vínculos...</div>
                     )}
                   </div>
                 )}
