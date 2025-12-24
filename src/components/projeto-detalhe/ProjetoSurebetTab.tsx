@@ -133,11 +133,15 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
 
   const fetchSurebets = async () => {
     try {
+      // CORREÇÃO: Filtrar por ESTRATÉGIA, não por forma_registro
+      // A estratégia define onde a aposta é contabilizada
+      // O forma_registro define apenas COMO foi estruturada
       let query = supabase
         .from("apostas_unificada")
         .select("*")
         .eq("projeto_id", projetoId)
-        .eq("forma_registro", "ARBITRAGEM")
+        .eq("estrategia", "SUREBET")
+        .is("cancelled_at", null)
         .order("data_aposta", { ascending: false });
       
       if (dateRange) {
