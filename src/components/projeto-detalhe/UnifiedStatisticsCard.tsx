@@ -5,26 +5,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { 
   BarChart3, 
   TrendingUp, 
-  DollarSign, 
   Target, 
-  Dumbbell,
-  LineChart,
-  Percent,
   AlertTriangle,
   Zap,
   Trophy
 } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  Cell,
-  Legend,
-} from "recharts";
+import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 
 interface Aposta {
   id: string;
@@ -420,102 +406,85 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
 
     return (
       <div className="space-y-6">
-        {/* Gráfico de Lucros por Faixa */}
+        {/* Gráfico de Distribuição por Resultado */}
         <div>
-          <div className="text-xs font-medium text-muted-foreground mb-2">Lucro por Faixa de Cotação</div>
-          <div className="h-[140px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart 
-                data={chartData} 
-                margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
-                barCategoryGap="20%"
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} opacity={0.3} />
-                <XAxis 
-                  dataKey="faixa" 
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis 
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v) => `R$${v}`}
-                  width={50}
-                />
-                <RechartsTooltip 
-                  contentStyle={{ 
-                    backgroundColor: "hsl(var(--popover))", 
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                    fontSize: "12px"
-                  }}
-                  formatter={(value: number) => [formatCurrency(value), "Lucro"]}
-                  labelStyle={{ color: "hsl(var(--muted-foreground))" }}
-                />
-                <Bar dataKey="lucro" radius={[4, 4, 0, 0]} maxBarSize={60}>
-                  {chartData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.lucro >= 0 ? "hsl(var(--chart-2))" : "hsl(var(--destructive))"} 
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Gráfico Comparativo - Ganhas / Perdidas / Reembolsadas */}
-        <div>
-          <div className="text-xs font-medium text-muted-foreground mb-2">Distribuição por Resultado</div>
-          <div className="h-[140px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart 
-                data={chartData} 
-                margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
-                barCategoryGap="15%"
-                barGap={2}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} opacity={0.3} />
-                <XAxis 
-                  dataKey="faixa" 
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis 
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  tickLine={false}
-                  axisLine={false}
-                  width={30}
-                  allowDecimals={false}
-                />
-                <RechartsTooltip 
-                  contentStyle={{ 
-                    backgroundColor: "hsl(var(--popover))", 
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                    fontSize: "12px"
-                  }}
-                  labelStyle={{ color: "hsl(var(--muted-foreground))" }}
-                />
-                <Legend 
-                  verticalAlign="top"
-                  align="right"
-                  height={24}
-                  iconType="square"
-                  iconSize={10}
-                  wrapperStyle={{ fontSize: "11px", paddingBottom: "4px" }}
-                  formatter={(value) => <span style={{ color: "hsl(var(--foreground))", marginLeft: 4 }}>{value}</span>}
-                />
-                <Bar dataKey="ganhas" name="Ganhas" fill="hsl(var(--chart-2))" radius={[3, 3, 0, 0]} maxBarSize={30} />
-                <Bar dataKey="perdidas" name="Perdidas" fill="hsl(var(--destructive))" radius={[3, 3, 0, 0]} maxBarSize={30} />
-                <Bar dataKey="reembolsadas" name="Reemb." fill="hsl(var(--muted-foreground))" radius={[3, 3, 0, 0]} maxBarSize={30} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <div className="text-xs font-medium text-muted-foreground mb-3">Distribuição por Faixa de Cotação</div>
+          <ModernBarChart
+            data={chartData}
+            categoryKey="faixa"
+            bars={[
+              { 
+                dataKey: "ganhas", 
+                label: "Ganhas", 
+                gradientStart: "#22C55E", 
+                gradientEnd: "#16A34A" 
+              },
+              { 
+                dataKey: "perdidas", 
+                label: "Perdidas", 
+                gradientStart: "#EF4444", 
+                gradientEnd: "#DC2626" 
+              },
+              { 
+                dataKey: "reembolsadas", 
+                label: "Reembolsadas", 
+                gradientStart: "#64748B", 
+                gradientEnd: "#475569" 
+              },
+            ]}
+            height={200}
+            barSize={14}
+            showLabels={false}
+            showLegend={true}
+            customTooltipContent={(payload, label) => {
+              const data = payload[0]?.payload;
+              if (!data) return null;
+              const total = data.ganhas + data.perdidas + data.reembolsadas;
+              const winRate = total > 0 ? ((data.ganhas / total) * 100).toFixed(1) : "0";
+              return (
+                <>
+                  <p className="font-medium text-sm mb-3 text-foreground">Odds {label}</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#22C55E] to-[#16A34A]" />
+                        <span className="text-xs text-muted-foreground">Ganhas</span>
+                      </div>
+                      <span className="text-sm font-semibold font-mono">{data.ganhas}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#EF4444] to-[#DC2626]" />
+                        <span className="text-xs text-muted-foreground">Perdidas</span>
+                      </div>
+                      <span className="text-sm font-semibold font-mono">{data.perdidas}</span>
+                    </div>
+                    {data.reembolsadas > 0 && (
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#64748B] to-[#475569]" />
+                          <span className="text-xs text-muted-foreground">Reemb.</span>
+                        </div>
+                        <span className="text-sm font-semibold font-mono">{data.reembolsadas}</span>
+                      </div>
+                    )}
+                    <div className="border-t border-border/50 pt-2 mt-2 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Lucro/Prejuízo</span>
+                        <span className={`text-sm font-mono font-semibold ${data.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                          {formatCurrency(data.lucro)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Win Rate</span>
+                        <span className="text-sm font-mono">{winRate}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            }}
+          />
         </div>
       </div>
     );
