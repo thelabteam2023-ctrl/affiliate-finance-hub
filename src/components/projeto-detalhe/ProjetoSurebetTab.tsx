@@ -199,7 +199,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             odd: p.odd,
             stake: p.stake,
             resultado: p.resultado,
-            bookmaker_nome: p.bookmaker_nome || "—"
+            bookmaker_nome: p.bookmaker_nome || "—",
+            bookmaker_id: p.bookmaker_id
           }));
 
           return {

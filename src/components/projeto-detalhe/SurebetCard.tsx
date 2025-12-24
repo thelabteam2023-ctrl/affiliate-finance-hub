@@ -12,6 +12,7 @@ export interface SurebetPerna {
   stake: number;
   resultado: string | null;
   bookmaker_nome: string;
+  bookmaker_id?: string;
 }
 
 export interface SurebetData {
