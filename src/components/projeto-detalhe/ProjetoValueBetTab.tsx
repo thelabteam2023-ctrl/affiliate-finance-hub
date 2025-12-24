@@ -626,7 +626,11 @@ export function ProjetoValueBetTab({
             open={dialogOpen}
             onOpenChange={setDialogOpen}
             projetoId={projetoId}
-            aposta={selectedAposta as any}
+            aposta={{
+              ...selectedAposta,
+              forma_registro: selectedAposta.forma_registro || "SIMPLES",
+              contexto_operacional: selectedAposta.contexto_operacional || "NORMAL",
+            } as any}
             onSuccess={handleApostaUpdated}
           />
         )}
@@ -683,7 +687,11 @@ export function ProjetoValueBetTab({
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           projetoId={projetoId}
-          aposta={selectedAposta as any}
+          aposta={{
+            ...selectedAposta,
+            forma_registro: selectedAposta.forma_registro || "SIMPLES",
+            contexto_operacional: selectedAposta.contexto_operacional || "NORMAL",
+          } as any}
           onSuccess={handleApostaUpdated}
         />
       )}
