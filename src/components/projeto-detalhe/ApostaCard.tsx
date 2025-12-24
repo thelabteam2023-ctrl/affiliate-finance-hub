@@ -2,9 +2,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Zap, TrendingUp, Target, ArrowLeftRight, Coins, Gift, CheckCircle2, Clock, Layers } from "lucide-react";
+import { Zap, TrendingUp, Target, ArrowLeftRight, Coins, Gift, CheckCircle2, Clock, Layers, X, CircleSlash } from "lucide-react";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useState } from "react";
 
 // Tipos de estratégia para badge
 export type EstrategiaType = 
@@ -53,6 +60,7 @@ interface ApostaCardProps {
   aposta: ApostaCardData;
   estrategia: EstrategiaType;
   onClick?: () => void;
+  onQuickResolve?: (apostaId: string, resultado: string) => void;
   variant?: "card" | "list";
   accentColor?: string;
   className?: string;
@@ -104,20 +112,93 @@ const ESTRATEGIA_CONFIG: Record<string, { label: string; icon: typeof Zap; color
   },
 };
 
-function ResultadoBadge({ resultado }: { resultado: string | null | undefined }) {
+interface ResultadoBadgeProps {
+  resultado: string | null | undefined;
+  apostaId?: string;
+  onQuickResolve?: (apostaId: string, resultado: string) => void;
+}
+
+function ResultadoBadge({ resultado, apostaId, onQuickResolve }: ResultadoBadgeProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  
   const getConfig = (r: string | null | undefined) => {
     switch (r) {
       case "GREEN": return { label: "Green", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", icon: CheckCircle2 };
       case "RED": return { label: "Red", color: "bg-red-500/20 text-red-400 border-red-500/30", icon: CheckCircle2 };
       case "MEIO_GREEN": return { label: "½ Green", color: "bg-teal-500/20 text-teal-400 border-teal-500/30", icon: CheckCircle2 };
       case "MEIO_RED": return { label: "½ Red", color: "bg-orange-500/20 text-orange-400 border-orange-500/30", icon: CheckCircle2 };
-      case "VOID": return { label: "Void", color: "bg-gray-500/20 text-gray-400 border-gray-500/30", icon: CheckCircle2 };
+      case "VOID": return { label: "Void", color: "bg-gray-500/20 text-gray-400 border-gray-500/30", icon: CircleSlash };
       default: return { label: "Pendente", color: "bg-blue-500/20 text-blue-400 border-blue-500/30", icon: Clock };
     }
   };
   
   const config = getConfig(resultado);
   const Icon = config.icon;
+  const isPending = !resultado || resultado === "PENDENTE";
+  const canQuickResolve = isPending && onQuickResolve && apostaId;
+  
+  const handleResolve = (newResultado: string) => {
+    if (onQuickResolve && apostaId) {
+      onQuickResolve(apostaId, newResultado);
+      setIsOpen(false);
+    }
+  };
+  
+  if (canQuickResolve) {
+    return (
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+          <Badge 
+            variant="outline" 
+            className={cn(
+              "text-[10px] px-1.5 py-0 flex items-center gap-0.5 cursor-pointer hover:bg-blue-500/30 transition-colors",
+              config.color
+            )}
+          >
+            <Icon className="h-2.5 w-2.5" />
+            {config.label}
+          </Badge>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-[140px]" onClick={(e) => e.stopPropagation()}>
+          <DropdownMenuItem 
+            onClick={() => handleResolve("GREEN")}
+            className="text-emerald-400 focus:text-emerald-400 focus:bg-emerald-500/10"
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Green
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={() => handleResolve("RED")}
+            className="text-red-400 focus:text-red-400 focus:bg-red-500/10"
+          >
+            <X className="h-4 w-4 mr-2" />
+            Red
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={() => handleResolve("MEIO_GREEN")}
+            className="text-teal-400 focus:text-teal-400 focus:bg-teal-500/10"
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            ½ Green
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={() => handleResolve("MEIO_RED")}
+            className="text-orange-400 focus:text-orange-400 focus:bg-orange-500/10"
+          >
+            <X className="h-4 w-4 mr-2" />
+            ½ Red
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={() => handleResolve("VOID")}
+            className="text-gray-400 focus:text-gray-400 focus:bg-gray-500/10"
+          >
+            <CircleSlash className="h-4 w-4 mr-2" />
+            Void
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
   
   return (
     <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", config.color)}>
@@ -137,7 +218,8 @@ function formatCurrency(value: number): string {
 export function ApostaCard({ 
   aposta, 
   estrategia, 
-  onClick, 
+  onClick,
+  onQuickResolve,
   variant = "card",
   accentColor,
   className 
@@ -204,7 +286,7 @@ export function ApostaCard({
                 {getModeloOperacao(aposta.pernas as Perna[])}
               </Badge>
             )}
-            <ResultadoBadge resultado={aposta.resultado} />
+            <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={onQuickResolve} />
           </div>
           
           {/* Data */}
@@ -287,7 +369,7 @@ export function ApostaCard({
               {getModeloOperacao(aposta.pernas as Perna[])}
             </Badge>
           )}
-          <ResultadoBadge resultado={aposta.resultado} />
+          <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={onQuickResolve} />
         </div>
         
         {/* Identificação: Evento e Esporte */}

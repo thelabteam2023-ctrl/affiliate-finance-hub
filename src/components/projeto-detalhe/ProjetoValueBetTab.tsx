@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -258,6 +259,71 @@ export function ProjetoValueBetTab({
       console.error("Erro ao carregar apostas ValueBet:", error);
     }
   };
+
+  // Resolução rápida de apostas
+  const handleQuickResolve = useCallback(async (apostaId: string, resultado: string) => {
+    try {
+      // Calcular lucro/prejuízo baseado no resultado
+      const aposta = apostas.find(a => a.id === apostaId);
+      if (!aposta) return;
+
+      const stake = typeof aposta.stake_total === "number" ? aposta.stake_total : aposta.stake;
+      const odd = aposta.odd || 1;
+      let lucro: number;
+
+      switch (resultado) {
+        case "GREEN":
+          lucro = stake * (odd - 1);
+          break;
+        case "RED":
+          lucro = -stake;
+          break;
+        case "MEIO_GREEN":
+          lucro = (stake * (odd - 1)) / 2;
+          break;
+        case "MEIO_RED":
+          lucro = -stake / 2;
+          break;
+        case "VOID":
+          lucro = 0;
+          break;
+        default:
+          lucro = 0;
+      }
+
+      const { error } = await supabase
+        .from("apostas_unificada")
+        .update({
+          resultado,
+          lucro_prejuizo: lucro,
+          status: "LIQUIDADA",
+        })
+        .eq("id", apostaId);
+
+      if (error) throw error;
+
+      // Atualizar lista local
+      setApostas(prev => prev.map(a => 
+        a.id === apostaId 
+          ? { ...a, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
+          : a
+      ));
+
+      const resultLabel = {
+        GREEN: "Green",
+        RED: "Red",
+        MEIO_GREEN: "½ Green",
+        MEIO_RED: "½ Red",
+        VOID: "Void"
+      }[resultado] || resultado;
+
+      toast.success(`Aposta marcada como ${resultLabel}`);
+      onDataChange?.();
+    } catch (error) {
+      console.error("Erro ao resolver aposta:", error);
+      toast.error("Erro ao atualizar resultado");
+    }
+  }, [apostas, onDataChange]);
 
   const metricas = useMemo(() => {
     const todasApostas = apostas.map((a) => ({
@@ -724,6 +790,7 @@ export function ProjetoValueBetTab({
               }}
               estrategia="VALUEBET"
               onClick={() => openEditDialog(aposta)}
+              onQuickResolve={handleQuickResolve}
               variant="card"
             />
           ))}
@@ -742,6 +809,7 @@ export function ProjetoValueBetTab({
               }}
               estrategia="VALUEBET"
               onClick={() => openEditDialog(aposta)}
+              onQuickResolve={handleQuickResolve}
               variant="list"
             />
           ))}
