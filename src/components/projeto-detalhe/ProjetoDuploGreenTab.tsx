@@ -32,7 +32,8 @@ import {
   Users,
   Clock,
   History,
-  ArrowUpDown
+  ArrowUpDown,
+  Sparkles
 } from "lucide-react";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -543,33 +544,22 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
 
   const renderVisaoGeral = () => (
     <div className="space-y-6">
-      <Card className="border-lime-500/20 bg-lime-500/5">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <Info className="h-5 w-5 text-lime-400 mt-0.5 shrink-0" />
-            <p className="text-sm text-lime-200">
-              <strong>Visão especializada Duplo Green:</strong> Estratégia coordenada para obter múltiplos greens. 
-              As mesmas apostas também aparecem em <strong>Apostas Livres</strong>.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-      
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Apostas DG</CardTitle>
-            <Zap className="h-4 w-4 text-lime-400" />
+            <CardTitle className="text-sm font-medium">Duplo Green</CardTitle>
+            <Sparkles className="h-4 w-4 text-lime-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metricas.total}</div>
-            <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs">
-              <span className="text-blue-400">{metricas.pendentes} Pendentes</span>
-              <span className="text-emerald-500">{metricas.greens} G</span>
-              <span className="text-red-500">{metricas.reds} R</span>
-            </div>
+            <p className="text-xs text-muted-foreground flex items-center gap-2">
+              {metricas.pendentes > 0 && <span>{metricas.pendentes} Pendentes</span>}
+              <span className="text-emerald-400">{metricas.greens}G</span>
+              <span className="text-red-400">{metricas.reds}R</span>
+            </p>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Volume</CardTitle>
@@ -577,9 +567,10 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(metricas.totalStake)}</div>
-            <p className="text-xs text-muted-foreground">Total apostado</p>
+            <p className="text-xs text-muted-foreground">Total investido</p>
           </CardContent>
         </Card>
+
         <Card className={metricas.lucroTotal >= 0 ? "border-emerald-500/20" : "border-red-500/20"}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{metricas.lucroTotal >= 0 ? 'Lucro' : 'Prejuízo'}</CardTitle>
@@ -589,9 +580,10 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
             <div className={`text-2xl font-bold ${metricas.lucroTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {formatCurrency(metricas.lucroTotal)}
             </div>
-            <p className="text-xs text-muted-foreground">Taxa: {metricas.taxaAcerto.toFixed(1)}%</p>
+            <p className="text-xs text-muted-foreground">Resultado liquidado</p>
           </CardContent>
         </Card>
+
         <Card className={metricas.roi >= 0 ? "border-emerald-500/20" : "border-red-500/20"}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">ROI</CardTitle>
@@ -605,6 +597,19 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           </CardContent>
         </Card>
       </div>
+
+      {/* Banner Info - Abaixo dos KPIs */}
+      <Card className="border-lime-500/30 bg-lime-500/5">
+        <CardContent className="py-3">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 text-lime-400 mt-0.5 shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-lime-400">Visão Especializada:</span> Esta aba exibe apenas operações de Duplo Green. 
+              As mesmas apostas também aparecem na aba "Apostas Livres".
+            </p>
+          </div>
+        </CardContent>
+      </Card>
       
       {metricas.total > 0 && (
         <VisaoGeralCharts apostas={apostas} accentColor="#84cc16" logoMap={logoMap} />

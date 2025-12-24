@@ -605,21 +605,6 @@ export function ProjetoValueBetTab({
   // Render Visão Geral
   const renderVisaoGeral = () => (
     <div className="space-y-6">
-      {/* Banner informativo */}
-      <Card className="border-purple-500/20 bg-purple-500/5">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <Info className="h-5 w-5 text-purple-400 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-sm text-purple-200">
-                <strong>Visão especializada ValueBet:</strong> Esta aba exibe apenas apostas com estratégia ValueBet.
-                As mesmas apostas também aparecem em <strong>Apostas Livres</strong> para visão global.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* KPIs */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -629,11 +614,11 @@ export function ProjetoValueBetTab({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metricas.total}</div>
-            <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs">
-              <span className="text-blue-400">{metricas.pendentes} Pendentes</span>
-              <span className="text-emerald-500">{metricas.greens} G</span>
-              <span className="text-red-500">{metricas.reds} R</span>
-            </div>
+            <p className="text-xs text-muted-foreground flex items-center gap-2">
+              {metricas.pendentes > 0 && <span>{metricas.pendentes} Pendentes</span>}
+              <span className="text-emerald-400">{metricas.greens}G</span>
+              <span className="text-red-400">{metricas.reds}R</span>
+            </p>
           </CardContent>
         </Card>
 
@@ -644,7 +629,7 @@ export function ProjetoValueBetTab({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(metricas.totalStake)}</div>
-            <p className="text-xs text-muted-foreground">Total apostado</p>
+            <p className="text-xs text-muted-foreground">Total investido</p>
           </CardContent>
         </Card>
 
@@ -657,9 +642,7 @@ export function ProjetoValueBetTab({
             <div className={`text-2xl font-bold ${metricas.lucroTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {formatCurrency(metricas.lucroTotal)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Taxa de acerto: {metricas.taxaAcerto.toFixed(1)}%
-            </p>
+            <p className="text-xs text-muted-foreground">Resultado liquidado</p>
           </CardContent>
         </Card>
 
@@ -676,6 +659,19 @@ export function ProjetoValueBetTab({
           </CardContent>
         </Card>
       </div>
+
+      {/* Banner Info - Abaixo dos KPIs */}
+      <Card className="border-purple-500/30 bg-purple-500/5">
+        <CardContent className="py-3">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 text-purple-400 mt-0.5 shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-purple-400">Visão Especializada:</span> Esta aba exibe apenas apostas com estratégia ValueBet. 
+              As mesmas apostas também aparecem na aba "Apostas Livres".
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Gráficos e Estatísticas */}
       {metricas.total > 0 && (
