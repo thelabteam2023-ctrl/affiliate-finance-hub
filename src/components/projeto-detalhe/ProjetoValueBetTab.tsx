@@ -46,6 +46,14 @@ import { ValueBetStatisticsCard } from "./ValueBetStatisticsCard";
 
 import { cn } from "@/lib/utils";
 
+// Helper para exibir apenas primeiro nome + último sobrenome
+const getFirstLastName = (fullName: string): string => {
+  if (!fullName) return "";
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length <= 2) return fullName;
+  return `${parts[0]} ${parts[parts.length - 1]}`;
+};
+
 interface ProjetoValueBetTabProps {
   projetoId: string;
   onDataChange?: () => void;
@@ -379,15 +387,16 @@ export function ProjetoValueBetTab({
       // Primeiro tenta extrair do formato "CASA - Operador" no nome do bookmaker
       const separatorIdx = bookmakerNome.indexOf(" - ");
       if (separatorIdx > 0) {
+        const vinculoRaw = bookmakerNome.substring(separatorIdx + 3).trim();
         return {
           casa: bookmakerNome.substring(0, separatorIdx).trim(),
-          vinculo: bookmakerNome.substring(separatorIdx + 3).trim()
+          vinculo: getFirstLastName(vinculoRaw)
         };
       }
       // Se não tem separador, usa o operador_nome como vínculo
       return { 
         casa: bookmakerNome, 
-        vinculo: operadorNome || "Sem vínculo" 
+        vinculo: operadorNome ? getFirstLastName(operadorNome) : "Sem vínculo" 
       };
     };
 
