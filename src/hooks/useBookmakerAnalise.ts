@@ -289,34 +289,27 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
 
       const bookmakerIds = bookmakers.map(b => b.id);
 
-      // Query base para apostas
+      // Query base para apostas - using apostas_unificada
       let apostasQuery = supabase
-        .from("apostas")
-        .select("bookmaker_id, lucro_prejuizo, stake, status, data_aposta, surebet_id")
+        .from("apostas_unificada")
+        .select("bookmaker_id, lucro_prejuizo, stake, stake_total, status, data_aposta, estrategia, pernas")
         .eq("projeto_id", projetoId)
-        .in("bookmaker_id", bookmakerIds);
+        .in("estrategia", ["SIMPLES", "SUREBET"]); // Include SUREBET for pernas
 
       let apostasMultiplasQuery = supabase
-        .from("apostas_multiplas")
+        .from("apostas_unificada")
         .select("bookmaker_id, lucro_prejuizo, stake, resultado, data_aposta")
         .eq("projeto_id", projetoId)
-        .in("bookmaker_id", bookmakerIds);
-
-      let surebetsQuery = supabase
-        .from("surebets")
-        .select("id, lucro_real, stake_total, status, data_operacao")
-        .eq("projeto_id", projetoId);
+        .eq("estrategia", "MULTIPLA");
 
       // Aplicar filtros de data se fornecidos
       if (dataInicio) {
         apostasQuery = apostasQuery.gte("data_aposta", dataInicio);
         apostasMultiplasQuery = apostasMultiplasQuery.gte("data_aposta", dataInicio);
-        surebetsQuery = surebetsQuery.gte("data_operacao", dataInicio);
       }
       if (dataFim) {
         apostasQuery = apostasQuery.lte("data_aposta", dataFim);
         apostasMultiplasQuery = apostasMultiplasQuery.lte("data_aposta", dataFim);
-        surebetsQuery = surebetsQuery.lte("data_operacao", dataFim);
       }
 
       // Buscar perdas operacionais (limitações/bloqueios)
@@ -361,7 +354,6 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
       const [
         apostasResult,
         apostasMultiplasResult,
-        surebetsResult,
         perdasResult,
         depositosResult,
         saquesResult,
@@ -370,7 +362,6 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
       ] = await Promise.all([
         apostasQuery,
         apostasMultiplasQuery,
-        surebetsQuery,
         perdasQuery,
         depositosQuery,
         saquesQuery,
@@ -380,36 +371,30 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
 
       const apostas = apostasResult.data || [];
       const apostasMultiplas = apostasMultiplasResult.data || [];
-      const surebets = surebetsResult.data || [];
       const perdas = perdasResult.data || [];
       const depositos = depositosResult.data || [];
       const saques = saquesResult.data || [];
       const ciclos = ciclosResult.data || [];
       const projeto = projetoResult.data;
 
-      // Buscar pernas de surebet para mapear bookmaker
-      const { data: surebetPernas } = await supabase
-        .from("apostas")
-        .select("bookmaker_id, surebet_id, stake")
-        .eq("projeto_id", projetoId)
-        .not("surebet_id", "is", null)
-        .in("bookmaker_id", bookmakerIds);
-
-      // Mapear surebets para bookmakers
-      const surebetLucroMap: Record<string, number> = {};
-      const surebetStakeMap: Record<string, number> = {};
-      surebets.forEach(s => {
-        surebetLucroMap[s.id] = s.status === "LIQUIDADA" ? Number(s.lucro_real || 0) : 0;
-        surebetStakeMap[s.id] = Number(s.stake_total || 0);
-      });
-
-      const surebetBookmakerMap: Record<string, Set<string>> = {};
-      surebetPernas?.forEach(p => {
-        if (p.surebet_id) {
-          if (!surebetBookmakerMap[p.surebet_id]) {
-            surebetBookmakerMap[p.surebet_id] = new Set();
-          }
-          surebetBookmakerMap[p.surebet_id].add(p.bookmaker_id);
+      // Process surebets from apostas (estrategia = SUREBET) - pernas are in JSON
+      const surebetBookmakerData: Record<string, { lucro: number; volume: number; qtdApostas: number }> = {};
+      
+      apostas.forEach((a: any) => {
+        if (a.estrategia === "SUREBET" && a.pernas) {
+          const pernas = Array.isArray(a.pernas) ? a.pernas : [];
+          const lucroPerPerna = a.status === "LIQUIDADA" ? (Number(a.lucro_prejuizo || 0) / Math.max(pernas.length, 1)) : 0;
+          
+          pernas.forEach((p: any) => {
+            if (p.bookmaker_id && bookmakerIds.includes(p.bookmaker_id)) {
+              if (!surebetBookmakerData[p.bookmaker_id]) {
+                surebetBookmakerData[p.bookmaker_id] = { lucro: 0, volume: 0, qtdApostas: 0 };
+              }
+              surebetBookmakerData[p.bookmaker_id].lucro += lucroPerPerna;
+              surebetBookmakerData[p.bookmaker_id].volume += Number(p.stake || 0);
+              surebetBookmakerData[p.bookmaker_id].qtdApostas += 1;
+            }
+          });
         }
       });
 

@@ -233,7 +233,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
       }
 
       const { data, error } = await supabase
-        .from("apostas")
+        .from("apostas_unificada")
         .select(`
           *,
           bookmaker:bookmakers (
@@ -245,12 +245,20 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           )
         `)
         .eq("projeto_id", projetoId)
-        .is("surebet_id", null)
+        .eq("estrategia", "SIMPLES")
         .or(`bookmaker_id.in.(${bookmakersInBonusMode.join(',')}),is_bonus_bet.eq.true`)
         .order("data_aposta", { ascending: false });
 
       if (error) throw error;
-      setApostas(data || []);
+      
+      // Map to expected Aposta format
+      const mapped = (data || []).map((a: any) => ({
+        ...a,
+        esporte: a.esporte || '',
+        evento: a.evento || '',
+        selecao: a.selecao || ''
+      }));
+      setApostas(mapped);
     } catch (error: any) {
       toast.error("Erro ao carregar apostas: " + error.message);
     }
@@ -265,7 +273,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
       }
 
       const { data, error } = await supabase
-        .from("apostas_multiplas")
+        .from("apostas_unificada")
         .select(`
           *,
           bookmaker:bookmakers (
@@ -277,6 +285,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           )
         `)
         .eq("projeto_id", projetoId)
+        .eq("estrategia", "MULTIPLA")
         .or(`bookmaker_id.in.(${bookmakersInBonusMode.join(',')}),is_bonus_bet.eq.true`)
         .order("data_aposta", { ascending: false });
 
@@ -299,42 +308,42 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
         return;
       }
 
-      // Fetch surebets that have at least one perna with a bookmaker in bonus mode
+      // Fetch surebets from apostas_unificada with estrategia SUREBET
       const { data: surebetsData, error } = await supabase
-        .from("surebets")
+        .from("apostas_unificada")
         .select("*")
         .eq("projeto_id", projetoId)
-        .order("data_operacao", { ascending: false });
+        .eq("estrategia", "SUREBET")
+        .order("data_aposta", { ascending: false });
 
       if (error) throw error;
       
-      // Fetch pernas for each surebet and filter by bonus bookmakers
-      const surebetsComPernas = await Promise.all((surebetsData || []).map(async (surebet) => {
-        const { data: pernasData } = await supabase
-          .from("apostas")
-          .select(`
-            id,
-            bookmaker_id,
-            selecao,
-            odd,
-            stake,
-            resultado,
-            bookmaker:bookmakers (
-              nome,
-              parceiro:parceiros (nome)
-            )
-          `)
-          .eq("surebet_id", surebet.id);
-        
+      // Parse pernas from JSON and filter by bonus bookmakers
+      const surebetsComPernas = (surebetsData || []).map((surebet: any) => {
+        const pernas = Array.isArray(surebet.pernas) ? surebet.pernas : [];
         return {
-          ...surebet,
-          pernas: pernasData || []
+          id: surebet.id,
+          evento: surebet.evento || '',
+          esporte: surebet.esporte || '',
+          modelo: surebet.modelo || 'BACK_LAY',
+          mercado: surebet.mercado,
+          stake_total: surebet.stake_total || 0,
+          spread_calculado: surebet.spread_calculado,
+          roi_esperado: surebet.roi_esperado,
+          roi_real: surebet.roi_real,
+          lucro_esperado: surebet.lucro_esperado,
+          lucro_real: surebet.lucro_prejuizo,
+          status: surebet.status,
+          resultado: surebet.resultado,
+          data_operacao: surebet.data_aposta,
+          observacoes: surebet.observacoes,
+          pernas: pernas
         };
-      }));
+      });
       
       // Filter surebets that have at least one perna with a bookmaker in bonus mode
-      const surebetsFiltradas = surebetsComPernas.filter(sb => 
-        sb.pernas?.some(p => bookmakersInBonusMode.includes(p.bookmaker_id))
+      const surebetsFiltradas = surebetsComPernas.filter((sb: any) => 
+        sb.pernas?.some((p: any) => bookmakersInBonusMode.includes(p.bookmaker_id))
       );
       
       setSurebets(surebetsFiltradas);

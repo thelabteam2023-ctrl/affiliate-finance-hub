@@ -158,14 +158,8 @@ export default function Testes() {
         await supabase.from("projeto_perdas").delete().in("projeto_id", projetoIds);
 
 
-        // Apagar apostas (incluindo as vinculadas a surebets)
-        await supabase.from("apostas").delete().in("projeto_id", projetoIds);
-
-        // Apagar apostas múltiplas
-        await supabase.from("apostas_multiplas").delete().in("projeto_id", projetoIds);
-
-        // Apagar surebets
-        await supabase.from("surebets").delete().in("projeto_id", projetoIds);
+        // Apagar apostas unificada
+        await supabase.from("apostas_unificada").delete().in("projeto_id", projetoIds);
 
         // Apagar freebets recebidas
         await supabase.from("freebets_recebidas").delete().in("projeto_id", projetoIds);
@@ -789,20 +783,9 @@ export default function Testes() {
         console.error("Erro ao apagar freebets:", freebetsError);
       }
 
-      // Apagar todas as apostas múltiplas do usuário
-      const { error: apostasMultiplasError } = await supabase
-        .from("apostas_multiplas")
-        .delete()
-        .eq("user_id", user.id);
-
-      if (apostasMultiplasError) {
-        console.error("Erro ao apagar apostas múltiplas:", apostasMultiplasError);
-      }
-
-      // Apagar todas as apostas do usuário (campos gerou_freebet e tipo_freebet são limpos junto)
-      // IMPORTANTE: Apagar apostas antes de surebets pois apostas têm FK para surebets
+      // Apagar todas as apostas unificada do usuário
       const { error: apostasError } = await supabase
-        .from("apostas")
+        .from("apostas_unificada")
         .delete()
         .eq("user_id", user.id);
 
@@ -810,26 +793,7 @@ export default function Testes() {
         console.error("Erro ao apagar apostas:", apostasError);
       }
 
-      // Apagar todas as surebets do usuário
-      // Primeiro verificar quantas existem para debug
-      const { data: surebetsExistentes } = await supabase
-        .from("surebets")
-        .select("id")
-        .eq("user_id", user.id);
-      
-      console.log("Surebets a deletar:", surebetsExistentes?.length || 0);
-      
-      const { error: surebetsError, count: surebetsCount } = await supabase
-        .from("surebets")
-        .delete()
-        .eq("user_id", user.id)
-        .select();
-
-      console.log("Surebets deletadas:", surebetsCount);
-      if (surebetsError) {
-        console.error("Erro ao apagar surebets:", surebetsError);
-        toast.error(`Erro ao apagar surebets: ${surebetsError.message}`);
-      }
+      console.log("Apostas deletadas com sucesso");
 
       // Atualizar cada bookmaker com seu saldo original e zerar saldo_freebet
       let atualizados = 0;
