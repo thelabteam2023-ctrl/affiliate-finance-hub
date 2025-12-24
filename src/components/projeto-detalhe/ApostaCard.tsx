@@ -178,10 +178,10 @@ export function ApostaCard({
               <Icon className="h-2.5 w-2.5" />
               {config.label}
             </Badge>
-            {isMultipla && aposta.tipo_multipla && (
+            {isMultipla && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 bg-purple-500/20 flex items-center gap-0.5">
                 <Layers className="h-2.5 w-2.5" />
-                {aposta.tipo_multipla}
+                MÚLTIPLA
               </Badge>
             )}
             {hasPernas && aposta.modelo && (
@@ -256,10 +256,10 @@ export function ApostaCard({
             <Icon className="h-2.5 w-2.5" />
             {config.label}
           </Badge>
-          {isMultipla && aposta.tipo_multipla && (
+          {isMultipla && (
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 bg-purple-500/20 flex items-center gap-0.5">
               <Layers className="h-2.5 w-2.5" />
-              {aposta.tipo_multipla}
+              MÚLTIPLA
             </Badge>
           )}
           {hasPernas && aposta.modelo && (
@@ -278,7 +278,7 @@ export function ApostaCard({
         {/* Identificação: Evento e Esporte */}
         <div className="mb-2">
           <p className="font-medium text-sm truncate uppercase">{displayEvento || 'Aposta Múltipla'}</p>
-          <p className="text-xs text-muted-foreground">{aposta.esporte || (isMultipla ? `${aposta.selecoes?.length || 2} seleções` : '')}</p>
+          <p className="text-xs text-muted-foreground">{aposta.esporte || (isMultipla ? `${aposta.selecoes?.length || 2} SELEÇÕES` : '')}</p>
         </div>
         
         {/* Detalhamento: Pernas, Seleções ou Seleção Simples */}
