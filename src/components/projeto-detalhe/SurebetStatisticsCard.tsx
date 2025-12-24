@@ -112,10 +112,13 @@ const RankingTooltip = ({
 );
 
 const SectionHeader = ({ title }: { title: string }) => (
-  <div className="mt-3 first:mt-0">
-    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-      {title}
-    </span>
+  <div className="mt-4 first:mt-0 mb-1">
+    <div className="flex items-center gap-2">
+      <div className="w-0.5 h-4 bg-emerald-500 rounded-full" />
+      <span className="text-xs font-semibold text-foreground/90 uppercase tracking-wider">
+        {title}
+      </span>
+    </div>
   </div>
 );
 
