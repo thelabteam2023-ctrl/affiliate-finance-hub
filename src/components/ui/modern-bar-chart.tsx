@@ -33,11 +33,13 @@ interface ModernBarChartProps {
   formatValue?: (value: number) => string;
   formatTooltip?: (dataKey: string, value: number) => string;
   customTooltipContent?: (payload: any, label: string) => React.ReactNode;
+  labelDataKey?: string; // Key to use for label values (e.g., 'lucro' instead of bar count)
+  formatLabel?: (value: number) => string; // Custom formatter for labels
 }
 
 // Custom animated label component
 const AnimatedLabel = (props: any) => {
-  const { x, y, width, value, fill, index } = props;
+  const { x, y, width, value, fill, index, formattedValue } = props;
   const [opacity, setOpacity] = useState(0);
   const [translateY, setTranslateY] = useState(10);
 
@@ -49,7 +51,8 @@ const AnimatedLabel = (props: any) => {
     return () => clearTimeout(timer);
   }, [index]);
 
-  if (!value || value === 0) return null;
+  const displayValue = formattedValue !== undefined ? formattedValue : value;
+  if (displayValue === undefined || displayValue === null || displayValue === 0 || displayValue === "R$ 0") return null;
 
   return (
     <text
@@ -63,10 +66,10 @@ const AnimatedLabel = (props: any) => {
         opacity,
         transform: `translateY(${translateY}px)`,
         transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-        fontSize: "11px",
+        fontSize: "10px",
       }}
     >
-      {value}
+      {displayValue}
     </text>
   );
 };
@@ -157,6 +160,8 @@ export function ModernBarChart({
   formatValue,
   formatTooltip,
   customTooltipContent,
+  labelDataKey,
+  formatLabel,
 }: ModernBarChartProps) {
   const [isAnimated, setIsAnimated] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -264,12 +269,19 @@ export function ModernBarChart({
                 <LabelList
                   dataKey={bar.dataKey}
                   position="top"
-                  content={(props: any) => (
-                    <AnimatedLabel 
-                      {...props} 
-                      fill={bar.gradientStart}
-                    />
-                  )}
+                  content={(props: any) => {
+                    const entry = props.payload;
+                    // If labelDataKey is provided, use that value instead of bar count
+                    const labelValue = labelDataKey && entry ? entry[labelDataKey] : props.value;
+                    const formattedValue = formatLabel && labelValue !== undefined ? formatLabel(labelValue) : labelValue;
+                    return (
+                      <AnimatedLabel 
+                        {...props} 
+                        fill={labelValue > 0 ? "#22C55E" : labelValue < 0 ? "#EF4444" : bar.gradientStart}
+                        formattedValue={formattedValue}
+                      />
+                    );
+                  }}
                 />
               )}
             </Bar>

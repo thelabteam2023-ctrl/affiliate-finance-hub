@@ -452,8 +452,14 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
             ]}
             height={200}
             barSize={14}
-            showLabels={false}
+            showLabels={true}
             showLegend={true}
+            labelDataKey="lucro"
+            formatLabel={(value) => {
+              if (value === 0) return "";
+              const prefix = value > 0 ? "+" : "";
+              return `${prefix}R$ ${Math.abs(value).toFixed(0)}`;
+            }}
             customTooltipContent={(payload, label) => {
               const data = payload[0]?.payload;
               if (!data) return null;
