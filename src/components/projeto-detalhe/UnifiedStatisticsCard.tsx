@@ -446,7 +446,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
               },
             ]}
             height={200}
-            barSize={18}
+            barSize={14}
             showLabels={false}
             showLegend={true}
             customTooltipContent={(payload, label) => {
