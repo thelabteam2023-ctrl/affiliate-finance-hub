@@ -434,34 +434,37 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
             data={chartData}
             categoryKey="faixa"
             bars={[
-              { 
-                dataKey: "ganhas", 
-                label: "Ganhas", 
-                gradientStart: "#22C55E", 
-                gradientEnd: "#16A34A" 
+              {
+                dataKey: "ganhas",
+                label: "Ganhas",
+                gradientStart: "#22C55E",
+                gradientEnd: "#16A34A",
               },
-              { 
-                dataKey: "perdidas", 
-                label: "Perdidas", 
-                gradientStart: "#EF4444", 
-                gradientEnd: "#DC2626" 
+              {
+                dataKey: "perdidas",
+                label: "Perdidas",
+                gradientStart: "#EF4444",
+                gradientEnd: "#DC2626",
               },
-              { 
-                dataKey: "reembolsadas", 
-                label: "Reembolsadas", 
-                gradientStart: "#64748B", 
-                gradientEnd: "#475569" 
+              {
+                dataKey: "reembolsadas",
+                label: "Reembolsadas",
+                gradientStart: "#64748B",
+                gradientEnd: "#475569",
               },
             ]}
             height={200}
             barSize={14}
             showLabels={true}
             showLegend={true}
+            // Mostrar lucro/prejuízo UMA vez por faixa (no topo do grupo), evitando confundir com contagem
             labelDataKey="lucro"
-            formatLabel={(value) => {
-              if (value === 0) return "";
-              const prefix = value > 0 ? "+" : "";
-              return `${prefix}R$ ${Math.abs(value).toFixed(0)}`;
+            formatLabel={(_, { dataKey, payload }) => {
+              if (dataKey !== "ganhas") return "";
+              const lucro = Number(payload?.lucro ?? 0);
+              if (!lucro) return "";
+              const prefix = lucro > 0 ? "+" : "";
+              return `${prefix}${formatCurrency(lucro).replace("R$", "R$")}`;
             }}
             customTooltipContent={(payload, label) => {
               const data = payload[0]?.payload;
