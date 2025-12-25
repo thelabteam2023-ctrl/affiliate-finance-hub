@@ -663,20 +663,35 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       </CardHeader>
       <CardContent className="pt-2 pb-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-5 h-8 mb-4">
-            <TabsTrigger value="resumo" className="text-xs data-[state=active]:bg-purple-500/20">
+          <TabsList className="w-full grid grid-cols-5 h-9 mb-4 bg-transparent gap-1 p-0">
+            <TabsTrigger 
+              value="resumo" 
+              className="text-xs rounded-lg transition-all duration-200 data-[state=inactive]:text-muted-foreground data-[state=inactive]:bg-transparent data-[state=active]:bg-purple-500/10 data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-[inset_0_-2px_0_0_hsl(270,76%,60%)] hover:bg-muted/40"
+            >
               Resumo
             </TabsTrigger>
-            <TabsTrigger value="por-valor" className="text-xs data-[state=active]:bg-purple-500/20">
+            <TabsTrigger 
+              value="por-valor" 
+              className="text-xs rounded-lg transition-all duration-200 data-[state=inactive]:text-muted-foreground data-[state=inactive]:bg-transparent data-[state=active]:bg-purple-500/10 data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-[inset_0_-2px_0_0_hsl(270,76%,60%)] hover:bg-muted/40"
+            >
               Por Valor
             </TabsTrigger>
-            <TabsTrigger value="por-cotacao" className="text-xs data-[state=active]:bg-purple-500/20">
+            <TabsTrigger 
+              value="por-cotacao" 
+              className="text-xs rounded-lg transition-all duration-200 data-[state=inactive]:text-muted-foreground data-[state=inactive]:bg-transparent data-[state=active]:bg-purple-500/10 data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-[inset_0_-2px_0_0_hsl(270,76%,60%)] hover:bg-muted/40"
+            >
               Por Cotação
             </TabsTrigger>
-            <TabsTrigger value="por-esporte" className="text-xs data-[state=active]:bg-purple-500/20">
+            <TabsTrigger 
+              value="por-esporte" 
+              className="text-xs rounded-lg transition-all duration-200 data-[state=inactive]:text-muted-foreground data-[state=inactive]:bg-transparent data-[state=active]:bg-purple-500/10 data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-[inset_0_-2px_0_0_hsl(270,76%,60%)] hover:bg-muted/40"
+            >
               Por Esporte
             </TabsTrigger>
-            <TabsTrigger value="avancado" className="text-xs data-[state=active]:bg-purple-500/20">
+            <TabsTrigger 
+              value="avancado" 
+              className="text-xs rounded-lg transition-all duration-200 data-[state=inactive]:text-muted-foreground data-[state=inactive]:bg-transparent data-[state=active]:bg-purple-500/10 data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-[inset_0_-2px_0_0_hsl(270,76%,60%)] hover:bg-muted/40"
+            >
               Avançado
             </TabsTrigger>
           </TabsList>
