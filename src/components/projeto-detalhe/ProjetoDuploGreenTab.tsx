@@ -44,6 +44,7 @@ import { ApostaCard } from "./ApostaCard";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
+import { DuploGreenStatisticsCard } from "./DuploGreenStatisticsCard";
 
 import { cn, getFirstLastName } from "@/lib/utils";
 
@@ -598,6 +599,11 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           </CardContent>
         </Card>
       </div>
+
+      {/* Card de Estatísticas Detalhadas */}
+      {metricas.total > 0 && (
+        <DuploGreenStatisticsCard apostas={apostas} />
+      )}
 
       {metricas.total > 0 && (
         <VisaoGeralCharts apostas={apostas} accentColor="#84cc16" logoMap={logoMap} isSingleDayPeriod={internalPeriod === "1dia"} />
