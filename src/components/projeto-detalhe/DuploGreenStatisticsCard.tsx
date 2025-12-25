@@ -319,20 +319,6 @@ export function DuploGreenStatisticsCard({ apostas }: DuploGreenStatisticsCardPr
           </div>
         </div>
 
-        {/* Eficiência (só mostra se houver volume) */}
-        {stats.taxaConversao !== null && (
-          <div>
-            <SectionHeader title="Eficiência Operacional" icon={Percent} color="amber" />
-            <div className="grid grid-cols-1 gap-2">
-              <StatCell 
-                label="Taxa de Conversão" 
-                value={`${stats.taxaConversao >= 0 ? "+" : ""}${stats.taxaConversao.toFixed(2)}%`}
-                valueClass={stats.taxaConversao >= 0 ? "text-emerald-400" : "text-red-400"}
-                tooltip="Eficiência de conversão de stake em lucro (quanto maior, melhor)"
-              />
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
