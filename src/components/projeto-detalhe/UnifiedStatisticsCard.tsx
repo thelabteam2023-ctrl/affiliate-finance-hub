@@ -5,7 +5,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { 
   BarChart3, 
   TrendingUp, 
-  Target, 
   AlertTriangle,
   Zap
 } from "lucide-react";
@@ -29,8 +28,8 @@ interface UnifiedStatisticsCardProps {
   accentColor?: string;
 }
 
-// Componente de célula de estatística
-const StatCell = ({ 
+// Componente de KPI âncora (destaque máximo)
+const AnchorKPI = ({ 
   label, 
   value, 
   valueClass = "",
@@ -42,8 +41,79 @@ const StatCell = ({
   tooltip?: string;
 }) => {
   const content = (
-    <div className="flex items-center justify-between bg-muted/40 rounded px-3 py-2">
-      <span className="text-muted-foreground text-xs">{label}</span>
+    <div className="flex flex-col items-center justify-center bg-gradient-to-br from-muted/60 to-muted/30 rounded-xl px-4 py-4 border border-border/30 min-h-[90px]">
+      <span className={`font-bold tabular-nums text-2xl lg:text-3xl ${valueClass}`}>{value}</span>
+      <span className="text-muted-foreground text-xs mt-1.5 text-center">{label}</span>
+    </div>
+  );
+
+  if (tooltip) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{content}</TooltipTrigger>
+        <TooltipContent side="top" className="text-xs max-w-xs">
+          {tooltip}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+  return content;
+};
+
+// Componente de célula de estatística (peso médio)
+const StatCell = ({ 
+  label, 
+  value, 
+  valueClass = "",
+  tooltip,
+  size = "normal"
+}: { 
+  label: string; 
+  value: string | number; 
+  valueClass?: string;
+  tooltip?: string;
+  size?: "small" | "normal";
+}) => {
+  const content = (
+    <div className={`flex items-center justify-between bg-muted/40 rounded-lg ${size === "small" ? "px-2.5 py-1.5" : "px-3 py-2.5"}`}>
+      <span className={`text-muted-foreground ${size === "small" ? "text-[10px]" : "text-xs"}`}>{label}</span>
+      <span className={`font-semibold tabular-nums ${size === "small" ? "text-xs" : "text-sm"} ${valueClass}`}>{value}</span>
+    </div>
+  );
+
+  if (tooltip) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{content}</TooltipTrigger>
+        <TooltipContent side="top" className="text-xs max-w-xs">
+          {tooltip}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+  return content;
+};
+
+// Componente de célula de risco (com ícone de alerta)
+const RiskCell = ({ 
+  label, 
+  value, 
+  valueClass = "",
+  tooltip,
+  isNegative = false
+}: { 
+  label: string; 
+  value: string | number; 
+  valueClass?: string;
+  tooltip?: string;
+  isNegative?: boolean;
+}) => {
+  const content = (
+    <div className="flex items-center justify-between bg-muted/30 rounded-lg px-3 py-2.5 border border-border/20">
+      <div className="flex items-center gap-1.5">
+        {isNegative && <AlertTriangle className="h-3 w-3 text-amber-500/70" />}
+        <span className="text-muted-foreground text-xs">{label}</span>
+      </div>
       <span className={`font-semibold tabular-nums text-sm ${valueClass}`}>{value}</span>
     </div>
   );
@@ -61,18 +131,40 @@ const StatCell = ({
   return content;
 };
 
-// Cabeçalho de seção
-const SectionHeader = ({ title, icon: Icon }: { title: string; icon?: React.ElementType }) => (
-  <div className="mt-4 first:mt-0 mb-2">
-    <div className="flex items-center gap-2">
-      <div className="w-0.5 h-4 bg-purple-500 rounded-full" />
-      {Icon && <Icon className="h-3.5 w-3.5 text-purple-400" />}
-      <span className="text-xs font-semibold text-foreground/90 uppercase tracking-wider">
-        {title}
-      </span>
+// Cabeçalho de seção com diferentes pesos
+const SectionHeader = ({ 
+  title, 
+  icon: Icon,
+  priority = "normal" 
+}: { 
+  title: string; 
+  icon?: React.ElementType;
+  priority?: "high" | "normal" | "low";
+}) => {
+  const borderColor = priority === "high" 
+    ? "bg-amber-500" 
+    : priority === "low" 
+      ? "bg-muted-foreground/50" 
+      : "bg-purple-500";
+  
+  const iconColor = priority === "high" 
+    ? "text-amber-500" 
+    : priority === "low" 
+      ? "text-muted-foreground" 
+      : "text-purple-400";
+
+  return (
+    <div className={`mb-2.5 ${priority === "high" ? "mt-6 pt-4 border-t border-border/50" : "mt-5 first:mt-0"}`}>
+      <div className="flex items-center gap-2">
+        <div className={`w-0.5 h-4 ${borderColor} rounded-full`} />
+        {Icon && <Icon className={`h-3.5 w-3.5 ${iconColor}`} />}
+        <span className="text-xs font-semibold text-foreground/90 uppercase tracking-wider">
+          {title}
+        </span>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Formatadores
 const formatCurrency = (value: number) => {
@@ -333,13 +425,33 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
 
   // ==================== RENDERIZAÇÃO DAS ABAS ====================
 
-  // Aba Resumo (unificada com Avançado)
+  // Aba Resumo (redesenhada com hierarquia visual)
   const renderResumo = () => (
-    <div className="space-y-4">
-      {/* Resultados */}
+    <div className="space-y-1">
+      {/* 1️⃣ KPIs ÂNCORA - destaque máximo */}
+      <div className="grid grid-cols-3 gap-3">
+        <AnchorKPI 
+          label="Lucro / Prejuízo" 
+          value={formatCurrency(stats.lucroTotal)} 
+          valueClass={stats.lucroTotal >= 0 ? "text-emerald-400" : "text-red-400"} 
+        />
+        <AnchorKPI 
+          label="ROI" 
+          value={formatPercent(stats.roi)} 
+          valueClass={stats.roi >= 0 ? "text-emerald-400" : "text-red-400"}
+          tooltip="Lucro total ÷ Volume total apostado"
+        />
+        <AnchorKPI 
+          label="Taxa de Acerto" 
+          value={`${stats.taxaAcerto.toFixed(1)}%`} 
+          valueClass={stats.taxaAcerto >= 50 ? "text-emerald-400" : "text-amber-400"} 
+        />
+      </div>
+
+      {/* 2️⃣ RESULTADOS OPERACIONAIS - layout compacto, peso médio */}
       <div>
-        <SectionHeader title="Resultados" icon={BarChart3} />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        <SectionHeader title="Resultados Operacionais" icon={BarChart3} />
+        <div className="grid grid-cols-4 gap-2">
           <StatCell label="Vencedoras" value={stats.vencedoras} valueClass="text-emerald-400" />
           <StatCell label="Perdedoras" value={stats.perdedoras} valueClass="text-red-400" />
           <StatCell label="Reembolsadas" value={stats.reembolsadas} />
@@ -347,75 +459,12 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
         </div>
       </div>
 
-      {/* Financeiro */}
+      {/* 3️⃣ FINANCEIRO - peso médio-alto */}
       <div>
         <SectionHeader title="Financeiro" icon={TrendingUp} />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           <StatCell label="Valor apostado" value={formatCurrency(stats.valorTotal)} />
           <StatCell label="Em curso" value={formatCurrency(stats.valorEmCurso)} valueClass="text-blue-400" />
-          <StatCell 
-            label="Lucro/Prejuízo" 
-            value={formatCurrency(stats.lucroTotal)} 
-            valueClass={stats.lucroTotal >= 0 ? "text-emerald-400" : "text-red-400"} 
-          />
-          <StatCell 
-            label="ROI" 
-            value={formatPercent(stats.roi)} 
-            valueClass={stats.roi >= 0 ? "text-emerald-400" : "text-red-400"}
-            tooltip="Lucro total ÷ Volume total apostado"
-          />
-        </div>
-      </div>
-
-      {/* Desempenho */}
-      <div>
-        <SectionHeader title="Desempenho" icon={Target} />
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-          <StatCell 
-            label="Taxa de acerto" 
-            value={`${stats.taxaAcerto.toFixed(1)}%`} 
-            valueClass={stats.taxaAcerto >= 50 ? "text-emerald-400" : "text-amber-400"} 
-          />
-          <StatCell label="Máx. vitórias seguidas" value={stats.maxVitorias} valueClass="text-emerald-400" />
-          <StatCell label="Máx. derrotas seguidas" value={stats.maxDerrotas} valueClass="text-red-400" />
-        </div>
-      </div>
-
-      {/* Análise de Risco */}
-      <div>
-        <SectionHeader title="Análise de Risco" icon={AlertTriangle} />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-          <StatCell 
-            label="Maior lucro unitário" 
-            value={formatCurrency(stats.maiorLucro)} 
-            valueClass="text-emerald-400"
-            tooltip="Maior lucro em uma única aposta"
-          />
-          <StatCell 
-            label="Maior prejuízo unitário" 
-            value={formatCurrency(stats.maiorPerda)} 
-            valueClass="text-red-400"
-            tooltip="Maior perda em uma única aposta"
-          />
-          <StatCell 
-            label="Maior lucro diário" 
-            value={formatCurrency(stats.maiorLucroDiario)} 
-            valueClass="text-emerald-400"
-            tooltip="Maior soma positiva em um único dia"
-          />
-          <StatCell 
-            label="Maior prejuízo diário" 
-            value={formatCurrency(stats.maiorPrejuizoDiario)} 
-            valueClass="text-red-400"
-            tooltip="Maior soma negativa em um único dia"
-          />
-        </div>
-      </div>
-
-      {/* Eficiência e Cotações */}
-      <div>
-        <SectionHeader title="Eficiência e Cotações" icon={Zap} />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           <StatCell 
             label="Stake média" 
             value={formatCurrency(stats.stakeMedia)}
@@ -426,16 +475,81 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
             value={formatCurrency(stats.stakeMaxima)}
             tooltip="Maior valor apostado"
           />
+        </div>
+      </div>
+
+      {/* 4️⃣ ANÁLISE DE RISCO - separador visual mais forte */}
+      <div>
+        <SectionHeader title="Análise de Risco" icon={AlertTriangle} priority="high" />
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+          <RiskCell 
+            label="Maior lucro unitário" 
+            value={formatCurrency(stats.maiorLucro)} 
+            valueClass="text-emerald-400"
+            tooltip="Maior lucro em uma única aposta"
+          />
+          <RiskCell 
+            label="Maior prejuízo unitário" 
+            value={formatCurrency(stats.maiorPerda)} 
+            valueClass="text-red-400"
+            tooltip="Maior perda em uma única aposta"
+            isNegative
+          />
+          <RiskCell 
+            label="Maior lucro diário" 
+            value={formatCurrency(stats.maiorLucroDiario)} 
+            valueClass="text-emerald-400"
+            tooltip="Maior soma positiva em um único dia"
+          />
+          <RiskCell 
+            label="Maior prejuízo diário" 
+            value={formatCurrency(stats.maiorPrejuizoDiario)} 
+            valueClass="text-red-400"
+            tooltip="Maior soma negativa em um único dia"
+            isNegative
+          />
+          <RiskCell 
+            label="Máx. vitórias seguidas" 
+            value={stats.maxVitorias} 
+            valueClass="text-emerald-400" 
+          />
+          <RiskCell 
+            label="Máx. derrotas seguidas" 
+            value={stats.maxDerrotas} 
+            valueClass="text-red-400"
+            isNegative
+          />
+        </div>
+      </div>
+
+      {/* 5️⃣ EFICIÊNCIA E COTAÇÕES - bloco complementar, menor destaque */}
+      <div>
+        <SectionHeader title="Eficiência e Cotações" icon={Zap} priority="low" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           <StatCell 
             label="Lucro por R$ 1.000" 
             value={formatCurrency(stats.lucroPorMil)}
             valueClass={stats.lucroPorMil >= 0 ? "text-emerald-400" : "text-red-400"}
             tooltip="Quanto você ganha para cada R$ 1.000 apostados"
+            size="small"
           />
           <StatCell 
             label="Maior odd ganha" 
             value={stats.maiorCotacaoGanha > 0 ? stats.maiorCotacaoGanha.toFixed(2) : "-"}
             valueClass="text-emerald-400"
+            size="small"
+          />
+          <StatCell 
+            label="Odd média" 
+            value={stats.oddMedia > 0 ? stats.oddMedia.toFixed(2) : "-"}
+            size="small"
+          />
+          <StatCell 
+            label="Acerto odds > 2.0" 
+            value={`${stats.taxaAcertoOddsAltas.toFixed(1)}%`}
+            valueClass={stats.taxaAcertoOddsAltas >= 50 ? "text-emerald-400" : "text-amber-400"}
+            tooltip="Taxa de acerto em apostas com odd maior que 2.0"
+            size="small"
           />
         </div>
       </div>
