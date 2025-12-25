@@ -110,10 +110,7 @@ const RiskCell = ({
 }) => {
   const content = (
     <div className="flex items-center justify-between bg-muted/30 rounded-lg px-3 py-2.5 border border-border/20">
-      <div className="flex items-center gap-1.5">
-        {isNegative && <AlertTriangle className="h-3 w-3 text-amber-500/70" />}
-        <span className="text-muted-foreground text-xs">{label}</span>
-      </div>
+      <span className="text-muted-foreground text-xs">{label}</span>
       <span className={`font-semibold tabular-nums text-sm ${valueClass}`}>{value}</span>
     </div>
   );
