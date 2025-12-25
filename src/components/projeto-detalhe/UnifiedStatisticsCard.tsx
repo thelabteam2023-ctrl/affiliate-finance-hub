@@ -132,23 +132,38 @@ const RiskCell = ({
 const SectionHeader = ({ 
   title, 
   icon: Icon,
-  priority = "normal" 
+  priority = "normal",
+  color
 }: { 
   title: string; 
   icon?: React.ElementType;
   priority?: "high" | "normal" | "low";
+  color?: "purple" | "blue" | "emerald";
 }) => {
-  const borderColor = priority === "high" 
+  // Se cor customizada foi passada, usa ela
+  const customBorderColor = color === "blue" 
+    ? "bg-blue-500" 
+    : color === "emerald" 
+      ? "bg-emerald-500" 
+      : null;
+  
+  const customIconColor = color === "blue" 
+    ? "text-blue-400" 
+    : color === "emerald" 
+      ? "text-emerald-400" 
+      : null;
+
+  const borderColor = customBorderColor ?? (priority === "high" 
     ? "bg-amber-500" 
     : priority === "low" 
       ? "bg-muted-foreground/50" 
-      : "bg-purple-500";
+      : "bg-purple-500");
   
-  const iconColor = priority === "high" 
+  const iconColor = customIconColor ?? (priority === "high" 
     ? "text-amber-500" 
     : priority === "low" 
       ? "text-muted-foreground" 
-      : "text-purple-400";
+      : "text-purple-400");
 
   return (
     <div className={`mb-2.5 ${priority === "high" ? "mt-6 pt-4 border-t border-border/50" : "mt-5 first:mt-0"}`}>
@@ -458,7 +473,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
 
       {/* 3️⃣ FINANCEIRO - peso médio-alto */}
       <div>
-        <SectionHeader title="Financeiro" icon={TrendingUp} />
+        <SectionHeader title="Financeiro" icon={TrendingUp} color="emerald" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           <StatCell label="Valor apostado" value={formatCurrency(stats.valorTotal)} />
           <StatCell label="Em curso" value={formatCurrency(stats.valorEmCurso)} valueClass="text-blue-400" />
