@@ -20,7 +20,7 @@ interface TabsListProps extends React.ComponentPropsWithoutRef<typeof TabsPrimit
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   TabsListProps
->(({ className, accentColor = "bg-lime-500", ...props }, ref) => {
+>(({ className, accentColor = "bg-emerald-500", ...props }, ref) => {
   const [underlineStyle, setUnderlineStyle] = React.useState({ left: 0, width: 0 });
   const listRef = React.useRef<HTMLDivElement>(null);
 
