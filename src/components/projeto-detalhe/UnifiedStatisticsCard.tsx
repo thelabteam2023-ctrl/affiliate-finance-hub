@@ -415,7 +415,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       {/* Eficiência e Cotações */}
       <div>
         <SectionHeader title="Eficiência e Cotações" icon={Zap} />
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           <StatCell 
             label="Stake média" 
             value={formatCurrency(stats.stakeMedia)}
@@ -431,11 +431,6 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
             value={formatCurrency(stats.lucroPorMil)}
             valueClass={stats.lucroPorMil >= 0 ? "text-emerald-400" : "text-red-400"}
             tooltip="Quanto você ganha para cada R$ 1.000 apostados"
-          />
-          <StatCell 
-            label="Odd média" 
-            value={stats.oddMedia.toFixed(2)}
-            tooltip="Média de todas as cotações"
           />
           <StatCell 
             label="Maior odd ganha" 
