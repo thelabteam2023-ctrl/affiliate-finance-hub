@@ -63,8 +63,12 @@ interface CasaUsada {
 }
 
 interface EvolucaoData {
+  entrada: number;
   data: string;
+  hora: string;
   acumulado: number;
+  impacto: number;
+  resultado: string;
 }
 
 interface VisaoGeralChartsProps {
@@ -98,6 +102,34 @@ interface EvolucaoLucroChartProps {
   accentColor: string;
 }
 
+// Tooltip customizado para mostrar detalhes da entrada
+const CustomTooltip = ({ active, payload }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  
+  const data = payload[0].payload as EvolucaoData;
+  const isPositive = data.impacto >= 0;
+  
+  return (
+    <div className="bg-popover border border-border rounded-lg p-3 shadow-lg text-sm space-y-1.5">
+      <div className="font-semibold text-foreground border-b border-border pb-1.5 mb-1.5">
+        Entrada #{data.entrada}
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+        <span className="text-muted-foreground">Data/Hora:</span>
+        <span className="text-foreground font-medium">{data.data} {data.hora}</span>
+        <span className="text-muted-foreground">Impacto:</span>
+        <span className={`font-semibold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+          {isPositive ? '+' : ''}{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(data.impacto)}
+        </span>
+        <span className="text-muted-foreground">Acumulado:</span>
+        <span className={`font-bold ${data.acumulado >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+          {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(data.acumulado)}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 function EvolucaoLucroChart({ data, accentColor }: EvolucaoLucroChartProps) {
   if (data.length === 0) {
     return (
@@ -115,6 +147,9 @@ function EvolucaoLucroChart({ data, accentColor }: EvolucaoLucroChartProps) {
   const strokeColor = isPositive ? "hsl(var(--chart-2))" : "hsl(var(--destructive))";
   const fillColor = isPositive ? "hsl(var(--chart-2))" : "hsl(var(--destructive))";
 
+  // Determina intervalo do eixo X baseado na quantidade de entradas
+  const tickInterval = data.length > 50 ? Math.floor(data.length / 10) : data.length > 20 ? 5 : 1;
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -126,11 +161,13 @@ function EvolucaoLucroChart({ data, accentColor }: EvolucaoLucroChartProps) {
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
         <XAxis
-          dataKey="data"
+          dataKey="entrada"
           stroke="hsl(var(--muted-foreground))"
           fontSize={11}
           tickLine={false}
           axisLine={false}
+          interval={tickInterval}
+          tickFormatter={(v) => `#${v}`}
         />
         <YAxis
           stroke="hsl(var(--muted-foreground))"
@@ -139,16 +176,7 @@ function EvolucaoLucroChart({ data, accentColor }: EvolucaoLucroChartProps) {
           axisLine={false}
           tickFormatter={(v) => `R$${v}`}
         />
-        <RechartsTooltip
-          formatter={(value: number) => [formatCurrency(value), "Acumulado"]}
-          contentStyle={{
-            backgroundColor: "hsl(var(--popover))",
-            border: "1px solid hsl(var(--border))",
-            borderRadius: "8px",
-            fontSize: "12px",
-          }}
-          labelStyle={{ color: "hsl(var(--muted-foreground))" }}
-        />
+        <RechartsTooltip content={<CustomTooltip />} />
         <Area
           type="monotone"
           dataKey="acumulado"
@@ -326,21 +354,27 @@ export function VisaoGeralCharts({
   showCasasCard = true 
 }: VisaoGeralChartsProps) {
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const evolucaoData = useMemo(() => {
+  const evolucaoData = useMemo((): EvolucaoData[] => {
     const sorted = [...apostas].sort(
       (a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()
     );
     
     let acumulado = 0;
-    const dataMap = new Map<string, number>();
-
-    sorted.forEach((a) => {
-      const dateKey = format(new Date(a.data_aposta), "dd/MM", { locale: ptBR });
-      acumulado += a.lucro_prejuizo || 0;
-      dataMap.set(dateKey, acumulado);
+    
+    return sorted.map((a, index) => {
+      const impacto = a.lucro_prejuizo || 0;
+      acumulado += impacto;
+      const date = new Date(a.data_aposta);
+      
+      return {
+        entrada: index + 1,
+        data: format(date, "dd/MM", { locale: ptBR }),
+        hora: format(date, "HH:mm", { locale: ptBR }),
+        acumulado,
+        impacto,
+        resultado: impacto >= 0 ? 'GREEN' : 'RED',
+      };
     });
-
-    return Array.from(dataMap.entries()).map(([data, acc]) => ({ data, acumulado: acc }));
   }, [apostas]);
 
   // Casas mais utilizadas (por volume) — agrupa por CASA, com detalhamento por vínculo
@@ -485,7 +519,7 @@ export function VisaoGeralCharts({
               </Badge>
             </div>
           </div>
-          <CardDescription className="text-xs">Lucro/Prejuízo acumulado ao longo do tempo</CardDescription>
+          <CardDescription className="text-xs">Evolução entrada por entrada ({evolucaoData.length} apostas)</CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="h-[280px]">
@@ -541,7 +575,7 @@ export function VisaoGeralCharts({
               </Badge>
             </div>
           </div>
-          <CardDescription className="text-xs">Lucro/Prejuízo acumulado ao longo do tempo</CardDescription>
+          <CardDescription className="text-xs">Evolução entrada por entrada ({evolucaoData.length} apostas)</CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="h-[280px]">
