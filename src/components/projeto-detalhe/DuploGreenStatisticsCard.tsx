@@ -198,12 +198,9 @@ export function DuploGreenStatisticsCard({ apostas }: DuploGreenStatisticsCardPr
       }
     }
     
-    // Juice médio (spread_calculado)
-    const spreads = apostas
-      .filter(a => typeof a.spread_calculado === "number" && Number.isFinite(a.spread_calculado))
-      .map(a => a.spread_calculado as number);
-    const juiceMedio = spreads.length > 0 
-      ? (spreads.reduce((acc, s) => acc + s, 0) / spreads.length) 
+    // Taxa de conversão (lucro/stake total)
+    const taxaConversao = volumeTotal > 0 
+      ? (lucroTotal / volumeTotal) * 100 
       : null;
     
     return {
@@ -220,7 +217,7 @@ export function DuploGreenStatisticsCard({ apostas }: DuploGreenStatisticsCardPr
       volumeEmCurso,
       maiorLucro,
       stakeMedia,
-      juiceMedio,
+      taxaConversao,
       pendentes: pendentes.length
     };
   }, [apostas]);
@@ -322,16 +319,16 @@ export function DuploGreenStatisticsCard({ apostas }: DuploGreenStatisticsCardPr
           </div>
         </div>
 
-        {/* Eficiência (só mostra se houver dados de juice) */}
-        {stats.juiceMedio !== null && (
+        {/* Eficiência (só mostra se houver volume) */}
+        {stats.taxaConversao !== null && (
           <div>
             <SectionHeader title="Eficiência Operacional" icon={Percent} color="amber" />
             <div className="grid grid-cols-1 gap-2">
               <StatCell 
-                label="Juice Médio" 
-                value={`${stats.juiceMedio.toFixed(2)}%`}
-                valueClass={stats.juiceMedio < 3 ? "text-emerald-400" : stats.juiceMedio < 5 ? "text-amber-400" : "text-red-400"}
-                tooltip="Margem média das operações (quanto menor, melhor)"
+                label="Taxa de Conversão" 
+                value={`${stats.taxaConversao >= 0 ? "+" : ""}${stats.taxaConversao.toFixed(2)}%`}
+                valueClass={stats.taxaConversao >= 0 ? "text-emerald-400" : "text-red-400"}
+                tooltip="Eficiência de conversão de stake em lucro (quanto maior, melhor)"
               />
             </div>
           </div>
