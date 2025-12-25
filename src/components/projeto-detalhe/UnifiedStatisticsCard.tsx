@@ -251,14 +251,18 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
     const maiorLucro = lucros.length > 0 ? Math.max(...lucros) : 0;
     const maiorPerda = lucros.length > 0 ? Math.min(...lucros) : 0;
 
-    // Maior prejuízo diário
+    // Maior prejuízo diário e maior lucro diário
     const lucroPorDia = new Map<string, number>();
     liquidadas.forEach(a => {
       const dia = a.data_aposta.slice(0, 10);
       lucroPorDia.set(dia, (lucroPorDia.get(dia) || 0) + (a.lucro_prejuizo || 0));
     });
-    const maiorPrejuizoDiario = lucroPorDia.size > 0 
-      ? Math.min(...Array.from(lucroPorDia.values()), 0) 
+    const diasValues = Array.from(lucroPorDia.values());
+    const maiorPrejuizoDiario = diasValues.length > 0 
+      ? Math.min(...diasValues, 0) 
+      : 0;
+    const maiorLucroDiario = diasValues.length > 0 
+      ? Math.max(...diasValues, 0) 
       : 0;
 
     // Odds médias e por faixas
@@ -311,6 +315,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       maiorLucro,
       maiorPerda,
       maiorPrejuizoDiario,
+      maiorLucroDiario,
       oddMedia,
       taxaAcertoOddsAltas,
       lucroPorMil,
@@ -577,10 +582,22 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       <div className="space-y-2">
         <SectionHeader title="Risco" icon={AlertTriangle} />
         <StatCell 
+          label="Maior lucro unitário" 
+          value={formatCurrency(stats.maiorLucro)} 
+          valueClass="text-emerald-400"
+          tooltip="Maior lucro em uma única aposta"
+        />
+        <StatCell 
           label="Maior prejuízo unitário" 
           value={formatCurrency(stats.maiorPerda)} 
           valueClass="text-red-400"
           tooltip="Maior perda em uma única aposta"
+        />
+        <StatCell 
+          label="Maior lucro diário" 
+          value={formatCurrency(stats.maiorLucroDiario)} 
+          valueClass="text-emerald-400"
+          tooltip="Maior soma positiva em um único dia"
         />
         <StatCell 
           label="Maior prejuízo diário" 
@@ -625,12 +642,6 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
           value={`${stats.taxaAcertoOddsAltas.toFixed(1)}%`}
           valueClass={stats.taxaAcertoOddsAltas >= 40 ? "text-emerald-400" : "text-amber-400"}
           tooltip="Taxa de acerto em apostas com cotação > 2.0"
-        />
-        <StatCell 
-          label="Maior lucro unitário" 
-          value={formatCurrency(stats.maiorLucro)}
-          valueClass="text-emerald-400"
-          tooltip="Maior lucro em uma única aposta"
         />
       </div>
     </div>
