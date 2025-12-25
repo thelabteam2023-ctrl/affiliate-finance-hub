@@ -230,51 +230,25 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     return new Date(year, month - 1, day, hours || 0, minutes || 0);
   };
 
-  // Determina se deve exibir por aposta individual (hoje/ontem) ou agregado por dia
-  const isIntradayView = periodFilter === "hoje" || periodFilter === "ontem";
-
+  // Sempre exibe por entrada individual (não mais por dia)
   const evolutionData: DailyData[] = useMemo(() => {
-    if (isIntradayView) {
-      // Exibe cada aposta como um ponto individual
-      const sortedApostas = [...apostasUnificadas].sort((a, b) => 
-        new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()
-      );
-      
-      let cumulativeBalance = 0;
-      return sortedApostas.map((aposta, index) => {
-        cumulativeBalance += aposta.lucro_prejuizo || 0;
-        const date = parseLocalDateTime(aposta.data_aposta);
-        return {
-          data: format(date, "HH:mm", { locale: ptBR }),
-          dataCompleta: `Aposta #${index + 1} às ${format(date, "HH:mm", { locale: ptBR })}`,
-          lucro_dia: aposta.lucro_prejuizo || 0,
-          saldo: cumulativeBalance
-        };
-      });
-    }
+    // Ordena apostas cronologicamente
+    const sortedApostas = [...apostasUnificadas].sort((a, b) => 
+      new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()
+    );
     
-    // Agregação por dia para outros filtros
-    const dailyMap = apostasUnificadas.reduce((acc: Record<string, number>, aposta) => {
-      const dateKey = aposta.data_aposta.split('T')[0];
-      acc[dateKey] = (acc[dateKey] || 0) + (aposta.lucro_prejuizo || 0);
-      return acc;
-    }, {});
-
-    const sortedDates = Object.keys(dailyMap).sort();
     let cumulativeBalance = 0;
-
-    return sortedDates.map(dateKey => {
-      const dailyProfit = dailyMap[dateKey];
-      cumulativeBalance += dailyProfit;
-      
+    return sortedApostas.map((aposta, index) => {
+      cumulativeBalance += aposta.lucro_prejuizo || 0;
+      const date = parseLocalDateTime(aposta.data_aposta);
       return {
-        data: format(parseLocalDateTime(dateKey), "dd/MM", { locale: ptBR }),
-        dataCompleta: format(parseLocalDateTime(dateKey), "dd/MM/yyyy", { locale: ptBR }),
-        lucro_dia: dailyProfit,
+        data: `#${index + 1}`,
+        dataCompleta: `Entrada #${index + 1} - ${format(date, "dd/MM/yyyy HH:mm", { locale: ptBR })}`,
+        lucro_dia: aposta.lucro_prejuizo || 0,
         saldo: cumulativeBalance
       };
     });
-  }, [apostasUnificadas, isIntradayView]);
+  }, [apostasUnificadas]);
 
   // Aggregate by bookmaker
   const bookmakerMetrics = useMemo(() => {
@@ -456,7 +430,7 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
             Evolução do Saldo
           </CardTitle>
           <CardDescription>
-            Acompanhe a evolução do lucro/prejuízo ao longo do tempo
+            Evolução entrada por entrada ({evolutionData.length} apostas)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -529,6 +503,7 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
                       fontSize={12}
                       axisLine={false}
                       tickLine={false}
+                      interval={evolutionData.length > 50 ? Math.floor(evolutionData.length / 10) : evolutionData.length > 20 ? 5 : 0}
                     />
                     <YAxis 
                       stroke="hsl(var(--muted-foreground))"
@@ -547,12 +522,10 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
                           return (
                             <div className="bg-background/90 backdrop-blur-xl border border-border/50 rounded-lg px-3 py-2 shadow-xl">
                               <p className="text-sm font-medium">{data.dataCompleta}</p>
-                              {isIntradayView && (
-                                <p className="text-sm text-muted-foreground">
-                                  <span className={`inline-block w-2 h-2 rounded-sm mr-2 ${lucroDiaPositive ? 'bg-teal-400' : 'bg-red-400'}`} />
-                                  P/L: {formatCurrency(data.lucro_dia)}
-                                </p>
-                              )}
+                              <p className="text-sm text-muted-foreground">
+                                <span className={`inline-block w-2 h-2 rounded-sm mr-2 ${lucroDiaPositive ? 'bg-teal-400' : 'bg-red-400'}`} />
+                                Impacto: {formatCurrency(data.lucro_dia)}
+                              </p>
                               <p className="text-sm text-muted-foreground">
                                 <span className={`inline-block w-2 h-2 rounded-sm mr-2 ${isPositive ? 'bg-teal-400' : 'bg-red-400'}`} />
                                 Acumulado: {formatCurrency(data.saldo)}
