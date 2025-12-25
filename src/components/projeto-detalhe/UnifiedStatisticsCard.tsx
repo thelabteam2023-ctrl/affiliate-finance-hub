@@ -611,7 +611,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
             <thead>
               <tr className="border-b border-border/50">
                 <th className="text-left py-2 px-2 text-muted-foreground font-medium">Esporte</th>
-                <th className="text-right py-2 px-1 text-muted-foreground font-medium">Apo</th>
+                <th className="text-right py-2 px-1 text-muted-foreground font-medium">Apostas</th>
                 <th className="text-right py-2 px-1 text-muted-foreground font-medium">G</th>
                 <th className="text-right py-2 px-1 text-muted-foreground font-medium">P</th>
                 <th className="text-right py-2 px-1 text-muted-foreground font-medium">R</th>
