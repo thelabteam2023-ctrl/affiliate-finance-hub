@@ -483,9 +483,9 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
                     )}
                     <div className="border-t border-border/50 pt-2 mt-2 space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Lucro/Prejuízo</span>
+                        <span className="text-xs text-muted-foreground">{data.lucro >= 0 ? "Lucro" : "Prejuízo"}</span>
                         <span className={`text-sm font-mono font-semibold ${data.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                          {formatCurrency(data.lucro)}
+                          {formatCurrency(Math.abs(data.lucro))}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
