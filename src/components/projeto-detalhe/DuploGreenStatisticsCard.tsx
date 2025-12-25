@@ -234,10 +234,10 @@ export function DuploGreenStatisticsCard({ apostas }: DuploGreenStatisticsCardPr
   };
 
   return (
-    <Card className="border-lime-500/20 bg-gradient-to-br from-card to-card/80">
+    <Card className="border-border/40">
       <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Zap className="w-5 h-5 text-lime-500" />
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+          <Zap className="w-4 h-4 text-lime-500" />
           Estatísticas Duplo Green
         </CardTitle>
       </CardHeader>
