@@ -95,13 +95,86 @@ export default function GestaoProjetos() {
   const fetchProjetos = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Buscar projetos
+      const { data: projetosData, error: projetosError } = await supabase
         .from("projetos")
         .select("*");
 
-      if (error) throw error;
-      // Map to Projeto interface
-      const mapped = (data || []).map((proj: any) => ({
+      if (projetosError) throw projetosError;
+      
+      if (!projetosData || projetosData.length === 0) {
+        setProjetos([]);
+        return;
+      }
+      
+      const projetoIds = projetosData.map(p => p.id);
+      
+      // Buscar dados agregados em paralelo
+      const [bookmarkersResult, apostasResult, operadoresResult, perdasResult] = await Promise.all([
+        // Bookmakers por projeto
+        supabase
+          .from("bookmakers")
+          .select("projeto_id, saldo_atual, saldo_irrecuperavel")
+          .in("projeto_id", projetoIds),
+        
+        // Apostas liquidadas por projeto
+        supabase
+          .from("apostas_unificada")
+          .select("projeto_id, lucro_prejuizo")
+          .in("projeto_id", projetoIds)
+          .eq("status", "LIQUIDADA"),
+        
+        // Operadores ativos por projeto
+        supabase
+          .from("operador_projetos")
+          .select("projeto_id, id")
+          .in("projeto_id", projetoIds)
+          .eq("status", "ATIVO"),
+        
+        // Perdas confirmadas por projeto
+        supabase
+          .from("projeto_perdas")
+          .select("projeto_id, valor")
+          .in("projeto_id", projetoIds)
+          .eq("status", "CONFIRMADA")
+      ]);
+      
+      // Agregar dados de bookmakers por projeto
+      const bookmakersByProjeto: Record<string, { saldo: number; count: number; irrecuperavel: number }> = {};
+      (bookmarkersResult.data || []).forEach((bk: any) => {
+        if (!bk.projeto_id) return;
+        if (!bookmakersByProjeto[bk.projeto_id]) {
+          bookmakersByProjeto[bk.projeto_id] = { saldo: 0, count: 0, irrecuperavel: 0 };
+        }
+        bookmakersByProjeto[bk.projeto_id].saldo += bk.saldo_atual || 0;
+        bookmakersByProjeto[bk.projeto_id].irrecuperavel += bk.saldo_irrecuperavel || 0;
+        bookmakersByProjeto[bk.projeto_id].count += 1;
+      });
+      
+      // Agregar lucro de apostas por projeto
+      const lucroByProjeto: Record<string, number> = {};
+      (apostasResult.data || []).forEach((ap: any) => {
+        if (!ap.projeto_id) return;
+        lucroByProjeto[ap.projeto_id] = (lucroByProjeto[ap.projeto_id] || 0) + (ap.lucro_prejuizo || 0);
+      });
+      
+      // Agregar operadores ativos por projeto
+      const operadoresByProjeto: Record<string, number> = {};
+      (operadoresResult.data || []).forEach((op: any) => {
+        if (!op.projeto_id) return;
+        operadoresByProjeto[op.projeto_id] = (operadoresByProjeto[op.projeto_id] || 0) + 1;
+      });
+      
+      // Agregar perdas confirmadas por projeto
+      const perdasByProjeto: Record<string, number> = {};
+      (perdasResult.data || []).forEach((pd: any) => {
+        if (!pd.projeto_id) return;
+        perdasByProjeto[pd.projeto_id] = (perdasByProjeto[pd.projeto_id] || 0) + (pd.valor || 0);
+      });
+      
+      // Map to Projeto interface com dados agregados
+      const mapped = projetosData.map((proj: any) => ({
         id: proj.id,
         nome: proj.nome,
         descricao: proj.descricao || null,
@@ -109,7 +182,14 @@ export default function GestaoProjetos() {
         data_inicio: proj.data_inicio,
         data_fim_prevista: proj.data_fim_prevista,
         orcamento_inicial: proj.orcamento_inicial || 0,
+        saldo_bookmakers: bookmakersByProjeto[proj.id]?.saldo || 0,
+        saldo_irrecuperavel: bookmakersByProjeto[proj.id]?.irrecuperavel || 0,
+        total_bookmakers: bookmakersByProjeto[proj.id]?.count || 0,
+        lucro_operacional: lucroByProjeto[proj.id] || 0,
+        operadores_ativos: operadoresByProjeto[proj.id] || 0,
+        perdas_confirmadas: perdasByProjeto[proj.id] || 0,
       }));
+      
       setProjetos(mapped);
     } catch (error: any) {
       toast.error("Erro ao carregar projetos: " + error.message);
