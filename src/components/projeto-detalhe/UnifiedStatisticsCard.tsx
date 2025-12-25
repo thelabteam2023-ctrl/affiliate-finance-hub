@@ -666,31 +666,31 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
           <TabsList className="w-full grid grid-cols-5 h-9 mb-4 bg-transparent gap-1 p-0">
             <TabsTrigger 
               value="resumo" 
-              className="text-xs rounded-lg transition-all duration-200 bg-transparent data-[state=inactive]:text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-[inset_0_-2px_0_0_hsl(270,76%,60%)] hover:text-foreground/80"
+              className="text-xs rounded-lg transition-all duration-200 bg-transparent data-[state=inactive]:text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-[inset_0_2px_0_0_hsl(270,76%,60%)] hover:text-foreground/80"
             >
               Resumo
             </TabsTrigger>
             <TabsTrigger 
               value="por-valor" 
-              className="text-xs rounded-lg transition-all duration-200 bg-transparent data-[state=inactive]:text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-[inset_0_-2px_0_0_hsl(270,76%,60%)] hover:text-foreground/80"
+              className="text-xs rounded-lg transition-all duration-200 bg-transparent data-[state=inactive]:text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-[inset_0_2px_0_0_hsl(270,76%,60%)] hover:text-foreground/80"
             >
               Por Valor
             </TabsTrigger>
             <TabsTrigger 
               value="por-cotacao" 
-              className="text-xs rounded-lg transition-all duration-200 bg-transparent data-[state=inactive]:text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-[inset_0_-2px_0_0_hsl(270,76%,60%)] hover:text-foreground/80"
+              className="text-xs rounded-lg transition-all duration-200 bg-transparent data-[state=inactive]:text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-[inset_0_2px_0_0_hsl(270,76%,60%)] hover:text-foreground/80"
             >
               Por Cotação
             </TabsTrigger>
             <TabsTrigger 
               value="por-esporte" 
-              className="text-xs rounded-lg transition-all duration-200 bg-transparent data-[state=inactive]:text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-[inset_0_-2px_0_0_hsl(270,76%,60%)] hover:text-foreground/80"
+              className="text-xs rounded-lg transition-all duration-200 bg-transparent data-[state=inactive]:text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-[inset_0_2px_0_0_hsl(270,76%,60%)] hover:text-foreground/80"
             >
               Por Esporte
             </TabsTrigger>
             <TabsTrigger 
               value="avancado" 
-              className="text-xs rounded-lg transition-all duration-200 bg-transparent data-[state=inactive]:text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-[inset_0_-2px_0_0_hsl(270,76%,60%)] hover:text-foreground/80"
+              className="text-xs rounded-lg transition-all duration-200 bg-transparent data-[state=inactive]:text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-[inset_0_2px_0_0_hsl(270,76%,60%)] hover:text-foreground/80"
             >
               Avançado
             </TabsTrigger>
