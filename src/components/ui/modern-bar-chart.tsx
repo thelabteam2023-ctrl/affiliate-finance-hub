@@ -34,7 +34,7 @@ interface ModernBarChartProps {
   formatTooltip?: (dataKey: string, value: number) => string;
   customTooltipContent?: (payload: any, label: string) => React.ReactNode;
   labelDataKey?: string; // Key to use for label values (e.g., 'lucro' instead of bar count)
-  formatLabel?: (value: number) => string; // Custom formatter for labels
+  formatLabel?: (value: number, ctx: { dataKey: string; payload: any }) => string; // Custom formatter for labels
 }
 
 // Custom animated label component
@@ -52,7 +52,14 @@ const AnimatedLabel = (props: any) => {
   }, [index]);
 
   const displayValue = formattedValue !== undefined ? formattedValue : value;
-  if (displayValue === undefined || displayValue === null || displayValue === 0 || displayValue === "R$ 0") return null;
+  if (
+    displayValue === undefined ||
+    displayValue === null ||
+    displayValue === 0 ||
+    displayValue === "" ||
+    displayValue === "R$ 0"
+  )
+    return null;
 
   return (
     <text
@@ -272,12 +279,26 @@ export function ModernBarChart({
                   content={(props: any) => {
                     const entry = props.payload;
                     // If labelDataKey is provided, use that value instead of bar count
-                    const labelValue = labelDataKey && entry ? entry[labelDataKey] : props.value;
-                    const formattedValue = formatLabel && labelValue !== undefined ? formatLabel(labelValue) : labelValue;
+                    const rawValue = labelDataKey && entry ? entry[labelDataKey] : props.value;
+
+                    const ctx = { dataKey: bar.dataKey, payload: entry };
+                    const formattedValue = formatLabel && rawValue !== undefined ? formatLabel(rawValue, ctx) : rawValue;
+
+                    // When labeling lucro (group label), color should follow lucro sign (from payload)
+                    const signValue = labelDataKey && entry ? entry[labelDataKey] : rawValue;
+
                     return (
-                      <AnimatedLabel 
-                        {...props} 
-                        fill={labelValue > 0 ? "#22C55E" : labelValue < 0 ? "#EF4444" : bar.gradientStart}
+                      <AnimatedLabel
+                        {...props}
+                        fill={
+                          typeof signValue === "number"
+                            ? signValue > 0
+                              ? "#22C55E"
+                              : signValue < 0
+                                ? "#EF4444"
+                                : bar.gradientStart
+                            : bar.gradientStart
+                        }
                         formattedValue={formattedValue}
                       />
                     );
