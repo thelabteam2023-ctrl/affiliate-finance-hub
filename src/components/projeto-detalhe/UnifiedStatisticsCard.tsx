@@ -539,18 +539,15 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
             value={formatCurrency(stats.lucroPorMil)}
             valueClass={stats.lucroPorMil >= 0 ? "text-emerald-400" : "text-red-400"}
             tooltip="Quanto você ganha para cada R$ 1.000 apostados"
-            size="small"
           />
           <StatCell 
             label="Maior odd ganha" 
             value={stats.maiorCotacaoGanha > 0 ? stats.maiorCotacaoGanha.toFixed(2) : "-"}
             valueClass="text-emerald-400"
-            size="small"
           />
           <StatCell 
             label="Odd média" 
             value={stats.oddMedia > 0 ? stats.oddMedia.toFixed(2) : "-"}
-            size="small"
           />
         </div>
       </div>
