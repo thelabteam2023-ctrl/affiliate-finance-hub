@@ -69,7 +69,7 @@ const TabsList = React.forwardRef<
     >
       {props.children}
       <span
-        className="absolute bottom-0 h-0.5 bg-accent transition-all duration-300 ease-out"
+        className="absolute bottom-0 h-0.5 bg-purple-500 transition-all duration-300 ease-out"
         style={{
           left: `${underlineStyle.left}px`,
           width: `${underlineStyle.width}px`,
