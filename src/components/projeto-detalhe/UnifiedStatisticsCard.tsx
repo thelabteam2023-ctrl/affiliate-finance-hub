@@ -186,21 +186,24 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
     }).filter(r => r.apostas > 0);
 
     // === POR COTAÇÃO ===
+    // Filtrar apenas apostas com odd válida (excluir SUREBET, DUPLO_GREEN e outras múltiplas sem odd única)
+    const apostasComOdd = apostas.filter(a => getOdd(a) > 0);
+    
     const porCotacao = ODD_RANGES.map(range => {
-      const filtered = apostas.filter(a => {
+      const filtered = apostasComOdd.filter(a => {
         const odd = getOdd(a);
         return odd >= range.min && odd < range.max;
       });
       const filteredLiquidadas = filtered.filter(a => a.resultado && a.resultado !== "PENDENTE");
-      const ganhas = filtered.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
-      const perdidas = filtered.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
-      const reemb = filtered.filter(a => a.resultado === "VOID").length;
-      const volume = filtered.reduce((acc, a) => acc + getStake(a), 0);
+      const ganhas = filteredLiquidadas.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
+      const perdidas = filteredLiquidadas.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
+      const reemb = filteredLiquidadas.filter(a => a.resultado === "VOID").length;
+      const volume = filteredLiquidadas.reduce((acc, a) => acc + getStake(a), 0);
       const lucro = filteredLiquidadas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
 
       return {
         faixa: range.label,
-        apostas: filtered.length,
+        apostas: filteredLiquidadas.length,
         ganhas,
         perdidas,
         reembolsadas: reemb,
