@@ -243,14 +243,30 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     );
     
     let cumulativeBalance = 0;
+    let lastDateLabel = "";
+    
     return sortedApostas.map((aposta, index) => {
       cumulativeBalance += aposta.lucro_prejuizo || 0;
       const date = parseLocalDateTime(aposta.data_aposta);
       
+      const dataFormatada = format(date, "dd/MM", { locale: ptBR });
+      const horaFormatada = format(date, "HH:mm", { locale: ptBR });
+      
       // Eixo X: hora para período de 1 dia, data para períodos maiores
-      const xLabel = isSingleDayPeriod 
-        ? format(date, "HH:mm", { locale: ptBR })
-        : format(date, "dd/MM", { locale: ptBR });
+      // Mostra o label apenas na primeira ocorrência de cada data/hora
+      let xLabel: string;
+      if (isSingleDayPeriod) {
+        // Para 1 dia: sempre mostra hora
+        xLabel = horaFormatada;
+      } else {
+        // Para múltiplos dias: mostra data apenas na primeira entrada do dia
+        if (dataFormatada !== lastDateLabel) {
+          xLabel = dataFormatada;
+          lastDateLabel = dataFormatada;
+        } else {
+          xLabel = ""; // Oculta label para entradas subsequentes do mesmo dia
+        }
+      }
       
       return {
         data: xLabel,
@@ -514,7 +530,24 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
                       fontSize={12}
                       axisLine={false}
                       tickLine={false}
-                      interval={evolutionData.length > 50 ? Math.floor(evolutionData.length / 10) : evolutionData.length > 20 ? 5 : 0}
+                      interval={isSingleDayPeriod 
+                        ? (evolutionData.length > 50 ? Math.floor(evolutionData.length / 10) : evolutionData.length > 20 ? 5 : 0)
+                        : 0}
+                      tick={({ x, y, payload }: any) => {
+                        // Não renderiza tick se o label for vazio
+                        if (!payload.value) return null;
+                        return (
+                          <text 
+                            x={x} 
+                            y={y + 10} 
+                            textAnchor="middle" 
+                            fill="hsl(var(--muted-foreground))" 
+                            fontSize={12}
+                          >
+                            {payload.value}
+                          </text>
+                        );
+                      }}
                     />
                     <YAxis 
                       stroke="hsl(var(--muted-foreground))"

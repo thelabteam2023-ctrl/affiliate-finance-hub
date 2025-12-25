@@ -150,8 +150,11 @@ function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod }: EvolucaoLu
   const strokeColor = isPositive ? "hsl(var(--chart-2))" : "hsl(var(--destructive))";
   const fillColor = isPositive ? "hsl(var(--chart-2))" : "hsl(var(--destructive))";
 
-  // Determina intervalo do eixo X baseado na quantidade de entradas
-  const tickInterval = data.length > 50 ? Math.floor(data.length / 10) : data.length > 20 ? 5 : 0;
+  // Para período de 1 dia, usa intervalo baseado na quantidade
+  // Para múltiplos dias, mostra apenas os ticks com label (filtra vazios)
+  const tickInterval = isSingleDayPeriod 
+    ? (data.length > 50 ? Math.floor(data.length / 10) : data.length > 20 ? 5 : 0)
+    : 0; // Mostra todos, mas o tickFormatter vai filtrar vazios
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -170,6 +173,21 @@ function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod }: EvolucaoLu
           tickLine={false}
           axisLine={false}
           interval={tickInterval}
+          tick={({ x, y, payload }) => {
+            // Não renderiza tick se o label for vazio
+            if (!payload.value) return null;
+            return (
+              <text 
+                x={x} 
+                y={y + 10} 
+                textAnchor="middle" 
+                fill="hsl(var(--muted-foreground))" 
+                fontSize={11}
+              >
+                {payload.value}
+              </text>
+            );
+          }}
         />
         <YAxis
           stroke="hsl(var(--muted-foreground))"
@@ -363,21 +381,36 @@ export function VisaoGeralCharts({
     );
     
     let acumulado = 0;
+    let lastDateLabel = "";
     
     return sorted.map((a, index) => {
       const impacto = a.lucro_prejuizo || 0;
       acumulado += impacto;
       const date = new Date(a.data_aposta);
       
+      const dataFormatada = format(date, "dd/MM", { locale: ptBR });
+      const horaFormatada = format(date, "HH:mm", { locale: ptBR });
+      
       // Eixo X: hora para período de 1 dia, data para períodos maiores
-      const xLabel = isSingleDayPeriod 
-        ? format(date, "HH:mm", { locale: ptBR })
-        : format(date, "dd/MM", { locale: ptBR });
+      // Mostra o label apenas na primeira ocorrência de cada data/hora
+      let xLabel: string;
+      if (isSingleDayPeriod) {
+        // Para 1 dia: sempre mostra hora (pode repetir se houver mesmo horário)
+        xLabel = horaFormatada;
+      } else {
+        // Para múltiplos dias: mostra data apenas na primeira entrada do dia
+        if (dataFormatada !== lastDateLabel) {
+          xLabel = dataFormatada;
+          lastDateLabel = dataFormatada;
+        } else {
+          xLabel = ""; // Oculta label para entradas subsequentes do mesmo dia
+        }
+      }
       
       return {
         entrada: index + 1,
-        data: format(date, "dd/MM", { locale: ptBR }),
-        hora: format(date, "HH:mm", { locale: ptBR }),
+        data: dataFormatada,
+        hora: horaFormatada,
         xLabel,
         acumulado,
         impacto,
