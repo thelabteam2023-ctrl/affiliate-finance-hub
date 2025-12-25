@@ -1003,7 +1003,7 @@ export function ProjetoValueBetTab({
       <div className="space-y-6">
         <Tabs value={activeNavTab} onValueChange={handleNavTabChange} className="space-y-6">
           <div className="flex items-center justify-between border-b border-border/50">
-            <TabsList className="bg-transparent border-0 rounded-none p-0 h-auto gap-6" accentColor="bg-purple-500">
+            <TabsList className="bg-transparent border-0 rounded-none p-0 h-auto gap-6">
               {NAV_ITEMS.map((item) => (
                 <TabsTrigger
                   key={item.value}
