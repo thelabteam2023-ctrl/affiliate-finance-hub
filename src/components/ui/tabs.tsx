@@ -13,10 +13,14 @@ const TabsContext = React.createContext<{
   setActiveValue: () => {},
 });
 
+interface TabsListProps extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.List> {
+  accentColor?: string;
+}
+
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => {
+  TabsListProps
+>(({ className, accentColor = "bg-lime-500", ...props }, ref) => {
   const [underlineStyle, setUnderlineStyle] = React.useState({ left: 0, width: 0 });
   const listRef = React.useRef<HTMLDivElement>(null);
 
@@ -69,7 +73,7 @@ const TabsList = React.forwardRef<
     >
       {props.children}
       <span
-        className="absolute bottom-0 h-0.5 bg-purple-500 transition-all duration-300 ease-out"
+        className={cn("absolute bottom-0 h-0.5 transition-all duration-300 ease-out", accentColor)}
         style={{
           left: `${underlineStyle.left}px`,
           width: `${underlineStyle.width}px`,
