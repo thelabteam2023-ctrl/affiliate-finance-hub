@@ -789,7 +789,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       </CardHeader>
       <CardContent className="pt-2 pb-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-4 h-9 mb-4 bg-transparent gap-1 p-0">
+          <TabsList className="w-full grid grid-cols-4 h-9 mb-4 bg-transparent gap-1 p-0" accentColor="bg-purple-500">
             <TabsTrigger 
               value="resumo" 
               className="text-xs rounded-lg transition-all duration-200 bg-transparent data-[state=inactive]:text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium hover:text-foreground/80"
