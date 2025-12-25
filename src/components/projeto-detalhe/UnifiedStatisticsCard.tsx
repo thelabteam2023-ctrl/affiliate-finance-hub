@@ -354,8 +354,10 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
 
     // === AVANÇADO ===
     const lucros = liquidadas.map(a => a.lucro_prejuizo || 0);
-    const maiorLucro = lucros.length > 0 ? Math.max(...lucros) : 0;
-    const maiorPerda = lucros.length > 0 ? Math.min(...lucros) : 0;
+    const maiorLucro = lucros.length > 0 ? Math.max(...lucros, 0) : 0;
+    // Só considera prejuízos reais (valores negativos)
+    const prejuizos = lucros.filter(v => v < 0);
+    const maiorPerda = prejuizos.length > 0 ? Math.min(...prejuizos) : 0;
 
     // Maior prejuízo diário e maior lucro diário
     const lucroPorDia = new Map<string, number>();
