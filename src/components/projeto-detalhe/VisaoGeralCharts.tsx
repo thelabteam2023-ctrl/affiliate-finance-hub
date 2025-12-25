@@ -66,6 +66,7 @@ interface EvolucaoData {
   entrada: number;
   data: string;
   hora: string;
+  xLabel: string; // Label formatado para o eixo X (hora ou data)
   acumulado: number;
   impacto: number;
   resultado: string;
@@ -79,6 +80,7 @@ interface VisaoGeralChartsProps {
   showCalendar?: boolean;
   showEvolucaoChart?: boolean;
   showCasasCard?: boolean;
+  isSingleDayPeriod?: boolean;
 }
 
 // =====================================================
@@ -100,6 +102,7 @@ const getStake = (a: ApostaBase): number => {
 interface EvolucaoLucroChartProps {
   data: EvolucaoData[];
   accentColor: string;
+  isSingleDayPeriod: boolean;
 }
 
 // Tooltip customizado para mostrar detalhes da entrada
@@ -130,7 +133,7 @@ const CustomTooltip = ({ active, payload }: any) => {
   );
 };
 
-function EvolucaoLucroChart({ data, accentColor }: EvolucaoLucroChartProps) {
+function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod }: EvolucaoLucroChartProps) {
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
@@ -148,7 +151,7 @@ function EvolucaoLucroChart({ data, accentColor }: EvolucaoLucroChartProps) {
   const fillColor = isPositive ? "hsl(var(--chart-2))" : "hsl(var(--destructive))";
 
   // Determina intervalo do eixo X baseado na quantidade de entradas
-  const tickInterval = data.length > 50 ? Math.floor(data.length / 10) : data.length > 20 ? 5 : 1;
+  const tickInterval = data.length > 50 ? Math.floor(data.length / 10) : data.length > 20 ? 5 : 0;
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -161,13 +164,12 @@ function EvolucaoLucroChart({ data, accentColor }: EvolucaoLucroChartProps) {
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
         <XAxis
-          dataKey="entrada"
+          dataKey="xLabel"
           stroke="hsl(var(--muted-foreground))"
           fontSize={11}
           tickLine={false}
           axisLine={false}
           interval={tickInterval}
-          tickFormatter={(v) => `#${v}`}
         />
         <YAxis
           stroke="hsl(var(--muted-foreground))"
@@ -351,7 +353,8 @@ export function VisaoGeralCharts({
   logoMap, 
   showCalendar = true,
   showEvolucaoChart = true,
-  showCasasCard = true 
+  showCasasCard = true,
+  isSingleDayPeriod = false
 }: VisaoGeralChartsProps) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const evolucaoData = useMemo((): EvolucaoData[] => {
@@ -366,16 +369,22 @@ export function VisaoGeralCharts({
       acumulado += impacto;
       const date = new Date(a.data_aposta);
       
+      // Eixo X: hora para período de 1 dia, data para períodos maiores
+      const xLabel = isSingleDayPeriod 
+        ? format(date, "HH:mm", { locale: ptBR })
+        : format(date, "dd/MM", { locale: ptBR });
+      
       return {
         entrada: index + 1,
         data: format(date, "dd/MM", { locale: ptBR }),
         hora: format(date, "HH:mm", { locale: ptBR }),
+        xLabel,
         acumulado,
         impacto,
         resultado: impacto >= 0 ? 'GREEN' : 'RED',
       };
     });
-  }, [apostas]);
+  }, [apostas, isSingleDayPeriod]);
 
   // Casas mais utilizadas (por volume) — agrupa por CASA, com detalhamento por vínculo
   // Formato esperado: "PARIMATCH - RAFAEL GOMES" → Casa = "PARIMATCH", Vínculo = "RAFAEL GOMES"
@@ -519,11 +528,11 @@ export function VisaoGeralCharts({
               </Badge>
             </div>
           </div>
-          <CardDescription className="text-xs">Evolução entrada por entrada ({evolucaoData.length} apostas)</CardDescription>
+          <CardDescription className="text-xs">{isSingleDayPeriod ? "Evolução por horário" : "Evolução por data"} ({evolucaoData.length} apostas)</CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="h-[280px]">
-            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} />
+            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} />
           </div>
         </CardContent>
       </Card>
@@ -575,11 +584,11 @@ export function VisaoGeralCharts({
               </Badge>
             </div>
           </div>
-          <CardDescription className="text-xs">Evolução entrada por entrada ({evolucaoData.length} apostas)</CardDescription>
+          <CardDescription className="text-xs">{isSingleDayPeriod ? "Evolução por horário" : "Evolução por data"} ({evolucaoData.length} apostas)</CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="h-[280px]">
-            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} />
+            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} />
           </div>
         </CardContent>
       </Card>

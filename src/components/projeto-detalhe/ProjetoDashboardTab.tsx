@@ -230,7 +230,12 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     return new Date(year, month - 1, day, hours || 0, minutes || 0);
   };
 
-  // Sempre exibe por entrada individual (não mais por dia)
+  // Determina se é período de 1 dia (hoje/ontem) para usar hora no eixo X
+  const isSingleDayPeriod = periodFilter === "hoje" || periodFilter === "ontem" || 
+    (periodFilter === "custom" && dateRange?.from && dateRange?.to && 
+      startOfDay(dateRange.from).getTime() === startOfDay(dateRange.to).getTime());
+
+  // Dados de evolução com eixo X baseado no período
   const evolutionData: DailyData[] = useMemo(() => {
     // Ordena apostas cronologicamente
     const sortedApostas = [...apostasUnificadas].sort((a, b) => 
@@ -241,14 +246,20 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     return sortedApostas.map((aposta, index) => {
       cumulativeBalance += aposta.lucro_prejuizo || 0;
       const date = parseLocalDateTime(aposta.data_aposta);
+      
+      // Eixo X: hora para período de 1 dia, data para períodos maiores
+      const xLabel = isSingleDayPeriod 
+        ? format(date, "HH:mm", { locale: ptBR })
+        : format(date, "dd/MM", { locale: ptBR });
+      
       return {
-        data: `#${index + 1}`,
+        data: xLabel,
         dataCompleta: `Entrada #${index + 1} - ${format(date, "dd/MM/yyyy HH:mm", { locale: ptBR })}`,
         lucro_dia: aposta.lucro_prejuizo || 0,
         saldo: cumulativeBalance
       };
     });
-  }, [apostasUnificadas]);
+  }, [apostasUnificadas, isSingleDayPeriod]);
 
   // Aggregate by bookmaker
   const bookmakerMetrics = useMemo(() => {
@@ -430,7 +441,7 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
             Evolução do Saldo
           </CardTitle>
           <CardDescription>
-            Evolução entrada por entrada ({evolutionData.length} apostas)
+            {isSingleDayPeriod ? "Evolução por horário" : "Evolução por data"} ({evolutionData.length} apostas)
           </CardDescription>
         </CardHeader>
         <CardContent>
