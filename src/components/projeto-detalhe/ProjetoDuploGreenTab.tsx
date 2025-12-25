@@ -600,7 +600,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       </div>
 
       {metricas.total > 0 && (
-        <VisaoGeralCharts apostas={apostas} accentColor="#84cc16" logoMap={logoMap} />
+        <VisaoGeralCharts apostas={apostas} accentColor="#84cc16" logoMap={logoMap} isSingleDayPeriod={internalPeriod === "1dia"} />
       )}
 
       {/* Banner Info - No final da página */}

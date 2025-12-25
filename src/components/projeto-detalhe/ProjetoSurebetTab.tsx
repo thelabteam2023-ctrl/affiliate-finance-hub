@@ -532,6 +532,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
               showCasasCard={false}
+              isSingleDayPeriod={internalPeriod === "1dia"}
             />
             <SurebetStatisticsCard surebets={surebets} />
           </div>
@@ -551,6 +552,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
               showEvolucaoChart={false}
+              isSingleDayPeriod={internalPeriod === "1dia"}
             />
           </div>
         </div>
