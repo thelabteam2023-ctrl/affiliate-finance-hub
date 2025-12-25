@@ -478,47 +478,58 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
         </div>
       </div>
 
-      {/* 4️⃣ ANÁLISE DE RISCO - separador visual mais forte */}
+      {/* 4️⃣ ANÁLISE DE RISCO - pares verticais opostos */}
       <div>
         <SectionHeader title="Análise de Risco" icon={AlertTriangle} priority="high" />
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-          <RiskCell 
-            label="Maior lucro unitário" 
-            value={formatCurrency(stats.maiorLucro)} 
-            valueClass="text-emerald-400"
-            tooltip="Maior lucro em uma única aposta"
-          />
-          <RiskCell 
-            label="Maior prejuízo unitário" 
-            value={formatCurrency(stats.maiorPerda)} 
-            valueClass="text-red-400"
-            tooltip="Maior perda em uma única aposta"
-            isNegative
-          />
-          <RiskCell 
-            label="Maior lucro diário" 
-            value={formatCurrency(stats.maiorLucroDiario)} 
-            valueClass="text-emerald-400"
-            tooltip="Maior soma positiva em um único dia"
-          />
-          <RiskCell 
-            label="Maior prejuízo diário" 
-            value={formatCurrency(stats.maiorPrejuizoDiario)} 
-            valueClass="text-red-400"
-            tooltip="Maior soma negativa em um único dia"
-            isNegative
-          />
-          <RiskCell 
-            label="Máx. vitórias seguidas" 
-            value={stats.maxVitorias} 
-            valueClass="text-emerald-400" 
-          />
-          <RiskCell 
-            label="Máx. derrotas seguidas" 
-            value={stats.maxDerrotas} 
-            valueClass="text-red-400"
-            isNegative
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Par 1 — Unitário */}
+          <div className="flex flex-col gap-1.5">
+            <RiskCell 
+              label="Maior lucro unitário" 
+              value={formatCurrency(stats.maiorLucro)} 
+              valueClass="text-emerald-400"
+              tooltip="Maior lucro em uma única aposta"
+            />
+            <RiskCell 
+              label="Maior prejuízo unitário" 
+              value={formatCurrency(stats.maiorPerda)} 
+              valueClass="text-red-400"
+              tooltip="Maior perda em uma única aposta"
+              isNegative
+            />
+          </div>
+
+          {/* Par 2 — Diário */}
+          <div className="flex flex-col gap-1.5">
+            <RiskCell 
+              label="Maior lucro diário" 
+              value={formatCurrency(stats.maiorLucroDiario)} 
+              valueClass="text-emerald-400"
+              tooltip="Maior soma positiva em um único dia"
+            />
+            <RiskCell 
+              label="Maior prejuízo diário" 
+              value={formatCurrency(stats.maiorPrejuizoDiario)} 
+              valueClass="text-red-400"
+              tooltip="Maior soma negativa em um único dia"
+              isNegative
+            />
+          </div>
+
+          {/* Par 3 — Sequência */}
+          <div className="flex flex-col gap-1.5">
+            <RiskCell 
+              label="Máx. vitórias seguidas" 
+              value={stats.maxVitorias} 
+              valueClass="text-emerald-400" 
+            />
+            <RiskCell 
+              label="Máx. derrotas seguidas" 
+              value={stats.maxDerrotas} 
+              valueClass="text-red-400"
+              isNegative
+            />
+          </div>
         </div>
       </div>
 
