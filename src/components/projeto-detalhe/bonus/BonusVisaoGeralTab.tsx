@@ -2,21 +2,25 @@ import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus } from "@/hooks/useProjectBonuses";
 import { Building2, Coins, Wallet, TrendingUp, AlertTriangle, Timer, Trophy } from "lucide-react";
-import { differenceInDays, parseISO, format, subDays, startOfDay, startOfWeek, eachDayOfInterval, eachWeekOfInterval } from "date-fns";
+import { differenceInDays, parseISO, format, startOfDay, startOfWeek, eachDayOfInterval, eachWeekOfInterval, subDays, eachHourOfInterval, startOfHour } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
 } from "@/components/ui/chart";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceLine, CartesianGrid, Tooltip } from "recharts";
 
+interface DateRangeResult {
+  start: Date;
+  end: Date;
+}
+
 interface BonusVisaoGeralTabProps {
   projetoId: string;
+  dateRange?: DateRangeResult | null;
+  isSingleDayPeriod?: boolean;
 }
 
 interface BookmakerWithBonus {
@@ -33,6 +37,7 @@ interface BookmakerWithBonus {
 interface DailyData {
   date: string;
   dateLabel: string;
+  xLabel: string;
   deposits: number;
   bonusCredits: number;
   juice: number;
@@ -57,13 +62,10 @@ interface ExtractedBonusRanking {
   currency: string;
 }
 
-type PeriodFilter = 7 | 30 | 90;
-
-export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
+export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false }: BonusVisaoGeralTabProps) {
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
   const [bookmakersWithBonus, setBookmakersWithBonus] = useState<BookmakerWithBonus[]>([]);
   const [loading, setLoading] = useState(true);
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>(30);
   const [betsData, setBetsData] = useState<any[]>([]);
   const [betsLoading, setBetsLoading] = useState(true);
 
@@ -97,16 +99,22 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
 
       try {
         setBetsLoading(true);
-        const startDate = subDays(new Date(), periodFilter).toISOString();
+        const startDate = dateRange?.start?.toISOString() || subDays(new Date(), 30).toISOString();
         
         // Fetch bets from bookmakers in bonus mode or marked as bonus bets
-        const { data, error } = await supabase
+        let query = supabase
           .from("apostas_unificada")
           .select("id, data_aposta, stake, lucro_prejuizo, bookmaker_id, is_bonus_bet")
           .eq("projeto_id", projetoId)
           .gte("data_aposta", startDate.split('T')[0])
           .or(`is_bonus_bet.eq.true,bookmaker_id.in.(${bookmakersInBonusMode.join(',')})`)
           .not("lucro_prejuizo", "is", null);
+
+        if (dateRange?.end) {
+          query = query.lte("data_aposta", dateRange.end.toISOString());
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
         setBetsData(data || []);
@@ -119,7 +127,7 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
     };
 
     fetchBetsData();
-  }, [projetoId, bookmakersInBonusMode, periodFilter]);
+  }, [projetoId, bookmakersInBonusMode, dateRange]);
 
   useEffect(() => {
     fetchBookmakersWithBonus();
@@ -186,8 +194,8 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
 
   // Calculate daily data for charts
   const dailyData = useMemo((): DailyData[] => {
-    const endDate = startOfDay(new Date());
-    const startDate = subDays(endDate, periodFilter);
+    const endDate = dateRange?.end ? startOfDay(dateRange.end) : startOfDay(new Date());
+    const startDate = dateRange?.start ? startOfDay(dateRange.start) : subDays(endDate, 30);
     const days = eachDayOfInterval({ start: startDate, end: endDate });
 
     // Group bonuses by credited date
@@ -215,10 +223,12 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
 
     // Calculate cumulative adjusted balance
     let cumulativeBalance = 0;
+    let lastDateLabel = "";
     
     return days.map(day => {
       const dateKey = format(day, 'yyyy-MM-dd');
       const dateLabel = format(day, 'dd/MM', { locale: ptBR });
+      const horaLabel = format(day, 'HH:mm', { locale: ptBR });
       
       const dayData = bonusByDate[dateKey] || { deposits: 0, bonusCredits: 0 };
       const juice = juiceByDate[dateKey] || 0;
@@ -226,21 +236,35 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
       // Adjusted balance = previous + deposits + bonus + juice
       cumulativeBalance += dayData.deposits + dayData.bonusCredits + juice;
       
+      // Eixo X: hora para 1 dia, data para períodos maiores (evita repetir)
+      let xLabel: string;
+      if (isSingleDayPeriod) {
+        xLabel = horaLabel;
+      } else {
+        if (dateLabel !== lastDateLabel) {
+          xLabel = dateLabel;
+          lastDateLabel = dateLabel;
+        } else {
+          xLabel = "";
+        }
+      }
+      
       return {
         date: dateKey,
         dateLabel,
+        xLabel,
         deposits: dayData.deposits,
         bonusCredits: dayData.bonusCredits,
         juice,
         adjustedBalance: cumulativeBalance,
       };
     });
-  }, [bonuses, betsData, periodFilter]);
+  }, [bonuses, betsData, dateRange, isSingleDayPeriod]);
 
   // Calculate weekly deposits
   const weeklyData = useMemo((): WeeklyData[] => {
-    const endDate = new Date();
-    const startDate = subDays(endDate, periodFilter);
+    const endDate = dateRange?.end || new Date();
+    const startDate = dateRange?.start || subDays(endDate, 30);
     const weeks = eachWeekOfInterval({ start: startDate, end: endDate }, { weekStartsOn: 1 });
 
     return weeks.map(weekStart => {
@@ -271,18 +295,19 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
         count,
       };
     });
-  }, [bonuses, periodFilter]);
+  }, [bonuses, dateRange]);
 
   // Calculate extracted bonus ranking (finalized bonuses with rollover_completed)
   const extractedBonusRanking = useMemo((): ExtractedBonusRanking[] => {
-    const startDate = subDays(new Date(), periodFilter);
+    const startDate = dateRange?.start || subDays(new Date(), 30);
+    const endDate = dateRange?.end || new Date();
     
     // Filter bonuses that are finalized with rollover_completed within the period
     const extractedBonuses = bonuses.filter(b => {
       if (b.status !== 'finalized' || b.finalize_reason !== 'rollover_completed') return false;
       if (!b.finalized_at) return false;
       const finalizedDate = parseISO(b.finalized_at);
-      return finalizedDate >= startDate;
+      return finalizedDate >= startDate && finalizedDate <= endDate;
     });
 
     // Group by bookmaker
@@ -316,7 +341,7 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
     });
 
     return ranking;
-  }, [bonuses, periodFilter]);
+  }, [bonuses, dateRange]);
 
   // Calculate totals
   const totalSaldoReal = bookmakersWithBonus.reduce((acc, bk) => acc + bk.saldo_real, 0);
@@ -333,20 +358,6 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Period Filter */}
-      <div className="flex justify-end gap-2">
-        {([7, 30, 90] as PeriodFilter[]).map((period) => (
-          <Button
-            key={period}
-            variant={periodFilter === period ? "default" : "outline"}
-            size="sm"
-            onClick={() => setPeriodFilter(period)}
-            className="text-xs"
-          >
-            {period} dias
-          </Button>
-        ))}
-      </div>
 
       {/* KPIs with hierarchy - Saldo Operável is primary */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -523,11 +534,11 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
                   <BarChart data={dailyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
                     <XAxis 
-                      dataKey="dateLabel" 
+                      dataKey="xLabel" 
                       tick={{ fontSize: 10 }} 
                       tickLine={false}
                       axisLine={false}
-                      interval={periodFilter === 7 ? 0 : periodFilter === 30 ? 4 : 10}
+                      interval={isSingleDayPeriod ? 0 : "preserveEnd"}
                     />
                     <YAxis 
                       tick={{ fontSize: 10 }} 
@@ -628,7 +639,7 @@ export function BonusVisaoGeralTab({ projetoId }: BonusVisaoGeralTabProps) {
             Ranking: Casas por Bônus Extraído
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Bônus finalizados com rollover cumprido nos últimos {periodFilter} dias
+            Bônus finalizados com rollover cumprido no período selecionado
           </p>
         </CardHeader>
         <CardContent>
