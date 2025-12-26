@@ -546,12 +546,15 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     isEditing
   ]);
 
-  // Obter saldo livre da casa selecionada (saldo_atual - saldo em aposta)
+  // Obter saldo operável da casa selecionada (saldo_atual + saldo_freebet + saldo_bonus - saldo em aposta)
   const getBookmakerSaldoLivre = (bookmakerId: string): number | null => {
     const bk = bookmakers.find(b => b.id === bookmakerId);
     if (!bk) return null;
     const saldoEmAposta = saldosEmAposta[bookmakerId] || 0;
-    return Number(bk.saldo_atual) - saldoEmAposta;
+    const saldoAtual = Number(bk.saldo_atual) || 0;
+    const saldoFreebet = Number(bk.saldo_freebet) || 0;
+    const saldoBonus = Number(bk.saldo_bonus) || 0;
+    return saldoAtual + saldoFreebet + saldoBonus - saldoEmAposta;
   };
 
   // Calcular saldo disponível para uma posição específica (considerando stakes usadas em outras posições da mesma operação)
@@ -1633,9 +1636,12 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                   </SelectTrigger>
                                   <SelectContent>
                                     {bookmakersDisponiveis.map(bk => {
-                                      // Calcular saldo disponível para esta posição específica
+                                      // Calcular saldo operável para esta posição específica
                                       const saldoEmApostaGlobal = saldosEmAposta[bk.id] || 0;
-                                      const saldoLivreBase = Number(bk.saldo_atual) - saldoEmApostaGlobal;
+                                      const saldoAtual = Number(bk.saldo_atual) || 0;
+                                      const saldoFreebet = Number(bk.saldo_freebet) || 0;
+                                      const saldoBonus = Number(bk.saldo_bonus) || 0;
+                                      const saldoLivreBase = saldoAtual + saldoFreebet + saldoBonus - saldoEmApostaGlobal;
                                       
                                       // Descontar stakes usadas em OUTRAS posições desta operação
                                       let stakesOutrasPosicoes = 0;
