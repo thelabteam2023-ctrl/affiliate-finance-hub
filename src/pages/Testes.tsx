@@ -783,6 +783,26 @@ export default function Testes() {
         console.error("Erro ao apagar freebets:", freebetsError);
       }
 
+      // Apagar todos os bônus de bookmakers vinculados aos projetos do usuário
+      const { data: projetos } = await supabase
+        .from("projetos")
+        .select("id")
+        .eq("user_id", user.id);
+
+      if (projetos && projetos.length > 0) {
+        const projetoIds = projetos.map(p => p.id);
+        const { error: bonusError } = await supabase
+          .from("project_bookmaker_link_bonuses")
+          .delete()
+          .in("project_id", projetoIds);
+
+        if (bonusError) {
+          console.error("Erro ao apagar bônus:", bonusError);
+        } else {
+          console.log("Bônus de bookmakers deletados com sucesso");
+        }
+      }
+
       // Apagar todas as apostas unificada do usuário
       const { error: apostasError } = await supabase
         .from("apostas_unificada")
@@ -808,7 +828,7 @@ export default function Testes() {
         }
       }
 
-      toast.success(`Saldos de ${atualizados} bookmakers resetados, apostas, surebets e freebets apagadas!`);
+      toast.success(`Saldos de ${atualizados} bookmakers resetados, apostas, freebets e bônus apagados!`);
     } catch (error: any) {
       console.error("Erro ao resetar saldos:", error);
       toast.error(`Erro ao resetar saldos: ${error.message}`);
