@@ -9,6 +9,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Pencil, CheckCircle2, XCircle, CircleDot, X, Check } from "lucide-react";
+import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 
 type OperationType = "bookmaker" | "back" | "lay" | "cobertura";
 
@@ -28,6 +29,9 @@ interface ResultadoPillProps {
   isFreebetExtraction?: boolean; // true quando é extração de freebet (SNR/SR)
   gerouFreebet?: boolean; // true se a aposta gerou freebet
   valorFreebetGerada?: number; // valor da freebet gerada (para fallback de criação)
+  // Campos para consumo proporcional de bônus
+  stakeBonus?: number; // Parte da stake que veio do saldo de bônus
+  bonusId?: string | null; // ID do bônus utilizado (se houver)
   onResultadoUpdated: () => void;
   onEditClick: () => void;
 }
@@ -85,11 +89,16 @@ export function ResultadoPill({
   isFreebetExtraction = false,
   gerouFreebet = false,
   valorFreebetGerada,
+  stakeBonus = 0,
+  bonusId = null,
   onResultadoUpdated,
   onEditClick,
 }: ResultadoPillProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Hook para gerenciar consumo de bônus
+  const { processarLiquidacaoBonus, reverterLiquidacaoBonus } = useBonusBalanceManager();
 
   // Determina o valor a exibir na pill (resultado ou status se pendente)
   const displayValue = resultado || status;
@@ -532,8 +541,30 @@ export function ResultadoPill({
 
       if (error) throw error;
 
-      // Atualizar saldo do bookmaker
+      // Atualizar saldo do bookmaker (saldo real)
       await atualizarSaldoBookmaker(resultado, novoResultado);
+
+      // ====== LÓGICA DE CONSUMO DE BÔNUS ======
+      // Se a aposta usou saldo de bônus, processar consumo proporcional
+      if (bonusId && stakeBonus > 0) {
+        const stakeReal = stake - stakeBonus;
+        const resultadoAnterior = resultado || "PENDENTE";
+        
+        // Reverter liquidação anterior se havia resultado
+        if (resultadoAnterior !== "PENDENTE") {
+          await reverterLiquidacaoBonus(resultadoAnterior, stakeBonus, bonusId);
+        }
+        
+        // Processar nova liquidação
+        await processarLiquidacaoBonus(
+          novoResultado,
+          stakeReal,
+          stakeBonus,
+          bonusId,
+          lucroPrejuizo,
+          bookmarkerId
+        );
+      }
 
       // ====== LÓGICA DE FREEBET ======
       // Se a aposta gerou freebet, precisamos atualizar o status da freebet

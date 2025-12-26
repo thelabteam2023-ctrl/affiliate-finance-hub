@@ -15,6 +15,7 @@ export interface ProjectBonus {
   bookmaker_id: string;
   title: string;
   bonus_amount: number;
+  saldo_atual: number; // Saldo atual do bônus (pode ser menor que bonus_amount se consumido)
   currency: string;
   status: BonusStatus;
   credited_at: string | null;
@@ -127,6 +128,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         bookmaker_id: b.bookmaker_id,
         title: b.title,
         bonus_amount: Number(b.bonus_amount),
+        saldo_atual: Number(b.saldo_atual || 0), // Saldo atual do bônus
         currency: b.currency,
         status: b.status as BonusStatus,
         credited_at: b.credited_at,
@@ -196,9 +198,11 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         case "credited":
           summary.total_credited += b.bonus_amount;
           summary.count_credited++;
-          // Credited = active bonus that enters operational balance
-          summary.active_bonus_total += b.bonus_amount;
-          bookmakersWithBonus.add(b.bookmaker_id);
+          // Credited = active bonus: use saldo_atual (pode ter sido consumido parcialmente)
+          summary.active_bonus_total += b.saldo_atual;
+          if (b.saldo_atual > 0) {
+            bookmakersWithBonus.add(b.bookmaker_id);
+          }
           break;
         case "pending":
           summary.total_pending += b.bonus_amount;
@@ -228,22 +232,28 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
     return summary;
   }, [bonuses]);
 
-  // Get active (credited) bonus total for a specific bookmaker
+  // Get active (credited) bonus saldo_atual for a specific bookmaker
   const getActiveBonusByBookmaker = useCallback((bkId: string): number => {
     return bonuses
       .filter((b) => b.bookmaker_id === bkId && b.status === "credited")
-      .reduce((acc, b) => acc + b.bonus_amount, 0);
+      .reduce((acc, b) => acc + b.saldo_atual, 0); // Usar saldo_atual, não bonus_amount
   }, [bonuses]);
 
-  // Get all bookmaker IDs that have active bonuses
+  // Get all bookmaker IDs that have active bonuses with saldo > 0
   const getBookmakersWithActiveBonus = useCallback((): string[] => {
     const ids = new Set<string>();
     bonuses.forEach((b) => {
-      if (b.status === "credited") {
+      if (b.status === "credited" && b.saldo_atual > 0) {
         ids.add(b.bookmaker_id);
       }
     });
     return Array.from(ids);
+  }, [bonuses]);
+
+  // Get active bonus ID for a bookmaker (para uso na decomposição de stake)
+  const getActiveBonusId = useCallback((bkId: string): string | null => {
+    const bonus = bonuses.find((b) => b.bookmaker_id === bkId && b.status === "credited" && b.saldo_atual > 0);
+    return bonus?.id || null;
   }, [bonuses]);
 
   const createBonus = async (data: BonusFormData): Promise<boolean> => {
@@ -265,6 +275,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         bookmaker_id: data.bookmaker_id,
         title: data.title || "",
         bonus_amount: data.bonus_amount,
+        saldo_atual: data.status === "credited" ? data.bonus_amount : 0, // Inicializar saldo_atual
         currency: data.currency,
         status: data.status,
         credited_at: data.status === "credited" ? (data.credited_at || new Date().toISOString()) : null,
@@ -449,6 +460,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
     getTotalCreditedByBookmaker,
     getActiveBonusByBookmaker,
     getBookmakersWithActiveBonus,
+    getActiveBonusId,
     updateRolloverProgress,
     getRolloverPercentage,
   };
