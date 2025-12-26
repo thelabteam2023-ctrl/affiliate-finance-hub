@@ -231,7 +231,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       const saldoOperavel = saldoAtual + saldoFreebet + saldoBonus - saldoEmAposta;
       return saldoOperavel >= 0.50;
     });
-  }, [bookmakers, saldosEmAposta]);
+  }, [
+    // Dependências explícitas para garantir reatividade
+    bookmakers.map(b => `${b.id}|${b.saldo_atual}|${b.saldo_freebet}|${b.saldo_bonus}`).join(','),
+    JSON.stringify(saldosEmAposta)
+  ]);
 
   // Inicializar formulário - SEMPRE resetar ao abrir sem surebet
   useEffect(() => {
@@ -593,7 +597,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       }
     }
     return false;
-  }, [odds, bookmakers, saldosEmAposta, isEditing]);
+  }, [
+    // Dependências explícitas para garantir reatividade
+    odds.map(o => `${o.bookmaker_id}|${o.stake}`).join(','),
+    bookmakers.map(b => `${b.id}|${b.saldo_atual}|${b.saldo_freebet}|${b.saldo_bonus}`).join(','),
+    JSON.stringify(saldosEmAposta),
+    isEditing
+  ]);
 
   const getBookmakerNome = (bookmakerId: string): string => {
     const bk = bookmakers.find(b => b.id === bookmakerId);
@@ -614,6 +624,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
   // Cálculos em tempo real - TOTALMENTE reativo aos inputs atuais
   // NOVO COMPORTAMENTO: Calcular todos os cenários com ROI máximo/mínimo e risco
+  // DEPENDÊNCIAS EXPLÍCITAS: odds (valores), bookmakers (saldos), saldosEmAposta, contexto
   const analysis = useMemo(() => {
     const parsedOdds = odds.map(o => parseFloat(o.odd) || 0);
     const validOddsCount = parsedOdds.filter(o => o > 1).length;
@@ -669,6 +680,34 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     // StakeTotal = soma de todas as stakes atuais
     const stakeTotal = actualStakes.reduce((a, b) => a + b, 0);
     
+    // Calcular saldos disponíveis por posição para validação
+    const saldosPorPosicao = odds.map((entry, idx) => {
+      if (!entry.bookmaker_id) return null;
+      const bk = bookmakers.find(b => b.id === entry.bookmaker_id);
+      if (!bk) return null;
+      
+      const saldoEmApostaGlobal = saldosEmAposta[entry.bookmaker_id] || 0;
+      const saldoAtual = Number(bk.saldo_atual) || 0;
+      const saldoFreebet = Number(bk.saldo_freebet) || 0;
+      const saldoBonus = Number(bk.saldo_bonus) || 0;
+      const saldoLivreBase = saldoAtual + saldoFreebet + saldoBonus - saldoEmApostaGlobal;
+      
+      // Descontar stakes usadas em outras posições da mesma casa
+      let stakesOutrasPosicoes = 0;
+      odds.forEach((o, i) => {
+        if (i !== idx && o.bookmaker_id === entry.bookmaker_id) {
+          stakesOutrasPosicoes += parseFloat(o.stake) || 0;
+        }
+      });
+      
+      return saldoLivreBase - stakesOutrasPosicoes;
+    });
+    
+    // Saldo total operável das casas selecionadas
+    const saldoTotalOperavel = saldosPorPosicao.reduce((acc, saldo) => 
+      saldo !== null ? acc + Math.max(0, saldo) : acc, 0
+    );
+    
     // Calcular cenários de retorno/lucro para CADA resultado possível
     // LucroCenário = stake * odd - stakeTotal
     const scenarios = parsedOdds.map((odd, i) => {
@@ -682,7 +721,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         retorno,
         lucro,
         roi,
-        isPositive: lucro >= 0
+        isPositive: lucro >= 0,
+        saldoDisponivel: saldosPorPosicao[i]
       };
     });
     
@@ -711,11 +751,23 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     // Hedge parcial: quando nem todos os cenários são cobertos igualmente
     const isHedgeParcial = anyNegative && scenarios.some(s => s.lucro > 0);
     
+    // Verificar saldo insuficiente em alguma posição
+    const hasSaldoInsuficiente = scenarios.some((s, i) => {
+      const saldo = saldosPorPosicao[i];
+      return saldo !== null && s.stake > saldo + 0.01;
+    });
+    
     // Recomendação baseada nos cenários
     let recommendation: { text: string; color: string; icon: "check" | "x" | "alert" } | null = null;
     
     if (stakeTotal > 0 && validOddsCount >= 2) {
-      if (allPositive && guaranteedProfit > 0) {
+      if (hasSaldoInsuficiente) {
+        recommendation = { 
+          text: `Saldo insuficiente em uma ou mais posições`, 
+          color: "text-amber-400",
+          icon: "alert"
+        };
+      } else if (allPositive && guaranteedProfit > 0) {
         recommendation = { 
           text: `Arbitragem! Lucro garantido: ${formatCurrency(guaranteedProfit)}`, 
           color: "text-emerald-500",
@@ -763,9 +815,21 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       isHedgeParcial,
       recommendation,
       validOddsCount,
-      hasPartialData: validOddsCount > 0
+      hasPartialData: validOddsCount > 0,
+      // Saldos para reatividade
+      saldosPorPosicao,
+      saldoTotalOperavel,
+      hasSaldoInsuficiente
     };
-  }, [odds, arredondarAtivado, arredondarValor]);
+  }, [
+    // Dependências explícitas para garantir reatividade total
+    odds.map(o => `${o.bookmaker_id}|${o.odd}|${o.stake}|${o.isReference}`).join(','),
+    bookmakers.map(b => `${b.id}|${b.saldo_atual}|${b.saldo_freebet}|${b.saldo_bonus}`).join(','),
+    JSON.stringify(saldosEmAposta),
+    arredondarAtivado,
+    arredondarValor,
+    registroValues.contexto_operacional
+  ]);
 
   // Análise de resultado REAL (quando resolvida - posições marcadas como GREEN/RED/VOID/MEIO_GREEN/MEIO_RED)
   const analysisReal = useMemo(() => {
