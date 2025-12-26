@@ -74,6 +74,8 @@ interface Bookmaker {
   parceiro_id: string;
   saldo_atual: number;
   saldo_freebet: number;
+  saldo_bonus: number;
+  saldo_operavel: number;
   moeda: string;
   parceiro?: {
     nome: string;
@@ -141,6 +143,8 @@ export function ApostaMultiplaDialog({
   const [bookmakerSaldo, setBookmakerSaldo] = useState<{
     saldo: number;
     saldoFreebet: number;
+    saldoBonus: number;
+    saldoOperavel: number;
     moeda: string;
   } | null>(null);
 
@@ -229,6 +233,8 @@ export function ApostaMultiplaDialog({
         setBookmakerSaldo({
           saldo: bk.saldo_atual,
           saldoFreebet: bk.saldo_freebet,
+          saldoBonus: bk.saldo_bonus,
+          saldoOperavel: bk.saldo_operavel,
           moeda: bk.moeda,
         });
       }
@@ -292,7 +298,35 @@ export function ApostaMultiplaDialog({
         .in("status", ["ativo", "ATIVO", "EM_USO"]);
 
       if (error) throw error;
-      setBookmakers(data || []);
+      
+      // Buscar bônus creditados por bookmaker
+      const bookmakerIds = (data || []).map(b => b.id);
+      let bonusByBookmaker: Record<string, number> = {};
+      
+      if (bookmakerIds.length > 0) {
+        const { data: bonusData } = await supabase
+          .from("project_bookmaker_link_bonuses")
+          .select("bookmaker_id, bonus_amount")
+          .eq("project_id", projetoId)
+          .eq("status", "credited");
+        
+        (bonusData || []).forEach((b: any) => {
+          bonusByBookmaker[b.bookmaker_id] = (bonusByBookmaker[b.bookmaker_id] || 0) + (b.bonus_amount || 0);
+        });
+      }
+      
+      // Enriquecer bookmakers com saldo_bonus e saldo_operavel
+      const enriched = (data || []).map((bk: any) => {
+        const saldoBonus = bonusByBookmaker[bk.id] || 0;
+        const saldoOperavel = (bk.saldo_atual || 0) + (bk.saldo_freebet || 0) + saldoBonus;
+        return {
+          ...bk,
+          saldo_bonus: saldoBonus,
+          saldo_operavel: saldoOperavel,
+        };
+      });
+      
+      setBookmakers(enriched);
     } catch (error: any) {
       toast.error("Erro ao carregar bookmakers: " + error.message);
     }
@@ -488,17 +522,10 @@ export function ApostaMultiplaDialog({
       }
     }
 
-    // Validar saldo
-    if (usarFreebet) {
-      if (!bookmakerSaldo || stakeNum > bookmakerSaldo.saldoFreebet) {
-        toast.error("Saldo de freebet insuficiente");
-        return;
-      }
-    } else {
-      if (bookmakerSaldo && stakeNum > bookmakerSaldo.saldo) {
-        toast.error("Saldo insuficiente na casa");
-        return;
-      }
+    // Validar saldo contra saldo operável (real + freebet + bonus)
+    if (bookmakerSaldo && stakeNum > bookmakerSaldo.saldoOperavel) {
+      toast.error(`Stake maior que o saldo operável (${formatCurrency(bookmakerSaldo.saldoOperavel)})`);
+      return;
     }
 
     try {
@@ -1099,14 +1126,17 @@ export function ApostaMultiplaDialog({
               {bookmakerSaldo && (
                 <div className="flex gap-4 text-xs">
                   <span className="text-muted-foreground">
-                    Saldo Total:{" "}
-                    <span className="text-foreground font-medium">
-                      {formatCurrency(bookmakerSaldo.saldo + bookmakerSaldo.saldoFreebet)}
+                    Saldo Operável:{" "}
+                    <span className="text-blue-500 font-medium">
+                      {formatCurrency(bookmakerSaldo.saldoOperavel)}
                     </span>
-                    <span className="text-muted-foreground/70 ml-1">
-                      ({formatCurrency(bookmakerSaldo.saldo)} real
+                    <span className="text-muted-foreground/70 ml-1 inline-flex items-center gap-1 flex-wrap">
+                      (🏦 {formatCurrency(bookmakerSaldo.saldo)}
                       {bookmakerSaldo.saldoFreebet > 0 && (
-                        <> + <Gift className="h-3 w-3 inline mx-0.5 text-amber-400" />{formatCurrency(bookmakerSaldo.saldoFreebet)} freebet</>
+                        <span className="text-amber-400">🎁 {formatCurrency(bookmakerSaldo.saldoFreebet)}</span>
+                      )}
+                      {bookmakerSaldo.saldoBonus > 0 && (
+                        <span className="text-purple-400">🎰 {formatCurrency(bookmakerSaldo.saldoBonus)}</span>
                       )})
                     </span>
                   </span>

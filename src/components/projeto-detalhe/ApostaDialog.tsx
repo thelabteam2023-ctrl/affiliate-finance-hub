@@ -85,6 +85,8 @@ interface Bookmaker {
   saldo_total: number;
   saldo_disponivel: number;
   saldo_freebet: number;
+  saldo_bonus: number;      // Soma de bônus creditados
+  saldo_operavel: number;   // disponível + freebet + bonus
   moeda: string;
   parceiro?: {
     nome: string;
@@ -452,11 +454,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   // Tipo de aposta para Exchange Back (Normal, Freebet SNR, Freebet SR)
   const [tipoApostaExchangeBack, setTipoApostaExchangeBack] = useState<"normal" | "freebet_snr" | "freebet_sr">("normal");
   
-  // Saldos das casas selecionadas (incluindo saldo de freebet)
-  const [bookmakerSaldo, setBookmakerSaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; moeda: string } | null>(null);
-  const [coberturaBackSaldo, setCoberturaBackSaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; moeda: string } | null>(null);
-  const [coberturaLaySaldo, setCoberturaLaySaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; moeda: string } | null>(null);
-  const [exchangeBookmakerSaldo, setExchangeBookmakerSaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; moeda: string } | null>(null);
+  // Saldos das casas selecionadas (incluindo saldo de freebet e bônus)
+  const [bookmakerSaldo, setBookmakerSaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; saldoBonus: number; saldoOperavel: number; moeda: string } | null>(null);
+  const [coberturaBackSaldo, setCoberturaBackSaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; saldoBonus: number; saldoOperavel: number; moeda: string } | null>(null);
+  const [coberturaLaySaldo, setCoberturaLaySaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; saldoBonus: number; saldoOperavel: number; moeda: string } | null>(null);
+  const [exchangeBookmakerSaldo, setExchangeBookmakerSaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; saldoBonus: number; saldoOperavel: number; moeda: string } | null>(null);
   
   // Valores calculados para Cobertura
   const [coberturaLayStake, setCoberturaLayStake] = useState<number | null>(null);
@@ -682,7 +684,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     if (bookmakerId && bookmakers.length > 0) {
       const selectedBk = bookmakers.find(b => b.id === bookmakerId);
       if (selectedBk) {
-        setBookmakerSaldo({ saldo: selectedBk.saldo_total, saldoDisponivel: selectedBk.saldo_disponivel, saldoFreebet: selectedBk.saldo_freebet, moeda: selectedBk.moeda });
+        setBookmakerSaldo({ 
+          saldo: selectedBk.saldo_total, 
+          saldoDisponivel: selectedBk.saldo_disponivel, 
+          saldoFreebet: selectedBk.saldo_freebet, 
+          saldoBonus: selectedBk.saldo_bonus,
+          saldoOperavel: selectedBk.saldo_operavel,
+          moeda: selectedBk.moeda 
+        });
       }
     }
   }, [bookmakerId, bookmakers]);
@@ -692,7 +701,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     if (exchangeBookmakerId && bookmakers.length > 0) {
       const selectedBk = bookmakers.find(b => b.id === exchangeBookmakerId);
       if (selectedBk) {
-        setExchangeBookmakerSaldo({ saldo: selectedBk.saldo_total, saldoDisponivel: selectedBk.saldo_disponivel, saldoFreebet: selectedBk.saldo_freebet, moeda: selectedBk.moeda });
+        setExchangeBookmakerSaldo({ 
+          saldo: selectedBk.saldo_total, 
+          saldoDisponivel: selectedBk.saldo_disponivel, 
+          saldoFreebet: selectedBk.saldo_freebet, 
+          saldoBonus: selectedBk.saldo_bonus,
+          saldoOperavel: selectedBk.saldo_operavel,
+          moeda: selectedBk.moeda 
+        });
       } else {
         setExchangeBookmakerSaldo(null);
       }
@@ -962,24 +978,43 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       const bookmakerIds = (bookmakersData || []).map(b => b.id);
       
       let pendingStakes: Record<string, number> = {};
+      let bonusByBookmaker: Record<string, number> = {};
+      
       if (bookmakerIds.length > 0) {
-        const { data: pendingBets } = await supabase
-          .from("apostas_unificada")
-          .select("bookmaker_id, stake")
-          .in("bookmaker_id", bookmakerIds)
-          .eq("status", "PENDENTE")
-          .not("bookmaker_id", "is", null);
+        // Buscar em paralelo: apostas pendentes e bônus creditados
+        const [pendingBetsResult, bonusResult] = await Promise.all([
+          supabase
+            .from("apostas_unificada")
+            .select("bookmaker_id, stake")
+            .in("bookmaker_id", bookmakerIds)
+            .eq("status", "PENDENTE")
+            .not("bookmaker_id", "is", null),
+          supabase
+            .from("project_bookmaker_link_bonuses")
+            .select("bookmaker_id, bonus_amount")
+            .eq("project_id", projetoId)
+            .eq("status", "credited")
+        ]);
 
-        pendingStakes = (pendingBets || []).reduce((acc, bet) => {
+        pendingStakes = (pendingBetsResult.data || []).reduce((acc, bet) => {
           acc[bet.bookmaker_id!] = (acc[bet.bookmaker_id!] || 0) + (bet.stake || 0);
           return acc;
         }, {} as Record<string, number>);
+        
+        // Agrupar bônus creditados por bookmaker
+        (bonusResult.data || []).forEach((b: any) => {
+          bonusByBookmaker[b.bookmaker_id] = (bonusByBookmaker[b.bookmaker_id] || 0) + (b.bonus_amount || 0);
+        });
       }
 
       const formatted = (bookmakersData || []).map((bk: any) => {
         const saldoTotal = bk.saldo_atual || 0;
         const stakeBloqueada = pendingStakes[bk.id] || 0;
         const saldoDisponivel = saldoTotal - stakeBloqueada;
+        const saldoFreebet = bk.saldo_freebet || 0;
+        const saldoBonus = bonusByBookmaker[bk.id] || 0;
+        const saldoOperavel = saldoDisponivel + saldoFreebet + saldoBonus;
+        
         return {
           id: bk.id,
           nome: bk.nome,
@@ -987,11 +1022,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           saldo_atual: saldoTotal,
           saldo_total: saldoTotal,
           saldo_disponivel: saldoDisponivel,
-          saldo_freebet: bk.saldo_freebet || 0,
+          saldo_freebet: saldoFreebet,
+          saldo_bonus: saldoBonus,
+          saldo_operavel: saldoOperavel,
           moeda: bk.moeda || "BRL",
           parceiro: bk.parceiro
         };
-      }).filter(bk => bk.saldo_disponivel > 0 || bk.saldo_freebet > 0 || (aposta && aposta.bookmaker_id === bk.id));
+      }).filter(bk => bk.saldo_operavel > 0 || (aposta && aposta.bookmaker_id === bk.id));
 
       setBookmakers(formatted);
     } catch (error) {
@@ -1117,27 +1154,16 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         return;
       }
 
-      // Validar stake vs saldo disponível da bookmaker (considerando se usa freebet)
+      // Validar stake vs saldo operável da bookmaker (real + freebet + bonus)
       const selectedBookmaker = bookmakers.find(b => b.id === bookmakerId);
       if (selectedBookmaker) {
         const stakeAnterior = aposta?.status === "PENDENTE" ? aposta.stake : 0;
+        const saldoOperavelParaValidar = selectedBookmaker.saldo_operavel + stakeAnterior;
         
-        // Se for usar freebet, validar contra saldo_freebet
-        if (usarFreebetBookmaker) {
-          if (stakeNum > selectedBookmaker.saldo_freebet) {
-            toast.error(`Stake da Freebet (${formatCurrencyWithSymbol(stakeNum, selectedBookmaker.moeda)}) maior que o saldo de Freebet disponível (${formatCurrencyWithSymbol(selectedBookmaker.saldo_freebet, selectedBookmaker.moeda)})`);
-            return;
-          }
-        } else {
-          // Aposta normal: validar contra saldo disponível
-          const saldoDisponivel = (selectedBookmaker as any).saldo_disponivel ?? selectedBookmaker.saldo_atual;
-          const saldoParaValidar = saldoDisponivel + stakeAnterior;
-          
-          if (stakeNum > saldoParaValidar) {
-            const moeda = selectedBookmaker.moeda;
-            toast.error(`Stake maior que o saldo disponível (${formatCurrencyWithSymbol(saldoParaValidar, moeda)})`);
-            return;
-          }
+        if (stakeNum > saldoOperavelParaValidar) {
+          const moeda = selectedBookmaker.moeda;
+          toast.error(`Stake (${formatCurrencyWithSymbol(stakeNum, moeda)}) maior que o saldo operável (${formatCurrencyWithSymbol(saldoOperavelParaValidar, moeda)})`);
+          return;
         }
       }
     } else if (tipoAposta === "exchange") {
@@ -2477,7 +2503,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         setBookmakerId(val);
                         const selectedBk = bookmakers.find(b => b.id === val);
                         if (selectedBk) {
-                          setBookmakerSaldo({ saldo: selectedBk.saldo_total, saldoDisponivel: selectedBk.saldo_disponivel, saldoFreebet: selectedBk.saldo_freebet, moeda: selectedBk.moeda });
+                          setBookmakerSaldo({ 
+                            saldo: selectedBk.saldo_total, 
+                            saldoDisponivel: selectedBk.saldo_disponivel, 
+                            saldoFreebet: selectedBk.saldo_freebet, 
+                            saldoBonus: selectedBk.saldo_bonus,
+                            saldoOperavel: selectedBk.saldo_operavel,
+                            moeda: selectedBk.moeda 
+                          });
                         } else {
                           setBookmakerSaldo(null);
                         }
@@ -2517,7 +2550,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                     {displayName}
                                   </span>
                                   <span className="text-xs text-muted-foreground flex-shrink-0">
-                                    Disp: {formatCurrencyWithSymbol(bk.saldo_disponivel + bk.saldo_freebet, bk.moeda)}
+                                    Disp: {formatCurrencyWithSymbol(bk.saldo_operavel, bk.moeda)}
                                   </span>
                                 </div>
                               </SelectItem>
@@ -2529,13 +2562,16 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     {bookmakerSaldo && (
                       <div className="text-xs text-center space-y-0.5">
                         <p className="text-muted-foreground">
-                          Saldo Total: <span className="text-emerald-500 font-medium">{formatCurrencyWithSymbol(bookmakerSaldo.saldo + bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)}</span>
+                          Saldo Operável: <span className="text-blue-500 font-medium">{formatCurrencyWithSymbol(bookmakerSaldo.saldoOperavel, bookmakerSaldo.moeda)}</span>
                         </p>
-                        <p className="text-muted-foreground/70 text-[10px]">
-                          ({formatCurrencyWithSymbol(bookmakerSaldo.saldo, bookmakerSaldo.moeda)} real
+                        <p className="text-muted-foreground/70 text-[10px] flex items-center justify-center gap-2 flex-wrap">
+                          <span className="text-emerald-400">🏦 {formatCurrencyWithSymbol(bookmakerSaldo.saldoDisponivel, bookmakerSaldo.moeda)}</span>
                           {bookmakerSaldo.saldoFreebet > 0 && (
-                            <> + <Gift className="h-2.5 w-2.5 inline mx-0.5 text-amber-400" />{formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)} freebet</>
-                          )})
+                            <span className="text-amber-400">🎁 {formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)}</span>
+                          )}
+                          {bookmakerSaldo.saldoBonus > 0 && (
+                            <span className="text-purple-400">🎰 {formatCurrencyWithSymbol(bookmakerSaldo.saldoBonus, bookmakerSaldo.moeda)}</span>
+                          )}
                         </p>
                       </div>
                     )}
@@ -2582,7 +2618,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                       className={`text-center ${(() => {
                         const selectedBk = bookmakers.find(b => b.id === bookmakerId);
                         const stakeNum = parseFloat(stake);
-                        if (selectedBk && !isNaN(stakeNum) && stakeNum > selectedBk.saldo_disponivel) {
+                        if (selectedBk && !isNaN(stakeNum) && stakeNum > selectedBk.saldo_operavel) {
                           return "border-destructive focus-visible:ring-destructive";
                         }
                         return "";
@@ -2591,10 +2627,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     {(() => {
                       const selectedBk = bookmakers.find(b => b.id === bookmakerId);
                       const stakeNum = parseFloat(stake);
-                      if (selectedBk && !isNaN(stakeNum) && stakeNum > selectedBk.saldo_disponivel) {
+                      if (selectedBk && !isNaN(stakeNum) && stakeNum > selectedBk.saldo_operavel) {
                         return (
                           <p className="text-xs text-destructive mt-1">
-                            Disponível: {formatCurrencyWithSymbol(selectedBk.saldo_disponivel, selectedBk.moeda)}
+                            Operável: {formatCurrencyWithSymbol(selectedBk.saldo_operavel, selectedBk.moeda)}
                           </p>
                         );
                       }
@@ -3080,7 +3116,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 setCoberturaBackBookmakerId(val);
                                 const bk = bookmakers.find(b => b.id === val);
                                 if (bk) {
-                                  setCoberturaBackSaldo({ saldo: bk.saldo_total, saldoDisponivel: bk.saldo_disponivel, saldoFreebet: bk.saldo_freebet, moeda: bk.moeda });
+                                  setCoberturaBackSaldo({ 
+                                    saldo: bk.saldo_total, 
+                                    saldoDisponivel: bk.saldo_disponivel, 
+                                    saldoFreebet: bk.saldo_freebet, 
+                                    saldoBonus: bk.saldo_bonus,
+                                    saldoOperavel: bk.saldo_operavel,
+                                    moeda: bk.moeda 
+                                  });
                                 } else {
                                   setCoberturaBackSaldo(null);
                                 }
@@ -3246,7 +3289,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 setCoberturaLayBookmakerId(val);
                                 const bk = bookmakers.find(b => b.id === val);
                                 if (bk) {
-                                  setCoberturaLaySaldo({ saldo: bk.saldo_total, saldoDisponivel: bk.saldo_disponivel, saldoFreebet: bk.saldo_freebet, moeda: bk.moeda });
+                                  setCoberturaLaySaldo({ 
+                                    saldo: bk.saldo_total, 
+                                    saldoDisponivel: bk.saldo_disponivel, 
+                                    saldoFreebet: bk.saldo_freebet, 
+                                    saldoBonus: bk.saldo_bonus,
+                                    saldoOperavel: bk.saldo_operavel,
+                                    moeda: bk.moeda 
+                                  });
                                 } else {
                                   setCoberturaLaySaldo(null);
                                 }
