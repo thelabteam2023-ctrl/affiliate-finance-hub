@@ -18,13 +18,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Loader2, Gift, Building2, Sparkles, Check } from "lucide-react";
+import { Loader2, Gift, Building2, Sparkles, Check, Info } from "lucide-react";
 import { BonusFormData, BonusStatus, ProjectBonus } from "@/hooks/useProjectBonuses";
 import { useBookmakerBonusTemplates, BonusTemplate, calculateRolloverTarget } from "@/hooks/useBookmakerBonusTemplates";
 import { format, addDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface BookmakerOption {
   id: string;
@@ -403,10 +409,20 @@ export function BonusDialog({
           {/* LINHA 2 — Valores monetários (Depósito + Bônus + Moeda) */}
           {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
           <div className="grid grid-cols-3 gap-3">
-            {/* Depósito */}
+            {/* Depósito de Referência (informativo, não financeiro) */}
             <div className="flex flex-col">
-              <div className="h-5 flex items-center justify-center">
-                <Label className="text-xs text-muted-foreground">Valor do Depósito</Label>
+              <div className="h-5 flex items-center justify-center gap-1">
+                <Label className="text-xs text-muted-foreground">Depósito Referência</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-muted-foreground/60 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[200px] text-xs">
+                      <p>Valor informativo para cálculo do rollover. <strong>Não representa depósito financeiro</strong> — depósitos reais são registrados no Caixa.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <Input
                 type="number"
