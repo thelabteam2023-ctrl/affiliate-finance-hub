@@ -267,8 +267,8 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           )
         `)
         .eq("projeto_id", projetoId)
-        .eq("estrategia", "SIMPLES")
-        .or(`bookmaker_id.in.(${bookmakersInBonusMode.join(',')}),is_bonus_bet.eq.true`)
+        .eq("forma_registro", "SIMPLES")
+        .or(`bookmaker_id.in.(${bookmakersInBonusMode.join(',')}),is_bonus_bet.eq.true,contexto_operacional.eq.BONUS`)
         .order("data_aposta", { ascending: false });
 
       if (error) throw error;
@@ -307,8 +307,8 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           )
         `)
         .eq("projeto_id", projetoId)
-        .eq("estrategia", "MULTIPLA")
-        .or(`bookmaker_id.in.(${bookmakersInBonusMode.join(',')}),is_bonus_bet.eq.true`)
+        .eq("forma_registro", "MULTIPLA")
+        .or(`bookmaker_id.in.(${bookmakersInBonusMode.join(',')}),is_bonus_bet.eq.true,contexto_operacional.eq.BONUS`)
         .order("data_aposta", { ascending: false });
 
       if (error) throw error;
