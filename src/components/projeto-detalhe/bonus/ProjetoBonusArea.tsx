@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "../StandardTimeFilter";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProjetoBonusAreaProps {
   projetoId: string;
@@ -20,15 +21,38 @@ type TabValue = "visao-geral" | "bookmakers" | "apostas";
 
 const STORAGE_KEY = "bonus-area-nav-mode";
 
-const NAV_ITEMS = [
-  { value: "visao-geral" as TabValue, label: "Visão Geral", icon: LayoutDashboard },
-  { value: "apostas" as TabValue, label: "Operações", icon: Target },
-  { value: "bookmakers" as TabValue, label: "Por Casa", icon: Building2, showCount: true },
-];
-
 export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusAreaProps) {
   const { getBookmakersWithActiveBonus, fetchBonuses } = useProjectBonuses({ projectId: projetoId });
   const bookmakersInBonusMode = getBookmakersWithActiveBonus();
+  
+  // Count of open operations (pending bets in bonus context)
+  const [openOperationsCount, setOpenOperationsCount] = useState(0);
+  
+  // Fetch open operations count
+  useEffect(() => {
+    const fetchOpenCount = async () => {
+      // bookmakersInBonusMode is an array of bookmaker IDs (strings)
+      const bookmakerIds = bookmakersInBonusMode;
+      
+      const { count } = await supabase
+        .from("apostas_unificada")
+        .select("*", { count: "exact", head: true })
+        .eq("projeto_id", projetoId)
+        .eq("status", "PENDENTE")
+        .or(`contexto_operacional.eq.BONUS,is_bonus_bet.eq.true${bookmakerIds.length > 0 ? `,bookmaker_id.in.(${bookmakerIds.join(",")})` : ""}`);
+      
+      setOpenOperationsCount(count || 0);
+    };
+    
+    fetchOpenCount();
+  }, [projetoId, bookmakersInBonusMode, refreshTrigger]);
+  
+  // NAV_ITEMS with dynamic counts
+  const NAV_ITEMS = useMemo(() => [
+    { value: "visao-geral" as TabValue, label: "Visão Geral", icon: LayoutDashboard },
+    { value: "apostas" as TabValue, label: "Operações", icon: Target, showCount: true, count: openOperationsCount },
+    { value: "bookmakers" as TabValue, label: "Por Casa", icon: Building2, showCount: true, count: bookmakersInBonusMode.length },
+  ], [openOperationsCount, bookmakersInBonusMode.length]);
   
   // Refetch when refreshTrigger changes
   useEffect(() => {
@@ -134,9 +158,9 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
                 >
                   <item.icon className="h-4 w-4 mr-2 opacity-60" />
                   {item.label}
-                  {item.showCount && bookmakersInBonusMode.length > 0 && (
+                  {item.showCount && item.count > 0 && (
                     <span className="ml-1.5 text-xs font-medium text-muted-foreground/60">
-                      ({bookmakersInBonusMode.length})
+                      ({item.count})
                     </span>
                   )}
                 </TabsTrigger>
@@ -192,14 +216,14 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
                     isActive ? "text-accent" : "opacity-60"
                   )} />
                   <span className="flex-1 text-left">{item.label}</span>
-                  {item.showCount && bookmakersInBonusMode.length > 0 && (
+                  {item.showCount && item.count > 0 && (
                     <span className={cn(
                       "text-xs px-1.5 py-0.5 rounded-full transition-colors",
                       isActive 
                         ? "bg-accent/20 text-accent" 
                         : "bg-muted/50 text-muted-foreground/60"
                     )}>
-                      {bookmakersInBonusMode.length}
+                      {item.count}
                     </span>
                   )}
                 </button>
