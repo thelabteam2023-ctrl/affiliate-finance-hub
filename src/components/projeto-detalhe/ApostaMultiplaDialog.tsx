@@ -295,34 +295,65 @@ export function ApostaMultiplaDialog({
         `
         )
         .eq("projeto_id", projetoId)
-        .in("status", ["ativo", "ATIVO", "EM_USO"]);
+        .in("status", ["ativo", "ATIVO", "EM_USO", "LIMITADA", "limitada"]);
 
       if (error) throw error;
       
-      // Buscar bônus creditados por bookmaker
-      // CONTRATO: saldo_bonus = SUM(project_bookmaker_link_bonuses.saldo_atual) WHERE status='credited'
       const bookmakerIds = (data || []).map(b => b.id);
+      
+      // Buscar em paralelo: apostas pendentes e bônus creditados
+      let pendingStakes: Record<string, number> = {};
       let bonusByBookmaker: Record<string, number> = {};
       
       if (bookmakerIds.length > 0) {
-        const { data: bonusData } = await supabase
-          .from("project_bookmaker_link_bonuses")
-          .select("bookmaker_id, saldo_atual")
-          .eq("project_id", projetoId)
-          .eq("status", "credited");
+        const [pendingBetsResult, bonusResult] = await Promise.all([
+          // Apostas pendentes
+          supabase
+            .from("apostas_unificada")
+            .select("bookmaker_id, stake")
+            .in("bookmaker_id", bookmakerIds)
+            .eq("status", "PENDENTE")
+            .not("bookmaker_id", "is", null),
+          // CONTRATO: saldo_bonus = SUM(project_bookmaker_link_bonuses.saldo_atual) WHERE status='credited' AND project_id=X
+          supabase
+            .from("project_bookmaker_link_bonuses")
+            .select("bookmaker_id, saldo_atual")
+            .eq("project_id", projetoId)
+            .in("bookmaker_id", bookmakerIds)
+            .eq("status", "credited")
+        ]);
         
-        (bonusData || []).forEach((b: any) => {
+        // Agregar apostas pendentes
+        (pendingBetsResult.data || []).forEach((bet: any) => {
+          if (bet.bookmaker_id) {
+            pendingStakes[bet.bookmaker_id] = (pendingStakes[bet.bookmaker_id] || 0) + (bet.stake || 0);
+          }
+        });
+        
+        // Agregar bônus
+        (bonusResult.data || []).forEach((b: any) => {
           bonusByBookmaker[b.bookmaker_id] = (bonusByBookmaker[b.bookmaker_id] || 0) + (b.saldo_atual || 0);
         });
       }
       
-      // Enriquecer bookmakers com saldo_bonus e saldo_operavel
+      // Enriquecer bookmakers com saldos calculados corretamente
+      // CONTRATO CANÔNICO:
+      // saldo_disponivel = saldo_atual - saldo_em_aposta
+      // saldo_operavel = saldo_disponivel + saldo_freebet + saldo_bonus
       const enriched = (data || []).map((bk: any) => {
+        const saldoReal = Number(bk.saldo_atual) || 0;
+        const saldoFreebet = Number(bk.saldo_freebet) || 0;
         const saldoBonus = bonusByBookmaker[bk.id] || 0;
-        const saldoOperavel = (bk.saldo_atual || 0) + (bk.saldo_freebet || 0) + saldoBonus;
+        const saldoEmAposta = pendingStakes[bk.id] || 0;
+        const saldoDisponivel = saldoReal - saldoEmAposta;
+        const saldoOperavel = saldoDisponivel + saldoFreebet + saldoBonus;
+        
         return {
           ...bk,
+          saldo_real: saldoReal,
           saldo_bonus: saldoBonus,
+          saldo_em_aposta: saldoEmAposta,
+          saldo_disponivel: saldoDisponivel,
           saldo_operavel: saldoOperavel,
         };
       });
