@@ -2564,13 +2564,38 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         <p className="text-muted-foreground">
                           Saldo Operável: <span className="text-blue-500 font-medium">{formatCurrencyWithSymbol(bookmakerSaldo.saldoOperavel, bookmakerSaldo.moeda)}</span>
                         </p>
-                        <p className="text-muted-foreground/70 text-[10px] flex items-center justify-center gap-2 flex-wrap">
-                          <span className="text-emerald-400">🏦 {formatCurrencyWithSymbol(bookmakerSaldo.saldoDisponivel, bookmakerSaldo.moeda)}</span>
+                        <p className="text-muted-foreground/70 text-[10px] flex items-center justify-center gap-3 flex-wrap">
+                          <span className="text-emerald-400 flex items-center gap-1">
+                            <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
+                              <rect x="3" y="8" width="18" height="11" rx="2" className="fill-emerald-500/20 stroke-emerald-400" strokeWidth="1.5"/>
+                              <path d="M3 10h18" className="stroke-emerald-400" strokeWidth="1.5"/>
+                              <path d="M7 4h10M9 4v4M15 4v4" className="stroke-emerald-400" strokeWidth="1.5" strokeLinecap="round"/>
+                              <rect x="6" y="13" width="4" height="3" rx="0.5" className="fill-emerald-400/50"/>
+                            </svg>
+                            {formatCurrencyWithSymbol(bookmakerSaldo.saldoDisponivel, bookmakerSaldo.moeda)}
+                          </span>
                           {bookmakerSaldo.saldoFreebet > 0 && (
-                            <span className="text-amber-400">🎁 {formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)}</span>
+                            <span className="text-amber-400 flex items-center gap-1">
+                              <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="2" y="6" width="20" height="12" rx="2" className="fill-amber-500/20 stroke-amber-400" strokeWidth="1.5"/>
+                                <path d="M2 10h20" className="stroke-amber-400" strokeWidth="1"/>
+                                <circle cx="12" cy="14" r="2" className="stroke-amber-400" strokeWidth="1.5"/>
+                                <path d="M6 14h2M16 14h2" className="stroke-amber-400/60" strokeWidth="1" strokeLinecap="round"/>
+                              </svg>
+                              {formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)}
+                            </span>
                           )}
                           {bookmakerSaldo.saldoBonus > 0 && (
-                            <span className="text-purple-400">🎰 {formatCurrencyWithSymbol(bookmakerSaldo.saldoBonus, bookmakerSaldo.moeda)}</span>
+                            <span className="text-purple-400 flex items-center gap-1">
+                              <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="2" y="4" width="20" height="16" rx="3" className="fill-purple-500/20 stroke-purple-400" strokeWidth="1.5"/>
+                                <circle cx="12" cy="12" r="4" className="stroke-purple-400" strokeWidth="1.5"/>
+                                <path d="M12 10v4M10.5 11.5l1.5-1.5 1.5 1.5" className="stroke-purple-400" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                                <circle cx="5.5" cy="8" r="1" className="fill-purple-400/60"/>
+                                <circle cx="18.5" cy="16" r="1" className="fill-purple-400/60"/>
+                              </svg>
+                              {formatCurrencyWithSymbol(bookmakerSaldo.saldoBonus, bookmakerSaldo.moeda)}
+                            </span>
                           )}
                         </p>
                       </div>
