@@ -1,10 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, Building2, Target, History, PanelLeft, LayoutList } from "lucide-react";
+import { LayoutDashboard, Building2, Target, PanelLeft, LayoutList } from "lucide-react";
 import { BonusVisaoGeralTab } from "./BonusVisaoGeralTab";
 import { BonusBookmakersTab } from "./BonusBookmakersTab";
 import { BonusApostasTab } from "./BonusApostasTab";
-import { BonusHistoricoTab } from "./BonusHistoricoTab";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,7 @@ interface ProjetoBonusAreaProps {
 }
 
 type NavigationMode = "tabs" | "sidebar";
-type TabValue = "visao-geral" | "bookmakers" | "apostas" | "historico";
+type TabValue = "visao-geral" | "bookmakers" | "apostas";
 
 const STORAGE_KEY = "bonus-area-nav-mode";
 
@@ -25,7 +24,6 @@ const NAV_ITEMS = [
   { value: "visao-geral" as TabValue, label: "Visão Geral", icon: LayoutDashboard },
   { value: "bookmakers" as TabValue, label: "Bookmakers", icon: Building2, showCount: true },
   { value: "apostas" as TabValue, label: "Apostas", icon: Target },
-  { value: "historico" as TabValue, label: "Histórico", icon: History },
 ];
 
 export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusAreaProps) {
@@ -94,7 +92,6 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
         {activeTab === "visao-geral" && <BonusVisaoGeralTab projetoId={projetoId} />}
         {activeTab === "bookmakers" && <BonusBookmakersTab projetoId={projetoId} />}
         {activeTab === "apostas" && <BonusApostasTab projetoId={projetoId} />}
-        {activeTab === "historico" && <BonusHistoricoTab projetoId={projetoId} />}
       </div>
     );
   };
