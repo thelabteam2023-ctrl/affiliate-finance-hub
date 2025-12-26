@@ -1103,44 +1103,29 @@ export function ApostaMultiplaDialog({
                 <SelectTrigger className="h-10 items-center">
                   <SelectValue placeholder="Selecione a casa..." />
                 </SelectTrigger>
-                <SelectContent className="max-w-[420px]">
+                <SelectContent className="z-50 w-[var(--radix-select-trigger-width)] min-w-[300px]">
                   {bookmakers.map((bk) => {
-                    // Calcular breakdown do saldo
                     const saldoReal = bk.saldo_atual || 0;
                     const saldoFreebet = bk.saldo_freebet || 0;
                     const saldoBonus = bk.saldo_bonus || 0;
                     const saldoOperavel = bk.saldo_operavel || (saldoReal + saldoFreebet + saldoBonus);
                     
-                    // Construir breakdown
-                    const breakdownParts = [`R$ ${saldoReal.toFixed(0)}`];
-                    if (saldoFreebet > 0) breakdownParts.push(`FB: ${saldoFreebet.toFixed(0)}`);
-                    if (saldoBonus > 0) breakdownParts.push(`🎁: ${saldoBonus.toFixed(0)}`);
-                    
                     return (
-                      <SelectItem key={bk.id} value={bk.id}>
-                        <div className="flex items-center justify-between w-full gap-3 min-w-0">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            {bk.bookmakers_catalogo?.logo_url && (
-                              <img
-                                src={bk.bookmakers_catalogo.logo_url}
-                                alt=""
-                                className="h-4 w-4 rounded object-contain flex-shrink-0"
-                              />
-                            )}
-                            <span className="uppercase truncate">
-                              {bk.nome} • {getFirstLastName(bk.parceiro?.nome || "")}
-                            </span>
-                          </div>
-                          <div className="flex flex-col items-end flex-shrink-0">
-                            <span className="text-xs font-medium text-blue-400">
-                              {formatCurrency(saldoOperavel)}
-                            </span>
-                            {(saldoFreebet > 0 || saldoBonus > 0) && (
-                              <span className="text-[9px] text-muted-foreground/70">
-                                {breakdownParts.join(" + ")}
-                              </span>
-                            )}
-                          </div>
+                      <SelectItem key={bk.id} value={bk.id} className="py-2">
+                        <div className="flex items-center gap-2 w-full">
+                          {bk.bookmakers_catalogo?.logo_url && (
+                            <img
+                              src={bk.bookmakers_catalogo.logo_url}
+                              alt=""
+                              className="h-4 w-4 rounded object-contain flex-shrink-0"
+                            />
+                          )}
+                          <span className="uppercase text-sm flex-1 truncate">
+                            {bk.nome} • {getFirstLastName(bk.parceiro?.nome || "")}
+                          </span>
+                          <span className="text-xs font-medium text-emerald-400 flex-shrink-0 ml-auto">
+                            {formatCurrency(saldoOperavel)}
+                          </span>
                         </div>
                       </SelectItem>
                     );
