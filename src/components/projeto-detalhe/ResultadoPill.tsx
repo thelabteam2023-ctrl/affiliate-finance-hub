@@ -8,60 +8,10 @@ import {
 } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Pencil, TrendingUp, TrendingDown, MinusCircle, Clock } from "lucide-react";
+import { Loader2, Pencil, CheckCircle2, XCircle, CircleDot, X, Check } from "lucide-react";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 
 type OperationType = "bookmaker" | "back" | "lay" | "cobertura";
-
-// Componentes de ícones SVG personalizados e modernos
-const IconGreen = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
-    <rect x="2" y="4" width="20" height="16" rx="3" className="fill-emerald-500/20 stroke-emerald-400" strokeWidth="1.5"/>
-    <path d="M12 8v8M8 12h8" className="stroke-emerald-400" strokeWidth="2" strokeLinecap="round"/>
-    <circle cx="6" cy="12" r="1" className="fill-emerald-400"/>
-    <circle cx="18" cy="12" r="1" className="fill-emerald-400"/>
-  </svg>
-);
-
-const IconRed = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
-    <rect x="2" y="4" width="20" height="16" rx="3" className="fill-red-500/20 stroke-red-400" strokeWidth="1.5"/>
-    <path d="M8 12h8" className="stroke-red-400" strokeWidth="2" strokeLinecap="round"/>
-    <circle cx="6" cy="12" r="1" className="fill-red-400"/>
-    <circle cx="18" cy="12" r="1" className="fill-red-400"/>
-  </svg>
-);
-
-const IconMeioGreen = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
-    <rect x="2" y="4" width="20" height="16" rx="3" className="fill-teal-500/20 stroke-teal-400" strokeWidth="1.5"/>
-    <path d="M12 9v6M10 12h4" className="stroke-teal-400" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M6 8l2 4-2 4" className="stroke-teal-400/50" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const IconMeioRed = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
-    <rect x="2" y="4" width="20" height="16" rx="3" className="fill-orange-500/20 stroke-orange-400" strokeWidth="1.5"/>
-    <path d="M10 12h4" className="stroke-orange-400" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M6 8l2 4-2 4" className="stroke-orange-400/50" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const IconVoid = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
-    <rect x="2" y="4" width="20" height="16" rx="3" className="fill-slate-500/20 stroke-slate-400" strokeWidth="1.5" strokeDasharray="3 2"/>
-    <path d="M8 8l8 8M16 8l-8 8" className="stroke-slate-400" strokeWidth="1.5" strokeLinecap="round"/>
-  </svg>
-);
-
-const IconPendente = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
-    <rect x="2" y="4" width="20" height="16" rx="3" className="fill-blue-500/20 stroke-blue-400" strokeWidth="1.5"/>
-    <circle cx="12" cy="12" r="4" className="stroke-blue-400" strokeWidth="1.5"/>
-    <path d="M12 10v2l1.5 1.5" className="stroke-blue-400" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
 
 interface ResultadoPillProps {
   apostaId: string;
@@ -87,32 +37,32 @@ interface ResultadoPillProps {
 
 // Opções para Bookmaker (apostas tradicionais com meio resultados)
 const RESULTADO_OPTIONS_BOOKMAKER = [
-  { value: "GREEN", label: "Green", sublabel: "Seleção ganhou", Icon: IconGreen, textColor: "text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
-  { value: "RED", label: "Red", sublabel: "Seleção perdeu", Icon: IconRed, textColor: "text-red-400", color: "bg-red-500 hover:bg-red-600" },
-  { value: "MEIO_GREEN", label: "½ Green", sublabel: "Vitória parcial", Icon: IconMeioGreen, textColor: "text-teal-400", color: "bg-teal-500 hover:bg-teal-600" },
-  { value: "MEIO_RED", label: "½ Red", sublabel: "Derrota parcial", Icon: IconMeioRed, textColor: "text-orange-400", color: "bg-orange-500 hover:bg-orange-600" },
-  { value: "VOID", label: "Void", sublabel: "Cancelada", Icon: IconVoid, textColor: "text-slate-400", color: "bg-gray-500 hover:bg-gray-600" },
+  { value: "GREEN", label: "Green", sublabel: "Seleção ganhou", icon: CheckCircle2, iconColor: "text-emerald-400", textColor: "text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED", label: "Red", sublabel: "Seleção perdeu", icon: X, iconColor: "text-red-400", textColor: "text-red-400", color: "bg-red-500 hover:bg-red-600" },
+  { value: "MEIO_GREEN", label: "½ Green", sublabel: "Vitória parcial", icon: CheckCircle2, iconColor: "text-teal-400", textColor: "text-teal-400", color: "bg-teal-500 hover:bg-teal-600" },
+  { value: "MEIO_RED", label: "½ Red", sublabel: "Derrota parcial", icon: X, iconColor: "text-orange-400", textColor: "text-orange-400", color: "bg-orange-500 hover:bg-orange-600" },
+  { value: "VOID", label: "Void", sublabel: "Cancelada", icon: CircleDot, iconColor: "text-slate-400", textColor: "text-slate-400", color: "bg-gray-500 hover:bg-gray-600" },
 ];
 
 // Opções para Exchange Back (simplificado: Green, Red, Void)
 const RESULTADO_OPTIONS_EXCHANGE_BACK = [
-  { value: "GREEN", label: "Green", sublabel: "Seleção ganhou", Icon: IconGreen, textColor: "text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
-  { value: "RED", label: "Red", sublabel: "Seleção perdeu", Icon: IconRed, textColor: "text-red-400", color: "bg-red-500 hover:bg-red-600" },
-  { value: "VOID", label: "Void", sublabel: "Aposta devolvida", Icon: IconVoid, textColor: "text-slate-400", color: "bg-gray-500 hover:bg-gray-600" },
+  { value: "GREEN", label: "Green", sublabel: "Seleção ganhou", icon: CheckCircle2, iconColor: "text-emerald-400", textColor: "text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED", label: "Red", sublabel: "Seleção perdeu", icon: X, iconColor: "text-red-400", textColor: "text-red-400", color: "bg-red-500 hover:bg-red-600" },
+  { value: "VOID", label: "Void", sublabel: "Aposta devolvida", icon: CircleDot, iconColor: "text-slate-400", textColor: "text-slate-400", color: "bg-gray-500 hover:bg-gray-600" },
 ];
 
 // Opções para Exchange Lay (simplificado: Green, Red, Void)
 const RESULTADO_OPTIONS_EXCHANGE_LAY = [
-  { value: "GREEN", label: "Green", sublabel: "Lay ganhou (seleção perdeu)", Icon: IconGreen, textColor: "text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
-  { value: "RED", label: "Red", sublabel: "Lay perdeu (seleção ganhou)", Icon: IconRed, textColor: "text-red-400", color: "bg-red-500 hover:bg-red-600" },
-  { value: "VOID", label: "Void", sublabel: "Aposta devolvida", Icon: IconVoid, textColor: "text-slate-400", color: "bg-gray-500 hover:bg-gray-600" },
+  { value: "GREEN", label: "Green", sublabel: "Lay ganhou (seleção perdeu)", icon: CheckCircle2, iconColor: "text-emerald-400", textColor: "text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED", label: "Red", sublabel: "Lay perdeu (seleção ganhou)", icon: X, iconColor: "text-red-400", textColor: "text-red-400", color: "bg-red-500 hover:bg-red-600" },
+  { value: "VOID", label: "Void", sublabel: "Aposta devolvida", icon: CircleDot, iconColor: "text-slate-400", textColor: "text-slate-400", color: "bg-gray-500 hover:bg-gray-600" },
 ];
 
 // Opções para Cobertura (qual lado da cobertura bateu)
 const RESULTADO_OPTIONS_COBERTURA = [
-  { value: "GREEN_BOOKMAKER", label: "Green Bookmaker", sublabel: "Seleção ganhou na Bookmaker", Icon: IconGreen, textColor: "text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
-  { value: "RED_BOOKMAKER", label: "Red Bookmaker", sublabel: "Seleção perdeu na Bookmaker", Icon: IconRed, textColor: "text-red-400", color: "bg-red-500 hover:bg-red-600" },
-  { value: "VOID", label: "Void", sublabel: "Devolvida em ambas", Icon: IconVoid, textColor: "text-slate-400", color: "bg-gray-500 hover:bg-gray-600" },
+  { value: "GREEN_BOOKMAKER", label: "Green Bookmaker", sublabel: "Seleção ganhou na Bookmaker", icon: CheckCircle2, iconColor: "text-emerald-400", textColor: "text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED_BOOKMAKER", label: "Red Bookmaker", sublabel: "Seleção perdeu na Bookmaker", icon: X, iconColor: "text-red-400", textColor: "text-red-400", color: "bg-red-500 hover:bg-red-600" },
+  { value: "VOID", label: "Void", sublabel: "Devolvida em ambas", icon: CircleDot, iconColor: "text-slate-400", textColor: "text-slate-400", color: "bg-gray-500 hover:bg-gray-600" },
 ];
 
 export function ResultadoPill({
@@ -795,17 +745,17 @@ export function ResultadoPill({
               ) : (
                 <>
                   {displayValue === "PENDENTE" ? (
-                    <IconPendente className="h-3 w-3" />
+                    <CircleDot className="h-3 w-3" />
                   ) : displayValue === "GREEN" || displayValue === "GREEN_BOOKMAKER" ? (
-                    <IconGreen className="h-3 w-3" />
+                    <CheckCircle2 className="h-3 w-3" />
                   ) : displayValue === "RED" || displayValue === "RED_BOOKMAKER" ? (
-                    <IconRed className="h-3 w-3" />
+                    <X className="h-3 w-3" />
                   ) : displayValue === "MEIO_GREEN" ? (
-                    <IconMeioGreen className="h-3 w-3" />
+                    <CheckCircle2 className="h-3 w-3" />
                   ) : displayValue === "MEIO_RED" ? (
-                    <IconMeioRed className="h-3 w-3" />
+                    <X className="h-3 w-3" />
                   ) : displayValue === "VOID" ? (
-                    <IconVoid className="h-3 w-3" />
+                    <CircleDot className="h-3 w-3" />
                   ) : null}
                   {getDisplayLabel(displayValue)}
                 </>
@@ -821,7 +771,7 @@ export function ResultadoPill({
                operationType === "back" ? "Resultado na Exchange" : "Alterar Resultado"}
             </p>
             {resultadoOptions.map((option) => {
-              const OptionIcon = option.Icon;
+              const OptionIcon = option.icon;
               const isSelected = resultado === option.value;
               return (
                 <button
@@ -834,7 +784,7 @@ export function ResultadoPill({
                   onClick={() => handleResultadoSelect(option.value)}
                   disabled={loading}
                 >
-                  <OptionIcon className="h-4 w-4" />
+                  <OptionIcon className={`h-4 w-4 ${option.iconColor}`} />
                   <span className={`text-sm font-medium ${option.textColor}`}>{option.label}</span>
                 </button>
               );

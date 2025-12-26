@@ -426,7 +426,14 @@ export function BonusDialog({
               </div>
               <div className="relative mt-1.5">
                 <div className="absolute left-0 top-0 bottom-0 w-10 flex items-center justify-center bg-muted/50 border-r border-border rounded-l-md">
-                  <span className="text-lg">🏦</span>
+                  <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="8" width="18" height="11" rx="2" className="fill-slate-500/20 stroke-slate-400" strokeWidth="1.5"/>
+                    <path d="M3 10h18" className="stroke-slate-400" strokeWidth="1.5"/>
+                    <path d="M7 4h10M9 4v4M15 4v4" className="stroke-slate-400" strokeWidth="1.5" strokeLinecap="round"/>
+                    <rect x="6" y="13" width="4" height="3" rx="0.5" className="fill-slate-400/50"/>
+                    <rect x="12" y="13" width="5" height="1.5" rx="0.5" className="fill-slate-400/30"/>
+                    <rect x="12" y="15.5" width="3" height="1.5" rx="0.5" className="fill-slate-400/30"/>
+                  </svg>
                 </div>
                 <Input
                   type="number"
@@ -455,8 +462,15 @@ export function BonusDialog({
                 )}
               </div>
               <div className="relative mt-1.5">
-                <div className="absolute left-0 top-0 bottom-0 w-10 flex items-center justify-center bg-primary/10 border-r border-border rounded-l-md">
-                  <span className="text-lg">🎰</span>
+                <div className="absolute left-0 top-0 bottom-0 w-10 flex items-center justify-center bg-primary/10 border-r border-primary/20 rounded-l-md">
+                  <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="4" width="20" height="16" rx="3" className="fill-primary/20 stroke-primary" strokeWidth="1.5"/>
+                    <circle cx="12" cy="12" r="4" className="stroke-primary" strokeWidth="1.5"/>
+                    <path d="M12 10v4M10.5 11.5l1.5-1.5 1.5 1.5" className="stroke-primary" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="5.5" cy="8" r="1" className="fill-primary/60"/>
+                    <circle cx="18.5" cy="16" r="1" className="fill-primary/60"/>
+                    <path d="M5 15.5h2M17 8.5h2" className="stroke-primary/40" strokeWidth="1" strokeLinecap="round"/>
+                  </svg>
                 </div>
                 <Input
                   type="number"
