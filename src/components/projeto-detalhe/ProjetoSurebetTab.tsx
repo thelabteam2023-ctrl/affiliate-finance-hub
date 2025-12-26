@@ -927,7 +927,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             if (!open) setSelectedSurebet(null);
           }}
           projetoId={projetoId}
-          bookmakers={bookmakers}
           surebet={selectedSurebet}
           onSuccess={handleDataChange}
         />
@@ -986,7 +985,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           if (!open) setSelectedSurebet(null);
         }}
         projetoId={projetoId}
-        bookmakers={bookmakers}
         surebet={selectedSurebet}
         onSuccess={handleDataChange}
       />

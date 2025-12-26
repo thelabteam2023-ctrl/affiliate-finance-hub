@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
 
-interface Bookmaker {
+// Interface local DEPRECATED - agora usamos BookmakerSaldo do hook canônico diretamente
+interface LegacyBookmaker {
   id: string;
   nome: string;
   saldo_atual: number;
@@ -68,7 +70,7 @@ interface SurebetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projetoId: string;
-  bookmakers: Bookmaker[];
+  bookmakers?: LegacyBookmaker[]; // DEPRECATED: mantido para compatibilidade, ignorado internamente
   surebet: Surebet | null;
   onSuccess: () => void;
   activeTab?: string;
@@ -157,6 +159,19 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   const isEditing = !!surebet;
   const { workspaceId } = useWorkspace();
   
+  // ========== HOOK CANÔNICO DE SALDOS ==========
+  // Esta é a ÚNICA fonte de verdade para saldos de bookmaker
+  const { 
+    data: bookmakerSaldos = [], 
+    isLoading: saldosLoading,
+    refetch: refetchSaldos 
+  } = useBookmakerSaldosQuery({
+    projetoId,
+    enabled: open,
+    includeZeroBalance: isEditing, // Em edição, mostrar todos
+  });
+  const invalidateSaldos = useInvalidateBookmakerSaldos();
+  
   // Form state
   const [evento, setEvento] = useState("");
   const [mercado, setMercado] = useState("");
@@ -189,58 +204,18 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   // Apostas vinculadas para edição
   const [linkedApostas, setLinkedApostas] = useState<any[]>([]);
   
-  // Saldos em aposta por bookmaker (para calcular saldo livre)
-  const [saldosEmAposta, setSaldosEmAposta] = useState<Record<string, number>>({});
-  
   // Estado para controlar expansão de resultados avançados por perna
   const [expandedResultados, setExpandedResultados] = useState<Record<number, boolean>>({});
 
-  // Buscar saldos em aposta (apostas pendentes) para cada bookmaker
-  const fetchSaldosEmAposta = async () => {
-    try {
-      // Usar apostas_unificada para buscar apostas pendentes
-      const { data: apostasData } = await supabase
-        .from("apostas_unificada")
-        .select("bookmaker_id, stake")
-        .eq("projeto_id", projetoId)
-        .eq("status", "PENDENTE")
-        .not("bookmaker_id", "is", null);
-
-      // Calcular saldo em aposta por bookmaker
-      const saldos: Record<string, number> = {};
-      
-      apostasData?.forEach((aposta) => {
-        if (aposta.bookmaker_id) {
-          saldos[aposta.bookmaker_id] = (saldos[aposta.bookmaker_id] || 0) + Number(aposta.stake || 0);
-        }
-      });
-      
-      setSaldosEmAposta(saldos);
-    } catch (error) {
-      console.error("Erro ao buscar saldos em aposta:", error);
-    }
-  };
-
-  // Filtrar bookmakers com saldo operável >= 0.50
+  // Filtrar bookmakers com saldo operável >= 0.50 (usando dados canônicos)
   const bookmakersDisponiveis = useMemo(() => {
-    return bookmakers.filter((bk) => {
-      const saldoAtual = Number(bk.saldo_atual) || 0;
-      const saldoFreebet = Number(bk.saldo_freebet) || 0;
-      const saldoBonus = Number(bk.saldo_bonus) || 0;
-      const saldoEmAposta = saldosEmAposta[bk.id] || 0;
-      const saldoOperavel = saldoAtual + saldoFreebet + saldoBonus - saldoEmAposta;
-      return saldoOperavel >= 0.50;
-    });
-  }, [
-    // Dependências explícitas para garantir reatividade
-    bookmakers.map(b => `${b.id}|${b.saldo_atual}|${b.saldo_freebet}|${b.saldo_bonus}`).join(','),
-    JSON.stringify(saldosEmAposta)
-  ]);
+    return bookmakerSaldos.filter((bk) => bk.saldo_operavel >= 0.50);
+  }, [bookmakerSaldos]);
 
   // Inicializar formulário - SEMPRE resetar ao abrir sem surebet
   useEffect(() => {
     if (open) {
-      fetchSaldosEmAposta();
+      // O hook canônico já refetch automaticamente quando open=true
       if (surebet && surebet.id) {
         // Modo edição: carregar dados da surebet existente
         setEvento(surebet.evento);
@@ -550,15 +525,12 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     isEditing
   ]);
 
-  // Obter saldo operável da casa selecionada (saldo_atual + saldo_freebet + saldo_bonus - saldo em aposta)
+  // Obter saldo operável da casa selecionada (usando dados canônicos)
   const getBookmakerSaldoLivre = (bookmakerId: string): number | null => {
-    const bk = bookmakers.find(b => b.id === bookmakerId);
+    const bk = bookmakerSaldos.find(b => b.id === bookmakerId);
     if (!bk) return null;
-    const saldoEmAposta = saldosEmAposta[bookmakerId] || 0;
-    const saldoAtual = Number(bk.saldo_atual) || 0;
-    const saldoFreebet = Number(bk.saldo_freebet) || 0;
-    const saldoBonus = Number(bk.saldo_bonus) || 0;
-    return saldoAtual + saldoFreebet + saldoBonus - saldoEmAposta;
+    // O saldo_operavel já vem calculado corretamente da RPC canônica
+    return bk.saldo_operavel;
   };
 
   // Calcular saldo disponível para uma posição específica (considerando stakes usadas em outras posições da mesma operação)
@@ -600,15 +572,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   }, [
     // Dependências explícitas para garantir reatividade
     odds.map(o => `${o.bookmaker_id}|${o.stake}`).join(','),
-    bookmakers.map(b => `${b.id}|${b.saldo_atual}|${b.saldo_freebet}|${b.saldo_bonus}`).join(','),
-    JSON.stringify(saldosEmAposta),
+    bookmakerSaldos.map(b => `${b.id}|${b.saldo_operavel}`).join(','),
     isEditing
   ]);
 
   const getBookmakerNome = (bookmakerId: string): string => {
-    const bk = bookmakers.find(b => b.id === bookmakerId);
+    const bk = bookmakerSaldos.find(b => b.id === bookmakerId);
     if (!bk) return "";
-    const parceiroNome = bk.parceiro?.nome?.split(" ");
+    const parceiroNome = bk.parceiro_nome?.split(" ");
     const shortName = parceiroNome 
       ? `${parceiroNome[0]} ${parceiroNome[parceiroNome.length - 1] || ""}`.trim()
       : "";
@@ -683,14 +654,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     // Calcular saldos disponíveis por posição para validação
     const saldosPorPosicao = odds.map((entry, idx) => {
       if (!entry.bookmaker_id) return null;
-      const bk = bookmakers.find(b => b.id === entry.bookmaker_id);
+      const bk = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
       if (!bk) return null;
       
-      const saldoEmApostaGlobal = saldosEmAposta[entry.bookmaker_id] || 0;
-      const saldoAtual = Number(bk.saldo_atual) || 0;
-      const saldoFreebet = Number(bk.saldo_freebet) || 0;
-      const saldoBonus = Number(bk.saldo_bonus) || 0;
-      const saldoLivreBase = saldoAtual + saldoFreebet + saldoBonus - saldoEmApostaGlobal;
+      // saldo_operavel já vem calculado corretamente da RPC canônica
+      const saldoLivreBase = bk.saldo_operavel;
       
       // Descontar stakes usadas em outras posições da mesma casa
       let stakesOutrasPosicoes = 0;
@@ -824,8 +792,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   }, [
     // Dependências explícitas para garantir reatividade total
     odds.map(o => `${o.bookmaker_id}|${o.odd}|${o.stake}|${o.isReference}`).join(','),
-    bookmakers.map(b => `${b.id}|${b.saldo_atual}|${b.saldo_freebet}|${b.saldo_bonus}`).join(','),
-    JSON.stringify(saldosEmAposta),
+    bookmakerSaldos.map(b => `${b.id}|${b.saldo_operavel}`).join(','),
     arredondarAtivado,
     arredondarValor,
     registroValues.contexto_operacional
@@ -1700,12 +1667,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                   </SelectTrigger>
                                 <SelectContent className="max-w-[320px]">
                                     {bookmakersDisponiveis.map(bk => {
-                                      // Calcular saldo operável para esta posição específica
-                                      const saldoEmApostaGlobal = saldosEmAposta[bk.id] || 0;
-                                      const saldoAtual = Number(bk.saldo_atual) || 0;
-                                      const saldoFreebet = Number(bk.saldo_freebet) || 0;
-                                      const saldoBonus = Number(bk.saldo_bonus) || 0;
-                                      const saldoLivreBase = saldoAtual + saldoFreebet + saldoBonus - saldoEmApostaGlobal;
+                                      // saldo_operavel já vem calculado corretamente da RPC canônica
+                                      const saldoLivreBase = bk.saldo_operavel;
                                       
                                       // Descontar stakes usadas em OUTRAS posições desta operação
                                       let stakesOutrasPosicoes = 0;
@@ -1718,15 +1681,15 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                       const saldoDisponivelParaEssaPosicao = saldoLivreBase - stakesOutrasPosicoes;
                                       const isIndisponivel = saldoDisponivelParaEssaPosicao < 0.50;
                                       
-                                      const parceiroNomeBk = bk.parceiro?.nome?.split(" ");
+                                      const parceiroNomeBk = bk.parceiro_nome?.split(" ");
                                       const parceiroShortBk = parceiroNomeBk 
                                         ? `${parceiroNomeBk[0]} ${parceiroNomeBk[parceiroNomeBk.length - 1] || ""}`.trim()
                                         : "";
                                       
                                       // Breakdown do saldo
-                                      const breakdownParts = [`R$ ${saldoAtual.toFixed(0)}`];
-                                      if (saldoFreebet > 0) breakdownParts.push(`FB: ${saldoFreebet.toFixed(0)}`);
-                                      if (saldoBonus > 0) breakdownParts.push(`🎁: ${saldoBonus.toFixed(0)}`);
+                                      const breakdownParts = [`R$ ${bk.saldo_disponivel.toFixed(0)}`];
+                                      if (bk.saldo_freebet > 0) breakdownParts.push(`FB: ${bk.saldo_freebet.toFixed(0)}`);
+                                      if (bk.saldo_bonus > 0) breakdownParts.push(`🎁: ${bk.saldo_bonus.toFixed(0)}`);
                                       
                                       return (
                                         <SelectItem 
@@ -1746,7 +1709,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                               <span className={`text-[10px] font-medium ${isIndisponivel ? "text-destructive" : "text-blue-400"}`}>
                                                 {isIndisponivel ? "Indisponível" : formatCurrency(saldoDisponivelParaEssaPosicao)}
                                               </span>
-                                              {!isIndisponivel && (saldoFreebet > 0 || saldoBonus > 0) && (
+                                              {!isIndisponivel && (bk.saldo_freebet > 0 || bk.saldo_bonus > 0) && (
                                                 <span className="text-[9px] text-muted-foreground/70">
                                                   {breakdownParts.join(" + ")}
                                                 </span>
