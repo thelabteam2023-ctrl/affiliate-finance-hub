@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutDashboard, Building2, Target, PanelLeft, LayoutList } from "lucide-react";
 import { BonusVisaoGeralTab } from "./BonusVisaoGeralTab";
@@ -8,6 +8,7 @@ import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "../StandardTimeFilter";
 
 interface ProjetoBonusAreaProps {
   projetoId: string;
@@ -44,6 +45,12 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
   const [activeTab, setActiveTab] = useState<TabValue>("visao-geral");
   const [isTransitioning, setIsTransitioning] = useState(false);
   
+  // Standard time filter state
+  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
+  const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
+  
+  const dateRange = useMemo(() => getDateRangeFromPeriod(internalPeriod, internalDateRange), [internalPeriod, internalDateRange]);
+  const isSingleDayPeriod = internalPeriod === "1dia";
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, navMode);
@@ -65,6 +72,15 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
     }
   };
   
+  // Period filter component
+  const periodFilterComponent = (
+    <StandardTimeFilter
+      period={internalPeriod}
+      onPeriodChange={setInternalPeriod}
+      customDateRange={internalDateRange}
+      onCustomDateRangeChange={setInternalDateRange}
+    />
+  );
 
   const renderContent = () => {
     const contentClass = cn(
@@ -74,7 +90,7 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
 
     return (
       <div className={cn("min-h-[400px]", contentClass)}>
-        {activeTab === "visao-geral" && <BonusVisaoGeralTab projetoId={projetoId} />}
+        {activeTab === "visao-geral" && <BonusVisaoGeralTab projetoId={projetoId} dateRange={dateRange} isSingleDayPeriod={isSingleDayPeriod} />}
         {activeTab === "bookmakers" && <BonusBookmakersTab projetoId={projetoId} />}
         {activeTab === "apostas" && <BonusApostasTab projetoId={projetoId} />}
       </div>
@@ -127,6 +143,7 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
               ))}
             </TabsList>
             <div className="flex items-center gap-4">
+              {periodFilterComponent}
               {modeToggle}
             </div>
           </div>
@@ -142,6 +159,11 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
   // Mode: Sidebar
   return (
     <div className="space-y-4">
+      {/* Period Filter at top right */}
+      <div className="flex justify-end">
+        {periodFilterComponent}
+      </div>
+      
       <div className="flex gap-6">
         {/* Sidebar Navigation */}
         <div className="w-48 shrink-0">
