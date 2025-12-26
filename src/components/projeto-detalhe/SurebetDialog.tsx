@@ -36,6 +36,8 @@ interface Bookmaker {
   nome: string;
   saldo_atual: number;
   saldo_freebet?: number;
+  saldo_bonus?: number;
+  saldo_operavel?: number;
   parceiro?: {
     nome: string;
   };
@@ -219,13 +221,15 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     }
   };
 
-  // Filtrar bookmakers com saldo real livre >= 0.50
+  // Filtrar bookmakers com saldo operável >= 0.50
   const bookmakersDisponiveis = useMemo(() => {
     return bookmakers.filter((bk) => {
       const saldoAtual = Number(bk.saldo_atual) || 0;
+      const saldoFreebet = Number(bk.saldo_freebet) || 0;
+      const saldoBonus = Number(bk.saldo_bonus) || 0;
       const saldoEmAposta = saldosEmAposta[bk.id] || 0;
-      const saldoLivre = saldoAtual - saldoEmAposta;
-      return saldoLivre >= 0.50;
+      const saldoOperavel = saldoAtual + saldoFreebet + saldoBonus - saldoEmAposta;
+      return saldoOperavel >= 0.50;
     });
   }, [bookmakers, saldosEmAposta]);
 
