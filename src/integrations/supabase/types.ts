@@ -227,6 +227,8 @@ export type Database = {
           selecoes: Json | null
           spread_calculado: number | null
           stake: number | null
+          stake_bonus: number | null
+          stake_real: number | null
           stake_total: number | null
           status: string
           surebet_legado_id: string | null
@@ -282,6 +284,8 @@ export type Database = {
           selecoes?: Json | null
           spread_calculado?: number | null
           stake?: number | null
+          stake_bonus?: number | null
+          stake_real?: number | null
           stake_total?: number | null
           status?: string
           surebet_legado_id?: string | null
@@ -337,6 +341,8 @@ export type Database = {
           selecoes?: Json | null
           spread_calculado?: number | null
           stake?: number | null
+          stake_bonus?: number | null
+          stake_real?: number | null
           stake_total?: number | null
           status?: string
           surebet_legado_id?: string | null
@@ -3642,6 +3648,7 @@ export type Database = {
           rollover_multiplier: number | null
           rollover_progress: number | null
           rollover_target_amount: number | null
+          saldo_atual: number | null
           source: string
           status: string
           template_snapshot: Json | null
@@ -3671,6 +3678,7 @@ export type Database = {
           rollover_multiplier?: number | null
           rollover_progress?: number | null
           rollover_target_amount?: number | null
+          saldo_atual?: number | null
           source?: string
           status?: string
           template_snapshot?: Json | null
@@ -3700,6 +3708,7 @@ export type Database = {
           rollover_multiplier?: number | null
           rollover_progress?: number | null
           rollover_target_amount?: number | null
+          saldo_atual?: number | null
           source?: string
           status?: string
           template_snapshot?: Json | null
