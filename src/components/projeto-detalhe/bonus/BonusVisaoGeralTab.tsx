@@ -68,7 +68,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   const [loading, setLoading] = useState(true);
   const [betsData, setBetsData] = useState<any[]>([]);
   const [betsLoading, setBetsLoading] = useState(true);
-  const [realDeposits, setRealDeposits] = useState<{ data_transacao: string; valor: number }[]>([]);
+  // Note: deposit_amount from bonus records is now used as source of truth (not cash_ledger)
 
   const summary = getSummary();
   
@@ -130,42 +130,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     fetchBetsData();
   }, [projetoId, bookmakersInBonusMode, dateRange]);
 
-  // Fetch REAL deposits from cash_ledger (actual financial transactions)
-  useEffect(() => {
-    const fetchRealDeposits = async () => {
-      if (!projetoId || bookmakersInBonusMode.length === 0) {
-        setRealDeposits([]);
-        return;
-      }
-
-      try {
-        const startDate = dateRange?.start?.toISOString().split('T')[0] || subDays(new Date(), 30).toISOString().split('T')[0];
-        
-        // Fetch real deposits to bookmakers in bonus mode from cash_ledger
-        let query = supabase
-          .from("cash_ledger")
-          .select("data_transacao, valor, destino_bookmaker_id")
-          .eq("tipo_transacao", "DEPOSITO")
-          .eq("status", "confirmado")
-          .in("destino_bookmaker_id", bookmakersInBonusMode)
-          .gte("data_transacao", startDate);
-
-        if (dateRange?.end) {
-          query = query.lte("data_transacao", dateRange.end.toISOString());
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-        setRealDeposits(data || []);
-      } catch (error) {
-        console.error("Error fetching real deposits:", error);
-        setRealDeposits([]);
-      }
-    };
-
-    fetchRealDeposits();
-  }, [projetoId, bookmakersInBonusMode, dateRange]);
+  // Note: Removed cash_ledger fetch - now using deposit_amount from bonus records
+  // This ensures the chart shows only capital tied to bonus campaigns, not global bookmaker deposits
 
   useEffect(() => {
     fetchBookmakersWithBonus();
@@ -230,23 +196,26 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     return `${symbols[moeda] || moeda} ${value.toFixed(2)}`;
   };
 
-  // Calculate daily data for charts using REAL deposits from cash_ledger
+  // Calculate daily data for charts using deposit_amount from bonus records (not cash_ledger)
+  // This shows capital evolution specific to bonus campaigns
   const dailyData = useMemo((): DailyData[] => {
     const endDate = dateRange?.end ? startOfDay(dateRange.end) : startOfDay(new Date());
     const startDate = dateRange?.start ? startOfDay(dateRange.start) : subDays(endDate, 30);
     const days = eachDayOfInterval({ start: startDate, end: endDate });
 
-    // Group REAL deposits from cash_ledger by date (not from bonus informative field)
+    // Group reference deposits by date (from bonus deposit_amount, using credited_at as date)
     const depositsByDate: Record<string, number> = {};
-    realDeposits.forEach(deposit => {
-      const dateKey = deposit.data_transacao.split('T')[0];
-      if (!depositsByDate[dateKey]) {
-        depositsByDate[dateKey] = 0;
+    bonuses.forEach(b => {
+      if (b.status === 'credited' && b.credited_at && b.deposit_amount) {
+        const dateKey = format(parseISO(b.credited_at), 'yyyy-MM-dd');
+        if (!depositsByDate[dateKey]) {
+          depositsByDate[dateKey] = 0;
+        }
+        depositsByDate[dateKey] += b.deposit_amount;
       }
-      depositsByDate[dateKey] += deposit.valor || 0;
     });
 
-    // Group bonus credits by date (only bonus_amount, NOT deposit_amount)
+    // Group bonus credits by date (bonus_amount from credited bonuses)
     const bonusByDate: Record<string, number> = {};
     bonuses.forEach(b => {
       if (b.status === 'credited' && b.credited_at) {
@@ -254,12 +223,11 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         if (!bonusByDate[dateKey]) {
           bonusByDate[dateKey] = 0;
         }
-        // Only add bonus_amount - deposit is tracked separately in cash_ledger
         bonusByDate[dateKey] += b.bonus_amount;
       }
     });
 
-    // Group juice by date
+    // Group juice (P&L) by date from bets in bonus context
     const juiceByDate: Record<string, number> = {};
     betsData.forEach(bet => {
       const dateKey = bet.data_aposta;
@@ -282,7 +250,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       const bonusCredits = bonusByDate[dateKey] || 0;
       const juice = juiceByDate[dateKey] || 0;
       
-      // Adjusted balance = previous + REAL deposits + bonus credits + juice
+      // Adjusted balance = previous + reference deposit + bonus credits + juice
       cumulativeBalance += deposits + bonusCredits + juice;
       
       // Eixo X: hora para 1 dia, data para períodos maiores (evita repetir)
@@ -308,9 +276,9 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         adjustedBalance: cumulativeBalance,
       };
     });
-  }, [bonuses, betsData, realDeposits, dateRange, isSingleDayPeriod]);
+  }, [bonuses, betsData, dateRange, isSingleDayPeriod]);
 
-  // Calculate weekly data using REAL deposits from cash_ledger
+  // Calculate weekly data using deposit_amount from bonus records (not cash_ledger)
   const weeklyData = useMemo((): WeeklyData[] => {
     const endDate = dateRange?.end || new Date();
     const startDate = dateRange?.start || subDays(endDate, 30);
@@ -320,22 +288,16 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       const weekEnd = subDays(startOfWeek(subDays(weekStart, -7), { weekStartsOn: 1 }), 1);
       const weekLabel = format(weekStart, 'dd/MM', { locale: ptBR });
 
-      // Sum REAL deposits from cash_ledger for this week
+      // Sum reference deposits from bonuses for this week
       let deposits = 0;
-      realDeposits.forEach(deposit => {
-        const depositDate = parseISO(deposit.data_transacao);
-        if (depositDate >= weekStart && depositDate <= weekEnd) {
-          deposits += deposit.valor || 0;
-        }
-      });
-
-      // Sum bonus credits for this week (only bonus_amount, not deposit reference)
       let bonusCredits = 0;
       let count = 0;
+      
       bonuses.forEach(b => {
         if (b.status === 'credited' && b.credited_at) {
           const creditedDate = parseISO(b.credited_at);
           if (creditedDate >= weekStart && creditedDate <= weekEnd) {
+            deposits += b.deposit_amount || 0;
             bonusCredits += b.bonus_amount;
             count++;
           }
@@ -350,7 +312,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         count,
       };
     });
-  }, [bonuses, realDeposits, dateRange]);
+  }, [bonuses, dateRange]);
 
   // Calculate extracted bonus ranking (finalized bonuses with rollover_completed)
   const extractedBonusRanking = useMemo((): ExtractedBonusRanking[] => {
@@ -472,7 +434,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                 Saldo Ajustado Acumulado
               </CardTitle>
               <p className="text-xs text-muted-foreground">
-                Depósitos Reais (Caixa) + Bônus Creditados + Resultado das Apostas
+                Depósito Referência + Bônus Creditado + Resultado das Apostas em Modo Bônus
               </p>
             </CardHeader>
             <CardContent>
