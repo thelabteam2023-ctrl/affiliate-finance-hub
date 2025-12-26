@@ -257,15 +257,19 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       let bonusByBookmaker: Record<string, number> = {};
       
       if (bookmakerIds.length > 0) {
-        const { data: bonusData } = await supabase
+        const { data: bonusData, error: bonusError } = await supabase
           .from("project_bookmaker_link_bonuses")
           .select("bookmaker_id, saldo_atual")
-          .eq("project_id", projetoId)
+          .in("bookmaker_id", bookmakerIds)
           .eq("status", "credited");
         
-        (bonusData || []).forEach((b: any) => {
-          bonusByBookmaker[b.bookmaker_id] = (bonusByBookmaker[b.bookmaker_id] || 0) + (b.saldo_atual || 0);
-        });
+        if (bonusError) {
+          console.error("Erro ao buscar bonus:", bonusError);
+        } else {
+          (bonusData || []).forEach((b: any) => {
+            bonusByBookmaker[b.bookmaker_id] = (bonusByBookmaker[b.bookmaker_id] || 0) + (b.saldo_atual || 0);
+          });
+        }
       }
       
       // Enriquecer bookmakers com saldo_bonus e saldo_operavel
