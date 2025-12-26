@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Pencil } from "lucide-react";
+import { Loader2, Pencil, CheckCircle2, XCircle, CircleDot, X, Check } from "lucide-react";
 
 type OperationType = "bookmaker" | "back" | "lay" | "cobertura";
 
@@ -41,32 +41,32 @@ interface ResultadoPillProps {
 
 // Opções para Bookmaker (apostas tradicionais com meio resultados)
 const RESULTADO_OPTIONS_BOOKMAKER = [
-  { value: "GREEN", label: "Green", sublabel: "Seleção ganhou", color: "bg-emerald-500 hover:bg-emerald-600" },
-  { value: "RED", label: "Red", sublabel: "Seleção perdeu", color: "bg-red-500 hover:bg-red-600" },
-  { value: "MEIO_GREEN", label: "Meio Green", sublabel: "Vitória parcial", color: "bg-teal-500 hover:bg-teal-600" },
-  { value: "MEIO_RED", label: "Meio Red", sublabel: "Derrota parcial", color: "bg-orange-500 hover:bg-orange-600" },
-  { value: "VOID", label: "Void", sublabel: "Cancelada", color: "bg-gray-500 hover:bg-gray-600" },
+  { value: "GREEN", label: "Green", sublabel: "Seleção ganhou", icon: CheckCircle2, iconColor: "text-emerald-400", textColor: "text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED", label: "Red", sublabel: "Seleção perdeu", icon: X, iconColor: "text-red-400", textColor: "text-red-400", color: "bg-red-500 hover:bg-red-600" },
+  { value: "MEIO_GREEN", label: "½ Green", sublabel: "Vitória parcial", icon: CheckCircle2, iconColor: "text-teal-400", textColor: "text-teal-400", color: "bg-teal-500 hover:bg-teal-600" },
+  { value: "MEIO_RED", label: "½ Red", sublabel: "Derrota parcial", icon: X, iconColor: "text-orange-400", textColor: "text-orange-400", color: "bg-orange-500 hover:bg-orange-600" },
+  { value: "VOID", label: "Void", sublabel: "Cancelada", icon: CircleDot, iconColor: "text-slate-400", textColor: "text-slate-400", color: "bg-gray-500 hover:bg-gray-600" },
 ];
 
 // Opções para Exchange Back (simplificado: Green, Red, Void)
 const RESULTADO_OPTIONS_EXCHANGE_BACK = [
-  { value: "GREEN", label: "Green", sublabel: "Seleção ganhou", color: "bg-emerald-500 hover:bg-emerald-600" },
-  { value: "RED", label: "Red", sublabel: "Seleção perdeu", color: "bg-red-500 hover:bg-red-600" },
-  { value: "VOID", label: "Void", sublabel: "Aposta devolvida", color: "bg-gray-500 hover:bg-gray-600" },
+  { value: "GREEN", label: "Green", sublabel: "Seleção ganhou", icon: CheckCircle2, iconColor: "text-emerald-400", textColor: "text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED", label: "Red", sublabel: "Seleção perdeu", icon: X, iconColor: "text-red-400", textColor: "text-red-400", color: "bg-red-500 hover:bg-red-600" },
+  { value: "VOID", label: "Void", sublabel: "Aposta devolvida", icon: CircleDot, iconColor: "text-slate-400", textColor: "text-slate-400", color: "bg-gray-500 hover:bg-gray-600" },
 ];
 
 // Opções para Exchange Lay (simplificado: Green, Red, Void)
 const RESULTADO_OPTIONS_EXCHANGE_LAY = [
-  { value: "GREEN", label: "Green", sublabel: "Lay ganhou (seleção perdeu)", color: "bg-emerald-500 hover:bg-emerald-600" },
-  { value: "RED", label: "Red", sublabel: "Lay perdeu (seleção ganhou)", color: "bg-red-500 hover:bg-red-600" },
-  { value: "VOID", label: "Void", sublabel: "Aposta devolvida", color: "bg-gray-500 hover:bg-gray-600" },
+  { value: "GREEN", label: "Green", sublabel: "Lay ganhou (seleção perdeu)", icon: CheckCircle2, iconColor: "text-emerald-400", textColor: "text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED", label: "Red", sublabel: "Lay perdeu (seleção ganhou)", icon: X, iconColor: "text-red-400", textColor: "text-red-400", color: "bg-red-500 hover:bg-red-600" },
+  { value: "VOID", label: "Void", sublabel: "Aposta devolvida", icon: CircleDot, iconColor: "text-slate-400", textColor: "text-slate-400", color: "bg-gray-500 hover:bg-gray-600" },
 ];
 
 // Opções para Cobertura (qual lado da cobertura bateu)
 const RESULTADO_OPTIONS_COBERTURA = [
-  { value: "GREEN_BOOKMAKER", label: "Green Bookmaker", sublabel: "Seleção ganhou na Bookmaker", color: "bg-emerald-500 hover:bg-emerald-600" },
-  { value: "RED_BOOKMAKER", label: "Red Bookmaker", sublabel: "Seleção perdeu na Bookmaker", color: "bg-red-500 hover:bg-red-600" },
-  { value: "VOID", label: "Void", sublabel: "Devolvida em ambas", color: "bg-gray-500 hover:bg-gray-600" },
+  { value: "GREEN_BOOKMAKER", label: "Green Bookmaker", sublabel: "Seleção ganhou na Bookmaker", icon: CheckCircle2, iconColor: "text-emerald-400", textColor: "text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED_BOOKMAKER", label: "Red Bookmaker", sublabel: "Seleção perdeu na Bookmaker", icon: X, iconColor: "text-red-400", textColor: "text-red-400", color: "bg-red-500 hover:bg-red-600" },
+  { value: "VOID", label: "Void", sublabel: "Devolvida em ambas", icon: CircleDot, iconColor: "text-slate-400", textColor: "text-slate-400", color: "bg-gray-500 hover:bg-gray-600" },
 ];
 
 export function ResultadoPill({
@@ -715,35 +715,57 @@ export function ResultadoPill({
             onClick={(e) => e.stopPropagation()}
           >
             <Badge 
-              className={`${getResultadoColor(displayValue)} text-[10px] px-1.5 py-0 cursor-pointer hover:opacity-80 transition-opacity`}
+              className={`${getResultadoColor(displayValue)} text-[10px] px-1.5 py-0.5 cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1`}
             >
-              {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : getDisplayLabel(displayValue)}
+              {loading ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <>
+                  {displayValue === "PENDENTE" ? (
+                    <CircleDot className="h-3 w-3" />
+                  ) : displayValue === "GREEN" || displayValue === "GREEN_BOOKMAKER" ? (
+                    <CheckCircle2 className="h-3 w-3" />
+                  ) : displayValue === "RED" || displayValue === "RED_BOOKMAKER" ? (
+                    <X className="h-3 w-3" />
+                  ) : displayValue === "MEIO_GREEN" ? (
+                    <CheckCircle2 className="h-3 w-3" />
+                  ) : displayValue === "MEIO_RED" ? (
+                    <X className="h-3 w-3" />
+                  ) : displayValue === "VOID" ? (
+                    <CircleDot className="h-3 w-3" />
+                  ) : null}
+                  {getDisplayLabel(displayValue)}
+                </>
+              )}
             </Badge>
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-2" align="end">
-          <div className="flex flex-col gap-1">
-            <p className="text-xs text-muted-foreground mb-1 font-medium">
+        <PopoverContent className="w-48 p-2" align="end">
+          <div className="flex flex-col gap-0.5">
+            <p className="text-xs text-muted-foreground mb-2 font-medium">
               {operationType === "lay" ? "Resultado do Lay" : 
                operationType === "cobertura" ? "Resultado da Cobertura" :
                operationType === "back" ? "Resultado na Exchange" : "Alterar Resultado"}
             </p>
-            {resultadoOptions.map((option) => (
-              <Button
-                key={option.value}
-                size="sm"
-                variant={resultado === option.value ? "default" : "outline"}
-                className={resultado === option.value 
-                  ? `${option.color} text-white justify-start text-xs h-auto py-1.5 flex-col items-start`
-                  : "justify-start text-xs h-auto py-1.5 hover:bg-accent flex-col items-start"
-                }
-                onClick={() => handleResultadoSelect(option.value)}
-                disabled={loading}
-              >
-                <span className="font-medium">{option.label}</span>
-                <span className="text-[10px] opacity-70 font-normal">{option.sublabel}</span>
-              </Button>
-            ))}
+            {resultadoOptions.map((option) => {
+              const Icon = option.icon;
+              const isSelected = resultado === option.value;
+              return (
+                <button
+                  key={option.value}
+                  className={`flex items-center gap-2 px-2 py-2 rounded-md transition-colors w-full text-left ${
+                    isSelected 
+                      ? 'bg-muted' 
+                      : 'hover:bg-muted/50'
+                  }`}
+                  onClick={() => handleResultadoSelect(option.value)}
+                  disabled={loading}
+                >
+                  <Icon className={`h-4 w-4 ${option.iconColor}`} />
+                  <span className={`text-sm font-medium ${option.textColor}`}>{option.label}</span>
+                </button>
+              );
+            })}
           </div>
         </PopoverContent>
       </Popover>
