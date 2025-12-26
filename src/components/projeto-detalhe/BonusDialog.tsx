@@ -424,15 +424,20 @@ export function BonusDialog({
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
-                className="h-10 mt-1.5 text-center"
-              />
+              <div className="relative mt-1.5">
+                <div className="absolute left-0 top-0 bottom-0 w-10 flex items-center justify-center bg-muted/50 border-r border-border rounded-l-md">
+                  <span className="text-lg">🏦</span>
+                </div>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                  className="h-10 text-center pl-12"
+                />
+              </div>
               <div className="h-4 mt-1">
                 {templatePercent && (
                   <p className="text-[10px] text-muted-foreground text-center truncate">
@@ -449,15 +454,20 @@ export function BonusDialog({
                   <Badge variant="secondary" className="text-[9px] px-1 h-4">Auto</Badge>
                 )}
               </div>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="h-10 mt-1.5 text-center"
-              />
+              <div className="relative mt-1.5">
+                <div className="absolute left-0 top-0 bottom-0 w-10 flex items-center justify-center bg-primary/10 border-r border-border rounded-l-md">
+                  <span className="text-lg">🎰</span>
+                </div>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="h-10 text-center pl-12"
+                />
+              </div>
               <div className="h-4 mt-1" />
             </div>
             {/* Moeda */}
