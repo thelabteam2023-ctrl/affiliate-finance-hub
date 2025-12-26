@@ -989,9 +989,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             .in("bookmaker_id", bookmakerIds)
             .eq("status", "PENDENTE")
             .not("bookmaker_id", "is", null),
+          // CONTRATO: saldo_bonus = SUM(project_bookmaker_link_bonuses.saldo_atual) WHERE status='credited'
           supabase
             .from("project_bookmaker_link_bonuses")
-            .select("bookmaker_id, bonus_amount")
+            .select("bookmaker_id, saldo_atual")
             .eq("project_id", projetoId)
             .eq("status", "credited")
         ]);
@@ -1001,9 +1002,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           return acc;
         }, {} as Record<string, number>);
         
-        // Agrupar bônus creditados por bookmaker
+        // Agrupar bônus creditados por bookmaker (usando saldo_atual = saldo corrente do bônus)
         (bonusResult.data || []).forEach((b: any) => {
-          bonusByBookmaker[b.bookmaker_id] = (bonusByBookmaker[b.bookmaker_id] || 0) + (b.bonus_amount || 0);
+          bonusByBookmaker[b.bookmaker_id] = (bonusByBookmaker[b.bookmaker_id] || 0) + (b.saldo_atual || 0);
         });
       }
 

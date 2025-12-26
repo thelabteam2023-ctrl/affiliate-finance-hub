@@ -299,19 +299,20 @@ export function ApostaMultiplaDialog({
 
       if (error) throw error;
       
-      // Buscar bônus creditados por bookmaker (usando current_balance para saldo atual do bônus)
+      // Buscar bônus creditados por bookmaker
+      // CONTRATO: saldo_bonus = SUM(project_bookmaker_link_bonuses.saldo_atual) WHERE status='credited'
       const bookmakerIds = (data || []).map(b => b.id);
       let bonusByBookmaker: Record<string, number> = {};
       
       if (bookmakerIds.length > 0) {
         const { data: bonusData } = await supabase
           .from("project_bookmaker_link_bonuses")
-          .select("bookmaker_id, current_balance")
+          .select("bookmaker_id, saldo_atual")
           .eq("project_id", projetoId)
           .eq("status", "credited");
         
         (bonusData || []).forEach((b: any) => {
-          bonusByBookmaker[b.bookmaker_id] = (bonusByBookmaker[b.bookmaker_id] || 0) + (b.current_balance || 0);
+          bonusByBookmaker[b.bookmaker_id] = (bonusByBookmaker[b.bookmaker_id] || 0) + (b.saldo_atual || 0);
         });
       }
       
