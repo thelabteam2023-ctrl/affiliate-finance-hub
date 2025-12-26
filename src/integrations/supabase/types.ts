@@ -6624,6 +6624,23 @@ export type Database = {
       }
       expire_old_invites: { Args: never; Returns: number }
       generate_public_id: { Args: never; Returns: string }
+      get_bookmaker_saldos: {
+        Args: { p_projeto_id: string }
+        Returns: {
+          id: string
+          logo_url: string
+          moeda: string
+          nome: string
+          parceiro_id: string
+          parceiro_nome: string
+          saldo_bonus: number
+          saldo_disponivel: number
+          saldo_em_aposta: number
+          saldo_freebet: number
+          saldo_operavel: number
+          saldo_real: number
+        }[]
+      }
       get_current_workspace: { Args: never; Returns: string }
       get_effective_access: {
         Args: { _user_id: string; _workspace_id?: string }

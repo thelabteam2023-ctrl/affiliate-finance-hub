@@ -236,7 +236,6 @@ export function GlobalActionsBar({
         open={surebetDialogOpen}
         onOpenChange={setSurebetDialogOpen}
         projetoId={projetoId}
-        bookmakers={bookmakers}
         surebet={null}
         onSuccess={handleSurebetSuccess}
         activeTab={activeTab || 'surebet'}
