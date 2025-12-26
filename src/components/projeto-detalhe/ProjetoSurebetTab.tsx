@@ -73,6 +73,8 @@ interface Bookmaker {
   nome: string;
   saldo_atual: number;
   saldo_freebet?: number;
+  saldo_bonus?: number;
+  saldo_operavel?: number;
   parceiro?: {
     nome: string;
   };
@@ -248,7 +250,35 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         .in("status", ["ativo", "ATIVO", "LIMITADA", "limitada"]);
 
       if (error) throw error;
-      setBookmakers(data || []);
+      
+      // Buscar bônus creditados por bookmaker
+      const bookmakerIds = (data || []).map(b => b.id);
+      let bonusByBookmaker: Record<string, number> = {};
+      
+      if (bookmakerIds.length > 0) {
+        const { data: bonusData } = await supabase
+          .from("project_bookmaker_link_bonuses")
+          .select("bookmaker_id, current_balance")
+          .eq("project_id", projetoId)
+          .eq("status", "credited");
+        
+        (bonusData || []).forEach((b: any) => {
+          bonusByBookmaker[b.bookmaker_id] = (bonusByBookmaker[b.bookmaker_id] || 0) + (b.current_balance || 0);
+        });
+      }
+      
+      // Enriquecer bookmakers com saldo_bonus e saldo_operavel
+      const enriched = (data || []).map((bk: any) => {
+        const saldoBonus = bonusByBookmaker[bk.id] || 0;
+        const saldoOperavel = (bk.saldo_atual || 0) + (bk.saldo_freebet || 0) + saldoBonus;
+        return {
+          ...bk,
+          saldo_bonus: saldoBonus,
+          saldo_operavel: saldoOperavel,
+        };
+      });
+      
+      setBookmakers(enriched);
     } catch (error: any) {
       console.error("Erro ao carregar bookmakers:", error.message);
     }

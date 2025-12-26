@@ -1634,7 +1634,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                       )}
                                     </SelectValue>
                                   </SelectTrigger>
-                                  <SelectContent>
+                                <SelectContent className="max-w-[320px]">
                                     {bookmakersDisponiveis.map(bk => {
                                       // Calcular saldo operável para esta posição específica
                                       const saldoEmApostaGlobal = saldosEmAposta[bk.id] || 0;
@@ -1659,6 +1659,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                         ? `${parceiroNomeBk[0]} ${parceiroNomeBk[parceiroNomeBk.length - 1] || ""}`.trim()
                                         : "";
                                       
+                                      // Breakdown do saldo
+                                      const breakdownParts = [`R$ ${saldoAtual.toFixed(0)}`];
+                                      if (saldoFreebet > 0) breakdownParts.push(`FB: ${saldoFreebet.toFixed(0)}`);
+                                      if (saldoBonus > 0) breakdownParts.push(`🎁: ${saldoBonus.toFixed(0)}`);
+                                      
                                       return (
                                         <SelectItem 
                                           key={bk.id} 
@@ -1666,16 +1671,23 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                           disabled={isIndisponivel}
                                           className={isIndisponivel ? "opacity-50" : ""}
                                         >
-                                          <div className="flex items-center justify-between w-full gap-2">
-                                            <div className="flex flex-col">
-                                              <span className="uppercase text-xs">{bk.nome}</span>
+                                          <div className="flex items-center justify-between w-full gap-2 min-w-0">
+                                            <div className="flex flex-col min-w-0 flex-1">
+                                              <span className="uppercase text-xs truncate">{bk.nome}</span>
                                               {parceiroShortBk && (
-                                                <span className="text-[10px] text-muted-foreground">{parceiroShortBk}</span>
+                                                <span className="text-[10px] text-muted-foreground truncate">{parceiroShortBk}</span>
                                               )}
                                             </div>
-                                            <span className={`text-[10px] ${isIndisponivel ? "text-destructive" : "text-muted-foreground"}`}>
-                                              {isIndisponivel ? "Indisponível" : formatCurrency(saldoDisponivelParaEssaPosicao)}
-                                            </span>
+                                            <div className="flex flex-col items-end flex-shrink-0">
+                                              <span className={`text-[10px] font-medium ${isIndisponivel ? "text-destructive" : "text-blue-400"}`}>
+                                                {isIndisponivel ? "Indisponível" : formatCurrency(saldoDisponivelParaEssaPosicao)}
+                                              </span>
+                                              {!isIndisponivel && (saldoFreebet > 0 || saldoBonus > 0) && (
+                                                <span className="text-[9px] text-muted-foreground/70">
+                                                  {breakdownParts.join(" + ")}
+                                                </span>
+                                              )}
+                                            </div>
                                           </div>
                                         </SelectItem>
                                       );
@@ -1748,18 +1760,38 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             </div>
                           </div>
                           
-                          {/* Parceiro + Saldo abaixo dos campos (saldo apenas para criação) */}
+                          {/* Parceiro + Saldo com breakdown (saldo apenas para criação) */}
                           {entry.bookmaker_id && (
-                            <div className="flex items-center justify-between gap-1 px-1 text-[10px] text-muted-foreground">
-                              <span className="truncate max-w-[60%]">
-                                {parceiroShortName || "—"}
-                              </span>
-                              {!isEditing && saldoDisponivelPosicao !== null && (
-                                <div className="flex items-center gap-1 flex-shrink-0">
-                                  <Wallet className="h-2.5 w-2.5" />
-                                  <span className={saldoInsuficiente ? "text-destructive font-medium" : ""}>
-                                    {formatCurrency(saldoDisponivelPosicao)}
+                            <div className="px-1 text-[10px] text-muted-foreground space-y-0.5">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="truncate max-w-[60%]">
+                                  {parceiroShortName || "—"}
+                                </span>
+                                {!isEditing && saldoDisponivelPosicao !== null && (
+                                  <div className="flex items-center gap-1 flex-shrink-0">
+                                    <Wallet className="h-2.5 w-2.5 text-blue-400" />
+                                    <span className={`font-medium ${saldoInsuficiente ? "text-destructive" : "text-blue-400"}`}>
+                                      {formatCurrency(saldoDisponivelPosicao)}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              {/* Breakdown do saldo operável */}
+                              {!isEditing && selectedBookmaker && (
+                                <div className="flex items-center justify-center gap-2 text-[9px] text-muted-foreground/70 flex-wrap">
+                                  <span className="text-emerald-400/80">
+                                    R$ {(Number(selectedBookmaker.saldo_atual) || 0).toFixed(0)}
                                   </span>
+                                  {(Number(selectedBookmaker.saldo_freebet) || 0) > 0 && (
+                                    <span className="text-amber-400/80">
+                                      FB: {(Number(selectedBookmaker.saldo_freebet) || 0).toFixed(0)}
+                                    </span>
+                                  )}
+                                  {(Number(selectedBookmaker.saldo_bonus) || 0) > 0 && (
+                                    <span className="text-purple-400/80">
+                                      🎁: {(Number(selectedBookmaker.saldo_bonus) || 0).toFixed(0)}
+                                    </span>
+                                  )}
                                 </div>
                               )}
                             </div>
