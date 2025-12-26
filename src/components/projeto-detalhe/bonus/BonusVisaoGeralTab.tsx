@@ -10,7 +10,7 @@ import { ptBR } from "date-fns/locale";
 import {
   ChartContainer,
 } from "@/components/ui/chart";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceLine, CartesianGrid, Tooltip } from "recharts";
+import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, ResponsiveContainer, ReferenceLine, CartesianGrid, Tooltip } from "recharts";
 
 interface DateRangeResult {
   start: Date;
@@ -423,7 +423,13 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             <CardContent>
               <ChartContainer config={chartConfig} className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={dailyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <AreaChart data={dailyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorAdjustedBalance" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
                     <XAxis 
                       dataKey="dateLabel" 
@@ -459,15 +465,14 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                       }}
                     />
                     <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
-                    <Line 
+                    <Area 
                       type="monotone" 
                       dataKey="adjustedBalance" 
                       stroke="hsl(var(--primary))" 
                       strokeWidth={2}
-                      dot={false}
-                      activeDot={{ r: 4 }}
+                      fill="url(#colorAdjustedBalance)"
                     />
-                  </LineChart>
+                  </AreaChart>
                 </ResponsiveContainer>
               </ChartContainer>
             </CardContent>
