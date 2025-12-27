@@ -109,6 +109,8 @@ export interface CriarArbitragemParams {
   observacoes?: string | null;
   estrategia: Estrategia;
   contexto_operacional: ContextoOperacional;
+  // Suporte multi-moeda
+  moeda_operacao?: string;
 }
 
 // Parâmetros para atualização de operação de arbitragem

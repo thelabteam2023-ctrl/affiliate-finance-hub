@@ -192,6 +192,8 @@ export type Database = {
           cancelled_at: string | null
           cancelled_by: string | null
           contexto_operacional: string
+          cotacao_snapshot: number | null
+          cotacao_snapshot_at: string | null
           created_at: string
           data_aposta: string
           esporte: string | null
@@ -211,9 +213,11 @@ export type Database = {
           legacy_table: string | null
           lucro_esperado: number | null
           lucro_prejuizo: number | null
+          lucro_prejuizo_brl_referencia: number | null
           mercado: string | null
           modelo: string | null
           modo_entrada: string | null
+          moeda_operacao: string | null
           observacoes: string | null
           odd: number | null
           odd_final: number | null
@@ -236,6 +240,7 @@ export type Database = {
           tipo_multipla: string | null
           updated_at: string
           user_id: string
+          valor_brl_referencia: number | null
           valor_freebet_gerada: number | null
           valor_retorno: number | null
           workspace_id: string | null
@@ -249,6 +254,8 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           contexto_operacional?: string
+          cotacao_snapshot?: number | null
+          cotacao_snapshot_at?: string | null
           created_at?: string
           data_aposta?: string
           esporte?: string | null
@@ -268,9 +275,11 @@ export type Database = {
           legacy_table?: string | null
           lucro_esperado?: number | null
           lucro_prejuizo?: number | null
+          lucro_prejuizo_brl_referencia?: number | null
           mercado?: string | null
           modelo?: string | null
           modo_entrada?: string | null
+          moeda_operacao?: string | null
           observacoes?: string | null
           odd?: number | null
           odd_final?: number | null
@@ -293,6 +302,7 @@ export type Database = {
           tipo_multipla?: string | null
           updated_at?: string
           user_id: string
+          valor_brl_referencia?: number | null
           valor_freebet_gerada?: number | null
           valor_retorno?: number | null
           workspace_id?: string | null
@@ -306,6 +316,8 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           contexto_operacional?: string
+          cotacao_snapshot?: number | null
+          cotacao_snapshot_at?: string | null
           created_at?: string
           data_aposta?: string
           esporte?: string | null
@@ -325,9 +337,11 @@ export type Database = {
           legacy_table?: string | null
           lucro_esperado?: number | null
           lucro_prejuizo?: number | null
+          lucro_prejuizo_brl_referencia?: number | null
           mercado?: string | null
           modelo?: string | null
           modo_entrada?: string | null
+          moeda_operacao?: string | null
           observacoes?: string | null
           odd?: number | null
           odd_final?: number | null
@@ -350,6 +364,7 @@ export type Database = {
           tipo_multipla?: string | null
           updated_at?: string
           user_id?: string
+          valor_brl_referencia?: number | null
           valor_freebet_gerada?: number | null
           valor_retorno?: number | null
           workspace_id?: string | null
@@ -1799,10 +1814,13 @@ export type Database = {
           aposta_id: string | null
           aposta_multipla_id: string | null
           bookmaker_id: string
+          cotacao_snapshot: number | null
+          cotacao_snapshot_at: string | null
           created_at: string
           data_recebida: string
           data_utilizacao: string | null
           id: string
+          moeda_operacao: string | null
           motivo: string
           observacoes: string | null
           projeto_id: string
@@ -1811,16 +1829,20 @@ export type Database = {
           user_id: string
           utilizada: boolean | null
           valor: number
+          valor_brl_referencia: number | null
           workspace_id: string | null
         }
         Insert: {
           aposta_id?: string | null
           aposta_multipla_id?: string | null
           bookmaker_id: string
+          cotacao_snapshot?: number | null
+          cotacao_snapshot_at?: string | null
           created_at?: string
           data_recebida?: string
           data_utilizacao?: string | null
           id?: string
+          moeda_operacao?: string | null
           motivo: string
           observacoes?: string | null
           projeto_id: string
@@ -1829,16 +1851,20 @@ export type Database = {
           user_id: string
           utilizada?: boolean | null
           valor: number
+          valor_brl_referencia?: number | null
           workspace_id?: string | null
         }
         Update: {
           aposta_id?: string | null
           aposta_multipla_id?: string | null
           bookmaker_id?: string
+          cotacao_snapshot?: number | null
+          cotacao_snapshot_at?: string | null
           created_at?: string
           data_recebida?: string
           data_utilizacao?: string | null
           id?: string
+          moeda_operacao?: string | null
           motivo?: string
           observacoes?: string | null
           projeto_id?: string
@@ -1847,6 +1873,7 @@ export type Database = {
           user_id?: string
           utilizada?: boolean | null
           valor?: number
+          valor_brl_referencia?: number | null
           workspace_id?: string | null
         }
         Relationships: [
@@ -3681,6 +3708,8 @@ export type Database = {
         Row: {
           bonus_amount: number
           bookmaker_id: string
+          cotacao_credito_at: string | null
+          cotacao_credito_snapshot: number | null
           created_at: string
           created_by: string
           credited_at: string | null
@@ -3706,11 +3735,14 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          valor_brl_referencia: number | null
           workspace_id: string | null
         }
         Insert: {
           bonus_amount?: number
           bookmaker_id: string
+          cotacao_credito_at?: string | null
+          cotacao_credito_snapshot?: number | null
           created_at?: string
           created_by: string
           credited_at?: string | null
@@ -3736,11 +3768,14 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id: string
+          valor_brl_referencia?: number | null
           workspace_id?: string | null
         }
         Update: {
           bonus_amount?: number
           bookmaker_id?: string
+          cotacao_credito_at?: string | null
+          cotacao_credito_snapshot?: number | null
           created_at?: string
           created_by?: string
           credited_at?: string | null
@@ -3766,6 +3801,7 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          valor_brl_referencia?: number | null
           workspace_id?: string | null
         }
         Relationships: [
@@ -3970,6 +4006,8 @@ export type Database = {
       }
       projeto_ciclos: {
         Row: {
+          cotacao_fechamento: number | null
+          cotacao_fechamento_at: string | null
           created_at: string | null
           data_aprovacao: string | null
           data_fechamento: string | null
@@ -3981,7 +4019,9 @@ export type Database = {
           gatilho_fechamento: string | null
           id: string
           lucro_bruto: number | null
+          lucro_bruto_usd: number | null
           lucro_liquido: number | null
+          lucro_liquido_usd: number | null
           meta_volume: number | null
           metrica_acumuladora: string | null
           numero_ciclo: number
@@ -3998,6 +4038,8 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          cotacao_fechamento?: number | null
+          cotacao_fechamento_at?: string | null
           created_at?: string | null
           data_aprovacao?: string | null
           data_fechamento?: string | null
@@ -4009,7 +4051,9 @@ export type Database = {
           gatilho_fechamento?: string | null
           id?: string
           lucro_bruto?: number | null
+          lucro_bruto_usd?: number | null
           lucro_liquido?: number | null
+          lucro_liquido_usd?: number | null
           meta_volume?: number | null
           metrica_acumuladora?: string | null
           numero_ciclo?: number
@@ -4026,6 +4070,8 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          cotacao_fechamento?: number | null
+          cotacao_fechamento_at?: string | null
           created_at?: string | null
           data_aprovacao?: string | null
           data_fechamento?: string | null
@@ -4037,7 +4083,9 @@ export type Database = {
           gatilho_fechamento?: string | null
           id?: string
           lucro_bruto?: number | null
+          lucro_bruto_usd?: number | null
           lucro_liquido?: number | null
+          lucro_liquido_usd?: number | null
           meta_volume?: number | null
           metrica_acumuladora?: string | null
           numero_ciclo?: number

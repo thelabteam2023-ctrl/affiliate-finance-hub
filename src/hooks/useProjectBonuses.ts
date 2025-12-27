@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useCurrencySnapshot } from "./useCurrencySnapshot";
+import type { SupportedCurrency } from "@/types/currency";
 
 export type BonusStatus = "pending" | "credited" | "failed" | "expired" | "reversed" | "finalized";
 
@@ -43,6 +45,10 @@ export interface ProjectBonus {
   bookmaker_logo_url?: string | null;
   parceiro_nome?: string | null;
   bookmaker_catalogo_id?: string | null;
+  // Campos de snapshot multi-moeda
+  cotacao_credito_snapshot?: number | null;
+  cotacao_credito_at?: string | null;
+  valor_brl_referencia?: number | null;
 }
 
 export interface BonusFormData {
@@ -92,6 +98,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
   const [bonuses, setBonuses] = useState<ProjectBonus[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { getSnapshotFields, isForeignCurrency } = useCurrencySnapshot();
 
   const fetchBonuses = useCallback(async () => {
     try {
@@ -156,6 +163,10 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         bookmaker_logo_url: b.bookmakers?.bookmakers_catalogo?.logo_url,
         parceiro_nome: b.bookmakers?.parceiros?.nome,
         bookmaker_catalogo_id: b.bookmakers?.bookmaker_catalogo_id,
+        // Campos de snapshot multi-moeda
+        cotacao_credito_snapshot: b.cotacao_credito_snapshot ? Number(b.cotacao_credito_snapshot) : null,
+        cotacao_credito_at: b.cotacao_credito_at,
+        valor_brl_referencia: b.valor_brl_referencia ? Number(b.valor_brl_referencia) : null,
       }));
 
       setBonuses(mapped);
