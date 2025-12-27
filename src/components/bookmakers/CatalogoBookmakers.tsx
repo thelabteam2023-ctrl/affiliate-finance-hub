@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, ShieldCheck, AlertTriangle, LayoutGrid, List, Info, Globe, Lock, Users, Settings2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, ShieldCheck, AlertTriangle, LayoutGrid, List, Info, Globe, Lock, Users, Settings2, Link2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,9 +21,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import BookmakerCatalogoDialog from "./BookmakerCatalogoDialog";
 import BookmakerAccessDialog from "./BookmakerAccessDialog";
+import BookmakerDialog from "./BookmakerDialog";
 import { useRole } from "@/hooks/useRole";
 import { useAuth } from "@/hooks/useAuth";
-import { useActionAccess } from "@/hooks/useModuleAccess";
+import { useActionAccess, useModuleAccess } from "@/hooks/useModuleAccess";
 
 interface BookmakerCatalogo {
   id: string;
@@ -63,13 +64,18 @@ export default function CatalogoBookmakers() {
   const [bookmakerToDelete, setBookmakerToDelete] = useState<string | null>(null);
   const [accessDialogOpen, setAccessDialogOpen] = useState(false);
   const [selectedAccessBookmaker, setSelectedAccessBookmaker] = useState<BookmakerCatalogo | null>(null);
+  const [vincularDialogOpen, setVincularDialogOpen] = useState(false);
+  const [selectedVincularBookmaker, setSelectedVincularBookmaker] = useState<BookmakerCatalogo | null>(null);
   const { toast } = useToast();
   const { isOwnerOrAdmin } = useRole();
   const { isSystemOwner, user } = useAuth();
   const { canCreate, canEdit, canDelete } = useActionAccess();
+  const { hasPermission } = useModuleAccess();
   // CRITICAL: Apenas System Owner pode gerenciar acesso/visibilidade de bookmakers
   const canManageAccess = isSystemOwner;
   const canManageGlobal = isSystemOwner;
+  // Permissão para criar vínculos (contas em parceiros)
+  const canCreateVinculo = hasPermission('bookmakers.accounts.create');
 
   useEffect(() => {
     fetchBookmakers();
@@ -184,6 +190,16 @@ export default function CatalogoBookmakers() {
   const handleAccessClick = (bookmaker: BookmakerCatalogo) => {
     setSelectedAccessBookmaker(bookmaker);
     setAccessDialogOpen(true);
+  };
+
+  const handleVincularClick = (bookmaker: BookmakerCatalogo) => {
+    setSelectedVincularBookmaker(bookmaker);
+    setVincularDialogOpen(true);
+  };
+
+  const handleVincularClose = () => {
+    setVincularDialogOpen(false);
+    setSelectedVincularBookmaker(null);
   };
 
   // Helper to check if current user can edit/delete a specific bookmaker
@@ -609,7 +625,27 @@ export default function CatalogoBookmakers() {
                         );
                       })()}
 
-                      <div className="flex gap-2 pt-2">
+                      <div className="flex gap-2 pt-2 flex-wrap">
+                        {canCreateVinculo && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  className="flex-1"
+                                  onClick={() => handleVincularClick(bookmaker)}
+                                >
+                                  <Link2 className="mr-1 h-4 w-4" />
+                                  Vincular
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Vincular a um parceiro</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                         {canManageAccess && (
                           <TooltipProvider>
                             <Tooltip>
@@ -819,6 +855,25 @@ export default function CatalogoBookmakers() {
                           </div>
                         </div>
                         <div className="flex gap-2">
+                          {canCreateVinculo && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() => handleVincularClick(bookmaker)}
+                                  >
+                                    <Link2 className="h-4 w-4 mr-1" />
+                                    Vincular
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Vincular a um parceiro</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                           {canManageAccess && (
                             <TooltipProvider>
                               <Tooltip>
@@ -984,6 +1039,15 @@ export default function CatalogoBookmakers() {
         onOpenChange={setAccessDialogOpen}
         bookmaker={selectedAccessBookmaker}
         onSaved={fetchBookmakers}
+      />
+
+      {/* Dialog de Vincular Parceiro */}
+      <BookmakerDialog
+        open={vincularDialogOpen}
+        onClose={handleVincularClose}
+        bookmaker={null}
+        defaultBookmakerId={selectedVincularBookmaker?.id}
+        lockBookmaker={true}
       />
     </div>
   );
