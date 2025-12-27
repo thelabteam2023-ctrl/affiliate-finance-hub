@@ -1448,8 +1448,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   {odds.map((entry, index) => {
                     const saldoLivreBase = getBookmakerSaldoLivre(entry.bookmaker_id);
                     const saldoDisponivelPosicao = getSaldoDisponivelParaPosicao(entry.bookmaker_id, index);
-                    const selectedBookmaker = bookmakers.find(b => b.id === entry.bookmaker_id);
-                    const parceiroNome = selectedBookmaker?.parceiro?.nome?.split(" ");
+                    const selectedBookmaker = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
+                    const parceiroNome = selectedBookmaker?.parceiro_nome?.split(" ");
                     const parceiroShortName = parceiroNome 
                       ? `${parceiroNome[0]} ${parceiroNome[parceiroNome.length - 1] || ""}`.trim()
                       : "";
@@ -1807,7 +1807,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               {!isEditing && selectedBookmaker && (
                                 <div className="flex items-center justify-center gap-2 text-[9px] text-muted-foreground/70 flex-wrap">
                                   <span className="text-emerald-400/80">
-                                    R$ {(Number(selectedBookmaker.saldo_atual) || 0).toFixed(0)}
+                                    R$ {(Number(selectedBookmaker.saldo_real) || 0).toFixed(0)}
                                   </span>
                                   {(Number(selectedBookmaker.saldo_freebet) || 0) > 0 && (
                                     <span className="text-amber-400/80">
