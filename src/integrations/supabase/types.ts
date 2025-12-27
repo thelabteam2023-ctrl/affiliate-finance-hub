@@ -2249,6 +2249,7 @@ export type Database = {
           login_at: string
           logout_at: string | null
           session_id: string | null
+          session_status: string | null
           user_agent: string | null
           user_email: string | null
           user_id: string
@@ -2263,6 +2264,7 @@ export type Database = {
           login_at?: string
           logout_at?: string | null
           session_id?: string | null
+          session_status?: string | null
           user_agent?: string | null
           user_email?: string | null
           user_id: string
@@ -2277,6 +2279,7 @@ export type Database = {
           login_at?: string
           logout_at?: string | null
           session_id?: string | null
+          session_status?: string | null
           user_agent?: string | null
           user_email?: string | null
           user_id?: string
@@ -6648,6 +6651,7 @@ export type Database = {
           is_active: boolean
           login_at: string
           logout_at: string
+          session_status: string
           user_agent: string
           user_email: string
           user_id: string
