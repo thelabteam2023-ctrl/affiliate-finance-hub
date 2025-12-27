@@ -58,7 +58,23 @@ export function useLoginHistory(params: UseLoginHistoryParams = {}) {
       });
 
       if (error) throw error;
-      setHistory(data || []);
+      
+      // Map data to include new session fields with defaults for backwards compatibility
+      const mappedData: LoginRecord[] = (data || []).map((record: any) => ({
+        id: record.id,
+        user_id: record.user_id,
+        user_email: record.user_email,
+        user_name: record.user_name,
+        workspace_id: record.workspace_id,
+        workspace_name: record.workspace_name,
+        ip_address: record.ip_address,
+        user_agent: record.user_agent,
+        login_at: record.login_at,
+        logout_at: record.logout_at || null,
+        is_active: record.is_active ?? false,
+      }));
+      
+      setHistory(mappedData);
     } catch (error: any) {
       console.error('Error fetching login history:', error);
       toast.error('Erro ao carregar histórico de logins');
