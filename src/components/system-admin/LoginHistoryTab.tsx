@@ -43,8 +43,8 @@ export function LoginHistoryTab() {
   }, [history, sortOrder, isUserOnline]);
 
   // Format session display based on session_status
-  // REGRA: Apenas a última sessão ativa pode mostrar "online"
-  // Sessões antigas NUNCA mostram "online há X horas"
+  // REGRA DE SEGURANÇA: Estados válidos são apenas: active, closed, expired
+  // "logout pendente" NÃO existe mais após logout explícito
   const formatSessionTime = (record: { 
     login_at: string; 
     logout_at: string | null; 
@@ -55,38 +55,42 @@ export function LoginHistoryTab() {
     const { login_at, logout_at, is_active, session_status, user_id } = record;
     const loginDate = new Date(login_at);
 
-    // REGRA 5: Sessões antigas nunca mostram status online
-    // Apenas session_status = 'active' pode ser considerada para online
-    if (session_status !== 'active' || !is_active) {
-      // Sessão encerrada - mostrar duração se tiver logout_at
+    // ESTADO 1: Sessão encerrada (closed ou expired)
+    if (session_status === 'closed' || session_status === 'expired') {
       if (logout_at) {
         const logoutDate = new Date(logout_at);
         const sessionDuration = differenceInMinutes(logoutDate, loginDate);
         if (sessionDuration < 1) {
-          return 'sessão < 1 min';
+          return session_status === 'expired' ? 'expirada < 1 min' : 'sessão < 1 min';
         } else if (sessionDuration < 60) {
-          return `sessão de ${sessionDuration} min`;
+          return session_status === 'expired' ? `expirada ${sessionDuration} min` : `sessão de ${sessionDuration} min`;
         }
         const hours = Math.floor(sessionDuration / 60);
         const mins = sessionDuration % 60;
-        return mins > 0 ? `sessão de ${hours}h ${mins}min` : `sessão de ${hours}h`;
+        const duration = mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
+        return session_status === 'expired' ? `expirada ${duration}` : `sessão de ${duration}`;
       }
-      // Sem logout_at = registro antigo, apenas mostrar quando foi
-      return formatDistanceToNow(loginDate, { locale: ptBR, addSuffix: true });
+      // Sessão fechada mas sem logout_at (migração de dados antigos)
+      return session_status === 'expired' ? 'sessão expirada' : 'sessão encerrada';
     }
 
-    // Sessão ativa - verificar presença real
+    // ESTADO 2: Sessão marcada como não ativa (is_active = false)
+    if (!is_active) {
+      return 'sessão encerrada';
+    }
+
+    // ESTADO 3: Sessão ativa (session_status = 'active' E is_active = true)
+    // Verificar presença real para determinar se está online agora
     const isOnlineNow = isUserOnline(user_id);
     
     if (isOnlineNow) {
-      // REGRA 9: Não calcular tempo online acumulado incorretamente
-      // Apenas indicar que está online, sem tempo desde login
       return 'online agora';
     }
 
-    // Sessão marcada como ativa mas usuário não está com presença
-    // Pode indicar que fechou o browser sem logout (sessão não encerrada corretamente)
-    return 'logout pendente';
+    // Sessão ativa mas sem presença detectada
+    // Pode ser usuário em outra aba ou conexão instável
+    // NÃO mostrar como "pendente" - isso é estado técnico
+    return formatDistanceToNow(loginDate, { locale: ptBR, addSuffix: true });
   };
 
   const handleRefresh = () => {

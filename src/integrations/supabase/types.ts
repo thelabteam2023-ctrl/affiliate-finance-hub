@@ -6848,6 +6848,10 @@ export type Database = {
       check_partner_limit: { Args: { workspace_uuid: string }; Returns: Json }
       check_user_limit: { Args: { workspace_uuid: string }; Returns: Json }
       cleanup_expired_chat_messages: { Args: never; Returns: number }
+      cleanup_orphan_sessions: {
+        Args: { p_hours_threshold?: number }
+        Returns: number
+      }
       close_project_cycle: {
         Args: { _ciclo_id: string; _workspace_id: string }
         Returns: Json
@@ -6893,7 +6897,7 @@ export type Database = {
         }
         Returns: Json
       }
-      end_user_session: { Args: { p_user_id: string }; Returns: undefined }
+      end_user_session: { Args: { p_user_id: string }; Returns: number }
       expire_old_invites: { Args: never; Returns: number }
       generate_public_id: { Args: never; Returns: string }
       get_bookmaker_saldos: {
@@ -7080,6 +7084,18 @@ export type Database = {
           p_reason?: string
           p_target_price_id: string
           p_workspace_id: string
+        }
+        Returns: string
+      }
+      secure_login: {
+        Args: {
+          p_ip_address?: string
+          p_user_agent?: string
+          p_user_email: string
+          p_user_id: string
+          p_user_name?: string
+          p_workspace_id?: string
+          p_workspace_name?: string
         }
         Returns: string
       }
