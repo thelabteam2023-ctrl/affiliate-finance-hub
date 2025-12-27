@@ -62,6 +62,8 @@ const ROLE_BASE_PERMISSIONS: Record<string, string[]> = {
   admin: ['*'], // Admin has all permissions
   finance: [
     'bookmakers.accounts.read',
+    'bookmakers.accounts.create',
+    'bookmakers.accounts.edit',
     'bookmakers.catalog.read',
     'bookmakers.transactions.create',
     'bookmakers.transactions.read',
