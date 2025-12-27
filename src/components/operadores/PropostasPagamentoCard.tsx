@@ -116,6 +116,16 @@ export function PropostasPagamentoCard() {
         return;
       }
 
+      // Buscar workspace do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", session.session.user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const workspaceId = workspaceMember?.workspace_id || null;
+
       // 1. Criar registro em pagamentos_operador
       const valorFinal = selectedProposta.valor_ajustado ?? selectedProposta.valor_calculado;
       
@@ -123,6 +133,7 @@ export function PropostasPagamentoCard() {
         .from("pagamentos_operador")
         .insert({
           user_id: session.session.user.id,
+          workspace_id: workspaceId,
           operador_id: selectedProposta.operador_id,
           projeto_id: selectedProposta.projeto_id,
           valor: valorFinal,

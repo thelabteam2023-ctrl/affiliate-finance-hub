@@ -205,6 +205,16 @@ export function ParticipacaoManualDialog({
         return;
       }
 
+      // Buscar workspace do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", session.session.user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const workspaceId = workspaceMember?.workspace_id || null;
+
       const defaultObservacao = tipoParticipacao === "REGULAR" 
         ? "Participação manual - criação direta"
         : tipoParticipacao === "AJUSTE_POSITIVO"
@@ -213,6 +223,7 @@ export function ParticipacaoManualDialog({
 
       const { error } = await supabase.from("participacao_ciclos").insert({
         user_id: session.session.user.id,
+        workspace_id: workspaceId,
         investidor_id: investidorId,
         projeto_id: projetoId,
         ciclo_id: cicloId,

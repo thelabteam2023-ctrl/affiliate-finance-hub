@@ -93,8 +93,19 @@ export function EntregaDialog({
         return;
       }
 
+      // Buscar workspace do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", session.session.user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const workspaceId = workspaceMember?.workspace_id || null;
+
       const { error } = await supabase.from("entregas").insert({
         user_id: session.session.user.id,
+        workspace_id: workspaceId,
         operador_projeto_id: operadorProjetoId,
         numero_entrega: nextNumero,
         descricao: formData.descricao || null,
