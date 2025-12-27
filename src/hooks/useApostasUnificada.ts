@@ -1,4 +1,5 @@
 // Hook para operações CRUD na tabela apostas_unificada
+// Suporte completo a multi-moeda (BRL + USD/USDT)
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,6 +18,8 @@ import {
   determinarResultadoArbitragem,
   parsePernaFromJson
 } from "@/types/apostasUnificada";
+import { SupportedCurrency } from "@/types/currency";
+import { useCurrencySnapshot } from "./useCurrencySnapshot";
 
 export interface UseApostasUnificadaReturn {
   loading: boolean;
@@ -34,6 +37,7 @@ export interface UseApostasUnificadaReturn {
 
 export function useApostasUnificada(): UseApostasUnificadaReturn {
   const [loading, setLoading] = useState(false);
+  const { getSnapshotFields, isForeignCurrency } = useCurrencySnapshot();
 
   // Buscar operações de arbitragem de um projeto
   const fetchArbitragens = useCallback(async (
@@ -89,6 +93,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
   }, []);
 
   // Criar nova operação de arbitragem
+  // Suporte multi-moeda: calcula snapshot de conversão para operações em moeda estrangeira
   const criarArbitragem = useCallback(async (params: CriarArbitragemParams): Promise<string | null> => {
     try {
       setLoading(true);
@@ -103,6 +108,13 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
       const spread = calcularSpread(params.pernas);
       const roiEsperado = calcularRoiEsperado(params.pernas);
       const lucroEsperado = calcularLucroEsperado(params.pernas);
+
+      // Determinar moeda da operação baseado nas pernas
+      // Para operações multi-moeda, usamos a moeda da primeira perna ou BRL
+      const moedaOperacao = params.moeda_operacao || "BRL";
+      
+      // Criar snapshot de conversão se for moeda estrangeira
+      const snapshotFields = getSnapshotFields(stakeTotal, moedaOperacao as SupportedCurrency);
 
       const insertData: ApostaUnificadaInsert = {
         user_id: user.id,
@@ -122,7 +134,12 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         observacoes: params.observacoes,
         status: "PENDENTE",
         resultado: "PENDENTE",
-        data_aposta: new Date().toISOString()
+        data_aposta: new Date().toISOString(),
+        // Campos de multi-moeda
+        moeda_operacao: snapshotFields.moeda_operacao,
+        cotacao_snapshot: snapshotFields.cotacao_snapshot,
+        cotacao_snapshot_at: snapshotFields.cotacao_snapshot_at,
+        valor_brl_referencia: snapshotFields.valor_brl_referencia,
       };
 
       const { data, error } = await supabase
@@ -133,7 +150,12 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
 
       if (error) throw error;
       
-      toast.success("Operação registrada com sucesso!");
+      const isForeign = isForeignCurrency(moedaOperacao);
+      toast.success(
+        isForeign 
+          ? `Operação registrada (${moedaOperacao})!` 
+          : "Operação registrada com sucesso!"
+      );
       return data.id;
     } catch (error: any) {
       toast.error("Erro ao criar operação: " + error.message);
@@ -141,7 +163,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getSnapshotFields, isForeignCurrency]);
 
   // Atualizar operação existente
   const atualizarArbitragem = useCallback(async (params: AtualizarArbitragemParams): Promise<boolean> => {
