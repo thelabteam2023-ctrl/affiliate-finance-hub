@@ -1,11 +1,10 @@
 import { useOnlineUsers } from '@/hooks/useOnlineUsers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Users, Wifi, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function OnlineUsersCard() {
-  const { onlineCount, onlineUsers, isConnected } = useOnlineUsers();
+  const { onlineCount, isConnected } = useOnlineUsers();
 
   return (
     <Card>
@@ -31,20 +30,6 @@ export function OnlineUsersCard() {
         <p className="text-xs text-muted-foreground mt-1">
           {isConnected ? 'Conectado em tempo real' : 'Conectando...'}
         </p>
-        {onlineUsers.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1">
-            {onlineUsers.slice(0, 5).map((user, idx) => (
-              <Badge key={idx} variant="secondary" className="text-xs">
-                {user.name || user.email || 'Usuário'}
-              </Badge>
-            ))}
-            {onlineUsers.length > 5 && (
-              <Badge variant="outline" className="text-xs">
-                +{onlineUsers.length - 5}
-              </Badge>
-            )}
-          </div>
-        )}
       </CardContent>
     </Card>
   );
