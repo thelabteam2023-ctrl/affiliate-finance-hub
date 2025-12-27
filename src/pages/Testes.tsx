@@ -260,6 +260,16 @@ export default function Testes() {
         return;
       }
 
+      // Buscar workspace do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const workspaceId = workspaceMember?.workspace_id || null;
+
       // Buscar nomes de parceiros já existentes para este usuário
       const { data: parceirosExistentes } = await supabase
         .from("parceiros")
@@ -299,6 +309,7 @@ export default function Testes() {
 
       const novosParceiros = nomesEmbaralhados.slice(0, quantidadeGerar).map(nome => ({
         user_id: user.id,
+        workspace_id: workspaceId,
         nome,
         cpf: gerarCPF(),
         status: "ativo",
@@ -396,6 +407,16 @@ export default function Testes() {
         return;
       }
 
+      // Buscar workspace do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const workspaceId = workspaceMember?.workspace_id || null;
+
       // Buscar nomes de indicadores já existentes para este usuário
       const { data: indicadoresExistentes } = await supabase
         .from("indicadores_referral")
@@ -435,6 +456,7 @@ export default function Testes() {
 
       const novosIndicadores = nomesEmbaralhados.slice(0, quantidadeGerar).map(nome => ({
         user_id: user.id,
+        workspace_id: workspaceId,
         nome,
         cpf: gerarCPF(),
         status: "ATIVO",
@@ -454,6 +476,7 @@ export default function Testes() {
       // Criar acordos de comissão para cada indicador (obrigatório)
       const acordos = indicadoresCriados.map((indicador, index) => ({
         user_id: user.id,
+        workspace_id: workspaceId,
         indicador_id: indicador.id,
         orcamento_por_parceiro: [500, 750, 600, 800][index % 4], // Valores variados
         meta_parceiros: [5, 10, 8, 15][index % 4],
@@ -490,6 +513,16 @@ export default function Testes() {
         return;
       }
 
+      // Buscar workspace do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const workspaceId = workspaceMember?.workspace_id || null;
+
       // Buscar nomes de investidores já existentes para este usuário
       const { data: investidoresExistentes } = await supabase
         .from("investidores")
@@ -514,6 +547,7 @@ export default function Testes() {
 
       const novoInvestidor = {
         user_id: user.id,
+        workspace_id: workspaceId,
         nome: nomeAleatorio,
         cpf: gerarCPF(),
         status: "ativo",
@@ -539,6 +573,16 @@ export default function Testes() {
         toast.error("Usuário não autenticado");
         return;
       }
+
+      // Buscar workspace do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const workspaceId = workspaceMember?.workspace_id || null;
 
       // Buscar nomes de operadores já existentes para este usuário
       const { data: operadoresExistentes } = await supabase
@@ -579,6 +623,7 @@ export default function Testes() {
 
       const novosOperadores = nomesEmbaralhados.slice(0, quantidadeGerar).map(nome => ({
         user_id: user.id,
+        workspace_id: workspaceId,
         nome,
         cpf: gerarCPF(),
         status: "ATIVO",
@@ -605,6 +650,16 @@ export default function Testes() {
         toast.error("Usuário não autenticado");
         return;
       }
+
+      // Buscar workspace do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const workspaceId = workspaceMember?.workspace_id || null;
 
       // Buscar parceiros
       const { data: parceiros, error: parceirosError } = await supabase
@@ -670,6 +725,7 @@ export default function Testes() {
 
           novosVinculos.push({
             user_id: user.id,
+            workspace_id: workspaceId,
             parceiro_id: parceiro.id,
             bookmaker_catalogo_id: bk.id,
             nome: bk.nome,
