@@ -24,10 +24,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Users, Building2, Shield, Ban, Check, Plus, UserPlus, Settings2, 
-  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard, History, BarChart3
+  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard, History, BarChart3, ArrowUpDown
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 const PLANS = [
   { value: 'free', label: 'Free', color: 'bg-muted text-muted-foreground' },
@@ -68,6 +69,7 @@ export default function SystemAdmin() {
   const [searchUsers, setSearchUsers] = useState('');
   const [searchWorkspaces, setSearchWorkspaces] = useState('');
   const [showArchivedUsers, setShowArchivedUsers] = useState(false);
+  const [sortOnlineFirst, setSortOnlineFirst] = useState(true);
   
   // Dialogs
   const [createWorkspaceDialog, setCreateWorkspaceDialog] = useState<{ open: boolean; userId: string; userName: string }>({ open: false, userId: '', userName: '' });
@@ -98,6 +100,36 @@ export default function SystemAdmin() {
     u.full_name?.toLowerCase().includes(searchUsers.toLowerCase()) ||
     u.public_id?.toLowerCase().includes(searchUsers.toLowerCase())
   );
+
+  // Helper para calcular dias desde último login
+  const getDaysSinceLastLogin = (lastLogin: string | null): number | null => {
+    if (!lastLogin) return null;
+    return differenceInDays(new Date(), new Date(lastLogin));
+  };
+
+  // Helper para determinar status de inatividade visual (somente para usuários OFFLINE)
+  const getInactivityLevel = (user: any): 'normal' | 'warning' | 'danger' => {
+    // Se usuário está online, não mostrar alerta de inatividade
+    if (isUserOnline(user.id)) return 'normal';
+    
+    const days = getDaysSinceLastLogin(user.last_login);
+    if (days === null) return 'normal';
+    if (days > 5) return 'danger'; // Vermelho: mais de 5 dias
+    if (days > 3) return 'warning'; // Amarelo: mais de 3 dias
+    return 'normal';
+  };
+
+  // Ordenar usuários: online primeiro (se sortOnlineFirst ativo)
+  const sortedFilteredUsers = [...filteredUsers].sort((a, b) => {
+    if (!sortOnlineFirst) return 0;
+    
+    const aOnline = isUserOnline(a.id);
+    const bOnline = isUserOnline(b.id);
+    
+    if (aOnline && !bOnline) return -1;
+    if (!aOnline && bOnline) return 1;
+    return 0;
+  });
 
   const filteredWorkspaces = workspaces.filter(w =>
     w.name?.toLowerCase().includes(searchWorkspaces.toLowerCase()) ||
@@ -280,8 +312,8 @@ export default function SystemAdmin() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {/* Toggle Ativos / Arquivados */}
-                  <div className="flex items-center gap-4 mb-4">
+                  {/* Toggle Ativos / Arquivados + Filtro Online Primeiro */}
+                  <div className="flex items-center gap-4 mb-4 flex-wrap">
                     <div className="flex rounded-lg border p-1 bg-muted/30">
                       <Button
                         variant={!showArchivedUsers ? "secondary" : "ghost"}
@@ -302,6 +334,18 @@ export default function SystemAdmin() {
                         Arquivados ({archivedUsersCount})
                       </Button>
                     </div>
+                    
+                    {/* Toggle Online Primeiro */}
+                    <Button
+                      variant={sortOnlineFirst ? "secondary" : "outline"}
+                      size="sm"
+                      onClick={() => setSortOnlineFirst(!sortOnlineFirst)}
+                      className="gap-1.5"
+                    >
+                      <ArrowUpDown className="h-3.5 w-3.5" />
+                      Online primeiro
+                    </Button>
+                    
                     <div className="flex-1">
                       <SearchInput
                         placeholder="Buscar por nome ou email..."
@@ -324,8 +368,15 @@ export default function SystemAdmin() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredUsers.map((u) => (
-                          <TableRow key={u.id}>
+                        {sortedFilteredUsers.map((u) => {
+                          const inactivityLevel = getInactivityLevel(u);
+                          const rowClasses = cn(
+                            inactivityLevel === 'warning' && 'bg-amber-500/5 hover:bg-amber-500/10',
+                            inactivityLevel === 'danger' && 'bg-destructive/5 hover:bg-destructive/10'
+                          );
+                          
+                          return (
+                          <TableRow key={u.id} className={rowClasses}>
                             <TableCell>
                               <span className="font-mono text-xs text-muted-foreground">
                                 {u.public_id || '-'}
@@ -397,8 +448,9 @@ export default function SystemAdmin() {
                               </div>
                             </TableCell>
                           </TableRow>
-                        ))}
-                        {filteredUsers.length === 0 && (
+                          );
+                        })}
+                        {sortedFilteredUsers.length === 0 && (
                           <TableRow>
                             <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                               Nenhum usuário encontrado
