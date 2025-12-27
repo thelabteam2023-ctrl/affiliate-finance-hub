@@ -91,6 +91,16 @@ export function PagamentoBonusDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      // Buscar workspace do usuário PRIMEIRO
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const workspaceId = workspaceMember?.workspace_id || null;
+
       // Get parceria_id if not provided
       let finalParceriaId = parceriaId;
       if (!finalParceriaId) {
@@ -107,6 +117,7 @@ export function PagamentoBonusDialog({
             .from("parcerias")
             .insert({
               user_id: user.id,
+              workspace_id: workspaceId,
               parceiro_id: (await supabase.from("parceiros").select("id").eq("user_id", user.id).limit(1).single()).data?.id,
               status: "ATIVA",
               duracao_dias: 60,
@@ -120,16 +131,6 @@ export function PagamentoBonusDialog({
           finalParceriaId = parceria.id;
         }
       }
-
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
 
       // PASSO 1: Debitar da origem selecionada via cash_ledger (valor total)
       // 🔒 REGRA DE CONVERSÃO CRYPTO:
@@ -170,6 +171,7 @@ export function PagamentoBonusDialog({
         insertPromises.push(
           supabase.from("movimentacoes_indicacao").insert({
             user_id: user.id,
+            workspace_id: workspaceId,
             indicador_id: indicador.id,
             parceria_id: finalParceriaId,
             tipo: "BONUS_INDICADOR",

@@ -131,6 +131,7 @@ export function PagamentoComissaoDialog({
       // PASSO 2: Registrar em movimentacoes_indicacao (histórico do módulo)
       const { error: movError } = await supabase.from("movimentacoes_indicacao").insert({
         user_id: user.id,
+        workspace_id: workspaceId,
         indicador_id: parceria.indicadorId,
         parceria_id: parceria.id,
         tipo: "COMISSAO_INDICADOR",

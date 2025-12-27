@@ -155,6 +155,17 @@ export function EntregaConciliacaoDialog({
       }
 
       const userId = session.session.user.id;
+
+      // Buscar workspace do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", userId)
+        .limit(1)
+        .maybeSingle();
+
+      const workspaceId = workspaceMember?.workspace_id || null;
+
       let cashLedgerId: string | null = null;
 
       // Determinar operadorId se não foi passado
@@ -179,6 +190,7 @@ export function EntregaConciliacaoDialog({
         // 1. Criar registro no cash_ledger para debitar a origem
         const ledgerPayload: any = {
           user_id: userId,
+          workspace_id: workspaceId,
           tipo_transacao: "PAGTO_OPERADOR",
           valor: valorPagamento,
           moeda: origemData.tipoMoeda === "CRYPTO" ? "USD" : "BRL",
@@ -221,6 +233,7 @@ export function EntregaConciliacaoDialog({
           .from("pagamentos_operador")
           .insert({
             user_id: userId,
+            workspace_id: workspaceId,
             operador_id: opId,
             projeto_id: projId || null,
             tipo_pagamento: "COMISSAO",

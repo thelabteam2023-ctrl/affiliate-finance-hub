@@ -237,8 +237,19 @@ export default function BookmakerDialog({
         throw new Error("Selecione um link de cadastro");
       }
 
+      // Buscar workspace do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const workspaceId = workspaceMember?.workspace_id || null;
+
       const bookmakerData: any = {
         user_id: user.id,
+        workspace_id: workspaceId,
         parceiro_id: parceiroId,
         bookmaker_catalogo_id: bookmakerId,
         nome: selectedBookmaker?.nome || "",
