@@ -245,14 +245,14 @@ export function InfluenceMetricsTab() {
                     </SelectContent>
                   </Select>
                   <Select 
-                    value={selectedPeriodStart || ''} 
-                    onValueChange={(v) => setSelectedPeriodStart(v || undefined)}
+                    value={selectedPeriodStart ?? "__latest__"} 
+                    onValueChange={(v) => setSelectedPeriodStart(v === "__latest__" ? undefined : v)}
                   >
                     <SelectTrigger className="w-48">
                       <SelectValue placeholder="Período mais recente" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Mais recente</SelectItem>
+                      <SelectItem value="__latest__">Mais recente</SelectItem>
                       {periods?.map((p) => (
                         <SelectItem key={p.period_start} value={p.period_start}>
                           {formatPeriodLabel(p.period_start, p.period_end, selectedPeriodType)}
