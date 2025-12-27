@@ -23,6 +23,7 @@ import BookmakerCatalogoDialog from "./BookmakerCatalogoDialog";
 import BookmakerAccessDialog from "./BookmakerAccessDialog";
 import { useRole } from "@/hooks/useRole";
 import { useAuth } from "@/hooks/useAuth";
+import { useActionAccess } from "@/hooks/useModuleAccess";
 
 interface BookmakerCatalogo {
   id: string;
@@ -65,6 +66,7 @@ export default function CatalogoBookmakers() {
   const { toast } = useToast();
   const { isOwnerOrAdmin } = useRole();
   const { isSystemOwner, user } = useAuth();
+  const { canCreate, canEdit, canDelete } = useActionAccess();
   // CRITICAL: Apenas System Owner pode gerenciar acesso/visibilidade de bookmakers
   const canManageAccess = isSystemOwner;
   const canManageGlobal = isSystemOwner;
@@ -275,10 +277,12 @@ export default function CatalogoBookmakers() {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Bookmaker
-            </Button>
+            {canCreate('bookmakers', 'bookmakers.catalog.create') && (
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Bookmaker
+              </Button>
+            )}
           </div>
 
           {showFilters && (
