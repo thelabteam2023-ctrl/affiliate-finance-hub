@@ -23,7 +23,7 @@ export function useUserLoginHistory() {
         .select('id, login_at, ip_address, user_agent')
         .eq('user_id', userId)
         .order('login_at', { ascending: false })
-        .limit(5);
+        .limit(8);
 
       if (error) throw error;
 
