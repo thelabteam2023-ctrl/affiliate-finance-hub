@@ -128,18 +128,18 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            {/* Projetos - Usa permission key do banco */}
+            {/* Projetos - Aceita projetos.read OU projetos.read_vinculados (operadores) */}
             <Route path="/projetos" element={
-              <ProtectedRoute requiredPermission="projetos.read">
+              <ProtectedRoute requiredPermission={["projetos.read", "projetos.read_vinculados"]}>
                 <AuthenticatedLayout>
                   <GestaoProjetos />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
             
-            {/* Projeto Detalhe - Usa permission key do banco */}
+            {/* Projeto Detalhe - Aceita projetos.read OU projetos.read_vinculados (operadores) */}
             <Route path="/projeto/:id" element={
-              <ProtectedRoute requiredPermission="projetos.read">
+              <ProtectedRoute requiredPermission={["projetos.read", "projetos.read_vinculados"]}>
                 <AuthenticatedLayout>
                   <ProjetoDetalhe />
                 </AuthenticatedLayout>

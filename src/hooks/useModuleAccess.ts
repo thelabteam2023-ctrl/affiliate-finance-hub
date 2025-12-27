@@ -6,13 +6,13 @@ import { supabase } from '@/integrations/supabase/client';
 /**
  * Definição de módulos e suas permissões mínimas
  * key: identificador do módulo (usado internamente)
- * permission: código da permissão necessária (null = sem restrição)
+ * permission: código da permissão necessária OU array de permissões (qualquer uma é suficiente)
  * roles: roles permitidos (vazio = todos, null = verificar permission)
  * 
  * IMPORTANTE: As permission keys DEVEM corresponder às keys no banco (role_permissions)
  */
 interface ModuleConfig {
-  permission: string | null;
+  permission: string | string[] | null;  // String, array, ou null
   roles: string[] | null;
   requiresPlan?: string[];
   requiresSystemOwner?: boolean;
@@ -23,7 +23,8 @@ const MODULE_ACCESS_MAP: Record<string, ModuleConfig> = {
   'central': { permission: null, roles: null },
   
   // OPERAÇÃO - Usa permission keys do banco
-  'projetos': { permission: 'projetos.read', roles: null },
+  // Projetos: aceita projetos.read OU projetos.read_vinculados (para operadores)
+  'projetos': { permission: ['projetos.read', 'projetos.read_vinculados'], roles: null },
   'bookmakers': { permission: 'bookmakers.catalog.read', roles: null },
   
   // FINANCEIRO - Usa permission keys do banco
@@ -248,9 +249,13 @@ export function useModuleAccess(): ModuleAccessResult {
         return true;
       }
       
-      // Check permission requirement
+      // Check permission requirement (can be string or array)
       if (config.permission) {
-        return hasPermission(config.permission);
+        const permsToCheck = Array.isArray(config.permission) 
+          ? config.permission 
+          : [config.permission];
+        // User needs ANY of the permissions
+        return permsToCheck.some(p => hasPermission(p));
       }
       
       // No specific requirement - allow

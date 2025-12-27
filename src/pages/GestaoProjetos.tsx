@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +74,7 @@ interface Projeto {
 
 export default function GestaoProjetos() {
   const navigate = useNavigate();
+  const { user, role } = useAuth();
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -88,18 +90,56 @@ export default function GestaoProjetos() {
   const [projetoParaVisualizar, setProjetoParaVisualizar] = useState<Projeto | null>(null);
   const { isFavorite, toggleFavorite } = useProjectFavorites();
 
-  useEffect(() => {
-    fetchProjetos();
-  }, []);
+  // Check if user is operator (should only see linked projects)
+  const isOperator = role === 'operator';
 
-  const fetchProjetos = async () => {
+  const fetchProjetos = useCallback(async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
       
-      // Buscar projetos
-      const { data: projetosData, error: projetosError } = await supabase
-        .from("projetos")
-        .select("*");
+      let projetoIds: string[] = [];
+      
+      // If operator, first get only their linked projects
+      if (isOperator) {
+        // Find operator record linked to this auth user
+        const { data: operadorData } = await supabase
+          .from("operadores")
+          .select("id")
+          .eq("auth_user_id", user.id)
+          .single();
+        
+        if (operadorData) {
+          // Get projects linked to this operator
+          const { data: vinculos } = await supabase
+            .from("operador_projetos")
+            .select("projeto_id")
+            .eq("operador_id", operadorData.id)
+            .eq("status", "ATIVO");
+          
+          projetoIds = (vinculos || []).map(v => v.projeto_id);
+          
+          if (projetoIds.length === 0) {
+            setProjetos([]);
+            return;
+          }
+        } else {
+          // Operator has no operador record
+          setProjetos([]);
+          return;
+        }
+      }
+      
+      // Build projects query
+      let projetosQuery = supabase.from("projetos").select("*");
+      
+      // If operator, filter only linked projects
+      if (isOperator && projetoIds.length > 0) {
+        projetosQuery = projetosQuery.in("id", projetoIds);
+      }
+      
+      const { data: projetosData, error: projetosError } = await projetosQuery;
 
       if (projetosError) throw projetosError;
       
@@ -108,7 +148,7 @@ export default function GestaoProjetos() {
         return;
       }
       
-      const projetoIds = projetosData.map(p => p.id);
+      const finalProjetoIds = projetosData.map(p => p.id);
       
       // Buscar dados agregados em paralelo
       const [bookmarkersResult, apostasResult, operadoresResult, perdasResult] = await Promise.all([
@@ -116,27 +156,27 @@ export default function GestaoProjetos() {
         supabase
           .from("bookmakers")
           .select("projeto_id, saldo_atual, saldo_irrecuperavel")
-          .in("projeto_id", projetoIds),
+          .in("projeto_id", finalProjetoIds),
         
         // Apostas liquidadas por projeto
         supabase
           .from("apostas_unificada")
           .select("projeto_id, lucro_prejuizo")
-          .in("projeto_id", projetoIds)
+          .in("projeto_id", finalProjetoIds)
           .eq("status", "LIQUIDADA"),
         
         // Operadores ativos por projeto
         supabase
           .from("operador_projetos")
           .select("projeto_id, id")
-          .in("projeto_id", projetoIds)
+          .in("projeto_id", finalProjetoIds)
           .eq("status", "ATIVO"),
         
         // Perdas confirmadas por projeto
         supabase
           .from("projeto_perdas")
           .select("projeto_id, valor")
-          .in("projeto_id", projetoIds)
+          .in("projeto_id", finalProjetoIds)
           .eq("status", "CONFIRMADA")
       ]);
       
@@ -196,7 +236,11 @@ export default function GestaoProjetos() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, isOperator]);
+
+  useEffect(() => {
+    fetchProjetos();
+  }, [fetchProjetos]);
 
   const filteredProjetos = projetos.filter((proj) => {
     const matchesSearch = proj.nome.toLowerCase().includes(searchTerm.toLowerCase());

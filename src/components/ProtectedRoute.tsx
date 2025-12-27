@@ -8,7 +8,7 @@ import { AccessDenied } from "@/components/AccessDenied";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  requiredPermission?: string;
+  requiredPermission?: string | string[];  // Aceita string ou array (qualquer uma é suficiente)
   requiredRole?: string[];
   requireSystemOwner?: boolean;
   fallback?: ReactNode;
@@ -101,23 +101,34 @@ export function ProtectedRoute({
           return;
         }
 
-        console.log('[ProtectedRoute] Checking permission:', {
-          permission: requiredPermission,
+        // Handle array of permissions (ANY is sufficient)
+        const permissionsToCheck = Array.isArray(requiredPermission) 
+          ? requiredPermission 
+          : [requiredPermission];
+
+        console.log('[ProtectedRoute] Checking permissions:', {
+          permissions: permissionsToCheck,
           role: role,
           workspaceId: workspace?.id
         });
 
-        const allowed = await hasPermission(requiredPermission);
+        // Check if user has ANY of the required permissions
+        const results = await Promise.all(
+          permissionsToCheck.map(p => hasPermission(p))
+        );
+        const allowed = results.some(r => r === true);
         
         if (!allowed) {
           logAccessDenial('PERMISSION_MISSING', {
             ...debugInfo,
-            required_permission: requiredPermission,
+            required_permissions: permissionsToCheck,
           });
           setDenyCode('PERMISSION_MISSING');
-          setDenyReason(`Permissão necessária: ${requiredPermission}`);
+          const permLabel = permissionsToCheck.join(' ou ');
+          setDenyReason(`Permissão necessária: ${permLabel}`);
         } else {
-          console.log('[ProtectedRoute] Permission granted:', requiredPermission);
+          const grantedPerm = permissionsToCheck[results.findIndex(r => r)];
+          console.log('[ProtectedRoute] Permission granted:', grantedPerm);
         }
         
         setHasAccess(allowed);
