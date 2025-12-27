@@ -91,11 +91,12 @@ const ROLE_BASE_PERMISSIONS: Record<string, string[]> = {
     'projetos.read',
   ],
   operator: [
-    'bookmakers.accounts.read_project',
-    'bookmakers.catalog.read',
+    // Permissões removidas da base (agora são adicionais):
+    // - 'parceiros.read'
+    // - 'bookmakers.catalog.read'
+    // - 'bookmakers.accounts.read_project'
     'operadores.pagamentos.read_self',
     'operadores.read_self',
-    'parceiros.read',
     'projeto.apostas.cancel',
     'projeto.apostas.create',
     'projeto.apostas.edit',
