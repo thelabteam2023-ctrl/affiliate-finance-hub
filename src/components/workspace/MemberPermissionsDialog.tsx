@@ -29,7 +29,7 @@ import { Loader2, Info, Shield, Trash2, Users, DollarSign, Building, FolderOpen,
 
 // Explicações detalhadas para cada permissão
 const permissionExplanations: Record<string, { title: string; explanation: string; example: string }> = {
-  // Bookmakers
+  // ========== BOOKMAKERS ==========
   "bookmakers.catalog.read": {
     title: "Ver catálogo de casas",
     explanation: "Permite visualizar a lista de todas as casas de apostas disponíveis no catálogo do sistema.",
@@ -55,6 +55,11 @@ const permissionExplanations: Record<string, { title: string; explanation: strin
     explanation: "Permite visualizar as contas abertas em casas de apostas vinculadas aos parceiros.",
     example: "Consultar saldo, login e status das contas em cada casa."
   },
+  "bookmakers.accounts.read_project": {
+    title: "Ver contas do projeto",
+    explanation: "Permite visualizar apenas as contas vinculadas a um projeto específico onde você atua.",
+    example: "Ver as contas que fazem parte do projeto que você está operando."
+  },
   "bookmakers.accounts.create": {
     title: "Criar contas em casas",
     explanation: "Permite vincular novas contas de casas de apostas a parceiros.",
@@ -70,7 +75,18 @@ const permissionExplanations: Record<string, { title: string; explanation: strin
     explanation: "Permite excluir contas de casas de apostas do sistema.",
     example: "Remover uma conta que foi encerrada ou limitada."
   },
-  // Caixa
+  "bookmakers.transactions.read": {
+    title: "Ver transações em casas",
+    explanation: "Permite visualizar o histórico de transações (depósitos, saques) nas casas.",
+    example: "Consultar todos os depósitos e saques realizados em cada conta."
+  },
+  "bookmakers.transactions.create": {
+    title: "Criar transações",
+    explanation: "Permite registrar depósitos e saques nas contas de casas de apostas.",
+    example: "Registrar um depósito de R$ 500 em uma conta."
+  },
+  
+  // ========== CAIXA ==========
   "caixa.ledger.read": {
     title: "Ver movimentações do caixa",
     explanation: "Permite visualizar todas as transações financeiras registradas no caixa.",
@@ -96,7 +112,28 @@ const permissionExplanations: Record<string, { title: string; explanation: strin
     explanation: "Permite visualizar os saldos consolidados de parceiros e contas.",
     example: "Consultar quanto cada parceiro possui em suas contas bancárias."
   },
-  // Captação
+  "caixa.read": {
+    title: "Acessar módulo Caixa",
+    explanation: "Permite acessar o módulo de caixa e visualizar os dados consolidados.",
+    example: "Ver a visão geral do caixa operacional."
+  },
+  "caixa.reports.read": {
+    title: "Ver relatórios de caixa",
+    explanation: "Permite visualizar relatórios detalhados do caixa.",
+    example: "Consultar relatórios de fluxo de caixa por período."
+  },
+  "caixa.transactions.confirm": {
+    title: "Confirmar saques",
+    explanation: "Permite confirmar saques pendentes no sistema.",
+    example: "Aprovar um saque que está aguardando confirmação."
+  },
+  "caixa.transactions.create": {
+    title: "Criar transações de caixa",
+    explanation: "Permite criar novas movimentações no caixa operacional.",
+    example: "Registrar uma entrada ou saída de valores."
+  },
+  
+  // ========== CAPTAÇÃO ==========
   "captacao.indicadores.read": {
     title: "Ver indicadores",
     explanation: "Permite visualizar a lista de indicadores cadastrados.",
@@ -157,7 +194,28 @@ const permissionExplanations: Record<string, { title: string; explanation: strin
     explanation: "Permite remover fornecedores do sistema.",
     example: "Deletar um fornecedor inativo."
   },
-  // Financeiro
+  "captacao.fornecedores.manage": {
+    title: "Gerenciar fornecedores",
+    explanation: "Permite gerenciar completamente os fornecedores (criar, editar, excluir).",
+    example: "Administrar todos os fornecedores da operação."
+  },
+  "captacao.pagamentos.create": {
+    title: "Criar pagamentos de comissões",
+    explanation: "Permite registrar pagamentos de comissões a indicadores e parceiros.",
+    example: "Pagar a comissão mensal de um indicador."
+  },
+  "captacao.promocoes.manage": {
+    title: "Gerenciar promoções",
+    explanation: "Permite criar, editar e gerenciar promoções ativas.",
+    example: "Criar uma promoção de bônus de boas-vindas."
+  },
+  "captacao.read": {
+    title: "Acessar módulo Captação",
+    explanation: "Permite acessar o módulo de captação e ver todos os dados.",
+    example: "Visualizar o painel completo de captação."
+  },
+  
+  // ========== FINANCEIRO ==========
   "financeiro.kpis.read": {
     title: "Ver KPIs financeiros",
     explanation: "Permite visualizar os indicadores de performance financeira.",
@@ -193,7 +251,13 @@ const permissionExplanations: Record<string, { title: string; explanation: strin
     explanation: "Permite alterar as participações cadastradas.",
     example: "Atualizar o percentual de um investidor."
   },
-  // Investidores
+  "financeiro.read": {
+    title: "Acessar módulo Financeiro",
+    explanation: "Permite acessar o módulo financeiro e ver todos os dados.",
+    example: "Visualizar o painel completo de finanças."
+  },
+  
+  // ========== INVESTIDORES ==========
   "investidores.read": {
     title: "Ver investidores",
     explanation: "Permite visualizar a lista de investidores e seus dados.",
@@ -214,11 +278,27 @@ const permissionExplanations: Record<string, { title: string; explanation: strin
     explanation: "Permite remover investidores do sistema.",
     example: "Deletar um investidor que saiu da operação."
   },
-  // Operadores
+  "investidores.deals.manage": {
+    title: "Gerenciar acordos",
+    explanation: "Permite criar e gerenciar acordos com investidores.",
+    example: "Definir termos de participação nos lucros."
+  },
+  "investidores.participacoes.pay": {
+    title: "Pagar participações",
+    explanation: "Permite registrar pagamentos de participações aos investidores.",
+    example: "Registrar a distribuição mensal de lucros."
+  },
+  
+  // ========== OPERADORES ==========
   "operadores.read": {
     title: "Ver operadores",
     explanation: "Permite visualizar a lista de operadores e seus dados.",
     example: "Consultar quem são os operadores e em quais projetos atuam."
+  },
+  "operadores.read_self": {
+    title: "Ver seus próprios dados",
+    explanation: "Permite visualizar apenas seus próprios dados como operador.",
+    example: "Ver seu desempenho e acordos em projetos."
   },
   "operadores.create": {
     title: "Criar operadores",
@@ -235,17 +315,33 @@ const permissionExplanations: Record<string, { title: string; explanation: strin
     explanation: "Permite remover operadores do sistema.",
     example: "Deletar um operador que não atua mais."
   },
+  "operadores.archive": {
+    title: "Arquivar operadores",
+    explanation: "Permite arquivar operadores inativos.",
+    example: "Arquivar um operador que parou de operar temporariamente."
+  },
+  "operadores.vincular_projeto": {
+    title: "Vincular a projetos",
+    explanation: "Permite vincular operadores a projetos específicos.",
+    example: "Associar um operador a um novo projeto."
+  },
   "operadores.pagamentos.read": {
     title: "Ver pagamentos a operadores",
     explanation: "Permite visualizar o histórico de pagamentos aos operadores.",
     example: "Consultar quanto já foi pago a cada operador."
+  },
+  "operadores.pagamentos.read_self": {
+    title: "Ver seus próprios pagamentos",
+    explanation: "Permite visualizar apenas seus próprios pagamentos como operador.",
+    example: "Ver quanto você já recebeu de pagamentos."
   },
   "operadores.pagamentos.create": {
     title: "Registrar pagamentos",
     explanation: "Permite criar novos pagamentos para operadores.",
     example: "Registrar o pagamento mensal de um operador."
   },
-  // Parceiros
+  
+  // ========== PARCEIROS ==========
   "parceiros.read": {
     title: "Ver parceiros",
     explanation: "Permite visualizar a lista de parceiros (CPFs/contas).",
@@ -266,11 +362,32 @@ const permissionExplanations: Record<string, { title: string; explanation: strin
     explanation: "Permite remover parceiros do sistema.",
     example: "Deletar um parceiro que não atua mais."
   },
-  // Projetos
+  "parceiros.link_bookmaker": {
+    title: "Vincular a casas",
+    explanation: "Permite vincular parceiros a casas de apostas.",
+    example: "Associar uma conta de casa a um parceiro."
+  },
+  "parceiros.view_credentials": {
+    title: "Ver credenciais de acesso",
+    explanation: "Permite visualizar logins e senhas das contas.",
+    example: "Consultar as credenciais para acessar uma conta."
+  },
+  "parceiros.view_financeiro": {
+    title: "Ver dados financeiros",
+    explanation: "Permite visualizar dados financeiros dos parceiros.",
+    example: "Consultar saldos e movimentações financeiras."
+  },
+  
+  // ========== PROJETOS ==========
   "projetos.read": {
     title: "Ver projetos",
     explanation: "Permite visualizar a lista de projetos e seus dados.",
     example: "Consultar todos os projetos ativos e seus resultados."
+  },
+  "projetos.read_vinculados": {
+    title: "Ver projetos vinculados",
+    explanation: "Permite visualizar apenas os projetos onde você está vinculado.",
+    example: "Ver somente os projetos em que você atua como operador."
   },
   "projetos.create": {
     title: "Criar projetos",
@@ -286,6 +403,11 @@ const permissionExplanations: Record<string, { title: string; explanation: strin
     title: "Excluir projetos",
     explanation: "Permite remover projetos do sistema.",
     example: "Deletar um projeto finalizado ou cancelado."
+  },
+  "projetos.archive": {
+    title: "Arquivar projetos",
+    explanation: "Permite arquivar projetos finalizados ou inativos.",
+    example: "Arquivar um projeto concluído para manter o histórico."
   },
   "projetos.apostas.read": {
     title: "Ver apostas",
@@ -322,6 +444,73 @@ const permissionExplanations: Record<string, { title: string; explanation: strin
     explanation: "Permite alterar dados de ciclos existentes.",
     example: "Ajustar as datas ou metas de um ciclo."
   },
+  
+  // ========== PROJETO DETALHE ==========
+  "projeto.apostas.cancel": {
+    title: "Cancelar apostas",
+    explanation: "Permite cancelar apostas já registradas em um projeto.",
+    example: "Cancelar uma aposta que foi feita por engano."
+  },
+  "projeto.apostas.create": {
+    title: "Registrar apostas no projeto",
+    explanation: "Permite criar novas apostas dentro de um projeto específico.",
+    example: "Registrar uma nova aposta no projeto que você opera."
+  },
+  "projeto.apostas.edit": {
+    title: "Editar apostas do projeto",
+    explanation: "Permite alterar apostas já registradas no projeto.",
+    example: "Corrigir o resultado de uma aposta."
+  },
+  "projeto.apostas.read": {
+    title: "Ver apostas do projeto",
+    explanation: "Permite visualizar as apostas de um projeto específico.",
+    example: "Consultar todas as apostas do projeto."
+  },
+  "projeto.ciclos.close": {
+    title: "Fechar ciclos",
+    explanation: "Permite encerrar ciclos operacionais de um projeto.",
+    example: "Finalizar um ciclo e calcular os resultados."
+  },
+  "projeto.ciclos.create": {
+    title: "Criar ciclos no projeto",
+    explanation: "Permite iniciar novos ciclos em um projeto específico.",
+    example: "Abrir um novo ciclo operacional."
+  },
+  "projeto.ciclos.read": {
+    title: "Ver ciclos do projeto",
+    explanation: "Permite visualizar os ciclos de um projeto específico.",
+    example: "Consultar o histórico de ciclos do projeto."
+  },
+  "projeto.dashboard.read": {
+    title: "Ver dashboard do projeto",
+    explanation: "Permite visualizar o painel com métricas e resumo do projeto.",
+    example: "Ver o desempenho geral e KPIs do projeto."
+  },
+  "projeto.perdas.confirm": {
+    title: "Confirmar perdas",
+    explanation: "Permite confirmar perdas operacionais registradas.",
+    example: "Validar uma perda que foi reportada."
+  },
+  "projeto.perdas.create": {
+    title: "Registrar perdas",
+    explanation: "Permite registrar perdas operacionais no projeto.",
+    example: "Registrar uma perda por conta limitada."
+  },
+  "projeto.perdas.read": {
+    title: "Ver perdas do projeto",
+    explanation: "Permite visualizar as perdas operacionais do projeto.",
+    example: "Consultar todas as perdas registradas."
+  },
+  "projeto.vinculos.manage": {
+    title: "Gerenciar vínculos",
+    explanation: "Permite gerenciar os vínculos de parceiros e contas no projeto.",
+    example: "Adicionar ou remover contas vinculadas ao projeto."
+  },
+  "projeto.vinculos.read": {
+    title: "Ver vínculos do projeto",
+    explanation: "Permite visualizar os vínculos de parceiros e contas.",
+    example: "Ver quais contas estão vinculadas ao projeto."
+  },
 };
 
 interface MemberPermissionsDialogProps {
@@ -347,6 +536,16 @@ const moduleConfig: Record<string, { label: string; icon: any; description: stri
     label: "Projetos", 
     icon: FolderOpen,
     description: "Projetos, apostas e ciclos operacionais"
+  },
+  projeto_detalhe: {
+    label: "Projeto (Detalhe)",
+    icon: FolderOpen,
+    description: "Operações dentro de um projeto específico"
+  },
+  projeto: {
+    label: "Projeto (Operações)",
+    icon: FolderOpen,
+    description: "Ações específicas dentro de projetos"
   },
   caixa: { 
     label: "Caixa", 
