@@ -15,6 +15,7 @@ import HistoricoTransacoes from "@/components/bookmakers/HistoricoTransacoes";
 import CatalogoBookmakers from "@/components/bookmakers/CatalogoBookmakers";
 import AccessGroupsManager from "@/components/bookmakers/AccessGroupsManager";
 import { useAuth } from "@/hooks/useAuth";
+import { useActionAccess } from "@/hooks/useModuleAccess";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Tooltip,
@@ -71,6 +72,7 @@ export default function GestaoBookmakers() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isSystemOwner } = useAuth();
+  const { canCreate, canEdit, canDelete } = useActionAccess();
 
   useEffect(() => {
     checkAuth();
@@ -460,10 +462,12 @@ export default function GestaoBookmakers() {
                   )}
                 </Button>
               </div>
-              <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Vínculo
-              </Button>
+              {canCreate('bookmakers', 'bookmakers.accounts.create') && (
+                <Button onClick={() => setDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo Vínculo
+                </Button>
+              )}
             </div>
               </CardContent>
             </Card>
@@ -652,24 +656,28 @@ export default function GestaoBookmakers() {
                     </div>
 
                     <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => handleEdit(bookmaker)}
-                      >
-                        <Edit className="mr-1 h-4 w-4" />
-                        Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-red-600 hover:text-red-700"
-                        onClick={() => handleDelete(bookmaker.id)}
-                      >
-                        <Trash2 className="mr-1 h-4 w-4" />
-                        Excluir
-                      </Button>
+                      {canEdit('bookmakers', 'bookmakers.accounts.edit') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleEdit(bookmaker)}
+                        >
+                          <Edit className="mr-1 h-4 w-4" />
+                          Editar
+                        </Button>
+                      )}
+                      {canDelete('bookmakers', 'bookmakers.accounts.delete') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-red-600 hover:text-red-700"
+                          onClick={() => handleDelete(bookmaker.id)}
+                        >
+                          <Trash2 className="mr-1 h-4 w-4" />
+                          Excluir
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -847,21 +855,25 @@ export default function GestaoBookmakers() {
                                 </TooltipTrigger>
                               </Tooltip>
                             </TooltipProvider>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(bookmaker)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(bookmaker.id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {canEdit('bookmakers', 'bookmakers.accounts.edit') && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(bookmaker)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {canDelete('bookmakers', 'bookmakers.accounts.delete') && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(bookmaker.id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
