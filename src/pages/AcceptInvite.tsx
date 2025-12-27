@@ -35,7 +35,7 @@ interface InviteInfo {
 export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user, session, refreshWorkspace } = useAuth();
+  const { user, session, refreshWorkspace, signOut } = useAuth();
   const { toast } = useToast();
   
   const token = searchParams.get("token");
@@ -351,7 +351,7 @@ export default function AcceptInvite() {
                 <Link to="/">Voltar</Link>
               </Button>
               <Button onClick={async () => {
-                await supabase.auth.signOut();
+                await signOut();
                 window.location.reload();
               }}>
                 <LogIn className="h-4 w-4 mr-2" />

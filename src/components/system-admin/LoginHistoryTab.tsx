@@ -85,8 +85,8 @@ export function LoginHistoryTab() {
     }
 
     // Sessão marcada como ativa mas usuário não está com presença
-    // Pode indicar que fechou o browser sem logout
-    return 'sessão ativa';
+    // Pode indicar que fechou o browser sem logout (sessão não encerrada corretamente)
+    return 'logout pendente';
   };
 
   const handleRefresh = () => {
