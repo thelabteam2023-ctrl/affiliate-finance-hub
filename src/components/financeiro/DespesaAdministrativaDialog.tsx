@@ -222,10 +222,21 @@ export function DespesaAdministrativaDialog({
           const valorUSD = isCrypto ? formData.valor / cotacaoUSD : null;
           const qtdCoin = isCrypto && valorUSD ? valorUSD / coinPriceUSD : null;
           
+          // Buscar workspace do usuário
+          const { data: workspaceMember } = await supabase
+            .from("workspace_members")
+            .select("workspace_id")
+            .eq("user_id", user.id)
+            .limit(1)
+            .maybeSingle();
+
+          const workspaceId = workspaceMember?.workspace_id || null;
+
           const { error: ledgerError } = await supabase
             .from("cash_ledger")
             .insert({
               user_id: user.id,
+              workspace_id: workspaceId,
               tipo_transacao: "DESPESA_ADMINISTRATIVA",
               tipo_moeda: origemData.tipoMoeda,
               moeda: isCrypto ? "BRL" : origemData.moeda,

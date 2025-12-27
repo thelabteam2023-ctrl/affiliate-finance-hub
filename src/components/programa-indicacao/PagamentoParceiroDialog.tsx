@@ -94,6 +94,16 @@ export function PagamentoParceiroDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      // Buscar workspace do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const workspaceId = workspaceMember?.workspace_id || null;
+
       // PASSO 1: Debitar da origem selecionada via cash_ledger
       // 🔒 REGRA DE CONVERSÃO CRYPTO:
       // A dívida é sempre em BRL. Se pagando com crypto:
@@ -113,6 +123,7 @@ export function PagamentoParceiroDialog({
         .from("cash_ledger")
         .insert({
           user_id: user.id,
+          workspace_id: workspaceId,
           tipo_transacao: "PAGTO_PARCEIRO",
           tipo_moeda: origemData.tipoMoeda,
           moeda: isCrypto ? "BRL" : origemData.moeda, // A dívida é sempre em BRL

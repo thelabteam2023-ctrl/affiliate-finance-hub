@@ -183,6 +183,16 @@ export function PagamentoOperadorDialog({
       const userId = session.session.user.id;
       let cashLedgerId: string | null = null;
 
+      // Buscar workspace do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", userId)
+        .limit(1)
+        .maybeSingle();
+
+      const workspaceId = workspaceMember?.workspace_id || null;
+
       // Se status for CONFIRMADO, criar registro no cash_ledger para debitar a origem
       if (formData.status === "CONFIRMADO") {
         // 🔒 REGRA DE CONVERSÃO CRYPTO:
@@ -205,6 +215,7 @@ export function PagamentoOperadorDialog({
 
         const ledgerPayload: any = {
           user_id: userId,
+          workspace_id: workspaceId,
           tipo_transacao: "PAGTO_OPERADOR",
           valor: formData.valor, // Sempre o valor da dívida em BRL
           moeda: "BRL", // A dívida é sempre em BRL
@@ -284,6 +295,7 @@ export function PagamentoOperadorDialog({
 
           const ledgerPayload: any = {
             user_id: userId,
+            workspace_id: workspaceId,
             tipo_transacao: "PAGTO_OPERADOR",
             valor: formData.valor,
             moeda: "BRL",

@@ -937,6 +937,16 @@ export function CaixaTransacaoDialog({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
+      // Buscar workspace do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", userData.user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const workspaceId = workspaceMember?.workspace_id || null;
+
       // Find investor name if APORTE_FINANCEIRO
       const investidor = investidores.find(inv => inv.id === investidorId);
       
@@ -945,6 +955,7 @@ export function CaixaTransacaoDialog({
 
       const transactionData: any = {
         user_id: userData.user.id,
+        workspace_id: workspaceId,
         tipo_transacao: tipoTransacao,
         tipo_moeda: tipoMoeda,
         moeda: tipoMoeda === "FIAT" ? moeda : "USD",
