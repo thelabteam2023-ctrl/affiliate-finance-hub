@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -14,6 +14,21 @@ export function useOnlineUsers() {
   const [onlineUsers, setOnlineUsers] = useState<PresenceState[]>([]);
   const [onlineCount, setOnlineCount] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
+
+  // Set of online user IDs for O(1) lookup
+  const onlineUserIds = useMemo(() => {
+    return new Set(onlineUsers.map(u => u.user_id));
+  }, [onlineUsers]);
+
+  // Function to check if a specific user is online
+  const isUserOnline = useCallback((userId: string): boolean => {
+    return onlineUserIds.has(userId);
+  }, [onlineUserIds]);
+
+  // Get user's online info if available
+  const getUserOnlineInfo = useCallback((userId: string): PresenceState | undefined => {
+    return onlineUsers.find(u => u.user_id === userId);
+  }, [onlineUsers]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -61,6 +76,9 @@ export function useOnlineUsers() {
   return {
     onlineUsers,
     onlineCount,
+    onlineUserIds,
     isConnected,
+    isUserOnline,
+    getUserOnlineInfo,
   };
 }

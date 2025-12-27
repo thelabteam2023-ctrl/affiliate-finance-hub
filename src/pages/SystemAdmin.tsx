@@ -8,6 +8,8 @@ import { BillingDashboardTab } from '@/components/system-admin/BillingDashboardT
 import { SubscriptionsTab } from '@/components/system-admin/SubscriptionsTab';
 import { OnlineUsersCard } from '@/components/system-admin/OnlineUsersCard';
 import { LoginHistoryTab } from '@/components/system-admin/LoginHistoryTab';
+import { OnlineStatusIndicator } from '@/components/system-admin/OnlineStatusIndicator';
+import { useOnlineUsers } from '@/hooks/useOnlineUsers';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -46,6 +48,7 @@ const ROLES = [
 
 export default function SystemAdmin() {
   const { user } = useAuth();
+  const { isUserOnline } = useOnlineUsers();
   const {
     loading,
     users,
@@ -326,9 +329,15 @@ export default function SystemAdmin() {
                           </span>
                         </TableCell>
                         <TableCell>
-                          <div>
-                            <div className="font-medium">{u.full_name || 'Sem nome'}</div>
-                            <div className="text-sm text-muted-foreground">{u.email}</div>
+                          <div className="flex items-start gap-2">
+                            <OnlineStatusIndicator 
+                              userId={u.id} 
+                              isOnline={isUserOnline(u.id)} 
+                            />
+                            <div>
+                              <div className="font-medium">{u.full_name || 'Sem nome'}</div>
+                              <div className="text-sm text-muted-foreground">{u.email}</div>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>{getUserStatus(u)}</TableCell>
