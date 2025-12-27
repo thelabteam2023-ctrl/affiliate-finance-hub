@@ -17,6 +17,7 @@ interface AdminUser {
   workspace_role: string | null;
   is_system_owner: boolean;
   is_deleted: boolean;
+  last_login: string | null;
 }
 
 // Helper para identificar usuário removido

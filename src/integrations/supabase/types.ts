@@ -6567,6 +6567,7 @@ export type Database = {
           is_blocked: boolean
           is_deleted: boolean
           is_system_owner: boolean
+          last_login: string
           public_id: string
           workspace_id: string
           workspace_name: string
