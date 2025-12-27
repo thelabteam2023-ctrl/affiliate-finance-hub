@@ -12,6 +12,8 @@ interface LoginRecord {
   ip_address: string | null;
   user_agent: string | null;
   login_at: string;
+  logout_at: string | null;
+  is_active: boolean;
 }
 
 interface LoginStats {
