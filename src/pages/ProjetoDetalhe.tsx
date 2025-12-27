@@ -52,6 +52,7 @@ import { ProjetoDuploGreenTab } from "@/components/projeto-detalhe/ProjetoDuploG
 import { ProjetoBonusArea } from "@/components/projeto-detalhe/bonus";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar";
+import { useActionAccess } from "@/hooks/useModuleAccess";
 
 interface Projeto {
   id: string;
@@ -99,6 +100,7 @@ export default function ProjetoDetalhe() {
   
   // Project favorites
   const { isFavorite, toggleFavorite } = useProjectFavorites();
+  const { canEdit } = useActionAccess();
   
   // KPIs sempre mostram dados completos (sem filtro de período - cada aba usa seu próprio)
   const [activeTab, setActiveTab] = useState("apostas");
@@ -363,10 +365,12 @@ export default function ProjetoDetalhe() {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
-            <Edit className="mr-2 h-4 w-4" />
-            Editar Projeto
-          </Button>
+          {canEdit('projetos', 'projetos.edit') && (
+            <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
+              <Edit className="mr-2 h-4 w-4" />
+              Editar Projeto
+            </Button>
+          )}
         </div>
       </div>
 
