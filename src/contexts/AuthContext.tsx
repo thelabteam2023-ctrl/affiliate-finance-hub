@@ -153,8 +153,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [fetchWorkspaceAndRole]);
 
-  const recordLoginHistory = useCallback(async (userId: string, email: string, userName?: string) => {
+  // Função de login seguro - usa RPC que encerra sessões anteriores atomicamente
+  const secureLoginRecord = useCallback(async (userId: string, email: string, userName?: string) => {
     try {
+      console.log('[Auth] Recording secure login for user:', userId);
+      
       // Get workspace info for this user
       const { data: workspaceId } = await supabase.rpc('get_user_workspace', { _user_id: userId });
       
@@ -168,15 +171,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         workspaceName = wsData?.name || null;
       }
 
-      await supabase.from('login_history').insert({
-        user_id: userId,
-        user_email: email,
-        user_name: userName || null,
-        workspace_id: workspaceId || null,
-        workspace_name: workspaceName,
+      // Usar secure_login que encerra sessões anteriores automaticamente
+      const { data: sessionId, error } = await supabase.rpc('secure_login', {
+        p_user_id: userId,
+        p_user_email: email,
+        p_user_name: userName || null,
+        p_workspace_id: workspaceId || null,
+        p_workspace_name: workspaceName,
+        p_ip_address: null,
+        p_user_agent: navigator.userAgent || null
       });
+      
+      if (error) {
+        console.error('[Auth] secure_login RPC error:', error);
+      } else {
+        console.log('[Auth] Secure login recorded, session ID:', sessionId);
+      }
     } catch (error) {
-      console.error('Error recording login history:', error);
+      console.error('[Auth] Exception in secureLoginRecord:', error);
     }
   }, []);
 
@@ -185,8 +197,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (!error && data.user) {
-        // Record login history in background
-        recordLoginHistory(
+        // Usar secure_login que encerra sessões anteriores automaticamente
+        secureLoginRecord(
           data.user.id, 
           data.user.email || email, 
           data.user.user_metadata?.full_name
@@ -216,30 +228,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    // End the user's session in login_history before signing out
-    if (user) {
-      console.log('[Auth] Ending session for user:', user.id);
+    const userId = user?.id;
+    
+    // CRÍTICO: Encerrar sessão na base ANTES de limpar estado local
+    if (userId) {
+      console.log('[Auth] LOGOUT: Encerrar sessão para user:', userId);
       try {
-        const { data, error } = await supabase.rpc('end_user_session', { p_user_id: user.id });
+        // Chamar RPC para encerrar todas as sessões ativas deste usuário
+        const { data: closedCount, error } = await supabase.rpc('end_user_session', { p_user_id: userId });
         if (error) {
-          console.error('[Auth] Failed to end session - RPC error:', error);
+          console.error('[Auth] LOGOUT FALHOU - RPC error:', error);
+          // Mesmo com erro, continuar com logout do Supabase Auth
         } else {
-          console.log('[Auth] Session ended successfully, RPC result:', data);
+          console.log('[Auth] LOGOUT: Sessões encerradas:', closedCount);
         }
       } catch (error) {
-        console.error('[Auth] Exception ending user session:', error);
+        console.error('[Auth] LOGOUT exception:', error);
+        // Mesmo com exceção, continuar com logout
       }
     } else {
-      console.log('[Auth] No user to end session for');
+      console.log('[Auth] LOGOUT: Sem user_id para encerrar sessão');
     }
 
-    // CRITICAL: Limpar cache do React Query ao fazer logout
+    // Limpar cache do React Query
     queryClient.clear();
-    console.log('[Auth] Cleared React Query cache');
+    console.log('[Auth] Cache React Query limpo');
     
+    // Executar logout do Supabase Auth (invalida token)
     await supabase.auth.signOut();
-    console.log('[Auth] Signed out from Supabase');
+    console.log('[Auth] Deslogado do Supabase Auth');
     
+    // Limpar estado local
     setWorkspace(null);
     setRole(null);
     setIsSystemOwner(false);
