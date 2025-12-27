@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { usePermissionOverrides } from "@/hooks/usePermissionOverrides";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -20,7 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Loader2, Info, Shield, Trash2, Users, DollarSign, Building, FolderOpen, TrendingUp, Lock, AlertCircle } from "lucide-react";
+import { Loader2, Info, Shield, Trash2, Users, DollarSign, Building, FolderOpen, TrendingUp, Lock, AlertCircle, CheckSquare } from "lucide-react";
 
 interface MemberPermissionsDialogProps {
   open: boolean;
@@ -112,9 +112,13 @@ export function MemberPermissionsDialog({
     hasLimitedPermissions,
     maxOverrides,
     workspacePlan,
+    toggleModulePermissions,
+    isModuleFullyEnabled,
+    isModulePartiallyEnabled,
   } = usePermissionOverrides(member.user_id, member.role);
 
   const [saving, setSaving] = useState<string | null>(null);
+  const [savingModule, setSavingModule] = useState<string | null>(null);
 
   const handleToggle = async (permissionCode: string, currentState: boolean) => {
     setSaving(permissionCode);
@@ -160,6 +164,36 @@ export function MemberPermissionsDialog({
         description: "Não foi possível remover as permissões.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleToggleModule = async (module: string, grant: boolean) => {
+    setSavingModule(module);
+    try {
+      await toggleModulePermissions(module, grant);
+      onPermissionsChanged?.();
+    } catch (error: any) {
+      if (error.message === 'PLAN_NOT_ALLOWED') {
+        toast({
+          title: "Plano não permite",
+          description: "Seu plano atual não permite permissões customizadas.",
+          variant: "destructive",
+        });
+      } else if (error.message === 'LIMIT_REACHED') {
+        toast({
+          title: "Limite atingido",
+          description: `Ativar todas ultrapassaria o limite de ${maxOverrides} permissões.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível alterar as permissões.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setSavingModule(null);
     }
   };
 
@@ -288,21 +322,37 @@ export function MemberPermissionsDialog({
 
                   return (
                     <div key={module} className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <ModuleIcon className="h-4 w-4 text-muted-foreground" />
-                        <h3 className="font-medium text-sm">{config.label}</h3>
-                        {config.description && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Info className="h-3 w-3 text-muted-foreground" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="max-w-xs">{config.description}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <ModuleIcon className="h-4 w-4 text-muted-foreground" />
+                          <h3 className="font-medium text-sm">{config.label}</h3>
+                          {config.description && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Info className="h-3 w-3 text-muted-foreground" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="max-w-xs">{config.description}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleModule(module, !isModuleFullyEnabled(module))}
+                          disabled={savingModule === module || (hasLimitedPermissions && overrideCount >= maxOverrides && !isModulePartiallyEnabled(module))}
+                          className="h-7 px-2 text-xs"
+                        >
+                          {savingModule === module ? (
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          ) : (
+                            <CheckSquare className="h-3 w-3 mr-1" />
+                          )}
+                          {isModuleFullyEnabled(module) ? "Desmarcar todos" : "Marcar todos"}
+                        </Button>
                       </div>
 
                       <div className="grid gap-2 pl-6">

@@ -277,6 +277,53 @@ export function usePermissionOverrides(userId?: string, userRole?: string) {
     }
   };
 
+  // Toggle all permissions in a module
+  const toggleModulePermissions = async (module: string, grant: boolean) => {
+    const modulePerms = permissionsByModule[module] || [];
+    if (modulePerms.length === 0) return;
+
+    // Plan validation
+    if (!canUseCustomPermissions) {
+      throw new Error('PLAN_NOT_ALLOWED');
+    }
+
+    // Check limit for limited plans when granting
+    if (grant && hasLimitedPermissions) {
+      const currentCount = overrides.filter(o => o.granted).length;
+      const toGrant = modulePerms.filter(p => !hasOverride(p.code)).length;
+      if (currentCount + toGrant > maxOverrides) {
+        throw new Error('LIMIT_REACHED');
+      }
+    }
+
+    try {
+      for (const perm of modulePerms) {
+        const isEnabled = hasOverride(perm.code);
+        if (grant && !isEnabled) {
+          await toggleOverride(perm.code, true);
+        } else if (!grant && isEnabled) {
+          await toggleOverride(perm.code, false);
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling module permissions:', error);
+      throw error;
+    }
+  };
+
+  // Check if all permissions in a module are enabled
+  const isModuleFullyEnabled = (module: string): boolean => {
+    const modulePerms = permissionsByModule[module] || [];
+    if (modulePerms.length === 0) return false;
+    return modulePerms.every(p => hasOverride(p.code));
+  };
+
+  // Check if any permission in a module is enabled
+  const isModulePartiallyEnabled = (module: string): boolean => {
+    const modulePerms = permissionsByModule[module] || [];
+    return modulePerms.some(p => hasOverride(p.code));
+  };
+
   return {
     permissions,
     permissionsByModule,
@@ -292,5 +339,9 @@ export function usePermissionOverrides(userId?: string, userRole?: string) {
     hasLimitedPermissions,
     maxOverrides,
     workspacePlan,
+    // Module toggle
+    toggleModulePermissions,
+    isModuleFullyEnabled,
+    isModulePartiallyEnabled,
   };
 }
