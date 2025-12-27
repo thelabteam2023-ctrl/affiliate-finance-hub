@@ -67,6 +67,7 @@ export function VincularProjetoDialog({
   operadorId,
   onSuccess,
 }: VincularProjetoDialogProps) {
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [projetosVinculados, setProjetosVinculados] = useState<string[]>([]);
@@ -148,6 +149,7 @@ export function VincularProjetoDialog({
         data_entrada: formData.data_entrada,
         status: "ATIVO",
         user_id: session.session.user.id,
+        workspace_id: workspaceId,
         frequencia_conciliacao: formData.frequencia_conciliacao,
         resumo_acordo: formData.resumo_acordo || null,
         // Campos de referência (opcionais - não usados para cálculo automático)
