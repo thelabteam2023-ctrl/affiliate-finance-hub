@@ -1,16 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus } from "@/hooks/useProjectBonuses";
-import { Building2, Coins, Wallet, TrendingUp, AlertTriangle, Timer, Trophy } from "lucide-react";
-import { differenceInDays, parseISO, format, startOfDay, startOfWeek, eachDayOfInterval, eachWeekOfInterval, subDays, eachHourOfInterval, startOfHour } from "date-fns";
+import { Building2, Coins, Wallet, TrendingUp, AlertTriangle, Timer } from "lucide-react";
+import { differenceInDays, parseISO, format, startOfDay, startOfWeek, eachDayOfInterval, eachWeekOfInterval, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   ChartContainer,
 } from "@/components/ui/chart";
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, ResponsiveContainer, ReferenceLine, CartesianGrid, Tooltip } from "recharts";
+import { BonusAnalyticsCard } from "./BonusAnalyticsCard";
 
 interface DateRangeResult {
   start: Date;
@@ -50,16 +50,6 @@ interface WeeklyData {
   deposits: number;
   bonusCredits: number;
   count: number;
-}
-
-interface ExtractedBonusRanking {
-  bookmaker_id: string;
-  bookmaker_nome: string;
-  bookmaker_login: string;
-  logo_url: string | null;
-  count: number;
-  total_extracted: number;
-  currency: string;
 }
 
 export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false }: BonusVisaoGeralTabProps) {
@@ -312,52 +302,6 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         count,
       };
     });
-  }, [bonuses, dateRange]);
-
-  // Calculate extracted bonus ranking (finalized bonuses with rollover_completed)
-  const extractedBonusRanking = useMemo((): ExtractedBonusRanking[] => {
-    const startDate = dateRange?.start || subDays(new Date(), 30);
-    const endDate = dateRange?.end || new Date();
-    
-    // Filter bonuses that are finalized with rollover_completed within the period
-    const extractedBonuses = bonuses.filter(b => {
-      if (b.status !== 'finalized' || b.finalize_reason !== 'rollover_completed') return false;
-      if (!b.finalized_at) return false;
-      const finalizedDate = parseISO(b.finalized_at);
-      return finalizedDate >= startDate && finalizedDate <= endDate;
-    });
-
-    // Group by bookmaker
-    const byBookmaker: Record<string, { count: number; total: number; bonus: ProjectBonus }> = {};
-    
-    extractedBonuses.forEach(b => {
-      if (!byBookmaker[b.bookmaker_id]) {
-        byBookmaker[b.bookmaker_id] = { count: 0, total: 0, bonus: b };
-      }
-      byBookmaker[b.bookmaker_id].count++;
-      byBookmaker[b.bookmaker_id].total += b.bonus_amount;
-    });
-
-    // Convert to array and sort
-    const ranking: ExtractedBonusRanking[] = Object.entries(byBookmaker).map(([id, data]) => ({
-      bookmaker_id: id,
-      bookmaker_nome: data.bonus.bookmaker_nome || 'Casa',
-      bookmaker_login: data.bonus.bookmaker_login || '',
-      logo_url: data.bonus.bookmaker_logo_url || null,
-      count: data.count,
-      total_extracted: data.total,
-      currency: data.bonus.currency || 'BRL',
-    }));
-
-    // Sort by total extracted (desc), then by count (desc)
-    ranking.sort((a, b) => {
-      if (b.total_extracted !== a.total_extracted) {
-        return b.total_extracted - a.total_extracted;
-      }
-      return b.count - a.count;
-    });
-
-    return ranking;
   }, [bonuses, dateRange]);
 
   // Calculate totals
@@ -653,58 +597,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         </Card>
       )}
 
-      {/* Ranking: Extracted Bonuses */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-primary" />
-            Ranking: Casas por Bônus Extraído
-          </CardTitle>
-          <p className="text-xs text-muted-foreground">
-            Bônus finalizados com rollover cumprido no período selecionado
-          </p>
-        </CardHeader>
-        <CardContent>
-          {extractedBonusRanking.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Trophy className="mx-auto h-12 w-12 mb-4 opacity-30" />
-              <p>Nenhum bônus extraído no período selecionado</p>
-            </div>
-          ) : (
-            <ScrollArea className="h-[300px]">
-              <div className="space-y-3">
-                {extractedBonusRanking.map((bk, index) => (
-                  <div key={bk.bookmaker_id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
-                      {index + 1}
-                    </div>
-                    {bk.logo_url ? (
-                      <img src={bk.logo_url} alt={bk.bookmaker_nome} className="h-10 w-10 rounded-lg object-contain bg-white p-1" />
-                    ) : (
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Building2 className="h-5 w-5 text-primary" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{bk.bookmaker_nome}</p>
-                      <p className="text-xs text-muted-foreground truncate">{bk.bookmaker_login}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Badge variant="secondary" className="text-xs">
-                        QTD: {bk.count}
-                      </Badge>
-                      <div className="text-right">
-                        <p className="font-bold text-primary">{formatCurrency(bk.total_extracted, bk.currency)}</p>
-                        <p className="text-xs text-muted-foreground">extraído</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          )}
-        </CardContent>
-      </Card>
+      {/* Central de Análise de Bônus - Card Analítico Unificado */}
+      <BonusAnalyticsCard bonuses={bonuses} dateRange={dateRange} />
     </div>
   );
 }
