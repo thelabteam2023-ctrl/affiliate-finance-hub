@@ -9,7 +9,7 @@ import { SubscriptionsTab } from '@/components/system-admin/SubscriptionsTab';
 import { OnlineUsersCard } from '@/components/system-admin/OnlineUsersCard';
 import { LoginHistoryTab } from '@/components/system-admin/LoginHistoryTab';
 import { OnlineStatusIndicator } from '@/components/system-admin/OnlineStatusIndicator';
-import { useOnlineUsers } from '@/hooks/useOnlineUsers';
+import { usePresence } from '@/contexts/PresenceContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -48,7 +48,7 @@ const ROLES = [
 
 export default function SystemAdmin() {
   const { user } = useAuth();
-  const { isUserOnline } = useOnlineUsers();
+  const { isUserOnline } = usePresence();
   const {
     loading,
     users,
