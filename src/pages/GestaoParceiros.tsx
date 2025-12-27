@@ -176,13 +176,10 @@ export default function GestaoParceiros() {
 
   const fetchROIData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
+      // RLS policies handle workspace isolation - no need to filter by user_id
       const { data: financialData, error: financialError } = await supabase
         .from("cash_ledger")
         .select("*")
-        .eq("user_id", user.id)
         .in("tipo_transacao", ["DEPOSITO", "SAQUE"])
         .eq("status", "CONFIRMADO");
 
@@ -190,8 +187,7 @@ export default function GestaoParceiros() {
 
       const { data: bookmakersData, error: bookmakersError } = await supabase
         .from("bookmakers")
-        .select("parceiro_id, saldo_atual, status")
-        .eq("user_id", user.id);
+        .select("parceiro_id, saldo_atual, status");
 
       if (bookmakersError) throw bookmakersError;
 
@@ -266,13 +262,10 @@ export default function GestaoParceiros() {
 
   const fetchParceriasStatus = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
+      // RLS policies handle workspace isolation - no need to filter by user_id
       const { data: parcerias, error } = await supabase
         .from("parcerias")
         .select("id, parceiro_id, data_fim_prevista, custo_aquisicao_isento, valor_parceiro")
-        .eq("user_id", user.id)
         .in("status", ["ATIVA", "EM_ENCERRAMENTO"]);
 
       if (error) throw error;
@@ -322,20 +315,16 @@ export default function GestaoParceiros() {
 
   const fetchSaldosData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
+      // Views already filter by workspace via get_current_workspace()
       const { data: saldosFiat, error: errorFiat } = await supabase
         .from("v_saldo_parceiro_contas")
-        .select("*")
-        .eq("user_id", user.id);
+        .select("*");
 
       if (errorFiat) throw errorFiat;
 
       const { data: saldosCrypto, error: errorCrypto } = await supabase
         .from("v_saldo_parceiro_wallets")
-        .select("*")
-        .eq("user_id", user.id);
+        .select("*");
 
       if (errorCrypto) throw errorCrypto;
 

@@ -508,13 +508,10 @@ export function CaixaTransacaoDialog({
 
   const fetchInvestidores = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
+      // RLS policies handle workspace isolation
       const { data, error } = await supabase
         .from("investidores")
         .select("id, nome")
-        .eq("user_id", user.id)
         .eq("status", "ativo");
 
       if (error) throw error;
