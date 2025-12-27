@@ -44,10 +44,22 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
   const [minutesUntilTimeout, setMinutesUntilTimeout] = useState<number | null>(null);
   const [showingWarning, setShowingWarning] = useState(false);
   
+  // Refs para evitar problemas de dependência circular
   const lastBackendUpdateRef = useRef<number>(0);
   const warningShownRef = useRef<boolean>(false);
   const isExpiredRef = useRef<boolean>(false);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
+  const lastActivityRef = useRef<Date | null>(null);
+  const userIdRef = useRef<string | undefined>(undefined);
+
+  // Manter refs sincronizados
+  useEffect(() => {
+    lastActivityRef.current = lastActivity;
+  }, [lastActivity]);
+
+  useEffect(() => {
+    userIdRef.current = user?.id;
+  }, [user?.id]);
 
   // Inicializar BroadcastChannel para sincronização multi-aba
   useEffect(() => {
@@ -60,31 +72,52 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
     };
   }, []);
 
+  // Função para atualizar atividade no backend (throttled)
+  const updateBackendActivity = useCallback(async () => {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    
+    const now = Date.now();
+    if (now - lastBackendUpdateRef.current < ACTIVITY_UPDATE_THROTTLE_MS) {
+      return; // Throttle: não atualizar muito frequentemente
+    }
+    
+    lastBackendUpdateRef.current = now;
+    
+    try {
+      await supabase.rpc('update_user_activity', { p_user_id: userId });
+    } catch (error) {
+      console.error('[Inactivity] Erro ao atualizar atividade:', error);
+    }
+  }, []);
+
   // Broadcast activity update para outras abas
   const broadcastActivity = useCallback((timestamp: number) => {
+    const userId = userIdRef.current;
     const message: BroadcastMessage = {
       type: 'ACTIVITY_UPDATE',
       timestamp,
-      userId: user?.id,
+      userId,
     };
     
     // Atualizar localStorage para fallback
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ timestamp, userId: user?.id }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ timestamp, userId }));
     } catch (e) {
       console.error('[Inactivity] Erro ao salvar no localStorage:', e);
     }
     
     // Broadcast via BroadcastChannel
     broadcastChannelRef.current?.postMessage(message);
-  }, [user?.id]);
+  }, []);
 
   // Broadcast expiração para outras abas
   const broadcastExpiration = useCallback(() => {
+    const userId = userIdRef.current;
     const message: BroadcastMessage = {
       type: 'SESSION_EXPIRED',
       timestamp: Date.now(),
-      userId: user?.id,
+      userId,
     };
     
     broadcastChannelRef.current?.postMessage(message);
@@ -95,25 +128,7 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
     } catch (e) {
       console.error('[Inactivity] Erro ao limpar localStorage:', e);
     }
-  }, [user?.id]);
-
-  // Função para atualizar atividade no backend (throttled)
-  const updateBackendActivity = useCallback(async () => {
-    if (!user?.id) return;
-    
-    const now = Date.now();
-    if (now - lastBackendUpdateRef.current < ACTIVITY_UPDATE_THROTTLE_MS) {
-      return; // Throttle: não atualizar muito frequentemente
-    }
-    
-    lastBackendUpdateRef.current = now;
-    
-    try {
-      await supabase.rpc('update_user_activity', { p_user_id: user.id });
-    } catch (error) {
-      console.error('[Inactivity] Erro ao atualizar atividade:', error);
-    }
-  }, [user?.id]);
+  }, []);
 
   // Função para registrar atividade (apenas se aba estiver visível)
   const registerActivity = useCallback(() => {
@@ -140,11 +155,12 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
 
   // Função para verificar expiração no BACKEND (autoridade final)
   const checkBackendExpiration = useCallback(async (): Promise<boolean> => {
-    if (!user?.id) return false;
+    const userId = userIdRef.current;
+    if (!userId) return false;
     
     try {
       const { data, error } = await supabase.rpc('check_session_inactivity', {
-        p_user_id: user.id,
+        p_user_id: userId,
         p_timeout_minutes: 40
       });
       
@@ -159,11 +175,12 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
       console.error('[Inactivity] Erro ao verificar backend:', error);
       return false;
     }
-  }, [user?.id]);
+  }, []);
 
   // Função para expirar sessão
   const expireSession = useCallback(async () => {
-    if (!user?.id || isExpiredRef.current) return;
+    const userId = userIdRef.current;
+    if (!userId || isExpiredRef.current) return;
     
     // REGRA DE OURO: Verificar com backend antes de expirar
     const backendConfirmedExpired = await checkBackendExpiration();
@@ -191,70 +208,7 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
     // Fazer logout e redirecionar
     await signOut();
     navigate('/auth');
-  }, [user?.id, signOut, navigate, toast, checkBackendExpiration, broadcastExpiration]);
-
-  // Handler para mensagens de outras abas
-  const handleBroadcastMessage = useCallback((event: MessageEvent<BroadcastMessage>) => {
-    const { type, timestamp, userId } = event.data;
-    
-    // Ignorar mensagens de outros usuários
-    if (userId && userId !== user?.id) return;
-    
-    switch (type) {
-      case 'ACTIVITY_UPDATE':
-        // Outra aba registrou atividade, atualizar estado local
-        if (!isExpiredRef.current) {
-          setLastActivity(new Date(timestamp));
-          setShowingWarning(false);
-          warningShownRef.current = false;
-        }
-        break;
-        
-      case 'SESSION_EXPIRED':
-        // Outra aba expirou a sessão, expirar aqui também
-        if (!isExpiredRef.current) {
-          isExpiredRef.current = true;
-          toast({
-            title: "Sessão Expirada",
-            description: "Sua sessão expirou por inatividade. Faça login novamente.",
-            variant: "destructive",
-            duration: 5000,
-          });
-          signOut().then(() => navigate('/auth'));
-        }
-        break;
-    }
-  }, [user?.id, signOut, navigate, toast]);
-
-  // Handler para mudanças no localStorage (fallback para browsers sem BroadcastChannel)
-  const handleStorageChange = useCallback((event: StorageEvent) => {
-    if (event.key !== STORAGE_KEY) return;
-    
-    if (event.newValue === null) {
-      // Sessão foi expirada em outra aba
-      if (!isExpiredRef.current) {
-        isExpiredRef.current = true;
-        toast({
-          title: "Sessão Expirada",
-          description: "Sua sessão expirou por inatividade. Faça login novamente.",
-          variant: "destructive",
-          duration: 5000,
-        });
-        signOut().then(() => navigate('/auth'));
-      }
-    } else {
-      try {
-        const data = JSON.parse(event.newValue);
-        if (data.userId === user?.id && !isExpiredRef.current) {
-          setLastActivity(new Date(data.timestamp));
-          setShowingWarning(false);
-          warningShownRef.current = false;
-        }
-      } catch (e) {
-        console.error('[Inactivity] Erro ao parsear localStorage:', e);
-      }
-    }
-  }, [user?.id, signOut, navigate, toast]);
+  }, [signOut, navigate, toast, checkBackendExpiration, broadcastExpiration]);
 
   // Verificar inatividade periodicamente
   useEffect(() => {
@@ -263,8 +217,11 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
     const checkInactivity = async () => {
       if (isExpiredRef.current) return;
       
+      const currentLastActivity = lastActivityRef.current;
+      if (!currentLastActivity) return;
+      
       const now = Date.now();
-      const lastActivityTime = lastActivity.getTime();
+      const lastActivityTime = currentLastActivity.getTime();
       const inactiveMs = now - lastActivityTime;
       const remainingMs = INACTIVITY_TIMEOUT_MS - inactiveMs;
       const remainingMinutes = Math.ceil(remainingMs / 60000);
@@ -304,13 +261,15 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
   useEffect(() => {
     if (!user?.id) return;
     
+    const userId = user.id;
+    
     // Tentar recuperar última atividade do localStorage (sync multi-aba)
     let initialActivity = new Date();
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const data = JSON.parse(stored);
-        if (data.userId === user.id && data.timestamp) {
+        if (data.userId === userId && data.timestamp) {
           initialActivity = new Date(data.timestamp);
         }
       }
@@ -329,6 +288,69 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
       window.addEventListener(event, handleActivity, { passive: true });
     });
     
+    // Handler para mensagens de outras abas
+    const handleBroadcastMessage = (event: MessageEvent<BroadcastMessage>) => {
+      const { type, timestamp, userId: msgUserId } = event.data;
+      
+      // Ignorar mensagens de outros usuários
+      if (msgUserId && msgUserId !== userId) return;
+      
+      switch (type) {
+        case 'ACTIVITY_UPDATE':
+          // Outra aba registrou atividade, atualizar estado local
+          if (!isExpiredRef.current) {
+            setLastActivity(new Date(timestamp));
+            setShowingWarning(false);
+            warningShownRef.current = false;
+          }
+          break;
+          
+        case 'SESSION_EXPIRED':
+          // Outra aba expirou a sessão, expirar aqui também
+          if (!isExpiredRef.current) {
+            isExpiredRef.current = true;
+            toast({
+              title: "Sessão Expirada",
+              description: "Sua sessão expirou por inatividade. Faça login novamente.",
+              variant: "destructive",
+              duration: 5000,
+            });
+            signOut().then(() => navigate('/auth'));
+          }
+          break;
+      }
+    };
+    
+    // Handler para mudanças no localStorage (fallback para browsers sem BroadcastChannel)
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key !== STORAGE_KEY) return;
+      
+      if (event.newValue === null) {
+        // Sessão foi expirada em outra aba
+        if (!isExpiredRef.current) {
+          isExpiredRef.current = true;
+          toast({
+            title: "Sessão Expirada",
+            description: "Sua sessão expirou por inatividade. Faça login novamente.",
+            variant: "destructive",
+            duration: 5000,
+          });
+          signOut().then(() => navigate('/auth'));
+        }
+      } else {
+        try {
+          const data = JSON.parse(event.newValue);
+          if (data.userId === userId && !isExpiredRef.current) {
+            setLastActivity(new Date(data.timestamp));
+            setShowingWarning(false);
+            warningShownRef.current = false;
+          }
+        } catch (e) {
+          console.error('[Inactivity] Erro ao parsear localStorage:', e);
+        }
+      }
+    };
+    
     // Listener para BroadcastChannel
     if (broadcastChannelRef.current) {
       broadcastChannelRef.current.onmessage = handleBroadcastMessage;
@@ -345,9 +367,10 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
           const stored = localStorage.getItem(STORAGE_KEY);
           if (stored) {
             const data = JSON.parse(stored);
-            if (data.userId === user.id && data.timestamp) {
+            if (data.userId === userId && data.timestamp) {
               const storedTime = new Date(data.timestamp);
-              if (lastActivity && storedTime > lastActivity) {
+              const currentActivity = lastActivityRef.current;
+              if (currentActivity && storedTime > currentActivity) {
                 setLastActivity(storedTime);
                 setShowingWarning(false);
                 warningShownRef.current = false;
@@ -368,7 +391,7 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
       window.removeEventListener('storage', handleStorageChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user?.id, registerActivity, handleBroadcastMessage, handleStorageChange, lastActivity]);
+  }, [user?.id, registerActivity, signOut, navigate, toast]);
 
   return {
     lastActivity,
