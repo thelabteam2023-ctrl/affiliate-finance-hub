@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { FornecedorDialog } from "@/components/fornecedores/FornecedorDialog";
 import { Truck, Users, DollarSign, LayoutGrid, List, UserX } from "lucide-react";
+import { useActionAccess } from "@/hooks/useModuleAccess";
 
 interface Fornecedor {
   id: string;
@@ -39,6 +40,7 @@ export function FornecedoresTab() {
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fornecedorToDelete, setFornecedorToDelete] = useState<Fornecedor | null>(null);
+  const { canCreate } = useActionAccess();
 
   useEffect(() => {
     fetchFornecedores();
@@ -223,11 +225,11 @@ export function FornecedoresTab() {
             placeholder="Buscar por nome ou documento..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            onAdd={() => {
+            onAdd={canCreate('captacao', 'captacao.fornecedores.create') ? () => {
               setSelectedFornecedor(null);
               setIsViewMode(false);
               setDialogOpen(true);
-            }}
+            } : undefined}
             addButtonLabel="Novo Fornecedor"
           />
         </div>

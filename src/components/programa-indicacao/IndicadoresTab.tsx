@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { IndicadorDialog } from "@/components/indicadores/IndicadorDialog";
 import { IndicadorCard } from "@/components/indicadores/IndicadorCard";
 import { Users, UserPlus, UserX, LayoutGrid, List, DollarSign } from "lucide-react";
+import { useActionAccess } from "@/hooks/useModuleAccess";
 
 interface IndicadorPerformance {
   indicador_id: string;
@@ -50,6 +51,7 @@ export function IndicadoresTab() {
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [indicadorToDelete, setIndicadorToDelete] = useState<IndicadorPerformance | null>(null);
+  const { canCreate, canEdit, canDelete } = useActionAccess();
 
   useEffect(() => {
     fetchIndicadores();
@@ -220,11 +222,11 @@ export function IndicadoresTab() {
             placeholder="Buscar por nome ou CPF..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            onAdd={() => {
+            onAdd={canCreate('captacao', 'captacao.indicadores.create') ? () => {
               setSelectedIndicador(null);
               setIsViewMode(false);
               setDialogOpen(true);
-            }}
+            } : undefined}
             addButtonLabel="Novo Indicador"
           />
         </div>
@@ -268,14 +270,16 @@ export function IndicadoresTab() {
               ? "Tente ajustar os filtros de busca"
               : "Comece cadastrando seu primeiro indicador"}
           </p>
-          <Button onClick={() => {
-            setSelectedIndicador(null);
-            setIsViewMode(false);
-            setDialogOpen(true);
-          }}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Novo Indicador
-          </Button>
+          {canCreate('captacao', 'captacao.indicadores.create') && (
+            <Button onClick={() => {
+              setSelectedIndicador(null);
+              setIsViewMode(false);
+              setDialogOpen(true);
+            }}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Novo Indicador
+            </Button>
+          )}
         </Card>
       ) : viewMode === "cards" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { maskCPFPartial } from "@/lib/validators";
+import { useActionAccess } from "@/hooks/useModuleAccess";
 
 interface Parceiro {
   id: string;
@@ -32,6 +33,7 @@ export function ParceiroListaSidebar({
 }: ParceiroListaSidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
+  const { canCreate } = useActionAccess();
 
   const filteredParceiros = useMemo(() => {
     return parceiros.filter((p) => {
@@ -78,7 +80,7 @@ export function ParceiroListaSidebar({
             <SelectItem value="inativo">Inativos</SelectItem>
           </SelectContent>
         </Select>
-        {onAddParceiro && (
+        {onAddParceiro && canCreate('parceiros', 'parceiros.create') && (
           <button
             onClick={onAddParceiro}
             className="w-full flex items-center justify-center gap-2 p-2.5 rounded-md transition-colors hover:bg-primary/10 border border-dashed border-primary/30 text-primary"

@@ -37,6 +37,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { useActionAccess } from "@/hooks/useModuleAccess";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface OperadorWorkspace {
@@ -74,6 +75,7 @@ interface LegacyOperador {
 
 export default function GestaoOperadores() {
   const { workspace } = useWorkspace();
+  const { canCreate, canEdit } = useActionAccess();
   const [operadores, setOperadores] = useState<OperadorWorkspace[]>([]);
   const [legacyOperadores, setLegacyOperadores] = useState<LegacyOperador[]>([]);
   const [loading, setLoading] = useState(true);
@@ -168,10 +170,12 @@ export default function GestaoOperadores() {
         pagePath="/operadores"
         pageIcon="Briefcase"
         actions={
-          <Button onClick={() => setInviteDialogOpen(true)}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Convidar Operador
-          </Button>
+          canCreate('operadores', 'operadores.create') && (
+            <Button onClick={() => setInviteDialogOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Convidar Operador
+            </Button>
+          )
         }
       />
 
@@ -351,18 +355,20 @@ export default function GestaoOperadores() {
                         <Eye className="h-4 w-4 mr-1" />
                         Ver
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenDialog(operador, "edit");
-                        }}
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Editar
-                      </Button>
+                      {canEdit('operadores', 'operadores.edit') && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenDialog(operador, "edit");
+                          }}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -410,16 +416,18 @@ export default function GestaoOperadores() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenDialog(operador, "edit");
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                          {canEdit('operadores', 'operadores.edit') && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenDialog(operador, "edit");
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -18,6 +18,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useActionAccess } from "@/hooks/useModuleAccess";
 
 interface InvestidorROI {
   investidor_id: string;
@@ -139,6 +140,8 @@ export function InvestidorPainelCard({
   onSimular,
   onClick,
 }: InvestidorPainelCardProps) {
+  const { canEdit, canDelete } = useActionAccess();
+  
   // Métricas FIAT
   const metricasFiat = calcularMetricasPsicologicas(
     roi?.aportes_fiat_brl || 0,
@@ -506,14 +509,16 @@ export function InvestidorPainelCard({
       {/* Actions Section */}
       <div className="p-3 bg-muted/10">
         <div className="flex justify-center gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" onClick={onEdit}>
-                <Edit className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Editar</TooltipContent>
-          </Tooltip>
+          {canEdit('investidores', 'investidores.edit') && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="sm" onClick={onEdit}>
+                  <Edit className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Editar</TooltipContent>
+            </Tooltip>
+          )}
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -524,19 +529,21 @@ export function InvestidorPainelCard({
             <TooltipContent>Ver Extrato</TooltipContent>
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={onDelete}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Excluir</TooltipContent>
-          </Tooltip>
+          {canDelete('investidores', 'investidores.delete') && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={onDelete}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Excluir</TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </div>
     </Card>
