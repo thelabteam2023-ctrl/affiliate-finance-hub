@@ -855,6 +855,16 @@ export default function Testes() {
         return;
       }
 
+      // Buscar workspace do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const workspaceId = workspaceMember?.workspace_id || null;
+
       const valorTotal = parseFloat(valorAporte);
       if (isNaN(valorTotal) || valorTotal <= 0) {
         toast.error("Valor de aporte inválido");
@@ -909,6 +919,7 @@ export default function Testes() {
       // 3. ETAPA 1: Aporte financeiro do investidor para o caixa operacional
       const { error: aporteError } = await supabase.from("cash_ledger").insert({
         user_id: user.id,
+        workspace_id: workspaceId,
         tipo_transacao: "APORTE_FINANCEIRO",
         tipo_moeda: "FIAT",
         moeda: "BRL",
@@ -960,6 +971,7 @@ export default function Testes() {
         // Criar transferência do caixa operacional para conta do parceiro
         const { error: transferenciaError } = await supabase.from("cash_ledger").insert({
           user_id: user.id,
+          workspace_id: workspaceId,
           tipo_transacao: "TRANSFERENCIA",
           tipo_moeda: "FIAT",
           moeda: "BRL",
@@ -1024,6 +1036,7 @@ export default function Testes() {
           // Criar depósito da conta bancária para bookmaker
           const { error: depositoError } = await supabase.from("cash_ledger").insert({
             user_id: user.id,
+            workspace_id: workspaceId,
             tipo_transacao: "DEPOSITO",
             tipo_moeda: "FIAT",
             moeda: "BRL",
