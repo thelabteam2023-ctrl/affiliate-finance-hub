@@ -2246,6 +2246,7 @@ export type Database = {
           id: string
           ip_address: string | null
           is_active: boolean | null
+          last_activity_at: string | null
           login_at: string
           logout_at: string | null
           session_id: string | null
@@ -2261,6 +2262,7 @@ export type Database = {
           id?: string
           ip_address?: string | null
           is_active?: boolean | null
+          last_activity_at?: string | null
           login_at?: string
           logout_at?: string | null
           session_id?: string | null
@@ -2276,6 +2278,7 @@ export type Database = {
           id?: string
           ip_address?: string | null
           is_active?: boolean | null
+          last_activity_at?: string | null
           login_at?: string
           logout_at?: string | null
           session_id?: string | null
@@ -6846,6 +6849,15 @@ export type Database = {
         }[]
       }
       check_partner_limit: { Args: { workspace_uuid: string }; Returns: Json }
+      check_session_inactivity: {
+        Args: { p_timeout_minutes?: number; p_user_id: string }
+        Returns: {
+          last_activity: string
+          minutes_inactive: number
+          session_id: string
+          was_expired: boolean
+        }[]
+      }
       check_user_limit: { Args: { workspace_uuid: string }; Returns: Json }
       cleanup_expired_chat_messages: { Args: never; Returns: number }
       cleanup_orphan_sessions: {
@@ -6899,6 +6911,10 @@ export type Database = {
       }
       end_user_session: { Args: { p_user_id: string }; Returns: number }
       expire_old_invites: { Args: never; Returns: number }
+      expire_session_by_inactivity: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
       generate_public_id: { Args: never; Returns: string }
       get_bookmaker_saldos: {
         Args: { p_projeto_id: string }
@@ -7113,6 +7129,7 @@ export type Database = {
         Returns: boolean
       }
       update_parcerias_em_encerramento: { Args: never; Returns: undefined }
+      update_user_activity: { Args: { p_user_id: string }; Returns: boolean }
       user_belongs_to_workspace: {
         Args: { _workspace_id: string }
         Returns: boolean
