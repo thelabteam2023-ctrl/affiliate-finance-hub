@@ -98,9 +98,20 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
 
       const userId = session.session.user.id;
 
+      // Buscar workspace do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", userId)
+        .limit(1)
+        .maybeSingle();
+
+      const workspaceId = workspaceMember?.workspace_id || null;
+
       // Criar registro no cash_ledger (tabela principal)
       const ledgerPayload: any = {
         user_id: userId,
+        workspace_id: workspaceId,
         valor: valorNum,
         moeda: origemData.tipoMoeda === "CRYPTO" ? "USD" : "BRL",
         tipo_moeda: origemData.tipoMoeda,
