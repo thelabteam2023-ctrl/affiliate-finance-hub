@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.parse-betting-slip]
 verify_jwt = false
+
+[functions.aggregate-daily-influence]
+verify_jwt = false
+
+[functions.calculate-influence-rankings]
+verify_jwt = false
