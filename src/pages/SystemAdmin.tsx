@@ -8,6 +8,7 @@ import { BillingDashboardTab } from '@/components/system-admin/BillingDashboardT
 import { SubscriptionsTab } from '@/components/system-admin/SubscriptionsTab';
 import { OnlineUsersCard } from '@/components/system-admin/OnlineUsersCard';
 import { LoginHistoryTab } from '@/components/system-admin/LoginHistoryTab';
+import { InfluenceMetricsTab } from '@/components/system-admin/InfluenceMetricsTab';
 import { OnlineStatusIndicator } from '@/components/system-admin/OnlineStatusIndicator';
 import { usePresence } from '@/contexts/PresenceContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Users, Building2, Shield, Ban, Check, Plus, UserPlus, Settings2, 
-  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard, History
+  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard, History, BarChart3
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -238,6 +239,10 @@ export default function SystemAdmin() {
           <TabsTrigger value="sistema" className="gap-2">
             <Settings2 className="h-4 w-4" />
             Sistema
+          </TabsTrigger>
+          <TabsTrigger value="metricas" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Métricas
           </TabsTrigger>
         </TabsList>
 
@@ -571,6 +576,11 @@ export default function SystemAdmin() {
               <CommunityResetTab />
             </TabsContent>
           </Tabs>
+        </TabsContent>
+
+        {/* =============== ABA MÉTRICAS =============== */}
+        <TabsContent value="metricas" className="space-y-4">
+          <InfluenceMetricsTab />
         </TabsContent>
       </Tabs>
 

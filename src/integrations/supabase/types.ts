@@ -4803,6 +4803,162 @@ export type Database = {
           },
         ]
       }
+      user_influence_config: {
+        Row: {
+          active: boolean
+          config_key: string
+          created_at: string
+          id: string
+          updated_at: string
+          weight_chat: number
+          weight_comment: number
+          weight_review: number
+          weight_topic: number
+        }
+        Insert: {
+          active?: boolean
+          config_key?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          weight_chat?: number
+          weight_comment?: number
+          weight_review?: number
+          weight_topic?: number
+        }
+        Update: {
+          active?: boolean
+          config_key?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          weight_chat?: number
+          weight_comment?: number
+          weight_review?: number
+          weight_topic?: number
+        }
+        Relationships: []
+      }
+      user_influence_daily: {
+        Row: {
+          chat_messages: number
+          comments_made: number
+          created_at: string
+          id: string
+          metric_date: string
+          reviews_made: number
+          topics_created: number
+          total_interactions: number
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          chat_messages?: number
+          comments_made?: number
+          created_at?: string
+          id?: string
+          metric_date: string
+          reviews_made?: number
+          topics_created?: number
+          total_interactions?: number
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          chat_messages?: number
+          comments_made?: number
+          created_at?: string
+          id?: string
+          metric_date?: string
+          reviews_made?: number
+          topics_created?: number
+          total_interactions?: number
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      user_influence_events: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          event_type: string
+          id: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type: string
+          id?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type?: string
+          id?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      user_influence_ranking: {
+        Row: {
+          calculated_at: string
+          chat_messages: number
+          comments_made: number
+          id: string
+          influence_score: number
+          period_end: string
+          period_start: string
+          period_type: string
+          rank_position: number
+          reviews_made: number
+          topics_created: number
+          total_interactions: number
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          calculated_at?: string
+          chat_messages?: number
+          comments_made?: number
+          id?: string
+          influence_score?: number
+          period_end: string
+          period_start: string
+          period_type: string
+          rank_position: number
+          reviews_made?: number
+          topics_created?: number
+          total_interactions?: number
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          calculated_at?: string
+          chat_messages?: number
+          comments_made?: number
+          id?: string
+          influence_score?: number
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          rank_position?: number
+          reviews_made?: number
+          topics_created?: number
+          total_interactions?: number
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       user_permission_overrides: {
         Row: {
           created_at: string
@@ -6615,6 +6771,10 @@ export type Database = {
         Args: { _plan: string; _workspace_id: string }
         Returns: undefined
       }
+      aggregate_daily_influence: {
+        Args: { target_date: string }
+        Returns: number
+      }
       apply_immediate_downgrade: {
         Args: {
           p_reason?: string
@@ -6638,6 +6798,14 @@ export type Database = {
           p_started_at?: string
         }
         Returns: string
+      }
+      calculate_influence_ranking: {
+        Args: {
+          p_period_end: string
+          p_period_start: string
+          p_period_type: string
+        }
+        Returns: number
       }
       can_moderate_community: { Args: { _user_id: string }; Returns: boolean }
       cancel_workspace_invite: { Args: { _invite_id: string }; Returns: Json }
@@ -6735,6 +6903,15 @@ export type Database = {
       get_effective_access: {
         Args: { _user_id: string; _workspace_id?: string }
         Returns: Json
+      }
+      get_influence_config: {
+        Args: never
+        Returns: {
+          weight_chat: number
+          weight_comment: number
+          weight_review: number
+          weight_topic: number
+        }[]
       }
       get_invite_by_token: { Args: { _token: string }; Returns: Json }
       get_my_pending_invites: {
@@ -6894,6 +7071,15 @@ export type Database = {
       }
       set_current_workspace: {
         Args: { _workspace_id: string }
+        Returns: boolean
+      }
+      update_influence_config: {
+        Args: {
+          p_weight_chat: number
+          p_weight_comment: number
+          p_weight_review: number
+          p_weight_topic: number
+        }
         Returns: boolean
       }
       update_parcerias_em_encerramento: { Args: never; Returns: undefined }
