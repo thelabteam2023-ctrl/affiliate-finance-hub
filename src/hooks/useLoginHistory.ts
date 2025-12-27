@@ -14,6 +14,7 @@ interface LoginRecord {
   login_at: string;
   logout_at: string | null;
   is_active: boolean;
+  session_status: 'active' | 'closed' | 'expired';
 }
 
 interface LoginStats {
@@ -72,6 +73,7 @@ export function useLoginHistory(params: UseLoginHistoryParams = {}) {
         login_at: record.login_at,
         logout_at: record.logout_at || null,
         is_active: record.is_active ?? false,
+        session_status: record.session_status || 'closed',
       }));
       
       setHistory(mappedData);

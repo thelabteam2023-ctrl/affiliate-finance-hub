@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, LogIn, Calendar, Users, TrendingUp, Circle } from 'lucide-react';
-import { format, formatDistanceToNow, differenceInMinutes, differenceInHours } from 'date-fns';
+import { format, formatDistanceToNow, differenceInMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { InactiveUsersCard } from './InactiveUsersCard';
@@ -24,16 +24,16 @@ export function LoginHistoryTab() {
   const { isUserOnline, getUserOnlineInfo } = usePresence();
 
   // Sort history based on selected order
-  // Only active sessions can be considered "online"
+  // REGRA: Apenas sessões com session_status='active' podem ser online
   const sortedHistory = useMemo(() => {
     if (sortOrder === 'online_first') {
       return [...history].sort((a, b) => {
-        // Only consider online if is_active AND presence shows online
-        const aOnline = a.is_active && isUserOnline(a.user_id);
-        const bOnline = b.is_active && isUserOnline(b.user_id);
+        // Só considera online se session_status='active' E presença mostra online
+        const aOnline = a.session_status === 'active' && a.is_active && isUserOnline(a.user_id);
+        const bOnline = b.session_status === 'active' && b.is_active && isUserOnline(b.user_id);
         if (aOnline && !bOnline) return -1;
         if (!aOnline && bOnline) return 1;
-        // If both have same online status, sort by most recent login
+        // Se ambos tem mesmo status, ordenar por login mais recente
         return new Date(b.login_at).getTime() - new Date(a.login_at).getTime();
       });
     }
@@ -42,48 +42,51 @@ export function LoginHistoryTab() {
     );
   }, [history, sortOrder, isUserOnline]);
 
-  // Format session time based on is_active status from database
-  // Only the last active session for a user can show as online
-  const formatSessionTime = (record: { login_at: string; logout_at: string | null; is_active: boolean; user_id: string }) => {
-    const { login_at, logout_at, is_active, user_id } = record;
+  // Format session display based on session_status
+  // REGRA: Apenas a última sessão ativa pode mostrar "online"
+  // Sessões antigas NUNCA mostram "online há X horas"
+  const formatSessionTime = (record: { 
+    login_at: string; 
+    logout_at: string | null; 
+    is_active: boolean; 
+    session_status: string;
+    user_id: string 
+  }) => {
+    const { login_at, logout_at, is_active, session_status, user_id } = record;
     const loginDate = new Date(login_at);
-    const now = new Date();
 
-    // If session is not active (is_active = false), it's a closed session
-    if (!is_active) {
+    // REGRA 5: Sessões antigas nunca mostram status online
+    // Apenas session_status = 'active' pode ser considerada para online
+    if (session_status !== 'active' || !is_active) {
+      // Sessão encerrada - mostrar duração se tiver logout_at
       if (logout_at) {
         const logoutDate = new Date(logout_at);
         const sessionDuration = differenceInMinutes(logoutDate, loginDate);
-        if (sessionDuration < 60) {
+        if (sessionDuration < 1) {
+          return 'sessão < 1 min';
+        } else if (sessionDuration < 60) {
           return `sessão de ${sessionDuration} min`;
         }
         const hours = Math.floor(sessionDuration / 60);
         const mins = sessionDuration % 60;
-        return `sessão de ${hours}h ${mins}min`;
+        return mins > 0 ? `sessão de ${hours}h ${mins}min` : `sessão de ${hours}h`;
       }
-      // Closed without logout_at (old records)
+      // Sem logout_at = registro antigo, apenas mostrar quando foi
       return formatDistanceToNow(loginDate, { locale: ptBR, addSuffix: true });
     }
 
-    // Session is active - check if user is actually online via presence
+    // Sessão ativa - verificar presença real
     const isOnlineNow = isUserOnline(user_id);
-    const minutesDiff = differenceInMinutes(now, loginDate);
-    const hoursDiff = differenceInHours(now, loginDate);
-
+    
     if (isOnlineNow) {
-      if (minutesDiff < 1) {
-        return 'online agora';
-      } else if (minutesDiff < 60) {
-        return `online há ${minutesDiff} min`;
-      } else if (hoursDiff < 24) {
-        return `online há ${hoursDiff}h ${minutesDiff % 60}min`;
-      } else {
-        return `online há ${Math.floor(hoursDiff / 24)}d ${hoursDiff % 24}h`;
-      }
+      // REGRA 9: Não calcular tempo online acumulado incorretamente
+      // Apenas indicar que está online, sem tempo desde login
+      return 'online agora';
     }
 
-    // Active session but not showing as online via presence (maybe browser closed)
-    return `última atividade ${formatDistanceToNow(loginDate, { locale: ptBR, addSuffix: true })}`;
+    // Sessão marcada como ativa mas usuário não está com presença
+    // Pode indicar que fechou o browser sem logout
+    return 'sessão ativa';
   };
 
   const handleRefresh = () => {
@@ -211,8 +214,8 @@ export function LoginHistoryTab() {
                 </TableHeader>
                 <TableBody>
                   {sortedHistory.map((record) => {
-                    // Only show as online if: is_active=true AND user is online via presence
-                    const canShowOnline = record.is_active && isUserOnline(record.user_id);
+                    // REGRA: Só mostra online se session_status='active' E presença confirma
+                    const canShowOnline = record.session_status === 'active' && record.is_active && isUserOnline(record.user_id);
                     return (
                       <TableRow key={record.id} className={cn(canShowOnline && 'bg-emerald-500/5')}>
                         <TableCell>
