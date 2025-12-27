@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
+import { useCurrencySnapshot, type SupportedCurrency } from "@/hooks/useCurrencySnapshot";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ import {
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
+import { detectarMoedaOperacao, calcularValorBRLReferencia, type MoedaOperacao } from "@/types/apostasUnificada";
 
 // Interface local DEPRECATED - agora usamos BookmakerSaldo do hook canônico diretamente
 interface LegacyBookmaker {
@@ -76,15 +78,23 @@ interface SurebetDialogProps {
   activeTab?: string;
 }
 
-// Estrutura de perna armazenada no JSONB da surebet
+// Estrutura de perna armazenada no JSONB da surebet (COM SUPORTE MULTI-MOEDA)
 export interface SurebetPerna {
   bookmaker_id: string;
   bookmaker_nome: string;
+  moeda: SupportedCurrency; // OBRIGATÓRIO - moeda da bookmaker
   selecao: string;
   odd: number;
   stake: number;
+  // Campos de snapshot para referência BRL
+  stake_brl_referencia: number | null;
+  cotacao_snapshot: number | null;
+  cotacao_snapshot_at: string | null;
+  // Campos de resultado
   resultado: string | null;
   lucro_prejuizo: number | null;
+  lucro_prejuizo_brl_referencia: number | null;
+  // Campos de freebet
   gerou_freebet: boolean;
   valor_freebet_gerada: number | null;
 }
@@ -92,6 +102,7 @@ export interface SurebetPerna {
 // Estrutura interna do formulário (para edição)
 interface OddEntry {
   bookmaker_id: string;
+  moeda: SupportedCurrency; // NOVO - moeda da bookmaker selecionada
   odd: string;
   stake: string;
   selecao: string;
@@ -159,6 +170,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   const isEditing = !!surebet;
   const { workspaceId } = useWorkspace();
   
+  // ========== HOOK DE MULTI-MOEDA ==========
+  const { getSnapshotFields, isForeignCurrency, formatCurrency: formatCurrencySnapshot } = useCurrencySnapshot();
+  
   // ========== HOOK CANÔNICO DE SALDOS ==========
   // Esta é a ÚNICA fonte de verdade para saldos de bookmaker
   const { 
@@ -197,8 +211,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   
   // Odds entries (2 for binary, 3 for 1X2)
   const [odds, setOdds] = useState<OddEntry[]>([
-    { bookmaker_id: "", odd: "", stake: "", selecao: "Sim", isReference: true, isManuallyEdited: false },
-    { bookmaker_id: "", odd: "", stake: "", selecao: "Não", isReference: false, isManuallyEdited: false }
+    { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Sim", isReference: true, isManuallyEdited: false },
+    { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Não", isReference: false, isManuallyEdited: false }
   ]);
   
   // Apostas vinculadas para edição
@@ -263,6 +277,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         }
         setOdds(newSelecoes.map((sel, i) => ({
           bookmaker_id: "",
+          moeda: "BRL" as SupportedCurrency,
           odd: "",
           stake: "",
           selecao: sel,
@@ -309,7 +324,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     setArredondarValor("1");
     const defaultSelecoes = getSelecoesPorMercado("", "1-2");
     setOdds(defaultSelecoes.map((sel, i) => ({
-      bookmaker_id: "", odd: "", stake: "", selecao: sel, isReference: i === 0, isManuallyEdited: false
+      bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecao: sel, isReference: i === 0, isManuallyEdited: false
     })));
     setLinkedApostas([]);
     setExpandedResultados({}); // Reset expansão de resultados avançados
@@ -381,6 +396,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     // Popular o array de odds com os dados das pernas para cálculos
     const newOdds: OddEntry[] = sortedPernas.map((perna, index) => ({
       bookmaker_id: perna.bookmaker_id || "",
+      moeda: (perna.moeda || "BRL") as SupportedCurrency,
       odd: perna.odd?.toString() || "",
       stake: perna.stake?.toString() || "",
       selecao: perna.selecao,
@@ -399,6 +415,12 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   const updateOdd = (index: number, field: keyof OddEntry, value: string | boolean) => {
     const newOdds = [...odds];
     newOdds[index] = { ...newOdds[index], [field]: value };
+    
+    // Quando bookmaker muda, atualizar também a moeda
+    if (field === "bookmaker_id" && typeof value === "string") {
+      const selectedBk = bookmakerSaldos.find(b => b.id === value);
+      newOdds[index].moeda = (selectedBk?.moeda as SupportedCurrency) || "BRL";
+    }
     
     // Se está definindo referência, remover das outras
     if (field === "isReference" && value === true) {
@@ -920,24 +942,59 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         if (error) throw error;
         toast.success("Operação atualizada!");
       } else {
-        // Calcular stake total e valores das stakes diretamente dos campos
+        // Calcular stakes diretamente dos campos
         const stakes = odds.map(o => parseFloat(o.stake) || 0);
-        const stakeTotal = stakes.reduce((a, b) => a + b, 0);
         
-        // Criar pernas como estrutura JSONB interna
-        const pernasToSave: SurebetPerna[] = odds.map((entry, idx) => ({
-          bookmaker_id: entry.bookmaker_id,
-          bookmaker_nome: getBookmakerNome(entry.bookmaker_id),
-          selecao: entry.selecao,
-          odd: parseFloat(entry.odd),
-          stake: stakes[idx],
-          resultado: null,
-          lucro_prejuizo: null,
-          gerou_freebet: entry.gerouFreebet || false,
-          valor_freebet_gerada: entry.gerouFreebet && entry.valorFreebetGerada 
-            ? parseFloat(entry.valorFreebetGerada) 
-            : null
-        }));
+        // Obter moeda de cada bookmaker selecionada
+        const getBookmakerMoeda = (bookmakerId: string): SupportedCurrency => {
+          const bk = bookmakerSaldos.find(b => b.id === bookmakerId);
+          return (bk?.moeda as SupportedCurrency) || "BRL";
+        };
+        
+        // Criar pernas COM SNAPSHOT por moeda estrangeira
+        const pernasToSave: SurebetPerna[] = odds.map((entry, idx) => {
+          const stake = stakes[idx];
+          const moeda = getBookmakerMoeda(entry.bookmaker_id);
+          
+          // Criar snapshot para moeda estrangeira
+          const snapshotFields = getSnapshotFields(stake, moeda);
+          
+          return {
+            bookmaker_id: entry.bookmaker_id,
+            bookmaker_nome: getBookmakerNome(entry.bookmaker_id),
+            moeda,
+            selecao: entry.selecao,
+            odd: parseFloat(entry.odd),
+            stake,
+            // Campos de snapshot (BRL terá valor_brl_referencia = stake, sem cotação)
+            stake_brl_referencia: snapshotFields.valor_brl_referencia,
+            cotacao_snapshot: snapshotFields.cotacao_snapshot,
+            cotacao_snapshot_at: snapshotFields.cotacao_snapshot_at,
+            // Campos de resultado (null ao criar)
+            resultado: null,
+            lucro_prejuizo: null,
+            lucro_prejuizo_brl_referencia: null,
+            // Campos de freebet
+            gerou_freebet: entry.gerouFreebet || false,
+            valor_freebet_gerada: entry.gerouFreebet && entry.valorFreebetGerada 
+              ? parseFloat(entry.valorFreebetGerada) 
+              : null
+          };
+        });
+        
+        // Detectar moeda de operação (única ou MULTI)
+        const moedasPernas = pernasToSave.map(p => p.moeda);
+        const moedasUnicas = [...new Set(moedasPernas)];
+        const moedaOperacao: MoedaOperacao = moedasUnicas.length === 1 ? moedasUnicas[0] : "MULTI";
+        
+        // Calcular valor BRL de referência (soma dos snapshots)
+        const valorBRLReferencia = pernasToSave.reduce(
+          (acc, p) => acc + (p.stake_brl_referencia || 0), 0
+        );
+        
+        // stake_total só é válido para operações de moeda única
+        // Para MULTI, stake_total = null (proibido somar moedas diferentes!)
+        const stakeTotal = moedaOperacao === "MULTI" ? null : stakes.reduce((a, b) => a + b, 0);
         
         // Inserir na tabela unificada
         if (!workspaceId) {
@@ -958,7 +1015,18 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             esporte,
             modelo,
             mercado,
-            stake_total: stakeTotal,
+            // Campos multi-moeda
+            moeda_operacao: moedaOperacao,
+            stake_total: stakeTotal, // null se MULTI
+            valor_brl_referencia: valorBRLReferencia,
+            // Snapshot da operação (só faz sentido para moeda única)
+            cotacao_snapshot: moedaOperacao !== "MULTI" && moedaOperacao !== "BRL" 
+              ? pernasToSave[0]?.cotacao_snapshot 
+              : null,
+            cotacao_snapshot_at: moedaOperacao !== "MULTI" && moedaOperacao !== "BRL"
+              ? pernasToSave[0]?.cotacao_snapshot_at
+              : null,
+            // Demais campos
             spread_calculado: analysis?.spread || null,
             roi_esperado: analysis?.roiEsperado || null,
             lucro_esperado: analysis?.guaranteedProfit || null,
