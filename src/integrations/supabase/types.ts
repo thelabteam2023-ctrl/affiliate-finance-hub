@@ -5824,6 +5824,7 @@ export type Database = {
           total_pendente: number | null
           total_projetos: number | null
           user_id: string | null
+          workspace_id: string | null
         }
         Insert: {
           cpf?: string | null
@@ -5837,6 +5838,7 @@ export type Database = {
           total_pendente?: never
           total_projetos?: never
           user_id?: string | null
+          workspace_id?: string | null
         }
         Update: {
           cpf?: string | null
@@ -5850,8 +5852,17 @@ export type Database = {
           total_pendente?: never
           total_projetos?: never
           user_id?: string | null
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "operadores_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_operadores_sem_entrega: {
         Row: {
@@ -6228,8 +6239,17 @@ export type Database = {
           nome: string | null
           status: string | null
           user_id: string | null
+          workspace_id: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "investidores_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_saldo_caixa_crypto: {
         Row: {
