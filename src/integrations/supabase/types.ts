@@ -6645,7 +6645,9 @@ export type Database = {
         Returns: {
           id: string
           ip_address: string
+          is_active: boolean
           login_at: string
+          logout_at: string
           user_agent: string
           user_email: string
           user_id: string
