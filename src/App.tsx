@@ -9,6 +9,8 @@ import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { PresenceProvider } from "@/contexts/PresenceContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppSidebar } from "@/components/AppSidebar";
+import { InactivityWarningBanner } from "@/components/InactivityWarningBanner";
+import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import GestaoParceiros from "./pages/GestaoParceiros";
@@ -33,10 +35,20 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Layout component for authenticated routes
+// Layout component for authenticated routes with inactivity monitoring
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
+  const { minutesUntilTimeout, showingWarning, resetActivity } = useInactivityTimeout();
+  
   return (
     <SidebarProvider defaultOpen={true}>
+      {/* Banner de aviso de inatividade */}
+      {showingWarning && minutesUntilTimeout !== null && minutesUntilTimeout <= 5 && (
+        <InactivityWarningBanner 
+          minutesRemaining={minutesUntilTimeout} 
+          onDismiss={resetActivity} 
+        />
+      )}
+      
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         
