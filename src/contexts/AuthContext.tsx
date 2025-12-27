@@ -218,18 +218,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     // End the user's session in login_history before signing out
     if (user) {
+      console.log('[Auth] Ending session for user:', user.id);
       try {
-        await supabase.rpc('end_user_session', { p_user_id: user.id });
+        const { data, error } = await supabase.rpc('end_user_session', { p_user_id: user.id });
+        if (error) {
+          console.error('[Auth] Failed to end session - RPC error:', error);
+        } else {
+          console.log('[Auth] Session ended successfully, RPC result:', data);
+        }
       } catch (error) {
-        console.error('Error ending user session:', error);
+        console.error('[Auth] Exception ending user session:', error);
       }
+    } else {
+      console.log('[Auth] No user to end session for');
     }
 
     // CRITICAL: Limpar cache do React Query ao fazer logout
     queryClient.clear();
-    console.log('[Auth] Signed out, cleared React Query cache');
+    console.log('[Auth] Cleared React Query cache');
     
     await supabase.auth.signOut();
+    console.log('[Auth] Signed out from Supabase');
+    
     setWorkspace(null);
     setRole(null);
     setIsSystemOwner(false);
