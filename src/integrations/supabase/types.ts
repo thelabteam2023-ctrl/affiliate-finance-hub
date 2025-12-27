@@ -2241,6 +2241,45 @@ export type Database = {
         }
         Relationships: []
       }
+      login_history: {
+        Row: {
+          id: string
+          ip_address: string | null
+          login_at: string
+          session_id: string | null
+          user_agent: string | null
+          user_email: string | null
+          user_id: string
+          user_name: string | null
+          workspace_id: string | null
+          workspace_name: string | null
+        }
+        Insert: {
+          id?: string
+          ip_address?: string | null
+          login_at?: string
+          session_id?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id: string
+          user_name?: string | null
+          workspace_id?: string | null
+          workspace_name?: string | null
+        }
+        Update: {
+          id?: string
+          ip_address?: string | null
+          login_at?: string
+          session_id?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string
+          user_name?: string | null
+          workspace_id?: string | null
+          workspace_name?: string | null
+        }
+        Relationships: []
+      }
       moderation_logs: {
         Row: {
           action_type: string
@@ -6410,6 +6449,37 @@ export type Database = {
           workspace_id: string
           workspace_name: string
           workspace_plan: string
+        }[]
+      }
+      admin_get_login_history: {
+        Args: {
+          _end_date?: string
+          _limit?: number
+          _offset?: number
+          _start_date?: string
+          _user_id?: string
+          _workspace_id?: string
+        }
+        Returns: {
+          id: string
+          ip_address: string
+          login_at: string
+          user_agent: string
+          user_email: string
+          user_id: string
+          user_name: string
+          workspace_id: string
+          workspace_name: string
+        }[]
+      }
+      admin_get_login_stats: {
+        Args: never
+        Returns: {
+          month_logins: number
+          today_logins: number
+          unique_users_today: number
+          unique_users_week: number
+          week_logins: number
         }[]
       }
       admin_get_revenue_by_plan: {

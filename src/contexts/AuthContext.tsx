@@ -153,9 +153,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [fetchWorkspaceAndRole]);
 
+  const recordLoginHistory = useCallback(async (userId: string, email: string, userName?: string) => {
+    try {
+      // Get workspace info for this user
+      const { data: workspaceId } = await supabase.rpc('get_user_workspace', { _user_id: userId });
+      
+      let workspaceName: string | null = null;
+      if (workspaceId) {
+        const { data: wsData } = await supabase
+          .from('workspaces')
+          .select('name')
+          .eq('id', workspaceId)
+          .single();
+        workspaceName = wsData?.name || null;
+      }
+
+      await supabase.from('login_history').insert({
+        user_id: userId,
+        user_email: email,
+        user_name: userName || null,
+        workspace_id: workspaceId || null,
+        workspace_name: workspaceName,
+      });
+    } catch (error) {
+      console.error('Error recording login history:', error);
+    }
+  }, []);
+
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (!error && data.user) {
+        // Record login history in background
+        recordLoginHistory(
+          data.user.id, 
+          data.user.email || email, 
+          data.user.user_metadata?.full_name
+        );
+      }
+      
       return { error: error ? new Error(error.message) : null };
     } catch (error) {
       return { error: error as Error };

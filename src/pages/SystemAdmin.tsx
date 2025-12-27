@@ -6,6 +6,8 @@ import { CommunityResetTab } from '@/components/system-admin/CommunityResetTab';
 import { PlansTab } from '@/components/system-admin/PlansTab';
 import { BillingDashboardTab } from '@/components/system-admin/BillingDashboardTab';
 import { SubscriptionsTab } from '@/components/system-admin/SubscriptionsTab';
+import { OnlineUsersCard } from '@/components/system-admin/OnlineUsersCard';
+import { LoginHistoryTab } from '@/components/system-admin/LoginHistoryTab';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Users, Building2, Shield, Ban, Check, Plus, UserPlus, Settings2, 
-  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard
+  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard, History
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -172,7 +174,8 @@ export default function SystemAdmin() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
+        <OnlineUsersCard />
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Usuários Ativos</CardTitle>
@@ -240,6 +243,10 @@ export default function SystemAdmin() {
           <TabsTrigger value="billing" className="gap-2">
             <DollarSign className="h-4 w-4" />
             Billing & Growth
+          </TabsTrigger>
+          <TabsTrigger value="logins" className="gap-2">
+            <History className="h-4 w-4" />
+            Logins
           </TabsTrigger>
           <TabsTrigger value="cleanup" className="gap-2">
             <Trash2 className="h-4 w-4" />
@@ -509,6 +516,11 @@ export default function SystemAdmin() {
         {/* Billing Tab */}
         <TabsContent value="billing">
           <BillingDashboardTab />
+        </TabsContent>
+
+        {/* Login History Tab */}
+        <TabsContent value="logins">
+          <LoginHistoryTab />
         </TabsContent>
 
         {/* Cleanup Tab */}
