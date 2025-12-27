@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
+import { PresenceProvider } from "@/contexts/PresenceContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppSidebar } from "@/components/AppSidebar";
 import Index from "./pages/Index";
@@ -61,10 +62,11 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <PermissionsProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+        <PresenceProvider>
+          <PermissionsProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
             <Routes>
             {/* Public routes - no layout */}
             <Route path="/landing" element={<Index />} />
@@ -224,9 +226,10 @@ const App = () => (
             
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-        </PermissionsProvider>
+            </Routes>
+          </BrowserRouter>
+          </PermissionsProvider>
+        </PresenceProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

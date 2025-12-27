@@ -162,12 +162,26 @@ export default function Auth() {
           // Check if now blocked after this attempt
           await checkIfBlocked(email);
           
-          // Generic error message - don't reveal if email exists or password is wrong
+        // Generic error message - don't reveal if email exists or password is wrong
           throw new Error("Credenciais inválidas. Verifique seus dados e tente novamente.");
         }
 
         // Record successful login
         await recordLoginAttempt(email, true);
+
+        // Record login history for online tracking
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData.session?.user) {
+            await supabase.from('login_history').insert({
+              user_id: sessionData.session.user.id,
+              user_email: email,
+              user_name: sessionData.session.user.user_metadata?.full_name || null,
+            });
+          }
+        } catch (historyError) {
+          console.error('Error recording login history:', historyError);
+        }
 
         toast({
           title: "Login realizado!",

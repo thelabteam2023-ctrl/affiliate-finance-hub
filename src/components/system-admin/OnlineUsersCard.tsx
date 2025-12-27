@@ -1,10 +1,10 @@
-import { useOnlineUsers } from '@/hooks/useOnlineUsers';
+import { usePresence } from '@/contexts/PresenceContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Wifi, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function OnlineUsersCard() {
-  const { onlineCount, isConnected } = useOnlineUsers();
+  const { onlineCount, isConnected } = usePresence();
 
   return (
     <Card>
