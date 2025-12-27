@@ -79,21 +79,18 @@ export default function GestaoInvestidores() {
 
   const fetchInvestidores = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
+      // RLS policies handle workspace isolation - no need to filter by user_id
       const { data, error } = await supabase
         .from("investidores")
         .select("*")
-        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       setInvestidores(data || []);
       
       await Promise.all([
-        fetchROIData(user.id),
-        fetchDealsData(user.id),
+        fetchROIData(),
+        fetchDealsData(),
       ]);
     } catch (error: any) {
       toast.error("Erro ao carregar investidores", {
@@ -104,12 +101,12 @@ export default function GestaoInvestidores() {
     }
   };
 
-  const fetchROIData = async (userId: string) => {
+  const fetchROIData = async () => {
     try {
+      // Views already filter by workspace
       const { data, error } = await supabase
         .from("v_roi_investidores")
-        .select("*")
-        .eq("user_id", userId);
+        .select("*");
 
       if (error) throw error;
       
@@ -155,12 +152,12 @@ export default function GestaoInvestidores() {
     }
   };
 
-  const fetchDealsData = async (userId: string) => {
+  const fetchDealsData = async () => {
     try {
+      // RLS policies handle workspace isolation
       const { data, error } = await supabase
         .from("investidor_deals")
         .select("*")
-        .eq("user_id", userId)
         .eq("ativo", true);
 
       if (error) throw error;

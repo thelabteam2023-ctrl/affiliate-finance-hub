@@ -28,13 +28,10 @@ export function InvestidorSelect({ value, onValueChange, disabled }: InvestidorS
 
   const fetchInvestidores = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
+      // RLS policies handle workspace isolation
       const { data, error } = await supabase
         .from("investidores")
         .select("*")
-        .eq("user_id", user.id)
         .eq("status", "ativo")
         .order("nome");
 
