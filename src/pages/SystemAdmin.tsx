@@ -225,321 +225,352 @@ export default function SystemAdmin() {
         </Card>
       </div>
 
-      <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="users" className="gap-2">
+      <Tabs defaultValue="usuarios" className="space-y-4">
+        <TabsList className="h-auto">
+          <TabsTrigger value="usuarios" className="gap-2">
             <Users className="h-4 w-4" />
             Usuários
           </TabsTrigger>
-          <TabsTrigger value="workspaces" className="gap-2">
-            <Building2 className="h-4 w-4" />
-            Workspaces
-          </TabsTrigger>
-          <TabsTrigger value="subscriptions" className="gap-2">
-            <CreditCard className="h-4 w-4" />
-            Assinaturas
-          </TabsTrigger>
-          <TabsTrigger value="plans" className="gap-2">
-            <Crown className="h-4 w-4" />
-            Planos & Preços
-          </TabsTrigger>
-          <TabsTrigger value="billing" className="gap-2">
+          <TabsTrigger value="financeiro" className="gap-2">
             <DollarSign className="h-4 w-4" />
-            Billing & Growth
+            Financeiro
           </TabsTrigger>
-          <TabsTrigger value="logins" className="gap-2">
-            <History className="h-4 w-4" />
-            Logins
-          </TabsTrigger>
-          <TabsTrigger value="cleanup" className="gap-2">
-            <Trash2 className="h-4 w-4" />
-            Limpeza de Testes
-          </TabsTrigger>
-          <TabsTrigger value="community-reset" className="gap-2">
-            <MessagesSquare className="h-4 w-4" />
-            Reset Comunidade
+          <TabsTrigger value="sistema" className="gap-2">
+            <Settings2 className="h-4 w-4" />
+            Sistema
           </TabsTrigger>
         </TabsList>
 
-        {/* Users Tab */}
-        <TabsContent value="users" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Gestão de Usuários</CardTitle>
-                  <CardDescription>Gerencie todos os usuários cadastrados na plataforma</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => fetchUsers()} disabled={loading}>
-                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                  Atualizar
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Toggle Ativos / Arquivados */}
-              <div className="flex items-center gap-4 mb-4">
-                <div className="flex rounded-lg border p-1 bg-muted/30">
-                  <Button
-                    variant={!showArchivedUsers ? "secondary" : "ghost"}
-                    size="sm"
-                    onClick={() => setShowArchivedUsers(false)}
-                    className="gap-1"
-                  >
-                    <Users className="h-3.5 w-3.5" />
-                    Ativos ({activeUsersCount})
-                  </Button>
-                  <Button
-                    variant={showArchivedUsers ? "secondary" : "ghost"}
-                    size="sm"
-                    onClick={() => setShowArchivedUsers(true)}
-                    className="gap-1"
-                  >
-                    <Archive className="h-3.5 w-3.5" />
-                    Arquivados ({archivedUsersCount})
-                  </Button>
-                </div>
-                <div className="flex-1">
-                  <SearchInput
-                    placeholder="Buscar por nome ou email..."
-                    value={searchUsers}
-                    onChange={(e) => setSearchUsers(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Usuário</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Workspace</TableHead>
-                      <TableHead>Papel</TableHead>
-                      <TableHead>Cadastro</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredUsers.map((u) => (
-                      <TableRow key={u.id}>
-                        <TableCell>
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {u.public_id || '-'}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-start gap-2">
-                            <OnlineStatusIndicator 
-                              userId={u.id} 
-                              isOnline={isUserOnline(u.id)} 
-                            />
-                            <div>
-                              <div className="font-medium">{u.full_name || 'Sem nome'}</div>
-                              <div className="text-sm text-muted-foreground">{u.email}</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{getUserStatus(u)}</TableCell>
-                        <TableCell>
-                          {u.workspace_name || <span className="text-muted-foreground">-</span>}
-                        </TableCell>
-                        <TableCell>
-                          {u.workspace_role ? (
-                            <Badge variant="outline">{getRoleLabel(u.workspace_role)}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {format(new Date(u.created_at), 'dd/MM/yyyy', { locale: ptBR })}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            {/* Botões desabilitados para usuários removidos */}
-                            {!u.workspace_id && !u.is_deleted && (
-                              <>
+        {/* =============== ABA USUÁRIOS =============== */}
+        <TabsContent value="usuarios" className="space-y-4">
+          <Tabs defaultValue="gestao" className="space-y-4">
+            <TabsList className="bg-muted/50">
+              <TabsTrigger value="gestao" className="gap-1.5 text-xs">
+                <Users className="h-3.5 w-3.5" />
+                Gestão
+              </TabsTrigger>
+              <TabsTrigger value="workspaces" className="gap-1.5 text-xs">
+                <Building2 className="h-3.5 w-3.5" />
+                Workspaces
+              </TabsTrigger>
+              <TabsTrigger value="logins" className="gap-1.5 text-xs">
+                <History className="h-3.5 w-3.5" />
+                Logins
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Sub-aba: Gestão de Usuários */}
+            <TabsContent value="gestao" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Gestão de Usuários</CardTitle>
+                      <CardDescription>Gerencie todos os usuários cadastrados na plataforma</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => fetchUsers()} disabled={loading}>
+                      <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                      Atualizar
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {/* Toggle Ativos / Arquivados */}
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="flex rounded-lg border p-1 bg-muted/30">
+                      <Button
+                        variant={!showArchivedUsers ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => setShowArchivedUsers(false)}
+                        className="gap-1"
+                      >
+                        <Users className="h-3.5 w-3.5" />
+                        Ativos ({activeUsersCount})
+                      </Button>
+                      <Button
+                        variant={showArchivedUsers ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => setShowArchivedUsers(true)}
+                        className="gap-1"
+                      >
+                        <Archive className="h-3.5 w-3.5" />
+                        Arquivados ({archivedUsersCount})
+                      </Button>
+                    </div>
+                    <div className="flex-1">
+                      <SearchInput
+                        placeholder="Buscar por nome ou email..."
+                        value={searchUsers}
+                        onChange={(e) => setSearchUsers(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>ID</TableHead>
+                          <TableHead>Usuário</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Workspace</TableHead>
+                          <TableHead>Papel</TableHead>
+                          <TableHead>Cadastro</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredUsers.map((u) => (
+                          <TableRow key={u.id}>
+                            <TableCell>
+                              <span className="font-mono text-xs text-muted-foreground">
+                                {u.public_id || '-'}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-start gap-2">
+                                <OnlineStatusIndicator 
+                                  userId={u.id} 
+                                  isOnline={isUserOnline(u.id)} 
+                                />
+                                <div>
+                                  <div className="font-medium">{u.full_name || 'Sem nome'}</div>
+                                  <div className="text-sm text-muted-foreground">{u.email}</div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>{getUserStatus(u)}</TableCell>
+                            <TableCell>
+                              {u.workspace_name || <span className="text-muted-foreground">-</span>}
+                            </TableCell>
+                            <TableCell>
+                              {u.workspace_role ? (
+                                <Badge variant="outline">{getRoleLabel(u.workspace_role)}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {format(new Date(u.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                {/* Botões desabilitados para usuários removidos */}
+                                {!u.workspace_id && !u.is_deleted && (
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setCreateWorkspaceDialog({ open: true, userId: u.id, userName: u.full_name || u.email })}
+                                    >
+                                      <Plus className="h-4 w-4 mr-1" />
+                                      Novo WS
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setAddToWorkspaceDialog({ open: true, userId: u.id, userName: u.full_name || u.email })}
+                                    >
+                                      <UserPlus className="h-4 w-4 mr-1" />
+                                      Vincular
+                                    </Button>
+                                  </>
+                                )}
+                                {!u.is_system_owner && !u.is_deleted && (
+                                  <Button
+                                    variant={u.is_blocked ? 'default' : 'destructive'}
+                                    size="sm"
+                                    onClick={() => setBlockUserDialog({ 
+                                      open: true, 
+                                      userId: u.id, 
+                                      userName: u.full_name || u.email,
+                                      currentlyBlocked: u.is_blocked 
+                                    })}
+                                  >
+                                    {u.is_blocked ? <Check className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {filteredUsers.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                              Nenhum usuário encontrado
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Sub-aba: Workspaces */}
+            <TabsContent value="workspaces" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Gestão de Workspaces</CardTitle>
+                      <CardDescription>Gerencie todos os workspaces e planos</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => fetchWorkspaces()} disabled={loading}>
+                      <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                      Atualizar
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="mb-4">
+                    <SearchInput
+                      placeholder="Buscar por nome ou owner..."
+                      value={searchWorkspaces}
+                      onChange={(e) => setSearchWorkspaces(e.target.value)}
+                    />
+                  </div>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Workspace</TableHead>
+                          <TableHead>Owner</TableHead>
+                          <TableHead>Plano</TableHead>
+                          <TableHead>Membros</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Criado</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredWorkspaces.map((w) => (
+                          <TableRow key={w.id}>
+                            <TableCell>
+                              <div className="font-medium">{w.name}</div>
+                              <div className="text-sm text-muted-foreground">{w.slug}</div>
+                            </TableCell>
+                            <TableCell>
+                              <div>{w.owner_name || 'Sem owner'}</div>
+                              <div className="text-sm text-muted-foreground">{w.owner_email}</div>
+                            </TableCell>
+                            <TableCell>{getPlanBadge(w.plan)}</TableCell>
+                            <TableCell>{w.member_count}</TableCell>
+                            <TableCell>
+                              {w.is_active ? (
+                                <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-400">Ativo</Badge>
+                              ) : (
+                                <Badge variant="destructive">Inativo</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {format(new Date(w.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setCreateWorkspaceDialog({ open: true, userId: u.id, userName: u.full_name || u.email })}
+                                  onClick={() => handleViewMembers(w.id, w.name)}
                                 >
-                                  <Plus className="h-4 w-4 mr-1" />
-                                  Novo WS
+                                  <Eye className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setAddToWorkspaceDialog({ open: true, userId: u.id, userName: u.full_name || u.email })}
+                                  onClick={() => {
+                                    setSelectedPlan(w.plan);
+                                    setChangePlanDialog({ open: true, workspaceId: w.id, workspaceName: w.name, currentPlan: w.plan });
+                                  }}
                                 >
-                                  <UserPlus className="h-4 w-4 mr-1" />
-                                  Vincular
+                                  <Settings2 className="h-4 w-4" />
                                 </Button>
-                              </>
-                            )}
-                            {!u.is_system_owner && !u.is_deleted && (
-                              <Button
-                                variant={u.is_blocked ? 'default' : 'destructive'}
-                                size="sm"
-                                onClick={() => setBlockUserDialog({ 
-                                  open: true, 
-                                  userId: u.id, 
-                                  userName: u.full_name || u.email,
-                                  currentlyBlocked: u.is_blocked 
-                                })}
-                              >
-                                {u.is_blocked ? <Check className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {filteredUsers.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                          Nenhum usuário encontrado
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                                <Button
+                                  variant={w.is_active ? 'destructive' : 'default'}
+                                  size="sm"
+                                  onClick={() => setWorkspaceActive(w.id, !w.is_active)}
+                                >
+                                  {w.is_active ? <Ban className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {filteredWorkspaces.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                              Nenhum workspace encontrado
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Sub-aba: Logins */}
+            <TabsContent value="logins">
+              <LoginHistoryTab />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
-        {/* Workspaces Tab */}
-        <TabsContent value="workspaces" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Gestão de Workspaces</CardTitle>
-                  <CardDescription>Gerencie todos os workspaces e planos</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => fetchWorkspaces()} disabled={loading}>
-                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                  Atualizar
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4">
-                <SearchInput
-                  placeholder="Buscar por nome ou owner..."
-                  value={searchWorkspaces}
-                  onChange={(e) => setSearchWorkspaces(e.target.value)}
-                />
-              </div>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Workspace</TableHead>
-                      <TableHead>Owner</TableHead>
-                      <TableHead>Plano</TableHead>
-                      <TableHead>Membros</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Criado</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredWorkspaces.map((w) => (
-                      <TableRow key={w.id}>
-                        <TableCell>
-                          <div className="font-medium">{w.name}</div>
-                          <div className="text-sm text-muted-foreground">{w.slug}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div>{w.owner_name || 'Sem owner'}</div>
-                          <div className="text-sm text-muted-foreground">{w.owner_email}</div>
-                        </TableCell>
-                        <TableCell>{getPlanBadge(w.plan)}</TableCell>
-                        <TableCell>{w.member_count}</TableCell>
-                        <TableCell>
-                          {w.is_active ? (
-                            <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-400">Ativo</Badge>
-                          ) : (
-                            <Badge variant="destructive">Inativo</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {format(new Date(w.created_at), 'dd/MM/yyyy', { locale: ptBR })}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewMembers(w.id, w.name)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedPlan(w.plan);
-                                setChangePlanDialog({ open: true, workspaceId: w.id, workspaceName: w.name, currentPlan: w.plan });
-                              }}
-                            >
-                              <Settings2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant={w.is_active ? 'destructive' : 'default'}
-                              size="sm"
-                              onClick={() => setWorkspaceActive(w.id, !w.is_active)}
-                            >
-                              {w.is_active ? <Ban className="h-4 w-4" /> : <Check className="h-4 w-4" />}
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {filteredWorkspaces.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                          Nenhum workspace encontrado
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+        {/* =============== ABA FINANCEIRO =============== */}
+        <TabsContent value="financeiro" className="space-y-4">
+          <Tabs defaultValue="assinaturas" className="space-y-4">
+            <TabsList className="bg-muted/50">
+              <TabsTrigger value="assinaturas" className="gap-1.5 text-xs">
+                <CreditCard className="h-3.5 w-3.5" />
+                Assinaturas
+              </TabsTrigger>
+              <TabsTrigger value="planos" className="gap-1.5 text-xs">
+                <Crown className="h-3.5 w-3.5" />
+                Planos & Preços
+              </TabsTrigger>
+              <TabsTrigger value="billing" className="gap-1.5 text-xs">
+                <DollarSign className="h-3.5 w-3.5" />
+                Billing & Growth
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="assinaturas">
+              <SubscriptionsTab />
+            </TabsContent>
+
+            <TabsContent value="planos">
+              <PlansTab />
+            </TabsContent>
+
+            <TabsContent value="billing">
+              <BillingDashboardTab />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
-        {/* Subscriptions Tab */}
-        <TabsContent value="subscriptions">
-          <SubscriptionsTab />
-        </TabsContent>
+        {/* =============== ABA SISTEMA =============== */}
+        <TabsContent value="sistema" className="space-y-4">
+          <Tabs defaultValue="limpeza" className="space-y-4">
+            <TabsList className="bg-muted/50">
+              <TabsTrigger value="limpeza" className="gap-1.5 text-xs">
+                <Trash2 className="h-3.5 w-3.5" />
+                Limpeza de Testes
+              </TabsTrigger>
+              <TabsTrigger value="comunidade" className="gap-1.5 text-xs">
+                <MessagesSquare className="h-3.5 w-3.5" />
+                Reset Comunidade
+              </TabsTrigger>
+            </TabsList>
 
-        {/* Plans Tab */}
-        <TabsContent value="plans">
-          <PlansTab />
-        </TabsContent>
+            <TabsContent value="limpeza">
+              <CleanupTab />
+            </TabsContent>
 
-        {/* Billing Tab */}
-        <TabsContent value="billing">
-          <BillingDashboardTab />
-        </TabsContent>
-
-        {/* Login History Tab */}
-        <TabsContent value="logins">
-          <LoginHistoryTab />
-        </TabsContent>
-
-        {/* Cleanup Tab */}
-        <TabsContent value="cleanup">
-          <CleanupTab />
-        </TabsContent>
-
-        {/* Community Reset Tab */}
-        <TabsContent value="community-reset">
-          <CommunityResetTab />
+            <TabsContent value="comunidade">
+              <CommunityResetTab />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
 
