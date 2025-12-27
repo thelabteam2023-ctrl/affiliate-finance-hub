@@ -208,6 +208,7 @@ export function VincularOperadorDialog({
         data_entrada: formData.data_entrada,
         status: "ATIVO",
         user_id: session.session.user.id,
+        workspace_id: workspaceId,
         resumo_acordo: formData.resumo_acordo || null,
         modelo_pagamento: formData.modelo_pagamento,
         valor_fixo: formData.valor_fixo ? parseFloat(formData.valor_fixo) : 0,

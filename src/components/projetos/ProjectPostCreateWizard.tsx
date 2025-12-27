@@ -479,6 +479,7 @@ export function ProjectPostCreateWizard({
         data_entrada: opDataEntrada,
         status: "ATIVO",
         user_id: session.session.user.id,
+        workspace_id: workspaceId,
         resumo_acordo: opResumoAcordo || null,
         modelo_pagamento: opModeloPagamento,
         valor_fixo: opValorFixo ? parseFloat(opValorFixo) : 0,
