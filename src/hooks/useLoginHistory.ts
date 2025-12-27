@@ -22,6 +22,13 @@ interface LoginStats {
   unique_users_week: number;
 }
 
+interface InactiveUser {
+  user_id: string;
+  user_email: string | null;
+  user_name: string | null;
+  last_login: string;
+}
+
 interface UseLoginHistoryParams {
   workspaceId?: string | null;
   userId?: string | null;
@@ -34,6 +41,7 @@ export function useLoginHistory(params: UseLoginHistoryParams = {}) {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<LoginRecord[]>([]);
   const [stats, setStats] = useState<LoginStats | null>(null);
+  const [inactiveUsers, setInactiveUsers] = useState<InactiveUser[]>([]);
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
@@ -75,6 +83,50 @@ export function useLoginHistory(params: UseLoginHistoryParams = {}) {
     }
   }, []);
 
+  const fetchInactiveUsers = useCallback(async (daysInactive: number = 5) => {
+    try {
+      // Query to get users who haven't logged in for X days
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysInactive);
+
+      const { data, error } = await supabase
+        .from('login_history')
+        .select('user_id, user_email, user_name, login_at')
+        .order('login_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Group by user and get the most recent login for each
+      const userLastLogin = new Map<string, InactiveUser>();
+      
+      (data || []).forEach((record) => {
+        if (!userLastLogin.has(record.user_id)) {
+          userLastLogin.set(record.user_id, {
+            user_id: record.user_id,
+            user_email: record.user_email,
+            user_name: record.user_name,
+            last_login: record.login_at,
+          });
+        }
+      });
+
+      // Filter users whose last login was before the cutoff date
+      const inactive = Array.from(userLastLogin.values()).filter(user => {
+        const lastLoginDate = new Date(user.last_login);
+        return lastLoginDate < cutoffDate;
+      });
+
+      // Sort by last login (oldest first)
+      inactive.sort((a, b) => 
+        new Date(a.last_login).getTime() - new Date(b.last_login).getTime()
+      );
+
+      setInactiveUsers(inactive);
+    } catch (error: any) {
+      console.error('Error fetching inactive users:', error);
+    }
+  }, []);
+
   const recordLogin = useCallback(async (userId: string, email: string, name: string, workspaceId?: string, workspaceName?: string) => {
     try {
       await supabase.from('login_history').insert({
@@ -92,14 +144,17 @@ export function useLoginHistory(params: UseLoginHistoryParams = {}) {
   useEffect(() => {
     fetchHistory();
     fetchStats();
-  }, [fetchHistory, fetchStats]);
+    fetchInactiveUsers(5);
+  }, [fetchHistory, fetchStats, fetchInactiveUsers]);
 
   return {
     loading,
     history,
     stats,
+    inactiveUsers,
     fetchHistory,
     fetchStats,
+    fetchInactiveUsers,
     recordLogin,
   };
 }
