@@ -8,7 +8,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { z } from "zod";
 
+// Schema de validação com Zod
+const loginSchema = z.object({
+  email: z.string()
+    .trim()
+    .min(1, "Email é obrigatório")
+    .email("Email inválido")
+    .max(255, "Email muito longo"),
+  password: z.string()
+    .min(6, "Senha deve ter no mínimo 6 caracteres")
+    .max(128, "Senha muito longa"),
+});
+
+const signupSchema = loginSchema.extend({
+  fullName: z.string()
+    .trim()
+    .min(2, "Nome deve ter no mínimo 2 caracteres")
+    .max(100, "Nome muito longo"),
+});
 export default function Auth() {
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
@@ -142,7 +161,14 @@ export default function Auth() {
     setLoading(true);
 
     try {
+      // Validação com Zod antes de processar
       if (isLogin) {
+        const validation = loginSchema.safeParse({ email, password });
+        if (!validation.success) {
+          const firstError = validation.error.errors[0];
+          throw new Error(firstError.message);
+        }
+
         // Check if blocked before attempting login
         const blocked = await checkIfBlocked(email);
         if (blocked) {
@@ -151,8 +177,8 @@ export default function Auth() {
         }
 
         const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+          email: validation.data.email,
+          password: validation.data.password,
         });
 
         if (error) {
@@ -162,26 +188,15 @@ export default function Auth() {
           // Check if now blocked after this attempt
           await checkIfBlocked(email);
           
-        // Generic error message - don't reveal if email exists or password is wrong
+          // Generic error message - don't reveal if email exists or password is wrong
           throw new Error("Credenciais inválidas. Verifique seus dados e tente novamente.");
         }
 
         // Record successful login
         await recordLoginAttempt(email, true);
-
-        // Record login history for online tracking
-        try {
-          const { data: sessionData } = await supabase.auth.getSession();
-          if (sessionData.session?.user) {
-            await supabase.from('login_history').insert({
-              user_id: sessionData.session.user.id,
-              user_email: email,
-              user_name: sessionData.session.user.user_metadata?.full_name || null,
-            });
-          }
-        } catch (historyError) {
-          console.error('Error recording login history:', historyError);
-        }
+        
+        // NOTA: O histórico de login é registrado automaticamente pelo AuthContext.signIn()
+        // via a RPC secure_login, evitando duplicação
 
         toast({
           title: "Login realizado!",
@@ -190,15 +205,21 @@ export default function Auth() {
         
         // Redirecionar para o destino correto
         const destination = redirectTo || "/parceiros";
-        console.log("[Auth] Login bem-sucedido, redirecionando para:", destination);
         navigate(destination);
       } else {
+        // Validação de signup
+        const validation = signupSchema.safeParse({ email, password, fullName });
+        if (!validation.success) {
+          const firstError = validation.error.errors[0];
+          throw new Error(firstError.message);
+        }
+
         const { error } = await supabase.auth.signUp({
-          email,
-          password,
+          email: validation.data.email,
+          password: validation.data.password,
           options: {
             data: {
-              full_name: fullName,
+              full_name: validation.data.fullName,
             },
             emailRedirectTo: `${window.location.origin}/parceiros`,
           },
