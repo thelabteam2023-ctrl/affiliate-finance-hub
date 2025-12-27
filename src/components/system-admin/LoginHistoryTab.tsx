@@ -24,11 +24,13 @@ export function LoginHistoryTab() {
   const { isUserOnline, getUserOnlineInfo } = usePresence();
 
   // Sort history based on selected order
+  // Only active sessions can be considered "online"
   const sortedHistory = useMemo(() => {
     if (sortOrder === 'online_first') {
       return [...history].sort((a, b) => {
-        const aOnline = isUserOnline(a.user_id);
-        const bOnline = isUserOnline(b.user_id);
+        // Only consider online if is_active AND presence shows online
+        const aOnline = a.is_active && isUserOnline(a.user_id);
+        const bOnline = b.is_active && isUserOnline(b.user_id);
         if (aOnline && !bOnline) return -1;
         if (!aOnline && bOnline) return 1;
         // If both have same online status, sort by most recent login
@@ -40,15 +42,35 @@ export function LoginHistoryTab() {
     );
   }, [history, sortOrder, isUserOnline]);
 
-  // Format session time based on online status
-  const formatSessionTime = (loginAt: string, userId: string) => {
-    const isOnline = isUserOnline(userId);
-    const loginDate = new Date(loginAt);
+  // Format session time based on is_active status from database
+  // Only the last active session for a user can show as online
+  const formatSessionTime = (record: { login_at: string; logout_at: string | null; is_active: boolean; user_id: string }) => {
+    const { login_at, logout_at, is_active, user_id } = record;
+    const loginDate = new Date(login_at);
     const now = new Date();
+
+    // If session is not active (is_active = false), it's a closed session
+    if (!is_active) {
+      if (logout_at) {
+        const logoutDate = new Date(logout_at);
+        const sessionDuration = differenceInMinutes(logoutDate, loginDate);
+        if (sessionDuration < 60) {
+          return `sessão de ${sessionDuration} min`;
+        }
+        const hours = Math.floor(sessionDuration / 60);
+        const mins = sessionDuration % 60;
+        return `sessão de ${hours}h ${mins}min`;
+      }
+      // Closed without logout_at (old records)
+      return formatDistanceToNow(loginDate, { locale: ptBR, addSuffix: true });
+    }
+
+    // Session is active - check if user is actually online via presence
+    const isOnlineNow = isUserOnline(user_id);
     const minutesDiff = differenceInMinutes(now, loginDate);
     const hoursDiff = differenceInHours(now, loginDate);
 
-    if (isOnline) {
+    if (isOnlineNow) {
       if (minutesDiff < 1) {
         return 'online agora';
       } else if (minutesDiff < 60) {
@@ -59,7 +81,9 @@ export function LoginHistoryTab() {
         return `online há ${Math.floor(hoursDiff / 24)}d ${hoursDiff % 24}h`;
       }
     }
-    return formatDistanceToNow(loginDate, { locale: ptBR, addSuffix: true });
+
+    // Active session but not showing as online via presence (maybe browser closed)
+    return `última atividade ${formatDistanceToNow(loginDate, { locale: ptBR, addSuffix: true })}`;
   };
 
   const handleRefresh = () => {
@@ -187,13 +211,14 @@ export function LoginHistoryTab() {
                 </TableHeader>
                 <TableBody>
                   {sortedHistory.map((record) => {
-                    const isOnline = isUserOnline(record.user_id);
+                    // Only show as online if: is_active=true AND user is online via presence
+                    const canShowOnline = record.is_active && isUserOnline(record.user_id);
                     return (
-                      <TableRow key={record.id} className={cn(isOnline && 'bg-emerald-500/5')}>
+                      <TableRow key={record.id} className={cn(canShowOnline && 'bg-emerald-500/5')}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <div className="relative">
-                              {isOnline && (
+                              {canShowOnline && (
                                 <span className="absolute -left-4 top-1/2 -translate-y-1/2 flex h-2.5 w-2.5">
                                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
@@ -219,9 +244,9 @@ export function LoginHistoryTab() {
                         <TableCell>
                           <span className={cn(
                             "text-sm",
-                            isOnline ? "text-emerald-500 font-medium" : "text-muted-foreground"
+                            canShowOnline ? "text-emerald-500 font-medium" : "text-muted-foreground"
                           )}>
-                            {formatSessionTime(record.login_at, record.user_id)}
+                            {formatSessionTime(record)}
                           </span>
                         </TableCell>
                       </TableRow>

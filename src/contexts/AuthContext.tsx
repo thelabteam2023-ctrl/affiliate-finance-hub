@@ -216,6 +216,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // End the user's session in login_history before signing out
+    if (user) {
+      try {
+        await supabase.rpc('end_user_session', { p_user_id: user.id });
+      } catch (error) {
+        console.error('Error ending user session:', error);
+      }
+    }
+
     // CRITICAL: Limpar cache do React Query ao fazer logout
     queryClient.clear();
     console.log('[Auth] Signed out, cleared React Query cache');

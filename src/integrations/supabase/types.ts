@@ -2245,7 +2245,9 @@ export type Database = {
         Row: {
           id: string
           ip_address: string | null
+          is_active: boolean | null
           login_at: string
+          logout_at: string | null
           session_id: string | null
           user_agent: string | null
           user_email: string | null
@@ -2257,7 +2259,9 @@ export type Database = {
         Insert: {
           id?: string
           ip_address?: string | null
+          is_active?: boolean | null
           login_at?: string
+          logout_at?: string | null
           session_id?: string | null
           user_agent?: string | null
           user_email?: string | null
@@ -2269,7 +2273,9 @@ export type Database = {
         Update: {
           id?: string
           ip_address?: string | null
+          is_active?: boolean | null
           login_at?: string
+          logout_at?: string | null
           session_id?: string | null
           user_agent?: string | null
           user_email?: string | null
@@ -6880,6 +6886,7 @@ export type Database = {
         }
         Returns: Json
       }
+      end_user_session: { Args: { p_user_id: string }; Returns: undefined }
       expire_old_invites: { Args: never; Returns: number }
       generate_public_id: { Args: never; Returns: string }
       get_bookmaker_saldos: {
