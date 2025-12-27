@@ -1,6 +1,7 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { useCommunityAccess } from './useCommunityAccess';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Definição de módulos e suas permissões mínimas
@@ -133,11 +134,48 @@ export interface ModuleAccessResult {
 }
 
 export function useModuleAccess(): ModuleAccessResult {
-  const { role, isSystemOwner, workspace } = useAuth();
+  const { role, isSystemOwner, workspace, user } = useAuth();
   const { hasFullAccess: hasCommunityAccess, loading: communityLoading } = useCommunityAccess();
+  const [userOverrides, setUserOverrides] = useState<string[]>([]);
+  const [overridesLoading, setOverridesLoading] = useState(true);
+
+  // Fetch user permission overrides from database
+  useEffect(() => {
+    const fetchOverrides = async () => {
+      if (!user?.id || !workspace?.id) {
+        setUserOverrides([]);
+        setOverridesLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user_permission_overrides')
+          .select('permission_code')
+          .eq('user_id', user.id)
+          .eq('workspace_id', workspace.id)
+          .eq('granted', true);
+
+        if (error) {
+          console.error('[useModuleAccess] Error fetching overrides:', error);
+          setUserOverrides([]);
+        } else {
+          setUserOverrides(data?.map(o => o.permission_code) || []);
+        }
+      } catch (err) {
+        console.error('[useModuleAccess] Exception fetching overrides:', err);
+        setUserOverrides([]);
+      } finally {
+        setOverridesLoading(false);
+      }
+    };
+
+    fetchOverrides();
+  }, [user?.id, workspace?.id]);
 
   /**
    * Check if the current role has a specific permission
+   * Now also checks user_permission_overrides from database
    */
   const hasPermission = useCallback((permissionCode: string): boolean => {
     // System Owner has all permissions
@@ -146,12 +184,15 @@ export function useModuleAccess(): ModuleAccessResult {
     // Owner and Admin have all permissions
     if (role === 'owner' || role === 'admin') return true;
     
+    // Check overrides first (additional permissions granted to user)
+    if (userOverrides.includes(permissionCode)) return true;
+    
     // Get base permissions for role
     const basePerms = ROLE_BASE_PERMISSIONS[role || ''] || [];
     
     // Check if permission is in base permissions
     return basePerms.includes(permissionCode);
-  }, [role, isSystemOwner]);
+  }, [role, isSystemOwner, userOverrides]);
 
   const canAccess = useMemo(() => {
     return (moduleKey: string): boolean => {
@@ -220,7 +261,7 @@ export function useModuleAccess(): ModuleAccessResult {
   return {
     canAccess,
     hasPermission,
-    loading: communityLoading,
+    loading: communityLoading || overridesLoading,
   };
 }
 

@@ -3,9 +3,10 @@ import { useCallback, useMemo, useEffect } from "react";
 import { ShieldX, Home, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { SAFE_ROUTE } from "@/lib/routes";
+import { ROUTE_PERMISSIONS } from "@/lib/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { useModuleAccess } from "@/hooks/useModuleAccess";
 
 interface AccessDeniedProps {
   message?: string;
@@ -23,6 +24,57 @@ export function AccessDenied({ message, denyCode }: AccessDeniedProps) {
   const state = location.state as LocationState | null;
   const { user, role, isSystemOwner } = useAuth();
   const { workspaceId, workspaceName } = useWorkspace();
+  const { canAccess, hasPermission } = useModuleAccess();
+  
+  // Find the first accessible route for the user
+  const firstAccessibleRoute = useMemo(() => {
+    // Priority order of routes to check
+    const routePriority = [
+      'central',      // / - Central de Operações (todos)
+      'projetos',     // /projetos
+      'caixa',        // /caixa  
+      'financeiro',   // /financeiro
+      'parceiros',    // /parceiros
+      'operadores',   // /operadores
+      'bookmakers',   // /bookmakers
+      'captacao',     // /programa-indicacao
+      'comunidade',   // /comunidade
+      'workspace',    // /workspace (admin/owner)
+    ];
+    
+    for (const routeKey of routePriority) {
+      const config = ROUTE_PERMISSIONS[routeKey];
+      if (!config) continue;
+      
+      // Check if user can access this route
+      // System owner has access to everything
+      if (isSystemOwner) return config.path;
+      
+      // Check role restriction
+      if (config.roles && config.roles.length > 0) {
+        if (role && config.roles.includes(role)) {
+          return config.path;
+        }
+        continue;
+      }
+      
+      // Check permission
+      if (config.permission) {
+        if (hasPermission(config.permission)) {
+          return config.path;
+        }
+        continue;
+      }
+      
+      // No specific requirement = can access (like central)
+      if (!config.requireSystemOwner) {
+        return config.path;
+      }
+    }
+    
+    // Fallback to central
+    return '/';
+  }, [role, isSystemOwner, hasPermission]);
   
   // Log access denial for debugging
   useEffect(() => {
@@ -66,14 +118,14 @@ export function AccessDenied({ message, denyCode }: AccessDeniedProps) {
       // Tentar voltar pelo histórico
       navigate(-1);
     } else {
-      // Fallback: ir para rota segura
-      navigate(SAFE_ROUTE, { replace: true });
+      // Fallback: ir para primeira rota acessível
+      navigate(firstAccessibleRoute, { replace: true });
     }
-  }, [canGoBack, state, navigate]);
+  }, [canGoBack, state, navigate, firstAccessibleRoute]);
   
   const handleGoHome = useCallback(() => {
-    navigate(SAFE_ROUTE, { replace: true });
-  }, [navigate]);
+    navigate(firstAccessibleRoute, { replace: true });
+  }, [navigate, firstAccessibleRoute]);
 
   // Determine display message based on deny code
   const displayMessage = useMemo(() => {
