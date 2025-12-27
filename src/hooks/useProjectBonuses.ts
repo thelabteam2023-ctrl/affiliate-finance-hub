@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useCurrencySnapshot } from "./useCurrencySnapshot";
-import type { SupportedCurrency } from "@/types/currency";
 
 export type BonusStatus = "pending" | "credited" | "failed" | "expired" | "reversed" | "finalized";
 
@@ -98,7 +96,6 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
   const [bonuses, setBonuses] = useState<ProjectBonus[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { getSnapshotFields, isForeignCurrency } = useCurrencySnapshot();
 
   const fetchBonuses = useCallback(async () => {
     try {
