@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/select";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useActionAccess } from "@/hooks/useModuleAccess";
 
 interface Projeto {
   id: string;
@@ -89,6 +90,7 @@ export default function GestaoProjetos() {
   const [visualizarOperadoresOpen, setVisualizarOperadoresOpen] = useState(false);
   const [projetoParaVisualizar, setProjetoParaVisualizar] = useState<Projeto | null>(null);
   const { isFavorite, toggleFavorite } = useProjectFavorites();
+  const { canCreate, canEdit, canDelete } = useActionAccess();
 
   // Check if user is operator (should only see linked projects)
   const isOperator = role === 'operator';
@@ -334,10 +336,12 @@ export default function GestaoProjetos() {
         pagePath="/projetos"
         pageIcon="FolderKanban"
         actions={
-          <Button onClick={() => handleOpenDialog(null, "create")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Projeto
-          </Button>
+          canCreate('projetos', 'projetos.create') && (
+            <Button onClick={() => handleOpenDialog(null, "create")}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Projeto
+            </Button>
+          )
         }
       />
 
@@ -531,18 +535,20 @@ export default function GestaoProjetos() {
                     <ExternalLink className="h-4 w-4 mr-1" />
                     Abrir
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenDialog(projeto, "edit");
-                    }}
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Editar
-                  </Button>
+                  {canEdit('projetos', 'projetos.edit') && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenDialog(projeto, "edit");
+                      }}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Editar
+                    </Button>
+                  )}
                   <Button 
                     variant="outline" 
                     size="icon"
@@ -555,18 +561,20 @@ export default function GestaoProjetos() {
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="icon"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setProjetoToDelete(projeto);
-                      setDeleteDialogOpen(true);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {canDelete('projetos', 'projetos.delete') && (
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setProjetoToDelete(projeto);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -652,16 +660,18 @@ export default function GestaoProjetos() {
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenDialog(projeto, "edit");
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      {canEdit('projetos', 'projetos.edit') && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenDialog(projeto, "edit");
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button 
                         variant="ghost" 
                         size="icon"
@@ -674,18 +684,20 @@ export default function GestaoProjetos() {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setProjetoToDelete(projeto);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {canDelete('projetos', 'projetos.delete') && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setProjetoToDelete(projeto);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
