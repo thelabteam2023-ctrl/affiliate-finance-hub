@@ -6,6 +6,7 @@ import { useCotacoes } from "@/hooks/useCotacoes";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
 import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info } from "lucide-react";
+import { useActionAccess } from "@/hooks/useModuleAccess";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
@@ -75,6 +76,7 @@ export default function Caixa() {
   const [saldoContasParceiros, setSaldoContasParceiros] = useState(0);
   const [saldoWalletsParceiros, setSaldoWalletsParceiros] = useState(0);
   const [loading, setLoading] = useState(true);
+  const { canCreate } = useActionAccess();
   
   // Estado para confirmação de saque
   const [saqueParaConfirmar, setSaqueParaConfirmar] = useState<any>(null);
@@ -429,10 +431,12 @@ export default function Caixa() {
         actions={
           <div className="flex items-center gap-2">
             <SaldosParceirosSheet />
-            <Button onClick={() => setDialogOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Nova Transação
-            </Button>
+            {canCreate('caixa', 'caixa.transactions.create') && (
+              <Button onClick={() => setDialogOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Nova Transação
+              </Button>
+            )}
           </div>
         }
       />

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Plus, Search, LayoutGrid, List, ChartBar, User } from "lucide-react";
+import { useActionAccess } from "@/hooks/useModuleAccess";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,6 +75,7 @@ export default function GestaoInvestidores() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [investidorToDelete, setInvestidorToDelete] = useState<Investidor | null>(null);
   const [extratoDialogOpen, setExtratoDialogOpen] = useState(false);
+  const { canCreate } = useActionAccess();
 
   const fetchInvestidores = async () => {
     try {
@@ -338,24 +340,26 @@ export default function GestaoInvestidores() {
                         <p>{viewMode === "cards" ? "Visualizar como lista" : "Visualizar como cards"}</p>
                       </TooltipContent>
                     </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="icon"
-                          onClick={() => {
-                            setSelectedInvestidor(null);
-                            setDialogMode("create");
-                            setDialogOpen(true);
-                          }}
-                          className="shrink-0"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Novo Investidor</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    {canCreate('investidores', 'investidores.create') && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            onClick={() => {
+                              setSelectedInvestidor(null);
+                              setDialogMode("create");
+                              setDialogOpen(true);
+                            }}
+                            className="shrink-0"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Novo Investidor</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                 </CardContent>
               </Card>

@@ -92,8 +92,10 @@ const ROLE_BASE_PERMISSIONS: Record<string, string[]> = {
   ],
   operator: [
     'bookmakers.accounts.read_project',
+    'bookmakers.catalog.read',
     'operadores.pagamentos.read_self',
     'operadores.read_self',
+    'parceiros.read',
     'projeto.apostas.cancel',
     'projeto.apostas.create',
     'projeto.apostas.edit',

@@ -13,6 +13,7 @@ import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
 import { ParceiroBookmakersTab } from "./ParceiroBookmakersTab";
 import { useToast } from "@/hooks/use-toast";
 import { TabKey } from "@/hooks/useParceiroFinanceiroCache";
+import { useActionAccess } from "@/hooks/useModuleAccess";
 
 interface ParceiroCache {
   // Resumo only
@@ -58,6 +59,7 @@ export function ParceiroDetalhesPanel({
   const { toast } = useToast();
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
+  const { canEdit, canDelete } = useActionAccess();
 
   const handleBookmakersDataChange = useCallback(() => {
     if (parceiroId) {
@@ -208,7 +210,7 @@ export function ParceiroDetalhesPanel({
                 <p>Atualizar dados</p>
               </TooltipContent>
             </Tooltip>
-            {onEditParceiro && (
+            {onEditParceiro && canEdit('parceiros', 'parceiros.edit') && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -225,7 +227,7 @@ export function ParceiroDetalhesPanel({
                 </TooltipContent>
               </Tooltip>
             )}
-            {onDeleteParceiro && (
+            {onDeleteParceiro && canDelete('parceiros', 'parceiros.delete') && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
