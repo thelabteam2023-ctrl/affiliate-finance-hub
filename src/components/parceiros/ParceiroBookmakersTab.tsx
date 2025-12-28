@@ -162,16 +162,20 @@ export function ParceiroBookmakersTab({
     }
   };
 
-  const formatCurrency = (value: number) => {
+  const isUSDMoeda = (moeda: string) => moeda === "USD" || moeda === "USDT";
+
+  const formatCurrency = (value: number, moeda: string = "BRL") => {
+    const symbol = isUSDMoeda(moeda) ? "$" : "R$";
     return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
+      style: "decimal",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value).replace(/^/, `${symbol} `);
   };
 
-  const maskCurrency = (value: number) => {
-    if (showSensitiveData) return formatCurrency(value);
-    return "R$ ••••";
+  const maskCurrency = (value: number, moeda: string = "BRL") => {
+    if (showSensitiveData) return formatCurrency(value, moeda);
+    return isUSDMoeda(moeda) ? "$ ••••" : "R$ ••••";
   };
 
   const maskUsername = (username: string) => {
@@ -374,8 +378,13 @@ export function ParceiroBookmakersTab({
                           {maskUsername(bm.login_username)}
                         </span>
                         <span className="text-[10px] text-muted-foreground">•</span>
+                        {isUSDMoeda(bm.moeda) && (
+                          <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 border-amber-500/50 text-amber-500">
+                            USD
+                          </Badge>
+                        )}
                         <span className="text-[10px] font-medium">
-                          {maskCurrency(bm.saldo_atual)}
+                          {maskCurrency(bm.saldo_atual, bm.moeda)}
                         </span>
                       </div>
                     </div>
