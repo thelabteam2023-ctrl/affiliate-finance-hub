@@ -532,6 +532,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
       const parceiroData = {
         user_id: user.id,
+        workspace_id: workspaceId,
         nome,
         cpf: cpf.replace(/\D/g, ""),
         email,
@@ -916,6 +917,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
       const parceiroData = {
         user_id: user.id,
+        workspace_id: workspaceId,
         nome,
         cpf: cpf.replace(/\D/g, ""),
         email,
