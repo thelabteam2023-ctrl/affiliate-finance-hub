@@ -12,15 +12,20 @@ interface MovimentacaoCapitalCardProps {
   depositosBookmakers: number;
   saquesBookmakers: number;
   capitalEmOperacao: number;
-  formatCurrency: (value: number) => string;
+  capitalEmOperacaoBRL?: number;
+  capitalEmOperacaoUSD?: number;
+  formatCurrency: (value: number, currency?: string) => string;
 }
 
 export function MovimentacaoCapitalCard({
   depositosBookmakers,
   saquesBookmakers,
   capitalEmOperacao,
+  capitalEmOperacaoBRL = 0,
+  capitalEmOperacaoUSD = 0,
   formatCurrency,
 }: MovimentacaoCapitalCardProps) {
+  const hasUSD = capitalEmOperacaoUSD > 0;
   // Fluxo líquido = diferença entre o que saiu e entrou das bookmakers no período
   const fluxoLiquido = saquesBookmakers - depositosBookmakers;
   const isRetornando = fluxoLiquido > 0;
@@ -110,6 +115,14 @@ export function MovimentacaoCapitalCard({
                   </TooltipProvider>
                 </div>
                 <p className="text-[10px] text-muted-foreground">Saldo atual em todas as casas</p>
+                {/* Breakdown BRL/USD quando houver USD */}
+                {hasUSD && (
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
+                    <span>R$ {capitalEmOperacaoBRL.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                    <span>•</span>
+                    <span className="text-blue-400">$ {capitalEmOperacaoUSD.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} USD</span>
+                  </div>
+                )}
               </div>
             </div>
             <p className="text-xl font-bold text-primary">{formatCurrency(capitalEmOperacao)}</p>
