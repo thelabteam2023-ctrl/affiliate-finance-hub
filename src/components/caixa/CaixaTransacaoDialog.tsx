@@ -187,14 +187,14 @@ export function CaixaTransacaoDialog({
     prevTipoMoeda.current = tipoMoeda;
   }, [tipoMoeda]);
 
-  // Auto-focus CRYPTO: quando coin é selecionado, foca no campo Quantidade
+  // Auto-focus CRYPTO: quando coin é selecionado, abre o select Parceiro (novo fluxo)
   useEffect(() => {
-    if (tipoMoeda === "CRYPTO" && coin && qtdCoinInputRef.current) {
+    if (tipoMoeda === "CRYPTO" && coin && tipoTransacao === "DEPOSITO" && parceiroSelectRef.current) {
       setTimeout(() => {
-        qtdCoinInputRef.current?.focus();
+        parceiroSelectRef.current?.open();
       }, 100);
     }
-  }, [coin, tipoMoeda]);
+  }, [coin, tipoMoeda, tipoTransacao]);
 
   // Auto-focus FIAT: quando tipo de moeda muda para FIAT, foca no campo Moeda
   useEffect(() => {
@@ -227,18 +227,6 @@ export function CaixaTransacaoDialog({
     }
     prevValor.current = valor;
   }, [valor, tipoMoeda]);
-
-  // Auto-focus CRYPTO: quando quantidade de coins é preenchida (>0), abre o select Parceiro
-  useEffect(() => {
-    const qtdNum = parseFloat(qtdCoin);
-    const prevQtdNum = parseFloat(prevQtdCoin.current || "0");
-    if (tipoMoeda === "CRYPTO" && qtdNum > 0 && prevQtdNum === 0 && parceiroSelectRef.current) {
-      setTimeout(() => {
-        parceiroSelectRef.current?.open();
-      }, 150);
-    }
-    prevQtdCoin.current = qtdCoin;
-  }, [qtdCoin, tipoMoeda]);
 
   // Buscar cotações em tempo real da Binance quando tipo_moeda for CRYPTO
   // e atualizar automaticamente a cada 30 segundos
@@ -375,6 +363,19 @@ export function CaixaTransacaoDialog({
     }
     prevOrigemWalletId.current = origemWalletId;
   }, [origemWalletId, tipoMoeda]);
+
+  // Track destinoBookmakerId changes for auto-focus (CRYPTO deposito flow)
+  const prevDestinoBookmakerId = useRef<string>("");
+
+  // Auto-focus CRYPTO: quando bookmaker é selecionado (depósito), foca no campo Quantidade de Coins
+  useEffect(() => {
+    if (tipoMoeda === "CRYPTO" && tipoTransacao === "DEPOSITO" && destinoBookmakerId && destinoBookmakerId !== prevDestinoBookmakerId.current && qtdCoinInputRef.current) {
+      setTimeout(() => {
+        qtdCoinInputRef.current?.focus();
+      }, 150);
+    }
+    prevDestinoBookmakerId.current = destinoBookmakerId;
+  }, [destinoBookmakerId, tipoMoeda, tipoTransacao]);
 
   // Data for selects
   const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([]);
