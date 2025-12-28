@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 interface FaixaProgressiva {
   limite: number;
@@ -28,6 +29,7 @@ interface InvestidorDialogProps {
 }
 
 export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSuccess }: InvestidorDialogProps) {
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("dados");
   
@@ -146,13 +148,15 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
 
     setDocumentoLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!workspaceId) {
+        setDocumentoValidation({ valid: false, message: "Workspace não encontrado" });
+        return;
+      }
 
       let query = supabase
         .from("investidores")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("workspace_id", workspaceId)
         .eq("cpf", cleanDoc);
 
       if (mode === "edit" && investidor?.id) {
@@ -249,10 +253,12 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
+      if (!workspaceId) throw new Error("Workspace não encontrado");
 
       const cleanDoc = documento.replace(/\D/g, "");
       const investidorData = {
         user_id: user.id,
+        workspace_id: workspaceId,
         nome: nome.trim(),
         cpf: cleanDoc,
         status,
@@ -284,6 +290,7 @@ export function InvestidorDialog({ open, onOpenChange, mode, investidor, onSucce
         const dealData = {
           investidor_id: investidorId,
           user_id: user.id,
+          workspace_id: workspaceId,
           tipo_deal: tipoDeal,
           base_calculo: baseCalculo,
           percentual_fixo: tipoDeal === "FIXO" ? parseFloat(percentualFixo) : null,
