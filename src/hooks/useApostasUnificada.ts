@@ -104,6 +104,20 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         return null;
       }
 
+      // Buscar workspace_id do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+
+      if (!workspaceMember?.workspace_id) {
+        toast.error("Workspace não encontrado");
+        return null;
+      }
+
       const stakeTotal = calcularStakeTotalPernas(params.pernas);
       const spread = calcularSpread(params.pernas);
       const roiEsperado = calcularRoiEsperado(params.pernas);
@@ -118,6 +132,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
 
       const insertData: ApostaUnificadaInsert = {
         user_id: user.id,
+        workspace_id: workspaceMember.workspace_id,
         projeto_id: params.projeto_id,
         forma_registro: "ARBITRAGEM",
         estrategia: params.estrategia,
