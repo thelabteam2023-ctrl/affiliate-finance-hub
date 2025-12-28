@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import { useCurrencySnapshot } from "@/hooks/useCurrencySnapshot";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -213,6 +214,9 @@ export default function Financeiro() {
   // Hook centralizado de cotações
   const cryptoSymbols = useMemo(() => caixaCrypto.map(c => c.coin), [caixaCrypto]);
   const { cotacaoUSD, getCryptoUSDValue, getCryptoPrice, refreshAll: refreshCotacoes, loading: loadingCotacoes, lastUpdate, source } = useCotacoes(cryptoSymbols);
+  
+  // Hook para conversão de moedas (usa a API centralizada)
+  const { convertFromBRL } = useCurrencySnapshot({ cryptoSymbols });
 
   // Filtros de período
   const [periodoPreset, setPeriodoPreset] = useState<string>("1m");
@@ -794,11 +798,12 @@ export default function Financeiro() {
       // Valor em BRL (sempre somar para total de referência)
       agrupado[categoria].valor += d.valor;
       
-      // Se for CRYPTO, usar qtd_coin como valor USD (USDT = 1:1 com USD)
+      // Se for CRYPTO, usar o snapshot salvo (qtd_coin é o valor em USD/USDT)
       if (isCrypto) {
         agrupado[categoria].hasCrypto = true;
-        // qtd_coin já está em USDT/USD, cotacao é USD/BRL
-        const valorUSD = d.qtd_coin || (d.valor / (d.cotacao || 5));
+        // Usar valor do snapshot: qtd_coin já é USD (USDT 1:1)
+        // Se não tiver qtd_coin, usa API para converter BRL -> USD com cotação snapshot
+        const valorUSD = d.qtd_coin ?? (d.cotacao ? d.valor / d.cotacao : convertFromBRL(d.valor, "USD"));
         agrupado[categoria].valorUSD += valorUSD;
       }
     });
