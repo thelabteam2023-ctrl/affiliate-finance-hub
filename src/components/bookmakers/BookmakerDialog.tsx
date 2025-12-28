@@ -363,6 +363,7 @@ export default function BookmakerDialog({
                   }
                 }}
                 disabled={loading}
+                includeParceiroId={bookmaker ? parceiroId : undefined}
               />
             )}
             {lockParceiro && (

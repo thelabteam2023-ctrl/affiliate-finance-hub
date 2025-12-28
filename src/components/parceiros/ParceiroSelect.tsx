@@ -36,6 +36,8 @@ interface ParceiroSelectProps {
   coin?: string;
   saldosContas?: SaldoParceiroContas[];
   saldosWallets?: SaldoParceiroWallets[];
+  // Incluir parceiro atual mesmo se inativo (para edição)
+  includeParceiroId?: string;
 }
 
 export interface ParceiroSelectRef {
@@ -60,7 +62,8 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
   moeda,
   coin,
   saldosContas,
-  saldosWallets
+  saldosWallets,
+  includeParceiroId
 }, ref) => {
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,18 +81,39 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
     }
   }));
 
-  // Buscar lista de parceiros ativos
+  // Buscar lista de parceiros ativos + parceiro atual se fornecido
   useEffect(() => {
     const fetchParceiros = async () => {
       try {
-        const { data, error } = await supabase
+        // Buscar parceiros ativos
+        const { data: ativos, error } = await supabase
           .from("parceiros")
           .select("id, nome, cpf, status")
           .eq("status", "ativo")
           .order("nome", { ascending: true });
 
         if (error) throw error;
-        setParceiros(data || []);
+        
+        let lista = ativos || [];
+        
+        // Se temos um parceiro específico para incluir, garantir que está na lista
+        if (includeParceiroId) {
+          const jaExiste = lista.some(p => p.id === includeParceiroId);
+          if (!jaExiste) {
+            // Buscar o parceiro específico (pode estar inativo)
+            const { data: parceiroEspecifico } = await supabase
+              .from("parceiros")
+              .select("id, nome, cpf, status")
+              .eq("id", includeParceiroId)
+              .maybeSingle();
+            
+            if (parceiroEspecifico) {
+              lista = [parceiroEspecifico, ...lista];
+            }
+          }
+        }
+        
+        setParceiros(lista);
       } catch (error) {
         console.error("Erro ao buscar parceiros:", error);
       } finally {
@@ -98,7 +122,7 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
     };
 
     fetchParceiros();
-  }, []);
+  }, [includeParceiroId]);
 
   // Quando value muda, buscar o nome para exibição
   useEffect(() => {
