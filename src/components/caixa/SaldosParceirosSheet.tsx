@@ -31,6 +31,7 @@ interface SaldoBookmakerParceiro {
   parceiro_id: string;
   bookmaker_nome: string;
   saldo_atual: number;
+  saldo_usd: number;
   moeda: string;
 }
 
@@ -39,10 +40,11 @@ interface ParceiroSaldoAgrupado {
   parceiro_nome: string;
   saldos_fiat: Array<{ moeda: string; saldo: number; banco: string }>;
   saldos_crypto: Array<{ coin: string; saldo_coin: number; saldo_usd: number; exchange: string }>;
-  saldos_bookmakers: Array<{ nome: string; saldo: number; moeda: string }>;
+  saldos_bookmakers: Array<{ nome: string; saldo_brl: number; saldo_usd: number; moeda: string }>;
   total_fiat_brl: number;
   total_crypto_usd: number;
   total_bookmakers_brl: number;
+  total_bookmakers_usd: number;
 }
 
 export function SaldosParceirosSheet() {
@@ -96,7 +98,7 @@ export function SaldosParceirosSheet() {
       // Buscar bookmakers vinculadas aos parceiros
       const { data: bookmakers, error: bookmakersError } = await supabase
         .from("bookmakers")
-        .select("parceiro_id, nome, saldo_atual, moeda")
+        .select("parceiro_id, nome, saldo_atual, saldo_usd, moeda")
         .not("parceiro_id", "is", null);
 
       if (bookmakersError) throw bookmakersError;
@@ -126,6 +128,7 @@ export function SaldosParceirosSheet() {
             total_fiat_brl: 0,
             total_crypto_usd: 0,
             total_bookmakers_brl: 0,
+            total_bookmakers_usd: 0,
           });
         }
 
@@ -153,6 +156,7 @@ export function SaldosParceirosSheet() {
             total_fiat_brl: 0,
             total_crypto_usd: 0,
             total_bookmakers_brl: 0,
+            total_bookmakers_usd: 0,
           });
         }
 
@@ -185,18 +189,24 @@ export function SaldosParceirosSheet() {
             total_fiat_brl: 0,
             total_crypto_usd: 0,
             total_bookmakers_brl: 0,
+            total_bookmakers_usd: 0,
           });
         }
 
         const parceiro = parceirosMap.get(bk.parceiro_id)!;
-        parceiro.saldos_bookmakers.push({
-          nome: bk.nome,
-          saldo: bk.saldo_atual,
-          moeda: bk.moeda || "BRL",
-        });
-        // Assumindo BRL para bookmakers (simplificação)
-        if (bk.moeda === "BRL" || !bk.moeda) {
-          parceiro.total_bookmakers_brl += bk.saldo_atual;
+        const saldoBrl = bk.saldo_atual || 0;
+        const saldoUsd = bk.saldo_usd || 0;
+        
+        // Só adicionar se tiver saldo em alguma moeda
+        if (saldoBrl > 0 || saldoUsd > 0) {
+          parceiro.saldos_bookmakers.push({
+            nome: bk.nome,
+            saldo_brl: saldoBrl,
+            saldo_usd: saldoUsd,
+            moeda: bk.moeda || "BRL",
+          });
+          parceiro.total_bookmakers_brl += saldoBrl;
+          parceiro.total_bookmakers_usd += saldoUsd;
         }
       });
 
@@ -280,14 +290,25 @@ export function SaldosParceirosSheet() {
   );
 
   const BookmakerHoverContent = ({ saldos }: { saldos: ParceiroSaldoAgrupado["saldos_bookmakers"] }) => {
-    const saldosFiltrados = saldos.filter(s => s.saldo > 0.50);
+    const saldosFiltrados = saldos.filter(s => s.saldo_brl > 0.50 || s.saldo_usd > 0.50);
     return (
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted-foreground border-b border-border/50 pb-1.5">Saldo por Bookmaker</p>
         {saldosFiltrados.map((s, idx) => (
           <div key={idx} className="flex justify-between items-center gap-3 text-sm">
             <span className="text-foreground truncate max-w-[150px]">{s.nome}</span>
-            <span className="font-mono text-amber-400 whitespace-nowrap">{formatCurrency(s.saldo, s.moeda)}</span>
+            <div className="flex flex-col items-end">
+              {s.saldo_brl > 0 && (
+                <span className="font-mono text-amber-400 whitespace-nowrap">
+                  R$ {s.saldo_brl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              )}
+              {s.saldo_usd > 0 && (
+                <span className="font-mono text-cyan-400 whitespace-nowrap">
+                  $ {s.saldo_usd.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} USD
+                </span>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -411,8 +432,20 @@ export function SaldosParceirosSheet() {
                           {parceiro.saldos_bookmakers.length > 0 ? (
                             <HoverCard openDelay={100} closeDelay={50}>
                               <HoverCardTrigger asChild>
-                                <button className="inline-flex items-center gap-1 text-amber-400 font-mono text-sm hover:text-amber-300 transition-colors cursor-pointer">
-                                  {formatCurrency(parceiro.total_bookmakers_brl, "BRL")}
+                                <button className="inline-flex flex-col items-end gap-0.5 hover:opacity-80 transition-opacity cursor-pointer">
+                                  {parceiro.total_bookmakers_brl > 0 && (
+                                    <span className="text-amber-400 font-mono text-sm">
+                                      R$ {parceiro.total_bookmakers_brl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                  )}
+                                  {parceiro.total_bookmakers_usd > 0 && (
+                                    <span className="text-cyan-400 font-mono text-sm">
+                                      $ {parceiro.total_bookmakers_usd.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} USD
+                                    </span>
+                                  )}
+                                  {parceiro.total_bookmakers_brl === 0 && parceiro.total_bookmakers_usd === 0 && (
+                                    <span className="text-muted-foreground/50">R$ 0,00</span>
+                                  )}
                                 </button>
                               </HoverCardTrigger>
                               <HoverCardContent align="end" className="w-72">
