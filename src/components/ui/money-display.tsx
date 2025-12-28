@@ -15,7 +15,7 @@ export interface MoneyDisplayProps {
   variant?: "default" | "positive" | "negative" | "auto" | "muted";
   masked?: boolean;
   compact?: boolean;
-  showBadge?: boolean;
+  showBadge?: boolean | "always";
   className?: string;
   valueClassName?: string;
   decimals?: number;
@@ -129,6 +129,17 @@ export function MoneyDisplay({
     displayValue = displayValue.replace(/^[^\d-]+\s*/, "");
   }
   
+  // Determinar se deve mostrar badge
+  const shouldShowBadge = showBadge === "always" || (showBadge && isUSD);
+  const badgeLabel = currency.toUpperCase();
+  const badgeColorClass = isUSD 
+    ? "border-cyan-500/50 text-cyan-400" 
+    : currency === "EUR" 
+      ? "border-yellow-500/50 text-yellow-400"
+      : currency === "GBP"
+        ? "border-purple-500/50 text-purple-400"
+        : "border-emerald-500/50 text-emerald-400"; // BRL e outros
+  
   return (
     <span
       className={cn(
@@ -140,12 +151,12 @@ export function MoneyDisplay({
       )}
     >
       <span className={valueClassName}>{displayValue}</span>
-      {showBadge && isUSD && (
+      {shouldShowBadge && (
         <Badge
           variant="outline"
-          className="ml-1 text-[9px] px-1 py-0 h-4 border-cyan-500/50 text-cyan-400"
+          className={cn("ml-1 text-[9px] px-1 py-0 h-4", badgeColorClass)}
         >
-          USD
+          {badgeLabel}
         </Badge>
       )}
     </span>
