@@ -7,21 +7,28 @@ import { buttonVariants } from "@/components/ui/button";
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
-function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
+function Calendar({ className, classNames, showOutsideDays = true, captionLayout, ...props }: CalendarProps) {
+  // Hide caption_label when using dropdown layouts to avoid duplication
+  const isDropdownLayout = captionLayout === "dropdown" || captionLayout === "dropdown-buttons";
+  
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      captionLayout={captionLayout}
       className={cn("p-3 pointer-events-auto", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
         caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium text-foreground",
+        caption_label: cn(
+          "text-sm font-medium text-foreground",
+          isDropdownLayout && "sr-only"
+        ),
         caption_dropdowns: "flex gap-1 justify-center",
         dropdown: "bg-background border border-input rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring",
         dropdown_month: "mr-1",
         dropdown_year: "",
-        vhidden: "hidden",
+        vhidden: "sr-only hidden",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
