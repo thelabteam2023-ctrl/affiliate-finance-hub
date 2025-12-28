@@ -794,13 +794,11 @@ export default function Financeiro() {
       // Valor em BRL (sempre somar para total de referência)
       agrupado[categoria].valor += d.valor;
       
-      // Se for CRYPTO, calcular valor USD e marcar flag
+      // Se for CRYPTO, usar qtd_coin como valor USD (USDT = 1:1 com USD)
       if (isCrypto) {
         agrupado[categoria].hasCrypto = true;
-        // Valor USD = qtd_coin * cotacao (se disponível) ou valor / cotacao_usd_brl
-        const valorUSD = d.qtd_coin && d.cotacao 
-          ? d.qtd_coin * d.cotacao 
-          : d.valor / (d.cotacao || 5);
+        // qtd_coin já está em USDT/USD, cotacao é USD/BRL
+        const valorUSD = d.qtd_coin || (d.valor / (d.cotacao || 5));
         agrupado[categoria].valorUSD += valorUSD;
       }
     });
