@@ -32,7 +32,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import ParceiroSelect, { ParceiroSelectRef } from "@/components/parceiros/ParceiroSelect";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
-import BookmakerSelect from "@/components/bookmakers/BookmakerSelect";
+import BookmakerSelect, { BookmakerSelectRef } from "@/components/bookmakers/BookmakerSelect";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { Loader2, ArrowLeftRight, AlertTriangle, TrendingDown, TrendingUp, Info } from "lucide-react";
 
@@ -153,11 +153,14 @@ export function CaixaTransacaoDialog({
   const valorFiatInputRef = useRef<HTMLInputElement>(null);
   const parceiroSelectRef = useRef<ParceiroSelectRef>(null);
   const contaBancariaSelectRef = useRef<HTMLButtonElement>(null);
+  const walletCryptoSelectRef = useRef<HTMLButtonElement>(null);
+  const bookmakerSelectRef = useRef<BookmakerSelectRef>(null);
 
-  // Track previous values to detect changes (origemParceiroId tracked after its declaration)
+  // Track previous values to detect changes (origemParceiroId and origemWalletId tracked after their declarations)
   const prevTipoMoeda = useRef<string>(tipoMoeda);
   const prevMoeda = useRef<string>(moeda);
   const prevValor = useRef<string>(valor);
+  const prevQtdCoin = useRef<string>(qtdCoin);
 
   // Aplicar defaults quando dialog abre
   useEffect(() => {
@@ -224,6 +227,18 @@ export function CaixaTransacaoDialog({
     }
     prevValor.current = valor;
   }, [valor, tipoMoeda]);
+
+  // Auto-focus CRYPTO: quando quantidade de coins é preenchida (>0), abre o select Parceiro
+  useEffect(() => {
+    const qtdNum = parseFloat(qtdCoin);
+    const prevQtdNum = parseFloat(prevQtdCoin.current || "0");
+    if (tipoMoeda === "CRYPTO" && qtdNum > 0 && prevQtdNum === 0 && parceiroSelectRef.current) {
+      setTimeout(() => {
+        parceiroSelectRef.current?.open();
+      }, 150);
+    }
+    prevQtdCoin.current = qtdCoin;
+  }, [qtdCoin, tipoMoeda]);
 
   // Buscar cotações em tempo real da Binance quando tipo_moeda for CRYPTO
   // e atualizar automaticamente a cada 30 segundos
@@ -329,8 +344,9 @@ export function CaixaTransacaoDialog({
   const [destinoWalletId, setDestinoWalletId] = useState<string>("");
   const [destinoBookmakerId, setDestinoBookmakerId] = useState<string>("");
 
-  // Track origemParceiroId changes for auto-focus (declared after the state)
+  // Track origemParceiroId and origemWalletId changes for auto-focus (declared after the state)
   const prevOrigemParceiroId = useRef<string>("");
+  const prevOrigemWalletId = useRef<string>("");
 
   // Auto-focus FIAT: quando parceiro é selecionado, abre o select Conta Bancária
   useEffect(() => {
@@ -340,8 +356,25 @@ export function CaixaTransacaoDialog({
         contaBancariaSelectRef.current?.click();
       }, 150);
     }
+    // Auto-focus CRYPTO: quando parceiro é selecionado, abre o select Wallet Crypto
+    if (tipoMoeda === "CRYPTO" && origemParceiroId && origemParceiroId !== prevOrigemParceiroId.current && walletCryptoSelectRef.current) {
+      setTimeout(() => {
+        walletCryptoSelectRef.current?.focus();
+        walletCryptoSelectRef.current?.click();
+      }, 150);
+    }
     prevOrigemParceiroId.current = origemParceiroId;
   }, [origemParceiroId, tipoMoeda]);
+
+  // Auto-focus CRYPTO: quando wallet é selecionada, abre o select Bookmaker
+  useEffect(() => {
+    if (tipoMoeda === "CRYPTO" && origemWalletId && origemWalletId !== prevOrigemWalletId.current && bookmakerSelectRef.current) {
+      setTimeout(() => {
+        bookmakerSelectRef.current?.open();
+      }, 150);
+    }
+    prevOrigemWalletId.current = origemWalletId;
+  }, [origemWalletId, tipoMoeda]);
 
   // Data for selects
   const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([]);
@@ -1230,7 +1263,7 @@ export function CaixaTransacaoDialog({
                   setOrigemWalletId(value);
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger ref={walletCryptoSelectRef}>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1667,6 +1700,7 @@ export function CaixaTransacaoDialog({
           <div className="space-y-2">
             <Label>Bookmaker</Label>
             <BookmakerSelect
+              ref={bookmakerSelectRef}
               value={destinoBookmakerId}
               onValueChange={setDestinoBookmakerId}
               disabled={!isOrigemCompleta}
