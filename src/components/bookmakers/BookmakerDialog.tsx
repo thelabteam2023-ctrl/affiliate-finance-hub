@@ -57,8 +57,9 @@ export default function BookmakerDialog({
 }: BookmakerDialogProps) {
   const [loading, setLoading] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [parceiroId, setParceiroId] = useState("");
-  const [parceiroNome, setParceiroNome] = useState("");  // Nome do parceiro para display estático
+  const [parceiroNome, setParceiroNome] = useState("");
   const [bookmakerId, setBookmakerId] = useState("");
   const [selectedBookmaker, setSelectedBookmaker] = useState<BookmakerCatalogo | null>(null);
   const [selectedLink, setSelectedLink] = useState("");
@@ -155,6 +156,7 @@ export default function BookmakerDialog({
         setSaldoIrrecuperavel("");
         setObservacoes("");
         setIsLoadingDetails(false);
+        setIsInitialized(false);
       }, 100);
       return () => clearTimeout(timeout);
     }
@@ -164,9 +166,15 @@ export default function BookmakerDialog({
   useEffect(() => {
     if (!open) return;
     
-    // Modo edição
+    // Modo edição - aguardar bookmaker válido com parceiro_id
     if (bookmaker) {
-      setParceiroId(bookmaker.parceiro_id || "");
+      // CRÍTICO: Só inicializar se temos os dados essenciais
+      if (!bookmaker.id || !bookmaker.parceiro_id) {
+        // Dados incompletos, não inicializar ainda
+        return;
+      }
+      
+      setParceiroId(bookmaker.parceiro_id);
       setBookmakerId(bookmaker.bookmaker_catalogo_id || "");
       setLoginUsername(bookmaker.login_username || "");
       setLoginPassword("");
@@ -177,12 +185,11 @@ export default function BookmakerDialog({
       setSelectedLink(bookmaker.link_origem || "");
       setSelectedBookmaker(null);
       setParceiroNome("");
+      setIsInitialized(true);
       
-      if (bookmaker.parceiro_id) {
-        fetchParceiroNome(bookmaker.parceiro_id);
-      }
+      fetchParceiroNome(bookmaker.parceiro_id);
+      
       if (bookmaker.bookmaker_catalogo_id) {
-        // Em modo edição, preservar a moeda existente
         fetchBookmakerDetails(bookmaker.bookmaker_catalogo_id, bookmaker.link_origem, true);
       }
     } else {
@@ -196,23 +203,21 @@ export default function BookmakerDialog({
       setSelectedBookmaker(null);
       setParceiroNome("");
       
-      // Definir parceiro e bookmaker a partir dos defaults
       const newParceiroId = defaultParceiroId || "";
       const newBookmakerId = defaultBookmakerId || "";
       
       setParceiroId(newParceiroId);
       setBookmakerId(newBookmakerId);
+      setIsInitialized(true);
       
-      // Carregar nome do parceiro se houver ID default
       if (newParceiroId) {
         fetchParceiroNome(newParceiroId);
       }
-      // Carregar detalhes da bookmaker se houver ID default
       if (newBookmakerId) {
         fetchBookmakerDetails(newBookmakerId);
       }
     }
-  }, [open, bookmaker?.id, defaultParceiroId, defaultBookmakerId]);
+  }, [open, bookmaker?.id, bookmaker?.parceiro_id, defaultParceiroId, defaultBookmakerId]);
 
   // Handler para mudança manual de bookmaker
   const handleBookmakerChange = (newBookmakerId: string) => {
@@ -321,6 +326,10 @@ export default function BookmakerDialog({
     }
   };
 
+  // Em modo edição, mostrar loading até dados estarem prontos
+  const isEditMode = !!bookmaker;
+  const isWaitingForData = isEditMode && !isInitialized;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -330,13 +339,20 @@ export default function BookmakerDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <Alert className="mb-4">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Segurança:</strong> As credenciais são armazenadas de forma criptografada no banco de dados.
-            Mantenha essas informações confidenciais.
-          </AlertDescription>
-        </Alert>
+        {isWaitingForData ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-muted-foreground">Carregando dados do vínculo...</span>
+          </div>
+        ) : (
+          <>
+            <Alert className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Segurança:</strong> As credenciais são armazenadas de forma criptografada no banco de dados.
+                Mantenha essas informações confidenciais.
+              </AlertDescription>
+            </Alert>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
@@ -561,7 +577,9 @@ export default function BookmakerDialog({
               {bookmaker ? "Atualizar" : "Criar"} Vínculo
             </Button>
           </div>
-        </form>
+          </form>
+          </>
+        )}
       </DialogContent>
 
       {/* Dialog de Observações */}
