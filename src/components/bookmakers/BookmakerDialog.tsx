@@ -63,7 +63,7 @@ export default function BookmakerDialog({
   const [selectedLink, setSelectedLink] = useState("");
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [moedaOperacional, setMoedaOperacional] = useState<FiatCurrency>("BRL");
+  const [moedaOperacional, setMoedaOperacional] = useState<FiatCurrency>("USD");
   const [status, setStatus] = useState("ativo");
   const [saldoIrrecuperavel, setSaldoIrrecuperavel] = useState("");
   const [observacoes, setObservacoes] = useState("");
@@ -143,7 +143,7 @@ export default function BookmakerDialog({
         setSelectedLink("");
         setLoginUsername("");
         setLoginPassword("");
-        setMoedaOperacional("BRL");
+        setMoedaOperacional("USD");
         setStatus("ativo");
         setSaldoIrrecuperavel("");
         setObservacoes("");
@@ -475,7 +475,7 @@ export default function BookmakerDialog({
               <Select 
                 value={moedaOperacional} 
                 onValueChange={(val) => setMoedaOperacional(val as FiatCurrency)} 
-                disabled={loading || !!bookmaker}
+                disabled={loading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a moeda" />
