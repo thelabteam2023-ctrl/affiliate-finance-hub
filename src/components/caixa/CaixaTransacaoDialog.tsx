@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
+import ParceiroSelect, { ParceiroSelectRef } from "@/components/parceiros/ParceiroSelect";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import BookmakerSelect from "@/components/bookmakers/BookmakerSelect";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
@@ -149,6 +149,15 @@ export function CaixaTransacaoDialog({
   // Refs para auto-focus
   const coinSelectRef = useRef<HTMLButtonElement>(null);
   const qtdCoinInputRef = useRef<HTMLInputElement>(null);
+  const moedaFiatSelectRef = useRef<HTMLButtonElement>(null);
+  const valorFiatInputRef = useRef<HTMLInputElement>(null);
+  const parceiroSelectRef = useRef<ParceiroSelectRef>(null);
+  const contaBancariaSelectRef = useRef<HTMLButtonElement>(null);
+
+  // Track previous values to detect changes (origemParceiroId tracked after its declaration)
+  const prevTipoMoeda = useRef<string>(tipoMoeda);
+  const prevMoeda = useRef<string>(moeda);
+  const prevValor = useRef<string>(valor);
 
   // Aplicar defaults quando dialog abre
   useEffect(() => {
@@ -164,17 +173,18 @@ export function CaixaTransacaoDialog({
     }
   }, [open, defaultTipoTransacao, defaultOrigemBookmakerId]);
 
-  // Auto-focus: quando tipo de moeda muda para CRYPTO, foca no campo Moeda
+  // Auto-focus CRYPTO: quando tipo de moeda muda para CRYPTO, foca no campo Moeda
   useEffect(() => {
-    if (tipoMoeda === "CRYPTO" && coinSelectRef.current) {
+    if (tipoMoeda === "CRYPTO" && prevTipoMoeda.current !== "CRYPTO" && coinSelectRef.current) {
       setTimeout(() => {
         coinSelectRef.current?.focus();
         coinSelectRef.current?.click();
       }, 100);
     }
+    prevTipoMoeda.current = tipoMoeda;
   }, [tipoMoeda]);
 
-  // Auto-focus: quando coin é selecionado, foca no campo Quantidade
+  // Auto-focus CRYPTO: quando coin é selecionado, foca no campo Quantidade
   useEffect(() => {
     if (tipoMoeda === "CRYPTO" && coin && qtdCoinInputRef.current) {
       setTimeout(() => {
@@ -182,6 +192,38 @@ export function CaixaTransacaoDialog({
       }, 100);
     }
   }, [coin, tipoMoeda]);
+
+  // Auto-focus FIAT: quando tipo de moeda muda para FIAT, foca no campo Moeda
+  useEffect(() => {
+    if (tipoMoeda === "FIAT" && prevTipoMoeda.current === "CRYPTO" && moedaFiatSelectRef.current) {
+      setTimeout(() => {
+        moedaFiatSelectRef.current?.focus();
+        moedaFiatSelectRef.current?.click();
+      }, 100);
+    }
+  }, [tipoMoeda]);
+
+  // Auto-focus FIAT: quando moeda é selecionada, foca no campo Valor
+  useEffect(() => {
+    if (tipoMoeda === "FIAT" && moeda && moeda !== prevMoeda.current && valorFiatInputRef.current) {
+      setTimeout(() => {
+        valorFiatInputRef.current?.focus();
+      }, 100);
+    }
+    prevMoeda.current = moeda;
+  }, [moeda, tipoMoeda]);
+
+  // Auto-focus FIAT: quando valor é preenchido (>0), abre o select Parceiro
+  useEffect(() => {
+    const valorNum = parseFloat(valor);
+    const prevValorNum = parseFloat(prevValor.current || "0");
+    if (tipoMoeda === "FIAT" && valorNum > 0 && prevValorNum === 0 && parceiroSelectRef.current) {
+      setTimeout(() => {
+        parceiroSelectRef.current?.open();
+      }, 150);
+    }
+    prevValor.current = valor;
+  }, [valor, tipoMoeda]);
 
   // Buscar cotações em tempo real da Binance quando tipo_moeda for CRYPTO
   // e atualizar automaticamente a cada 30 segundos
@@ -286,6 +328,20 @@ export function CaixaTransacaoDialog({
   const [destinoContaId, setDestinoContaId] = useState<string>("");
   const [destinoWalletId, setDestinoWalletId] = useState<string>("");
   const [destinoBookmakerId, setDestinoBookmakerId] = useState<string>("");
+
+  // Track origemParceiroId changes for auto-focus (declared after the state)
+  const prevOrigemParceiroId = useRef<string>("");
+
+  // Auto-focus FIAT: quando parceiro é selecionado, abre o select Conta Bancária
+  useEffect(() => {
+    if (tipoMoeda === "FIAT" && origemParceiroId && origemParceiroId !== prevOrigemParceiroId.current && contaBancariaSelectRef.current) {
+      setTimeout(() => {
+        contaBancariaSelectRef.current?.focus();
+        contaBancariaSelectRef.current?.click();
+      }, 150);
+    }
+    prevOrigemParceiroId.current = origemParceiroId;
+  }, [origemParceiroId, tipoMoeda]);
 
   // Data for selects
   const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([]);
@@ -1098,6 +1154,7 @@ export function CaixaTransacaoDialog({
           <div className="space-y-2">
             <Label>Parceiro</Label>
             <ParceiroSelect
+              ref={parceiroSelectRef}
               value={origemParceiroId}
               onValueChange={(value) => {
                 setOrigemParceiroId(value);
@@ -1121,7 +1178,7 @@ export function CaixaTransacaoDialog({
                   setOrigemContaId(value);
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger ref={contaBancariaSelectRef}>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2248,7 +2305,7 @@ export function CaixaTransacaoDialog({
               <div className="space-y-2">
                 <Label className="text-center block">Moeda</Label>
                 <Select value={moeda} onValueChange={setMoeda}>
-                  <SelectTrigger>
+                  <SelectTrigger ref={moedaFiatSelectRef}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -2268,6 +2325,7 @@ export function CaixaTransacaoDialog({
               <div className="space-y-2">
                 <Label className="text-center block">Valor em {moeda}</Label>
                 <Input
+                  ref={valorFiatInputRef}
                   type="text"
                   value={valorDisplay}
                   onChange={handleValorChange}
