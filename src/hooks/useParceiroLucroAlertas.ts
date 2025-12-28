@@ -11,9 +11,9 @@ interface ParceiroLucroData {
   lucro_total: number;
 }
 
-export function useParceiroLucroAlertas(lucroData: ParceiroLucroData[]) {
+export function useParceiroLucroAlertas(lucroData: ParceiroLucroData[], workspaceId: string | null) {
   useEffect(() => {
-    if (lucroData.length === 0) return;
+    if (lucroData.length === 0 || !workspaceId) return;
     
     const checkAndCreateAlerts = async () => {
       try {
@@ -24,7 +24,8 @@ export function useParceiroLucroAlertas(lucroData: ParceiroLucroData[]) {
         const { data: existingAlerts, error: alertsError } = await supabase
           .from("parceiro_lucro_alertas")
           .select("parceiro_id, marco_valor")
-          .eq("user_id", user.id);
+          .eq("user_id", user.id)
+          .eq("workspace_id", workspaceId);
 
         if (alertsError) throw alertsError;
 
@@ -39,6 +40,7 @@ export function useParceiroLucroAlertas(lucroData: ParceiroLucroData[]) {
           marco_valor: number;
           lucro_atual: number;
           user_id: string;
+          workspace_id: string;
         }> = [];
 
         for (const parceiro of lucroData) {
@@ -54,6 +56,7 @@ export function useParceiroLucroAlertas(lucroData: ParceiroLucroData[]) {
                 marco_valor: marco,
                 lucro_atual: parceiro.lucro_total,
                 user_id: user.id,
+                workspace_id: workspaceId,
               });
             }
           }
@@ -81,7 +84,7 @@ export function useParceiroLucroAlertas(lucroData: ParceiroLucroData[]) {
     };
 
     checkAndCreateAlerts();
-  }, [lucroData]);
+  }, [lucroData, workspaceId]);
 }
 
 export async function fetchParceiroLucroAlertas() {
