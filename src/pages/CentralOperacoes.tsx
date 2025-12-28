@@ -871,11 +871,12 @@ export default function CentralOperacoes() {
         component: (
           <Card key="parceiros-sem-parceria" className="border-amber-500/30">
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
+                <CardTitle className="flex items-center gap-2 text-sm">
                 <UserPlus className="h-4 w-4 text-amber-400" />
-                Parceiros sem Parceria
+                Parceiros sem Origem
                 <Badge className="ml-auto bg-amber-500/20 text-amber-400">{parceirosSemParceria.length}</Badge>
               </CardTitle>
+              <p className="text-xs text-muted-foreground">Parceiros sem indicação, fornecedor ou origem registrada</p>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="space-y-2">
