@@ -43,6 +43,7 @@ interface BookmakerCatalogo {
   logo_url: string | null;
   links_json: Array<{ referencia: string; url: string }>;
   observacoes: string | null;
+  moeda_padrao?: string;
 }
 
 export default function BookmakerDialog({ 
@@ -71,14 +72,14 @@ export default function BookmakerDialog({
   const { toast } = useToast();
 
   // Função para carregar detalhes da bookmaker
-  const fetchBookmakerDetails = async (bookmakerIdToFetch: string, presetLink?: string) => {
+  const fetchBookmakerDetails = async (bookmakerIdToFetch: string, presetLink?: string, preserveMoeda = false) => {
     if (!bookmakerIdToFetch) return;
     
     setIsLoadingDetails(true);
     try {
       const { data, error } = await supabase
         .from("bookmakers_catalogo")
-        .select("id, nome, logo_url, links_json, observacoes")
+        .select("id, nome, logo_url, links_json, observacoes, moeda_padrao")
         .eq("id", bookmakerIdToFetch)
         .maybeSingle();
 
@@ -94,9 +95,15 @@ export default function BookmakerDialog({
         logo_url: data.logo_url,
         links_json: (data.links_json as any) || [],
         observacoes: data.observacoes,
+        moeda_padrao: data.moeda_padrao,
       };
       
       setSelectedBookmaker(bookmakerData);
+      
+      // Herdar moeda padrão do catálogo (apenas em modo criação, não edição)
+      if (!preserveMoeda && bookmakerData.moeda_padrao) {
+        setMoedaOperacional(bookmakerData.moeda_padrao as FiatCurrency);
+      }
       
       // Auto-select link
       const linksArray = bookmakerData.links_json;
@@ -175,7 +182,8 @@ export default function BookmakerDialog({
         fetchParceiroNome(bookmaker.parceiro_id);
       }
       if (bookmaker.bookmaker_catalogo_id) {
-        fetchBookmakerDetails(bookmaker.bookmaker_catalogo_id, bookmaker.link_origem);
+        // Em modo edição, preservar a moeda existente
+        fetchBookmakerDetails(bookmaker.bookmaker_catalogo_id, bookmaker.link_origem, true);
       }
     } else {
       // Modo criação - inicialização com valores dos props

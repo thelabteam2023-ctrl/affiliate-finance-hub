@@ -45,6 +45,7 @@ export default function BookmakerCatalogoDialog({
   const [logoUrl, setLogoUrl] = useState("");
   const [logoError, setLogoError] = useState(false);
   const [status, setStatus] = useState("REGULAMENTADA");
+  const [moedaPadrao, setMoedaPadrao] = useState("BRL");
   const [operacional, setOperacional] = useState("ATIVA");
   const [verificacao, setVerificacao] = useState("OBRIGATORIA");
   const [links, setLinks] = useState<LinkItem[]>([{ id: crypto.randomUUID(), url: "", referencia: "PADRÃO" }]);
@@ -60,6 +61,7 @@ export default function BookmakerCatalogoDialog({
       setLogoUrl(bookmaker.logo_url || "");
       setLogoError(false);
       setStatus(bookmaker.status || "REGULAMENTADA");
+      setMoedaPadrao(bookmaker.moeda_padrao || (bookmaker.status === "REGULAMENTADA" ? "BRL" : "USD"));
       setOperacional(bookmaker.operacional || "ATIVA");
       setVerificacao(bookmaker.verificacao || "OBRIGATORIA");
       setLinks(Array.isArray(bookmaker.links_json) && bookmaker.links_json.length > 0 
@@ -87,12 +89,24 @@ export default function BookmakerCatalogoDialog({
     setLogoUrl("");
     setLogoError(false);
     setStatus("REGULAMENTADA");
+    setMoedaPadrao("BRL");
     setOperacional("ATIVA");
     setVerificacao("OBRIGATORIA");
     setLinks([{ id: crypto.randomUUID(), url: "", referencia: "PADRÃO" }]);
     setBonusEnabled(false);
     setBonusList([]);
     setObservacoes("");
+  };
+
+  // Auto-sugerir moeda quando status muda
+  const handleStatusChange = (newStatus: string) => {
+    setStatus(newStatus);
+    // Auto-sugerir moeda baseado no status
+    if (newStatus === "REGULAMENTADA") {
+      setMoedaPadrao("BRL");
+    } else {
+      setMoedaPadrao("USD");
+    }
   };
 
   const addLink = () => {
@@ -292,6 +306,7 @@ export default function BookmakerCatalogoDialog({
         nome,
         logo_url: logoUrl || null,
         status,
+        moeda_padrao: moedaPadrao,
         operacional,
         verificacao,
         links_json: validLinks as any,
@@ -397,16 +412,31 @@ export default function BookmakerCatalogoDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="status">Status *</Label>
-                <Select value={status} onValueChange={setStatus} required>
+                <Select value={status} onValueChange={handleStatusChange} required>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="REGULAMENTADA">REGULAMENTADA</SelectItem>
                     <SelectItem value="NAO_REGULAMENTADA">NÃO REGULAMENTADA</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="moedaPadrao">Moeda Padrão *</Label>
+                <Select value={moedaPadrao} onValueChange={setMoedaPadrao} required>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BRL">🇧🇷 BRL (Real)</SelectItem>
+                    <SelectItem value="USD">🇺🇸 USD (Dólar)</SelectItem>
+                    <SelectItem value="EUR">🇪🇺 EUR (Euro)</SelectItem>
+                    <SelectItem value="GBP">🇬🇧 GBP (Libra)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

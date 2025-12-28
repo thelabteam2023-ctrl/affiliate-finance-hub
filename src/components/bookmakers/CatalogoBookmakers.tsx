@@ -42,7 +42,23 @@ interface BookmakerCatalogo {
   visibility: string | null;
   user_id: string | null;
   is_system: boolean | null;
+  moeda_padrao?: string;
 }
+
+const getMoedaInfo = (moeda: string | undefined) => {
+  switch (moeda) {
+    case "BRL":
+      return { flag: "🇧🇷", label: "BRL", color: "text-emerald-500" };
+    case "USD":
+      return { flag: "🇺🇸", label: "USD", color: "text-blue-500" };
+    case "EUR":
+      return { flag: "🇪🇺", label: "EUR", color: "text-amber-500" };
+    case "GBP":
+      return { flag: "🇬🇧", label: "GBP", color: "text-purple-500" };
+    default:
+      return { flag: "💵", label: moeda || "USD", color: "text-muted-foreground" };
+  }
+};
 
 export default function CatalogoBookmakers() {
   const [bookmakers, setBookmakers] = useState<BookmakerCatalogo[]>([]);
@@ -85,7 +101,7 @@ export default function CatalogoBookmakers() {
     try {
       const { data, error } = await supabase
         .from("bookmakers_catalogo")
-        .select("*")
+        .select("*, moeda_padrao")
         .order("nome", { ascending: true });
 
       if (error) throw error;
@@ -472,6 +488,15 @@ export default function CatalogoBookmakers() {
                           <CardTitle className="text-sm font-semibold">
                             {bookmaker.nome}
                           </CardTitle>
+                          {/* Badge de moeda */}
+                          {bookmaker.moeda_padrao && (
+                            <Badge 
+                              variant="outline" 
+                              className={`text-[10px] px-1.5 py-0 ${getMoedaInfo(bookmaker.moeda_padrao).color}`}
+                            >
+                              {getMoedaInfo(bookmaker.moeda_padrao).flag} {getMoedaInfo(bookmaker.moeda_padrao).label}
+                            </Badge>
+                          )}
                           <TooltipProvider>
                             {bookmaker.status === "REGULAMENTADA" ? (
                               <Tooltip>
@@ -761,6 +786,15 @@ export default function CatalogoBookmakers() {
                                   </Tooltip>
                                 )}
                               </TooltipProvider>
+                              {/* Badge de moeda na lista */}
+                              {bookmaker.moeda_padrao && (
+                                <Badge 
+                                  variant="outline" 
+                                  className={`text-[10px] px-1.5 py-0 ${getMoedaInfo(bookmaker.moeda_padrao).color}`}
+                                >
+                                  {getMoedaInfo(bookmaker.moeda_padrao).flag} {getMoedaInfo(bookmaker.moeda_padrao).label}
+                                </Badge>
+                              )}
                               {bookmaker.bonus_enabled && (
                                 <TooltipProvider>
                                   <Tooltip>
