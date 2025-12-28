@@ -1961,12 +1961,50 @@ export function CaixaTransacaoDialog({
 
   const saldoInsuficiente = checkSaldoInsuficiente();
 
-  const formatCurrency = (value: number) => {
-    const currencyCode = tipoMoeda === "CRYPTO" ? "USD" : (moeda || "BRL");
+  const formatCurrency = (value: number, forceCurrency?: "BRL" | "USD") => {
+    const currencyCode = forceCurrency || (tipoMoeda === "CRYPTO" ? "USD" : (moeda || "BRL"));
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: currencyCode,
     }).format(value);
+  };
+
+  // Formatar saldo de bookmaker com ambas moedas se existirem
+  const formatBookmakerBalance = (bookmarkerId: string): React.ReactNode => {
+    const saldos = getSaldoBrutoBookmaker(bookmarkerId);
+    const pendente = getSaquesPendentesBookmaker(bookmarkerId);
+    const hasBrl = saldos.brl > 0;
+    const hasUsd = saldos.usd > 0;
+    
+    // Se CRYPTO, mostrar apenas USD
+    if (tipoMoeda === "CRYPTO") {
+      const disponivel = saldos.usd - pendente;
+      return formatCurrency(disponivel, "USD");
+    }
+    
+    // Se FIAT, mostrar apenas BRL
+    const disponivel = saldos.brl - pendente;
+    return formatCurrency(disponivel, "BRL");
+  };
+
+  // Formatar exibição completa dos saldos da bookmaker (BRL + USD)
+  const formatBookmakerFullBalance = (bookmarkerId: string): React.ReactNode => {
+    const saldos = getSaldoBrutoBookmaker(bookmarkerId);
+    const hasBrl = saldos.brl > 0;
+    const hasUsd = saldos.usd > 0;
+    
+    if (hasBrl && hasUsd) {
+      return (
+        <div className="flex flex-col items-center gap-0.5">
+          <span>{formatCurrency(saldos.brl, "BRL")}</span>
+          <span className="text-cyan-400">{formatCurrency(saldos.usd, "USD")}</span>
+        </div>
+      );
+    }
+    if (hasUsd) {
+      return <span className="text-cyan-400">{formatCurrency(saldos.usd, "USD")}</span>;
+    }
+    return formatCurrency(saldos.brl, "BRL");
   };
 
   // Função para determinar moedas disponíveis baseado no tipo de transação
@@ -2377,7 +2415,7 @@ export function CaixaTransacaoDialog({
                                   <div className="text-xs text-yellow-500 flex items-center justify-center gap-1">
                                     <AlertTriangle className="h-3 w-3" />
                                     <span>
-                                      Pendente: {formatCurrency(getSaquesPendentesBookmaker(origemBookmakerId))}
+                                      Pendente: {formatCurrency(getSaquesPendentesBookmaker(origemBookmakerId), tipoMoeda === "CRYPTO" ? "USD" : "BRL")}
                                     </span>
                                   </div>
                                 )}
@@ -2386,16 +2424,21 @@ export function CaixaTransacaoDialog({
                                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                                       <TrendingDown className="h-4 w-4 text-destructive" />
                                       <span className="line-through opacity-70">
-                                        Disponível: {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId))}
+                                        Disponível: {tipoMoeda === "CRYPTO" 
+                                          ? <span className="text-cyan-400">{formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId), "USD")}</span>
+                                          : formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId), "BRL")}
                                       </span>
                                     </div>
-                                    <div className="text-sm font-semibold text-foreground">
-                                      {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId) - parseFloat(String(valor)))}
+                                    <div className={`text-sm font-semibold ${tipoMoeda === "CRYPTO" ? "text-cyan-400" : "text-foreground"}`}>
+                                      {tipoMoeda === "CRYPTO"
+                                        ? formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId) - parseFloat(String(valor)), "USD")
+                                        : formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId) - parseFloat(String(valor)), "BRL")}
                                     </div>
                                   </>
                                 ) : (
                                   <div className="text-xs text-muted-foreground">
-                                    Saldo disponível: {formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId))}
+                                    {/* Mostrar ambos os saldos se existirem */}
+                                    {formatBookmakerFullBalance(origemBookmakerId)}
                                   </div>
                                 )}
                               </div>
@@ -2640,30 +2683,21 @@ export function CaixaTransacaoDialog({
                                       <TrendingUp className="h-4 w-4 text-emerald-500" />
                                       <span className="line-through opacity-70">
                                         {tipoMoeda === "CRYPTO" 
-                                          ? `$ ${getSaldoAtual("BOOKMAKER", destinoBookmakerId).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                                          : formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId))
+                                          ? <span className="text-cyan-400">{formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId), "USD")}</span>
+                                          : formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId), "BRL")
                                         }
                                       </span>
                                     </div>
-                                    <div className="text-sm font-semibold text-foreground">
+                                    <div className={`text-sm font-semibold ${tipoMoeda === "CRYPTO" ? "text-cyan-400" : "text-foreground"}`}>
                                       {tipoMoeda === "CRYPTO" 
-                                        ? `$ ${(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + parseFloat(String(valor))).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                                        : formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + parseFloat(String(valor)))
+                                        ? formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + parseFloat(String(valor)), "USD")
+                                        : formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + parseFloat(String(valor)), "BRL")
                                       }
                                     </div>
                                   </>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground space-y-1">
-                                    {(() => {
-                                      const saldos = getSaldoBrutoBookmaker(destinoBookmakerId);
-                                      return (
-                                        <>
-                                          {saldos.brl > 0 && <div>Saldo BRL: R$ {saldos.brl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>}
-                                          {saldos.usd > 0 && <div className="text-cyan-400">Saldo USD: $ {saldos.usd.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>}
-                                          {saldos.brl === 0 && saldos.usd === 0 && <div>Saldo: R$ 0,00</div>}
-                                        </>
-                                      );
-                                    })()}
+                                  <div className="text-xs text-muted-foreground">
+                                    {formatBookmakerFullBalance(destinoBookmakerId)}
                                   </div>
                                 )}
                               </div>
