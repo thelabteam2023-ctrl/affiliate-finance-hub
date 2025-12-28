@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import {
   Dialog,
   DialogContent,
@@ -70,6 +71,7 @@ export function PagamentoOperadorDialog({
   defaultOperadorId,
   onSuccess,
 }: PagamentoOperadorDialogProps) {
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [operadores, setOperadores] = useState<Operador[]>([]);
   const [projetos, setProjetos] = useState<Projeto[]>([]);
@@ -273,6 +275,7 @@ export function PagamentoOperadorDialog({
         descricao: formData.descricao || null,
         status: formData.status,
         user_id: userId,
+        workspace_id: workspaceId,
         cash_ledger_id: cashLedgerId,
       };
 

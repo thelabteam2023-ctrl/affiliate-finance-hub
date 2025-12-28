@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ interface Fornecedor {
 
 export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRenewalMode = false }: ParceriaDialogProps) {
   const { toast } = useToast();
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
   const [indicadores, setIndicadores] = useState<Indicador[]>([]);
@@ -250,6 +252,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
           .from("indicacoes")
           .insert({
             user_id: user.id,
+            workspace_id: workspaceId,
             indicador_id: formData.indicador_id,
             parceiro_id: formData.parceiro_id,
             data_indicacao: new Date().toISOString(),
@@ -265,6 +268,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
 
       const payload = {
         user_id: user.id,
+        workspace_id: workspaceId,
         parceiro_id: formData.parceiro_id,
         indicacao_id: formData.origem_tipo === "INDICADOR" ? indicacaoId : null,
         fornecedor_id: formData.origem_tipo === "FORNECEDOR" ? formData.fornecedor_id : null,

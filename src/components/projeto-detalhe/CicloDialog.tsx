@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import {
   Dialog,
   DialogContent,
@@ -80,6 +81,7 @@ export function CicloDialog({
   proximoNumero,
   onSuccess,
 }: CicloDialogProps) {
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [operadoresProjeto, setOperadoresProjeto] = useState<OperadorProjeto[]>([]);
   const [formData, setFormData] = useState({
@@ -245,6 +247,7 @@ export function CicloDialog({
           .insert({
             ...cicloData,
             user_id: session.session.user.id,
+            workspace_id: workspaceId,
             projeto_id: projetoId,
             numero_ciclo: proximoNumero,
             status: "EM_ANDAMENTO",
@@ -269,6 +272,7 @@ export function CicloDialog({
             .from("participacao_ciclos")
             .insert({
               user_id: session.session.user.id,
+              workspace_id: workspaceId,
               projeto_id: projetoId,
               ciclo_id: novoCiclo.id,
               investidor_id: projeto.investidor_id,

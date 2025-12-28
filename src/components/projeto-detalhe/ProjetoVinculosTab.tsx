@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -110,6 +111,7 @@ interface BookmakerDisponivel {
 }
 
 export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
+  const { workspaceId } = useWorkspace();
   const navigate = useNavigate();
   const [vinculos, setVinculos] = useState<Vinculo[]>([]);
   const [disponiveis, setDisponiveis] = useState<BookmakerDisponivel[]>([]);
@@ -322,6 +324,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       // Insert history records
       const historicoRecords = selectedBookmakers.map(bk => ({
         user_id: user.id,
+        workspace_id: workspaceId,
         projeto_id: projetoId,
         bookmaker_id: bk.id,
         parceiro_id: bk.parceiro_id,
