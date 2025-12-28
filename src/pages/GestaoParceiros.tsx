@@ -46,6 +46,8 @@ interface ParceiroROI {
   total_depositado: number;
   total_sacado: number;
   lucro_prejuizo: number;
+  lucro_prejuizo_brl: number;
+  lucro_prejuizo_usd: number;
   roi_percentual: number;
   num_bookmakers: number;
   num_bookmakers_limitadas: number;
@@ -194,57 +196,85 @@ export default function GestaoParceiros() {
 
       const roiMap = new Map<string, ParceiroROI>();
       
-      const parceiroFinancials = new Map<string, { depositado: number; sacado: number }>();
+      // Separar por moeda: BRL vs USD
+      const parceiroFinancials = new Map<string, { 
+        depositado_brl: number; sacado_brl: number;
+        depositado_usd: number; sacado_usd: number;
+      }>();
       
       financialData?.forEach((tx) => {
-        // Usar valor_usd para transações USD/CRYPTO, senão usar valor direto
-        const valorEfetivo = (tx.tipo_moeda === "CRYPTO" || tx.moeda === "USD") 
-          ? (tx.valor_usd || tx.valor) 
-          : tx.valor;
+        const isUSD = tx.tipo_moeda === "CRYPTO" || tx.moeda === "USD";
+        const valor = Number(tx.valor || 0);
         
         if (tx.tipo_transacao === "DEPOSITO" && tx.origem_parceiro_id) {
-          const current = parceiroFinancials.get(tx.origem_parceiro_id) || { depositado: 0, sacado: 0 };
-          current.depositado += Number(valorEfetivo);
+          const current = parceiroFinancials.get(tx.origem_parceiro_id) || { 
+            depositado_brl: 0, sacado_brl: 0, depositado_usd: 0, sacado_usd: 0 
+          };
+          if (isUSD) {
+            current.depositado_usd += valor;
+          } else {
+            current.depositado_brl += valor;
+          }
           parceiroFinancials.set(tx.origem_parceiro_id, current);
         } else if (tx.tipo_transacao === "SAQUE" && tx.destino_parceiro_id) {
-          const current = parceiroFinancials.get(tx.destino_parceiro_id) || { depositado: 0, sacado: 0 };
-          current.sacado += Number(valorEfetivo);
+          const current = parceiroFinancials.get(tx.destino_parceiro_id) || { 
+            depositado_brl: 0, sacado_brl: 0, depositado_usd: 0, sacado_usd: 0 
+          };
+          if (isUSD) {
+            current.sacado_usd += valor;
+          } else {
+            current.sacado_brl += valor;
+          }
           parceiroFinancials.set(tx.destino_parceiro_id, current);
         }
       });
 
-      // Calcular saldo total de bookmakers incluindo USD
-      const parceiroBookmakers = new Map<string, { count: number; countLimitadas: number; saldo: number }>();
+      // Calcular saldo total de bookmakers separado por moeda
+      const parceiroBookmakers = new Map<string, { 
+        count: number; countLimitadas: number; saldo_brl: number; saldo_usd: number;
+      }>();
       
       bookmakersData?.forEach((bm) => {
         if (!bm.parceiro_id) return;
-        const current = parceiroBookmakers.get(bm.parceiro_id) || { count: 0, countLimitadas: 0, saldo: 0 };
+        const current = parceiroBookmakers.get(bm.parceiro_id) || { 
+          count: 0, countLimitadas: 0, saldo_brl: 0, saldo_usd: 0 
+        };
         if (bm.status === "ativo") {
           current.count += 1;
         } else if (bm.status === "limitada") {
           current.countLimitadas += 1;
         }
-        // Somar saldo baseado na moeda: USD usa saldo_usd, BRL usa saldo_atual
-        const saldo = bm.moeda === "USD" ? Number(bm.saldo_usd || 0) : Number(bm.saldo_atual || 0);
-        current.saldo += saldo;
+        // Separar saldo por moeda
+        if (bm.moeda === "USD") {
+          current.saldo_usd += Number(bm.saldo_usd || 0);
+        } else {
+          current.saldo_brl += Number(bm.saldo_atual || 0);
+        }
         parceiroBookmakers.set(bm.parceiro_id, current);
       });
 
       parceiroFinancials.forEach((financials, parceiroId) => {
-        const bookmakerInfo = parceiroBookmakers.get(parceiroId) || { count: 0, countLimitadas: 0, saldo: 0 };
+        const bookmakerInfo = parceiroBookmakers.get(parceiroId) || { 
+          count: 0, countLimitadas: 0, saldo_brl: 0, saldo_usd: 0 
+        };
         
-        const lucro = financials.sacado + bookmakerInfo.saldo - financials.depositado;
-        const roi = financials.depositado > 0 ? (lucro / financials.depositado) * 100 : 0;
+        const lucro_brl = financials.sacado_brl + bookmakerInfo.saldo_brl - financials.depositado_brl;
+        const lucro_usd = financials.sacado_usd + bookmakerInfo.saldo_usd - financials.depositado_usd;
+        const lucro_total = lucro_brl + lucro_usd; // Simplificado para compatibilidade
+        const depositado_total = financials.depositado_brl + financials.depositado_usd;
+        const roi = depositado_total > 0 ? (lucro_total / depositado_total) * 100 : 0;
         
         roiMap.set(parceiroId, {
           parceiro_id: parceiroId,
-          total_depositado: financials.depositado,
-          total_sacado: financials.sacado,
-          lucro_prejuizo: lucro,
+          total_depositado: depositado_total,
+          total_sacado: financials.sacado_brl + financials.sacado_usd,
+          lucro_prejuizo: lucro_total,
+          lucro_prejuizo_brl: lucro_brl,
+          lucro_prejuizo_usd: lucro_usd,
           roi_percentual: roi,
           num_bookmakers: bookmakerInfo.count,
           num_bookmakers_limitadas: bookmakerInfo.countLimitadas,
-          saldo_bookmakers: bookmakerInfo.saldo,
+          saldo_bookmakers: bookmakerInfo.saldo_brl + bookmakerInfo.saldo_usd,
         });
       });
 
@@ -254,11 +284,13 @@ export default function GestaoParceiros() {
             parceiro_id: parceiroId,
             total_depositado: 0,
             total_sacado: 0,
-            lucro_prejuizo: bookmakerInfo.saldo,
+            lucro_prejuizo: bookmakerInfo.saldo_brl + bookmakerInfo.saldo_usd,
+            lucro_prejuizo_brl: bookmakerInfo.saldo_brl,
+            lucro_prejuizo_usd: bookmakerInfo.saldo_usd,
             roi_percentual: 0,
             num_bookmakers: bookmakerInfo.count,
             num_bookmakers_limitadas: bookmakerInfo.countLimitadas,
-            saldo_bookmakers: bookmakerInfo.saldo,
+            saldo_bookmakers: bookmakerInfo.saldo_brl + bookmakerInfo.saldo_usd,
           });
         }
       });
@@ -534,14 +566,19 @@ export default function GestaoParceiros() {
 
   // Prepare data for sidebar
   const parceirosParaSidebar = useMemo(() => {
-    return parceiros.map(p => ({
-      id: p.id,
-      nome: p.nome,
-      cpf: p.cpf,
-      status: p.status,
-      lucro_prejuizo: roiData.get(p.id)?.lucro_prejuizo || 0,
-      has_parceria: parceriasData.has(p.id),
-    }));
+    return parceiros.map(p => {
+      const roi = roiData.get(p.id);
+      return {
+        id: p.id,
+        nome: p.nome,
+        cpf: p.cpf,
+        status: p.status,
+        lucro_prejuizo: roi?.lucro_prejuizo || 0,
+        lucro_prejuizo_brl: roi?.lucro_prejuizo_brl || 0,
+        lucro_prejuizo_usd: roi?.lucro_prejuizo_usd || 0,
+        has_parceria: parceriasData.has(p.id),
+      };
+    });
   }, [parceiros, roiData, parceriasData]);
 
   const stats = {
