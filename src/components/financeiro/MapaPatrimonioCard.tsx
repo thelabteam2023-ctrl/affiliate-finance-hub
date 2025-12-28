@@ -43,9 +43,11 @@ export interface CaixaDetalhe {
 interface MapaPatrimonioCardProps {
   caixaOperacional: number;
   saldoBookmakers: number;
+  saldoBookmakersBRL?: number;
+  saldoBookmakersUSD?: number;
   contasParceiros: number;
   walletsCrypto: number;
-  formatCurrency: (value: number) => string;
+  formatCurrency: (value: number, currency?: string) => string;
   // Dados detalhados para drill-down
   bookmakersPorProjeto?: BookmakerPorProjeto[];
   contasPorBanco?: ContaPorBanco[];
@@ -57,6 +59,8 @@ interface MapaPatrimonioCardProps {
 export function MapaPatrimonioCard({
   caixaOperacional,
   saldoBookmakers,
+  saldoBookmakersBRL = 0,
+  saldoBookmakersUSD = 0,
   contasParceiros,
   walletsCrypto,
   formatCurrency,
@@ -66,6 +70,7 @@ export function MapaPatrimonioCard({
   caixaDetalhes = [],
   cotacaoUSD = 1,
 }: MapaPatrimonioCardProps) {
+  const hasBookmakersUSD = saldoBookmakersUSD > 0;
   const total = caixaOperacional + saldoBookmakers + contasParceiros + walletsCrypto;
 
   // Colors matching the reference pattern
@@ -474,6 +479,7 @@ export function MapaPatrimonioCard({
         <div className="space-y-2">
           {data.map((item) => {
             const percent = total > 0 ? (item.value / total) * 100 : 0;
+            const isBookmakers = item.key === "bookmakers";
             
             return (
               <div key={item.name} className="flex items-center gap-3">
@@ -489,6 +495,14 @@ export function MapaPatrimonioCard({
                     </div>
                     <span className="text-sm font-bold ml-2">{formatCurrency(item.value)}</span>
                   </div>
+                  {/* Breakdown BRL/USD para Bookmakers */}
+                  {isBookmakers && hasBookmakersUSD && (
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
+                      <span>R$ {saldoBookmakersBRL.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                      <span>•</span>
+                      <span className="text-blue-400">$ {saldoBookmakersUSD.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} USD</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 mt-0.5">
                     <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                       <div 
