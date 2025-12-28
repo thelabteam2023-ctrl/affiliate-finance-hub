@@ -260,11 +260,24 @@ export default function GestaoBookmakers() {
       BRL: "R$",
       USD: "$",
       EUR: "€",
+      GBP: "£",
       USDT: "₮",
       BTC: "₿",
       ETH: "Ξ",
     };
     return `${currencySymbols[currency] || ""} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  // Retorna o saldo principal baseado na moeda operacional do bookmaker
+  const getBookmakerDisplayBalance = (bookmaker: Bookmaker) => {
+    const moeda = bookmaker.moeda || "BRL";
+    // EUR e GBP usam saldo_atual (serão tratados na moeda operacional)
+    // USD usa saldo_usd
+    // BRL usa saldo_atual
+    if (moeda === "USD") {
+      return { value: bookmaker.saldo_usd, currency: "USD" };
+    }
+    return { value: bookmaker.saldo_atual, currency: moeda };
   };
 
   const copyToClipboard = (text: string, field: string) => {
@@ -588,38 +601,40 @@ export default function GestaoBookmakers() {
                     <div className="p-3 bg-muted rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium">Saldo Disponível</span>
+                        <Badge variant="outline" className={
+                          bookmaker.moeda === "USD" ? "text-cyan-400 border-cyan-400/30" :
+                          bookmaker.moeda === "EUR" ? "text-amber-400 border-amber-400/30" :
+                          bookmaker.moeda === "GBP" ? "text-purple-400 border-purple-400/30" :
+                          "text-muted-foreground"
+                        }>
+                          {bookmaker.moeda || "BRL"}
+                        </Badge>
                       </div>
                       <div className="space-y-2">
-                        {/* Se tem saldo USD, exibir primeiro com destaque */}
-                        {Number(bookmaker.saldo_usd || 0) > 0 && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-2xl font-bold text-cyan-400">
-                              $ {Number(bookmaker.saldo_usd).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </span>
-                            <Badge variant="outline" className="text-cyan-400 border-cyan-400/30">
-                              USD
-                            </Badge>
-                          </div>
-                        )}
-                        {/* Se tem saldo BRL, exibir */}
-                        {Number(bookmaker.saldo_atual) > 0 && (
-                          <div className="flex items-center gap-2">
-                            <span className={`font-bold ${Number(bookmaker.saldo_usd || 0) > 0 ? 'text-lg' : 'text-2xl'}`}>
-                              {formatCurrency(Number(bookmaker.saldo_atual), "BRL")}
-                            </span>
-                            {Number(bookmaker.saldo_usd || 0) > 0 && (
-                              <Badge variant="outline" className="text-muted-foreground">
-                                BRL
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                        {/* Se não tem nenhum saldo */}
-                        {Number(bookmaker.saldo_atual) === 0 && Number(bookmaker.saldo_usd || 0) === 0 && (
-                          <div className="text-2xl font-bold text-muted-foreground">
-                            R$ 0,00
-                          </div>
-                        )}
+                        {/* Exibir saldo na moeda operacional */}
+                        {(() => {
+                          const balance = getBookmakerDisplayBalance(bookmaker);
+                          const colorClass = 
+                            balance.currency === "USD" ? "text-cyan-400" :
+                            balance.currency === "EUR" ? "text-amber-400" :
+                            balance.currency === "GBP" ? "text-purple-400" :
+                            "";
+                          
+                          if (Number(balance.value) > 0) {
+                            return (
+                              <div className="flex items-center gap-2">
+                                <span className={`text-2xl font-bold ${colorClass}`}>
+                                  {formatCurrency(Number(balance.value), balance.currency)}
+                                </span>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="text-2xl font-bold text-muted-foreground">
+                              {formatCurrency(0, balance.currency)}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
 
