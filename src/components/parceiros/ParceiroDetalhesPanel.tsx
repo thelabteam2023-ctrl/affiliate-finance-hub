@@ -319,6 +319,7 @@ export function ParceiroDetalhesPanel({
                         valueUSD={data.total_depositado_usd}
                         size="sm"
                         masked={!showSensitiveData}
+                        showDashOnZero
                       />
                     </div>
                   </div>
@@ -332,6 +333,7 @@ export function ParceiroDetalhesPanel({
                         valueUSD={data.total_sacado_usd}
                         size="sm"
                         masked={!showSensitiveData}
+                        showDashOnZero
                       />
                     </div>
                   </div>
@@ -354,6 +356,7 @@ export function ParceiroDetalhesPanel({
                         size="sm"
                         variant="auto"
                         masked={!showSensitiveData}
+                        showDashOnZero
                       />
                     </div>
                   </div>

@@ -19,6 +19,8 @@ export interface MoneyDisplayProps {
   className?: string;
   valueClassName?: string;
   decimals?: number;
+  /** Se true, mostra "-" quando o valor for 0 */
+  showDashOnZero?: boolean;
 }
 
 const sizeClasses = {
@@ -87,7 +89,23 @@ export function MoneyDisplay({
   className,
   valueClassName,
   decimals = 2,
+  showDashOnZero = false,
 }: MoneyDisplayProps) {
+  // Se showDashOnZero e valor for 0, retorna "-"
+  if (showDashOnZero && value === 0) {
+    return (
+      <span
+        className={cn(
+          sizeClasses[size],
+          fontWeightClasses[size],
+          "text-muted-foreground tabular-nums",
+          className
+        )}
+      >
+        -
+      </span>
+    );
+  }
   const isUSD = currency === "USD" || currency === "USDT";
   const symbol = CURRENCY_SYMBOLS[currency as SupportedCurrency] || currency;
   
@@ -175,6 +193,8 @@ export interface MultiCurrencyDisplayProps {
   className?: string;
   showZero?: boolean;
   stacked?: boolean;
+  /** Se true, mostra "-" quando ambos os valores forem 0 */
+  showDashOnZero?: boolean;
 }
 
 export function MultiCurrencyDisplay({
@@ -186,9 +206,25 @@ export function MultiCurrencyDisplay({
   className,
   showZero = false,
   stacked = true,
+  showDashOnZero = false,
 }: MultiCurrencyDisplayProps) {
   const hasBRL = valueBRL !== 0 || showZero;
   const hasUSD = valueUSD !== 0;
+  
+  // Se showDashOnZero e ambos são zero, retorna "-"
+  if (showDashOnZero && valueBRL === 0 && valueUSD === 0) {
+    const sizeClasses = {
+      xs: "text-[10px]",
+      sm: "text-xs",
+      md: "text-sm",
+      lg: "text-base",
+    };
+    return (
+      <span className={cn(sizeClasses[size], "font-medium text-muted-foreground tabular-nums", className)}>
+        -
+      </span>
+    );
+  }
   
   if (!hasBRL && !hasUSD) {
     return (
