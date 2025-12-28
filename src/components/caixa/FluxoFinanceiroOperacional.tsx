@@ -304,80 +304,6 @@ export function FluxoFinanceiroOperacional({
 
   const formatUSD = (value: number) => formatCurrency(value, "USD");
 
-  const tooltipStyle = {
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    border: "1px solid rgba(255, 255, 255, 0.1)",
-    backdropFilter: "blur(12px)",
-    borderRadius: "12px",
-    padding: "12px 16px",
-  };
-
-  const CustomTooltipExterno = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0]?.payload;
-      return (
-        <div style={tooltipStyle}>
-          <p className="font-medium text-sm mb-2">{label}</p>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between gap-4">
-              <span className="text-emerald-500">Aportes:</span>
-              <span className="font-mono">{formatCurrency(data?.aportes || 0)}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-amber-500">Liquidações:</span>
-              <span className="font-mono">{formatCurrency(Math.abs(data?.liquidacoes || 0))}</span>
-            </div>
-            <div className="border-t border-white/10 pt-1 mt-1">
-              <div className="flex justify-between gap-4 font-medium">
-                <span className={data?.liquido >= 0 ? "text-emerald-500" : "text-destructive"}>
-                  Saldo:
-                </span>
-                <span className="font-mono">{formatCurrency(data?.liquido || 0)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const CustomTooltipOperacao = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0]?.payload;
-      return (
-        <div style={tooltipStyle}>
-          <p className="font-medium text-sm mb-2">{label}</p>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between gap-4">
-              <span className="text-blue-500">Depósitos:</span>
-              <span className="font-mono">{formatCurrency(data?.depositos || 0)}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-purple-500">Saques:</span>
-              <span className="font-mono">{formatCurrency(data?.saques || 0)}</span>
-            </div>
-            <div className="border-t border-white/10 pt-1 mt-1">
-              <div className="flex justify-between gap-4 font-medium">
-                <span className={data?.alocacaoLiquida >= 0 ? "text-blue-500" : "text-purple-500"}>
-                  Alocação Líquida:
-                </span>
-                <span className="font-mono">{formatCurrency(data?.alocacaoLiquida || 0)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const handleBarClick = (data: any) => {
-    if (onTransacaoClick && data?.transacoes) {
-      onTransacaoClick(data.transacoes);
-    }
-  };
-
   if (transacoesFiltradas.length === 0) {
     return (
       <Card className="bg-card/50 backdrop-blur border-border/50">
@@ -597,7 +523,7 @@ export function FluxoFinanceiroOperacional({
               </div>
             </div>
 
-            {/* Gráfico */}
+            {/* Gráfico com 4 séries: BRL e USD separados */}
             {dadosCapitalExterno.dados.length > 0 ? (
               <ModernBarChart
                 data={dadosCapitalExterno.dados}
@@ -610,15 +536,70 @@ export function FluxoFinanceiroOperacional({
                     gradientEnd: "#16A34A" 
                   },
                   { 
+                    dataKey: "aportes_usd", 
+                    label: "Aportes USD", 
+                    gradientStart: "#06B6D4", 
+                    gradientEnd: "#0891B2" 
+                  },
+                  { 
                     dataKey: "liquidacoes", 
                     label: "Liquidações BRL", 
                     gradientStart: "#F97316", 
                     gradientEnd: "#EA580C" 
                   },
+                  { 
+                    dataKey: "liquidacoes_usd", 
+                    label: "Liquidações USD", 
+                    gradientStart: "#EC4899", 
+                    gradientEnd: "#DB2777" 
+                  },
                 ]}
-                height={280}
-                barSize={24}
-                formatValue={(value) => formatCurrency(value)}
+                height={300}
+                barSize={16}
+                customTooltipContent={(payload, label) => {
+                  const data = payload[0]?.payload;
+                  const hasAnyUSD = (data?.aportes_usd || 0) > 0 || Math.abs(data?.liquidacoes_usd || 0) > 0;
+                  
+                  return (
+                    <>
+                      <p className="font-medium text-sm mb-2">{label}</p>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between gap-4">
+                          <span className="text-emerald-500">Aportes BRL:</span>
+                          <span className="font-mono">{formatCurrency(data?.aportes || 0)}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-amber-500">Liquidações BRL:</span>
+                          <span className="font-mono">{formatCurrency(Math.abs(data?.liquidacoes || 0))}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-cyan-500">Aportes USD:</span>
+                          <span className="font-mono">{formatUSD(data?.aportes_usd || 0)}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-pink-500">Liquidações USD:</span>
+                          <span className="font-mono">{formatUSD(Math.abs(data?.liquidacoes_usd || 0))}</span>
+                        </div>
+                        <div className="border-t border-white/10 pt-1 mt-1 space-y-1">
+                          <div className="flex justify-between gap-4 font-medium">
+                            <span className={data?.liquido >= 0 ? "text-emerald-500" : "text-destructive"}>
+                              Saldo BRL:
+                            </span>
+                            <span className="font-mono">{formatCurrency(data?.liquido || 0)}</span>
+                          </div>
+                          {hasAnyUSD && (
+                            <div className="flex justify-between gap-4 font-medium">
+                              <span className={data?.liquido_usd >= 0 ? "text-cyan-500" : "text-pink-500"}>
+                                Saldo USD:
+                              </span>
+                              <span className="font-mono">{formatUSD(data?.liquido_usd || 0)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  );
+                }}
               />
             ) : (
               <div className="flex items-center justify-center h-[200px] text-muted-foreground">
@@ -671,7 +652,7 @@ export function FluxoFinanceiroOperacional({
               </div>
             </div>
 
-            {/* Gráfico */}
+            {/* Gráfico com 4 séries: BRL e USD separados */}
             {dadosCapitalOperacao.dados.length > 0 ? (
               <ModernBarChart
                 data={dadosCapitalOperacao.dados}
@@ -684,15 +665,70 @@ export function FluxoFinanceiroOperacional({
                     gradientEnd: "#2563EB" 
                   },
                   { 
+                    dataKey: "depositos_usd", 
+                    label: "Depósitos USD", 
+                    gradientStart: "#06B6D4", 
+                    gradientEnd: "#0891B2" 
+                  },
+                  { 
                     dataKey: "saques", 
                     label: "Saques BRL", 
                     gradientStart: "#8B5CF6", 
                     gradientEnd: "#7C3AED" 
                   },
+                  { 
+                    dataKey: "saques_usd", 
+                    label: "Saques USD", 
+                    gradientStart: "#EC4899", 
+                    gradientEnd: "#DB2777" 
+                  },
                 ]}
-                height={280}
-                barSize={24}
-                formatValue={(value) => formatCurrency(value)}
+                height={300}
+                barSize={16}
+                customTooltipContent={(payload, label) => {
+                  const data = payload[0]?.payload;
+                  const hasAnyUSD = (data?.depositos_usd || 0) > 0 || (data?.saques_usd || 0) > 0;
+                  
+                  return (
+                    <>
+                      <p className="font-medium text-sm mb-2">{label}</p>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between gap-4">
+                          <span className="text-blue-500">Depósitos BRL:</span>
+                          <span className="font-mono">{formatCurrency(data?.depositos || 0)}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-purple-500">Saques BRL:</span>
+                          <span className="font-mono">{formatCurrency(data?.saques || 0)}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-cyan-500">Depósitos USD:</span>
+                          <span className="font-mono">{formatUSD(data?.depositos_usd || 0)}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-pink-500">Saques USD:</span>
+                          <span className="font-mono">{formatUSD(data?.saques_usd || 0)}</span>
+                        </div>
+                        <div className="border-t border-white/10 pt-1 mt-1 space-y-1">
+                          <div className="flex justify-between gap-4 font-medium">
+                            <span className={data?.alocacaoLiquida >= 0 ? "text-blue-500" : "text-purple-500"}>
+                              Alocação Líquida BRL:
+                            </span>
+                            <span className="font-mono">{formatCurrency(data?.alocacaoLiquida || 0)}</span>
+                          </div>
+                          {hasAnyUSD && (
+                            <div className="flex justify-between gap-4 font-medium">
+                              <span className={data?.alocacaoLiquidaUSD >= 0 ? "text-cyan-500" : "text-pink-500"}>
+                                Alocação Líquida USD:
+                              </span>
+                              <span className="font-mono">{formatUSD(data?.alocacaoLiquidaUSD || 0)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  );
+                }}
               />
             ) : (
               <div className="flex items-center justify-center h-[200px] text-muted-foreground">
