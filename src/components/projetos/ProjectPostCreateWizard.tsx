@@ -592,7 +592,7 @@ export function ProjectPostCreateWizard({
         observacoes: cicloObservacoes || null,
         operador_projeto_id: cicloOperadorProjetoId || null,
         user_id: session.session.user.id,
-        workspace_id: workspaceId,
+        workspace_id: workspaceId!,
         projeto_id: projectId,
         numero_ciclo: proximoNumero,
         status: "EM_ANDAMENTO",
@@ -619,7 +619,7 @@ export function ProjectPostCreateWizard({
           .from("participacao_ciclos")
           .insert({
             user_id: session.session.user.id,
-            workspace_id: workspaceId,
+            workspace_id: workspaceId!,
             projeto_id: projectId,
             ciclo_id: novoCiclo.id,
             investidor_id: projeto.investidor_id,
