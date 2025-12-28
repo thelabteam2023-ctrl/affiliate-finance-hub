@@ -243,7 +243,7 @@ export type Database = {
           valor_brl_referencia: number | null
           valor_freebet_gerada: number | null
           valor_retorno: number | null
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           aposta_relacionada_id?: string | null
@@ -305,7 +305,7 @@ export type Database = {
           valor_brl_referencia?: number | null
           valor_freebet_gerada?: number | null
           valor_retorno?: number | null
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           aposta_relacionada_id?: string | null
@@ -367,7 +367,7 @@ export type Database = {
           valor_brl_referencia?: number | null
           valor_freebet_gerada?: number | null
           valor_retorno?: number | null
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -636,7 +636,7 @@ export type Database = {
           updated_at: string
           url: string | null
           user_id: string
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           bookmaker_catalogo_id?: string | null
@@ -657,7 +657,7 @@ export type Database = {
           updated_at?: string
           url?: string | null
           user_id: string
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           bookmaker_catalogo_id?: string | null
@@ -678,7 +678,7 @@ export type Database = {
           updated_at?: string
           url?: string | null
           user_id?: string
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -847,7 +847,7 @@ export type Database = {
           user_id: string
           valor: number
           valor_usd: number | null
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           coin?: string | null
@@ -878,7 +878,7 @@ export type Database = {
           user_id: string
           valor: number
           valor_usd?: number | null
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           coin?: string | null
@@ -909,7 +909,7 @@ export type Database = {
           user_id?: string
           valor?: number
           valor_usd?: number | null
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -1661,7 +1661,7 @@ export type Database = {
           updated_at: string | null
           user_id: string
           valor_pagamento_operador: number | null
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           ajuste?: number | null
@@ -1692,7 +1692,7 @@ export type Database = {
           updated_at?: string | null
           user_id: string
           valor_pagamento_operador?: number | null
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           ajuste?: number | null
@@ -1723,7 +1723,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           valor_pagamento_operador?: number | null
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -1769,7 +1769,7 @@ export type Database = {
           tipo_documento: string | null
           updated_at: string | null
           user_id: string
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           created_at?: string | null
@@ -1783,7 +1783,7 @@ export type Database = {
           tipo_documento?: string | null
           updated_at?: string | null
           user_id: string
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           created_at?: string | null
@@ -1797,7 +1797,7 @@ export type Database = {
           tipo_documento?: string | null
           updated_at?: string | null
           user_id?: string
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -1830,7 +1830,7 @@ export type Database = {
           utilizada: boolean | null
           valor: number
           valor_brl_referencia: number | null
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           aposta_id?: string | null
@@ -1852,7 +1852,7 @@ export type Database = {
           utilizada?: boolean | null
           valor: number
           valor_brl_referencia?: number | null
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           aposta_id?: string | null
@@ -1874,7 +1874,7 @@ export type Database = {
           utilizada?: boolean | null
           valor?: number
           valor_brl_referencia?: number | null
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -1931,7 +1931,7 @@ export type Database = {
           origem: string | null
           parceiro_id: string
           user_id: string
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           created_at?: string | null
@@ -1942,7 +1942,7 @@ export type Database = {
           origem?: string | null
           parceiro_id: string
           user_id: string
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           created_at?: string | null
@@ -1953,7 +1953,7 @@ export type Database = {
           origem?: string | null
           parceiro_id?: string
           user_id?: string
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -2021,7 +2021,7 @@ export type Database = {
           valor_bonus: number | null
           vigencia_fim: string | null
           vigencia_inicio: string | null
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           ativo?: boolean | null
@@ -2036,7 +2036,7 @@ export type Database = {
           valor_bonus?: number | null
           vigencia_fim?: string | null
           vigencia_inicio?: string | null
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           ativo?: boolean | null
@@ -2051,7 +2051,7 @@ export type Database = {
           valor_bonus?: number | null
           vigencia_fim?: string | null
           vigencia_inicio?: string | null
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -2089,7 +2089,7 @@ export type Database = {
           telefone: string | null
           updated_at: string | null
           user_id: string
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           cpf: string
@@ -2102,7 +2102,7 @@ export type Database = {
           telefone?: string | null
           updated_at?: string | null
           user_id: string
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           cpf?: string
@@ -2115,7 +2115,7 @@ export type Database = {
           telefone?: string | null
           updated_at?: string | null
           user_id?: string
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -2388,7 +2388,7 @@ export type Database = {
           tipo_moeda: string | null
           user_id: string
           valor: number
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           coin?: string | null
@@ -2411,7 +2411,7 @@ export type Database = {
           tipo_moeda?: string | null
           user_id: string
           valor: number
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           coin?: string | null
@@ -2434,7 +2434,7 @@ export type Database = {
           tipo_moeda?: string | null
           user_id?: string
           valor?: number
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -2576,7 +2576,7 @@ export type Database = {
           updated_at: string
           user_id: string
           valor_fixo: number | null
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           base_calculo?: string | null
@@ -2609,7 +2609,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           valor_fixo?: number | null
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           base_calculo?: string | null
@@ -2642,7 +2642,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valor_fixo?: number | null
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -2812,7 +2812,7 @@ export type Database = {
           updated_at: string
           user_id: string
           valor: number
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           cash_ledger_id?: string | null
@@ -2829,7 +2829,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           valor: number
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           cash_ledger_id?: string | null
@@ -2846,7 +2846,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valor?: number
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -2921,7 +2921,7 @@ export type Database = {
           valor_ajustado: number | null
           valor_calculado: number
           valor_fixo_aplicado: number | null
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           aprovado_por?: string | null
@@ -2950,7 +2950,7 @@ export type Database = {
           valor_ajustado?: number | null
           valor_calculado?: number
           valor_fixo_aplicado?: number | null
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           aprovado_por?: string | null
@@ -2979,7 +2979,7 @@ export type Database = {
           valor_ajustado?: number | null
           valor_calculado?: number
           valor_fixo_aplicado?: number | null
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -3071,7 +3071,7 @@ export type Database = {
           notificado: boolean | null
           parceiro_id: string
           user_id: string
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           created_at?: string
@@ -3082,7 +3082,7 @@ export type Database = {
           notificado?: boolean | null
           parceiro_id: string
           user_id: string
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           created_at?: string
@@ -3093,7 +3093,7 @@ export type Database = {
           notificado?: boolean | null
           parceiro_id?: string
           user_id?: string
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -3233,7 +3233,7 @@ export type Database = {
           valor_fornecedor: number | null
           valor_indicador: number | null
           valor_parceiro: number | null
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           comissao_paga?: boolean | null
@@ -3258,7 +3258,7 @@ export type Database = {
           valor_fornecedor?: number | null
           valor_indicador?: number | null
           valor_parceiro?: number | null
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           comissao_paga?: boolean | null
@@ -3283,7 +3283,7 @@ export type Database = {
           valor_fornecedor?: number | null
           valor_indicador?: number | null
           valor_parceiro?: number | null
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -3364,7 +3364,7 @@ export type Database = {
           updated_at: string | null
           user_id: string
           valor_participacao: number
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           base_calculo: string
@@ -3385,7 +3385,7 @@ export type Database = {
           updated_at?: string | null
           user_id: string
           valor_participacao?: number
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           base_calculo?: string
@@ -3406,7 +3406,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           valor_participacao?: number
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -3736,7 +3736,7 @@ export type Database = {
           updated_at: string
           user_id: string
           valor_brl_referencia: number | null
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           bonus_amount?: number
@@ -3769,7 +3769,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           valor_brl_referencia?: number | null
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           bonus_amount?: number
@@ -3802,7 +3802,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valor_brl_referencia?: number | null
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -3901,7 +3901,7 @@ export type Database = {
           projeto_id: string
           status_final: string | null
           user_id: string
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           bookmaker_id: string
@@ -3915,7 +3915,7 @@ export type Database = {
           projeto_id: string
           status_final?: string | null
           user_id: string
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           bookmaker_id?: string
@@ -3929,7 +3929,7 @@ export type Database = {
           projeto_id?: string
           status_final?: string | null
           user_id?: string
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -4035,7 +4035,7 @@ export type Database = {
           user_id: string
           valor_acumulado: number
           valor_pagamento_calculado: number | null
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           cotacao_fechamento?: number | null
@@ -4067,7 +4067,7 @@ export type Database = {
           user_id: string
           valor_acumulado?: number
           valor_pagamento_calculado?: number | null
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           cotacao_fechamento?: number | null
@@ -4099,7 +4099,7 @@ export type Database = {
           user_id?: string
           valor_acumulado?: number
           valor_pagamento_calculado?: number | null
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -4158,7 +4158,7 @@ export type Database = {
           tipo_ajuste: string
           updated_at: string
           user_id: string
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           ajuste_crypto_usd?: number
@@ -4178,7 +4178,7 @@ export type Database = {
           tipo_ajuste?: string
           updated_at?: string
           user_id: string
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           ajuste_crypto_usd?: number
@@ -4198,7 +4198,7 @@ export type Database = {
           tipo_ajuste?: string
           updated_at?: string
           user_id?: string
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -4232,7 +4232,7 @@ export type Database = {
           updated_at: string
           user_id: string
           valor: number
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           bookmaker_id?: string | null
@@ -4248,7 +4248,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           valor: number
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           bookmaker_id?: string | null
@@ -4264,7 +4264,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valor?: number
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -4420,7 +4420,7 @@ export type Database = {
           promocao_id: string
           updated_at: string | null
           user_id: string
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           bonus_pago?: boolean | null
@@ -4433,7 +4433,7 @@ export type Database = {
           promocao_id: string
           updated_at?: string | null
           user_id: string
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           bonus_pago?: boolean | null
@@ -4446,7 +4446,7 @@ export type Database = {
           promocao_id?: string
           updated_at?: string | null
           user_id?: string
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -4492,7 +4492,7 @@ export type Database = {
           updated_at: string | null
           user_id: string
           valor_bonus: number
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           created_at?: string | null
@@ -4506,7 +4506,7 @@ export type Database = {
           updated_at?: string | null
           user_id: string
           valor_bonus: number
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           created_at?: string | null
@@ -4520,7 +4520,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           valor_bonus?: number
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -4759,7 +4759,7 @@ export type Database = {
           saldo_novo: number
           tipo: string
           valor: number
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           bookmaker_id: string
@@ -4772,7 +4772,7 @@ export type Database = {
           saldo_novo: number
           tipo: string
           valor: number
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           bookmaker_id?: string
@@ -4785,7 +4785,7 @@ export type Database = {
           saldo_novo?: number
           tipo?: string
           valor?: number
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
