@@ -7,7 +7,9 @@ import { useRole } from "@/hooks/useRole";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useProjectFavorites } from "@/hooks/useProjectFavorites";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
+import { useCentralAlertsCount } from "@/hooks/useCentralAlertsCount";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { getRoleLabel } from "@/lib/roleLabels";
 import {
@@ -122,6 +124,7 @@ export function AppSidebar() {
   const { favorites: projectFavorites } = useProjectFavorites();
   const { workspace } = useWorkspace();
   const { canAccess } = useModuleAccess();
+  const { count: alertsCount } = useCentralAlertsCount();
   const currentPath = location.pathname;
   
   // State for project names
@@ -183,6 +186,9 @@ export function AppSidebar() {
   const renderMenuItem = (item: MenuItem) => {
     if (!canSeeItem(item)) return null;
 
+    const isCentral = item.moduleKey === "central";
+    const showBadge = isCentral && alertsCount > 0;
+
     return (
       <SidebarMenuItem key={item.title}>
         {isCollapsed ? (
@@ -192,15 +198,24 @@ export function AppSidebar() {
                 <NavLink 
                   to={item.url} 
                   end 
-                  className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-accent/50"
+                  className="relative flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-accent/50"
                   activeClassName="bg-primary/10 text-primary"
                 >
                   <item.icon className="h-4 w-4" />
+                  {showBadge && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] font-bold flex items-center justify-center"
+                    >
+                      {alertsCount > 99 ? "99+" : alertsCount}
+                    </Badge>
+                  )}
                 </NavLink>
               </SidebarMenuButton>
             </TooltipTrigger>
             <TooltipContent side="right" className="font-medium">
               {item.title}
+              {showBadge && ` (${alertsCount})`}
             </TooltipContent>
           </Tooltip>
         ) : (
@@ -212,7 +227,15 @@ export function AppSidebar() {
               activeClassName="bg-primary/10 text-primary font-medium"
             >
               <item.icon className="h-4 w-4 shrink-0" />
-              <span className="text-sm">{item.title}</span>
+              <span className="text-sm flex-1">{item.title}</span>
+              {showBadge && (
+                <Badge 
+                  variant="destructive" 
+                  className="h-5 min-w-5 px-1.5 text-[10px] font-bold"
+                >
+                  {alertsCount > 99 ? "99+" : alertsCount}
+                </Badge>
+              )}
             </NavLink>
           </SidebarMenuButton>
         )}
