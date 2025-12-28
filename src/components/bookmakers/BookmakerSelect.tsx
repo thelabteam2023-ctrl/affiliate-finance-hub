@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -44,6 +44,11 @@ interface BookmakerSelectProps {
   excludeVinculosDoParceiro?: string;
 }
 
+export interface BookmakerSelectRef {
+  focus: () => void;
+  open: () => void;
+}
+
 interface BookmakerItem {
   id: string;
   nome: string;
@@ -55,7 +60,7 @@ interface BookmakerItem {
   status?: string;
 }
 
-export default function BookmakerSelect({ 
+const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({ 
   value, 
   onValueChange, 
   onBookmakerData,
@@ -63,7 +68,7 @@ export default function BookmakerSelect({
   parceiroId, 
   somenteComSaldo,
   excludeVinculosDoParceiro
-}: BookmakerSelectProps) {
+}, ref) => {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<BookmakerItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -72,7 +77,18 @@ export default function BookmakerSelect({
   const [loadingDisplay, setLoadingDisplay] = useState(false);
   
   const lastFetchedValue = useRef<string>("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const isVinculoMode = !!parceiroId;
+
+  // Expose focus and open methods via ref
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      triggerRef.current?.focus();
+    },
+    open: () => {
+      setOpen(true);
+    }
+  }));
   
   // Notificar callback quando o item selecionado muda
   useEffect(() => {
@@ -261,6 +277,7 @@ export default function BookmakerSelect({
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
               <Button
+                ref={triggerRef}
                 variant="outline"
                 role="combobox"
                 aria-expanded={open}
@@ -403,4 +420,8 @@ export default function BookmakerSelect({
       </Popover>
     </TooltipProvider>
   );
-}
+});
+
+BookmakerSelect.displayName = "BookmakerSelect";
+
+export default BookmakerSelect;
