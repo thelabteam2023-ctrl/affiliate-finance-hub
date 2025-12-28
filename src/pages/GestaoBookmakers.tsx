@@ -168,7 +168,7 @@ export default function GestaoBookmakers() {
   };
 
   const handleEdit = async (bookmaker: Bookmaker) => {
-    // Fetch full bookmaker data including encrypted password
+    // Fetch full bookmaker data including encrypted password and ensure parceiro_id is present
     const { data, error } = await supabase
       .from("bookmakers")
       .select("*")
@@ -179,6 +179,16 @@ export default function GestaoBookmakers() {
       toast({
         title: "Erro ao carregar dados",
         description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // CRÍTICO: Verificar se parceiro_id está presente antes de abrir o dialog
+    if (!data.parceiro_id) {
+      toast({
+        title: "Erro de dados",
+        description: "Este vínculo não possui um parceiro associado.",
         variant: "destructive",
       });
       return;
