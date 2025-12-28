@@ -103,7 +103,7 @@ export function useParceiroFinanceiroCache() {
     const { data: bookmakers, error: bookmakersError } = await supabase
       .from("bookmakers")
       .select(`
-        id, nome, saldo_atual, status, projeto_id, bookmaker_catalogo_id,
+        id, nome, moeda, saldo_atual, status, projeto_id, bookmaker_catalogo_id,
         login_username, login_password_encrypted
       `)
       .eq("parceiro_id", parceiroId);
@@ -127,35 +127,49 @@ export function useParceiroFinanceiroCache() {
     }
 
     const bookmakerIds = (bookmakers || []).map(b => b.id);
-    let depositosMap = new Map<string, number>();
-    let saquesMap = new Map<string, number>();
+    let depositosMap = new Map<string, { brl: number; usd: number }>();
+    let saquesMap = new Map<string, { brl: number; usd: number }>();
 
     if (bookmakerIds.length > 0) {
       const { data: depositos } = await supabase
         .from("cash_ledger")
-        .select("destino_bookmaker_id, valor")
+        .select("destino_bookmaker_id, valor, valor_usd, tipo_moeda, moeda")
         .in("destino_bookmaker_id", bookmakerIds)
         .eq("tipo_transacao", "DEPOSITO")
         .eq("status", "CONFIRMADO");
 
       depositos?.forEach((d) => {
         if (d.destino_bookmaker_id) {
-          const current = depositosMap.get(d.destino_bookmaker_id) || 0;
-          depositosMap.set(d.destino_bookmaker_id, current + Number(d.valor));
+          const current = depositosMap.get(d.destino_bookmaker_id) || { brl: 0, usd: 0 };
+          if (d.tipo_moeda === "CRYPTO") {
+            current.usd += Number(d.valor_usd) || 0;
+          } else if (d.moeda === "USD") {
+            current.usd += Number(d.valor) || 0;
+          } else {
+            current.brl += Number(d.valor) || 0;
+          }
+          depositosMap.set(d.destino_bookmaker_id, current);
         }
       });
 
       const { data: saques } = await supabase
         .from("cash_ledger")
-        .select("origem_bookmaker_id, valor")
+        .select("origem_bookmaker_id, valor, valor_usd, tipo_moeda, moeda")
         .in("origem_bookmaker_id", bookmakerIds)
         .eq("tipo_transacao", "SAQUE")
         .eq("status", "CONFIRMADO");
 
       saques?.forEach((s) => {
         if (s.origem_bookmaker_id) {
-          const current = saquesMap.get(s.origem_bookmaker_id) || 0;
-          saquesMap.set(s.origem_bookmaker_id, current + Number(s.valor));
+          const current = saquesMap.get(s.origem_bookmaker_id) || { brl: 0, usd: 0 };
+          if (s.tipo_moeda === "CRYPTO") {
+            current.usd += Number(s.valor_usd) || 0;
+          } else if (s.moeda === "USD") {
+            current.usd += Number(s.valor) || 0;
+          } else {
+            current.brl += Number(s.valor) || 0;
+          }
+          saquesMap.set(s.origem_bookmaker_id, current);
         }
       });
     }
@@ -176,14 +190,20 @@ export function useParceiroFinanceiroCache() {
     }
 
     const bookmakersFinanceiro: BookmakerFinanceiro[] = (bookmakers || []).map(bm => {
-      const depositado = depositosMap.get(bm.id) || 0;
-      const sacado = saquesMap.get(bm.id) || 0;
+      const depositadoData = depositosMap.get(bm.id) || { brl: 0, usd: 0 };
+      const sacadoData = saquesMap.get(bm.id) || { brl: 0, usd: 0 };
       const saldoAtual = Number(bm.saldo_atual) || 0;
+      const moeda = bm.moeda || "BRL";
+      
+      const isUSD = moeda === "USD" || moeda === "USDT";
+      const depositado = isUSD ? depositadoData.usd : depositadoData.brl;
+      const sacado = isUSD ? sacadoData.usd : sacadoData.brl;
       const lucro = sacado + saldoAtual - depositado;
 
       return {
         bookmaker_id: bm.id,
         bookmaker_nome: bm.nome,
+        moeda,
         logo_url: bm.bookmaker_catalogo_id ? logosMap.get(bm.bookmaker_catalogo_id) || null : null,
         total_depositado: depositado,
         total_sacado: sacado,
@@ -198,17 +218,38 @@ export function useParceiroFinanceiroCache() {
       };
     });
 
-    const totalDepositado = bookmakersFinanceiro.reduce((sum, b) => sum + b.total_depositado, 0);
-    const totalSacado = bookmakersFinanceiro.reduce((sum, b) => sum + b.total_sacado, 0);
-    const lucroTotal = bookmakersFinanceiro.reduce((sum, b) => sum + b.lucro_prejuizo, 0);
+    // Calcular totais separados por moeda
+    let totalDepositadoBRL = 0, totalDepositadoUSD = 0;
+    let totalSacadoBRL = 0, totalSacadoUSD = 0;
+    let lucroBRL = 0, lucroUSD = 0;
+    
+    bookmakersFinanceiro.forEach(b => {
+      const isUSD = b.moeda === "USD" || b.moeda === "USDT";
+      if (isUSD) {
+        totalDepositadoUSD += b.total_depositado;
+        totalSacadoUSD += b.total_sacado;
+        lucroUSD += b.lucro_prejuizo;
+      } else {
+        totalDepositadoBRL += b.total_depositado;
+        totalSacadoBRL += b.total_sacado;
+        lucroBRL += b.lucro_prejuizo;
+      }
+    });
+    
     const qtdApostasTotal = bookmakersFinanceiro.reduce((sum, b) => sum + b.qtd_apostas, 0);
 
     return {
       parceiro_id: parceiroId,
       parceiro_nome: parceiroData.nome,
-      total_depositado: totalDepositado,
-      total_sacado: totalSacado,
-      lucro_prejuizo: lucroTotal,
+      total_depositado_brl: totalDepositadoBRL,
+      total_depositado_usd: totalDepositadoUSD,
+      total_sacado_brl: totalSacadoBRL,
+      total_sacado_usd: totalSacadoUSD,
+      lucro_prejuizo_brl: lucroBRL,
+      lucro_prejuizo_usd: lucroUSD,
+      total_depositado: totalDepositadoBRL + (totalDepositadoUSD * 5),
+      total_sacado: totalSacadoBRL + (totalSacadoUSD * 5),
+      lucro_prejuizo: lucroBRL + (lucroUSD * 5),
       qtd_apostas_total: qtdApostasTotal,
       bookmakers: bookmakersFinanceiro.sort((a, b) => b.lucro_prejuizo - a.lucro_prejuizo),
     };
