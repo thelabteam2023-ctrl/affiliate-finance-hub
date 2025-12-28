@@ -589,17 +589,32 @@ export default function GestaoBookmakers() {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium">Saldo Disponível</span>
                       </div>
-                      <div className="space-y-1">
-                        {Number(bookmaker.saldo_atual) > 0 && (
-                          <div className="text-2xl font-bold">
-                            {formatCurrency(Number(bookmaker.saldo_atual), "BRL")}
-                          </div>
-                        )}
+                      <div className="space-y-2">
+                        {/* Se tem saldo USD, exibir primeiro com destaque */}
                         {Number(bookmaker.saldo_usd || 0) > 0 && (
-                          <div className="text-xl font-bold text-cyan-400">
-                            $ {Number(bookmaker.saldo_usd).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl font-bold text-cyan-400">
+                              $ {Number(bookmaker.saldo_usd).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                            <Badge variant="outline" className="text-cyan-400 border-cyan-400/30">
+                              USD
+                            </Badge>
                           </div>
                         )}
+                        {/* Se tem saldo BRL, exibir */}
+                        {Number(bookmaker.saldo_atual) > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className={`font-bold ${Number(bookmaker.saldo_usd || 0) > 0 ? 'text-lg' : 'text-2xl'}`}>
+                              {formatCurrency(Number(bookmaker.saldo_atual), "BRL")}
+                            </span>
+                            {Number(bookmaker.saldo_usd || 0) > 0 && (
+                              <Badge variant="outline" className="text-muted-foreground">
+                                BRL
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                        {/* Se não tem nenhum saldo */}
                         {Number(bookmaker.saldo_atual) === 0 && Number(bookmaker.saldo_usd || 0) === 0 && (
                           <div className="text-2xl font-bold text-muted-foreground">
                             R$ 0,00

@@ -366,24 +366,27 @@ export default function BookmakerSelect({
                         )}>
                           {item.nome}
                         </span>
-                        {item.saldo_atual !== undefined && (
-                          <span className="text-xs text-muted-foreground flex-shrink-0">
+                        {(item.saldo_atual !== undefined || item.saldo_usd !== undefined) && (
+                          <span className="text-xs text-muted-foreground flex-shrink-0 flex items-center gap-1">
                             {/* Exibir BRL se existir */}
-                            {item.saldo_atual > 0 && (
-                              <span>R$ {item.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            {(item.saldo_atual ?? 0) > 0 && (
+                              <span className="bg-muted/50 px-1.5 py-0.5 rounded">
+                                R$ {item.saldo_atual?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
                             )}
                             {/* Exibir USD se existir */}
                             {(item.saldo_usd ?? 0) > 0 && (
-                              <span className={item.saldo_atual > 0 ? "ml-2 text-cyan-400" : "text-cyan-400"}>
-                                $ {item.saldo_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              <span className="bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded">
+                                $ {item.saldo_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} USD
                               </span>
                             )}
-                            {/* Exibir nada se ambos são zero */}
-                            {item.saldo_atual === 0 && (item.saldo_usd ?? 0) === 0 && (
-                              <span>R$ 0,00</span>
+                            {/* Exibir zero apenas se ambos são zero */}
+                            {(item.saldo_atual ?? 0) === 0 && (item.saldo_usd ?? 0) === 0 && (
+                              <span className="opacity-50">R$ 0,00</span>
                             )}
+                            {/* Freebet */}
                             {(item.saldo_freebet ?? 0) > 0 && (
-                              <span className="text-amber-400 ml-1">
+                              <span className="bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded">
                                 +FB {item.saldo_freebet?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                               </span>
                             )}
