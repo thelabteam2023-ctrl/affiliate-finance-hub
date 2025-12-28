@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
@@ -38,6 +38,11 @@ interface ParceiroSelectProps {
   saldosWallets?: SaldoParceiroWallets[];
 }
 
+export interface ParceiroSelectRef {
+  focus: () => void;
+  open: () => void;
+}
+
 interface Parceiro {
   id: string;
   nome: string;
@@ -45,7 +50,7 @@ interface Parceiro {
   status: string;
 }
 
-export default function ParceiroSelect({ 
+const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({ 
   value, 
   onValueChange, 
   disabled, 
@@ -56,11 +61,22 @@ export default function ParceiroSelect({
   coin,
   saldosContas,
   saldosWallets
-}: ParceiroSelectProps) {
+}, ref) => {
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [displayName, setDisplayName] = useState<string>("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Expose focus and open methods via ref
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      triggerRef.current?.focus();
+    },
+    open: () => {
+      triggerRef.current?.click();
+    }
+  }));
 
   // Buscar lista de parceiros ativos
   useEffect(() => {
@@ -209,7 +225,7 @@ export default function ParceiroSelect({
 
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled || loading}>
-      <SelectTrigger className="w-full text-center">
+      <SelectTrigger ref={triggerRef} className="w-full text-center">
         <div className="flex items-center justify-center gap-2 w-full">
           <User className="h-4 w-4 flex-shrink-0" />
           <span className="truncate text-center">
@@ -258,4 +274,8 @@ export default function ParceiroSelect({
       </SelectContent>
     </Select>
   );
-}
+});
+
+ParceiroSelect.displayName = "ParceiroSelect";
+
+export default ParceiroSelect;
