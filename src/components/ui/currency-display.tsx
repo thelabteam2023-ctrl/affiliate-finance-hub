@@ -197,19 +197,24 @@ export function CurrencyBadge({ moeda, size = "sm", className }: CurrencyBadgePr
     md: "text-sm px-2 py-1",
   };
   
-  const colorClasses: Record<SupportedCurrency, string> = {
+  const colorClasses: Record<string, string> = {
     BRL: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
     USD: "bg-blue-500/10 text-blue-500 border-blue-500/20",
     USDT: "bg-teal-500/10 text-teal-500 border-teal-500/20",
+    USDC: "bg-teal-500/10 text-teal-500 border-teal-500/20",
     EUR: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
     GBP: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+    BTC: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+    ETH: "bg-violet-500/10 text-violet-500 border-violet-500/20",
   };
+  
+  const colorClass = colorClasses[moeda] || "bg-gray-500/10 text-gray-500 border-gray-500/20";
   
   return (
     <span className={cn(
       "inline-flex items-center rounded border font-medium",
       sizeClasses[size],
-      colorClasses[moeda],
+      colorClass,
       className
     )}>
       {moeda}

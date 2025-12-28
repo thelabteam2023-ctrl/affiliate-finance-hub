@@ -8,37 +8,133 @@
  * 4. Valores históricos NUNCA são recalculados
  */
 
-// Moedas suportadas pelo sistema
-export type SupportedCurrency = "BRL" | "USD" | "USDT" | "EUR" | "GBP";
+// Moedas FIAT suportadas pelo sistema
+export type FiatCurrency = "BRL" | "USD" | "EUR" | "GBP";
+
+// Moedas CRYPTO suportadas pelo sistema
+export type CryptoCurrency = 
+  | "USDT" 
+  | "USDC" 
+  | "BTC" 
+  | "ETH" 
+  | "BNB" 
+  | "TRX" 
+  | "SOL" 
+  | "MATIC" 
+  | "ADA" 
+  | "DOT" 
+  | "AVAX" 
+  | "LINK" 
+  | "UNI" 
+  | "LTC" 
+  | "XRP";
+
+// Todas as moedas suportadas
+export type SupportedCurrency = FiatCurrency | CryptoCurrency;
 
 // Tipo para moeda com discriminador
 export type CurrencyType = "FIAT" | "CRYPTO";
 
+// Lista de moedas FIAT disponíveis para bookmakers
+export const FIAT_CURRENCIES: Array<{ value: FiatCurrency; label: string; symbol: string }> = [
+  { value: "BRL", label: "Real Brasileiro", symbol: "R$" },
+  { value: "USD", label: "Dólar Americano", symbol: "$" },
+  { value: "EUR", label: "Euro", symbol: "€" },
+  { value: "GBP", label: "Libra Esterlina", symbol: "£" },
+];
+
+// Lista de moedas CRYPTO disponíveis
+export const CRYPTO_CURRENCIES: Array<{ value: CryptoCurrency; label: string; symbol: string; isStablecoin: boolean }> = [
+  { value: "USDT", label: "Tether (USDT)", symbol: "₮", isStablecoin: true },
+  { value: "USDC", label: "USD Coin (USDC)", symbol: "USDC", isStablecoin: true },
+  { value: "BTC", label: "Bitcoin (BTC)", symbol: "₿", isStablecoin: false },
+  { value: "ETH", label: "Ethereum (ETH)", symbol: "Ξ", isStablecoin: false },
+  { value: "BNB", label: "Binance Coin (BNB)", symbol: "BNB", isStablecoin: false },
+  { value: "TRX", label: "Tron (TRX)", symbol: "TRX", isStablecoin: false },
+  { value: "SOL", label: "Solana (SOL)", symbol: "SOL", isStablecoin: false },
+  { value: "MATIC", label: "Polygon (MATIC)", symbol: "MATIC", isStablecoin: false },
+  { value: "ADA", label: "Cardano (ADA)", symbol: "ADA", isStablecoin: false },
+  { value: "DOT", label: "Polkadot (DOT)", symbol: "DOT", isStablecoin: false },
+  { value: "AVAX", label: "Avalanche (AVAX)", symbol: "AVAX", isStablecoin: false },
+  { value: "LINK", label: "Chainlink (LINK)", symbol: "LINK", isStablecoin: false },
+  { value: "UNI", label: "Uniswap (UNI)", symbol: "UNI", isStablecoin: false },
+  { value: "LTC", label: "Litecoin (LTC)", symbol: "Ł", isStablecoin: false },
+  { value: "XRP", label: "Ripple (XRP)", symbol: "XRP", isStablecoin: false },
+];
+
 // Mapeamento de moeda para tipo
 export const CURRENCY_TYPES: Record<SupportedCurrency, CurrencyType> = {
+  // FIAT
   BRL: "FIAT",
   USD: "FIAT",
   EUR: "FIAT",
   GBP: "FIAT",
+  // CRYPTO
   USDT: "CRYPTO",
+  USDC: "CRYPTO",
+  BTC: "CRYPTO",
+  ETH: "CRYPTO",
+  BNB: "CRYPTO",
+  TRX: "CRYPTO",
+  SOL: "CRYPTO",
+  MATIC: "CRYPTO",
+  ADA: "CRYPTO",
+  DOT: "CRYPTO",
+  AVAX: "CRYPTO",
+  LINK: "CRYPTO",
+  UNI: "CRYPTO",
+  LTC: "CRYPTO",
+  XRP: "CRYPTO",
 };
 
 // Símbolos de moeda
 export const CURRENCY_SYMBOLS: Record<SupportedCurrency, string> = {
+  // FIAT
   BRL: "R$",
   USD: "$",
   EUR: "€",
   GBP: "£",
-  USDT: "USDT",
+  // CRYPTO
+  USDT: "₮",
+  USDC: "USDC",
+  BTC: "₿",
+  ETH: "Ξ",
+  BNB: "BNB",
+  TRX: "TRX",
+  SOL: "SOL",
+  MATIC: "MATIC",
+  ADA: "ADA",
+  DOT: "DOT",
+  AVAX: "AVAX",
+  LINK: "LINK",
+  UNI: "UNI",
+  LTC: "Ł",
+  XRP: "XRP",
 };
 
 // Nomes completos
 export const CURRENCY_NAMES: Record<SupportedCurrency, string> = {
+  // FIAT
   BRL: "Real Brasileiro",
   USD: "Dólar Americano",
   EUR: "Euro",
   GBP: "Libra Esterlina",
+  // CRYPTO
   USDT: "Tether (USDT)",
+  USDC: "USD Coin (USDC)",
+  BTC: "Bitcoin (BTC)",
+  ETH: "Ethereum (ETH)",
+  BNB: "Binance Coin (BNB)",
+  TRX: "Tron (TRX)",
+  SOL: "Solana (SOL)",
+  MATIC: "Polygon (MATIC)",
+  ADA: "Cardano (ADA)",
+  DOT: "Polkadot (DOT)",
+  AVAX: "Avalanche (AVAX)",
+  LINK: "Chainlink (LINK)",
+  UNI: "Uniswap (UNI)",
+  LTC: "Litecoin (LTC)",
+  XRP: "Ripple (XRP)",
 };
 
 // Interface base para snapshot de conversão
@@ -148,6 +244,14 @@ export function isCryptoCurrency(moeda: string): boolean {
 }
 
 /**
+ * Verifica se uma moeda é stablecoin
+ */
+export function isStablecoin(moeda: string): boolean {
+  const crypto = CRYPTO_CURRENCIES.find(c => c.value === moeda);
+  return crypto?.isStablecoin ?? false;
+}
+
+/**
  * Formata um valor com símbolo de moeda
  */
 export function formatCurrencyValue(
@@ -206,4 +310,19 @@ export function isValidCurrency(moeda: string): moeda is SupportedCurrency {
  */
 export function getDefaultCurrency(): SupportedCurrency {
   return "BRL";
+}
+
+/**
+ * Retorna se a transação precisa de conversão
+ */
+export function needsConversion(moedaOrigem: string, moedaDestino: string): boolean {
+  if (!moedaOrigem || !moedaDestino) return false;
+  return moedaOrigem !== moedaDestino;
+}
+
+/**
+ * Retorna o símbolo da moeda
+ */
+export function getCurrencySymbol(moeda: string): string {
+  return CURRENCY_SYMBOLS[moeda as SupportedCurrency] || moeda;
 }

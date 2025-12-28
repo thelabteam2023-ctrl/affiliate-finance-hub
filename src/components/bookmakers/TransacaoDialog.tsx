@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, Info, ArrowRight } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -21,6 +21,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
+import { 
+  CURRENCY_SYMBOLS, 
+  needsConversion, 
+  getCurrencySymbol,
+  isCryptoCurrency,
+  isStablecoin 
+} from "@/types/currency";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TransacaoDialogProps {
   open: boolean;
@@ -29,6 +43,7 @@ interface TransacaoDialogProps {
     id: string;
     nome: string;
     saldo_atual: number;
+    saldo_usd?: number;
     moeda: string;
   };
   defaultTipo?: string;
@@ -38,6 +53,7 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
   const [loading, setLoading] = useState(false);
   const [tipo, setTipo] = useState(defaultTipo);
   const [valor, setValor] = useState("");
+  const [valorCreditado, setValorCreditado] = useState("");
   const [descricao, setDescricao] = useState("");
   const [origemData, setOrigemData] = useState<OrigemPagamentoData>({
     origemTipo: "CAIXA_OPERACIONAL",
@@ -48,14 +64,34 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
   });
 
   const valorNum = parseFloat(valor) || 0;
-  const isDebitoOrigem = tipo === "deposito"; // Depósito debita da origem e credita no bookmaker
+  const valorCreditadoNum = parseFloat(valorCreditado) || 0;
+  const isDebitoOrigem = tipo === "deposito";
   const isSaldoInsuficiente = isDebitoOrigem && valorNum > 0 && (origemData.saldoInsuficiente || origemData.saldoDisponivel < valorNum);
+
+  // Detectar moeda de origem baseado na seleção
+  const moedaOrigem = origemData.tipoMoeda === "CRYPTO" 
+    ? (origemData.coin || "USDT") 
+    : (origemData.moeda || "BRL");
+  
+  // Moeda operacional do bookmaker
+  const moedaDestino = bookmaker.moeda || "BRL";
+  
+  // Verifica se precisa de conversão
+  const precisaConversao = needsConversion(moedaOrigem, moedaDestino);
+  const isCryptoOrigem = isCryptoCurrency(moedaOrigem);
+  const isStablecoinOrigem = isStablecoin(moedaOrigem);
+
+  // Saldo correto baseado na moeda do bookmaker
+  const saldoBookmaker = moedaDestino === "USD" 
+    ? (bookmaker.saldo_usd ?? bookmaker.saldo_atual) 
+    : bookmaker.saldo_atual;
 
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
       setTipo(defaultTipo);
       setValor("");
+      setValorCreditado("");
       setDescricao("");
       setOrigemData({
         origemTipo: "CAIXA_OPERACIONAL",
@@ -67,11 +103,22 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
     }
   }, [open, defaultTipo]);
 
+  // Calcular cotação implícita
+  const cotacaoImplicita = valorNum > 0 && valorCreditadoNum > 0 
+    ? valorNum / valorCreditadoNum 
+    : null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (valorNum <= 0) {
       toast.error("Valor deve ser maior que zero");
+      return;
+    }
+
+    // Validar valor creditado quando há conversão (para depósito)
+    if (tipo === "deposito" && precisaConversao && valorCreditadoNum <= 0) {
+      toast.error(`Informe o valor creditado em ${moedaDestino}`);
       return;
     }
 
@@ -82,7 +129,7 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
     }
 
     // Validar saldo do bookmaker para retiradas
-    if (tipo === "retirada" && valorNum > bookmaker.saldo_atual) {
+    if (tipo === "retirada" && valorNum > saldoBookmaker) {
       toast.error("Saldo insuficiente no bookmaker para esta operação");
       return;
     }
@@ -108,16 +155,30 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
 
       const workspaceId = workspaceMember?.workspace_id || null;
 
-      // Criar registro no cash_ledger (tabela principal)
+      // Definir status_valor baseado no tipo de conversão
+      let statusValor = "CONFIRMADO";
+      if (isCryptoOrigem && !precisaConversao) {
+        // Crypto para casa USD sem informar valor creditado = estimativa
+        statusValor = "ESTIMADO";
+      }
+
+      // Criar registro no cash_ledger
       const ledgerPayload: any = {
         user_id: userId,
         workspace_id: workspaceId,
         valor: valorNum,
-        moeda: origemData.tipoMoeda === "CRYPTO" ? "USD" : "BRL",
+        moeda: origemData.tipoMoeda === "CRYPTO" ? "USD" : origemData.moeda || "BRL",
         tipo_moeda: origemData.tipoMoeda,
         data_transacao: new Date().toISOString(),
         descricao: descricao || `${getTipoLabel(tipo)} - ${bookmaker.nome}`,
         status: "CONFIRMADO",
+        // Novos campos de conversão
+        moeda_origem: moedaOrigem,
+        valor_origem: valorNum,
+        moeda_destino: moedaDestino,
+        valor_destino: precisaConversao ? valorCreditadoNum : valorNum,
+        cotacao_implicita: cotacaoImplicita,
+        status_valor: statusValor,
       };
 
       if (tipo === "deposito") {
@@ -132,6 +193,7 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
           if (origemData.tipoMoeda === "CRYPTO") {
             ledgerPayload.coin = origemData.coin;
             ledgerPayload.cotacao = origemData.cotacao;
+            ledgerPayload.valor_usd = valorNum;
           }
         } else if (origemData.origemTipo === "PARCEIRO_CONTA") {
           ledgerPayload.origem_tipo = "PARCEIRO_CONTA";
@@ -143,12 +205,16 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
           ledgerPayload.origem_wallet_id = origemData.origemWalletId;
           ledgerPayload.coin = origemData.coin;
           ledgerPayload.cotacao = origemData.cotacao;
+          ledgerPayload.valor_usd = valorNum;
         }
       } else if (tipo === "retirada") {
         // RETIRADA/SAQUE: debita do bookmaker, credita na origem
         ledgerPayload.tipo_transacao = "SAQUE";
         ledgerPayload.origem_tipo = "BOOKMAKER";
         ledgerPayload.origem_bookmaker_id = bookmaker.id;
+        // Inverter origem/destino para saque
+        ledgerPayload.moeda_origem = moedaDestino;
+        ledgerPayload.valor_origem = valorNum;
 
         // Configurar destino
         if (origemData.origemTipo === "CAIXA_OPERACIONAL") {
@@ -165,10 +231,13 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
           ledgerPayload.cotacao = origemData.cotacao;
         }
       } else if (tipo === "ajuste") {
-        // AJUSTE: apenas atualiza o saldo do bookmaker (pode ser positivo ou negativo)
+        // AJUSTE: apenas atualiza o saldo do bookmaker
         ledgerPayload.tipo_transacao = "AJUSTE_BOOKMAKER";
         ledgerPayload.origem_tipo = "BOOKMAKER";
         ledgerPayload.origem_bookmaker_id = bookmaker.id;
+        ledgerPayload.moeda_origem = moedaDestino;
+        ledgerPayload.moeda_destino = moedaDestino;
+        ledgerPayload.valor_destino = valorNum;
       }
 
       const { error: ledgerError } = await supabase
@@ -179,8 +248,8 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
 
       toast.success(`${getTipoLabel(tipo)} registrad${tipo === "retirada" ? "a" : "o"} com sucesso`);
       
-      // Reset form and close
       setValor("");
+      setValorCreditado("");
       setDescricao("");
       onClose();
     } catch (error: any) {
@@ -200,15 +269,8 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
   };
 
   const formatCurrency = (value: number, currency: string) => {
-    const currencySymbols: Record<string, string> = {
-      BRL: "R$",
-      USD: "$",
-      EUR: "€",
-      USDT: "₮",
-      BTC: "₿",
-      ETH: "Ξ",
-    };
-    return `${currencySymbols[currency] || ""} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const symbol = getCurrencySymbol(currency);
+    return `${symbol} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   return (
@@ -216,8 +278,21 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nova Transação - {bookmaker.nome}</DialogTitle>
-          <DialogDescription>
-            Saldo atual: {formatCurrency(Number(bookmaker.saldo_atual), bookmaker.moeda)}
+          <DialogDescription className="flex items-center gap-2">
+            <span>Saldo atual:</span>
+            <span className="font-semibold">{formatCurrency(saldoBookmaker, moedaDestino)}</span>
+            {moedaDestino !== "BRL" && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Esta casa opera em {moedaDestino}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -234,19 +309,6 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
                 <SelectItem value="ajuste">Ajuste Manual</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Valor ({bookmaker.moeda}) *</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={valor}
-              onChange={(e) => setValor(e.target.value)}
-              placeholder="0.00"
-              required
-              disabled={loading}
-            />
           </div>
 
           {/* Origem/Destino para Depósito e Saque */}
@@ -266,6 +328,74 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
                   <AlertTriangle className="h-4 w-4" />
                   <span>Saldo insuficiente na origem selecionada</span>
                 </div>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label>
+              {tipo === "deposito" 
+                ? `Valor enviado (${getCurrencySymbol(moedaOrigem)})` 
+                : `Valor (${getCurrencySymbol(moedaDestino)})`
+              } *
+            </Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={valor}
+              onChange={(e) => setValor(e.target.value)}
+              placeholder="0.00"
+              required
+              disabled={loading}
+            />
+            {isCryptoOrigem && tipo === "deposito" && (
+              <p className="text-xs text-muted-foreground">
+                {isStablecoinOrigem 
+                  ? "Valor estimado em USD (cotação ≈ 1:1)" 
+                  : "Valor estimado em USD baseado na cotação Binance"
+                }
+              </p>
+            )}
+          </div>
+
+          {/* Campo de valor creditado quando há conversão */}
+          {tipo === "deposito" && precisaConversao && (
+            <div className="space-y-2">
+              <Alert className="border-amber-500/50 bg-amber-500/5">
+                <Info className="h-4 w-4 text-amber-500" />
+                <AlertDescription className="text-sm">
+                  <span className="font-medium">Conversão necessária:</span> Esta casa opera em {moedaDestino}.
+                  Informe o valor efetivamente creditado pela casa.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                <div className="flex-1">
+                  <span className="text-sm text-muted-foreground">Enviando</span>
+                  <div className="font-medium">
+                    {getCurrencySymbol(moedaOrigem)} {valorNum.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <span className="text-sm text-muted-foreground">Creditado</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={valorCreditado}
+                    onChange={(e) => setValorCreditado(e.target.value)}
+                    placeholder={`0.00 ${moedaDestino}`}
+                    required
+                    disabled={loading}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              {cotacaoImplicita && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Cotação implícita: 1 {moedaDestino} = {cotacaoImplicita.toFixed(4)} {moedaOrigem}
+                </p>
               )}
             </div>
           )}
