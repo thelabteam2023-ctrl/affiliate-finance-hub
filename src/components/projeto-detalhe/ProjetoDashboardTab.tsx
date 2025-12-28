@@ -743,7 +743,7 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
             </Select>
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-hidden">
           <ModernBarChart
             data={filteredEsportesData}
             categoryKey="esporte"

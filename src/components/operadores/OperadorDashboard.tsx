@@ -620,8 +620,8 @@ export function OperadorDashboard() {
             Comparativo de Lucro por Operador
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="h-[300px]">
+        <CardContent className="overflow-hidden">
+          <div className="h-[300px] overflow-hidden">
             <ModernBarChart
               data={chartData}
               categoryKey="nome"

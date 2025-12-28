@@ -409,7 +409,7 @@ export function ModernDonutChart({
   }
 
   return (
-    <div className="relative" style={{ height }}>
+    <div className="relative overflow-hidden" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <defs>
@@ -504,25 +504,27 @@ export function ModernDonutChart({
         )}
       </div>
 
-      {/* Legend */}
+      {/* Legend - scrollable if too many items */}
       {showLegend && (
-        <div className="flex flex-wrap justify-center gap-4 mt-4">
-          {enrichedData.map((item, index) => (
-            <div 
-              key={index} 
-              className="flex items-center gap-2 cursor-pointer transition-opacity hover:opacity-80"
-              onMouseEnter={() => setActiveIndex(index)}
-              onMouseLeave={() => setActiveIndex(null)}
-            >
+        <div className="mt-4 max-h-20 overflow-y-auto overflow-x-hidden">
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 px-2">
+            {enrichedData.map((item, index) => (
               <div 
-                className="w-3 h-3 rounded-full"
-                style={{ 
-                  background: `linear-gradient(135deg, ${item.gradientStart}, ${item.gradientEnd})` 
-                }}
-              />
-              <span className="text-xs text-muted-foreground">{item.name}</span>
-            </div>
-          ))}
+                key={index} 
+                className="flex items-center gap-1.5 cursor-pointer transition-opacity hover:opacity-80 min-w-0 max-w-[45%]"
+                onMouseEnter={() => setActiveIndex(index)}
+                onMouseLeave={() => setActiveIndex(null)}
+              >
+                <div 
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ 
+                    background: `linear-gradient(135deg, ${item.gradientStart}, ${item.gradientEnd})` 
+                  }}
+                />
+                <span className="text-[10px] text-muted-foreground truncate">{item.name}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

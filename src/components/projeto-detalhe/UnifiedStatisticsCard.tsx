@@ -636,7 +636,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
     return (
       <div className="space-y-6">
         {/* Gráfico de Distribuição por Resultado */}
-        <div>
+        <div className="overflow-hidden">
           <div className="text-xs font-medium text-muted-foreground mb-3">Distribuição por Faixa de Cotação</div>
           <ModernBarChart
             data={chartData}

@@ -301,9 +301,9 @@ export function ComposicaoCustosCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 overflow-hidden">
         {/* Donut Chart */}
-        <div className="h-[180px]">
+        <div className="h-[180px] overflow-hidden">
           <ModernDonutChart
             data={donutData}
             height={180}

@@ -126,10 +126,10 @@ export function PosicaoCapital({
         </div>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Gráfico de Pizza Moderno */}
-          <div className="h-[280px]">
+          <div className="h-[280px] overflow-hidden">
             <ModernDonutChart
               data={chartData}
               height={280}
