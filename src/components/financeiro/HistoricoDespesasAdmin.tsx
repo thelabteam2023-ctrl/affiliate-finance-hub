@@ -320,23 +320,20 @@ export function HistoricoDespesasAdmin({ formatCurrency }: HistoricoDespesasAdmi
                     <div className="text-destructive font-bold">
                       {isCrypto ? (
                         <div className="flex flex-col items-end gap-0.5">
-                          {/* Valor principal em USD (moeda real do pagamento) */}
+                          {/* Valor principal em BRL (valor da despesa) */}
                           <div className="flex items-center gap-1">
                             <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30 text-[10px] px-1 py-0">
-                              USD
+                              CRYPTO
                             </Badge>
-                            <span>- ${(transacao.qtd_coin && transacao.cotacao 
-                              ? transacao.qtd_coin * transacao.cotacao 
-                              : transacao.valor / (transacao.cotacao || 5)
-                            ).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span>- {formatCurrency(transacao.valor)}</span>
                           </div>
-                          {/* Valor secundário em BRL (referência) */}
+                          {/* Valor pago em crypto (referência) */}
                           <span className="text-xs text-muted-foreground">
-                            Ref: {formatCurrency(transacao.valor)} BRL
+                            Pago: {transacao.qtd_coin?.toFixed(4)} {transacao.coin}
                           </span>
-                          {/* Info crypto detalhada */}
+                          {/* Cotação usada */}
                           <span className="text-[10px] text-muted-foreground/70">
-                            ({transacao.qtd_coin?.toFixed(4)} {transacao.coin})
+                            (Cotação: {transacao.cotacao?.toFixed(4)})
                           </span>
                         </div>
                       ) : (
