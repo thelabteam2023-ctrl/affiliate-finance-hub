@@ -94,11 +94,26 @@ export function PagamentoParticipacaoDialog({
         return;
       }
 
+      // Buscar workspace_id do usuário
+      const { data: workspaceMember } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", session.session.user.id)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+
+      if (!workspaceMember?.workspace_id) {
+        toast.error("Workspace não encontrado");
+        return;
+      }
+
       // 1. Registrar no cash_ledger
       const { data: ledgerEntry, error: ledgerError } = await supabase
         .from("cash_ledger")
         .insert({
           user_id: session.session.user.id,
+          workspace_id: workspaceMember.workspace_id,
           tipo_transacao: "DISTRIBUICAO_LUCRO",
           valor: participacao.valor_participacao,
           moeda: "BRL",
