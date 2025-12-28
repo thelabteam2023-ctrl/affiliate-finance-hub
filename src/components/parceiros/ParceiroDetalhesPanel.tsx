@@ -93,8 +93,10 @@ export function ParceiroDetalhesPanel({
     }
   };
 
+  const isUSDMoeda = (moeda: string) => moeda === "USD" || moeda === "USDT";
+
   const formatCurrency = (value: number, moeda: string = "BRL") => {
-    const symbol = moeda === "USD" || moeda === "USDT" ? "$" : "R$";
+    const symbol = isUSDMoeda(moeda) ? "$" : "R$";
     const formatted = new Intl.NumberFormat("pt-BR", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -104,7 +106,18 @@ export function ParceiroDetalhesPanel({
 
   const maskCurrency = (value: number, moeda: string = "BRL") => {
     if (showSensitiveData) return formatCurrency(value, moeda);
-    return moeda === "USD" || moeda === "USDT" ? "$ ••••" : "R$ ••••";
+    return isUSDMoeda(moeda) ? "$ ••••" : "R$ ••••";
+  };
+
+  // Formatar com badge de moeda para maior clareza
+  const formatCurrencyWithBadge = (value: number, moeda: string = "BRL") => {
+    const isUSD = isUSDMoeda(moeda);
+    const symbol = isUSD ? "$" : "R$";
+    const formatted = new Intl.NumberFormat("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+    return { formatted: `${symbol} ${formatted}`, isUSD, moeda };
   };
 
   // Verifica se há valores em USD
@@ -509,26 +522,64 @@ export function ParceiroDetalhesPanel({
                                 >
                                   {bm.status === "ativo" ? "Ativa" : "Limitada"}
                                 </Badge>
+                                {isUSDMoeda(bm.moeda) && (
+                                  <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-amber-500/50 text-amber-500">
+                                    USD
+                                  </Badge>
+                                )}
                                 <span className="text-[10px] text-muted-foreground">
-                                  {maskCurrency(bm.saldo_atual)}
+                                  {maskCurrency(bm.saldo_atual, bm.moeda)}
                                 </span>
                               </div>
                             </div>
                           </div>
-                          <div className="text-right text-xs text-muted-foreground">
-                            {maskCurrency(bm.total_depositado)}
-                          </div>
-                          <div className="text-right text-xs text-muted-foreground">
-                            {maskCurrency(bm.total_sacado)}
-                          </div>
-                          <div className={cn(
-                            "text-right text-xs font-medium",
-                            showSensitiveData
-                              ? (bm.lucro_prejuizo >= 0 ? "text-success" : "text-destructive")
-                              : "text-muted-foreground"
-                          )}>
-                            {maskCurrency(bm.lucro_prejuizo)}
-                          </div>
+                          {/* Depósito - usar moeda do bookmaker */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="text-right text-xs text-muted-foreground">
+                                {maskCurrency(bm.total_depositado, bm.moeda)}
+                              </div>
+                            </TooltipTrigger>
+                            {isUSDMoeda(bm.moeda) && showSensitiveData && (
+                              <TooltipContent side="top" className="text-xs">
+                                <p className="font-medium">{formatCurrency(bm.total_depositado, bm.moeda)} USD</p>
+                                <p className="text-muted-foreground text-[10px]">Valor original em dólar</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                          {/* Saque - usar moeda do bookmaker */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="text-right text-xs text-muted-foreground">
+                                {maskCurrency(bm.total_sacado, bm.moeda)}
+                              </div>
+                            </TooltipTrigger>
+                            {isUSDMoeda(bm.moeda) && showSensitiveData && (
+                              <TooltipContent side="top" className="text-xs">
+                                <p className="font-medium">{formatCurrency(bm.total_sacado, bm.moeda)} USD</p>
+                                <p className="text-muted-foreground text-[10px]">Valor original em dólar</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                          {/* Resultado - usar moeda do bookmaker */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className={cn(
+                                "text-right text-xs font-medium",
+                                showSensitiveData
+                                  ? (bm.lucro_prejuizo >= 0 ? "text-success" : "text-destructive")
+                                  : "text-muted-foreground"
+                              )}>
+                                {maskCurrency(bm.lucro_prejuizo, bm.moeda)}
+                              </div>
+                            </TooltipTrigger>
+                            {isUSDMoeda(bm.moeda) && showSensitiveData && (
+                              <TooltipContent side="top" className="text-xs">
+                                <p className="font-medium">{formatCurrency(bm.lucro_prejuizo, bm.moeda)} USD</p>
+                                <p className="text-muted-foreground text-[10px]">Resultado em dólar</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
                           <div className="text-right text-xs text-muted-foreground">
                             {bm.qtd_apostas.toLocaleString("pt-BR")}
                           </div>
