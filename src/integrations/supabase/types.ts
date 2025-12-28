@@ -2141,7 +2141,7 @@ export type Database = {
           user_id: string
           vigencia_fim: string | null
           vigencia_inicio: string | null
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           ativo?: boolean | null
@@ -2156,7 +2156,7 @@ export type Database = {
           user_id: string
           vigencia_fim?: string | null
           vigencia_inicio?: string | null
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           ativo?: boolean | null
@@ -2171,7 +2171,7 @@ export type Database = {
           user_id?: string
           vigencia_fim?: string | null
           vigencia_inicio?: string | null
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -2207,7 +2207,7 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           cpf: string
@@ -2218,7 +2218,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id: string
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           cpf?: string
@@ -2229,7 +2229,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -2699,7 +2699,7 @@ export type Database = {
           tipo_contrato: string
           updated_at: string
           user_id: string
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           auth_user_id?: string | null
@@ -2717,7 +2717,7 @@ export type Database = {
           tipo_contrato?: string
           updated_at?: string
           user_id: string
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           auth_user_id?: string | null
@@ -2735,7 +2735,7 @@ export type Database = {
           tipo_contrato?: string
           updated_at?: string
           user_id?: string
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -3149,7 +3149,7 @@ export type Database = {
           telefone: string | null
           updated_at: string
           user_id: string
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           cep?: string | null
@@ -3166,7 +3166,7 @@ export type Database = {
           telefone?: string | null
           updated_at?: string
           user_id: string
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           cep?: string | null
@@ -3183,7 +3183,7 @@ export type Database = {
           telefone?: string | null
           updated_at?: string
           user_id?: string
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
