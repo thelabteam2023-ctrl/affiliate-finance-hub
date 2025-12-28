@@ -473,7 +473,7 @@ export function DashboardTab() {
           <CardHeader>
             <CardTitle className="text-base">Distribuição por Origem</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-hidden">
             <ModernDonutChart
               data={pieData}
               height={250}
@@ -491,7 +491,7 @@ export function DashboardTab() {
           <CardHeader>
             <CardTitle className="text-base">Pagamentos por Categoria</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-hidden">
             <ModernBarChart
               data={barData}
               categoryKey="name"

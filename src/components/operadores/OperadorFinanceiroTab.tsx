@@ -442,8 +442,8 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
               Histórico de Pagamentos
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="h-[200px]">
+          <CardContent className="overflow-hidden">
+            <div className="h-[200px] overflow-hidden">
               <ModernBarChart
                 data={pagamentosPorMes}
                 categoryKey="mes"

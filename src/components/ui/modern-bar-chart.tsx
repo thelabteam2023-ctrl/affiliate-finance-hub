@@ -133,25 +133,27 @@ const CustomTooltip = ({
   return null;
 };
 
-// Custom legend component
+// Custom legend component - contained within card bounds
 const ModernLegend = ({ bars }: { bars: BarConfig[] }) => {
   return (
-    <div className="flex justify-center gap-6 mt-4">
-      {bars.map((bar, index) => (
-        <div 
-          key={index}
-          className="flex items-center gap-2 cursor-default"
-        >
+    <div className="mt-4 overflow-hidden">
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 px-2">
+        {bars.map((bar, index) => (
           <div 
-            className="w-3 h-3 rounded-full shadow-sm"
-            style={{ 
-              background: `linear-gradient(180deg, ${bar.gradientStart}, ${bar.gradientEnd})`,
-              boxShadow: `0 2px 8px ${bar.gradientStart}40`
-            }}
-          />
-          <span className="text-xs text-muted-foreground font-medium">{bar.label}</span>
-        </div>
-      ))}
+            key={index}
+            className="flex items-center gap-1.5 cursor-default min-w-0"
+          >
+            <div 
+              className="w-2.5 h-2.5 rounded-full shadow-sm shrink-0"
+              style={{ 
+                background: `linear-gradient(180deg, ${bar.gradientStart}, ${bar.gradientEnd})`,
+                boxShadow: `0 2px 8px ${bar.gradientStart}40`
+              }}
+            />
+            <span className="text-[10px] text-muted-foreground font-medium truncate">{bar.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -188,7 +190,7 @@ export function ModernBarChart({
   }
 
   return (
-    <div ref={chartRef} className="w-full" style={{ height: height + (showLegend ? 40 : 0) }}>
+    <div ref={chartRef} className="w-full overflow-hidden" style={{ height: height + (showLegend ? 40 : 0) }}>
       <ResponsiveContainer width="100%" height={height}>
         <BarChart 
           data={data} 
