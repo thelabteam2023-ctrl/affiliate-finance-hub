@@ -182,13 +182,16 @@ export default function Caixa() {
       if (cryptoError) throw cryptoError;
       setSaldosCrypto(saldosCryptoData || []);
 
-      // Fetch total bookmaker balance
+      // Fetch total bookmaker balance (BRL + USD separados)
       const { data: bookmakersBalanceData } = await supabase
         .from("bookmakers")
-        .select("saldo_atual");
+        .select("saldo_atual, saldo_usd");
       
-      const totalBookmakers = bookmakersBalanceData?.reduce((sum, b) => sum + (b.saldo_atual || 0), 0) || 0;
-      setSaldoBookmakers(totalBookmakers);
+      const totalBookmakersBRL = bookmakersBalanceData?.reduce((sum, b) => sum + (b.saldo_atual || 0), 0) || 0;
+      const totalBookmakersUSD = bookmakersBalanceData?.reduce((sum, b) => sum + (b.saldo_usd || 0), 0) || 0;
+      // Para compatibilidade, manter o saldo BRL no estado principal
+      setSaldoBookmakers(totalBookmakersBRL);
+      // TODO: adicionar estado separado para saldoBookmakersUSD se necessário
 
       // Fetch partner bank accounts balance
       const { data: contasSaldoData } = await supabase

@@ -89,6 +89,7 @@ interface Bookmaker {
   id: string;
   nome: string;
   saldo_atual: number;
+  saldo_usd: number;
   moeda: string;
 }
 
@@ -400,14 +401,14 @@ export function CaixaTransacaoDialog({
       // Buscar dados da bookmaker
       const { data } = await supabase
         .from("bookmakers")
-        .select("id, nome, saldo_atual, moeda")
+        .select("id, nome, saldo_atual, saldo_usd, moeda")
         .eq("id", origemBookmakerId)
         .single();
       
       if (data) {
         setBookmakers(prev => {
           const filtered = prev.filter(b => b.id !== data.id);
-          return [...filtered, data];
+          return [...filtered, { ...data, saldo_usd: data.saldo_usd ?? 0 }];
         });
       }
     };
@@ -425,14 +426,14 @@ export function CaixaTransacaoDialog({
       
       const { data } = await supabase
         .from("bookmakers")
-        .select("id, nome, saldo_atual, moeda")
+        .select("id, nome, saldo_atual, saldo_usd, moeda")
         .eq("id", destinoBookmakerId)
         .single();
       
       if (data) {
         setBookmakers(prev => {
           const filtered = prev.filter(b => b.id !== data.id);
-          return [...filtered, data];
+          return [...filtered, { ...data, saldo_usd: data.saldo_usd ?? 0 }];
         });
       }
     };
@@ -463,7 +464,7 @@ export function CaixaTransacaoDialog({
     try {
       const { data } = await supabase
         .from("bookmakers")
-        .select("id, nome, saldo_atual, moeda")
+        .select("id, nome, saldo_atual, saldo_usd, moeda")
         .order("nome");
       
       setBookmakers(data || []);
@@ -624,7 +625,8 @@ export function CaixaTransacaoDialog({
     
     if (tipo === "BOOKMAKER" && id) {
       const bm = bookmakers.find(b => b.id === id);
-      const saldoBase = bm?.saldo_atual || 0;
+      // Para CRYPTO, usar saldo_usd; para FIAT, usar saldo_atual
+      const saldoBase = tipoMoeda === "CRYPTO" ? (bm?.saldo_usd || 0) : (bm?.saldo_atual || 0);
       // Subtrair saques pendentes para calcular saldo disponível real
       const pendenteBookmaker = saquesPendentes[id] || 0;
       return saldoBase - pendenteBookmaker;
@@ -644,9 +646,12 @@ export function CaixaTransacaoDialog({
   };
 
   // Retorna o saldo bruto da bookmaker (sem descontar pendentes) para exibição
-  const getSaldoBrutoBookmaker = (id: string): number => {
+  const getSaldoBrutoBookmaker = (id: string): { brl: number; usd: number } => {
     const bm = bookmakers.find(b => b.id === id);
-    return bm?.saldo_atual || 0;
+    return { 
+      brl: bm?.saldo_atual || 0,
+      usd: bm?.saldo_usd || 0 
+    };
   };
 
   // Retorna o valor total de saques pendentes para uma bookmaker
@@ -2634,16 +2639,31 @@ export function CaixaTransacaoDialog({
                                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                                       <TrendingUp className="h-4 w-4 text-emerald-500" />
                                       <span className="line-through opacity-70">
-                                        {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId))}
+                                        {tipoMoeda === "CRYPTO" 
+                                          ? `$ ${getSaldoAtual("BOOKMAKER", destinoBookmakerId).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                                          : formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId))
+                                        }
                                       </span>
                                     </div>
                                     <div className="text-sm font-semibold text-foreground">
-                                      {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + parseFloat(String(valor)))}
+                                      {tipoMoeda === "CRYPTO" 
+                                        ? `$ ${(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + parseFloat(String(valor))).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                                        : formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + parseFloat(String(valor)))
+                                      }
                                     </div>
                                   </>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground">
-                                    Saldo atual: {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId))}
+                                  <div className="text-xs text-muted-foreground space-y-1">
+                                    {(() => {
+                                      const saldos = getSaldoBrutoBookmaker(destinoBookmakerId);
+                                      return (
+                                        <>
+                                          {saldos.brl > 0 && <div>Saldo BRL: R$ {saldos.brl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>}
+                                          {saldos.usd > 0 && <div className="text-cyan-400">Saldo USD: $ {saldos.usd.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>}
+                                          {saldos.brl === 0 && saldos.usd === 0 && <div>Saldo: R$ 0,00</div>}
+                                        </>
+                                      );
+                                    })()}
                                   </div>
                                 )}
                               </div>

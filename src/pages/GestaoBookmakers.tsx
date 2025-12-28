@@ -36,6 +36,7 @@ interface Bookmaker {
   login_username: string;
   login_password_encrypted: string;
   saldo_atual: number;
+  saldo_usd: number;
   moeda: string;
   status: string;
   created_at: string;
@@ -587,10 +588,23 @@ export default function GestaoBookmakers() {
                     <div className="p-3 bg-muted rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium">Saldo Disponível</span>
-                        <Badge variant="outline">{bookmaker.moeda}</Badge>
                       </div>
-                      <div className="text-2xl font-bold">
-                        {formatCurrency(Number(bookmaker.saldo_atual), bookmaker.moeda)}
+                      <div className="space-y-1">
+                        {Number(bookmaker.saldo_atual) > 0 && (
+                          <div className="text-2xl font-bold">
+                            {formatCurrency(Number(bookmaker.saldo_atual), "BRL")}
+                          </div>
+                        )}
+                        {Number(bookmaker.saldo_usd || 0) > 0 && (
+                          <div className="text-xl font-bold text-cyan-400">
+                            $ {Number(bookmaker.saldo_usd).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </div>
+                        )}
+                        {Number(bookmaker.saldo_atual) === 0 && Number(bookmaker.saldo_usd || 0) === 0 && (
+                          <div className="text-2xl font-bold text-muted-foreground">
+                            R$ 0,00
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -792,7 +806,13 @@ export default function GestaoBookmakers() {
                                     {bookmaker.parceiros?.nome || "Não definido"}
                                   </span>
                                   <span className="text-lg font-bold text-foreground">
-                                    {formatCurrency(Number(bookmaker.saldo_atual), bookmaker.moeda)}
+                                    {Number(bookmaker.saldo_atual) > 0 && `R$ ${Number(bookmaker.saldo_atual).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                                    {Number(bookmaker.saldo_usd || 0) > 0 && (
+                                      <span className={Number(bookmaker.saldo_atual) > 0 ? "ml-2 text-cyan-400" : "text-cyan-400"}>
+                                        $ {Number(bookmaker.saldo_usd).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                      </span>
+                                    )}
+                                    {Number(bookmaker.saldo_atual) === 0 && Number(bookmaker.saldo_usd || 0) === 0 && "R$ 0,00"}
                                   </span>
                                 </div>
                               </div>
