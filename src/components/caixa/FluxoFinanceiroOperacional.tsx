@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
-import { format, isWithinInterval, parseISO } from "date-fns";
+import { format, isWithinInterval, parseISO, subDays, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, DollarSign, AlertCircle, Building2, Users, HelpCircle, BarChart3 } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowRightLeft, AlertCircle, Building2, Users, HelpCircle, CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Transacao {
   id: string;
@@ -25,11 +27,13 @@ interface FluxoFinanceiroOperacionalProps {
   transacoes: Transacao[];
   dataInicio?: Date;
   dataFim?: Date;
+  setDataInicio?: (date: Date | undefined) => void;
+  setDataFim?: (date: Date | undefined) => void;
   saldoBookmakers?: number;
   onTransacaoClick?: (transacoes: Transacao[]) => void;
 }
 
-type Periodo = "dia" | "semana" | "mes";
+type Periodo = "dia" | "semana" | "mes" | "customizado";
 
 // Componente de ajuda reutilizável
 function KpiHelp({ text }: { text: string }) {
@@ -67,10 +71,35 @@ export function FluxoFinanceiroOperacional({
   transacoes,
   dataInicio,
   dataFim,
+  setDataInicio,
+  setDataFim,
   saldoBookmakers = 0,
   onTransacaoClick,
 }: FluxoFinanceiroOperacionalProps) {
   const [periodo, setPeriodo] = useState<Periodo>("dia");
+  const [customStartDate, setCustomStartDate] = useState<Date | undefined>(subDays(new Date(), 30));
+  const [customEndDate, setCustomEndDate] = useState<Date | undefined>(new Date());
+  const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
+
+  // Handler para mudar período
+  const handlePeriodoChange = (newPeriodo: Periodo) => {
+    setPeriodo(newPeriodo);
+    if (newPeriodo !== "customizado") {
+      setShowCustomDatePicker(false);
+    } else {
+      setShowCustomDatePicker(true);
+      // Aplicar datas customizadas quando mudar para customizado
+      if (setDataInicio && customStartDate) setDataInicio(customStartDate);
+      if (setDataFim && customEndDate) setDataFim(customEndDate);
+    }
+  };
+
+  // Aplicar datas quando o usuário selecionar
+  const handleCustomDateApply = () => {
+    if (setDataInicio) setDataInicio(customStartDate);
+    if (setDataFim) setDataFim(customEndDate);
+    setShowCustomDatePicker(false);
+  };
 
   // Filtrar transações pelo período selecionado
   const transacoesFiltradas = useMemo(() => {
@@ -264,35 +293,6 @@ export function FluxoFinanceiroOperacional({
     };
   }, [transacoesFiltradas, periodo]);
 
-  // 3. Performance Operacional - cálculos com saldo inicial e final
-  const performanceOperacional = useMemo(() => {
-    const totalDepositos = dadosCapitalOperacao.totalDepositos;
-    const totalSaques = dadosCapitalOperacao.totalSaques;
-    const saldoFinal = saldoBookmakers;
-    
-    // Saldo Inicial = Saldo Final + Saques - Depósitos (engenharia reversa)
-    const saldoInicial = saldoFinal + totalSaques - totalDepositos;
-    
-    // Lucro = (Saldo Final + Saques) - (Saldo Inicial + Depósitos)
-    const lucro = (saldoFinal + totalSaques) - (saldoInicial + totalDepositos);
-    
-    // Capital Médio para ROI
-    const capitalMedio = (saldoInicial + saldoFinal) / 2;
-    
-    // ROI = Lucro / Capital Médio * 100
-    const roi = capitalMedio > 0 ? (lucro / capitalMedio) * 100 : null;
-
-    return { 
-      saldoInicial,
-      saldoFinal,
-      totalDepositos, 
-      totalSaques, 
-      lucro,
-      capitalMedio,
-      roi 
-    };
-  }, [dadosCapitalOperacao, saldoBookmakers]);
-
   const formatCurrency = (value: number, currency: "BRL" | "USD" = "BRL") => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -405,11 +405,11 @@ export function FluxoFinanceiroOperacional({
             <TrendingUp className="h-5 w-5 text-primary" />
             Análise Financeira
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant={periodo === "dia" ? "default" : "outline"}
               size="sm"
-              onClick={() => setPeriodo("dia")}
+              onClick={() => handlePeriodoChange("dia")}
               className="h-7 px-3 text-xs"
             >
               Diário
@@ -417,7 +417,7 @@ export function FluxoFinanceiroOperacional({
             <Button
               variant={periodo === "semana" ? "default" : "outline"}
               size="sm"
-              onClick={() => setPeriodo("semana")}
+              onClick={() => handlePeriodoChange("semana")}
               className="h-7 px-3 text-xs"
             >
               Semanal
@@ -425,34 +425,110 @@ export function FluxoFinanceiroOperacional({
             <Button
               variant={periodo === "mes" ? "default" : "outline"}
               size="sm"
-              onClick={() => setPeriodo("mes")}
+              onClick={() => handlePeriodoChange("mes")}
               className="h-7 px-3 text-xs"
             >
               Mensal
             </Button>
+            <Popover open={showCustomDatePicker} onOpenChange={setShowCustomDatePicker}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={periodo === "customizado" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handlePeriodoChange("customizado")}
+                  className="h-7 px-3 text-xs gap-1"
+                >
+                  <CalendarIcon className="h-3 w-3" />
+                  Customizado
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-4" align="end">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Data Início</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal text-xs h-8",
+                              !customStartDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-3 w-3" />
+                            {customStartDate ? format(customStartDate, "dd/MM/yyyy") : "Selecione"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={customStartDate}
+                            onSelect={setCustomStartDate}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                            locale={ptBR}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Data Fim</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal text-xs h-8",
+                              !customEndDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-3 w-3" />
+                            {customEndDate ? format(customEndDate, "dd/MM/yyyy") : "Selecione"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={customEndDate}
+                            onSelect={setCustomEndDate}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                            locale={ptBR}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={handleCustomDateApply} 
+                    size="sm" 
+                    className="w-full"
+                    disabled={!customStartDate || !customEndDate}
+                  >
+                    Aplicar
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-6">
         <Tabs defaultValue="fluxo" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="fluxo" className="gap-1 text-xs sm:text-sm">
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Fluxo de Caixa</span>
               <span className="sm:hidden">Fluxo</span>
               <TabHelp text="Representa o fluxo financeiro efetivo da operação. Aqui são exibidos apenas movimentos de caixa: depósitos enviados às bookmakers e saques recebidos delas. Não considera variações internas de saldo." />
             </TabsTrigger>
-            <TabsTrigger value="performance" className="gap-1 text-xs sm:text-sm">
-              <BarChart3 className="h-4 w-4" />
-              <span className="hidden sm:inline">Performance</span>
-              <span className="sm:hidden">Perform.</span>
-              <TabHelp text="Representa o cenário financeiro real dos projetos. Aqui é calculado o lucro ou prejuízo considerando a variação do saldo nas bookmakers, mesmo quando não há saques. Mostra o verdadeiro retorno do período." />
-            </TabsTrigger>
             <TabsTrigger value="externo" className="gap-1 text-xs sm:text-sm">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Capital Externo</span>
               <span className="sm:hidden">Externo</span>
+              <TabHelp text="Fluxo de capital com investidores. Aportes (entrada de capital) e liquidações (retorno de capital ou lucros)." />
             </TabsTrigger>
           </TabsList>
 
@@ -626,158 +702,6 @@ export function FluxoFinanceiroOperacional({
 
             <p className="text-xs text-muted-foreground text-center">
               Fluxo financeiro efetivo. BRL e USD (Crypto) são exibidos separadamente, nunca somados.
-            </p>
-          </TabsContent>
-
-          {/* Aba 3: Performance Operacional (Resultado do Período) */}
-          <TabsContent value="performance" className="mt-4 space-y-4">
-            {/* KPIs - Saldo Inicial, Saldo Final, Depósitos, Saques */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <Wallet className="h-4 w-4" />
-                  <span className="text-xs font-medium uppercase">Saldo Inicial</span>
-                  <KpiHelp text="Capital nas bookmakers no início do período (calculado)" />
-                </div>
-                <span className="text-lg font-bold font-mono">
-                  {formatCurrency(performanceOperacional.saldoInicial)}
-                </span>
-              </div>
-              <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <Wallet className="h-4 w-4" />
-                  <span className="text-xs font-medium uppercase">Saldo Final</span>
-                  <KpiHelp text="Capital nas bookmakers no final do período (atual)" />
-                </div>
-                <span className="text-lg font-bold font-mono">
-                  {formatCurrency(performanceOperacional.saldoFinal)}
-                </span>
-              </div>
-              <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
-                <div className="flex items-center gap-2 text-blue-500 mb-1">
-                  <TrendingUp className="h-4 w-4" />
-                  <span className="text-xs font-medium uppercase">Depósitos</span>
-                  <KpiHelp text="Capital enviado às bookmakers no período" />
-                </div>
-                <span className="text-lg font-bold text-blue-400 font-mono">
-                  {formatCurrency(performanceOperacional.totalDepositos)}
-                </span>
-              </div>
-              <div className="bg-purple-500/10 rounded-lg p-3 border border-purple-500/20">
-                <div className="flex items-center gap-2 text-purple-500 mb-1">
-                  <TrendingDown className="h-4 w-4" />
-                  <span className="text-xs font-medium uppercase">Saques</span>
-                  <KpiHelp text="Capital retornado das bookmakers no período" />
-                </div>
-                <span className="text-lg font-bold text-purple-400 font-mono">
-                  {formatCurrency(performanceOperacional.totalSaques)}
-                </span>
-              </div>
-            </div>
-
-            {/* KPIs de Lucro e ROI */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Lucro do Período */}
-              {(() => {
-                const isPositivo = performanceOperacional.lucro > 0;
-                const isNegativo = performanceOperacional.lucro < 0;
-                return (
-                  <div className={`rounded-lg p-4 border ${
-                    isPositivo 
-                      ? "bg-emerald-500/10 border-emerald-500/20" 
-                      : isNegativo 
-                        ? "bg-destructive/10 border-destructive/20"
-                        : "bg-muted/30 border-border/50"
-                  }`}>
-                    <div className={`flex items-center gap-2 mb-1 ${
-                      isPositivo ? "text-emerald-500" : isNegativo ? "text-destructive" : "text-muted-foreground"
-                    }`}>
-                      <DollarSign className="h-4 w-4" />
-                      <span className="text-xs font-medium uppercase">Lucro do Período</span>
-                      <KpiHelp text="Lucro = (Saldo Final + Saques) - (Saldo Inicial + Depósitos). Considera variação de saldo nas bookmakers." />
-                    </div>
-                    <span className={`text-xl font-bold font-mono ${
-                      isPositivo ? "text-emerald-400" : isNegativo ? "text-destructive" : "text-foreground"
-                    }`}>
-                      {isPositivo ? "+" : ""}{formatCurrency(performanceOperacional.lucro)}
-                    </span>
-                    {performanceOperacional.lucro !== 0 && (
-                      <span className={`text-xs ml-2 ${isPositivo ? "text-emerald-500" : "text-destructive"}`}>
-                        ({isPositivo ? "Lucro" : "Prejuízo"})
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* ROI */}
-              {(() => {
-                const roi = performanceOperacional.roi;
-                const isPositivo = roi !== null && roi > 0;
-                const isNegativo = roi !== null && roi < 0;
-                return (
-                  <div className={`rounded-lg p-4 border ${
-                    isPositivo 
-                      ? "bg-emerald-500/10 border-emerald-500/20" 
-                      : isNegativo 
-                        ? "bg-destructive/10 border-destructive/20"
-                        : "bg-muted/30 border-border/50"
-                  }`}>
-                    <div className={`flex items-center gap-2 mb-1 ${
-                      isPositivo ? "text-emerald-500" : isNegativo ? "text-destructive" : "text-muted-foreground"
-                    }`}>
-                      <BarChart3 className="h-4 w-4" />
-                      <span className="text-xs font-medium uppercase">ROI do Período</span>
-                      <KpiHelp text="ROI = Lucro ÷ Capital Médio. Mais relevante em análises semanais, mensais ou de longo prazo." />
-                    </div>
-                    <span className={`text-xl font-bold font-mono ${
-                      isPositivo ? "text-emerald-400" : isNegativo ? "text-destructive" : "text-foreground"
-                    }`}>
-                      {roi !== null ? (
-                        <>
-                          {isPositivo ? "+" : ""}{roi.toFixed(2)}%
-                        </>
-                      ) : (
-                        "—"
-                      )}
-                    </span>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Fórmula explicativa */}
-            <div className="bg-muted/20 rounded-lg p-4 border border-border/50">
-              <h4 className="font-medium mb-3 text-sm">Como é calculado o resultado:</h4>
-              <div className="flex items-center justify-center gap-2 text-sm flex-wrap">
-                <Badge variant="outline" className="text-foreground border-border/50 bg-muted/30">
-                  Saldo Final
-                </Badge>
-                <span className="text-muted-foreground">+</span>
-                <Badge variant="outline" className="text-purple-400 border-purple-500/30 bg-purple-500/10">
-                  Saques
-                </Badge>
-                <span className="text-muted-foreground">-</span>
-                <Badge variant="outline" className="text-foreground border-border/50 bg-muted/30">
-                  Saldo Inicial
-                </Badge>
-                <span className="text-muted-foreground">-</span>
-                <Badge variant="outline" className="text-blue-400 border-blue-500/30 bg-blue-500/10">
-                  Depósitos
-                </Badge>
-                <span className="text-muted-foreground">=</span>
-                <Badge variant="outline" className={`${
-                  performanceOperacional.lucro >= 0 
-                    ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" 
-                    : "text-destructive border-destructive/30 bg-destructive/10"
-                }`}>
-                  Lucro
-                </Badge>
-              </div>
-            </div>
-
-            <p className="text-xs text-muted-foreground text-center">
-              Mostra o retorno real da operação no período, considerando a variação de saldo dentro das bookmakers. Representa o lucro/performance dos projetos, mesmo quando o capital permanece alocado.
             </p>
           </TabsContent>
         </Tabs>

@@ -544,6 +544,8 @@ export default function Caixa() {
         transacoes={transacoes}
         dataInicio={dataInicio}
         dataFim={dataFim}
+        setDataInicio={setDataInicio}
+        setDataFim={setDataFim}
         saldoBookmakers={saldoBookmakers}
       />
 
