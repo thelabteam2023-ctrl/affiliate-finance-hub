@@ -1068,17 +1068,36 @@ export function CaixaTransacaoDialog({
       // SAQUE inicia como PENDENTE, outros como CONFIRMADO
       const statusInicial = tipoTransacao === "SAQUE" ? "PENDENTE" : "CONFIRMADO";
 
+      // Determinar moeda de destino baseado no bookmaker de destino (para DEPOSITO)
+      let moedaDestino = tipoMoeda === "FIAT" ? moeda : "USD";
+      let destinoBookmakerMoeda = "BRL";
+      if (tipoTransacao === "DEPOSITO" && destinoBookmakerId) {
+        const destBm = bookmakers.find(b => b.id === destinoBookmakerId);
+        destinoBookmakerMoeda = destBm?.moeda || "BRL";
+        moedaDestino = destinoBookmakerMoeda;
+      }
+
+      // Determinar se há conversão de moeda
+      const moedaOrigem = tipoMoeda === "CRYPTO" ? coin : moeda;
+      const precisaConversao = moedaOrigem !== moedaDestino;
+
       const transactionData: any = {
         user_id: userData.user.id,
         workspace_id: workspaceId,
         tipo_transacao: tipoTransacao,
         tipo_moeda: tipoMoeda,
-        moeda: tipoMoeda === "FIAT" ? moeda : "USD",
+        moeda: moedaDestino,
         valor: parseFloat(valor),
         descricao,
         status: statusInicial,
         investidor_id: tipoTransacao === "APORTE_FINANCEIRO" ? investidorId : null,
         nome_investidor: tipoTransacao === "APORTE_FINANCEIRO" && investidor ? investidor.nome : null,
+        // Campos de conversão
+        moeda_origem: moedaOrigem,
+        valor_origem: parseFloat(valor),
+        moeda_destino: moedaDestino,
+        valor_destino: parseFloat(valor), // Inicialmente igual, pode ser ajustado depois
+        status_valor: precisaConversao ? "ESTIMADO" : "CONFIRMADO",
       };
 
       // Add crypto-specific fields
@@ -1088,6 +1107,8 @@ export function CaixaTransacaoDialog({
         transactionData.valor_usd = parseFloat(valor);
         if (cotacao) {
           transactionData.cotacao = parseFloat(cotacao);
+          // Para crypto, calcular cotação implícita
+          transactionData.cotacao_implicita = parseFloat(cotacao);
         }
       }
 
