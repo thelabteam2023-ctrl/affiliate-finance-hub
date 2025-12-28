@@ -28,6 +28,7 @@ export interface BookmakerData {
   nome: string;
   logo_url: string | null;
   saldo_atual?: number;
+  saldo_usd?: number;
   saldo_freebet?: number;
   moeda?: string;
   status?: string;
@@ -48,6 +49,7 @@ interface BookmakerItem {
   nome: string;
   logo_url: string | null;
   saldo_atual?: number;
+  saldo_usd?: number;
   saldo_freebet?: number;
   moeda?: string;
   status?: string;
@@ -85,6 +87,7 @@ export default function BookmakerSelect({
         nome: selectedItem.nome,
         logo_url: selectedItem.logo_url,
         saldo_atual: selectedItem.saldo_atual,
+        saldo_usd: selectedItem.saldo_usd,
         saldo_freebet: selectedItem.saldo_freebet,
         moeda: selectedItem.moeda,
         status: selectedItem.status,
@@ -104,6 +107,7 @@ export default function BookmakerSelect({
               id,
               nome,
               saldo_atual,
+              saldo_usd,
               saldo_freebet,
               moeda,
               status,
@@ -114,7 +118,8 @@ export default function BookmakerSelect({
             .eq("parceiro_id", parceiroId);
 
           if (somenteComSaldo) {
-            query = query.gt("saldo_atual", 0);
+            // Com saldo significa saldo_atual > 0 OU saldo_usd > 0
+            query = query.or('saldo_atual.gt.0,saldo_usd.gt.0');
           }
 
           const { data, error } = await query.order("nome");
@@ -125,6 +130,7 @@ export default function BookmakerSelect({
             nome: b.nome,
             logo_url: b.bookmakers_catalogo?.logo_url || null,
             saldo_atual: b.saldo_atual,
+            saldo_usd: b.saldo_usd,
             saldo_freebet: b.saldo_freebet,
             moeda: b.moeda,
             status: b.status,
@@ -362,7 +368,20 @@ export default function BookmakerSelect({
                         </span>
                         {item.saldo_atual !== undefined && (
                           <span className="text-xs text-muted-foreground flex-shrink-0">
-                            {item.moeda} {item.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            {/* Exibir BRL se existir */}
+                            {item.saldo_atual > 0 && (
+                              <span>R$ {item.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            )}
+                            {/* Exibir USD se existir */}
+                            {(item.saldo_usd ?? 0) > 0 && (
+                              <span className={item.saldo_atual > 0 ? "ml-2 text-cyan-400" : "text-cyan-400"}>
+                                $ {item.saldo_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
+                            )}
+                            {/* Exibir nada se ambos são zero */}
+                            {item.saldo_atual === 0 && (item.saldo_usd ?? 0) === 0 && (
+                              <span>R$ 0,00</span>
+                            )}
                             {(item.saldo_freebet ?? 0) > 0 && (
                               <span className="text-amber-400 ml-1">
                                 +FB {item.saldo_freebet?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}

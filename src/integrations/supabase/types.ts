@@ -632,6 +632,7 @@ export type Database = {
           saldo_atual: number
           saldo_freebet: number
           saldo_irrecuperavel: number
+          saldo_usd: number
           status: string
           updated_at: string
           url: string | null
@@ -653,6 +654,7 @@ export type Database = {
           saldo_atual?: number
           saldo_freebet?: number
           saldo_irrecuperavel?: number
+          saldo_usd?: number
           status?: string
           updated_at?: string
           url?: string | null
@@ -674,6 +676,7 @@ export type Database = {
           saldo_atual?: number
           saldo_freebet?: number
           saldo_irrecuperavel?: number
+          saldo_usd?: number
           status?: string
           updated_at?: string
           url?: string | null
