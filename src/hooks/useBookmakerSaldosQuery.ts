@@ -129,11 +129,14 @@ export function calcularSaldoDisponivelParaPosicao(
 }
 
 /**
- * Formata saldo para exibição com breakdown
+ * Formata saldo para exibição com breakdown, respeitando a moeda do bookmaker
  */
 export function formatarSaldoBreakdown(bookmaker: BookmakerSaldo): string {
+  const moeda = bookmaker.moeda || "BRL";
+  const symbol = moeda === "USD" ? "$" : "R$";
+  
   const parts: string[] = [];
-  parts.push(`R$ ${bookmaker.saldo_disponivel.toFixed(0)}`);
+  parts.push(`${symbol} ${bookmaker.saldo_disponivel.toFixed(0)}`);
   if (bookmaker.saldo_freebet > 0) {
     parts.push(`FB: ${bookmaker.saldo_freebet.toFixed(0)}`);
   }

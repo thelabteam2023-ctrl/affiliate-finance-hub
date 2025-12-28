@@ -748,11 +748,11 @@ export function HistoricoMovimentacoes({
                   <div className="text-right">
                     {transacao.tipo_moeda === "CRYPTO" ? (
                       <div className="flex flex-col items-end">
-                        <div className="font-medium text-primary">
-                          {transacao.qtd_coin?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} {transacao.coin}
+                        <div className="font-medium text-blue-400">
+                          ${transacao.valor_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'} USD
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          ≈ {formatCurrency(transacao.valor, "BRL")}
+                          {transacao.qtd_coin?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} {transacao.coin}
                         </div>
                         {transacao.cotacao && (
                           <div className="text-xs text-muted-foreground/70">
