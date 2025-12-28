@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,6 @@ import {
   Building2,
   User,
   Calendar,
-  ArrowRight,
   RefreshCw,
   Loader2,
   FolderKanban,
@@ -24,19 +23,17 @@ import {
   Users,
   Banknote,
   CheckCircle2,
-  XCircle,
-  Landmark,
   TrendingUp,
   Gift,
   Zap,
-  Play,
+  UserPlus,
 } from "lucide-react";
 import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliacaoDialog";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { PagamentoOperadorDialog } from "@/components/operadores/PagamentoOperadorDialog";
 import { PropostasPagamentoCard } from "@/components/operadores/PropostasPagamentoCard";
 import { PagamentoParticipacaoDialog } from "@/components/projetos/PagamentoParticipacaoDialog";
-import { useCicloAlertas, AlertaCiclo } from "@/hooks/useCicloAlertas";
+import { useCicloAlertas } from "@/hooks/useCicloAlertas";
 
 interface Alerta {
   tipo_alerta: string;
@@ -169,7 +166,13 @@ interface ParticipacaoPendente {
   ciclo_numero?: number;
 }
 
-// AlertaCiclo interface is imported from useCicloAlertas hook
+// Enum for card priority
+const PRIORITY = {
+  CRITICAL: 1,
+  HIGH: 2,
+  MEDIUM: 3,
+  LOW: 4,
+} as const;
 
 export default function CentralOperacoes() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
@@ -195,7 +198,6 @@ export default function CentralOperacoes() {
   const [selectedParticipacao, setSelectedParticipacao] = useState<ParticipacaoPendente | null>(null);
   const navigate = useNavigate();
 
-  // Alertas de ciclos via hook dedicado
   const { alertas: alertasCiclos, refetch: refetchCiclos } = useCicloAlertas();
 
   useEffect(() => {
@@ -213,7 +215,6 @@ export default function CentralOperacoes() {
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
 
-      // Fetch all data in parallel
       const [
         alertasResult,
         entregasResult,
@@ -235,122 +236,44 @@ export default function CentralOperacoes() {
         supabase.from("v_entregas_pendentes").select("*").in("status_conciliacao", ["PRONTA"]),
         supabase
           .from("parcerias")
-          .select(`
-            id,
-            valor_parceiro,
-            origem_tipo,
-            data_fim_prevista,
-            custo_aquisicao_isento,
-            parceiro:parceiros(nome)
-          `)
+          .select(`id, valor_parceiro, origem_tipo, data_fim_prevista, custo_aquisicao_isento, parceiro:parceiros(nome)`)
           .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
           .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
           .gt("valor_parceiro", 0),
-        supabase
-          .from("movimentacoes_indicacao")
-          .select("parceria_id, tipo, status, indicador_id"),
+        supabase.from("movimentacoes_indicacao").select("parceria_id, tipo, status, indicador_id"),
         supabase
           .from("parcerias")
-          .select(`
-            id,
-            data_fim_prevista,
-            parceiro:parceiros(nome)
-          `)
+          .select(`id, data_fim_prevista, parceiro:parceiros(nome)`)
           .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
           .not("data_fim_prevista", "is", null),
-        supabase
-          .from("parceiros")
-          .select("id, nome, cpf, created_at")
-          .eq("status", "ativo"),
-        supabase
-          .from("parcerias")
-          .select("parceiro_id")
-          .in("status", ["ATIVA", "EM_ENCERRAMENTO"]),
+        supabase.from("parceiros").select("id, nome, cpf, created_at").eq("status", "ativo"),
+        supabase.from("parcerias").select("parceiro_id").in("status", ["ATIVA", "EM_ENCERRAMENTO"]),
         supabase
           .from("cash_ledger")
-          .select(`
-            id,
-            valor,
-            moeda,
-            data_transacao,
-            descricao,
-            origem_bookmaker_id,
-            destino_parceiro_id,
-            destino_conta_bancaria_id
-          `)
+          .select(`id, valor, moeda, data_transacao, descricao, origem_bookmaker_id, destino_parceiro_id, destino_conta_bancaria_id`)
           .eq("tipo_transacao", "SAQUE")
           .eq("status", "PENDENTE")
           .order("data_transacao", { ascending: false }),
         supabase
           .from("parceiro_lucro_alertas")
-          .select(`
-            id,
-            parceiro_id,
-            marco_valor,
-            lucro_atual,
-            data_atingido,
-            parceiro:parceiros(nome)
-          `)
+          .select(`id, parceiro_id, marco_valor, lucro_atual, data_atingido, parceiro:parceiros(nome)`)
           .eq("notificado", false)
           .order("data_atingido", { ascending: false }),
-        // For bonus calculation
         supabase.from("v_custos_aquisicao").select("*"),
         supabase.from("indicador_acordos").select("*").eq("ativo", true),
-        // For comissões pendentes - fetch parcerias separately
         supabase
           .from("parcerias")
-          .select(`
-            id,
-            valor_comissao_indicador,
-            comissao_paga,
-            parceiro_id,
-            parceiro:parceiros(nome)
-          `)
+          .select(`id, valor_comissao_indicador, comissao_paga, parceiro_id, parceiro:parceiros(nome)`)
           .eq("comissao_paga", false)
           .not("valor_comissao_indicador", "is", null)
           .gt("valor_comissao_indicador", 0),
-        // Fetch indicacoes for mapping parceiro -> indicador
-        supabase
-          .from("indicacoes")
-          .select("parceiro_id, indicador_id"),
-        // Fetch indicadores for names
-        supabase
-          .from("indicadores_referral")
-          .select("id, nome"),
-        // Pagamentos de operador pendentes
+        supabase.from("indicacoes").select("parceiro_id, indicador_id"),
+        supabase.from("indicadores_referral").select("id, nome"),
         supabase
           .from("pagamentos_operador")
-          .select(`
-            id,
-            operador_id,
-            tipo_pagamento,
-            valor,
-            data_pagamento,
-            projeto_id,
-            operador:operadores(nome),
-            projeto:projetos(nome)
-          `)
+          .select(`id, operador_id, tipo_pagamento, valor, data_pagamento, projeto_id, operador:operadores(nome), projeto:projetos(nome)`)
           .eq("status", "PENDENTE")
           .order("data_pagamento", { ascending: false }),
-        // Participações de investidores pendentes
-        supabase
-          .from("participacao_ciclos")
-          .select(`
-            id,
-            projeto_id,
-            ciclo_id,
-            investidor_id,
-            percentual_aplicado,
-            base_calculo,
-            lucro_base,
-            valor_participacao,
-            data_apuracao,
-            investidor:investidores(nome),
-            projeto:projetos(nome),
-            ciclo:projeto_ciclos(numero_ciclo)
-          `)
-          .eq("status", "A_PAGAR")
-          .order("data_apuracao", { ascending: false })
       ]);
 
       if (alertasResult.error) throw alertasResult.error;
@@ -359,7 +282,6 @@ export default function CentralOperacoes() {
       if (entregasResult.error) throw entregasResult.error;
       setEntregasPendentes(entregasResult.data || []);
 
-      // Alertas de lucro
       if (!alertasLucroResult.error && alertasLucroResult.data) {
         setAlertasLucro(
           alertasLucroResult.data.map((a: any) => ({
@@ -373,15 +295,11 @@ export default function CentralOperacoes() {
         );
       }
 
-      if (entregasResult.error) throw entregasResult.error;
-      setEntregasPendentes(entregasResult.data || []);
-
-      // Pagamentos pendentes a parceiros - excluir os já pagos
       if (!parceirosResult.error && !movimentacoesResult.error) {
         const parceriasPagas = (movimentacoesResult.data || [])
           .filter((m: any) => m.tipo === "PAGTO_PARCEIRO" && m.status === "CONFIRMADO")
           .map((m: any) => m.parceria_id);
-        
+
         const pagamentosMap: PagamentoParceiroPendente[] = (parceirosResult.data || [])
           .filter((p: any) => !parceriasPagas.includes(p.id))
           .map((p: any) => {
@@ -402,10 +320,9 @@ export default function CentralOperacoes() {
         setPagamentosParceiros(pagamentosMap);
       }
 
-      // Calculate bonus pendentes (with multiple cycles support)
       if (custosResult.data && acordosResult.data && movimentacoesResult.data) {
         const indicadorStats: Record<string, { nome: string; qtd: number }> = {};
-        
+
         custosResult.data.forEach((c: any) => {
           if (c.indicador_id && c.indicador_nome) {
             if (!indicadorStats[c.indicador_id]) {
@@ -415,7 +332,6 @@ export default function CentralOperacoes() {
           }
         });
 
-        // Count paid bonuses per indicator
         const bonusPagosPorIndicador: Record<string, number> = {};
         (movimentacoesResult.data || [])
           .filter((m: any) => m.tipo === "BONUS_INDICADOR" && m.status === "CONFIRMADO")
@@ -432,7 +348,7 @@ export default function CentralOperacoes() {
             const ciclosCompletos = Math.floor(stats.qtd / acordo.meta_parceiros);
             const bonusJaPagos = bonusPagosPorIndicador[acordo.indicador_id] || 0;
             const ciclosPendentes = ciclosCompletos - bonusJaPagos;
-            
+
             if (ciclosPendentes > 0) {
               const valorBonusUnitario = acordo.valor_bonus || 0;
               pendentes.push({
@@ -450,9 +366,7 @@ export default function CentralOperacoes() {
         setBonusPendentes(pendentes);
       }
 
-      // Calculate comissões pendentes - build mapping from indicacoes table
       if (comissoesResult.data && indicacoesResult.data && indicadoresResult.data) {
-        // Build indicadores map
         const indicadoresMap: Record<string, { id: string; nome: string }> = {};
         indicadoresResult.data.forEach((ind: any) => {
           if (ind.id) {
@@ -460,7 +374,6 @@ export default function CentralOperacoes() {
           }
         });
 
-        // Build parceiro -> indicador map from indicacoes table
         const parceiroIndicadorMap: Record<string, { id: string; nome: string }> = {};
         indicacoesResult.data.forEach((ind: any) => {
           if (ind.parceiro_id && ind.indicador_id && indicadoresMap[ind.indicador_id]) {
@@ -468,7 +381,6 @@ export default function CentralOperacoes() {
           }
         });
 
-        // Map comissões using the parceiro -> indicador relationship
         const comissoes: ComissaoPendente[] = comissoesResult.data
           .filter((p: any) => p.parceiro_id && parceiroIndicadorMap[p.parceiro_id])
           .map((p: any) => {
@@ -484,7 +396,6 @@ export default function CentralOperacoes() {
         setComissoesPendentes(comissoes);
       }
 
-      // Parcerias próximas do encerramento (≤ 7 dias)
       if (!encerResult.error) {
         const alertasEncer: ParceriaAlertaEncerramento[] = (encerResult.data || [])
           .map((p: any) => {
@@ -504,12 +415,11 @@ export default function CentralOperacoes() {
         setParceriasEncerramento(alertasEncer);
       }
 
-      // Parceiros sem parceria ativa - identificar parceiros que precisam ter parceria criada
       if (!todosParceirosResult.error && !todasParceriasResult.error) {
         const parceirosComParceria = new Set(
           (todasParceriasResult.data || []).map((p: any) => p.parceiro_id)
         );
-        
+
         const semParceria: ParceiroSemParceria[] = (todosParceirosResult.data || [])
           .filter((p: any) => !parceirosComParceria.has(p.id))
           .map((p: any) => ({
@@ -518,44 +428,24 @@ export default function CentralOperacoes() {
             cpf: p.cpf,
             createdAt: p.created_at,
           }));
-        
+
         setParceirosSemParceria(semParceria);
       }
 
-      // Saques pendentes de confirmação - buscar nomes relacionados
       if (!saquesPendentesResult.error && saquesPendentesResult.data) {
-        // Buscar dados adicionais para os saques
-        const bookmakersIds = saquesPendentesResult.data
-          .map((s: any) => s.origem_bookmaker_id)
-          .filter(Boolean);
-        const parceirosIds = saquesPendentesResult.data
-          .map((s: any) => s.destino_parceiro_id)
-          .filter(Boolean);
-        const contasIds = saquesPendentesResult.data
-          .map((s: any) => s.destino_conta_bancaria_id)
-          .filter(Boolean);
+        const bookmakersIds = saquesPendentesResult.data.map((s: any) => s.origem_bookmaker_id).filter(Boolean);
+        const parceirosIds = saquesPendentesResult.data.map((s: any) => s.destino_parceiro_id).filter(Boolean);
+        const contasIds = saquesPendentesResult.data.map((s: any) => s.destino_conta_bancaria_id).filter(Boolean);
 
         const [bookmakersNomes, parceirosNomes, contasNomes] = await Promise.all([
-          bookmakersIds.length > 0
-            ? supabase.from("bookmakers").select("id, nome").in("id", bookmakersIds)
-            : Promise.resolve({ data: [] }),
-          parceirosIds.length > 0
-            ? supabase.from("parceiros").select("id, nome").in("id", parceirosIds)
-            : Promise.resolve({ data: [] }),
-          contasIds.length > 0
-            ? supabase.from("contas_bancarias").select("id, banco, titular").in("id", contasIds)
-            : Promise.resolve({ data: [] }),
+          bookmakersIds.length > 0 ? supabase.from("bookmakers").select("id, nome").in("id", bookmakersIds) : Promise.resolve({ data: [] }),
+          parceirosIds.length > 0 ? supabase.from("parceiros").select("id, nome").in("id", parceirosIds) : Promise.resolve({ data: [] }),
+          contasIds.length > 0 ? supabase.from("contas_bancarias").select("id, banco, titular").in("id", contasIds) : Promise.resolve({ data: [] }),
         ]);
 
-        const bookmakersMap = Object.fromEntries(
-          (bookmakersNomes.data || []).map((b: any) => [b.id, b.nome])
-        );
-        const parceirosMap = Object.fromEntries(
-          (parceirosNomes.data || []).map((p: any) => [p.id, p.nome])
-        );
-        const contasMap = Object.fromEntries(
-          (contasNomes.data || []).map((c: any) => [c.id, `${c.banco} - ${c.titular}`])
-        );
+        const bookmakersMap = Object.fromEntries((bookmakersNomes.data || []).map((b: any) => [b.id, b.nome]));
+        const parceirosMap = Object.fromEntries((parceirosNomes.data || []).map((p: any) => [p.id, p.nome]));
+        const contasMap = Object.fromEntries((contasNomes.data || []).map((c: any) => [c.id, `${c.banco} - ${c.titular}`]));
 
         const saquesEnriquecidos: SaquePendenteConfirmacao[] = saquesPendentesResult.data.map((s: any) => ({
           ...s,
@@ -567,7 +457,6 @@ export default function CentralOperacoes() {
         setSaquesPendentes(saquesEnriquecidos);
       }
 
-      // Pagamentos de operador pendentes
       if (!pagamentosOperadorResult.error && pagamentosOperadorResult.data) {
         const pagamentosOp: PagamentoOperadorPendente[] = pagamentosOperadorResult.data.map((p: any) => ({
           id: p.id,
@@ -582,18 +471,11 @@ export default function CentralOperacoes() {
         setPagamentosOperadorPendentes(pagamentosOp);
       }
 
-      // Participações de investidores pendentes
       const participacoesResult = await supabase
         .from("participacao_ciclos")
-        .select(`
-          id, projeto_id, ciclo_id, investidor_id, percentual_aplicado,
-          base_calculo, lucro_base, valor_participacao, data_apuracao,
-          investidor:investidores(nome),
-          projeto:projetos(nome),
-          ciclo:projeto_ciclos(numero_ciclo)
-        `)
+        .select(`id, projeto_id, ciclo_id, investidor_id, percentual_aplicado, base_calculo, lucro_base, valor_participacao, data_apuracao, investidor:investidores(nome), projeto:projetos(nome), ciclo:projeto_ciclos(numero_ciclo)`)
         .eq("status", "A_PAGAR");
-      
+
       if (!participacoesResult.error && participacoesResult.data) {
         const participacoes: ParticipacaoPendente[] = participacoesResult.data.map((p: any) => ({
           id: p.id,
@@ -612,9 +494,6 @@ export default function CentralOperacoes() {
         setParticipacoesPendentes(participacoes);
       }
 
-      // Alertas de ciclos são gerenciados pelo hook useCicloAlertas
-    } catch (error: any) {
-      toast.error("Erro ao carregar dados: " + error.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -622,60 +501,11 @@ export default function CentralOperacoes() {
   };
 
   const formatCurrency = (value: number, moeda: string = "BRL") => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: moeda,
-    }).format(value);
-  };
-
-  const getUrgencyBadge = (nivel: string) => {
-    switch (nivel) {
-      case "CRITICA":
-        return (
-          <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
-            <AlertTriangle className="h-3 w-3 mr-1" />
-            Crítico
-          </Badge>
-        );
-      case "ALTA":
-        return (
-          <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">
-            <Bell className="h-3 w-3 mr-1" />
-            Alta
-          </Badge>
-        );
-      case "NORMAL":
-        return (
-          <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-            <Clock className="h-3 w-3 mr-1" />
-            Normal
-          </Badge>
-        );
-      case "BAIXA":
-        return (
-          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
-            Baixa
-          </Badge>
-        );
-      default:
-        return (
-          <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">
-            {nivel}
-          </Badge>
-        );
-    }
+    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: moeda }).format(value);
   };
 
   const handleSaqueAction = (alerta: Alerta) => {
-    navigate("/caixa", {
-      state: {
-        openDialog: true,
-      },
-    });
-  };
-
-  const handleParceriaAction = (alerta: Alerta) => {
-    navigate("/programa-indicacao");
+    navigate("/caixa", { state: { openDialog: true } });
   };
 
   const handleConciliarEntrega = (entrega: EntregaPendente) => {
@@ -691,21 +521,563 @@ export default function CentralOperacoes() {
   const alertasSaques = alertas.filter((a) => a.tipo_alerta === "SAQUE_PENDENTE");
   const alertasCriticos = alertas.filter((a) => a.nivel_urgencia === "CRITICA");
 
+  // Build alert cards with priority
+  const alertCards = useMemo(() => {
+    const cards: Array<{ id: string; priority: number; component: JSX.Element }> = [];
+
+    // 1. Alertas Críticos (highest priority)
+    if (alertasCriticos.length > 0) {
+      cards.push({
+        id: "alertas-criticos",
+        priority: PRIORITY.CRITICAL,
+        component: (
+          <Card key="alertas-criticos" className="border-red-500/40 bg-red-500/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <AlertTriangle className="h-4 w-4 text-red-400" />
+                Alertas Críticos
+                <Badge className="ml-auto bg-red-500/20 text-red-400">{alertasCriticos.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {alertasCriticos.slice(0, 5).map((alerta) => (
+                  <div key={alerta.entidade_id} className="flex items-center justify-between p-2 rounded-lg border border-red-500/30 bg-red-500/10">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <AlertTriangle className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                      <span className="text-xs font-medium truncate">{alerta.titulo}</span>
+                    </div>
+                    <Button size="sm" variant="destructive" className="h-6 text-xs px-2 shrink-0">
+                      Resolver
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
+    // 2. Propostas de Pagamento (always show the component, it handles its own visibility)
+    cards.push({
+      id: "propostas-pagamento",
+      priority: PRIORITY.HIGH,
+      component: <PropostasPagamentoCard key="propostas-pagamento" />,
+    });
+
+    // 3. Saques Aguardando Confirmação
+    if (saquesPendentes.length > 0) {
+      cards.push({
+        id: "saques-aguardando",
+        priority: PRIORITY.HIGH,
+        component: (
+          <Card key="saques-aguardando" className="border-yellow-500/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-yellow-400" />
+                Saques Aguardando Confirmação
+                <Badge className="ml-auto bg-yellow-500/20 text-yellow-400">{saquesPendentes.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {saquesPendentes.slice(0, 4).map((saque) => (
+                  <div key={saque.id} className="flex items-center justify-between p-2 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Building2 className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{saque.bookmaker_nome}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">→ {saque.banco_nome}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-bold text-yellow-400">{formatCurrency(saque.valor, saque.moeda)}</span>
+                      <Button size="sm" onClick={() => handleConfirmarSaque(saque)} className="bg-yellow-600 hover:bg-yellow-700 h-6 text-xs px-2">
+                        Confirmar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
+    // 4. Saques Pendentes de Processamento
+    if (alertasSaques.length > 0) {
+      cards.push({
+        id: "saques-processamento",
+        priority: PRIORITY.HIGH,
+        component: (
+          <Card key="saques-processamento" className="border-emerald-500/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <DollarSign className="h-4 w-4 text-emerald-400" />
+                Saques Pendentes de Processamento
+                <Badge className="ml-auto bg-emerald-500/20 text-emerald-400">{alertasSaques.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {alertasSaques.slice(0, 4).map((alerta) => (
+                  <div key={alerta.entidade_id} className="flex items-center justify-between p-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Building2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                      <span className="text-xs font-medium truncate">{alerta.titulo}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {alerta.valor && <span className="text-xs font-bold text-emerald-400">{formatCurrency(alerta.valor, alerta.moeda)}</span>}
+                      <Button size="sm" onClick={() => handleSaqueAction(alerta)} className="h-6 text-xs px-2">
+                        Processar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
+    // 5. Participações de Investidores
+    if (participacoesPendentes.length > 0) {
+      cards.push({
+        id: "participacoes-investidores",
+        priority: PRIORITY.HIGH,
+        component: (
+          <Card key="participacoes-investidores" className="border-indigo-500/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Banknote className="h-4 w-4 text-indigo-400" />
+                Participações de Investidores
+                <Badge className="ml-auto bg-indigo-500/20 text-indigo-400">{participacoesPendentes.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {participacoesPendentes.slice(0, 4).map((part) => (
+                  <div key={part.id} className="flex items-center justify-between p-2 rounded-lg border border-indigo-500/20 bg-indigo-500/5 cursor-pointer" onClick={() => { setSelectedParticipacao(part); setPagamentoParticipacaoOpen(true); }}>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <User className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{part.investidor_nome}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{part.projeto_nome} • Ciclo {part.ciclo_numero}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-bold text-indigo-400">{formatCurrency(part.valor_participacao)}</span>
+                      <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 h-6 text-xs px-2" onClick={(e) => { e.stopPropagation(); setSelectedParticipacao(part); setPagamentoParticipacaoOpen(true); }}>
+                        Pagar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
+    // 6. Pagamentos de Operador
+    if (pagamentosOperadorPendentes.length > 0) {
+      cards.push({
+        id: "pagamentos-operador",
+        priority: PRIORITY.HIGH,
+        component: (
+          <Card key="pagamentos-operador" className="border-orange-500/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Users className="h-4 w-4 text-orange-400" />
+                Pagamentos de Operador
+                <Badge className="ml-auto bg-orange-500/20 text-orange-400">{pagamentosOperadorPendentes.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {pagamentosOperadorPendentes.slice(0, 4).map((pag) => (
+                  <div key={pag.id} className="flex items-center justify-between p-2 rounded-lg border border-orange-500/20 bg-orange-500/5 cursor-pointer" onClick={() => { setSelectedPagamentoOperador(pag); setPagamentoOperadorOpen(true); }}>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <DollarSign className="h-3.5 w-3.5 text-orange-400 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{pag.operador_nome}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{pag.tipo_pagamento}{pag.projeto_nome ? ` • ${pag.projeto_nome}` : ""}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-bold text-orange-400">{formatCurrency(pag.valor)}</span>
+                      <Button size="sm" className="bg-orange-600 hover:bg-orange-700 h-6 text-xs px-2" onClick={(e) => { e.stopPropagation(); setSelectedPagamentoOperador(pag); setPagamentoOperadorOpen(true); }}>
+                        Pagar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
+    // 7. Ciclos de Apuração
+    if (alertasCiclos.length > 0) {
+      cards.push({
+        id: "ciclos-apuracao",
+        priority: PRIORITY.MEDIUM,
+        component: (
+          <Card key="ciclos-apuracao" className="border-violet-500/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Target className="h-4 w-4 text-violet-400" />
+                Ciclos de Apuração
+                <Badge className="ml-auto bg-violet-500/20 text-violet-400">{alertasCiclos.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {alertasCiclos.slice(0, 4).map((ciclo) => {
+                  const getUrgencyColor = () => {
+                    switch (ciclo.urgencia) {
+                      case "CRITICA": return "border-red-500/40 bg-red-500/10";
+                      case "ALTA": return "border-orange-500/40 bg-orange-500/10";
+                      default: return "border-violet-500/30 bg-violet-500/10";
+                    }
+                  };
+                  return (
+                    <div key={ciclo.id} className={`p-2 rounded-lg border cursor-pointer ${getUrgencyColor()}`} onClick={() => navigate(`/projeto/${ciclo.projeto_id}`)}>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <FolderKanban className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="text-xs font-medium truncate">{ciclo.projeto_nome}</span>
+                          <Badge variant="outline" className="text-[10px] shrink-0">Ciclo {ciclo.numero_ciclo}</Badge>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {ciclo.tipo_gatilho === "TEMPO" && <Clock className="h-3 w-3 text-muted-foreground" />}
+                          {ciclo.tipo_gatilho === "VOLUME" && <Target className="h-3 w-3 text-muted-foreground" />}
+                          {ciclo.tipo_gatilho === "HIBRIDO" && <Zap className="h-3 w-3 text-muted-foreground" />}
+                        </div>
+                      </div>
+                      {(ciclo.tipo_gatilho === "VOLUME" || ciclo.tipo_gatilho === "HIBRIDO") && ciclo.meta_volume && (
+                        <div className="mt-2">
+                          <Progress value={Math.min(100, ciclo.progresso_volume)} className="h-1" />
+                          <p className="text-[10px] text-muted-foreground mt-1">{ciclo.progresso_volume.toFixed(0)}% concluído</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
+    // 8. Alertas de Lucro (Marcos)
+    if (alertasLucro.length > 0) {
+      cards.push({
+        id: "alertas-lucro",
+        priority: PRIORITY.MEDIUM,
+        component: (
+          <Card key="alertas-lucro" className="border-emerald-500/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <TrendingUp className="h-4 w-4 text-emerald-400" />
+                Marcos de Lucro Atingidos
+                <Badge className="ml-auto bg-emerald-500/20 text-emerald-400">{alertasLucro.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {alertasLucro.slice(0, 4).map((alerta) => (
+                  <div key={alerta.id} className="flex items-center justify-between p-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <TrendingUp className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{alerta.parceiro_nome}</p>
+                        <p className="text-[10px] text-muted-foreground">Lucro: {formatCurrency(alerta.lucro_atual)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-xs font-bold text-emerald-400">R$ {alerta.marco_valor.toLocaleString("pt-BR")}</span>
+                      <Button size="sm" variant="outline" onClick={async () => {
+                        try {
+                          await supabase.from("parceiro_lucro_alertas").update({ notificado: true }).eq("id", alerta.id);
+                          setAlertasLucro(prev => prev.filter(a => a.id !== alerta.id));
+                          toast.success("Marco verificado");
+                        } catch { toast.error("Erro ao confirmar"); }
+                      }} className="h-6 text-[10px] px-2 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />OK
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
+    // 9. Entregas Pendentes
+    if (entregasPendentes.length > 0) {
+      cards.push({
+        id: "entregas-pendentes",
+        priority: PRIORITY.MEDIUM,
+        component: (
+          <Card key="entregas-pendentes" className="border-purple-500/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Package className="h-4 w-4 text-purple-400" />
+                Entregas Pendentes
+                <Badge className="ml-auto bg-purple-500/20 text-purple-400">{entregasPendentes.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {entregasPendentes.slice(0, 4).map((entrega) => (
+                  <div key={entrega.id} className={`flex items-center justify-between p-2 rounded-lg border ${entrega.nivel_urgencia === "CRITICA" ? "border-red-500/30 bg-red-500/5" : "border-purple-500/20 bg-purple-500/5"}`}>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Target className={`h-3.5 w-3.5 shrink-0 ${entrega.nivel_urgencia === "CRITICA" ? "text-red-400" : "text-purple-400"}`} />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{entrega.operador_nome}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{entrega.projeto_nome} • Entrega #{entrega.numero_entrega}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-bold text-purple-400">{formatCurrency(entrega.resultado_nominal)}</span>
+                      <Button size="sm" onClick={() => handleConciliarEntrega(entrega)} className="bg-purple-600 hover:bg-purple-700 h-6 text-xs px-2">
+                        Conciliar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
+    // 10. Parceiros sem Parceria
+    if (parceirosSemParceria.length > 0) {
+      cards.push({
+        id: "parceiros-sem-parceria",
+        priority: PRIORITY.LOW,
+        component: (
+          <Card key="parceiros-sem-parceria" className="border-amber-500/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <UserPlus className="h-4 w-4 text-amber-400" />
+                Parceiros sem Parceria
+                <Badge className="ml-auto bg-amber-500/20 text-amber-400">{parceirosSemParceria.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {parceirosSemParceria.slice(0, 4).map((parceiro) => (
+                  <div key={parceiro.id} className="flex items-center justify-between p-2 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <User className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                      <span className="text-xs font-medium truncate">{parceiro.nome}</span>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => navigate("/programa-indicacao")} className="h-6 text-xs px-2 border-amber-500/30 text-amber-400 hover:bg-amber-500/10">
+                      Criar Parceria
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
+    // 11. Pagamentos a Parceiros
+    if (pagamentosParceiros.length > 0) {
+      cards.push({
+        id: "pagamentos-parceiros",
+        priority: PRIORITY.LOW,
+        component: (
+          <Card key="pagamentos-parceiros" className="border-cyan-500/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <DollarSign className="h-4 w-4 text-cyan-400" />
+                Pagamentos a Parceiros
+                <Badge className="ml-auto bg-cyan-500/20 text-cyan-400">{pagamentosParceiros.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {pagamentosParceiros.slice(0, 4).map((pag) => (
+                  <div key={pag.parceriaId} className="flex items-center justify-between p-2 rounded-lg border border-cyan-500/20 bg-cyan-500/5">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <User className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+                      <span className="text-xs font-medium truncate">{pag.parceiroNome}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-bold text-cyan-400">{formatCurrency(pag.valorParceiro)}</span>
+                      <Button size="sm" variant="ghost" onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })} className="h-6 text-xs px-2">
+                        Pagar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
+    // 12. Bônus Pendentes
+    if (bonusPendentes.length > 0) {
+      cards.push({
+        id: "bonus-pendentes",
+        priority: PRIORITY.LOW,
+        component: (
+          <Card key="bonus-pendentes" className="border-pink-500/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Gift className="h-4 w-4 text-pink-400" />
+                Bônus de Indicadores
+                <Badge className="ml-auto bg-pink-500/20 text-pink-400">{bonusPendentes.reduce((acc, b) => acc + b.ciclosPendentes, 0)}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {bonusPendentes.slice(0, 4).map((bonus) => (
+                  <div key={bonus.indicadorId} className="flex items-center justify-between p-2 rounded-lg border border-pink-500/20 bg-pink-500/5">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Gift className="h-3.5 w-3.5 text-pink-400 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{bonus.indicadorNome}</p>
+                        <p className="text-[10px] text-muted-foreground">{bonus.ciclosPendentes} ciclo(s) pendente(s)</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-bold text-pink-400">{formatCurrency(bonus.totalBonusPendente)}</span>
+                      <Button size="sm" variant="ghost" onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })} className="h-6 text-xs px-2">
+                        Pagar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
+    // 13. Comissões Pendentes
+    if (comissoesPendentes.length > 0) {
+      cards.push({
+        id: "comissoes-pendentes",
+        priority: PRIORITY.LOW,
+        component: (
+          <Card key="comissoes-pendentes" className="border-teal-500/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Banknote className="h-4 w-4 text-teal-400" />
+                Comissões Pendentes
+                <Badge className="ml-auto bg-teal-500/20 text-teal-400">{comissoesPendentes.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {comissoesPendentes.slice(0, 4).map((comissao) => (
+                  <div key={comissao.parceriaId} className="flex items-center justify-between p-2 rounded-lg border border-teal-500/20 bg-teal-500/5">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Banknote className="h-3.5 w-3.5 text-teal-400 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{comissao.indicadorNome}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">→ {comissao.parceiroNome}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-bold text-teal-400">{formatCurrency(comissao.valorComissao)}</span>
+                      <Button size="sm" variant="ghost" onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })} className="h-6 text-xs px-2">
+                        Pagar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
+    // 14. Parcerias Encerrando
+    if (parceriasEncerramento.length > 0) {
+      cards.push({
+        id: "parcerias-encerrando",
+        priority: PRIORITY.LOW,
+        component: (
+          <Card key="parcerias-encerrando" className="border-red-500/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Calendar className="h-4 w-4 text-red-400" />
+                Parcerias Encerrando
+                <Badge className="ml-auto bg-red-500/20 text-red-400">{parceriasEncerramento.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {parceriasEncerramento.slice(0, 4).map((parc) => {
+                  const isRed = parc.diasRestantes <= 5;
+                  return (
+                    <div key={parc.id} className={`flex items-center justify-between p-2 rounded-lg border ${isRed ? "border-red-500/30 bg-red-500/5" : "border-yellow-500/30 bg-yellow-500/5"}`}>
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <Calendar className={`h-3.5 w-3.5 shrink-0 ${isRed ? "text-red-400" : "text-yellow-400"}`} />
+                        <span className="text-xs font-medium truncate">{parc.parceiroNome}</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge className={`text-[10px] h-5 ${isRed ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"}`}>
+                          {parc.diasRestantes}d
+                        </Badge>
+                        <Button size="sm" variant={isRed ? "destructive" : "ghost"} onClick={() => navigate("/programa-indicacao")} className="h-6 text-xs px-2">
+                          {isRed ? "Encerrar" : "Ver"}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
+    // Sort by priority
+    return cards.sort((a, b) => a.priority - b.priority);
+  }, [
+    alertasCriticos, saquesPendentes, alertasSaques, participacoesPendentes,
+    pagamentosOperadorPendentes, alertasCiclos, alertasLucro, entregasPendentes,
+    parceirosSemParceria, pagamentosParceiros, bonusPendentes, comissoesPendentes, parceriasEncerramento
+  ]);
+
+  const hasAnyAlerts = alertCards.length > 1; // > 1 because PropostasPagamentoCard is always added
+
   if (loading) {
     return (
       <div className="p-6 space-y-6">
         <Skeleton className="h-10 w-64" />
-        <div className="grid gap-4 md:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-24" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} className="h-48" />
           ))}
         </div>
-        <Skeleton className="h-96" />
       </div>
     );
   }
-
-  const totalAlertas = alertasCriticos.length + entregasPendentes.filter(e => e.nivel_urgencia === "CRITICA").length;
 
   return (
     <div className="p-6 space-y-6">
@@ -714,898 +1086,40 @@ export default function CentralOperacoes() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Central de Operações</h1>
           <p className="text-muted-foreground">
-            Acompanhe alertas e ações que demandam atenção imediata
+            {hasAnyAlerts ? "Ações que demandam atenção imediata" : "Todas as operações estão em dia"}
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => fetchData(true)}
-          disabled={refreshing}
-        >
-          {refreshing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4" />
-          )}
+        <Button variant="outline" onClick={() => { fetchData(true); refetchCiclos(); }} disabled={refreshing}>
+          {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           <span className="ml-2">Atualizar</span>
         </Button>
       </div>
 
-      {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-red-500/30 bg-red-500/5">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Alertas Críticos</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-400">{totalAlertas}</div>
-            <p className="text-xs text-muted-foreground">Exigem ação imediata</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-purple-500/30 bg-purple-500/5">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Entregas Pendentes</CardTitle>
-            <Package className="h-4 w-4 text-purple-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-400">{entregasPendentes.length}</div>
-            <p className="text-xs text-muted-foreground">Aguardando conciliação</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-yellow-500/30 bg-yellow-500/5">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saques Aguardando</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-400">{saquesPendentes.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {formatCurrency(
-                saquesPendentes.reduce((acc, s) => acc + (s.valor || 0), 0)
-              )}{" "}
-              aguardando confirmação
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-cyan-500/30 bg-cyan-500/5">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Captação Pendente</CardTitle>
-            <Users className="h-4 w-4 text-cyan-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-cyan-400">
-              {pagamentosParceiros.length + bonusPendentes.reduce((acc, b) => acc + b.ciclosPendentes, 0) + comissoesPendentes.length + parceriasEncerramento.length + parceirosSemParceria.length}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {parceirosSemParceria.length > 0 && `${parceirosSemParceria.length} sem parceria • `}
-              {formatCurrency(
-                pagamentosParceiros.reduce((acc, p) => acc + p.valorParceiro, 0) +
-                bonusPendentes.reduce((acc, b) => acc + b.totalBonusPendente, 0) +
-                comissoesPendentes.reduce((acc, c) => acc + c.valorComissao, 0)
-              )} pendentes
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Propostas de Pagamento Pendentes */}
-      <PropostasPagamentoCard />
-
-      {/* Alertas List */}
-      {alertas.length === 0 && entregasPendentes.length === 0 && pagamentosParceiros.length === 0 && bonusPendentes.length === 0 && comissoesPendentes.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 && saquesPendentes.length === 0 && alertasLucro.length === 0 && pagamentosOperadorPendentes.length === 0 && alertasCiclos.length === 0 ? (
-        <Card>
+      {/* Empty State */}
+      {!hasAnyAlerts && (
+        <Card className="border-emerald-500/30 bg-emerald-500/5">
           <CardContent className="pt-6">
-            <div className="text-center py-10">
-              <Bell className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-4 text-lg font-semibold">Nenhum alerta pendente</h3>
-              <p className="text-muted-foreground">
+            <div className="text-center py-16">
+              <div className="mx-auto h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
+                <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-emerald-400">Nenhuma pendência</h3>
+              <p className="text-muted-foreground mt-2">
                 Todas as operações estão em dia! 🎉
               </p>
             </div>
           </CardContent>
         </Card>
-      ) : (
-        <div className="space-y-6">
-          {/* Alertas de Ciclos */}
-          {alertasCiclos.length > 0 && (
-            <Card className="border-violet-500/30 max-w-3xl">
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <Target className="h-4 w-4 text-violet-400" />
-                  Ciclos de Apuração
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Ciclos que atingiram gatilho de tempo ou volume
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-2">
-                  {alertasCiclos.map((ciclo) => {
-                    const getTipoGatilhoIcon = () => {
-                      switch (ciclo.tipo_gatilho) {
-                        case "TEMPO": return <Clock className="h-3 w-3" />;
-                        case "VOLUME": return <Target className="h-3 w-3" />;
-                        case "HIBRIDO": return <Zap className="h-3 w-3" />;
-                        default: return null;
-                      }
-                    };
-                    
-                    const getUrgencyColor = () => {
-                      switch (ciclo.urgencia) {
-                        case "CRITICA": return "border-red-500/40 bg-red-500/10 hover:bg-red-500/15";
-                        case "ALTA": return "border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/15";
-                        default: return "border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/15";
-                      }
-                    };
+      )}
 
-                    const getBadgeColor = () => {
-                      switch (ciclo.urgencia) {
-                        case "CRITICA": return "border-red-500/50 text-red-400";
-                        case "ALTA": return "border-orange-500/50 text-orange-400";
-                        default: return "border-violet-500/50 text-violet-400";
-                      }
-                    };
-
-                    return (
-                      <div
-                        key={ciclo.id}
-                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${getUrgencyColor()}`}
-                        onClick={() => navigate(`/projeto/${ciclo.projeto_id}`)}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <FolderKanban className="h-4 w-4 text-muted-foreground shrink-0" />
-                              <span className="font-medium text-sm truncate">{ciclo.projeto_nome}</span>
-                              <Badge variant="outline" className="text-xs shrink-0">
-                                Ciclo {ciclo.numero_ciclo}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs shrink-0 flex items-center gap-1">
-                                {getTipoGatilhoIcon()}
-                                {ciclo.tipo_gatilho}
-                              </Badge>
-                            </div>
-                            
-                            {/* Mensagens de alerta */}
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {ciclo.mensagem_tempo && (
-                                <Badge variant="outline" className={getBadgeColor()}>
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  {ciclo.mensagem_tempo}
-                                </Badge>
-                              )}
-                              {ciclo.mensagem_volume && (
-                                <Badge variant="outline" className={getBadgeColor()}>
-                                  <Target className="h-3 w-3 mr-1" />
-                                  {ciclo.mensagem_volume}
-                                </Badge>
-                              )}
-                            </div>
-
-                            {/* Barra de progresso para ciclos volumétricos */}
-                            {(ciclo.tipo_gatilho === "VOLUME" || ciclo.tipo_gatilho === "HIBRIDO") && ciclo.meta_volume && (
-                              <div className="mt-2">
-                                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                                  <span>
-                                    {ciclo.metrica_acumuladora === "LUCRO" ? "Lucro" : "Volume"}: {formatCurrency(ciclo.valor_acumulado)} de {formatCurrency(ciclo.meta_volume)}
-                                  </span>
-                                  <span className={
-                                    ciclo.progresso_volume >= 100 ? "text-emerald-400 font-medium" :
-                                    ciclo.progresso_volume >= 90 ? "text-amber-400 font-medium" : ""
-                                  }>
-                                    {ciclo.progresso_volume.toFixed(0)}%
-                                  </span>
-                                </div>
-                                <Progress 
-                                  value={Math.min(100, ciclo.progresso_volume)} 
-                                  className={
-                                    ciclo.progresso_volume >= 100 ? "bg-emerald-500/20" : 
-                                    ciclo.progresso_volume >= 90 ? "bg-amber-500/20" : ""
-                                  } 
-                                />
-                              </div>
-                            )}
-                          </div>
-                          
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/projeto/${ciclo.projeto_id}`);
-                            }}
-                          >
-                            <ArrowRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Alertas de Marco de Lucro */}
-          {alertasLucro.length > 0 && (
-            <Card className="border-amber-500/30 max-w-2xl">
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <TrendingUp className="h-4 w-4 text-amber-400" />
-                  Marcos de Lucro Atingidos
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Atenção: lucros altos podem gerar riscos fiscais
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-1.5">
-                  {alertasLucro.map((alerta) => {
-                    // Gradiente de cores baseado no lucro atual
-                    const lucro = alerta.lucro_atual;
-                    let colorClasses = {
-                      border: "border-emerald-500/30",
-                      bg: "bg-emerald-500/10 hover:bg-emerald-500/15",
-                      iconBg: "bg-emerald-500/20",
-                      iconText: "text-emerald-400",
-                      valueText: "text-emerald-400",
-                    };
-                    
-                    if (lucro >= 30000) {
-                      // CRÍTICO - estourou a cota
-                      colorClasses = {
-                        border: "border-rose-600/50",
-                        bg: "bg-rose-600/20 hover:bg-rose-600/25",
-                        iconBg: "bg-rose-600/30",
-                        iconText: "text-rose-400",
-                        valueText: "text-rose-400",
-                      };
-                    } else if (lucro >= 27000) {
-                      // MUITO ALTO - próximo de estourar
-                      colorClasses = {
-                        border: "border-red-500/40",
-                        bg: "bg-red-500/15 hover:bg-red-500/20",
-                        iconBg: "bg-red-500/25",
-                        iconText: "text-red-400",
-                        valueText: "text-red-400",
-                      };
-                    } else if (lucro >= 23000) {
-                      // ALTO - atenção redobrada
-                      colorClasses = {
-                        border: "border-orange-500/40",
-                        bg: "bg-orange-500/10 hover:bg-orange-500/15",
-                        iconBg: "bg-orange-500/20",
-                        iconText: "text-orange-400",
-                        valueText: "text-orange-400",
-                      };
-                    } else if (lucro >= 20000) {
-                      // MÉDIO - atenção
-                      colorClasses = {
-                        border: "border-yellow-500/30",
-                        bg: "bg-yellow-500/10 hover:bg-yellow-500/15",
-                        iconBg: "bg-yellow-500/20",
-                        iconText: "text-yellow-400",
-                        valueText: "text-yellow-400",
-                      };
-                    }
-                    // else: lucro < 20000 = verde (padrão definido acima)
-                    
-                    return (
-                      <div
-                        key={alerta.id}
-                        className={`flex items-center justify-between p-2.5 rounded-lg border ${colorClasses.border} ${colorClasses.bg} transition-colors`}
-                      >
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <div className={`h-7 w-7 rounded-md ${colorClasses.iconBg} flex items-center justify-center shrink-0`}>
-                            <TrendingUp className={`h-3.5 w-3.5 ${colorClasses.iconText}`} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-xs truncate">{alerta.parceiro_nome}</p>
-                            <p className="text-[10px] text-muted-foreground">
-                              Lucro: {formatCurrency(alerta.lucro_atual)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <span className={`text-xs font-bold ${colorClasses.valueText}`}>
-                            R$ {alerta.marco_valor.toLocaleString("pt-BR")}
-                          </span>
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => navigate("/gestao-parceiros")}
-                            className="h-6 text-[10px] px-2"
-                          >
-                            Ver
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={async () => {
-                              try {
-                                await supabase
-                                  .from("parceiro_lucro_alertas")
-                                  .update({ notificado: true })
-                                  .eq("id", alerta.id);
-                                setAlertasLucro(prev => prev.filter(a => a.id !== alerta.id));
-                                toast.success("Marco verificado");
-                              } catch (error) {
-                                toast.error("Erro ao confirmar");
-                              }
-                            }}
-                            className="h-6 text-[10px] px-2 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
-                          >
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            OK
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* GRID: Saques Agrupados (Aguardando Confirmação + Pendentes de Processamento) */}
-          {(saquesPendentes.length > 0 || alertasSaques.length > 0) && (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {/* Saques Aguardando Confirmação */}
-              {saquesPendentes.length > 0 && (
-                <Card className="border-yellow-500/30">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Clock className="h-5 w-5 text-yellow-400" />
-                      Saques Aguardando Confirmação
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      Verifique se o valor foi recebido antes de confirmar
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {saquesPendentes.map((saque) => (
-                        <div
-                          key={saque.id}
-                          className="flex items-center justify-between p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors"
-                        >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="h-8 w-8 rounded-lg bg-yellow-500/10 flex items-center justify-center shrink-0">
-                              <Building2 className="h-4 w-4 text-yellow-400" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-medium text-sm truncate">{saque.bookmaker_nome}</p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                → {saque.banco_nome}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-sm font-bold text-yellow-400">
-                              {formatCurrency(saque.valor, saque.moeda)}
-                            </span>
-                            <Button 
-                              size="sm" 
-                              onClick={() => handleConfirmarSaque(saque)}
-                              className="bg-yellow-600 hover:bg-yellow-700 h-7 text-xs"
-                            >
-                              Atualizar Status
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Saques Pendentes de Processamento */}
-              {alertasSaques.length > 0 && (
-                <Card className="border-emerald-500/30">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <DollarSign className="h-5 w-5 text-emerald-400" />
-                      Saques Pendentes de Processamento
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      Bookmakers liberados com saldo a resgatar
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {alertasSaques.map((alerta) => (
-                        <div
-                          key={alerta.entidade_id}
-                          className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
-                              <Building2 className="h-4 w-4 text-emerald-400" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-medium text-sm truncate">{alerta.titulo}</p>
-                              {alerta.parceiro_nome && (
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {alerta.parceiro_nome}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            {alerta.valor && (
-                              <span className="text-sm font-bold text-emerald-400">
-                                {formatCurrency(alerta.valor, alerta.moeda)}
-                              </span>
-                            )}
-                            <Button 
-                              size="sm" 
-                              onClick={() => handleSaqueAction(alerta)}
-                              className="h-7 text-xs"
-                            >
-                              Processar
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Placeholder para manter grid 2 colunas quando só tem 1 */}
-              {saquesPendentes.length > 0 && alertasSaques.length === 0 && (
-                <div className="hidden lg:block" />
-              )}
-              {alertasSaques.length > 0 && saquesPendentes.length === 0 && (
-                <div className="hidden lg:block" />
-              )}
-            </div>
-          )}
-
-          {/* Participações de Investidores a Pagar */}
-          {participacoesPendentes.length > 0 && (
-            <Card className="border-indigo-500/30 max-w-3xl">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Banknote className="h-5 w-5 text-indigo-400" />
-                  Participações de Investidores a Pagar
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Distribuição de lucros pendente de pagamento
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {participacoesPendentes.slice(0, 5).map((part) => (
-                    <div
-                      key={part.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/10 transition-colors cursor-pointer"
-                      onClick={() => {
-                        setSelectedParticipacao(part);
-                        setPagamentoParticipacaoOpen(true);
-                      }}
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
-                          <User className="h-4 w-4 text-indigo-400" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm truncate">{part.investidor_nome}</p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {part.projeto_nome} • Ciclo {part.ciclo_numero} • {part.percentual_aplicado}% do {part.base_calculo === "LUCRO_BRUTO" ? "Lucro Bruto" : "Lucro Líquido"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-sm font-bold text-indigo-400">
-                          {formatCurrency(part.valor_participacao)}
-                        </span>
-                        <Button
-                          size="sm"
-                          className="bg-indigo-600 hover:bg-indigo-700 h-7 text-xs"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedParticipacao(part);
-                            setPagamentoParticipacaoOpen(true);
-                          }}
-                        >
-                          Pagar
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {participacoesPendentes.length > 5 && (
-                    <p className="text-xs text-muted-foreground text-center py-1">
-                      +{participacoesPendentes.length - 5} participações pendentes
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* GRID: Entregas + Captação de Parcerias + Pagamentos Operador */}
-          {(entregasPendentes.length > 0 || pagamentosParceiros.length > 0 || bonusPendentes.length > 0 || comissoesPendentes.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0 || pagamentosOperadorPendentes.length > 0) && (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {/* Pagamentos de Operador Pendentes */}
-              {pagamentosOperadorPendentes.length > 0 && (
-                <Card className="border-orange-500/30">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Users className="h-5 w-5 text-orange-400" />
-                      Pagamentos de Operador Pendentes
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      Pagamentos registrados aguardando confirmação
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {pagamentosOperadorPendentes.slice(0, 5).map((pag) => (
-                        <div
-                          key={pag.id}
-                          className="flex items-center justify-between p-3 rounded-lg border border-orange-500/20 bg-orange-500/5 hover:bg-orange-500/10 transition-colors cursor-pointer"
-                          onClick={() => {
-                            setSelectedPagamentoOperador(pag);
-                            setPagamentoOperadorOpen(true);
-                          }}
-                        >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="h-8 w-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
-                              <DollarSign className="h-4 w-4 text-orange-400" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-medium text-sm truncate">{pag.operador_nome}</p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {pag.tipo_pagamento} {pag.projeto_nome ? `• ${pag.projeto_nome}` : ""}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-sm font-bold text-orange-400">
-                              {formatCurrency(pag.valor)}
-                            </span>
-                            <Button
-                              size="sm"
-                              className="bg-orange-600 hover:bg-orange-700 h-7 text-xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedPagamentoOperador(pag);
-                                setPagamentoOperadorOpen(true);
-                              }}
-                            >
-                              Pagar
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                      {pagamentosOperadorPendentes.length > 5 && (
-                        <p className="text-xs text-muted-foreground text-center py-1">
-                          +{pagamentosOperadorPendentes.length - 5} pagamentos pendentes
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Entregas Pendentes de Conciliação */}
-              {entregasPendentes.length > 0 && (
-                <Card className="border-purple-500/30">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Package className="h-5 w-5 text-purple-400" />
-                      Entregas Pendentes
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      Entregas que atingiram a meta ou período encerrado
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {entregasPendentes.map((entrega) => (
-                        <div
-                          key={entrega.id}
-                          className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                            entrega.nivel_urgencia === "CRITICA"
-                              ? "border-red-500/30 bg-red-500/5"
-                              : "bg-card hover:bg-muted/50"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div
-                              className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${
-                                entrega.nivel_urgencia === "CRITICA"
-                                  ? "bg-red-500/10"
-                                  : "bg-purple-500/10"
-                              }`}
-                            >
-                              <Target
-                                className={`h-4 w-4 ${
-                                  entrega.nivel_urgencia === "CRITICA"
-                                    ? "text-red-400"
-                                    : "text-purple-400"
-                                }`}
-                              />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-medium text-sm truncate">
-                                {entrega.operador_nome} - #{entrega.numero_entrega}
-                              </p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {entrega.projeto_nome}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-sm font-bold text-emerald-400">
-                              {formatCurrency(entrega.resultado_nominal)}
-                            </span>
-                            <Button size="sm" onClick={() => handleConciliarEntrega(entrega)} className="h-7 text-xs">
-                              Conciliar
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Captação de Parcerias */}
-              {(pagamentosParceiros.length > 0 || bonusPendentes.length > 0 || comissoesPendentes.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0) && (
-                <Card className="border-cyan-500/30">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Users className="h-5 w-5 text-cyan-400" />
-                      Captação de Parcerias
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      Parceiros, pagamentos, bônus e comissões pendentes
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Parceiros sem Parceria */}
-                    {parceirosSemParceria.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                          <AlertTriangle className="h-3 w-3 text-orange-400" />
-                          Sem Parceria ({parceirosSemParceria.length})
-                        </h4>
-                        <div className="space-y-1">
-                          {parceirosSemParceria.slice(0, 3).map((parceiro) => (
-                            <div
-                              key={parceiro.id}
-                              className="flex items-center justify-between p-2 rounded-lg border border-orange-500/30 bg-orange-500/5"
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <User className="h-3 w-3 text-orange-400 shrink-0" />
-                                <span className="text-xs font-medium truncate">{parceiro.nome}</span>
-                              </div>
-                              <Button 
-                                size="sm" 
-                                variant="ghost"
-                                className="h-6 text-xs px-2"
-                                onClick={() => navigate("/programa-indicacao", { state: { tab: "parcerias" } })}
-                              >
-                                Criar
-                              </Button>
-                            </div>
-                          ))}
-                          {parceirosSemParceria.length > 3 && (
-                            <p className="text-xs text-muted-foreground text-center py-1">
-                              +{parceirosSemParceria.length - 3} parceiros
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Pagamentos ao Parceiro */}
-                    {pagamentosParceiros.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                          <User className="h-3 w-3 text-emerald-400" />
-                          Pagamentos ao Parceiro ({pagamentosParceiros.length})
-                        </h4>
-                        <div className="space-y-1">
-                          {pagamentosParceiros.slice(0, 3).map((pag) => (
-                            <div
-                              key={pag.parceriaId}
-                              className="flex items-center justify-between p-2 rounded-lg border bg-card"
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <User className="h-3 w-3 text-emerald-400 shrink-0" />
-                                <span className="text-xs font-medium truncate">{pag.parceiroNome}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-emerald-400">
-                                  {formatCurrency(pag.valorParceiro)}
-                                </span>
-                                <Button 
-                                  size="sm" 
-                                  variant="ghost"
-                                  className="h-6 text-xs px-2"
-                                  onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })}
-                                >
-                                  Pagar
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                          {pagamentosParceiros.length > 3 && (
-                            <p className="text-xs text-muted-foreground text-center py-1">
-                              +{pagamentosParceiros.length - 3} pagamentos
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Bônus por Meta Atingida */}
-                    {bonusPendentes.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                          <Gift className="h-3 w-3 text-primary" />
-                          Bônus por Meta ({bonusPendentes.reduce((acc, b) => acc + b.ciclosPendentes, 0)})
-                        </h4>
-                        <div className="space-y-1">
-                          {bonusPendentes.slice(0, 3).map((bonus) => (
-                            <div
-                              key={bonus.indicadorId}
-                              className="flex items-center justify-between p-2 rounded-lg border border-primary/30 bg-primary/5"
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <Gift className="h-3 w-3 text-primary shrink-0" />
-                                <div className="min-w-0">
-                                  <span className="text-xs font-medium truncate block">{bonus.indicadorNome}</span>
-                                  <span className="text-[10px] text-muted-foreground">
-                                    {bonus.qtdParceiros}/{bonus.meta} parceiros
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-primary">
-                                  {bonus.ciclosPendentes > 1 
-                                    ? `${bonus.ciclosPendentes}x ${formatCurrency(bonus.valorBonus)}`
-                                    : formatCurrency(bonus.valorBonus)
-                                  }
-                                </span>
-                                <Button 
-                                  size="sm" 
-                                  variant="ghost"
-                                  className="h-6 text-xs px-2"
-                                  onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })}
-                                >
-                                  Pagar
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                          {bonusPendentes.length > 3 && (
-                            <p className="text-xs text-muted-foreground text-center py-1">
-                              +{bonusPendentes.length - 3} indicadores
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Comissões por Indicação */}
-                    {comissoesPendentes.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                          <Banknote className="h-3 w-3 text-chart-2" />
-                          Comissões ({comissoesPendentes.length})
-                        </h4>
-                        <div className="space-y-1">
-                          {comissoesPendentes.slice(0, 3).map((comissao) => (
-                            <div
-                              key={comissao.parceriaId}
-                              className="flex items-center justify-between p-2 rounded-lg border bg-card"
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <Banknote className="h-3 w-3 text-chart-2 shrink-0" />
-                                <div className="min-w-0">
-                                  <span className="text-xs font-medium truncate block">{comissao.indicadorNome}</span>
-                                  <span className="text-[10px] text-muted-foreground">
-                                    → {comissao.parceiroNome}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-chart-2">
-                                  {formatCurrency(comissao.valorComissao)}
-                                </span>
-                                <Button 
-                                  size="sm" 
-                                  variant="ghost"
-                                  className="h-6 text-xs px-2"
-                                  onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })}
-                                >
-                                  Pagar
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                          {comissoesPendentes.length > 3 && (
-                            <p className="text-xs text-muted-foreground text-center py-1">
-                              +{comissoesPendentes.length - 3} comissões
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Parcerias Encerrando */}
-                    {parceriasEncerramento.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          Encerrando ({parceriasEncerramento.length})
-                        </h4>
-                        <div className="space-y-1">
-                          {parceriasEncerramento.slice(0, 3).map((parc) => {
-                            const isRed = parc.diasRestantes <= 5;
-                            return (
-                              <div
-                                key={parc.id}
-                                className={`flex items-center justify-between p-2 rounded-lg border ${
-                                  isRed ? "border-red-500/30 bg-red-500/5" : "border-yellow-500/30 bg-yellow-500/5"
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <Calendar className={`h-3 w-3 shrink-0 ${isRed ? "text-red-400" : "text-yellow-400"}`} />
-                                  <span className="text-xs font-medium truncate">{parc.parceiroNome}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Badge className={`text-[10px] h-5 ${
-                                    isRed ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"
-                                  }`}>
-                                    {parc.diasRestantes}d
-                                  </Badge>
-                                  <Button 
-                                    size="sm" 
-                                    variant={isRed ? "destructive" : "ghost"}
-                                    className="h-6 text-xs px-2"
-                                    onClick={() => navigate("/programa-indicacao")}
-                                  >
-                                    {isRed ? "Encerrar" : "Ver"}
-                                  </Button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                          {parceriasEncerramento.length > 3 && (
-                            <p className="text-xs text-muted-foreground text-center py-1">
-                              +{parceriasEncerramento.length - 3} parcerias
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Placeholders para manter grid equilibrado */}
-              {entregasPendentes.length > 0 && pagamentosParceiros.length === 0 && bonusPendentes.length === 0 && comissoesPendentes.length === 0 && parceriasEncerramento.length === 0 && parceirosSemParceria.length === 0 && (
-                <div className="hidden lg:block" />
-              )}
-              {entregasPendentes.length === 0 && (pagamentosParceiros.length > 0 || bonusPendentes.length > 0 || comissoesPendentes.length > 0 || parceriasEncerramento.length > 0 || parceirosSemParceria.length > 0) && (
-                <div className="hidden lg:block" />
-              )}
-            </div>
-          )}
+      {/* Alert Cards Grid - 3 columns */}
+      {hasAnyAlerts && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {alertCards.map((card) => card.component)}
         </div>
       )}
 
-      {/* Dialog de Conciliação */}
+      {/* Dialogs */}
       {selectedEntrega && (
         <EntregaConciliacaoDialog
           open={conciliacaoOpen}
@@ -1632,24 +1146,16 @@ export default function CentralOperacoes() {
         />
       )}
 
-      {/* Dialog de Confirmação de Saque */}
       <ConfirmarSaqueDialog
         open={confirmarSaqueOpen}
-        onClose={() => {
-          setConfirmarSaqueOpen(false);
-          setSelectedSaque(null);
-        }}
+        onClose={() => { setConfirmarSaqueOpen(false); setSelectedSaque(null); }}
         onSuccess={() => fetchData(true)}
         saque={selectedSaque}
       />
 
-      {/* Dialog de Pagamento de Operador */}
       <PagamentoOperadorDialog
         open={pagamentoOperadorOpen}
-        onOpenChange={(open) => {
-          setPagamentoOperadorOpen(open);
-          if (!open) setSelectedPagamentoOperador(null);
-        }}
+        onOpenChange={(open) => { setPagamentoOperadorOpen(open); if (!open) setSelectedPagamentoOperador(null); }}
         pagamento={selectedPagamentoOperador ? {
           id: selectedPagamentoOperador.id,
           operador_id: selectedPagamentoOperador.operador_id,
@@ -1665,14 +1171,10 @@ export default function CentralOperacoes() {
         onSuccess={() => fetchData(true)}
       />
 
-      {/* Dialog de Pagamento de Participação de Investidor */}
       {selectedParticipacao && (
         <PagamentoParticipacaoDialog
           open={pagamentoParticipacaoOpen}
-          onOpenChange={(open) => {
-            setPagamentoParticipacaoOpen(open);
-            if (!open) setSelectedParticipacao(null);
-          }}
+          onOpenChange={(open) => { setPagamentoParticipacaoOpen(open); if (!open) setSelectedParticipacao(null); }}
           participacao={{
             id: selectedParticipacao.id,
             projeto_id: selectedParticipacao.projeto_id,
