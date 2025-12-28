@@ -501,7 +501,7 @@ export function ParceiroDetalhesPanel({
                                   </Popover>
                                 )}
                               </div>
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 flex-wrap">
                                 <Badge
                                   variant="outline"
                                   className={cn(
@@ -513,19 +513,22 @@ export function ParceiroDetalhesPanel({
                                 >
                                   {bm.status === "ativo" ? "Ativa" : "Limitada"}
                                 </Badge>
-                                {bm.saldo_usd > 0 && (
-                                  <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-cyan-500/50 text-cyan-400">
-                                    USD
-                                  </Badge>
-                                )}
-                                {/* Exibir saldos separados - PADRONIZADO */}
-                                <MultiCurrencyDisplay
-                                  valueBRL={bm.saldo_brl}
-                                  valueUSD={bm.saldo_usd}
-                                  size="xs"
-                                  masked={!showSensitiveData}
-                                  stacked={false}
-                                />
+                                {/* Badge de moeda baseado em bm.moeda - SEMPRE EXIBIDO */}
+                                <Badge 
+                                  variant="outline" 
+                                  className={cn(
+                                    "text-[9px] px-1 py-0 h-4",
+                                    bm.moeda === "USD" || bm.moeda === "USDT"
+                                      ? "border-cyan-500/50 text-cyan-400"
+                                      : bm.moeda === "EUR"
+                                        ? "border-yellow-500/50 text-yellow-400"
+                                        : bm.moeda === "GBP"
+                                          ? "border-purple-500/50 text-purple-400"
+                                          : "border-emerald-500/50 text-emerald-400"
+                                  )}
+                                >
+                                  {bm.moeda || "BRL"}
+                                </Badge>
                               </div>
                             </div>
                           </div>
@@ -533,10 +536,10 @@ export function ParceiroDetalhesPanel({
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div className="text-right">
-                                <MultiCurrencyDisplay
-                                  valueBRL={bm.total_depositado}
-                                  valueUSD={bm.total_depositado_usd}
-                                  size="xs"
+                                <MoneyDisplay
+                                  value={bm.moeda === "USD" || bm.moeda === "USDT" ? bm.total_depositado_usd : bm.total_depositado}
+                                  currency={bm.moeda || "BRL"}
+                                  size="sm"
                                   masked={!showSensitiveData}
                                 />
                               </div>
@@ -553,10 +556,10 @@ export function ParceiroDetalhesPanel({
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div className="text-right">
-                                <MultiCurrencyDisplay
-                                  valueBRL={bm.total_sacado}
-                                  valueUSD={bm.total_sacado_usd}
-                                  size="xs"
+                                <MoneyDisplay
+                                  value={bm.moeda === "USD" || bm.moeda === "USDT" ? bm.total_sacado_usd : bm.total_sacado}
+                                  currency={bm.moeda || "BRL"}
+                                  size="sm"
                                   masked={!showSensitiveData}
                                 />
                               </div>
@@ -573,10 +576,10 @@ export function ParceiroDetalhesPanel({
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div className="text-right">
-                                <MultiCurrencyDisplay
-                                  valueBRL={bm.lucro_prejuizo}
-                                  valueUSD={bm.lucro_prejuizo_usd}
-                                  size="xs"
+                                <MoneyDisplay
+                                  value={bm.moeda === "USD" || bm.moeda === "USDT" ? bm.lucro_prejuizo_usd : bm.lucro_prejuizo}
+                                  currency={bm.moeda || "BRL"}
+                                  size="sm"
                                   variant="auto"
                                   masked={!showSensitiveData}
                                 />
@@ -590,7 +593,7 @@ export function ParceiroDetalhesPanel({
                               </TooltipContent>
                             )}
                           </Tooltip>
-                          <div className="text-right text-xs text-muted-foreground">
+                          <div className="text-right text-sm font-medium text-muted-foreground">
                             {bm.qtd_apostas.toLocaleString("pt-BR")}
                           </div>
                         </div>
