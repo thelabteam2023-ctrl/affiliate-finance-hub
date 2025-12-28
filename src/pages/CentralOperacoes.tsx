@@ -886,8 +886,8 @@ export default function CentralOperacoes() {
                       <User className="h-3.5 w-3.5 text-amber-400 shrink-0" />
                       <span className="text-xs font-medium truncate">{parceiro.nome}</span>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => navigate("/programa-indicacao")} className="h-6 text-xs px-2 border-amber-500/30 text-amber-400 hover:bg-amber-500/10">
-                      Criar Parceria
+                    <Button size="sm" variant="outline" onClick={() => navigate("/programa-indicacao", { state: { tab: "parcerias", parceiroId: parceiro.id } })} className="h-6 text-xs px-2 border-amber-500/30 text-amber-400 hover:bg-amber-500/10">
+                      Definir Origem
                     </Button>
                   </div>
                 ))}
