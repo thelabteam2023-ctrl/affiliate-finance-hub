@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { maskCPFPartial } from "@/lib/validators";
 import { useActionAccess } from "@/hooks/useModuleAccess";
+import { MultiCurrencyDisplay } from "@/components/ui/money-display";
 
 interface Parceiro {
   id: string;
@@ -13,6 +14,8 @@ interface Parceiro {
   cpf: string;
   status: string;
   lucro_prejuizo: number;
+  lucro_prejuizo_brl?: number;
+  lucro_prejuizo_usd?: number;
   has_parceria?: boolean;
 }
 
@@ -43,20 +46,6 @@ export function ParceiroListaSidebar({
       return matchesSearch && matchesStatus;
     });
   }, [parceiros, searchTerm, statusFilter]);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      notation: "compact",
-      maximumFractionDigits: 1,
-    }).format(value);
-  };
-
-  const displayCurrency = (value: number) => {
-    if (!showSensitiveData) return "R$ ••••";
-    return formatCurrency(value);
-  };
 
   return (
     <div className="flex flex-col h-full border-r border-border min-w-[280px]">
@@ -119,16 +108,15 @@ export function ParceiroListaSidebar({
                   <span className="text-xs text-muted-foreground font-mono">
                     {maskCPFPartial(parceiro.cpf)}
                   </span>
-                  <span
-                    className={cn(
-                      "text-xs font-semibold shrink-0",
-                      showSensitiveData
-                        ? (parceiro.lucro_prejuizo >= 0 ? "text-success" : "text-destructive")
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    {displayCurrency(parceiro.lucro_prejuizo)}
-                  </span>
+                  <MultiCurrencyDisplay
+                    valueBRL={parceiro.lucro_prejuizo_brl ?? parceiro.lucro_prejuizo}
+                    valueUSD={parceiro.lucro_prejuizo_usd ?? 0}
+                    size="xs"
+                    variant="auto"
+                    masked={!showSensitiveData}
+                    stacked={false}
+                    showDashOnZero
+                  />
                 </div>
               </div>
             </button>
