@@ -11,6 +11,8 @@ interface Transacao {
   tipo_transacao: string;
   valor: number;
   moeda: string;
+  tipo_moeda: string;
+  valor_usd: number | null;
   data_transacao: string;
   status: string;
   descricao: string | null;
@@ -160,16 +162,39 @@ export function ParceiroMovimentacoesTab({
     fetchData();
   }, [parceiroId]);
   
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
+  // Formatação dinâmica baseada no tipo de moeda
+  const formatCurrency = (value: number, moeda: string = "BRL") => {
+    const symbol = moeda === "USD" || moeda === "USDT" ? "$" : "R$";
+    const formatted = new Intl.NumberFormat("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(value);
+    return `${symbol} ${formatted}`;
   };
 
-  const maskCurrency = (value: number) => {
-    if (showSensitiveData) return formatCurrency(value);
-    return "R$ ••••";
+  // Retorna valor e moeda efetiva para exibição
+  const getDisplayValue = (transacao: Transacao): { valor: number; moeda: string } => {
+    if (transacao.tipo_moeda === "CRYPTO") {
+      return { valor: transacao.valor_usd ?? transacao.valor, moeda: "USD" };
+    }
+    return { valor: transacao.valor, moeda: transacao.moeda || "BRL" };
+  };
+
+  const maskCurrency = (transacao: Transacao) => {
+    const { valor, moeda } = getDisplayValue(transacao);
+    if (showSensitiveData) return formatCurrency(valor, moeda);
+    return moeda === "USD" || moeda === "USDT" ? "$ ••••" : "R$ ••••";
+  };
+
+  // Badge para indicar tipo de moeda
+  const getMoedaBadge = (transacao: Transacao) => {
+    if (transacao.tipo_moeda === "CRYPTO") {
+      return <Badge variant="outline" className="text-[10px] ml-1 bg-amber-500/10 text-amber-500 border-amber-500/30">CRYPTO</Badge>;
+    }
+    if (transacao.moeda === "USD") {
+      return <Badge variant="outline" className="text-[10px] ml-1 bg-blue-500/10 text-blue-500 border-blue-500/30">USD</Badge>;
+    }
+    return null;
   };
 
   const formatDate = (date: string) => {
@@ -311,8 +336,9 @@ export function ParceiroMovimentacoesTab({
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">
-                {maskCurrency(transacao.valor)}
+              <span className="text-sm font-semibold flex items-center">
+                {maskCurrency(transacao)}
+                {getMoedaBadge(transacao)}
               </span>
               {transacao.descricao && (
                 <span className="text-xs text-muted-foreground truncate max-w-[150px]">

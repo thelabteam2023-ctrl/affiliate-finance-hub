@@ -93,17 +93,22 @@ export function ParceiroDetalhesPanel({
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
+  const formatCurrency = (value: number, moeda: string = "BRL") => {
+    const symbol = moeda === "USD" || moeda === "USDT" ? "$" : "R$";
+    const formatted = new Intl.NumberFormat("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(value);
+    return `${symbol} ${formatted}`;
   };
 
-  const maskCurrency = (value: number) => {
-    if (showSensitiveData) return formatCurrency(value);
-    return "R$ ••••";
+  const maskCurrency = (value: number, moeda: string = "BRL") => {
+    if (showSensitiveData) return formatCurrency(value, moeda);
+    return moeda === "USD" || moeda === "USDT" ? "$ ••••" : "R$ ••••";
   };
+
+  // Verifica se há valores em USD
+  const hasUSD = data ? (data.total_depositado_usd > 0 || data.total_sacado_usd > 0 || data.lucro_prejuizo_usd !== 0) : false;
 
   if (!parceiroId) {
     return (
@@ -293,7 +298,12 @@ export function ParceiroDetalhesPanel({
                     <ArrowDownToLine className="h-4 w-4 text-blue-500 shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Depositado</p>
-                      <p className="text-sm font-semibold truncate">{maskCurrency(data.total_depositado)}</p>
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-semibold truncate">{maskCurrency(data.total_depositado_brl, "BRL")}</p>
+                        {hasUSD && data.total_depositado_usd > 0 && (
+                          <p className="text-xs text-muted-foreground truncate">{maskCurrency(data.total_depositado_usd, "USD")}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -301,7 +311,12 @@ export function ParceiroDetalhesPanel({
                     <ArrowUpFromLine className="h-4 w-4 text-green-500 shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Sacado</p>
-                      <p className="text-sm font-semibold truncate">{maskCurrency(data.total_sacado)}</p>
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-semibold truncate">{maskCurrency(data.total_sacado_brl, "BRL")}</p>
+                        {hasUSD && data.total_sacado_usd > 0 && (
+                          <p className="text-xs text-muted-foreground truncate">{maskCurrency(data.total_sacado_usd, "USD")}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -317,14 +332,26 @@ export function ParceiroDetalhesPanel({
                     )}
                     <div className="min-w-0">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Resultado</p>
-                      <p className={cn(
-                        "text-sm font-semibold truncate",
-                        showSensitiveData 
-                          ? (data.lucro_prejuizo >= 0 ? "text-success" : "text-destructive")
-                          : "text-muted-foreground"
-                      )}>
-                        {maskCurrency(data.lucro_prejuizo)}
-                      </p>
+                      <div className="space-y-0.5">
+                        <p className={cn(
+                          "text-sm font-semibold truncate",
+                          showSensitiveData 
+                            ? (data.lucro_prejuizo_brl >= 0 ? "text-success" : "text-destructive")
+                            : "text-muted-foreground"
+                        )}>
+                          {maskCurrency(data.lucro_prejuizo_brl, "BRL")}
+                        </p>
+                        {hasUSD && data.lucro_prejuizo_usd !== 0 && (
+                          <p className={cn(
+                            "text-xs truncate",
+                            showSensitiveData 
+                              ? (data.lucro_prejuizo_usd >= 0 ? "text-success/70" : "text-destructive/70")
+                              : "text-muted-foreground"
+                          )}>
+                            {maskCurrency(data.lucro_prejuizo_usd, "USD")}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
 
