@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, TrendingUp, TrendingDown, Minus, HelpCircle, ChevronRight } from "lucide-react";
+import { PieChart, TrendingUp, TrendingDown, Minus, HelpCircle, ChevronRight, Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
 import {
@@ -8,6 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import {
   Popover,
   PopoverContent,
@@ -40,6 +41,9 @@ export interface BonusDetalhe {
 export interface InfraestruturaDetalhe {
   categoria: string;
   valor: number;
+  valorUSD?: number;
+  tipoMoeda?: string;
+  hasCrypto?: boolean;
 }
 
 export interface OperadorDetalhe {
@@ -66,9 +70,11 @@ interface DetalheItemProps {
   total: number;
   formatCurrency: (value: number) => string;
   color?: string;
+  hasCrypto?: boolean;
+  valorUSD?: number;
 }
 
-function DetalheItem({ nome, valor, total, formatCurrency, color = "#3B82F6" }: DetalheItemProps) {
+function DetalheItem({ nome, valor, total, formatCurrency, color = "#3B82F6", hasCrypto, valorUSD }: DetalheItemProps) {
   const percent = total > 0 ? (valor / total) * 100 : 0;
   
   return (
@@ -79,8 +85,23 @@ function DetalheItem({ nome, valor, total, formatCurrency, color = "#3B82F6" }: 
       />
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs truncate">{nome}</span>
-          <span className="text-xs font-medium">{formatCurrency(valor)}</span>
+          <div className="flex items-center gap-1">
+            <span className="text-xs truncate">{nome}</span>
+            {hasCrypto && (
+              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[8px] px-1 py-0 h-4">
+                <Coins className="h-2.5 w-2.5 mr-0.5" />
+                USD
+              </Badge>
+            )}
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="text-xs font-medium">{formatCurrency(valor)}</span>
+            {hasCrypto && valorUSD !== undefined && valorUSD > 0 && (
+              <span className="text-[9px] text-muted-foreground">
+                (${valorUSD.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
@@ -133,7 +154,7 @@ export function ComposicaoCustosCard({
   }));
 
   // Função para obter detalhes por categoria
-  const getDetalhesForCategoria = (name: string): { items: { nome: string; valor: number }[]; total: number; color: string } => {
+  const getDetalhesForCategoria = (name: string): { items: { nome: string; valor: number; hasCrypto?: boolean; valorUSD?: number }[]; total: number; color: string } => {
     const cat = categorias.find(c => c.name === name);
     const color = cat?.color || colors[categorias.indexOf(cat!) % colors.length] || "#3B82F6";
     
@@ -181,16 +202,27 @@ export function ComposicaoCustosCard({
         return { items: bonusAgrupado.sort((a, b) => b.valor - a.valor), total: cat?.value || 0, color };
         
       case "Infraestrutura":
-        const infraItems = infraestruturaDetalhes.length > 0
-          ? infraestruturaDetalhes.map(d => ({ nome: d.categoria, valor: d.valor }))
+        type InfraItem = { nome: string; valor: number; hasCrypto?: boolean; valorUSD?: number };
+        const infraItems: InfraItem[] = infraestruturaDetalhes.length > 0
+          ? infraestruturaDetalhes.map(d => ({ 
+              nome: d.categoria, 
+              valor: d.valor,
+              hasCrypto: d.hasCrypto || d.tipoMoeda === "CRYPTO",
+              valorUSD: d.valorUSD
+            }))
           : [{ nome: "Total", valor: cat?.value || 0 }];
-        // Agrupar por categoria
-        const infraAgrupado = infraItems.reduce((acc, item) => {
+        // Agrupar por categoria preservando info crypto
+        const infraAgrupado = infraItems.reduce<InfraItem[]>((acc, item) => {
           const existing = acc.find(a => a.nome === item.nome);
-          if (existing) existing.valor += item.valor;
-          else acc.push({ ...item });
+          if (existing) {
+            existing.valor += item.valor;
+            if (item.hasCrypto) existing.hasCrypto = true;
+            if (item.valorUSD) existing.valorUSD = (existing.valorUSD || 0) + item.valorUSD;
+          } else {
+            acc.push({ ...item });
+          }
           return acc;
-        }, [] as { nome: string; valor: number }[]);
+        }, []);
         return { items: infraAgrupado.sort((a, b) => b.valor - a.valor), total: cat?.value || 0, color };
         
       case "Operadores":
@@ -331,6 +363,8 @@ export function ComposicaoCustosCard({
                                     total={detalhes.total}
                                     formatCurrency={formatCurrency}
                                     color={detalhes.color}
+                                    hasCrypto={item.hasCrypto}
+                                    valorUSD={item.valorUSD}
                                   />
                                 ))}
                                 {detalhes.items.length > 10 && (

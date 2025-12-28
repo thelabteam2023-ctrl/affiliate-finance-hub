@@ -232,6 +232,10 @@ export function DespesaAdministrativaDialog({
 
           const workspaceId = workspaceMember?.workspace_id || null;
 
+          // CRYPTO: moeda = USD (USDT = 1:1), valor = valor em USD
+          // FIAT: moeda = BRL, valor = valor em BRL
+          const valorLedger = isCrypto ? valorUSD : formData.valor;
+          
           const { error: ledgerError } = await supabase
             .from("cash_ledger")
             .insert({
@@ -239,8 +243,8 @@ export function DespesaAdministrativaDialog({
               workspace_id: workspaceId,
               tipo_transacao: "DESPESA_ADMINISTRATIVA",
               tipo_moeda: origemData.tipoMoeda,
-              moeda: isCrypto ? "BRL" : origemData.moeda,
-              valor: formData.valor,
+              moeda: isCrypto ? "USD" : origemData.moeda, // CRÍTICO: CRYPTO = USD, não BRL
+              valor: isCrypto ? formData.valor : formData.valor, // valor referência BRL para histórico
               coin: origemData.coin || null,
               qtd_coin: qtdCoin,
               valor_usd: valorUSD,

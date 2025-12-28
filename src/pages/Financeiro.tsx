@@ -774,16 +774,35 @@ export default function Financeiro() {
     return Object.values(agrupado).sort((a, b) => b.valor - a.valor);
   }, [filteredDespesas]);
 
-  // Infraestrutura por categoria
+  // Infraestrutura por categoria - com suporte a CRYPTO
   const infraestruturaDetalhes = useMemo((): InfraestruturaDetalhe[] => {
-    const agrupado: Record<string, { categoria: string; valor: number }> = {};
+    const agrupado: Record<string, { 
+      categoria: string; 
+      valor: number; 
+      valorUSD: number;
+      hasCrypto: boolean;
+    }> = {};
     
-    filteredDespesasAdmin.forEach(d => {
+    filteredDespesasAdmin.forEach((d: any) => {
       const categoria = d.categoria || "Outros";
+      const isCrypto = d.tipo_moeda === "CRYPTO";
+      
       if (!agrupado[categoria]) {
-        agrupado[categoria] = { categoria, valor: 0 };
+        agrupado[categoria] = { categoria, valor: 0, valorUSD: 0, hasCrypto: false };
       }
+      
+      // Valor em BRL (sempre somar para total de referência)
       agrupado[categoria].valor += d.valor;
+      
+      // Se for CRYPTO, calcular valor USD e marcar flag
+      if (isCrypto) {
+        agrupado[categoria].hasCrypto = true;
+        // Valor USD = qtd_coin * cotacao (se disponível) ou valor / cotacao_usd_brl
+        const valorUSD = d.qtd_coin && d.cotacao 
+          ? d.qtd_coin * d.cotacao 
+          : d.valor / (d.cotacao || 5);
+        agrupado[categoria].valorUSD += valorUSD;
+      }
     });
     
     return Object.values(agrupado).sort((a, b) => b.valor - a.valor);
