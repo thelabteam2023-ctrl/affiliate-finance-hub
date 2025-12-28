@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -146,6 +146,10 @@ export function CaixaTransacaoDialog({
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
   const [loadingPrices, setLoadingPrices] = useState(false);
 
+  // Refs para auto-focus
+  const coinSelectRef = useRef<HTMLButtonElement>(null);
+  const qtdCoinInputRef = useRef<HTMLInputElement>(null);
+
   // Aplicar defaults quando dialog abre
   useEffect(() => {
     if (open) {
@@ -159,6 +163,25 @@ export function CaixaTransacaoDialog({
       }
     }
   }, [open, defaultTipoTransacao, defaultOrigemBookmakerId]);
+
+  // Auto-focus: quando tipo de moeda muda para CRYPTO, foca no campo Moeda
+  useEffect(() => {
+    if (tipoMoeda === "CRYPTO" && coinSelectRef.current) {
+      setTimeout(() => {
+        coinSelectRef.current?.focus();
+        coinSelectRef.current?.click();
+      }, 100);
+    }
+  }, [tipoMoeda]);
+
+  // Auto-focus: quando coin é selecionado, foca no campo Quantidade
+  useEffect(() => {
+    if (tipoMoeda === "CRYPTO" && coin && qtdCoinInputRef.current) {
+      setTimeout(() => {
+        qtdCoinInputRef.current?.focus();
+      }, 100);
+    }
+  }, [coin, tipoMoeda]);
 
   // Buscar cotações em tempo real da Binance quando tipo_moeda for CRYPTO
   // e atualizar automaticamente a cada 30 segundos
@@ -2273,7 +2296,7 @@ export function CaixaTransacaoDialog({
                 <div className="space-y-2">
                   <Label className="text-center block">Moeda</Label>
                   <Select value={coin} onValueChange={setCoin}>
-                    <SelectTrigger>
+                    <SelectTrigger ref={coinSelectRef}>
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
@@ -2307,6 +2330,7 @@ export function CaixaTransacaoDialog({
                 <div className="space-y-2">
                   <Label className="text-center block">Quantidade de Coins</Label>
                   <Input
+                    ref={qtdCoinInputRef}
                     type="number"
                     step="0.00000001"
                     value={qtdCoin}
