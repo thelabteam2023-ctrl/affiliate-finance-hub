@@ -1157,7 +1157,78 @@ export function CaixaTransacaoDialog({
 
       if (error) throw error;
 
+      // ATUALIZAR SALDO DO BOOKMAKER quando a transação envolve bookmaker
+      const valorNumerico = parseFloat(valor);
+      
+      // DEPÓSITO: aumentar saldo do bookmaker de destino
+      if (tipoTransacao === "DEPOSITO" && destinoBookmakerId) {
+        const destBk = bookmakers.find(b => b.id === destinoBookmakerId);
+        if (destBk) {
+          // Determinar qual campo atualizar baseado na moeda
+          const moedaBk = destBk.moeda || "BRL";
+          const campoSaldo = moedaBk === "USD" ? "saldo_usd" : "saldo_atual";
+          const novoSaldo = (moedaBk === "USD" ? destBk.saldo_usd : destBk.saldo_atual) + valorNumerico;
+          
+          const { error: updateBkError } = await supabase
+            .from("bookmakers")
+            .update({ 
+              [campoSaldo]: novoSaldo,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", destinoBookmakerId);
+          
+          if (updateBkError) {
+            console.error("Erro ao atualizar saldo do bookmaker de destino:", updateBkError);
+          }
+        }
+      }
+      
+      // TRANSFERÊNCIA BOOKMAKER → outro destino: decrementar saldo do bookmaker de origem
+      if (tipoTransacao === "TRANSFERENCIA" && origemBookmakerId) {
+        const origBk = bookmakers.find(b => b.id === origemBookmakerId);
+        if (origBk) {
+          const moedaBk = origBk.moeda || "BRL";
+          const campoSaldo = moedaBk === "USD" ? "saldo_usd" : "saldo_atual";
+          const novoSaldo = Math.max(0, (moedaBk === "USD" ? origBk.saldo_usd : origBk.saldo_atual) - valorNumerico);
+          
+          const { error: updateBkError } = await supabase
+            .from("bookmakers")
+            .update({ 
+              [campoSaldo]: novoSaldo,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", origemBookmakerId);
+          
+          if (updateBkError) {
+            console.error("Erro ao atualizar saldo do bookmaker de origem:", updateBkError);
+          }
+        }
+      }
+      
+      // TRANSFERÊNCIA → BOOKMAKER destino: incrementar saldo
+      if (tipoTransacao === "TRANSFERENCIA" && destinoBookmakerId) {
+        const destBk = bookmakers.find(b => b.id === destinoBookmakerId);
+        if (destBk) {
+          const moedaBk = destBk.moeda || "BRL";
+          const campoSaldo = moedaBk === "USD" ? "saldo_usd" : "saldo_atual";
+          const novoSaldo = (moedaBk === "USD" ? destBk.saldo_usd : destBk.saldo_atual) + valorNumerico;
+          
+          const { error: updateBkError } = await supabase
+            .from("bookmakers")
+            .update({ 
+              [campoSaldo]: novoSaldo,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", destinoBookmakerId);
+          
+          if (updateBkError) {
+            console.error("Erro ao atualizar saldo do bookmaker de destino:", updateBkError);
+          }
+        }
+      }
+
       // Se for SAQUE, atualizar status do bookmaker para indicar saque em processamento
+      // O saldo será atualizado apenas quando o saque for CONFIRMADO
       if (tipoTransacao === "SAQUE" && origemBookmakerId) {
         const { error: updateBookmakerError } = await supabase
           .from("bookmakers")
