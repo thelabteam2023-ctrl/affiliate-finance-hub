@@ -14,6 +14,7 @@ import { ParceiroBookmakersTab } from "./ParceiroBookmakersTab";
 import { useToast } from "@/hooks/use-toast";
 import { TabKey } from "@/hooks/useParceiroFinanceiroCache";
 import { useActionAccess } from "@/hooks/useModuleAccess";
+import { MoneyDisplay, MultiCurrencyDisplay, formatMoneyValue } from "@/components/ui/money-display";
 
 interface ParceiroCache {
   // Resumo only
@@ -307,18 +308,18 @@ export function ParceiroDetalhesPanel({
           <TabsContent value="resumo" className="flex-1 mt-0">
             <ScrollArea className="h-full">
               <div className="p-4 space-y-3">
-                {/* KPIs compactos - 4 colunas */}
+                {/* KPIs compactos - 4 colunas - PADRONIZADO */}
                 <div className="grid gap-2 grid-cols-2 lg:grid-cols-4">
                   <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
                     <ArrowDownToLine className="h-4 w-4 text-blue-500 shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Depositado</p>
-                      <div className="space-y-0.5">
-                        <p className="text-sm font-semibold truncate">{maskCurrency(data.total_depositado_brl, "BRL")}</p>
-                        {hasUSD && data.total_depositado_usd > 0 && (
-                          <p className="text-xs text-muted-foreground truncate">{maskCurrency(data.total_depositado_usd, "USD")}</p>
-                        )}
-                      </div>
+                      <MultiCurrencyDisplay
+                        valueBRL={data.total_depositado_brl}
+                        valueUSD={data.total_depositado_usd}
+                        size="sm"
+                        masked={!showSensitiveData}
+                      />
                     </div>
                   </div>
 
@@ -326,12 +327,12 @@ export function ParceiroDetalhesPanel({
                     <ArrowUpFromLine className="h-4 w-4 text-green-500 shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Sacado</p>
-                      <div className="space-y-0.5">
-                        <p className="text-sm font-semibold truncate">{maskCurrency(data.total_sacado_brl, "BRL")}</p>
-                        {hasUSD && data.total_sacado_usd > 0 && (
-                          <p className="text-xs text-muted-foreground truncate">{maskCurrency(data.total_sacado_usd, "USD")}</p>
-                        )}
-                      </div>
+                      <MultiCurrencyDisplay
+                        valueBRL={data.total_sacado_brl}
+                        valueUSD={data.total_sacado_usd}
+                        size="sm"
+                        masked={!showSensitiveData}
+                      />
                     </div>
                   </div>
 
@@ -347,26 +348,13 @@ export function ParceiroDetalhesPanel({
                     )}
                     <div className="min-w-0">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Resultado</p>
-                      <div className="space-y-0.5">
-                        <p className={cn(
-                          "text-sm font-semibold truncate",
-                          showSensitiveData 
-                            ? (data.lucro_prejuizo_brl >= 0 ? "text-success" : "text-destructive")
-                            : "text-muted-foreground"
-                        )}>
-                          {maskCurrency(data.lucro_prejuizo_brl, "BRL")}
-                        </p>
-                        {hasUSD && data.lucro_prejuizo_usd !== 0 && (
-                          <p className={cn(
-                            "text-xs truncate",
-                            showSensitiveData 
-                              ? (data.lucro_prejuizo_usd >= 0 ? "text-success/70" : "text-destructive/70")
-                              : "text-muted-foreground"
-                          )}>
-                            {maskCurrency(data.lucro_prejuizo_usd, "USD")}
-                          </p>
-                        )}
-                      </div>
+                      <MultiCurrencyDisplay
+                        valueBRL={data.lucro_prejuizo_brl}
+                        valueUSD={data.lucro_prejuizo_usd}
+                        size="sm"
+                        variant="auto"
+                        masked={!showSensitiveData}
+                      />
                     </div>
                   </div>
 
@@ -384,27 +372,13 @@ export function ParceiroDetalhesPanel({
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30">
                     <Wallet className="h-3 w-3 text-primary" />
                     <span className="text-muted-foreground">Saldo:</span>
-                    <div className="flex items-center gap-1.5">
-                      {totalSaldoBRL > 0 && (
-                        <span className={cn(
-                          "font-medium",
-                          showSensitiveData ? "text-primary" : "text-muted-foreground"
-                        )}>
-                          {maskCurrency(totalSaldoBRL, "BRL")}
-                        </span>
-                      )}
-                      {totalSaldoUSD > 0 && (
-                        <span className={cn(
-                          "font-medium text-cyan-400",
-                          !showSensitiveData && "text-muted-foreground"
-                        )}>
-                          {maskCurrency(totalSaldoUSD, "USD")}
-                        </span>
-                      )}
-                      {totalSaldoBRL === 0 && totalSaldoUSD === 0 && (
-                        <span className="text-muted-foreground">R$ 0,00</span>
-                      )}
-                    </div>
+                    <MultiCurrencyDisplay
+                      valueBRL={totalSaldoBRL}
+                      valueUSD={totalSaldoUSD}
+                      size="xs"
+                      masked={!showSensitiveData}
+                      stacked={false}
+                    />
                   </div>
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30">
                     <Building2 className="h-3 w-3 text-success" />
@@ -419,8 +393,8 @@ export function ParceiroDetalhesPanel({
                 </div>
 
                 {/* Tabela por Casa de Apostas */}
-                <div className="border border-border rounded-lg overflow-hidden">
-                  <div className="px-3 py-2 bg-muted/30 border-b border-border">
+                <div className="border border-border rounded-lg overflow-hidden flex flex-col max-h-[400px]">
+                  <div className="px-3 py-2 bg-muted/30 border-b border-border shrink-0">
                     <h3 className="text-xs font-medium flex items-center gap-1.5">
                       <Building2 className="h-3.5 w-3.5 text-primary" />
                       Desempenho por Casa
@@ -432,7 +406,7 @@ export function ParceiroDetalhesPanel({
                       Nenhuma casa vinculada
                     </div>
                   ) : (
-                    <div className="divide-y divide-border">
+                    <div className="divide-y divide-border flex-1 overflow-y-auto">
                       {/* Header */}
                       <div className="grid grid-cols-6 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/20">
                         <div className="col-span-2">Casa</div>
@@ -544,103 +518,75 @@ export function ParceiroDetalhesPanel({
                                     USD
                                   </Badge>
                                 )}
-                                {/* Exibir saldos separados */}
-                                <div className="flex items-center gap-1">
-                                  {bm.saldo_brl > 0 && (
-                                    <span className="text-[10px] text-muted-foreground">
-                                      {maskCurrency(bm.saldo_brl, "BRL")}
-                                    </span>
-                                  )}
-                                  {bm.saldo_usd > 0 && (
-                                    <span className="text-[10px] text-cyan-400">
-                                      {maskCurrency(bm.saldo_usd, "USD")}
-                                    </span>
-                                  )}
-                                  {bm.saldo_brl === 0 && bm.saldo_usd === 0 && (
-                                    <span className="text-[10px] text-muted-foreground">R$ 0,00</span>
-                                  )}
-                                </div>
+                                {/* Exibir saldos separados - PADRONIZADO */}
+                                <MultiCurrencyDisplay
+                                  valueBRL={bm.saldo_brl}
+                                  valueUSD={bm.saldo_usd}
+                                  size="xs"
+                                  masked={!showSensitiveData}
+                                  stacked={false}
+                                />
                               </div>
                             </div>
                           </div>
-                          {/* Depósito - exibir BRL e/ou USD */}
+                          {/* Depósito - PADRONIZADO */}
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="text-right text-xs text-muted-foreground space-y-0.5">
-                                {bm.total_depositado > 0 && (
-                                  <div>{maskCurrency(bm.total_depositado, "BRL")}</div>
-                                )}
-                                {bm.total_depositado_usd > 0 && (
-                                  <div className="text-cyan-400">{maskCurrency(bm.total_depositado_usd, "USD")}</div>
-                                )}
-                                {bm.total_depositado === 0 && bm.total_depositado_usd === 0 && (
-                                  <div>R$ 0,00</div>
-                                )}
+                              <div className="text-right">
+                                <MultiCurrencyDisplay
+                                  valueBRL={bm.total_depositado}
+                                  valueUSD={bm.total_depositado_usd}
+                                  size="xs"
+                                  masked={!showSensitiveData}
+                                />
                               </div>
                             </TooltipTrigger>
                             {showSensitiveData && (bm.total_depositado > 0 || bm.total_depositado_usd > 0) && (
                               <TooltipContent side="top" className="text-xs">
                                 <p className="font-medium">Total depositado</p>
-                                {bm.total_depositado > 0 && <p>BRL: {formatCurrency(bm.total_depositado, "BRL")}</p>}
-                                {bm.total_depositado_usd > 0 && <p className="text-cyan-400">USD: {formatCurrency(bm.total_depositado_usd, "USD")}</p>}
+                                {bm.total_depositado > 0 && <p>BRL: {formatMoneyValue(bm.total_depositado, "BRL")}</p>}
+                                {bm.total_depositado_usd > 0 && <p className="text-cyan-400">USD: {formatMoneyValue(bm.total_depositado_usd, "USD")}</p>}
                               </TooltipContent>
                             )}
                           </Tooltip>
-                          {/* Saque - exibir BRL e/ou USD */}
+                          {/* Saque - PADRONIZADO */}
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="text-right text-xs text-muted-foreground space-y-0.5">
-                                {bm.total_sacado > 0 && (
-                                  <div>{maskCurrency(bm.total_sacado, "BRL")}</div>
-                                )}
-                                {bm.total_sacado_usd > 0 && (
-                                  <div className="text-cyan-400">{maskCurrency(bm.total_sacado_usd, "USD")}</div>
-                                )}
-                                {bm.total_sacado === 0 && bm.total_sacado_usd === 0 && (
-                                  <div>R$ 0,00</div>
-                                )}
+                              <div className="text-right">
+                                <MultiCurrencyDisplay
+                                  valueBRL={bm.total_sacado}
+                                  valueUSD={bm.total_sacado_usd}
+                                  size="xs"
+                                  masked={!showSensitiveData}
+                                />
                               </div>
                             </TooltipTrigger>
                             {showSensitiveData && (bm.total_sacado > 0 || bm.total_sacado_usd > 0) && (
                               <TooltipContent side="top" className="text-xs">
                                 <p className="font-medium">Total sacado</p>
-                                {bm.total_sacado > 0 && <p>BRL: {formatCurrency(bm.total_sacado, "BRL")}</p>}
-                                {bm.total_sacado_usd > 0 && <p className="text-cyan-400">USD: {formatCurrency(bm.total_sacado_usd, "USD")}</p>}
+                                {bm.total_sacado > 0 && <p>BRL: {formatMoneyValue(bm.total_sacado, "BRL")}</p>}
+                                {bm.total_sacado_usd > 0 && <p className="text-cyan-400">USD: {formatMoneyValue(bm.total_sacado_usd, "USD")}</p>}
                               </TooltipContent>
                             )}
                           </Tooltip>
-                          {/* Resultado - exibir BRL e/ou USD */}
+                          {/* Resultado - PADRONIZADO */}
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="text-right text-xs font-medium space-y-0.5">
-                                {bm.lucro_prejuizo !== 0 && (
-                                  <div className={cn(
-                                    showSensitiveData
-                                      ? (bm.lucro_prejuizo >= 0 ? "text-success" : "text-destructive")
-                                      : "text-muted-foreground"
-                                  )}>
-                                    {maskCurrency(bm.lucro_prejuizo, "BRL")}
-                                  </div>
-                                )}
-                                {bm.lucro_prejuizo_usd !== 0 && (
-                                  <div className={cn(
-                                    showSensitiveData
-                                      ? (bm.lucro_prejuizo_usd >= 0 ? "text-cyan-400" : "text-red-400")
-                                      : "text-muted-foreground"
-                                  )}>
-                                    {maskCurrency(bm.lucro_prejuizo_usd, "USD")}
-                                  </div>
-                                )}
-                                {bm.lucro_prejuizo === 0 && bm.lucro_prejuizo_usd === 0 && (
-                                  <div className="text-muted-foreground">R$ 0,00</div>
-                                )}
+                              <div className="text-right">
+                                <MultiCurrencyDisplay
+                                  valueBRL={bm.lucro_prejuizo}
+                                  valueUSD={bm.lucro_prejuizo_usd}
+                                  size="xs"
+                                  variant="auto"
+                                  masked={!showSensitiveData}
+                                />
                               </div>
                             </TooltipTrigger>
                             {showSensitiveData && (bm.lucro_prejuizo !== 0 || bm.lucro_prejuizo_usd !== 0) && (
                               <TooltipContent side="top" className="text-xs">
                                 <p className="font-medium">Resultado</p>
-                                {bm.lucro_prejuizo !== 0 && <p>BRL: {formatCurrency(bm.lucro_prejuizo, "BRL")}</p>}
-                                {bm.lucro_prejuizo_usd !== 0 && <p className="text-cyan-400">USD: {formatCurrency(bm.lucro_prejuizo_usd, "USD")}</p>}
+                                {bm.lucro_prejuizo !== 0 && <p>BRL: {formatMoneyValue(bm.lucro_prejuizo, "BRL")}</p>}
+                                {bm.lucro_prejuizo_usd !== 0 && <p className="text-cyan-400">USD: {formatMoneyValue(bm.lucro_prejuizo_usd, "USD")}</p>}
                               </TooltipContent>
                             )}
                           </Tooltip>
