@@ -185,9 +185,10 @@ export default function GestaoParceiros() {
 
       if (financialError) throw financialError;
 
+      // Buscar saldo_atual (BRL) e saldo_usd para calcular saldo total corretamente
       const { data: bookmakersData, error: bookmakersError } = await supabase
         .from("bookmakers")
-        .select("parceiro_id, saldo_atual, status");
+        .select("parceiro_id, saldo_atual, saldo_usd, moeda, status");
 
       if (bookmakersError) throw bookmakersError;
 
@@ -196,17 +197,23 @@ export default function GestaoParceiros() {
       const parceiroFinancials = new Map<string, { depositado: number; sacado: number }>();
       
       financialData?.forEach((tx) => {
+        // Usar valor_usd para transações USD/CRYPTO, senão usar valor direto
+        const valorEfetivo = (tx.tipo_moeda === "CRYPTO" || tx.moeda === "USD") 
+          ? (tx.valor_usd || tx.valor) 
+          : tx.valor;
+        
         if (tx.tipo_transacao === "DEPOSITO" && tx.origem_parceiro_id) {
           const current = parceiroFinancials.get(tx.origem_parceiro_id) || { depositado: 0, sacado: 0 };
-          current.depositado += Number(tx.valor);
+          current.depositado += Number(valorEfetivo);
           parceiroFinancials.set(tx.origem_parceiro_id, current);
         } else if (tx.tipo_transacao === "SAQUE" && tx.destino_parceiro_id) {
           const current = parceiroFinancials.get(tx.destino_parceiro_id) || { depositado: 0, sacado: 0 };
-          current.sacado += Number(tx.valor);
+          current.sacado += Number(valorEfetivo);
           parceiroFinancials.set(tx.destino_parceiro_id, current);
         }
       });
 
+      // Calcular saldo total de bookmakers incluindo USD
       const parceiroBookmakers = new Map<string, { count: number; countLimitadas: number; saldo: number }>();
       
       bookmakersData?.forEach((bm) => {
@@ -217,7 +224,9 @@ export default function GestaoParceiros() {
         } else if (bm.status === "limitada") {
           current.countLimitadas += 1;
         }
-        current.saldo += Number(bm.saldo_atual);
+        // Somar saldo baseado na moeda: USD usa saldo_usd, BRL usa saldo_atual
+        const saldo = bm.moeda === "USD" ? Number(bm.saldo_usd || 0) : Number(bm.saldo_atual || 0);
+        current.saldo += saldo;
         parceiroBookmakers.set(bm.parceiro_id, current);
       });
 
