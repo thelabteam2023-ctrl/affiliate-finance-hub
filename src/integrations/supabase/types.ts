@@ -766,6 +766,7 @@ export type Database = {
           is_system: boolean | null
           links_json: Json | null
           logo_url: string | null
+          moeda_padrao: string
           multibonus_enabled: boolean
           nome: string
           observacoes: string | null
@@ -785,6 +786,7 @@ export type Database = {
           is_system?: boolean | null
           links_json?: Json | null
           logo_url?: string | null
+          moeda_padrao?: string
           multibonus_enabled?: boolean
           nome: string
           observacoes?: string | null
@@ -806,6 +808,7 @@ export type Database = {
           is_system?: boolean | null
           links_json?: Json | null
           logo_url?: string | null
+          moeda_padrao?: string
           multibonus_enabled?: boolean
           nome?: string
           observacoes?: string | null
