@@ -10,9 +10,15 @@
 
 import { useCallback, useMemo } from "react";
 import { useCotacoes } from "./useCotacoes";
+import { 
+  SupportedCurrency, 
+  FiatCurrency,
+  isForeignCurrency as isForeignCurrencyCheck,
+  CURRENCY_SYMBOLS
+} from "@/types/currency";
 
-// Tipos suportados de moeda
-export type SupportedCurrency = "BRL" | "USD" | "USDT" | "EUR" | "GBP";
+// Re-export do tipo para retrocompatibilidade
+export type { SupportedCurrency };
 
 // Moedas que requerem conversão (não-BRL)
 export const FOREIGN_CURRENCIES: SupportedCurrency[] = ["USD", "USDT", "EUR", "GBP"];
@@ -222,20 +228,14 @@ export function useCurrencySnapshot(props?: UseCurrencySnapshotProps) {
   ): string => {
     const { showSymbol = true, decimals = 2 } = options || {};
     
-    const symbols: Record<SupportedCurrency, string> = {
-      BRL: "R$",
-      USD: "$",
-      USDT: "USDT",
-      EUR: "€",
-      GBP: "£",
-    };
+    const symbol = CURRENCY_SYMBOLS[moeda] || moeda;
     
     const formatted = valor.toLocaleString("pt-BR", {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
     });
     
-    return showSymbol ? `${symbols[moeda]} ${formatted}` : formatted;
+    return showSymbol ? `${symbol} ${formatted}` : formatted;
   }, []);
 
   /**

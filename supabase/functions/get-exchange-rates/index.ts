@@ -14,63 +14,142 @@ function formatDateBCB(date: Date): string {
   return `${month}-${day}-${year}`;
 }
 
+// Busca cotação de uma moeda específica no BCB
+async function fetchBCBRate(currencyCode: number, dateStr: string): Promise<number | null> {
+  try {
+    // API do BCB para cotações de moedas
+    // Códigos: USD=220, EUR=978, GBP=540
+    const bcbUrl = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)?@moeda='${currencyCode}'&@dataCotacao='${dateStr}'&$format=json`;
+    
+    const response = await fetch(bcbUrl, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.value && data.value.length > 0) {
+        return data.value[data.value.length - 1].cotacaoVenda;
+      }
+    }
+  } catch (e) {
+    console.error(`Erro ao buscar cotação BCB para código ${currencyCode}:`, e);
+  }
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Fetching USD/BRL exchange rate from Banco Central do Brasil');
+    console.log('Fetching exchange rates from Banco Central do Brasil');
 
     const today = new Date();
-    let usdBrl = null;
+    const rates: Record<string, number | null> = {
+      USDBRL: null,
+      EURBRL: null,
+      GBPBRL: null,
+    };
 
     // Tentar últimos 5 dias úteis para garantir que pegamos uma cotação
-    for (let i = 0; i < 5 && !usdBrl; i++) {
+    for (let i = 0; i < 5; i++) {
       const checkDate = new Date(today);
       checkDate.setDate(checkDate.getDate() - i);
       const dateStr = formatDateBCB(checkDate);
       
-      const bcbUrl = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarDia(dataCotacao=@dataCotacao)?@dataCotacao='${dateStr}'&$format=json`;
-      
-      console.log(`Tentando BCB para ${dateStr}:`, bcbUrl);
-      
-      try {
-        const bcbResponse = await fetch(bcbUrl, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (bcbResponse.ok) {
-          const bcbData = await bcbResponse.json();
-          console.log(`BCB data (${dateStr}):`, JSON.stringify(bcbData));
+      console.log(`Tentando BCB para ${dateStr}`);
+
+      // Buscar USD/BRL usando a API PTAX (mais confiável)
+      if (!rates.USDBRL) {
+        try {
+          const bcbUrl = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarDia(dataCotacao=@dataCotacao)?@dataCotacao='${dateStr}'&$format=json`;
           
-          if (bcbData.value && bcbData.value.length > 0) {
-            // Usar última cotação de venda do dia
-            usdBrl = bcbData.value[bcbData.value.length - 1].cotacaoVenda;
-            console.log(`BCB PTAX cotação venda (${dateStr}): ${usdBrl}`);
+          const bcbResponse = await fetch(bcbUrl, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          if (bcbResponse.ok) {
+            const bcbData = await bcbResponse.json();
+            if (bcbData.value && bcbData.value.length > 0) {
+              rates.USDBRL = bcbData.value[bcbData.value.length - 1].cotacaoVenda;
+              console.log(`USD/BRL (${dateStr}): ${rates.USDBRL}`);
+            }
           }
+        } catch (e) {
+          console.error(`Erro BCB USD (${dateStr}):`, e);
         }
-      } catch (e) {
-        console.error(`Erro BCB (${dateStr}):`, e);
+      }
+
+      // Buscar EUR/BRL e GBP/BRL usando API de moedas do BCB
+      if (!rates.EURBRL || !rates.GBPBRL) {
+        try {
+          // Usar API alternativa do BCB para outras moedas
+          const moedaUrl = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaPeriodo(moeda=@moeda,dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@moeda='EUR'&@dataInicial='${dateStr}'&@dataFinalCotacao='${dateStr}'&$format=json`;
+          
+          const eurResponse = await fetch(moedaUrl, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          if (eurResponse.ok && !rates.EURBRL) {
+            const eurData = await eurResponse.json();
+            if (eurData.value && eurData.value.length > 0) {
+              rates.EURBRL = eurData.value[eurData.value.length - 1].cotacaoVenda;
+              console.log(`EUR/BRL (${dateStr}): ${rates.EURBRL}`);
+            }
+          }
+        } catch (e) {
+          console.error(`Erro BCB EUR (${dateStr}):`, e);
+        }
+
+        try {
+          const gbpUrl = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaPeriodo(moeda=@moeda,dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@moeda='GBP'&@dataInicial='${dateStr}'&@dataFinalCotacao='${dateStr}'&$format=json`;
+          
+          const gbpResponse = await fetch(gbpUrl, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          if (gbpResponse.ok && !rates.GBPBRL) {
+            const gbpData = await gbpResponse.json();
+            if (gbpData.value && gbpData.value.length > 0) {
+              rates.GBPBRL = gbpData.value[gbpData.value.length - 1].cotacaoVenda;
+              console.log(`GBP/BRL (${dateStr}): ${rates.GBPBRL}`);
+            }
+          }
+        } catch (e) {
+          console.error(`Erro BCB GBP (${dateStr}):`, e);
+        }
+      }
+
+      // Se conseguimos todas as cotações, parar
+      if (rates.USDBRL && rates.EURBRL && rates.GBPBRL) {
+        break;
       }
     }
 
-    if (usdBrl) {
-      return new Response(
-        JSON.stringify({ 
-          USDBRL: usdBrl,
-          timestamp: new Date().toISOString(),
-          source: 'Banco Central do Brasil (PTAX)'
-        }),
-        { 
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
+    // Aplicar fallbacks se necessário
+    const finalRates = {
+      USDBRL: rates.USDBRL ?? 5.31,
+      EURBRL: rates.EURBRL ?? 5.75,
+      GBPBRL: rates.GBPBRL ?? 6.70,
+    };
 
-    throw new Error('Não foi possível obter cotação do BCB');
+    return new Response(
+      JSON.stringify({ 
+        ...finalRates,
+        timestamp: new Date().toISOString(),
+        source: rates.USDBRL ? 'Banco Central do Brasil (PTAX)' : 'fallback',
+        partial: !rates.USDBRL || !rates.EURBRL || !rates.GBPBRL
+      }),
+      { 
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
 
   } catch (error) {
     console.error('Error in get-exchange-rates function:', error);
@@ -78,7 +157,9 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({ 
-        USDBRL: 5.31, // Fallback baseado na cotação atual
+        USDBRL: 5.31,
+        EURBRL: 5.75,
+        GBPBRL: 6.70,
         timestamp: new Date().toISOString(),
         source: 'fallback',
         error: errorMessage

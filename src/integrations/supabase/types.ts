@@ -824,6 +824,7 @@ export type Database = {
         Row: {
           coin: string | null
           cotacao: number | null
+          cotacao_implicita: number | null
           created_at: string
           data_transacao: string
           descricao: string | null
@@ -835,6 +836,8 @@ export type Database = {
           id: string
           investidor_id: string | null
           moeda: string
+          moeda_destino: string | null
+          moeda_origem: string | null
           nome_investidor: string | null
           operador_id: string | null
           origem_bookmaker_id: string | null
@@ -844,17 +847,21 @@ export type Database = {
           origem_wallet_id: string | null
           qtd_coin: number | null
           status: string
+          status_valor: string | null
           tipo_moeda: string
           tipo_transacao: string
           updated_at: string
           user_id: string
           valor: number
+          valor_destino: number | null
+          valor_origem: number | null
           valor_usd: number | null
           workspace_id: string
         }
         Insert: {
           coin?: string | null
           cotacao?: number | null
+          cotacao_implicita?: number | null
           created_at?: string
           data_transacao?: string
           descricao?: string | null
@@ -866,6 +873,8 @@ export type Database = {
           id?: string
           investidor_id?: string | null
           moeda: string
+          moeda_destino?: string | null
+          moeda_origem?: string | null
           nome_investidor?: string | null
           operador_id?: string | null
           origem_bookmaker_id?: string | null
@@ -875,17 +884,21 @@ export type Database = {
           origem_wallet_id?: string | null
           qtd_coin?: number | null
           status?: string
+          status_valor?: string | null
           tipo_moeda: string
           tipo_transacao: string
           updated_at?: string
           user_id: string
           valor: number
+          valor_destino?: number | null
+          valor_origem?: number | null
           valor_usd?: number | null
           workspace_id: string
         }
         Update: {
           coin?: string | null
           cotacao?: number | null
+          cotacao_implicita?: number | null
           created_at?: string
           data_transacao?: string
           descricao?: string | null
@@ -897,6 +910,8 @@ export type Database = {
           id?: string
           investidor_id?: string | null
           moeda?: string
+          moeda_destino?: string | null
+          moeda_origem?: string | null
           nome_investidor?: string | null
           operador_id?: string | null
           origem_bookmaker_id?: string | null
@@ -906,11 +921,14 @@ export type Database = {
           origem_wallet_id?: string | null
           qtd_coin?: number | null
           status?: string
+          status_valor?: string | null
           tipo_moeda?: string
           tipo_transacao?: string
           updated_at?: string
           user_id?: string
           valor?: number
+          valor_destino?: number | null
+          valor_origem?: number | null
           valor_usd?: number | null
           workspace_id?: string
         }

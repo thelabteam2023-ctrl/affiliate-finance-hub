@@ -25,6 +25,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import BookmakerSelect from "./BookmakerSelect";
 import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
 import { PasswordInput } from "@/components/parceiros/PasswordInput";
+import { FIAT_CURRENCIES, type FiatCurrency, CURRENCY_SYMBOLS } from "@/types/currency";
 
 interface BookmakerDialogProps {
   open: boolean;
@@ -62,6 +63,7 @@ export default function BookmakerDialog({
   const [selectedLink, setSelectedLink] = useState("");
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [moedaOperacional, setMoedaOperacional] = useState<FiatCurrency>("BRL");
   const [status, setStatus] = useState("ativo");
   const [saldoIrrecuperavel, setSaldoIrrecuperavel] = useState("");
   const [observacoes, setObservacoes] = useState("");
@@ -141,6 +143,7 @@ export default function BookmakerDialog({
         setSelectedLink("");
         setLoginUsername("");
         setLoginPassword("");
+        setMoedaOperacional("BRL");
         setStatus("ativo");
         setSaldoIrrecuperavel("");
         setObservacoes("");
@@ -160,6 +163,7 @@ export default function BookmakerDialog({
       setBookmakerId(bookmaker.bookmaker_catalogo_id || "");
       setLoginUsername(bookmaker.login_username || "");
       setLoginPassword("");
+      setMoedaOperacional((bookmaker.moeda as FiatCurrency) || "BRL");
       setStatus(bookmaker.status || "ativo");
       setSaldoIrrecuperavel(bookmaker.saldo_irrecuperavel?.toString() || "0");
       setObservacoes(bookmaker.observacoes || "");
@@ -257,8 +261,9 @@ export default function BookmakerDialog({
         login_username: loginUsername || "",
         login_password_encrypted: loginPassword ? encryptPassword(loginPassword) : "",
         saldo_atual: 0,
+        saldo_usd: 0,
         saldo_irrecuperavel: parseFloat(saldoIrrecuperavel) || 0,
-        moeda: "BRL",
+        moeda: moedaOperacional,
         status,
         observacoes: observacoes || null,
       };
@@ -466,6 +471,32 @@ export default function BookmakerDialog({
             </div>
 
             <div>
+              <Label htmlFor="moedaOperacional">Moeda Operacional</Label>
+              <Select 
+                value={moedaOperacional} 
+                onValueChange={(val) => setMoedaOperacional(val as FiatCurrency)} 
+                disabled={loading || !!bookmaker}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a moeda" />
+                </SelectTrigger>
+                <SelectContent>
+                  {FIAT_CURRENCIES.map((currency) => (
+                    <SelectItem key={currency.value} value={currency.value}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono">{currency.symbol}</span>
+                        <span>{currency.value} - {currency.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Moeda em que a casa opera (saldo e transações)
+              </p>
+            </div>
+
+            <div>
               <Label htmlFor="status">Status</Label>
               <Select value={status} onValueChange={setStatus} disabled={loading}>
                 <SelectTrigger>
@@ -481,7 +512,7 @@ export default function BookmakerDialog({
             <div>
               <Label htmlFor="saldoIrrecuperavel" className="flex items-center gap-2">
                 Saldo Irrecuperável
-                <span className="text-xs text-muted-foreground">(R$)</span>
+                <span className="text-xs text-muted-foreground">({CURRENCY_SYMBOLS[moedaOperacional]})</span>
               </Label>
               <Input
                 id="saldoIrrecuperavel"
