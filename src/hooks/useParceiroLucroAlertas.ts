@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 const MARCOS_LUCRO = [5000, 10000, 20000, 25000, 30000];
 

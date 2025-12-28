@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,7 @@ export function PagamentoParceiroDialog({
   onSuccess,
 }: PagamentoParceiroDialogProps) {
   const { toast } = useToast();
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [dataPagamento, setDataPagamento] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [valor, setValor] = useState<string>("");
@@ -149,6 +151,7 @@ export function PagamentoParceiroDialog({
         .from("movimentacoes_indicacao")
         .insert({
           user_id: user.id,
+          workspace_id: workspaceId,
           parceria_id: parceria.id,
           tipo: "PAGTO_PARCEIRO",
           valor: valorNumerico,

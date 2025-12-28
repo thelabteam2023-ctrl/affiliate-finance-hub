@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import {
   Dialog,
   DialogContent,
@@ -60,6 +61,7 @@ export function PerdaOperacionalDialog({
   projetoId,
   onSuccess,
 }: PerdaOperacionalDialogProps) {
+  const { workspaceId } = useWorkspace();
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -128,6 +130,7 @@ export function PerdaOperacionalDialog({
 
       const insertData = {
         user_id: user.id,
+        workspace_id: workspaceId,
         projeto_id: projetoId,
         bookmaker_id: bookmakerId,
         valor: valorNumerico,
