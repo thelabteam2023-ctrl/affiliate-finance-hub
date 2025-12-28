@@ -88,8 +88,15 @@ export function FluxoFinanceiroOperacional({
   }, [transacoes, dataInicio, dataFim]);
 
   // 1. Fluxo de Capital Externo (Investidores)
+  // REGRA: CRYPTO = USD, FIAT = BRL, nunca misturar
   const dadosCapitalExterno = useMemo(() => {
-    const agrupamentos: Map<string, { aportes: number; liquidacoes: number; transacoes: Transacao[] }> = new Map();
+    const agrupamentos: Map<string, { 
+      aportes_brl: number; 
+      aportes_usd: number;
+      liquidacoes_brl: number; 
+      liquidacoes_usd: number;
+      transacoes: Transacao[] 
+    }> = new Map();
 
     transacoesFiltradas.forEach((t) => {
       if (t.tipo_transacao !== "APORTE_FINANCEIRO") return;
@@ -112,42 +119,74 @@ export function FluxoFinanceiroOperacional({
       }
 
       if (!agrupamentos.has(chave)) {
-        agrupamentos.set(chave, { aportes: 0, liquidacoes: 0, transacoes: [] });
+        agrupamentos.set(chave, { aportes_brl: 0, aportes_usd: 0, liquidacoes_brl: 0, liquidacoes_usd: 0, transacoes: [] });
       }
 
       const grupo = agrupamentos.get(chave)!;
       grupo.transacoes.push(t);
-      const valor = t.tipo_moeda === "CRYPTO" ? (t.valor_usd || 0) : t.valor;
+      
+      const isCrypto = t.tipo_moeda === "CRYPTO";
+      const isUSD = t.moeda === "USD" || isCrypto;
+      const valor = isCrypto ? (t.valor_usd || 0) : t.valor;
 
       // Aporte: Investidor → Caixa
       if (t.destino_tipo === "CAIXA_OPERACIONAL") {
-        grupo.aportes += valor;
+        if (isUSD) {
+          grupo.aportes_usd += valor;
+        } else {
+          grupo.aportes_brl += valor;
+        }
       }
       // Liquidação: Caixa → Investidor
       if (t.origem_tipo === "CAIXA_OPERACIONAL") {
-        grupo.liquidacoes += valor;
+        if (isUSD) {
+          grupo.liquidacoes_usd += valor;
+        } else {
+          grupo.liquidacoes_brl += valor;
+        }
       }
     });
 
     const dados = Array.from(agrupamentos.entries())
       .map(([chave, dados]) => ({
         periodo: chave,
-        aportes: dados.aportes,
-        liquidacoes: -dados.liquidacoes,
-        liquido: dados.aportes - dados.liquidacoes,
+        aportes: dados.aportes_brl,
+        aportes_usd: dados.aportes_usd,
+        liquidacoes: -dados.liquidacoes_brl,
+        liquidacoes_usd: -dados.liquidacoes_usd,
+        liquido: dados.aportes_brl - dados.liquidacoes_brl,
+        liquido_usd: dados.aportes_usd - dados.liquidacoes_usd,
         transacoes: dados.transacoes,
       }))
       .slice(-12);
 
-    const totalAportes = dados.reduce((sum, d) => sum + d.aportes, 0);
-    const totalLiquidacoes = dados.reduce((sum, d) => sum + Math.abs(d.liquidacoes), 0);
+    const totalAportesBRL = dados.reduce((sum, d) => sum + d.aportes, 0);
+    const totalAportesUSD = dados.reduce((sum, d) => sum + d.aportes_usd, 0);
+    const totalLiquidacoesBRL = dados.reduce((sum, d) => sum + Math.abs(d.liquidacoes), 0);
+    const totalLiquidacoesUSD = dados.reduce((sum, d) => sum + Math.abs(d.liquidacoes_usd), 0);
 
-    return { dados, totalAportes, totalLiquidacoes, liquido: totalAportes - totalLiquidacoes };
+    return { 
+      dados, 
+      totalAportes: totalAportesBRL, 
+      totalAportesUSD,
+      totalLiquidacoes: totalLiquidacoesBRL,
+      totalLiquidacoesUSD,
+      liquido: totalAportesBRL - totalLiquidacoesBRL,
+      liquidoUSD: totalAportesUSD - totalLiquidacoesUSD,
+      hasUSD: totalAportesUSD > 0 || totalLiquidacoesUSD > 0
+    };
   }, [transacoesFiltradas, periodo]);
 
   // 2. Capital Alocado em Operação (Bookmakers)
+  // REGRA: CRYPTO = USD, FIAT = BRL, nunca misturar
   const dadosCapitalOperacao = useMemo(() => {
-    const agrupamentos: Map<string, { depositos: number; saques: number; transacoes: Transacao[] }> = new Map();
+    const agrupamentos: Map<string, { 
+      depositos_brl: number; 
+      depositos_usd: number;
+      saques_brl: number; 
+      saques_usd: number;
+      transacoes: Transacao[] 
+    }> = new Map();
 
     transacoesFiltradas.forEach((t) => {
       if (t.tipo_transacao !== "DEPOSITO" && t.tipo_transacao !== "SAQUE") return;
@@ -170,34 +209,59 @@ export function FluxoFinanceiroOperacional({
       }
 
       if (!agrupamentos.has(chave)) {
-        agrupamentos.set(chave, { depositos: 0, saques: 0, transacoes: [] });
+        agrupamentos.set(chave, { depositos_brl: 0, depositos_usd: 0, saques_brl: 0, saques_usd: 0, transacoes: [] });
       }
 
       const grupo = agrupamentos.get(chave)!;
       grupo.transacoes.push(t);
-      const valor = t.tipo_moeda === "CRYPTO" ? (t.valor_usd || 0) : t.valor;
+      
+      const isCrypto = t.tipo_moeda === "CRYPTO";
+      const isUSD = t.moeda === "USD" || isCrypto;
+      const valor = isCrypto ? (t.valor_usd || 0) : t.valor;
 
       if (t.tipo_transacao === "DEPOSITO") {
-        grupo.depositos += valor;
+        if (isUSD) {
+          grupo.depositos_usd += valor;
+        } else {
+          grupo.depositos_brl += valor;
+        }
       } else if (t.tipo_transacao === "SAQUE") {
-        grupo.saques += valor;
+        if (isUSD) {
+          grupo.saques_usd += valor;
+        } else {
+          grupo.saques_brl += valor;
+        }
       }
     });
 
     const dados = Array.from(agrupamentos.entries())
       .map(([chave, dados]) => ({
         periodo: chave,
-        depositos: dados.depositos,
-        saques: dados.saques,
-        alocacaoLiquida: dados.depositos - dados.saques,
+        depositos: dados.depositos_brl,
+        depositos_usd: dados.depositos_usd,
+        saques: dados.saques_brl,
+        saques_usd: dados.saques_usd,
+        alocacaoLiquida: dados.depositos_brl - dados.saques_brl,
+        alocacaoLiquidaUSD: dados.depositos_usd - dados.saques_usd,
         transacoes: dados.transacoes,
       }))
       .slice(-12);
 
-    const totalDepositos = dados.reduce((sum, d) => sum + d.depositos, 0);
-    const totalSaques = dados.reduce((sum, d) => sum + d.saques, 0);
+    const totalDepositosBRL = dados.reduce((sum, d) => sum + d.depositos, 0);
+    const totalDepositosUSD = dados.reduce((sum, d) => sum + d.depositos_usd, 0);
+    const totalSaquesBRL = dados.reduce((sum, d) => sum + d.saques, 0);
+    const totalSaquesUSD = dados.reduce((sum, d) => sum + d.saques_usd, 0);
 
-    return { dados, totalDepositos, totalSaques, alocacaoLiquida: totalDepositos - totalSaques };
+    return { 
+      dados, 
+      totalDepositos: totalDepositosBRL, 
+      totalDepositosUSD,
+      totalSaques: totalSaquesBRL,
+      totalSaquesUSD,
+      alocacaoLiquida: totalDepositosBRL - totalSaquesBRL,
+      alocacaoLiquidaUSD: totalDepositosUSD - totalSaquesUSD,
+      hasUSD: totalDepositosUSD > 0 || totalSaquesUSD > 0
+    };
   }, [transacoesFiltradas, periodo]);
 
   // 3. Performance Operacional - cálculos com saldo inicial e final
@@ -229,14 +293,16 @@ export function FluxoFinanceiroOperacional({
     };
   }, [dadosCapitalOperacao, saldoBookmakers]);
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number, currency: "BRL" | "USD" = "BRL") => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
-      currency: "BRL",
+      currency: currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
   };
+
+  const formatUSD = (value: number) => formatCurrency(value, "USD");
 
   const tooltipStyle = {
     backgroundColor: "rgba(0, 0, 0, 0.4)",
@@ -400,9 +466,16 @@ export function FluxoFinanceiroOperacional({
                   <span className="text-xs font-medium uppercase">Aportes</span>
                   <KpiHelp text="Total de capital recebido de investidores no período selecionado" />
                 </div>
-                <span className="text-lg font-bold text-emerald-400 font-mono">
-                  {formatCurrency(dadosCapitalExterno.totalAportes)}
-                </span>
+                <div className="space-y-1">
+                  <span className="text-lg font-bold text-emerald-400 font-mono">
+                    {formatCurrency(dadosCapitalExterno.totalAportes)}
+                  </span>
+                  {dadosCapitalExterno.hasUSD && dadosCapitalExterno.totalAportesUSD > 0 && (
+                    <div className="text-sm font-mono text-blue-400">
+                      + {formatUSD(dadosCapitalExterno.totalAportesUSD)}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="bg-amber-500/10 rounded-lg p-3 border border-amber-500/20">
                 <div className="flex items-center gap-2 text-amber-500 mb-1">
@@ -410,9 +483,16 @@ export function FluxoFinanceiroOperacional({
                   <span className="text-xs font-medium uppercase">Liquidações</span>
                   <KpiHelp text="Total de capital devolvido aos investidores (lucros ou resgates)" />
                 </div>
-                <span className="text-lg font-bold text-amber-400 font-mono">
-                  {formatCurrency(dadosCapitalExterno.totalLiquidacoes)}
-                </span>
+                <div className="space-y-1">
+                  <span className="text-lg font-bold text-amber-400 font-mono">
+                    {formatCurrency(dadosCapitalExterno.totalLiquidacoes)}
+                  </span>
+                  {dadosCapitalExterno.hasUSD && dadosCapitalExterno.totalLiquidacoesUSD > 0 && (
+                    <div className="text-sm font-mono text-blue-400">
+                      + {formatUSD(dadosCapitalExterno.totalLiquidacoesUSD)}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className={`rounded-lg p-3 border ${
                 dadosCapitalExterno.liquido >= 0 
@@ -426,11 +506,18 @@ export function FluxoFinanceiroOperacional({
                   <span className="text-xs font-medium uppercase">Saldo Líquido</span>
                   <KpiHelp text="Diferença entre aportes e liquidações. Positivo = mais capital entrando" />
                 </div>
-                <span className={`text-lg font-bold font-mono ${
-                  dadosCapitalExterno.liquido >= 0 ? "text-emerald-400" : "text-destructive"
-                }`}>
-                  {dadosCapitalExterno.liquido >= 0 ? "+" : ""}{formatCurrency(dadosCapitalExterno.liquido)}
-                </span>
+                <div className="space-y-1">
+                  <span className={`text-lg font-bold font-mono ${
+                    dadosCapitalExterno.liquido >= 0 ? "text-emerald-400" : "text-destructive"
+                  }`}>
+                    {dadosCapitalExterno.liquido >= 0 ? "+" : ""}{formatCurrency(dadosCapitalExterno.liquido)}
+                  </span>
+                  {dadosCapitalExterno.hasUSD && (
+                    <div className={`text-sm font-mono ${dadosCapitalExterno.liquidoUSD >= 0 ? "text-blue-400" : "text-red-400"}`}>
+                      {dadosCapitalExterno.liquidoUSD >= 0 ? "+" : ""}{formatUSD(dadosCapitalExterno.liquidoUSD)}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -442,13 +529,13 @@ export function FluxoFinanceiroOperacional({
                 bars={[
                   { 
                     dataKey: "aportes", 
-                    label: "Aportes", 
+                    label: "Aportes BRL", 
                     gradientStart: "#22C55E", 
                     gradientEnd: "#16A34A" 
                   },
                   { 
                     dataKey: "liquidacoes", 
-                    label: "Liquidações", 
+                    label: "Liquidações BRL", 
                     gradientStart: "#F97316", 
                     gradientEnd: "#EA580C" 
                   },
@@ -464,13 +551,13 @@ export function FluxoFinanceiroOperacional({
             )}
 
             <p className="text-xs text-muted-foreground text-center">
-              Quanto capital novo entrou (aportes) vs quanto foi devolvido (liquidações) aos investidores
+              Quanto capital novo entrou (aportes) vs quanto foi devolvido (liquidações) aos investidores. BRL e USD são exibidos separadamente.
             </p>
           </TabsContent>
 
           {/* Aba 2: Fluxo de Caixa (Capital em Operação - Bookmakers) */}
           <TabsContent value="fluxo" className="mt-4 space-y-4">
-            {/* KPIs - apenas Depósitos e Saques */}
+            {/* KPIs - Depósitos e Saques separados por moeda */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
                 <div className="flex items-center gap-2 text-blue-500 mb-1">
@@ -478,9 +565,16 @@ export function FluxoFinanceiroOperacional({
                   <span className="text-xs font-medium uppercase">Depósitos</span>
                   <KpiHelp text="Capital enviado às bookmakers no período selecionado" />
                 </div>
-                <span className="text-xl font-bold text-blue-400 font-mono">
-                  {formatCurrency(dadosCapitalOperacao.totalDepositos)}
-                </span>
+                <div className="space-y-1">
+                  <span className="text-xl font-bold text-blue-400 font-mono">
+                    {formatCurrency(dadosCapitalOperacao.totalDepositos)}
+                  </span>
+                  {dadosCapitalOperacao.hasUSD && dadosCapitalOperacao.totalDepositosUSD > 0 && (
+                    <div className="text-sm font-mono text-cyan-400">
+                      + {formatUSD(dadosCapitalOperacao.totalDepositosUSD)}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/20">
                 <div className="flex items-center gap-2 text-purple-500 mb-1">
@@ -488,9 +582,16 @@ export function FluxoFinanceiroOperacional({
                   <span className="text-xs font-medium uppercase">Saques</span>
                   <KpiHelp text="Capital retornado das bookmakers para o caixa no período" />
                 </div>
-                <span className="text-xl font-bold text-purple-400 font-mono">
-                  {formatCurrency(dadosCapitalOperacao.totalSaques)}
-                </span>
+                <div className="space-y-1">
+                  <span className="text-xl font-bold text-purple-400 font-mono">
+                    {formatCurrency(dadosCapitalOperacao.totalSaques)}
+                  </span>
+                  {dadosCapitalOperacao.hasUSD && dadosCapitalOperacao.totalSaquesUSD > 0 && (
+                    <div className="text-sm font-mono text-cyan-400">
+                      + {formatUSD(dadosCapitalOperacao.totalSaquesUSD)}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -502,13 +603,13 @@ export function FluxoFinanceiroOperacional({
                 bars={[
                   { 
                     dataKey: "depositos", 
-                    label: "Depósitos", 
+                    label: "Depósitos BRL", 
                     gradientStart: "#3B82F6", 
                     gradientEnd: "#2563EB" 
                   },
                   { 
                     dataKey: "saques", 
-                    label: "Saques", 
+                    label: "Saques BRL", 
                     gradientStart: "#8B5CF6", 
                     gradientEnd: "#7C3AED" 
                   },
@@ -524,7 +625,7 @@ export function FluxoFinanceiroOperacional({
             )}
 
             <p className="text-xs text-muted-foreground text-center">
-              Mostra somente o fluxo financeiro efetivo da operação. Não representa performance ou lucro — apenas movimentações reais.
+              Fluxo financeiro efetivo. BRL e USD (Crypto) são exibidos separadamente, nunca somados.
             </p>
           </TabsContent>
 
