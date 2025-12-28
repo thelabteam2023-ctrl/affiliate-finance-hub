@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus } from "lucide-react";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 import { PagamentoOperadorDialog } from "@/components/operadores/PagamentoOperadorDialog";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 interface DespesaAdministrativa {
   id?: string;
@@ -71,6 +72,7 @@ export function DespesaAdministrativaDialog({
   categoriasExtras = [],
 }: DespesaAdministrativaDialogProps) {
   const { toast } = useToast();
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [showNovaCategoria, setShowNovaCategoria] = useState(false);
   const [novaCategoria, setNovaCategoria] = useState("");
@@ -183,6 +185,7 @@ export function DespesaAdministrativaDialog({
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
+      if (!workspaceId) throw new Error("Workspace não encontrado");
 
       const payload: any = {
         categoria: formData.categoria,
@@ -192,6 +195,7 @@ export function DespesaAdministrativaDialog({
         recorrente: formData.recorrente,
         status: formData.status,
         user_id: user.id,
+        workspace_id: workspaceId,
         origem_tipo: origemData.origemTipo,
         origem_caixa_operacional: origemData.origemTipo === "CAIXA_OPERACIONAL",
         origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
@@ -221,16 +225,6 @@ export function DespesaAdministrativaDialog({
           const coinPriceUSD = origemData.coinPriceUSD || 1;
           const valorUSD = isCrypto ? formData.valor / cotacaoUSD : null;
           const qtdCoin = isCrypto && valorUSD ? valorUSD / coinPriceUSD : null;
-          
-          // Buscar workspace do usuário
-          const { data: workspaceMember } = await supabase
-            .from("workspace_members")
-            .select("workspace_id")
-            .eq("user_id", user.id)
-            .limit(1)
-            .maybeSingle();
-
-          const workspaceId = workspaceMember?.workspace_id || null;
 
           // CRYPTO: moeda = USD (USDT = 1:1), valor = valor em USD
           // FIAT: moeda = BRL, valor = valor em BRL

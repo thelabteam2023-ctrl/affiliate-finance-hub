@@ -1519,7 +1519,7 @@ export type Database = {
           updated_at: string
           user_id: string
           valor: number
-          workspace_id: string | null
+          workspace_id: string
         }
         Insert: {
           categoria: string
@@ -1541,7 +1541,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           valor: number
-          workspace_id?: string | null
+          workspace_id: string
         }
         Update: {
           categoria?: string
@@ -1563,7 +1563,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valor?: number
-          workspace_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
