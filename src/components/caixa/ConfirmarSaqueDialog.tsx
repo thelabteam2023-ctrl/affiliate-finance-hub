@@ -97,25 +97,33 @@ export function ConfirmarSaqueDialog({
 
       if (error) throw error;
 
-      // Verificar se ainda há saldo antes de mudar o status
+      // ATUALIZAR SALDO DO BOOKMAKER DE ORIGEM (decrementar o valor sacado)
       if (saque.origem_bookmaker_id) {
-        // Buscar saldo atual da bookmaker após o saque
+        // Buscar saldo atual da bookmaker
         const { data: bookmaker } = await supabase
           .from("bookmakers")
-          .select("saldo_atual")
+          .select("saldo_atual, saldo_usd, moeda")
           .eq("id", saque.origem_bookmaker_id)
           .single();
 
-        // Se ainda há saldo > 0, MANTER como AGUARDANDO_SAQUE para novo saque
-        // Se saldo = 0, pode voltar para 'ativo'
-        const novoStatus = (bookmaker?.saldo_atual || 0) > 0.5 
-          ? "AGUARDANDO_SAQUE" 
-          : "ativo";
-
-        await supabase
-          .from("bookmakers")
-          .update({ status: novoStatus })
-          .eq("id", saque.origem_bookmaker_id);
+        if (bookmaker) {
+          const moedaBk = bookmaker.moeda || "BRL";
+          const campoSaldo = moedaBk === "USD" ? "saldo_usd" : "saldo_atual";
+          const saldoAtual = moedaBk === "USD" ? (bookmaker.saldo_usd || 0) : (bookmaker.saldo_atual || 0);
+          const novoSaldo = Math.max(0, saldoAtual - saque.valor);
+          
+          // Atualizar saldo e status
+          const novoStatus = novoSaldo > 0.5 ? "AGUARDANDO_SAQUE" : "ativo";
+          
+          await supabase
+            .from("bookmakers")
+            .update({ 
+              [campoSaldo]: novoSaldo,
+              status: novoStatus,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", saque.origem_bookmaker_id);
+        }
       }
 
       toast.success("Saque confirmado com sucesso! O saldo foi atualizado.");
