@@ -7,10 +7,15 @@ export interface BookmakerFinanceiro {
   logo_url: string | null;
   moeda: string;
   total_depositado: number;
+  total_depositado_usd: number;
   total_sacado: number;
+  total_sacado_usd: number;
   lucro_prejuizo: number;
+  lucro_prejuizo_usd: number;
   qtd_apostas: number;
-  saldo_atual: number;
+  saldo_brl: number;
+  saldo_usd: number;
+  saldo_atual: number; // Legacy - soma total para compatibilidade
   status: string;
   projetos: string[]; // IDs dos projetos onde foi usado
   has_credentials: boolean; // Indica se tem login_username preenchido
@@ -75,7 +80,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
 
       if (parceiroError) throw parceiroError;
 
-      // Buscar todos os bookmakers do parceiro (incluindo moeda)
+      // Buscar todos os bookmakers do parceiro (incluindo moeda e saldo_usd)
       const { data: bookmakers, error: bookmakersError } = await supabase
         .from("bookmakers")
         .select(`
@@ -83,6 +88,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
           nome,
           moeda,
           saldo_atual,
+          saldo_usd,
           status,
           projeto_id,
           bookmaker_catalogo_id,
@@ -186,27 +192,30 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
       const bookmakersFinanceiro: BookmakerFinanceiro[] = (bookmakers || []).map(bm => {
         const depositadoData = depositosMap.get(bm.id) || { brl: 0, usd: 0 };
         const sacadoData = saquesMap.get(bm.id) || { brl: 0, usd: 0 };
-        const saldoAtual = Number(bm.saldo_atual) || 0;
+        const saldoBRL = Number(bm.saldo_atual) || 0;
+        const saldoUSD = Number(bm.saldo_usd) || 0;
         const moeda = bm.moeda || "BRL";
         
-        // Total depositado/sacado na moeda do bookmaker
-        const isUSD = moeda === "USD" || moeda === "USDT";
-        const depositado = isUSD ? depositadoData.usd : depositadoData.brl;
-        const sacado = isUSD ? sacadoData.usd : sacadoData.brl;
-        
-        // Lucro = Sacado + Saldo Atual - Depositado
-        const lucro = sacado + saldoAtual - depositado;
+        // Lucro BRL = Sacado BRL + Saldo BRL - Depositado BRL
+        const lucroBRL = sacadoData.brl + saldoBRL - depositadoData.brl;
+        // Lucro USD = Sacado USD + Saldo USD - Depositado USD
+        const lucroUSD = sacadoData.usd + saldoUSD - depositadoData.usd;
 
         return {
           bookmaker_id: bm.id,
           bookmaker_nome: bm.nome,
           moeda,
           logo_url: bm.bookmaker_catalogo_id ? logosMap.get(bm.bookmaker_catalogo_id) || null : null,
-          total_depositado: depositado,
-          total_sacado: sacado,
-          lucro_prejuizo: lucro,
+          total_depositado: depositadoData.brl,
+          total_depositado_usd: depositadoData.usd,
+          total_sacado: sacadoData.brl,
+          total_sacado_usd: sacadoData.usd,
+          lucro_prejuizo: lucroBRL,
+          lucro_prejuizo_usd: lucroUSD,
           qtd_apostas: apostasMap.get(bm.id) || 0,
-          saldo_atual: saldoAtual,
+          saldo_brl: saldoBRL,
+          saldo_usd: saldoUSD,
+          saldo_atual: saldoBRL + saldoUSD, // Legacy soma
           status: bm.status,
           projetos: bm.projeto_id ? [bm.projeto_id] : [],
           has_credentials: !!(bm.login_username && bm.login_username.trim()),
@@ -224,16 +233,13 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
       let lucroUSD = 0;
       
       bookmakersFinanceiro.forEach(b => {
-        const isUSD = b.moeda === "USD" || b.moeda === "USDT";
-        if (isUSD) {
-          totalDepositadoUSD += b.total_depositado;
-          totalSacadoUSD += b.total_sacado;
-          lucroUSD += b.lucro_prejuizo;
-        } else {
-          totalDepositadoBRL += b.total_depositado;
-          totalSacadoBRL += b.total_sacado;
-          lucroBRL += b.lucro_prejuizo;
-        }
+        // Agora cada bookmaker tem valores separados por moeda
+        totalDepositadoBRL += b.total_depositado;
+        totalDepositadoUSD += b.total_depositado_usd;
+        totalSacadoBRL += b.total_sacado;
+        totalSacadoUSD += b.total_sacado_usd;
+        lucroBRL += b.lucro_prejuizo;
+        lucroUSD += b.lucro_prejuizo_usd;
       });
       
       const qtdApostasTotal = bookmakersFinanceiro.reduce((sum, b) => sum + b.qtd_apostas, 0);
