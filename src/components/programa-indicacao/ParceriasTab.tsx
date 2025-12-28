@@ -38,7 +38,12 @@ interface ParceriaAlerta {
   valor_indicador?: number;
 }
 
-export function ParceriasTab() {
+interface ParceriasTabProps {
+  preSelectedParceiroId?: string | null;
+  onPreSelectedHandled?: () => void;
+}
+
+export function ParceriasTab({ preSelectedParceiroId, onPreSelectedHandled }: ParceriasTabProps) {
   const { toast } = useToast();
   const [parcerias, setParcerias] = useState<ParceriaAlerta[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,9 +56,22 @@ export function ParceriasTab() {
   const [selectedParceria, setSelectedParceria] = useState<ParceriaAlerta | null>(null);
   const [isViewMode, setIsViewMode] = useState(false);
   const [isRenewalMode, setIsRenewalMode] = useState(false);
+  const [dialogPreSelectedParceiroId, setDialogPreSelectedParceiroId] = useState<string | null>(null);
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [parceriaToDelete, setParceriaToDelete] = useState<ParceriaAlerta | null>(null);
+
+  // Handle pre-selected partner from navigation
+  useEffect(() => {
+    if (preSelectedParceiroId && !loading) {
+      setSelectedParceria(null);
+      setIsViewMode(false);
+      setIsRenewalMode(false);
+      setDialogPreSelectedParceiroId(preSelectedParceiroId);
+      setDialogOpen(true);
+      onPreSelectedHandled?.();
+    }
+  }, [preSelectedParceiroId, loading, onPreSelectedHandled]);
 
   useEffect(() => {
     fetchParcerias();
@@ -156,6 +174,7 @@ export function ParceriasTab() {
     setSelectedParceria(null);
     setIsViewMode(false);
     setIsRenewalMode(false);
+    setDialogPreSelectedParceiroId(null);
     fetchParcerias();
   };
 
@@ -436,6 +455,7 @@ export function ParceriasTab() {
         parceria={selectedParceria}
         isViewMode={isViewMode}
         isRenewalMode={isRenewalMode}
+        preSelectedParceiroId={dialogPreSelectedParceiroId}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

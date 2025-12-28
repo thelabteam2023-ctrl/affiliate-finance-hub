@@ -22,6 +22,7 @@ interface ParceriaDialogProps {
   parceria: any | null;
   isViewMode: boolean;
   isRenewalMode?: boolean;
+  preSelectedParceiroId?: string | null;
 }
 
 interface Parceiro {
@@ -41,7 +42,7 @@ interface Fornecedor {
   nome: string;
 }
 
-export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRenewalMode = false }: ParceriaDialogProps) {
+export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRenewalMode = false, preSelectedParceiroId }: ParceriaDialogProps) {
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
@@ -121,8 +122,9 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
       });
     } else {
       // New partnership: always set data_inicio to TODAY
+      // Use preSelectedParceiroId if provided
       setFormData({
-        parceiro_id: "",
+        parceiro_id: preSelectedParceiroId || "",
         origem_tipo: "INDICADOR",
         indicador_id: "",
         fornecedor_id: "",
@@ -138,7 +140,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
       });
       setOrcamentoDisponivel(0);
     }
-  }, [parceria, open]);
+  }, [parceria, open, preSelectedParceiroId]);
 
   const fetchParceiros = async () => {
     // If editing, show all active partners
@@ -167,7 +169,10 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
       .order("nome");
 
     // Filter out partners that already have active partnerships
-    const parceirosDisponiveis = (data || []).filter(p => !parceirosComParceria.has(p.id));
+    // But always include the pre-selected partner
+    const parceirosDisponiveis = (data || []).filter(p => 
+      !parceirosComParceria.has(p.id) || p.id === preSelectedParceiroId
+    );
     setParceiros(parceirosDisponiveis);
   };
 
@@ -388,7 +393,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
             <Select
               value={formData.parceiro_id}
               onValueChange={(value) => setFormData({ ...formData, parceiro_id: value })}
-              disabled={isViewMode || !!parceria || isRenewalMode}
+              disabled={isViewMode || !!parceria || isRenewalMode || !!preSelectedParceiroId}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o parceiro" />

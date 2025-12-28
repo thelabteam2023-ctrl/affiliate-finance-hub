@@ -19,12 +19,20 @@ export default function ProgramaIndicacao() {
     checkAuth();
   }, []);
 
-  // Handle navigation state for initial tab
+  // State for pre-selected partner from navigation
+  const [preSelectedParceiroId, setPreSelectedParceiroId] = useState<string | null>(null);
+
+  // Handle navigation state for initial tab and pre-selected partner
   useEffect(() => {
-    const state = location.state as { tab?: string } | null;
+    const state = location.state as { tab?: string; parceiroId?: string } | null;
     if (state?.tab) {
       setActiveTab(state.tab);
-      // Clear the state to avoid persisting on refresh
+    }
+    if (state?.parceiroId) {
+      setPreSelectedParceiroId(state.parceiroId);
+    }
+    // Clear the state to avoid persisting on refresh
+    if (state?.tab || state?.parceiroId) {
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
@@ -84,7 +92,10 @@ export default function ProgramaIndicacao() {
         </TabsContent>
 
         <TabsContent value="parcerias">
-          <ParceriasTab />
+          <ParceriasTab 
+            preSelectedParceiroId={preSelectedParceiroId} 
+            onPreSelectedHandled={() => setPreSelectedParceiroId(null)}
+          />
         </TabsContent>
 
         <TabsContent value="financeiro">
