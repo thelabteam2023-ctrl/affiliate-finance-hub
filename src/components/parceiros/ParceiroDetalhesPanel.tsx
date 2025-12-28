@@ -159,7 +159,9 @@ export function ParceiroDetalhesPanel({
     );
   }
 
-  const totalSaldoBookmakers = data.bookmakers.reduce((sum, b) => sum + b.saldo_atual, 0);
+  const totalSaldoBRL = data.bookmakers.reduce((sum, b) => sum + b.saldo_brl, 0);
+  const totalSaldoUSD = data.bookmakers.reduce((sum, b) => sum + b.saldo_usd, 0);
+  const totalSaldoBookmakers = totalSaldoBRL + totalSaldoUSD; // Legacy
   const bookmarkersAtivos = data.bookmakers.filter(b => b.status === "ativo").length;
   const bookmakersLimitados = data.bookmakers.filter(b => b.status === "limitada").length;
 
@@ -382,12 +384,27 @@ export function ParceiroDetalhesPanel({
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30">
                     <Wallet className="h-3 w-3 text-primary" />
                     <span className="text-muted-foreground">Saldo:</span>
-                    <span className={cn(
-                      "font-medium",
-                      showSensitiveData ? "text-primary" : "text-muted-foreground"
-                    )}>
-                      {maskCurrency(totalSaldoBookmakers)}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {totalSaldoBRL > 0 && (
+                        <span className={cn(
+                          "font-medium",
+                          showSensitiveData ? "text-primary" : "text-muted-foreground"
+                        )}>
+                          {maskCurrency(totalSaldoBRL, "BRL")}
+                        </span>
+                      )}
+                      {totalSaldoUSD > 0 && (
+                        <span className={cn(
+                          "font-medium text-cyan-400",
+                          !showSensitiveData && "text-muted-foreground"
+                        )}>
+                          {maskCurrency(totalSaldoUSD, "USD")}
+                        </span>
+                      )}
+                      {totalSaldoBRL === 0 && totalSaldoUSD === 0 && (
+                        <span className="text-muted-foreground">R$ 0,00</span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30">
                     <Building2 className="h-3 w-3 text-success" />
@@ -522,61 +539,108 @@ export function ParceiroDetalhesPanel({
                                 >
                                   {bm.status === "ativo" ? "Ativa" : "Limitada"}
                                 </Badge>
-                                {isUSDMoeda(bm.moeda) && (
-                                  <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-amber-500/50 text-amber-500">
+                                {bm.saldo_usd > 0 && (
+                                  <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-cyan-500/50 text-cyan-400">
                                     USD
                                   </Badge>
                                 )}
-                                <span className="text-[10px] text-muted-foreground">
-                                  {maskCurrency(bm.saldo_atual, bm.moeda)}
-                                </span>
+                                {/* Exibir saldos separados */}
+                                <div className="flex items-center gap-1">
+                                  {bm.saldo_brl > 0 && (
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {maskCurrency(bm.saldo_brl, "BRL")}
+                                    </span>
+                                  )}
+                                  {bm.saldo_usd > 0 && (
+                                    <span className="text-[10px] text-cyan-400">
+                                      {maskCurrency(bm.saldo_usd, "USD")}
+                                    </span>
+                                  )}
+                                  {bm.saldo_brl === 0 && bm.saldo_usd === 0 && (
+                                    <span className="text-[10px] text-muted-foreground">R$ 0,00</span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
-                          {/* Depósito - usar moeda do bookmaker */}
+                          {/* Depósito - exibir BRL e/ou USD */}
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="text-right text-xs text-muted-foreground">
-                                {maskCurrency(bm.total_depositado, bm.moeda)}
+                              <div className="text-right text-xs text-muted-foreground space-y-0.5">
+                                {bm.total_depositado > 0 && (
+                                  <div>{maskCurrency(bm.total_depositado, "BRL")}</div>
+                                )}
+                                {bm.total_depositado_usd > 0 && (
+                                  <div className="text-cyan-400">{maskCurrency(bm.total_depositado_usd, "USD")}</div>
+                                )}
+                                {bm.total_depositado === 0 && bm.total_depositado_usd === 0 && (
+                                  <div>R$ 0,00</div>
+                                )}
                               </div>
                             </TooltipTrigger>
-                            {isUSDMoeda(bm.moeda) && showSensitiveData && (
+                            {showSensitiveData && (bm.total_depositado > 0 || bm.total_depositado_usd > 0) && (
                               <TooltipContent side="top" className="text-xs">
-                                <p className="font-medium">{formatCurrency(bm.total_depositado, bm.moeda)} USD</p>
-                                <p className="text-muted-foreground text-[10px]">Valor original em dólar</p>
+                                <p className="font-medium">Total depositado</p>
+                                {bm.total_depositado > 0 && <p>BRL: {formatCurrency(bm.total_depositado, "BRL")}</p>}
+                                {bm.total_depositado_usd > 0 && <p className="text-cyan-400">USD: {formatCurrency(bm.total_depositado_usd, "USD")}</p>}
                               </TooltipContent>
                             )}
                           </Tooltip>
-                          {/* Saque - usar moeda do bookmaker */}
+                          {/* Saque - exibir BRL e/ou USD */}
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="text-right text-xs text-muted-foreground">
-                                {maskCurrency(bm.total_sacado, bm.moeda)}
+                              <div className="text-right text-xs text-muted-foreground space-y-0.5">
+                                {bm.total_sacado > 0 && (
+                                  <div>{maskCurrency(bm.total_sacado, "BRL")}</div>
+                                )}
+                                {bm.total_sacado_usd > 0 && (
+                                  <div className="text-cyan-400">{maskCurrency(bm.total_sacado_usd, "USD")}</div>
+                                )}
+                                {bm.total_sacado === 0 && bm.total_sacado_usd === 0 && (
+                                  <div>R$ 0,00</div>
+                                )}
                               </div>
                             </TooltipTrigger>
-                            {isUSDMoeda(bm.moeda) && showSensitiveData && (
+                            {showSensitiveData && (bm.total_sacado > 0 || bm.total_sacado_usd > 0) && (
                               <TooltipContent side="top" className="text-xs">
-                                <p className="font-medium">{formatCurrency(bm.total_sacado, bm.moeda)} USD</p>
-                                <p className="text-muted-foreground text-[10px]">Valor original em dólar</p>
+                                <p className="font-medium">Total sacado</p>
+                                {bm.total_sacado > 0 && <p>BRL: {formatCurrency(bm.total_sacado, "BRL")}</p>}
+                                {bm.total_sacado_usd > 0 && <p className="text-cyan-400">USD: {formatCurrency(bm.total_sacado_usd, "USD")}</p>}
                               </TooltipContent>
                             )}
                           </Tooltip>
-                          {/* Resultado - usar moeda do bookmaker */}
+                          {/* Resultado - exibir BRL e/ou USD */}
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className={cn(
-                                "text-right text-xs font-medium",
-                                showSensitiveData
-                                  ? (bm.lucro_prejuizo >= 0 ? "text-success" : "text-destructive")
-                                  : "text-muted-foreground"
-                              )}>
-                                {maskCurrency(bm.lucro_prejuizo, bm.moeda)}
+                              <div className="text-right text-xs font-medium space-y-0.5">
+                                {bm.lucro_prejuizo !== 0 && (
+                                  <div className={cn(
+                                    showSensitiveData
+                                      ? (bm.lucro_prejuizo >= 0 ? "text-success" : "text-destructive")
+                                      : "text-muted-foreground"
+                                  )}>
+                                    {maskCurrency(bm.lucro_prejuizo, "BRL")}
+                                  </div>
+                                )}
+                                {bm.lucro_prejuizo_usd !== 0 && (
+                                  <div className={cn(
+                                    showSensitiveData
+                                      ? (bm.lucro_prejuizo_usd >= 0 ? "text-cyan-400" : "text-red-400")
+                                      : "text-muted-foreground"
+                                  )}>
+                                    {maskCurrency(bm.lucro_prejuizo_usd, "USD")}
+                                  </div>
+                                )}
+                                {bm.lucro_prejuizo === 0 && bm.lucro_prejuizo_usd === 0 && (
+                                  <div className="text-muted-foreground">R$ 0,00</div>
+                                )}
                               </div>
                             </TooltipTrigger>
-                            {isUSDMoeda(bm.moeda) && showSensitiveData && (
+                            {showSensitiveData && (bm.lucro_prejuizo !== 0 || bm.lucro_prejuizo_usd !== 0) && (
                               <TooltipContent side="top" className="text-xs">
-                                <p className="font-medium">{formatCurrency(bm.lucro_prejuizo, bm.moeda)} USD</p>
-                                <p className="text-muted-foreground text-[10px]">Resultado em dólar</p>
+                                <p className="font-medium">Resultado</p>
+                                {bm.lucro_prejuizo !== 0 && <p>BRL: {formatCurrency(bm.lucro_prejuizo, "BRL")}</p>}
+                                {bm.lucro_prejuizo_usd !== 0 && <p className="text-cyan-400">USD: {formatCurrency(bm.lucro_prejuizo_usd, "USD")}</p>}
                               </TooltipContent>
                             )}
                           </Tooltip>

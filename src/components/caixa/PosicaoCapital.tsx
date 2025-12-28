@@ -8,7 +8,8 @@ import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard, HelpCir
 interface PosicaoCapitalProps {
   saldoCaixaFiat: number;
   saldoCaixaCrypto: number;
-  saldoBookmakers: number;
+  saldoBookmakersBRL: number;
+  saldoBookmakersUSD: number;
   saldoContasParceiros: number;
   saldoWalletsParceiros: number;
   cotacaoUSD: number;
@@ -25,7 +26,8 @@ const GRADIENT_COLORS = [
 export function PosicaoCapital({
   saldoCaixaFiat,
   saldoCaixaCrypto,
-  saldoBookmakers,
+  saldoBookmakersBRL,
+  saldoBookmakersUSD,
   saldoContasParceiros,
   saldoWalletsParceiros,
   cotacaoUSD,
@@ -34,6 +36,8 @@ export function PosicaoCapital({
     // Converter tudo para BRL para visualização unificada
     const caixaTotal = saldoCaixaFiat + (saldoCaixaCrypto * cotacaoUSD);
     const walletsTotal = saldoWalletsParceiros * cotacaoUSD;
+    // Bookmakers: BRL + USD convertido para BRL
+    const bookmakersTotal = saldoBookmakersBRL + (saldoBookmakersUSD * cotacaoUSD);
     
     const dados = [
       { 
@@ -45,9 +49,11 @@ export function PosicaoCapital({
       },
       { 
         name: "Bookmakers", 
-        value: saldoBookmakers, 
+        value: bookmakersTotal, 
         icon: Building2,
-        detail: "Em operação",
+        detail: saldoBookmakersUSD > 0 
+          ? `R$ ${saldoBookmakersBRL.toLocaleString('pt-BR', { minimumFractionDigits: 0 })} + $${saldoBookmakersUSD.toLocaleString('pt-BR', { minimumFractionDigits: 0 })} USD`
+          : "Em operação",
         help: "Capital alocado em casas de apostas para operações"
       },
       { 
@@ -69,7 +75,7 @@ export function PosicaoCapital({
     const total = dados.reduce((sum, item) => sum + item.value, 0);
     
     return { dados, total };
-  }, [saldoCaixaFiat, saldoCaixaCrypto, saldoBookmakers, saldoContasParceiros, saldoWalletsParceiros, cotacaoUSD]);
+  }, [saldoCaixaFiat, saldoCaixaCrypto, saldoBookmakersBRL, saldoBookmakersUSD, saldoContasParceiros, saldoWalletsParceiros, cotacaoUSD]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {

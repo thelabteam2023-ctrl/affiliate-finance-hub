@@ -72,7 +72,9 @@ export default function Caixa() {
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
   const [saldosFiat, setSaldosFiat] = useState<SaldoFiat[]>([]);
   const [saldosCrypto, setSaldosCrypto] = useState<SaldoCrypto[]>([]);
-  const [saldoBookmakers, setSaldoBookmakers] = useState(0);
+  const [saldoBookmakersBRL, setSaldoBookmakersBRL] = useState(0);
+  const [saldoBookmakersUSD, setSaldoBookmakersUSD] = useState(0);
+  const [saldoBookmakers, setSaldoBookmakers] = useState(0); // Legacy: BRL total
   const [saldoContasParceiros, setSaldoContasParceiros] = useState(0);
   const [saldoWalletsParceiros, setSaldoWalletsParceiros] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -189,9 +191,10 @@ export default function Caixa() {
       
       const totalBookmakersBRL = bookmakersBalanceData?.reduce((sum, b) => sum + (b.saldo_atual || 0), 0) || 0;
       const totalBookmakersUSD = bookmakersBalanceData?.reduce((sum, b) => sum + (b.saldo_usd || 0), 0) || 0;
-      // Para compatibilidade, manter o saldo BRL no estado principal
+      setSaldoBookmakersBRL(totalBookmakersBRL);
+      setSaldoBookmakersUSD(totalBookmakersUSD);
+      // Legacy: manter compatibilidade com saldoBookmakers (usado em alguns lugares)
       setSaldoBookmakers(totalBookmakersBRL);
-      // TODO: adicionar estado separado para saldoBookmakersUSD se necessário
 
       // Fetch partner bank accounts balance
       const { data: contasSaldoData } = await supabase
@@ -536,7 +539,8 @@ export default function Caixa() {
       <PosicaoCapital
         saldoCaixaFiat={saldosFiat.reduce((sum, s) => s.moeda === 'BRL' ? sum + s.saldo : sum, 0)}
         saldoCaixaCrypto={getTotalCryptoUSD()}
-        saldoBookmakers={saldoBookmakers}
+        saldoBookmakersBRL={saldoBookmakersBRL}
+        saldoBookmakersUSD={saldoBookmakersUSD}
         saldoContasParceiros={saldoContasParceiros}
         saldoWalletsParceiros={saldoWalletsParceiros}
         cotacaoUSD={cotacaoUSD}
