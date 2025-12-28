@@ -20,6 +20,7 @@ interface PromocaoDialogProps {
 
 export function PromocaoDialog({ open, onOpenChange, promocao, isViewMode }: PromocaoDialogProps) {
   const { toast } = useToast();
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nome: "",
@@ -77,9 +78,11 @@ export function PromocaoDialog({ open, onOpenChange, promocao, isViewMode }: Pro
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
+      if (!workspaceId) throw new Error("Workspace não disponível");
 
       const payload = {
         user_id: user.id,
+        workspace_id: workspaceId,
         nome: formData.nome,
         descricao: formData.descricao || null,
         data_inicio: format(formData.data_inicio, "yyyy-MM-dd"),

@@ -56,6 +56,7 @@ export function ProjetoConciliacaoDialog({
   projeto,
   onSuccess,
 }: ProjetoConciliacaoDialogProps) {
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [loadingNominal, setLoadingNominal] = useState(true);
   const [saldosNominais, setSaldosNominais] = useState<SaldosNominais>({ fiat: 0, crypto_usd: 0, saldo_irrecuperavel_total: 0 });
@@ -161,6 +162,7 @@ export function ProjetoConciliacaoDialog({
         .insert({
           projeto_id: projeto.id,
           user_id: session.session.user.id,
+          workspace_id: workspaceId!,
           saldo_nominal_fiat: saldosNominais.fiat,
           saldo_nominal_crypto_usd: saldosNominais.crypto_usd,
           saldo_real_fiat: realFiat,
