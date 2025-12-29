@@ -178,12 +178,18 @@ export function CaixaTransacaoDialog({
   }, [open, defaultTipoTransacao, defaultOrigemBookmakerId]);
 
   // Auto-focus CRYPTO: quando tipo de moeda muda para CRYPTO, foca no campo Moeda
+  // E reseta campos relacionados ao fluxo anterior (FIAT)
   useEffect(() => {
-    if (tipoMoeda === "CRYPTO" && prevTipoMoeda.current !== "CRYPTO" && coinSelectRef.current) {
-      setTimeout(() => {
-        coinSelectRef.current?.focus();
-        coinSelectRef.current?.click();
-      }, 100);
+    if (tipoMoeda === "CRYPTO" && prevTipoMoeda.current !== "CRYPTO") {
+      // Resetar bookmaker de origem que pode ter sido selecionada no fluxo FIAT
+      setOrigemBookmakerId("");
+      
+      if (coinSelectRef.current) {
+        setTimeout(() => {
+          coinSelectRef.current?.focus();
+          coinSelectRef.current?.click();
+        }, 100);
+      }
     }
     prevTipoMoeda.current = tipoMoeda;
   }, [tipoMoeda]);
