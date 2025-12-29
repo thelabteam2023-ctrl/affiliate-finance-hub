@@ -214,7 +214,7 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
 
   if (loading) {
     return (
-      <div className="h-full flex flex-col p-3">
+      <div className="flex flex-col flex-1 min-h-0 p-3">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             {[...Array(3)].map((_, i) => (
@@ -233,7 +233,7 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
 
   if (error) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-destructive gap-3">
+      <div className="flex flex-col flex-1 min-h-0 items-center justify-center text-destructive gap-3">
         <AlertCircle className="h-8 w-8 opacity-50" />
         <p className="text-sm">Erro ao carregar bookmakers</p>
         <Button variant="outline" size="sm" onClick={fetchData}>
@@ -259,7 +259,7 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
   // Scroll ÚNICO da aba (um container overflow) – sem scroll duplo por coluna
   return (
     <TooltipProvider>
-      <div className="h-full flex flex-col min-h-0 p-3 gap-3">
+      <div className="flex flex-col flex-1 min-h-0 p-3 gap-3">
         {/* Cabeçalhos fixos (fora do scroll) */}
         <div className="grid grid-cols-2 gap-3 shrink-0">
           <div className="flex flex-col gap-2">
