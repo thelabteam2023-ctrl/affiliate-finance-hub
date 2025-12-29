@@ -400,8 +400,9 @@ export function ParceiroDetalhesPanel({
                   </div>
                 </div>
 
-                {/* Tabela por Casa de Apostas */}
-                <div className="border border-border rounded-lg overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 420px)', minHeight: '200px' }}>
+                {/* Tabela por Casa de Apostas - estrutura correta sem scroll duplo */}
+                <div className="border border-border rounded-lg flex flex-col">
+                  {/* Header do card - FORA do scroll */}
                   <div className="px-3 py-2 bg-muted/30 border-b border-border shrink-0">
                     <h3 className="text-xs font-medium flex items-center gap-1.5">
                       <Building2 className="h-3.5 w-3.5 text-primary" />
@@ -415,8 +416,8 @@ export function ParceiroDetalhesPanel({
                     </div>
                   ) : (
                     <>
-                      {/* Header fixo - STICKY */}
-                      <div className="grid grid-cols-6 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/30 border-b border-border shrink-0 sticky top-0 z-10">
+                      {/* Header da tabela - FIXO, fora do scroll */}
+                      <div className="grid grid-cols-6 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/30 border-b border-border shrink-0">
                         <div className="col-span-2">Casa</div>
                         <div className="text-right">Dep.</div>
                         <div className="text-right">Saq.</div>
@@ -424,193 +425,188 @@ export function ParceiroDetalhesPanel({
                         <div className="text-right">Apost.</div>
                       </div>
 
-                      {/* Rows com scroll */}
-                      <div className="flex-1 overflow-y-auto">
-                        <div className="divide-y divide-border pb-4">
-
-                      {/* Rows */}
-                      {data.bookmakers.map((bm) => (
-                        <div
-                          key={bm.bookmaker_id}
-                          className="grid grid-cols-6 gap-2 px-3 py-2 hover:bg-muted/20 transition-colors items-center"
-                        >
-                          <div className="col-span-2 flex items-center gap-2 min-w-0">
-                            {bm.logo_url ? (
-                              <img
-                                src={bm.logo_url}
-                                alt={bm.bookmaker_nome}
-                                className="h-10 w-10 rounded object-contain bg-white p-0.5 shrink-0"
-                              />
-                            ) : (
-                              <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
-                                <Building2 className="h-5 w-5 text-muted-foreground" />
-                              </div>
-                            )}
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <p className="text-xs font-medium truncate">{bm.bookmaker_nome}</p>
-                                {bm.has_credentials && (
-                                  <Popover
-                                    open={credentialsPopoverOpen === bm.bookmaker_id}
-                                    onOpenChange={(open) => setCredentialsPopoverOpen(open ? bm.bookmaker_id : null)}
+                      {/* Corpo da tabela - única área com scroll, padding inferior de segurança */}
+                      <div className="divide-y divide-border pb-6">
+                        {data.bookmakers.map((bm) => (
+                          <div
+                            key={bm.bookmaker_id}
+                            className="grid grid-cols-6 gap-2 px-3 py-2 hover:bg-muted/20 transition-colors items-center"
+                          >
+                            <div className="col-span-2 flex items-center gap-2 min-w-0">
+                              {bm.logo_url ? (
+                                <img
+                                  src={bm.logo_url}
+                                  alt={bm.bookmaker_nome}
+                                  className="h-10 w-10 rounded object-contain bg-white p-0.5 shrink-0"
+                                />
+                              ) : (
+                                <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
+                                  <Building2 className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-xs font-medium truncate">{bm.bookmaker_nome}</p>
+                                  {bm.has_credentials && (
+                                    <Popover
+                                      open={credentialsPopoverOpen === bm.bookmaker_id}
+                                      onOpenChange={(open) => setCredentialsPopoverOpen(open ? bm.bookmaker_id : null)}
+                                    >
+                                      <PopoverTrigger asChild>
+                                        <button
+                                          type="button"
+                                          className="h-5 w-5 p-0.5 shrink-0 rounded hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setCredentialsPopoverOpen(credentialsPopoverOpen === bm.bookmaker_id ? null : bm.bookmaker_id);
+                                          }}
+                                        >
+                                          <IdCard className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                        </button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-52 p-2" align="start">
+                                        <div className="space-y-2">
+                                          <div>
+                                            <label className="text-[10px] text-muted-foreground">Usuário</label>
+                                            <div className="flex items-center gap-1 mt-0.5">
+                                              <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
+                                                {showSensitiveData ? bm.login_username : "••••••"}
+                                              </code>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => bm.login_username && copyToClipboard(bm.login_username, "Usuário")}
+                                                className="h-6 w-6 p-0 shrink-0"
+                                              >
+                                                {copiedField === "Usuário" ? (
+                                                  <Check className="h-3 w-3 text-success" />
+                                                ) : (
+                                                  <Copy className="h-3 w-3" />
+                                                )}
+                                              </Button>
+                                            </div>
+                                          </div>
+                                          <div>
+                                            <label className="text-[10px] text-muted-foreground">Senha</label>
+                                            <div className="flex items-center gap-1 mt-0.5">
+                                              <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
+                                                {showSensitiveData && bm.login_password_encrypted ? decryptPassword(bm.login_password_encrypted) : "••••••"}
+                                              </code>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => bm.login_password_encrypted && copyToClipboard(decryptPassword(bm.login_password_encrypted), "Senha")}
+                                                className="h-6 w-6 p-0 shrink-0"
+                                              >
+                                                {copiedField === "Senha" ? (
+                                                  <Check className="h-3 w-3 text-success" />
+                                                ) : (
+                                                  <Copy className="h-3 w-3" />
+                                                )}
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "text-[9px] px-1 py-0 h-4",
+                                      bm.status === "ativo"
+                                        ? "border-success/50 text-success"
+                                        : "border-warning/50 text-warning"
+                                    )}
                                   >
-                                    <PopoverTrigger asChild>
-                                      <button
-                                        type="button"
-                                        className="h-5 w-5 p-0.5 shrink-0 rounded hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setCredentialsPopoverOpen(credentialsPopoverOpen === bm.bookmaker_id ? null : bm.bookmaker_id);
-                                        }}
-                                      >
-                                        <IdCard className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                                      </button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-52 p-2" align="start">
-                                      <div className="space-y-2">
-                                        <div>
-                                          <label className="text-[10px] text-muted-foreground">Usuário</label>
-                                          <div className="flex items-center gap-1 mt-0.5">
-                                            <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
-                                              {showSensitiveData ? bm.login_username : "••••••"}
-                                            </code>
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => bm.login_username && copyToClipboard(bm.login_username, "Usuário")}
-                                              className="h-6 w-6 p-0 shrink-0"
-                                            >
-                                              {copiedField === "Usuário" ? (
-                                                <Check className="h-3 w-3 text-success" />
-                                              ) : (
-                                                <Copy className="h-3 w-3" />
-                                              )}
-                                            </Button>
-                                          </div>
-                                        </div>
-                                        <div>
-                                          <label className="text-[10px] text-muted-foreground">Senha</label>
-                                          <div className="flex items-center gap-1 mt-0.5">
-                                            <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
-                                              {showSensitiveData && bm.login_password_encrypted ? decryptPassword(bm.login_password_encrypted) : "••••••"}
-                                            </code>
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => bm.login_password_encrypted && copyToClipboard(decryptPassword(bm.login_password_encrypted), "Senha")}
-                                              className="h-6 w-6 p-0 shrink-0"
-                                            >
-                                              {copiedField === "Senha" ? (
-                                                <Check className="h-3 w-3 text-success" />
-                                              ) : (
-                                                <Copy className="h-3 w-3" />
-                                              )}
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </PopoverContent>
-                                  </Popover>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1 flex-wrap">
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    "text-[9px] px-1 py-0 h-4",
-                                    bm.status === "ativo"
-                                      ? "border-success/50 text-success"
-                                      : "border-warning/50 text-warning"
-                                  )}
-                                >
-                                  {bm.status === "ativo" ? "Ativa" : "Limitada"}
-                                </Badge>
-                                {/* Badge de moeda baseado em bm.moeda - SEMPRE EXIBIDO */}
-                                <Badge 
-                                  variant="outline" 
-                                  className={cn(
-                                    "text-[9px] px-1 py-0 h-4",
-                                    bm.moeda === "USD" || bm.moeda === "USDT"
-                                      ? "border-cyan-500/50 text-cyan-400"
-                                      : bm.moeda === "EUR"
-                                        ? "border-yellow-500/50 text-yellow-400"
-                                        : bm.moeda === "GBP"
-                                          ? "border-purple-500/50 text-purple-400"
-                                          : "border-emerald-500/50 text-emerald-400"
-                                  )}
-                                >
-                                  {bm.moeda || "BRL"}
-                                </Badge>
+                                    {bm.status === "ativo" ? "Ativa" : "Limitada"}
+                                  </Badge>
+                                  <Badge 
+                                    variant="outline" 
+                                    className={cn(
+                                      "text-[9px] px-1 py-0 h-4",
+                                      bm.moeda === "USD" || bm.moeda === "USDT"
+                                        ? "border-cyan-500/50 text-cyan-400"
+                                        : bm.moeda === "EUR"
+                                          ? "border-yellow-500/50 text-yellow-400"
+                                          : bm.moeda === "GBP"
+                                            ? "border-purple-500/50 text-purple-400"
+                                            : "border-emerald-500/50 text-emerald-400"
+                                    )}
+                                  >
+                                    {bm.moeda || "BRL"}
+                                  </Badge>
+                                </div>
                               </div>
                             </div>
+                            {/* Depósito */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="text-right">
+                                  <MoneyDisplay
+                                    value={bm.moeda === "USD" || bm.moeda === "USDT" ? bm.total_depositado_usd : bm.total_depositado}
+                                    currency={bm.moeda || "BRL"}
+                                    size="sm"
+                                    masked={!showSensitiveData}
+                                  />
+                                </div>
+                              </TooltipTrigger>
+                              {showSensitiveData && (bm.total_depositado > 0 || bm.total_depositado_usd > 0) && (
+                                <TooltipContent side="top" className="text-xs">
+                                  <p className="font-medium">Total depositado</p>
+                                  {bm.total_depositado > 0 && <p>BRL: {formatMoneyValue(bm.total_depositado, "BRL")}</p>}
+                                  {bm.total_depositado_usd > 0 && <p className="text-cyan-400">USD: {formatMoneyValue(bm.total_depositado_usd, "USD")}</p>}
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                            {/* Saque */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="text-right">
+                                  <MoneyDisplay
+                                    value={bm.moeda === "USD" || bm.moeda === "USDT" ? bm.total_sacado_usd : bm.total_sacado}
+                                    currency={bm.moeda || "BRL"}
+                                    size="sm"
+                                    masked={!showSensitiveData}
+                                  />
+                                </div>
+                              </TooltipTrigger>
+                              {showSensitiveData && (bm.total_sacado > 0 || bm.total_sacado_usd > 0) && (
+                                <TooltipContent side="top" className="text-xs">
+                                  <p className="font-medium">Total sacado</p>
+                                  {bm.total_sacado > 0 && <p>BRL: {formatMoneyValue(bm.total_sacado, "BRL")}</p>}
+                                  {bm.total_sacado_usd > 0 && <p className="text-cyan-400">USD: {formatMoneyValue(bm.total_sacado_usd, "USD")}</p>}
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                            {/* Resultado */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="text-right">
+                                  <MoneyDisplay
+                                    value={bm.moeda === "USD" || bm.moeda === "USDT" ? bm.lucro_prejuizo_usd : bm.lucro_prejuizo}
+                                    currency={bm.moeda || "BRL"}
+                                    size="sm"
+                                    variant="auto"
+                                    masked={!showSensitiveData}
+                                  />
+                                </div>
+                              </TooltipTrigger>
+                              {showSensitiveData && (bm.lucro_prejuizo !== 0 || bm.lucro_prejuizo_usd !== 0) && (
+                                <TooltipContent side="top" className="text-xs">
+                                  <p className="font-medium">Resultado</p>
+                                  {bm.lucro_prejuizo !== 0 && <p>BRL: {formatMoneyValue(bm.lucro_prejuizo, "BRL")}</p>}
+                                  {bm.lucro_prejuizo_usd !== 0 && <p className="text-cyan-400">USD: {formatMoneyValue(bm.lucro_prejuizo_usd, "USD")}</p>}
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                            <div className="text-right text-sm font-medium text-muted-foreground">
+                              {bm.qtd_apostas.toLocaleString("pt-BR")}
+                            </div>
                           </div>
-                          {/* Depósito - PADRONIZADO */}
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="text-right">
-                                <MoneyDisplay
-                                  value={bm.moeda === "USD" || bm.moeda === "USDT" ? bm.total_depositado_usd : bm.total_depositado}
-                                  currency={bm.moeda || "BRL"}
-                                  size="sm"
-                                  masked={!showSensitiveData}
-                                />
-                              </div>
-                            </TooltipTrigger>
-                            {showSensitiveData && (bm.total_depositado > 0 || bm.total_depositado_usd > 0) && (
-                              <TooltipContent side="top" className="text-xs">
-                                <p className="font-medium">Total depositado</p>
-                                {bm.total_depositado > 0 && <p>BRL: {formatMoneyValue(bm.total_depositado, "BRL")}</p>}
-                                {bm.total_depositado_usd > 0 && <p className="text-cyan-400">USD: {formatMoneyValue(bm.total_depositado_usd, "USD")}</p>}
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                          {/* Saque - PADRONIZADO */}
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="text-right">
-                                <MoneyDisplay
-                                  value={bm.moeda === "USD" || bm.moeda === "USDT" ? bm.total_sacado_usd : bm.total_sacado}
-                                  currency={bm.moeda || "BRL"}
-                                  size="sm"
-                                  masked={!showSensitiveData}
-                                />
-                              </div>
-                            </TooltipTrigger>
-                            {showSensitiveData && (bm.total_sacado > 0 || bm.total_sacado_usd > 0) && (
-                              <TooltipContent side="top" className="text-xs">
-                                <p className="font-medium">Total sacado</p>
-                                {bm.total_sacado > 0 && <p>BRL: {formatMoneyValue(bm.total_sacado, "BRL")}</p>}
-                                {bm.total_sacado_usd > 0 && <p className="text-cyan-400">USD: {formatMoneyValue(bm.total_sacado_usd, "USD")}</p>}
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                          {/* Resultado - PADRONIZADO */}
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="text-right">
-                                <MoneyDisplay
-                                  value={bm.moeda === "USD" || bm.moeda === "USDT" ? bm.lucro_prejuizo_usd : bm.lucro_prejuizo}
-                                  currency={bm.moeda || "BRL"}
-                                  size="sm"
-                                  variant="auto"
-                                  masked={!showSensitiveData}
-                                />
-                              </div>
-                            </TooltipTrigger>
-                            {showSensitiveData && (bm.lucro_prejuizo !== 0 || bm.lucro_prejuizo_usd !== 0) && (
-                              <TooltipContent side="top" className="text-xs">
-                                <p className="font-medium">Resultado</p>
-                                {bm.lucro_prejuizo !== 0 && <p>BRL: {formatMoneyValue(bm.lucro_prejuizo, "BRL")}</p>}
-                                {bm.lucro_prejuizo_usd !== 0 && <p className="text-cyan-400">USD: {formatMoneyValue(bm.lucro_prejuizo_usd, "USD")}</p>}
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                          <div className="text-right text-sm font-medium text-muted-foreground">
-                            {bm.qtd_apostas.toLocaleString("pt-BR")}
-                          </div>
-                        </div>
-                      ))}
-                        </div>
+                        ))}
                       </div>
                     </>
                   )}
