@@ -168,9 +168,9 @@ export function ParceiroDetalhesPanel({
 
   return (
     <TooltipProvider>
-      <div className="h-full flex flex-col">
-        {/* Header compacto */}
-        <div className="flex items-center gap-3 p-4 pb-2 border-b border-border">
+      <div className="h-full min-h-0 flex flex-col overflow-hidden">
+        {/* Header compacto - shrink-0 */}
+        <div className="flex items-center gap-3 p-4 pb-2 border-b border-border shrink-0">
           <div 
             className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 cursor-pointer hover:bg-primary/20 transition-colors"
             onClick={onEditParceiro}
@@ -285,13 +285,13 @@ export function ParceiroDetalhesPanel({
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs - flex-1 min-h-0 para ocupar espaço restante */}
         <Tabs
           defaultValue="resumo"
-          className="flex-1 min-h-0 flex flex-col"
+          className="flex-1 min-h-0 flex flex-col overflow-hidden"
           onValueChange={(value) => parceiroCache.changeTab(value as TabKey)}
         >
-          <div className="px-4 pt-2">
+          <div className="px-4 pt-2 shrink-0">
             <TabsList className="grid w-full grid-cols-3 h-8">
               <TabsTrigger value="resumo" className="text-xs gap-1">
                 <BarChart3 className="h-3 w-3" />
@@ -308,7 +308,7 @@ export function ParceiroDetalhesPanel({
             </TabsList>
           </div>
 
-          {/* Aba Resumo - SEM ScrollArea externo, scroll apenas no card de casas */}
+          {/* Aba Resumo - flex-1 min-h-0 overflow-hidden */}
           <TabsContent value="resumo" className="flex-1 min-h-0 mt-0 flex flex-col overflow-hidden">
             <div className="p-4 flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
               {/* KPIs compactos - 4 colunas - PADRONIZADO */}
@@ -428,9 +428,8 @@ export function ParceiroDetalhesPanel({
                       <div className="text-right">Apost.</div>
                     </div>
 
-                    {/* Lista - ÚNICA área com scroll interno */}
-                    {/* height: 0 + flex-1 força o cálculo correto de altura para o ScrollArea */}
-                    <ScrollArea className="flex-1" style={{ height: 0 }}>
+                    {/* Lista - ÚNICA área com scroll interno - flex-1 min-h-0 */}
+                    <ScrollArea className="flex-1 min-h-0">
                       <div className="divide-y divide-border">
                         {data.bookmakers.map((bm) => (
                           <div
@@ -672,16 +671,16 @@ export function ParceiroDetalhesPanel({
             </div>
           </TabsContent>
 
-          {/* Aba Movimentações - fetches its own data */}
-          <TabsContent value="movimentacoes" className="flex-1 mt-0">
+          {/* Aba Movimentações - flex-1 min-h-0 overflow-hidden */}
+          <TabsContent value="movimentacoes" className="flex-1 min-h-0 mt-0 overflow-hidden">
             <ParceiroMovimentacoesTab 
               parceiroId={parceiroId} 
               showSensitiveData={showSensitiveData}
             />
           </TabsContent>
 
-          {/* Aba Bookmakers - fetches its own data */}
-          <TabsContent value="bookmakers" className="flex-1 mt-0">
+          {/* Aba Bookmakers - flex-1 min-h-0 overflow-hidden */}
+          <TabsContent value="bookmakers" className="flex-1 min-h-0 mt-0 overflow-hidden">
             <ParceiroBookmakersTab
               parceiroId={parceiroId}
               showSensitiveData={showSensitiveData}

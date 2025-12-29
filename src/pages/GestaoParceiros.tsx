@@ -597,10 +597,10 @@ export default function GestaoParceiros() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8">
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-6">
+      <div className="h-full flex flex-col bg-background overflow-hidden">
+        <div className="flex flex-col flex-1 min-h-0 px-4 py-6">
+          {/* Header - shrink-0 para não comprimir */}
+          <div className="flex items-center gap-4 mb-4 shrink-0">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
               <Users className="h-6 w-6 text-primary" />
             </div>
@@ -613,43 +613,47 @@ export default function GestaoParceiros() {
             />
           </div>
 
-          {/* Partner Details Layout */}
-          <Card className="border-border bg-gradient-surface overflow-hidden">
-            <div className="grid grid-cols-[340px_1fr] lg:grid-cols-[360px_1fr] h-[calc(100vh-240px)] min-h-[480px]">
+          {/* Partner Details Layout - flex-1 min-h-0 para ocupar espaço restante */}
+          <Card className="border-border bg-gradient-surface overflow-hidden flex-1 min-h-0">
+            <div className="grid grid-cols-[340px_1fr] lg:grid-cols-[360px_1fr] h-full min-h-0">
               {/* Painel Esquerdo - Lista de Parceiros */}
-              <ParceiroListaSidebar
-                parceiros={parceirosParaSidebar}
-                selectedId={selectedParceiroDetalhes}
-                onSelect={handleSelectParceiroDetalhes}
-                showSensitiveData={showSensitiveData}
-                onAddParceiro={() => setDialogOpen(true)}
-              />
+              <div className="min-h-0 overflow-hidden">
+                <ParceiroListaSidebar
+                  parceiros={parceirosParaSidebar}
+                  selectedId={selectedParceiroDetalhes}
+                  onSelect={handleSelectParceiroDetalhes}
+                  showSensitiveData={showSensitiveData}
+                  onAddParceiro={() => setDialogOpen(true)}
+                />
+              </div>
 
               {/* Painel Direito - Detalhes */}
-              <ParceiroDetalhesPanel 
-                parceiroId={selectedParceiroDetalhes} 
-                showSensitiveData={showSensitiveData}
-                onToggleSensitiveData={() => setShowSensitiveData(!showSensitiveData)}
-                onCreateVinculo={handleCreateVinculo}
-                parceiroStatus={parceiros.find(p => p.id === selectedParceiroDetalhes)?.status}
-                hasParceria={parceriasData.has(selectedParceiroDetalhes || '')}
-                diasRestantes={parceriasData.get(selectedParceiroDetalhes || '')?.dias_restantes ?? null}
-                onEditParceiro={() => {
-                  const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
-                  if (parceiro) {
-                    setEditingParceiro(parceiro);
-                    setViewMode(false);
-                    setDialogOpen(true);
-                  }
-                }}
-                onDeleteParceiro={() => {
-                  if (selectedParceiroDetalhes) {
-                    setParceiroToDelete(selectedParceiroDetalhes);
-                    setDeleteDialogOpen(true);
-                  }
-                }}
-                parceiroCache={parceiroCache}
-              />
+              <div className="min-h-0 overflow-hidden">
+                <ParceiroDetalhesPanel 
+                  parceiroId={selectedParceiroDetalhes} 
+                  showSensitiveData={showSensitiveData}
+                  onToggleSensitiveData={() => setShowSensitiveData(!showSensitiveData)}
+                  onCreateVinculo={handleCreateVinculo}
+                  parceiroStatus={parceiros.find(p => p.id === selectedParceiroDetalhes)?.status}
+                  hasParceria={parceriasData.has(selectedParceiroDetalhes || '')}
+                  diasRestantes={parceriasData.get(selectedParceiroDetalhes || '')?.dias_restantes ?? null}
+                  onEditParceiro={() => {
+                    const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
+                    if (parceiro) {
+                      setEditingParceiro(parceiro);
+                      setViewMode(false);
+                      setDialogOpen(true);
+                    }
+                  }}
+                  onDeleteParceiro={() => {
+                    if (selectedParceiroDetalhes) {
+                      setParceiroToDelete(selectedParceiroDetalhes);
+                      setDeleteDialogOpen(true);
+                    }
+                  }}
+                  parceiroCache={parceiroCache}
+                />
+              </div>
             </div>
           </Card>
         </div>
