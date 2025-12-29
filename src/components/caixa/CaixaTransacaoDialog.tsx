@@ -334,6 +334,10 @@ export function CaixaTransacaoDialog({
     
     prevMoeda.current = moeda;
     
+    // Resetar bookmaker de origem (contexto de moeda mudou)
+    setOrigemBookmakerId("");
+    prevOrigemBookmakerId.current = "";
+    
     // Auto-focus para próximo passo
     if ((tipoTransacao === "DEPOSITO" || tipoTransacao === "SAQUE") && moeda && parceiroSelectRef.current) {
       setTimeout(() => {
@@ -1898,12 +1902,14 @@ export function CaixaTransacaoDialog({
             <div className="space-y-2">
               <Label>Bookmaker (com saldo {moeda})</Label>
               <BookmakerSelect
+                key={`saque-fiat-${destinoParceiroId}-${moeda}`}
                 ref={bookmakerSelectRef}
                 value={origemBookmakerId}
                 onValueChange={setOrigemBookmakerId}
                 disabled={!isDestinoCompleta}
                 parceiroId={destinoParceiroId}
                 somenteComSaldoFiat={true}
+                moedaOperacional={moeda}
               />
             </div>
           </>
@@ -1937,6 +1943,7 @@ export function CaixaTransacaoDialog({
           <div className="space-y-2">
             <Label>Bookmaker (com saldo USD)</Label>
             <BookmakerSelect
+              key={`saque-crypto-${destinoParceiroId}`}
               ref={bookmakerSelectRef}
               value={origemBookmakerId}
               onValueChange={setOrigemBookmakerId}
