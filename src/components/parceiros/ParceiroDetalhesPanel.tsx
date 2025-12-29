@@ -297,12 +297,13 @@ export function ParceiroDetalhesPanel({
           {/* TabViewport: flex-1 min-h-0 relative - área delimitada para conteúdo */}
           {/* Cada TabsContent usa absolute positioning para ocupar espaço definido */}
           <div className="flex-1 min-h-0 relative">
-            {/* Aba Resumo */}
+            {/* Aba Resumo - SEM scroll externo, flex-col para hierarquia */}
             <TabsContent 
               value="resumo" 
-              className="absolute inset-0 mt-0 p-4 overflow-y-auto data-[state=inactive]:hidden"
+              className="absolute inset-0 mt-0 p-4 flex flex-col data-[state=inactive]:hidden"
             >
-              <div className="space-y-3">
+              {/* Conteúdo fixo: KPIs e Info */}
+              <div className="shrink-0 space-y-3">
                 {/* KPIs compactos - 4 colunas */}
                 <div className="grid gap-2 grid-cols-2 lg:grid-cols-4">
                   <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
@@ -394,9 +395,10 @@ export function ParceiroDetalhesPanel({
                     <span className="font-medium text-warning">{bookmakersLimitados}</span>
                   </div>
                 </div>
+              </div>
 
-                {/* Tabela por Casa de Apostas */}
-                <div className="border border-border rounded-lg flex flex-col">
+              {/* Card Desempenho por Casa - ocupa espaço restante com scroll interno */}
+              <div className="flex-1 min-h-0 mt-3 border border-border rounded-lg flex flex-col">
                   {/* Header do card */}
                   <div className="px-3 py-2 bg-muted/30 border-b border-border">
                     <h3 className="text-xs font-medium flex items-center gap-1.5">
@@ -420,8 +422,8 @@ export function ParceiroDetalhesPanel({
                         <div className="text-right">Apost.</div>
                       </div>
 
-                      {/* Lista de bookmakers */}
-                      <div className="divide-y divide-border">
+                      {/* Lista de bookmakers - único elemento rolável */}
+                      <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-border">
                         {data.bookmakers.map((bm) => (
                           <div
                             key={bm.bookmaker_id}
@@ -656,7 +658,6 @@ export function ParceiroDetalhesPanel({
                     </>
                   )}
                 </div>
-              </div>
             </TabsContent>
 
             {/* Aba Movimentações */}
