@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { Search, User, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { maskCPFPartial } from "@/lib/validators";
@@ -27,6 +26,15 @@ interface ParceiroListaSidebarProps {
   onAddParceiro?: () => void;
 }
 
+/*
+ * ARQUITETURA: SidebarParceiros
+ * 
+ * Container: h-full (herda altura do pai)
+ * ├─ Header (shrink-0): filtros + botão novo
+ * └─ Lista (flex-1 overflow-y-auto): scroll próprio
+ * 
+ * NUNCA interfere no layout do painel principal.
+ */
 export function ParceiroListaSidebar({
   parceiros,
   selectedId,
@@ -48,8 +56,9 @@ export function ParceiroListaSidebar({
   }, [parceiros, searchTerm, statusFilter]);
 
   return (
-    <div className="flex flex-col h-full border-r border-border min-w-[280px]">
-      <div className="p-3 border-b border-border space-y-2">
+    <div className="h-full flex flex-col border-r border-border">
+      {/* Header: altura fixa, nunca comprime */}
+      <div className="shrink-0 p-3 border-b border-border space-y-2">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -80,7 +89,8 @@ export function ParceiroListaSidebar({
         )}
       </div>
 
-      <ScrollArea className="flex-1">
+      {/* Lista: flex-1 com scroll próprio */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="p-2 space-y-1 pb-4">
           {filteredParceiros.map((parceiro) => (
             <button
@@ -128,7 +138,7 @@ export function ParceiroListaSidebar({
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
