@@ -637,6 +637,14 @@ export default function GestaoParceiros() {
                   parceiroStatus={parceiros.find(p => p.id === selectedParceiroDetalhes)?.status}
                   hasParceria={parceriasData.has(selectedParceiroDetalhes || '')}
                   diasRestantes={parceriasData.get(selectedParceiroDetalhes || '')?.dias_restantes ?? null}
+                  onViewParceiro={() => {
+                    const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
+                    if (parceiro) {
+                      setEditingParceiro(parceiro);
+                      setViewMode(true);
+                      setDialogOpen(true);
+                    }
+                  }}
                   onEditParceiro={() => {
                     const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
                     if (parceiro) {
