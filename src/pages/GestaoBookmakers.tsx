@@ -316,8 +316,12 @@ export default function GestaoBookmakers() {
   const stats = {
     total: bookmakers.length,
     ativos: bookmakers.filter((b) => b.status === "ativo").length,
-    saldoTotal: bookmakers.reduce((acc, b) => {
+    saldoTotalBrl: bookmakers.reduce((acc, b) => {
       if (b.moeda === "BRL") return acc + Number(b.saldo_atual);
+      return acc;
+    }, 0),
+    saldoTotalUsd: bookmakers.reduce((acc, b) => {
+      if (b.moeda === "USD") return acc + Number(b.saldo_usd);
       return acc;
     }, 0),
   };
@@ -396,13 +400,24 @@ export default function GestaoBookmakers() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Saldo Total (BRL)
+                Saldo Total
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-primary">
-                {formatCurrency(stats.saldoTotal, "BRL")}
+            <CardContent className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-3xl font-bold text-primary">
+                  {formatCurrency(stats.saldoTotalBrl, "BRL")}
+                </span>
+                <Badge variant="outline" className="text-green-600 border-green-600">BRL</Badge>
               </div>
+              {stats.saldoTotalUsd > 0 && (
+                <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                  <span className="text-xl font-semibold text-blue-400">
+                    {formatCurrency(stats.saldoTotalUsd, "USD")}
+                  </span>
+                  <Badge variant="outline" className="text-blue-400 border-blue-400">USD</Badge>
+                </div>
+              )}
             </CardContent>
               </Card>
             </div>
