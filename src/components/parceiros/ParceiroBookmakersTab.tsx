@@ -268,10 +268,10 @@ export function ParceiroBookmakersTab({
 
   return (
     <TooltipProvider>
-      <div className="grid grid-cols-2 gap-3 p-2">
+      <div className="h-full grid grid-cols-2 gap-3 p-2">
         {/* Coluna: Casas Vinculadas */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col min-h-0 gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Building2 className="h-4 w-4 text-primary" />
             <h4 className="text-sm font-medium">Casas Vinculadas</h4>
             <Badge variant="secondary" className="text-xs ml-auto">
@@ -279,7 +279,7 @@ export function ParceiroBookmakersTab({
             </Badge>
           </div>
 
-          <div className="relative">
+          <div className="relative shrink-0">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               placeholder="Buscar..."
@@ -289,7 +289,7 @@ export function ParceiroBookmakersTab({
             />
           </div>
 
-          <ScrollArea className="h-[300px]">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="space-y-1.5 pb-3">
               {displayedVinculados.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground text-xs">
@@ -386,11 +386,16 @@ export function ParceiroBookmakersTab({
                           {maskUsername(bm.login_username)}
                         </span>
                         <span className="text-[10px] text-muted-foreground">•</span>
-                        {isUSDMoeda(bm.moeda) && (
-                          <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 border-amber-500/50 text-amber-500">
-                            USD
-                          </Badge>
-                        )}
+                        <Badge 
+                          variant="outline" 
+                          className={`text-[8px] px-1 py-0 h-3.5 ${
+                            isUSDMoeda(bm.moeda) 
+                              ? "border-amber-500/50 text-amber-500" 
+                              : "border-emerald-500/50 text-emerald-500"
+                          }`}
+                        >
+                          {isUSDMoeda(bm.moeda) ? "USD" : "BRL"}
+                        </Badge>
                         <span className="text-[10px] font-medium">
                           {maskCurrency(getSaldoCorreto(bm), bm.moeda)}
                         </span>
@@ -476,8 +481,8 @@ export function ParceiroBookmakersTab({
         </div>
 
         {/* Coluna: Casas Disponíveis */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col min-h-0 gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Plus className="h-4 w-4 text-muted-foreground" />
             <h4 className="text-sm font-medium">Casas Disponíveis</h4>
             <Badge variant="outline" className="text-xs ml-auto">
@@ -485,7 +490,7 @@ export function ParceiroBookmakersTab({
             </Badge>
           </div>
 
-          <div className="relative">
+          <div className="relative shrink-0">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               placeholder="Buscar..."
@@ -495,7 +500,7 @@ export function ParceiroBookmakersTab({
             />
           </div>
 
-          <ScrollArea className="h-[300px]">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="space-y-1.5 pb-3">
               {filteredDisponiveis.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground text-xs">
