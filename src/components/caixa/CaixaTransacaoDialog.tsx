@@ -511,12 +511,13 @@ export function CaixaTransacaoDialog({
     }
   }, [origemParceiroId, origemContaId, origemWalletId, tipoTransacao, fluxoTransferencia]);
 
-  // Limpar ORIGEM quando DESTINO mudar (somente para SAQUE)
+  // Limpar ORIGEM quando DESTINO mudar (somente para SAQUE FIAT)
+  // SAQUE CRYPTO usa fluxo invertido: bookmaker é selecionada primeiro
   useEffect(() => {
-    if (tipoTransacao === "SAQUE") {
+    if (tipoTransacao === "SAQUE" && tipoMoeda === "FIAT") {
       setOrigemBookmakerId("");
     }
-  }, [destinoParceiroId, destinoContaId, tipoTransacao]);
+  }, [destinoParceiroId, destinoContaId, tipoTransacao, tipoMoeda]);
 
   // ====== AUTO-FOCUS CHAIN FOR DEPOSIT FLOW ======
   
@@ -626,38 +627,69 @@ export function CaixaTransacaoDialog({
 
   // ====== AUTO-FOCUS CHAIN FOR SAQUE CRYPTO FLOW ======
   
-  // SAQUE CRYPTO: quando tipo de moeda muda para CRYPTO, auto-seleciona moeda se só houver uma, ou abre o select
+  // SAQUE CRYPTO: quando tipo de moeda muda para CRYPTO, abre o BookmakerSelect primeiro (fluxo invertido)
   useEffect(() => {
     if (tipoTransacao !== "SAQUE") return;
     if (tipoMoeda !== "CRYPTO") return;
+    if (prevTipoMoeda.current === "CRYPTO") return; // Não re-executar se já estava em CRYPTO
     
-    // Buscar moedas crypto disponíveis para saque
-    // Baseado nas bookmakers com saldo USD e wallets crypto dos parceiros
+    // Verificar se há bookmakers com saldo USD
     const temBookmakerComSaldoUsd = bookmakers.some(b => b.saldo_usd > 0);
     if (!temBookmakerComSaldoUsd) return;
     
-    const moedasCryptoWallets = [...new Set(
-      saldosParceirosWallets.map(s => s.coin)
-    )];
-    const moedasDisponiveis = MOEDAS_CRYPTO.filter(m => moedasCryptoWallets.includes(m.value));
-    
-    // Se há exatamente uma moeda disponível, auto-selecionar
-    if (moedasDisponiveis.length === 1 && !coin) {
-      setCoin(moedasDisponiveis[0].value);
-      // O próximo useEffect (coin change) vai cuidar de abrir o ParceiroSelect
-    } else if (coinSelectRef.current) {
-      // Abrir select de moeda automaticamente
+    // Abrir BookmakerSelect para o usuário selecionar a origem
+    if (bookmakerSelectRef.current) {
       setTimeout(() => {
-        coinSelectRef.current?.focus();
-        coinSelectRef.current?.click();
+        bookmakerSelectRef.current?.open();
       }, 100);
     }
-  }, [tipoMoeda, tipoTransacao, bookmakers, saldosParceirosWallets, coin]);
+  }, [tipoMoeda, tipoTransacao, bookmakers]);
   
-  // SAQUE CRYPTO: quando coin é selecionado, foca/abre o select Parceiro
+  // SAQUE CRYPTO: quando bookmaker é selecionada, buscar moeda do último depósito crypto
   useEffect(() => {
     if (tipoTransacao !== "SAQUE" || tipoMoeda !== "CRYPTO") return;
-    if (!coin) return;
+    if (!origemBookmakerId) return;
+    if (origemBookmakerId === prevOrigemBookmakerId.current) return;
+    
+    const fetchUltimoDepositoCoin = async () => {
+      const { data } = await supabase
+        .from("cash_ledger")
+        .select("coin")
+        .eq("destino_bookmaker_id", origemBookmakerId)
+        .eq("tipo_transacao", "DEPOSITO")
+        .eq("tipo_moeda", "CRYPTO")
+        .not("coin", "is", null)
+        .order("data_transacao", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (data?.coin) {
+        // Pré-seleciona a moeda do último depósito
+        setCoin(data.coin);
+        // Abre o select de moeda com foco para o usuário confirmar ou alterar
+        setTimeout(() => {
+          coinSelectRef.current?.focus();
+          coinSelectRef.current?.click();
+        }, 150);
+      } else {
+        // Sem histórico de depósito, abre o select para o usuário escolher
+        setTimeout(() => {
+          coinSelectRef.current?.focus();
+          coinSelectRef.current?.click();
+        }, 150);
+      }
+    };
+    
+    fetchUltimoDepositoCoin();
+    
+    // Atualizar ref após buscar (não antes, para permitir re-execução se bookmaker mudar)
+    prevOrigemBookmakerId.current = origemBookmakerId;
+  }, [origemBookmakerId, tipoTransacao, tipoMoeda]);
+  
+  // SAQUE CRYPTO: quando coin é confirmado/selecionado (após bookmaker), abre o ParceiroSelect
+  useEffect(() => {
+    if (tipoTransacao !== "SAQUE" || tipoMoeda !== "CRYPTO") return;
+    if (!coin || !origemBookmakerId) return; // Precisa ter bookmaker E coin selecionados
 
     const coinMudou = coin !== prevCoin.current;
     prevCoin.current = coin;
@@ -692,7 +724,7 @@ export function CaixaTransacaoDialog({
 
     const id = window.setTimeout(tryOpen, OPEN_DELAY_MS);
     return () => window.clearTimeout(id);
-  }, [coin, tipoTransacao, tipoMoeda]);
+  }, [coin, tipoTransacao, tipoMoeda, origemBookmakerId]);
 
   // SAQUE CRYPTO: quando parceiro é selecionado, abre o select Wallet (DESTINO)
   // Também auto-seleciona se houver apenas uma wallet disponível
@@ -719,14 +751,16 @@ export function CaixaTransacaoDialog({
     prevDestinoParceiroId.current = destinoParceiroId;
   }, [destinoParceiroId, tipoTransacao, tipoMoeda, walletsCrypto, coin]);
 
-  // SAQUE CRYPTO: quando wallet (destino) é selecionada, abre o select Bookmaker (origem)
+  // SAQUE CRYPTO: quando wallet (destino) é selecionada, foca no campo Quantidade de Coins
+  // (bookmaker já foi selecionada antes no novo fluxo invertido)
   useEffect(() => {
     if (tipoTransacao !== "SAQUE" || tipoMoeda !== "CRYPTO") return;
     if (!destinoWalletId || destinoWalletId === prevDestinoWalletId.current) return;
     
-    if (bookmakerSelectRef.current) {
+    // Focar no campo de quantidade de coins
+    if (qtdCoinInputRef.current) {
       setTimeout(() => {
-        bookmakerSelectRef.current?.open();
+        qtdCoinInputRef.current?.focus();
       }, 150);
     }
     
@@ -2695,18 +2729,13 @@ export function CaixaTransacaoDialog({
           .map(b => b.moeda)
       )];
       
-      // CRYPTO: moedas das bookmakers com saldo em USD (operações crypto usam USD)
-      // Para SAQUE CRYPTO, a moeda é derivada das wallets cripto dos parceiros
-      // que possam receber o saldo das bookmakers com saldo_usd > 0
+      // CRYPTO: mostrar TODAS as moedas crypto quando há bookmakers com saldo USD
+      // Isso permite depositar em uma moeda (ex: USDT) e sacar em outra (ex: BTC)
       const temBookmakerComSaldoUsd = bookmakers.some(b => b.saldo_usd > 0);
-      const moedasCryptoWallets = temBookmakerComSaldoUsd ? [...new Set(
-        saldosParceirosWallets
-          .map(s => s.coin)
-      )] : [];
       
       return {
         fiat: MOEDAS_FIAT.filter(m => moedasFiatBookmakers.includes(m.value)),
-        crypto: MOEDAS_CRYPTO.filter(m => moedasCryptoWallets.includes(m.value))
+        crypto: temBookmakerComSaldoUsd ? MOEDAS_CRYPTO : []
       };
     }
     
