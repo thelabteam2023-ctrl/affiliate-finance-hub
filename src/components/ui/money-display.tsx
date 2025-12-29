@@ -182,37 +182,63 @@ export function MoneyDisplay({
 }
 
 /**
- * Componente para exibir valores em múltiplas moedas empilhados
+ * Entrada individual para exibição multi-moeda
+ */
+export interface CurrencyEntry {
+  currency: string;
+  value: number;
+}
+
+/**
+ * Componente para exibir valores em múltiplas moedas - SEMPRE em linhas separadas
+ * 
+ * REGRA FINANCEIRA: Uma moeda = uma linha. Sempre. Em qualquer resolução.
+ * O componente renderiza iterativamente, nunca concatena valores.
  */
 export interface MultiCurrencyDisplayProps {
+  /** Valor em BRL (legacy - usar entries para novo código) */
   valueBRL?: number;
+  /** Valor em USD (legacy - usar entries para novo código) */
   valueUSD?: number;
+  /** Array de entradas para múltiplas moedas (preferido) */
+  entries?: CurrencyEntry[];
   size?: "xs" | "sm" | "md" | "lg";
   variant?: "default" | "auto";
   masked?: boolean;
   className?: string;
   showZero?: boolean;
+  /** @deprecated Use sempre layout vertical - prop mantida para compatibilidade */
   stacked?: boolean;
-  /** Se true, mostra "-" quando ambos os valores forem 0 */
+  /** Se true, mostra "-" quando todos os valores forem 0 */
   showDashOnZero?: boolean;
 }
 
 export function MultiCurrencyDisplay({
   valueBRL = 0,
   valueUSD = 0,
+  entries,
   size = "sm",
   variant = "default",
   masked = false,
   className,
   showZero = false,
-  stacked = true,
+  stacked = true, // Sempre vertical por padrão
   showDashOnZero = false,
 }: MultiCurrencyDisplayProps) {
-  const hasBRL = valueBRL !== 0 || showZero;
-  const hasUSD = valueUSD !== 0;
-  
-  // Se showDashOnZero e ambos são zero, retorna "-"
-  if (showDashOnZero && valueBRL === 0 && valueUSD === 0) {
+  // Construir lista de moedas a exibir
+  const currencyList: CurrencyEntry[] = entries ?? [
+    { currency: "BRL", value: valueBRL },
+    { currency: "USD", value: valueUSD },
+  ];
+
+  // Filtrar moedas com valor (a menos que showZero)
+  const visibleCurrencies = currencyList.filter(
+    (entry) => entry.value !== 0 || showZero
+  );
+
+  // Se showDashOnZero e todas são zero, retorna "-"
+  const allZero = currencyList.every((entry) => entry.value === 0);
+  if (showDashOnZero && allZero) {
     const sizeClasses = {
       xs: "text-[10px]",
       sm: "text-xs",
@@ -220,13 +246,20 @@ export function MultiCurrencyDisplay({
       lg: "text-base",
     };
     return (
-      <span className={cn(sizeClasses[size], "font-medium text-muted-foreground tabular-nums", className)}>
+      <span
+        className={cn(
+          sizeClasses[size],
+          "font-medium text-muted-foreground tabular-nums",
+          className
+        )}
+      >
         -
       </span>
     );
   }
-  
-  if (!hasBRL && !hasUSD) {
+
+  // Se não há moedas visíveis, mostrar BRL zerado
+  if (visibleCurrencies.length === 0) {
     return (
       <MoneyDisplay
         value={0}
@@ -237,29 +270,21 @@ export function MultiCurrencyDisplay({
       />
     );
   }
-  
-  const containerClass = stacked ? "space-y-0.5" : "flex items-center gap-2";
-  
+
+  // REGRA: Sempre vertical (flex-col), uma linha por moeda
+  // Independente de resolução, largura de tela ou quantidade de moedas
   return (
-    <div className={cn(containerClass, className)}>
-      {(hasBRL || !hasUSD) && (
+    <div className={cn("flex flex-col gap-0.5", className)}>
+      {visibleCurrencies.map((entry, index) => (
         <MoneyDisplay
-          value={valueBRL}
-          currency="BRL"
+          key={`${entry.currency}-${index}`}
+          value={entry.value}
+          currency={entry.currency}
           size={size}
           variant={variant === "auto" ? "auto" : "default"}
           masked={masked}
         />
-      )}
-      {hasUSD && (
-        <MoneyDisplay
-          value={valueUSD}
-          currency="USD"
-          size={size}
-          variant={variant === "auto" ? "auto" : "default"}
-          masked={masked}
-        />
-      )}
+      ))}
     </div>
   );
 }
