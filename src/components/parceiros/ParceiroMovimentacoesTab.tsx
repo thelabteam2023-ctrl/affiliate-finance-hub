@@ -275,11 +275,18 @@ export function ParceiroMovimentacoesTab({
     return "-";
   };
 
+  // ==========================================
+  // LAYOUT ESTRUTURAL - ARQUITETURA CORRETA
+  // ==========================================
+  // Container: h-full flex flex-col
+  // Conteúdo: flex-1 min-h-0 com ScrollArea interno
+  // ==========================================
+
   if (loading) {
     return (
-      <div className="space-y-2 p-2">
+      <div className="h-full flex flex-col p-3 gap-2">
         {[...Array(5)].map((_, i) => (
-          <Skeleton key={i} className="h-16" />
+          <Skeleton key={i} className="h-16 shrink-0" />
         ))}
       </div>
     );
@@ -287,7 +294,7 @@ export function ParceiroMovimentacoesTab({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-destructive gap-3">
+      <div className="h-full flex flex-col items-center justify-center text-destructive gap-3">
         <AlertCircle className="h-8 w-8 opacity-50" />
         <p className="text-sm">Erro ao carregar movimentações</p>
         <Button variant="outline" size="sm" onClick={fetchData}>
@@ -302,7 +309,7 @@ export function ParceiroMovimentacoesTab({
 
   if (transacoes.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+      <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
         <AlertCircle className="h-8 w-8 mb-2 opacity-30" />
         <p className="text-sm">Nenhuma movimentação encontrada</p>
       </div>
@@ -310,45 +317,48 @@ export function ParceiroMovimentacoesTab({
   }
 
   return (
-    <ScrollArea className="h-full">
-      <div className="space-y-2 p-2 pb-4">
-        {transacoes.map((transacao) => (
-          <div
-            key={transacao.id}
-            className="p-3 border border-border rounded-lg hover:bg-muted/20 transition-colors"
-          >
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <Badge
-                variant="outline"
-                className={`text-xs ${getTipoBadgeColor(transacao.tipo_transacao, transacao.status)}`}
-              >
-                {getTipoLabel(transacao.tipo_transacao, transacao)}
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                {formatDate(transacao.data_transacao)}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-              <span className="truncate max-w-[120px]">{getOrigemLabel(transacao)}</span>
-              <ArrowRight className="h-3 w-3 shrink-0" />
-              <span className="truncate max-w-[120px]">{getDestinoLabel(transacao)}</span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold flex items-center">
-                {maskCurrency(transacao)}
-                {getMoedaBadge(transacao)}
-              </span>
-              {transacao.descricao && (
-                <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-                  {transacao.descricao}
+    <div className="h-full flex flex-col min-h-0">
+      {/* Área de scroll única - ocupa todo espaço disponível */}
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="p-3 space-y-2">
+          {transacoes.map((transacao) => (
+            <div
+              key={transacao.id}
+              className="p-3 border border-border rounded-lg hover:bg-muted/20 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <Badge
+                  variant="outline"
+                  className={`text-xs ${getTipoBadgeColor(transacao.tipo_transacao, transacao.status)}`}
+                >
+                  {getTipoLabel(transacao.tipo_transacao, transacao)}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {formatDate(transacao.data_transacao)}
                 </span>
-              )}
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                <span className="truncate max-w-[120px]">{getOrigemLabel(transacao)}</span>
+                <ArrowRight className="h-3 w-3 shrink-0" />
+                <span className="truncate max-w-[120px]">{getDestinoLabel(transacao)}</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold flex items-center">
+                  {maskCurrency(transacao)}
+                  {getMoedaBadge(transacao)}
+                </span>
+                {transacao.descricao && (
+                  <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                    {transacao.descricao}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-    </ScrollArea>
+          ))}
+        </div>
+      </ScrollArea>
+    </div>
   );
 }
