@@ -33,6 +33,7 @@ interface ParceiroDetalhesPanelProps {
   showSensitiveData?: boolean;
   onToggleSensitiveData?: () => void;
   onCreateVinculo?: (parceiroId: string, bookmakerId: string) => void;
+  onViewParceiro?: () => void;
   onEditParceiro?: () => void;
   onDeleteParceiro?: () => void;
   parceiroStatus?: string;
@@ -46,6 +47,7 @@ export function ParceiroDetalhesPanel({
   showSensitiveData = false,
   onToggleSensitiveData,
   onCreateVinculo,
+  onViewParceiro,
   onEditParceiro,
   onDeleteParceiro,
   parceiroStatus,
@@ -173,13 +175,13 @@ export function ParceiroDetalhesPanel({
         <div className="flex items-center gap-3 p-4 pb-2 border-b border-border shrink-0">
           <div 
             className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 cursor-pointer hover:bg-primary/20 transition-colors"
-            onClick={onEditParceiro}
+            onClick={onViewParceiro}
           >
             <User className="h-5 w-5 text-primary" />
           </div>
           <div 
             className="flex-1 min-w-0 cursor-pointer group"
-            onClick={onEditParceiro}
+            onClick={onViewParceiro}
           >
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold truncate group-hover:text-primary transition-colors">{data.parceiro_nome}</h2>
