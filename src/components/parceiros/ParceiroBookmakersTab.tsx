@@ -290,7 +290,7 @@ export function ParceiroBookmakersTab({
           </div>
 
           <ScrollArea className="h-[300px]">
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 pb-3">
               {displayedVinculados.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground text-xs">
                   <AlertCircle className="h-6 w-6 mx-auto mb-1 opacity-30" />
@@ -496,7 +496,7 @@ export function ParceiroBookmakersTab({
           </div>
 
           <ScrollArea className="h-[300px]">
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 pb-3">
               {filteredDisponiveis.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground text-xs">
                   <AlertCircle className="h-6 w-6 mx-auto mb-1 opacity-30" />

@@ -370,18 +370,20 @@ export function ParceiroDetalhesPanel({
                   </div>
                 </div>
 
-                {/* Info secundária inline */}
+                {/* Info secundária inline - Saldo sempre empilhado para clareza */}
                 <div className="flex flex-wrap gap-3 text-xs">
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30">
-                    <Wallet className="h-3 w-3 text-primary" />
-                    <span className="text-muted-foreground">Saldo:</span>
-                    <MultiCurrencyDisplay
-                      valueBRL={totalSaldoBRL}
-                      valueUSD={totalSaldoUSD}
-                      size="xs"
-                      masked={!showSensitiveData}
-                      stacked={false}
-                    />
+                  <div className="flex items-start gap-1.5 px-2 py-1.5 rounded bg-muted/30">
+                    <Wallet className="h-3 w-3 text-primary mt-0.5 shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground text-[10px]">Saldo</span>
+                      <MultiCurrencyDisplay
+                        valueBRL={totalSaldoBRL}
+                        valueUSD={totalSaldoUSD}
+                        size="xs"
+                        masked={!showSensitiveData}
+                        stacked
+                      />
+                    </div>
                   </div>
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30">
                     <Building2 className="h-3 w-3 text-success" />
@@ -395,8 +397,8 @@ export function ParceiroDetalhesPanel({
                   </div>
                 </div>
 
-                {/* Tabela por Casa de Apostas */}
-                <div className="border border-border rounded-lg overflow-hidden flex flex-col max-h-[400px]">
+                {/* Tabela por Casa de Apostas - altura flexível com scroll seguro */}
+                <div className="border border-border rounded-lg overflow-hidden flex flex-col flex-1 min-h-0">
                   <div className="px-3 py-2 bg-muted/30 border-b border-border shrink-0">
                     <h3 className="text-xs font-medium flex items-center gap-1.5">
                       <Building2 className="h-3.5 w-3.5 text-primary" />
@@ -409,15 +411,19 @@ export function ParceiroDetalhesPanel({
                       Nenhuma casa vinculada
                     </div>
                   ) : (
-                    <div className="divide-y divide-border flex-1 overflow-y-auto">
-                      {/* Header */}
-                      <div className="grid grid-cols-6 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/20">
+                    <div className="flex flex-col flex-1 min-h-0">
+                      {/* Header fixo */}
+                      <div className="grid grid-cols-6 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/20 border-b border-border shrink-0">
                         <div className="col-span-2">Casa</div>
                         <div className="text-right">Dep.</div>
                         <div className="text-right">Saq.</div>
                         <div className="text-right">Result.</div>
                         <div className="text-right">Apost.</div>
                       </div>
+
+                      {/* Rows com scroll e padding inferior de segurança */}
+                      <div className="flex-1 overflow-y-auto min-h-0">
+                        <div className="divide-y divide-border pb-2">
 
                       {/* Rows */}
                       {data.bookmakers.map((bm) => (
@@ -601,6 +607,8 @@ export function ParceiroDetalhesPanel({
                           </div>
                         </div>
                       ))}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
