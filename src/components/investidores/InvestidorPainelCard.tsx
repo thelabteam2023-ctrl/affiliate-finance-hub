@@ -7,6 +7,7 @@ import {
   TrendingUp,
   Activity,
   Wallet,
+  Eye,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +64,7 @@ interface InvestidorPainelCardProps {
   onExtrato: () => void;
   onSimular?: () => void;
   onClick?: () => void;
+  onVerDetalhes?: () => void;
 }
 
 const formatCurrency = (value: number, currency: "BRL" | "USD" = "BRL") => {
@@ -139,6 +141,7 @@ export function InvestidorPainelCard({
   onExtrato,
   onSimular,
   onClick,
+  onVerDetalhes,
 }: InvestidorPainelCardProps) {
   const { canEdit, canDelete } = useActionAccess();
   
@@ -509,6 +512,18 @@ export function InvestidorPainelCard({
       {/* Actions Section */}
       <div className="p-3 bg-muted/10">
         <div className="flex justify-center gap-2">
+          {onVerDetalhes && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="default" size="sm" onClick={onVerDetalhes}>
+                  <Eye className="h-3.5 w-3.5 mr-1.5" />
+                  Detalhes
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Ver Detalhes Completos</TooltipContent>
+            </Tooltip>
+          )}
+
           {canEdit('investidores', 'investidores.edit') && (
             <Tooltip>
               <TooltipTrigger asChild>

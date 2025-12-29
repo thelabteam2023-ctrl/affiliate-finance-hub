@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { InvestidorDialog } from "@/components/investidores/InvestidorDialog";
 import { InvestidorPainelCard } from "@/components/investidores/InvestidorPainelCard";
 import { InvestidorExtratoDialog } from "@/components/investidores/InvestidorExtratoDialog";
+import { InvestidorDetalhesDrawer } from "@/components/investidores/InvestidorDetalhesDrawer";
 import { RelatorioROI } from "@/components/caixa/RelatorioROI";
 import { HistoricoInvestidor } from "@/components/caixa/HistoricoInvestidor";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -75,6 +76,7 @@ export default function GestaoInvestidores() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [investidorToDelete, setInvestidorToDelete] = useState<Investidor | null>(null);
   const [extratoDialogOpen, setExtratoDialogOpen] = useState(false);
+  const [detalhesDrawerOpen, setDetalhesDrawerOpen] = useState(false);
   const { canCreate } = useActionAccess();
 
   const fetchInvestidores = async () => {
@@ -402,6 +404,10 @@ export default function GestaoInvestidores() {
                         setSelectedInvestidor(investidor);
                         setExtratoDialogOpen(true);
                       }}
+                      onVerDetalhes={() => {
+                        setSelectedInvestidor(investidor);
+                        setDetalhesDrawerOpen(true);
+                      }}
                     />
                   ))}
                 </div>
@@ -430,6 +436,10 @@ export default function GestaoInvestidores() {
                       onExtrato={() => {
                         setSelectedInvestidor(investidor);
                         setExtratoDialogOpen(true);
+                      }}
+                      onVerDetalhes={() => {
+                        setSelectedInvestidor(investidor);
+                        setDetalhesDrawerOpen(true);
                       }}
                     />
                   ))}
@@ -467,6 +477,13 @@ export default function GestaoInvestidores() {
             open={extratoDialogOpen}
             onOpenChange={setExtratoDialogOpen}
             investidor={selectedInvestidor}
+          />
+          <InvestidorDetalhesDrawer
+            open={detalhesDrawerOpen}
+            onOpenChange={setDetalhesDrawerOpen}
+            investidor={selectedInvestidor}
+            roi={roiData.get(selectedInvestidor.id)}
+            deal={dealsData.get(selectedInvestidor.id)}
           />
         </>
       )}
