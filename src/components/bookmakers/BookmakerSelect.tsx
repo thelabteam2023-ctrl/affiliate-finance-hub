@@ -44,6 +44,7 @@ interface BookmakerSelectProps {
   somenteComSaldoUsd?: boolean;
   somenteComSaldoFiat?: boolean; // Apenas bookmakers com saldo_atual > 0 (FIAT)
   excludeVinculosDoParceiro?: string;
+  moedaOperacional?: string; // Filtra bookmakers pela moeda operacional (BRL, USD, etc)
 }
 
 export interface BookmakerSelectRef {
@@ -71,7 +72,8 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   somenteComSaldo,
   somenteComSaldoUsd,
   somenteComSaldoFiat,
-  excludeVinculosDoParceiro
+  excludeVinculosDoParceiro,
+  moedaOperacional
 }, ref) => {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<BookmakerItem[]>([]);
@@ -137,6 +139,11 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
             `)
             .eq("parceiro_id", parceiroId);
 
+          // Filtrar por moeda operacional (mecanismo de depósito)
+          if (moedaOperacional) {
+            query = query.eq('moeda', moedaOperacional);
+          }
+
           if (somenteComSaldoUsd) {
             // Apenas bookmakers com saldo_usd > 0 (para saques CRYPTO)
             query = query.gt('saldo_usd', 0);
@@ -199,7 +206,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     };
 
     fetchBookmakers();
-  }, [parceiroId, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat, excludeVinculosDoParceiro]);
+  }, [parceiroId, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat, excludeVinculosDoParceiro, moedaOperacional]);
 
   // Buscar dados de exibição quando value muda - execução imediata e determinística
   useEffect(() => {
@@ -351,9 +358,11 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
             >
               <CommandEmpty>
                 {parceiroId 
-                  ? (somenteComSaldo 
-                      ? "Este parceiro não possui bookmakers com saldo disponível" 
-                      : "Este parceiro não possui bookmakers vinculadas")
+                  ? (moedaOperacional
+                      ? `Nenhuma bookmaker compatível com ${moedaOperacional} neste parceiro`
+                      : somenteComSaldo 
+                        ? "Este parceiro não possui bookmakers com saldo disponível" 
+                        : "Este parceiro não possui bookmakers vinculadas")
                   : "Nenhuma bookmaker encontrada"}
               </CommandEmpty>
               <CommandGroup>
