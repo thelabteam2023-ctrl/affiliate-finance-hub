@@ -773,15 +773,16 @@ export function CaixaTransacaoDialog({
     prevDestinoWalletId.current = destinoWalletId;
   }, [destinoWalletId, tipoTransacao, tipoMoeda]);
 
-  // Auto-focus CRYPTO: quando wallet é selecionada, abre o select Bookmaker
+  // Auto-focus CRYPTO DEPÓSITO: quando wallet de origem é selecionada, abre o select Bookmaker (destino)
   useEffect(() => {
+    if (tipoTransacao !== "DEPOSITO") return;
     if (tipoMoeda === "CRYPTO" && origemWalletId && origemWalletId !== prevOrigemWalletId.current && bookmakerSelectRef.current) {
       setTimeout(() => {
         bookmakerSelectRef.current?.open();
       }, 150);
     }
     prevOrigemWalletId.current = origemWalletId;
-  }, [origemWalletId, tipoMoeda]);
+  }, [origemWalletId, tipoMoeda, tipoTransacao]);
 
   // Auto-focus DEPÓSITO: quando bookmaker é selecionado, foca no campo Valor
   useEffect(() => {
