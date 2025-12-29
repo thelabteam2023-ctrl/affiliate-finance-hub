@@ -607,6 +607,20 @@ export function CaixaTransacaoDialog({
 
   // ====== AUTO-FOCUS CHAIN FOR SAQUE CRYPTO FLOW ======
   
+  // SAQUE CRYPTO: quando tipo de moeda muda para CRYPTO, abre o select Moeda (Coin)
+  useEffect(() => {
+    if (tipoTransacao !== "SAQUE") return;
+    if (tipoMoeda !== "CRYPTO" || prevTipoMoeda.current === "CRYPTO") return;
+    
+    // Abrir select de moeda automaticamente
+    if (coinSelectRef.current) {
+      setTimeout(() => {
+        coinSelectRef.current?.focus();
+        coinSelectRef.current?.click();
+      }, 100);
+    }
+  }, [tipoMoeda, tipoTransacao]);
+  
   // SAQUE CRYPTO: quando coin é selecionado, abre o select Parceiro
   useEffect(() => {
     if (tipoTransacao !== "SAQUE" || tipoMoeda !== "CRYPTO") return;
