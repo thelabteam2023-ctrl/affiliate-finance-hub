@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowRight, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -42,6 +41,16 @@ interface ParceiroMovimentacoesTabProps {
   showSensitiveData: boolean;
 }
 
+/*
+ * ARQUITETURA: Tab de Movimentações
+ * 
+ * Este componente APENAS retorna conteúdo.
+ * O layout (altura, scroll) é controlado pelo container pai (TabViewport).
+ * 
+ * Retorna:
+ * - Estados de loading/erro/vazio: centralizados verticalmente
+ * - Conteúdo real: lista com overflow-y-auto
+ */
 export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: ParceiroMovimentacoesTabProps) {
   const [data, setData] = useState<MovimentacoesData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -274,10 +283,10 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
     return "-";
   };
 
-  // Estados de loading/erro/vazio ocupam 100% do container pai
+  // LOADING: centralizado no container pai
   if (loading) {
     return (
-      <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-y-auto">
+      <div className="h-full flex flex-col gap-2 overflow-y-auto p-1">
         {[...Array(5)].map((_, i) => (
           <Skeleton key={i} className="h-16 shrink-0" />
         ))}
@@ -285,9 +294,10 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
     );
   }
 
+  // ERROR: centralizado no container pai
   if (error) {
     return (
-      <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-destructive gap-3">
+      <div className="h-full flex flex-col items-center justify-center text-destructive gap-3">
         <AlertCircle className="h-8 w-8 opacity-50" />
         <p className="text-sm">Erro ao carregar movimentações</p>
         <Button variant="outline" size="sm" onClick={fetchData}>
@@ -300,19 +310,20 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
 
   const transacoes = data?.transacoes || [];
 
+  // EMPTY: centralizado no container pai
   if (transacoes.length === 0) {
     return (
-      <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-muted-foreground">
+      <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
         <AlertCircle className="h-8 w-8 mb-2 opacity-30" />
         <p className="text-sm">Nenhuma movimentação encontrada</p>
       </div>
     );
   }
 
-  // Conteúdo real: ScrollArea gerencia o scroll
+  // CONTENT: lista com scroll próprio (h-full + overflow-y-auto)
   return (
-    <ScrollArea className="flex-1 min-h-0">
-      <div className="space-y-2 pr-2">
+    <div className="h-full overflow-y-auto">
+      <div className="space-y-2 pr-1">
         {transacoes.map((transacao) => (
           <div
             key={transacao.id}
@@ -343,6 +354,6 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
           </div>
         ))}
       </div>
-    </ScrollArea>
+    </div>
   );
 }

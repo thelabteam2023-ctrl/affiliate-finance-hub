@@ -1,17 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { PageHeader } from "@/components/PageHeader";
-import { Plus, Search, Eye, EyeOff, Edit, Trash2, LayoutGrid, List, Users } from "lucide-react";
-import { ParceiroStatusIcon } from "@/components/parceiros/ParceiroStatusIcon";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Users } from "lucide-react";
+import { Tooltip, TooltipProvider } from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -79,14 +74,11 @@ export default function GestaoParceiros() {
   const [saldosData, setSaldosData] = useState<Map<string, SaldoParceiro>>(new Map());
   const [saldosCryptoRaw, setSaldosCryptoRaw] = useState<SaldoCryptoRaw[]>([]);
   const [parceriasData, setParceriasData] = useState<Map<string, ParceriaStatus>>(new Map());
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("todos");
   const [showSensitiveData, setShowSensitiveData] = useState(true);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingParceiro, setEditingParceiro] = useState<Parceiro | null>(null);
   const [viewMode, setViewMode] = useState(false);
-  const [viewType, setViewType] = useState<"cards" | "list">("cards");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [parceiroToDelete, setParceiroToDelete] = useState<string | null>(null);
   const [vinculoDialogOpen, setVinculoDialogOpen] = useState(false);
@@ -94,7 +86,6 @@ export default function GestaoParceiros() {
   const [vinculoBookmakerId, setVinculoBookmakerId] = useState<string | null>(null);
   const [selectedParceiroDetalhes, setSelectedParceiroDetalhes] = useState<string | null>(null);
 
-  // Cache system for partner financial data (all tabs)
   const parceiroCache = useParceiroFinanceiroCache();
 
   const handleSelectParceiroDetalhes = useCallback((id: string) => {
@@ -178,7 +169,6 @@ export default function GestaoParceiros() {
 
   const fetchROIData = async () => {
     try {
-      // RLS policies handle workspace isolation - no need to filter by user_id
       const { data: financialData, error: financialError } = await supabase
         .from("cash_ledger")
         .select("*")
@@ -187,7 +177,6 @@ export default function GestaoParceiros() {
 
       if (financialError) throw financialError;
 
-      // Buscar saldo_atual (BRL) e saldo_usd para calcular saldo total corretamente
       const { data: bookmakersData, error: bookmakersError } = await supabase
         .from("bookmakers")
         .select("parceiro_id, saldo_atual, saldo_usd, moeda, status");
@@ -196,7 +185,6 @@ export default function GestaoParceiros() {
 
       const roiMap = new Map<string, ParceiroROI>();
       
-      // Separar por moeda: BRL vs USD
       const parceiroFinancials = new Map<string, { 
         depositado_brl: number; sacado_brl: number;
         depositado_usd: number; sacado_usd: number;
@@ -229,7 +217,6 @@ export default function GestaoParceiros() {
         }
       });
 
-      // Calcular saldo total de bookmakers separado por moeda
       const parceiroBookmakers = new Map<string, { 
         count: number; countLimitadas: number; saldo_brl: number; saldo_usd: number;
       }>();
@@ -244,7 +231,6 @@ export default function GestaoParceiros() {
         } else if (bm.status === "limitada") {
           current.countLimitadas += 1;
         }
-        // Separar saldo por moeda
         if (bm.moeda === "USD") {
           current.saldo_usd += Number(bm.saldo_usd || 0);
         } else {
@@ -260,7 +246,7 @@ export default function GestaoParceiros() {
         
         const lucro_brl = financials.sacado_brl + bookmakerInfo.saldo_brl - financials.depositado_brl;
         const lucro_usd = financials.sacado_usd + bookmakerInfo.saldo_usd - financials.depositado_usd;
-        const lucro_total = lucro_brl + lucro_usd; // Simplificado para compatibilidade
+        const lucro_total = lucro_brl + lucro_usd;
         const depositado_total = financials.depositado_brl + financials.depositado_usd;
         const roi = depositado_total > 0 ? (lucro_total / depositado_total) * 100 : 0;
         
@@ -303,7 +289,6 @@ export default function GestaoParceiros() {
 
   const fetchParceriasStatus = async () => {
     try {
-      // RLS policies handle workspace isolation - no need to filter by user_id
       const { data: parcerias, error } = await supabase
         .from("parcerias")
         .select("id, parceiro_id, data_fim_prevista, custo_aquisicao_isento, valor_parceiro")
@@ -356,7 +341,6 @@ export default function GestaoParceiros() {
 
   const fetchSaldosData = async () => {
     try {
-      // Views already filter by workspace via get_current_workspace()
       const { data: saldosFiat, error: errorFiat } = await supabase
         .from("v_saldo_parceiro_contas")
         .select("*");
@@ -407,13 +391,6 @@ export default function GestaoParceiros() {
     } catch (error: any) {
       console.error("Erro ao carregar saldos:", error);
     }
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
   };
 
   const handleDeleteClick = async (id: string) => {
@@ -468,7 +445,6 @@ export default function GestaoParceiros() {
 
       if (error) throw error;
 
-      // Invalidar cache do parceiro excluído
       parceiroCache.invalidateCache(parceiroToDelete);
 
       toast({
@@ -478,7 +454,6 @@ export default function GestaoParceiros() {
       fetchParceiros();
       setDeleteDialogOpen(false);
       
-      // Se o parceiro excluído era o selecionado, limpar seleção
       if (selectedParceiroDetalhes === parceiroToDelete) {
         setSelectedParceiroDetalhes(null);
         parceiroCache.selectParceiro(null);
@@ -493,18 +468,6 @@ export default function GestaoParceiros() {
     }
   };
 
-  const handleEdit = (parceiro: Parceiro) => {
-    setEditingParceiro(parceiro);
-    setViewMode(false);
-    setDialogOpen(true);
-  };
-
-  const handleView = (parceiro: Parceiro) => {
-    setEditingParceiro(parceiro);
-    setViewMode(true);
-    setDialogOpen(true);
-  };
-
   const handleDialogClose = () => {
     const editedParceiroId = editingParceiro?.id;
     setDialogOpen(false);
@@ -512,7 +475,6 @@ export default function GestaoParceiros() {
     setViewMode(false);
     fetchParceiros();
     fetchSaldosData();
-    // Invalidar cache do parceiro editado para forçar refresh
     if (editedParceiroId) {
       parceiroCache.invalidateCache(editedParceiroId);
     }
@@ -524,7 +486,6 @@ export default function GestaoParceiros() {
     setVinculoParceiroId(null);
     setVinculoBookmakerId(null);
     fetchParceiros();
-    // Invalidar cache do parceiro que recebeu novo vínculo
     if (parceiroId) {
       parceiroCache.invalidateCache(parceiroId);
     }
@@ -535,25 +496,6 @@ export default function GestaoParceiros() {
     setVinculoBookmakerId(bookmakerCatalogoId);
     setVinculoDialogOpen(true);
   };
-
-  const maskCPF = (cpf: string) => {
-    if (showSensitiveData) return formatCPF(cpf);
-    return maskCPFPartial(cpf);
-  };
-
-  const maskCurrency = (value: number) => {
-    if (showSensitiveData) return formatCurrency(value);
-    return "R$ ••••";
-  };
-
-  const filteredParceiros = parceiros.filter((parceiro) => {
-    const matchesSearch =
-      parceiro.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      parceiro.cpf.includes(searchTerm);
-    const matchesStatus =
-      statusFilter === "todos" || parceiro.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
 
   // Auto-select first partner when list loads and none is selected
   useEffect(() => {
@@ -581,26 +523,31 @@ export default function GestaoParceiros() {
     });
   }, [parceiros, roiData, parceriasData]);
 
-  const stats = {
-    total: parceiros.length,
-    ativos: parceiros.filter((p) => p.status === "ativo").length,
-    inativos: parceiros.filter((p) => p.status === "inativo").length,
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <div className="text-muted-foreground">Carregando...</div>
       </div>
     );
   }
 
+  /*
+   * ARQUITETURA CONTAINER-FIRST
+   * 
+   * PageRoot (h-full = 100% da viewport disponível)
+   * ├─ PageHeader (shrink-0 = altura fixa)
+   * └─ PageBody (flex-1 = preenche espaço restante)
+   *     ├─ SidebarParceiros (w-fixo, scroll próprio)
+   *     └─ MainPanel (flex-1, organiza header + tabs + viewport)
+   */
   return (
     <TooltipProvider>
-      <div className="h-full flex flex-col bg-background overflow-hidden">
-        <div className="flex flex-col flex-1 min-h-0 px-4 py-6">
-          {/* Header - shrink-0 para não comprimir */}
-          <div className="flex items-center gap-4 mb-4 shrink-0">
+      {/* PageRoot: altura total, flex-col, sem overflow */}
+      <div className="h-full flex flex-col bg-background">
+        
+        {/* PageHeader: altura fixa, nunca comprime */}
+        <div className="shrink-0 px-4 pt-6 pb-4">
+          <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
               <Users className="h-6 w-6 text-primary" />
             </div>
@@ -612,60 +559,61 @@ export default function GestaoParceiros() {
               className="flex-1"
             />
           </div>
+        </div>
 
-          {/* Partner Details Layout - flex-1 min-h-0 para ocupar espaço restante */}
-          <Card className="border-border bg-gradient-surface overflow-hidden flex-1 min-h-0">
-            <div className="grid grid-cols-[340px_1fr] lg:grid-cols-[360px_1fr] h-full min-h-0">
-              {/* Painel Esquerdo - Lista de Parceiros */}
-              <div className="h-full min-h-0 overflow-hidden">
-                <ParceiroListaSidebar
-                  parceiros={parceirosParaSidebar}
-                  selectedId={selectedParceiroDetalhes}
-                  onSelect={handleSelectParceiroDetalhes}
-                  showSensitiveData={showSensitiveData}
-                  onAddParceiro={() => setDialogOpen(true)}
-                />
-              </div>
+        {/* PageBody: flex-1 ocupa espaço restante, min-h-0 permite shrink */}
+        <div className="flex-1 min-h-0 px-4 pb-6">
+          <Card className="h-full border-border bg-gradient-surface overflow-hidden">
+            {/* Layout Grid: duas colunas com altura 100% */}
+            <div className="h-full grid grid-cols-[340px_1fr] lg:grid-cols-[360px_1fr]">
+              
+              {/* Sidebar: altura 100%, scroll próprio interno */}
+              <ParceiroListaSidebar
+                parceiros={parceirosParaSidebar}
+                selectedId={selectedParceiroDetalhes}
+                onSelect={handleSelectParceiroDetalhes}
+                showSensitiveData={showSensitiveData}
+                onAddParceiro={() => setDialogOpen(true)}
+              />
 
-              {/* Painel Direito - Detalhes */}
-              <div className="h-full min-h-0 overflow-hidden">
-                <ParceiroDetalhesPanel 
-                  parceiroId={selectedParceiroDetalhes} 
-                  showSensitiveData={showSensitiveData}
-                  onToggleSensitiveData={() => setShowSensitiveData(!showSensitiveData)}
-                  onCreateVinculo={handleCreateVinculo}
-                  parceiroStatus={parceiros.find(p => p.id === selectedParceiroDetalhes)?.status}
-                  hasParceria={parceriasData.has(selectedParceiroDetalhes || '')}
-                  diasRestantes={parceriasData.get(selectedParceiroDetalhes || '')?.dias_restantes ?? null}
-                  onViewParceiro={() => {
-                    const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
-                    if (parceiro) {
-                      setEditingParceiro(parceiro);
-                      setViewMode(true);
-                      setDialogOpen(true);
-                    }
-                  }}
-                  onEditParceiro={() => {
-                    const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
-                    if (parceiro) {
-                      setEditingParceiro(parceiro);
-                      setViewMode(false);
-                      setDialogOpen(true);
-                    }
-                  }}
-                  onDeleteParceiro={() => {
-                    if (selectedParceiroDetalhes) {
-                      setParceiroToDelete(selectedParceiroDetalhes);
-                      setDeleteDialogOpen(true);
-                    }
-                  }}
-                  parceiroCache={parceiroCache}
-                />
-              </div>
+              {/* MainPanel: altura 100%, gerencia internamente */}
+              <ParceiroDetalhesPanel 
+                parceiroId={selectedParceiroDetalhes} 
+                showSensitiveData={showSensitiveData}
+                onToggleSensitiveData={() => setShowSensitiveData(!showSensitiveData)}
+                onCreateVinculo={handleCreateVinculo}
+                parceiroStatus={parceiros.find(p => p.id === selectedParceiroDetalhes)?.status}
+                hasParceria={parceriasData.has(selectedParceiroDetalhes || '')}
+                diasRestantes={parceriasData.get(selectedParceiroDetalhes || '')?.dias_restantes ?? null}
+                onViewParceiro={() => {
+                  const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
+                  if (parceiro) {
+                    setEditingParceiro(parceiro);
+                    setViewMode(true);
+                    setDialogOpen(true);
+                  }
+                }}
+                onEditParceiro={() => {
+                  const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
+                  if (parceiro) {
+                    setEditingParceiro(parceiro);
+                    setViewMode(false);
+                    setDialogOpen(true);
+                  }
+                }}
+                onDeleteParceiro={() => {
+                  if (selectedParceiroDetalhes) {
+                    setParceiroToDelete(selectedParceiroDetalhes);
+                    setDeleteDialogOpen(true);
+                  }
+                }}
+                parceiroCache={parceiroCache}
+              />
             </div>
           </Card>
         </div>
 
+        {/* Dialogs */}
         <ParceiroDialog
           open={dialogOpen}
           onClose={handleDialogClose}
