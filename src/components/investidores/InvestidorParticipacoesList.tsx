@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { Layers, Calendar, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Layers, Calendar, CheckCircle2, Clock, AlertCircle, ExternalLink } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,6 +70,7 @@ const getStatusConfig = (status: string) => {
 };
 
 export function InvestidorParticipacoesList({ investidorId }: InvestidorParticipacoesListProps) {
+  const navigate = useNavigate();
   const [participacoes, setParticipacoes] = useState<Participacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [totais, setTotais] = useState({
@@ -183,6 +186,29 @@ export function InvestidorParticipacoesList({ investidorId }: InvestidorParticip
           </CardContent>
         </Card>
       </div>
+
+      {/* Botão de navegação para gerenciar pagamentos */}
+      {totais.pendente > 0 && (
+        <Card className="bg-warning/5 border-warning/20">
+          <CardContent className="py-3 flex items-center justify-between">
+            <div className="text-sm">
+              <span className="text-warning font-medium">
+                {participacoes.filter(p => p.status === "A_PAGAR" || p.status === "AGUARDANDO").length}
+              </span>
+              <span className="text-muted-foreground"> participação(ões) pendente(s)</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-warning/30 text-warning hover:bg-warning/10"
+              onClick={() => navigate(`/financeiro?tab=participacoes&investidor=${investidorId}`)}
+            >
+              <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+              Gerenciar Pagamentos
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Separator />
 

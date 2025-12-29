@@ -1,14 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Users, CheckCircle2, Clock, TrendingUp, Plus, Gift, Hourglass } from "lucide-react";
+import { Loader2, Users, CheckCircle2, Clock, TrendingUp, Plus, Gift, Hourglass, X, Filter } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PagamentoParticipacaoDialog } from "@/components/projetos/PagamentoParticipacaoDialog";
 import { ParticipacaoManualDialog } from "./ParticipacaoManualDialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Participacao {
   id: string;
@@ -30,22 +38,41 @@ interface Participacao {
   projeto_ciclos?: { numero_ciclo: number; status: string } | null;
 }
 
+interface Investidor {
+  id: string;
+  nome: string;
+}
+
 interface ParticipacaoInvestidoresTabProps {
   formatCurrency: (value: number, currency?: string) => string;
   onRefresh?: () => void;
+  investidorFiltroId?: string;
 }
 
-export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: ParticipacaoInvestidoresTabProps) {
+export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investidorFiltroId }: ParticipacaoInvestidoresTabProps) {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [participacoes, setParticipacoes] = useState<Participacao[]>([]);
   const [pagamentoDialogOpen, setPagamentoDialogOpen] = useState(false);
   const [selectedParticipacao, setSelectedParticipacao] = useState<Participacao | null>(null);
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  
+  // Filtro de investidor
+  const [investidores, setInvestidores] = useState<Investidor[]>([]);
+  const [filtroInvestidor, setFiltroInvestidor] = useState<string | null>(investidorFiltroId || null);
 
   useEffect(() => {
     fetchData();
+    fetchInvestidores();
   }, []);
+
+  // Atualizar filtro quando investidorFiltroId mudar
+  useEffect(() => {
+    if (investidorFiltroId) {
+      setFiltroInvestidor(investidorFiltroId);
+    }
+  }, [investidorFiltroId]);
 
   const fetchData = async () => {
     try {
@@ -94,6 +121,33 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
     }
   };
 
+  const fetchInvestidores = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("investidores")
+        .select("id, nome")
+        .order("nome");
+      
+      if (error) throw error;
+      setInvestidores(data || []);
+    } catch (error: any) {
+      console.error("Erro ao carregar investidores:", error);
+    }
+  };
+
+  // Limpar filtro e URL
+  const handleLimparFiltro = () => {
+    setFiltroInvestidor(null);
+    // Limpar parâmetro da URL
+    navigate("/financeiro?tab=participacoes", { replace: true });
+  };
+
+  // Obter nome do investidor filtrado
+  const investidorFiltradoNome = useMemo(() => {
+    if (!filtroInvestidor) return null;
+    return investidores.find(i => i.id === filtroInvestidor)?.nome || null;
+  }, [filtroInvestidor, investidores]);
+
   const handlePagar = (participacao: Participacao) => {
     setSelectedParticipacao(participacao);
     setPagamentoDialogOpen(true);
@@ -109,19 +163,25 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
     onRefresh?.();
   };
 
+  // Aplicar filtro de investidor
+  const participacoesFiltradas = useMemo(() => {
+    if (!filtroInvestidor) return participacoes;
+    return participacoes.filter(p => p.investidor_id === filtroInvestidor);
+  }, [participacoes, filtroInvestidor]);
+
   // Aguardando: AGUARDANDO_CICLO ou (A_PAGAR mas ciclo ainda EM_ANDAMENTO)
-  const aguardando = participacoes.filter(p => 
+  const aguardando = participacoesFiltradas.filter(p => 
     p.status === "AGUARDANDO_CICLO" ||
     (p.status === "A_PAGAR" && p.projeto_ciclos?.status === "EM_ANDAMENTO")
   );
   
   // Pendentes (prontas para pagar): A_PAGAR e ciclo FECHADO ou CONCLUIDO
-  const pendentes = participacoes.filter(p => 
+  const pendentes = participacoesFiltradas.filter(p => 
     p.status === "A_PAGAR" && 
     p.projeto_ciclos?.status !== "EM_ANDAMENTO"
   );
   
-  const pagas = participacoes.filter(p => p.status === "PAGO");
+  const pagas = participacoesFiltradas.filter(p => p.status === "PAGO");
 
   const totalAguardando = aguardando.reduce((acc, p) => acc + p.valor_participacao, 0);
   const totalPendente = pendentes.reduce((acc, p) => acc + p.valor_participacao, 0);
@@ -137,14 +197,63 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
 
   return (
     <div className="space-y-6">
-      {/* Header com botão */}
-      <div className="flex items-center justify-between">
-        <div />
+      {/* Header com filtro e botão */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select
+            value={filtroInvestidor || "todos"}
+            onValueChange={(value) => {
+              if (value === "todos") {
+                handleLimparFiltro();
+              } else {
+                setFiltroInvestidor(value);
+              }
+            }}
+          >
+            <SelectTrigger className="w-[220px]">
+              <SelectValue placeholder="Filtrar por investidor" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os investidores</SelectItem>
+              {investidores.map((inv) => (
+                <SelectItem key={inv.id} value={inv.id}>
+                  {inv.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          {filtroInvestidor && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLimparFiltro}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Limpar
+            </Button>
+          )}
+        </div>
+        
         <Button onClick={() => setManualDialogOpen(true)} size="sm">
           <Plus className="h-4 w-4 mr-2" />
           Nova Participação Manual
         </Button>
       </div>
+
+      {/* Badge de filtro ativo */}
+      {investidorFiltradoNome && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="py-3 flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            <span className="text-sm">
+              Exibindo participações de: <strong>{investidorFiltradoNome}</strong>
+            </span>
+          </CardContent>
+        </Card>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -202,7 +311,7 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh }: Parti
               <div>
                 <p className="text-sm text-muted-foreground">Total</p>
                 <p className="text-xl font-bold">{formatCurrency(totalAguardando + totalPendente + totalPago)}</p>
-                <p className="text-xs text-muted-foreground">{participacoes.length} total</p>
+                <p className="text-xs text-muted-foreground">{participacoesFiltradas.length} total</p>
               </div>
             </div>
           </CardContent>
