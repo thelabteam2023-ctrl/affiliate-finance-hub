@@ -77,8 +77,10 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
       triggerRef.current?.focus();
     },
     open: () => {
+      // Garantir foco antes do click (Radix Select pode ignorar click sem foco após fechar outro Select)
+      triggerRef.current?.focus();
       triggerRef.current?.click();
-    }
+    },
   }));
 
   // Buscar lista de parceiros ativos + parceiro atual se fornecido

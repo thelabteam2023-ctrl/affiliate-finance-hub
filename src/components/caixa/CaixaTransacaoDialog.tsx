@@ -635,23 +635,44 @@ export function CaixaTransacaoDialog({
     }
   }, [tipoMoeda, tipoTransacao, bookmakers, saldosParceirosWallets, coin]);
   
-  // SAQUE CRYPTO: quando coin é selecionado, abre o select Parceiro
+  // SAQUE CRYPTO: quando coin é selecionado, foca/abre o select Parceiro
   useEffect(() => {
     if (tipoTransacao !== "SAQUE" || tipoMoeda !== "CRYPTO") return;
     if (!coin) return;
-    
-    // Sempre abrir parceiro quando coin muda (ignorar prevCoin para garantir foco)
+
     const coinMudou = coin !== prevCoin.current;
     prevCoin.current = coin;
-    
     if (!coinMudou) return;
-    
-    // Abrir select de parceiro automaticamente
-    if (parceiroSelectRef.current) {
-      setTimeout(() => {
-        parceiroSelectRef.current?.open();
-      }, 150);
-    }
+
+    // Radix Select pode ignorar o click se outro Select acabou de fechar.
+    // Além disso, o ParceiroSelect é renderizado condicionalmente, então o ref pode não estar pronto ainda.
+    const OPEN_DELAY_MS = 320;
+    const MAX_TRIES = 12;
+    const TRY_EVERY_MS = 60;
+
+    let tries = 0;
+    const tryOpen = () => {
+      tries += 1;
+      const ref = parceiroSelectRef.current;
+
+      if (ref) {
+        ref.focus();
+        // double-rAF ajuda quando o DOM acabou de renderizar
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            ref.open();
+          });
+        });
+        return;
+      }
+
+      if (tries < MAX_TRIES) {
+        setTimeout(tryOpen, TRY_EVERY_MS);
+      }
+    };
+
+    const id = window.setTimeout(tryOpen, OPEN_DELAY_MS);
+    return () => window.clearTimeout(id);
   }, [coin, tipoTransacao, tipoMoeda]);
 
   // SAQUE CRYPTO: quando parceiro é selecionado, abre o select Wallet (DESTINO)
