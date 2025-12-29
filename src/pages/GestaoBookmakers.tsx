@@ -335,18 +335,18 @@ export default function GestaoBookmakers() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+    <div className="h-screen flex flex-col bg-background">
+      <div className="container mx-auto px-4 py-8 flex flex-col flex-1 min-h-0">
         <PageHeader
           title="Gestão de Bookmakers"
           description="Bookmakers disponíveis e vínculos gerenciados"
           pagePath="/bookmakers"
           pageIcon="Building2"
-          className="mb-8"
+          className="mb-8 shrink-0"
         />
 
-        <Tabs defaultValue="contas" className="space-y-6">
-          <TabsList className={`grid w-full max-w-md ${isSystemOwner ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        <Tabs defaultValue="contas" className="flex flex-col flex-1 min-h-0">
+          <TabsList className={`grid w-full max-w-md shrink-0 ${isSystemOwner ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <TabsTrigger value="contas" className="flex items-center gap-2">
               <Wallet className="h-4 w-4" />
               Vínculos
@@ -363,17 +363,17 @@ export default function GestaoBookmakers() {
             )}
           </TabsList>
 
-          <TabsContent value="catalogo">
+          <TabsContent value="catalogo" className="flex-1 min-h-0 overflow-y-auto mt-6">
             <CatalogoBookmakers />
           </TabsContent>
 
           {isSystemOwner && (
-            <TabsContent value="grupos">
+            <TabsContent value="grupos" className="flex-1 min-h-0 overflow-y-auto mt-6">
               <AccessGroupsManager />
             </TabsContent>
           )}
 
-          <TabsContent value="contas" className="space-y-6">
+          <TabsContent value="contas" className="flex-1 min-h-0 overflow-y-auto mt-6 space-y-6">
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
