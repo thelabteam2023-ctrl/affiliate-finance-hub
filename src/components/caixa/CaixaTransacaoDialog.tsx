@@ -398,7 +398,7 @@ export function CaixaTransacaoDialog({
   }, [open]);
 
   useEffect(() => {
-    // Reset origin/destination when transaction type changes
+    // Reset ALL fields when transaction type changes to avoid inheriting data
     setOrigemTipo("");
     setOrigemParceiroId("");
     setOrigemContaId("");
@@ -412,6 +412,27 @@ export function CaixaTransacaoDialog({
     setFluxoTransferencia("CAIXA_PARCEIRO");
     setFluxoAporte("APORTE");
     setInvestidorId("");
+    
+    // Reset valores e moedas
+    setValor("");
+    setValorDisplay("");
+    setQtdCoin("");
+    setCotacao("");
+    setCoin("");
+    setTipoMoeda("FIAT");
+    setMoeda("BRL");
+    setDescricao("");
+    
+    // Reset refs de tracking para auto-focus
+    prevCoin.current = "";
+    prevDestinoParceiroId.current = "";
+    prevDestinoWalletId.current = "";
+    prevDestinoContaId.current = "";
+    prevOrigemBookmakerId.current = "";
+    prevOrigemParceiroId.current = "";
+    prevOrigemContaId.current = "";
+    prevOrigemWalletId.current = "";
+    prevDestinoBookmakerId.current = "";
 
     // Set defaults based on transaction type
     if (tipoTransacao === "APORTE_FINANCEIRO") {
@@ -419,11 +440,9 @@ export function CaixaTransacaoDialog({
     } else if (tipoTransacao === "DEPOSITO") {
       setOrigemTipo("PARCEIRO_CONTA");
       setDestinoTipo("BOOKMAKER");
-      // Não força FIAT - permite FIAT ou CRYPTO baseado nas moedas disponíveis nos parceiros
     } else if (tipoTransacao === "SAQUE") {
       setOrigemTipo("BOOKMAKER");
       setDestinoTipo("PARCEIRO_CONTA");
-      // SAQUE suporta FIAT e CRYPTO - padrão FIAT
       setTipoMoeda("FIAT");
     } else if (tipoTransacao === "TRANSFERENCIA") {
       setOrigemTipo("CAIXA_OPERACIONAL");
