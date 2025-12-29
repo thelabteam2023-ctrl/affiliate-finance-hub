@@ -150,10 +150,11 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     const contextChanged = prev.parceiroId !== parceiroId || prev.moedaOperacional !== moedaOperacional;
     
     if (contextChanged) {
-      // CRÍTICO: Limpar lista quando contexto muda
+      // CRÍTICO: Limpar TUDO quando contexto muda - zero estado residual
       setItems([]);
       setPrerequisitesReady(false);
       setDisplayData(null);
+      setLoadingDisplay(false); // Evitar estado "Carregando..." fantasma
       lastFetchedValue.current = "";
       
       // Se o value atual não pode mais existir no novo contexto, limpar
