@@ -638,7 +638,13 @@ export function CaixaTransacaoDialog({
   // SAQUE CRYPTO: quando coin é selecionado, abre o select Parceiro
   useEffect(() => {
     if (tipoTransacao !== "SAQUE" || tipoMoeda !== "CRYPTO") return;
-    if (!coin || coin === prevCoin.current) return;
+    if (!coin) return;
+    
+    // Sempre abrir parceiro quando coin muda (ignorar prevCoin para garantir foco)
+    const coinMudou = coin !== prevCoin.current;
+    prevCoin.current = coin;
+    
+    if (!coinMudou) return;
     
     // Abrir select de parceiro automaticamente
     if (parceiroSelectRef.current) {
@@ -646,8 +652,6 @@ export function CaixaTransacaoDialog({
         parceiroSelectRef.current?.open();
       }, 150);
     }
-    
-    prevCoin.current = coin;
   }, [coin, tipoTransacao, tipoMoeda]);
 
   // SAQUE CRYPTO: quando parceiro é selecionado, abre o select Wallet (DESTINO)
@@ -935,6 +939,13 @@ export function CaixaTransacaoDialog({
     setDestinoWalletId("");
     setDestinoBookmakerId("");
     setFluxoTransferencia("CAIXA_PARCEIRO");
+    
+    // Reset refs de tracking para auto-focus
+    prevCoin.current = "";
+    prevDestinoParceiroId.current = "";
+    prevDestinoWalletId.current = "";
+    prevDestinoContaId.current = "";
+    prevOrigemBookmakerId.current = "";
   };
 
   const getSaldoAtual = (tipo: string, id?: string): number => {
