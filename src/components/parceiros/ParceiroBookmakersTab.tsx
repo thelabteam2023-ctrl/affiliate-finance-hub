@@ -221,18 +221,29 @@ export function ParceiroBookmakersTab({
     return bm.login_username && bm.login_username.trim();
   };
 
+  // ==========================================
+  // LAYOUT ESTRUTURAL - ARQUITETURA CORRETA
+  // ==========================================
+  // Container: h-full flex flex-col
+  // Grid: flex-1 min-h-0 grid grid-cols-2
+  // Colunas: flex flex-col min-h-0
+  // ScrollArea: flex-1 min-h-0
+  // ==========================================
+
   if (loading) {
     return (
-      <div className="grid grid-cols-2 gap-3 p-2">
-        <div className="space-y-2">
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-14" />
-          ))}
-        </div>
-        <div className="space-y-2">
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-14" />
-          ))}
+      <div className="h-full flex flex-col p-3">
+        <div className="flex-1 min-h-0 grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-2">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-14 shrink-0" />
+            ))}
+          </div>
+          <div className="flex flex-col gap-2">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-14 shrink-0" />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -240,7 +251,7 @@ export function ParceiroBookmakersTab({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-destructive gap-3">
+      <div className="h-full flex flex-col items-center justify-center text-destructive gap-3">
         <AlertCircle className="h-8 w-8 opacity-50" />
         <p className="text-sm">Erro ao carregar bookmakers</p>
         <Button variant="outline" size="sm" onClick={fetchData}>
@@ -268,299 +279,303 @@ export function ParceiroBookmakersTab({
 
   return (
     <TooltipProvider>
-      <div className="h-full grid grid-cols-2 gap-3 p-2">
-        {/* Coluna: Casas Vinculadas */}
-        <div className="flex flex-col min-h-0 gap-2">
-          <div className="flex items-center gap-2 shrink-0">
-            <Building2 className="h-4 w-4 text-primary" />
-            <h4 className="text-sm font-medium">Casas Vinculadas</h4>
-            <Badge variant="secondary" className="text-xs ml-auto">
-              {bookmakersVinculados.length}
-            </Badge>
-          </div>
+      {/* Container principal - h-full flex flex-col */}
+      <div className="h-full flex flex-col min-h-0 p-3">
+        {/* Grid de 2 colunas - flex-1 para ocupar espaço restante */}
+        <div className="flex-1 min-h-0 grid grid-cols-2 gap-3">
+          
+          {/* Coluna: Casas Vinculadas */}
+          <div className="flex flex-col min-h-0 gap-2">
+            {/* Header fixo */}
+            <div className="flex items-center gap-2 shrink-0">
+              <Building2 className="h-4 w-4 text-primary" />
+              <h4 className="text-sm font-medium">Casas Vinculadas</h4>
+              <Badge variant="secondary" className="text-xs ml-auto">
+                {bookmakersVinculados.length}
+              </Badge>
+            </div>
 
-          <div className="relative shrink-0">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Buscar..."
-              value={searchVinculados}
-              onChange={(e) => setSearchVinculados(e.target.value)}
-              className="pl-7 h-8 text-xs"
-            />
-          </div>
+            {/* Search fixo */}
+            <div className="relative shrink-0">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Buscar..."
+                value={searchVinculados}
+                onChange={(e) => setSearchVinculados(e.target.value)}
+                className="pl-7 h-8 text-xs"
+              />
+            </div>
 
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="space-y-1.5 pb-3">
-              {displayedVinculados.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground text-xs">
-                  <AlertCircle className="h-6 w-6 mx-auto mb-1 opacity-30" />
-                  Nenhuma casa vinculada
-                </div>
-              ) : (
-                displayedVinculados.map((bm) => (
-                  <div
-                    key={bm.id}
-                    className="flex items-center gap-2 p-2 border border-border rounded-lg hover:bg-muted/20"
-                  >
-                    {bm.logo_url ? (
-                      <img
-                        src={bm.logo_url}
-                        alt={bm.nome}
-                        className="h-10 w-10 rounded object-contain bg-white p-0.5 shrink-0"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
-                        <Building2 className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    )}
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-xs font-medium truncate">{bm.nome}</p>
-                        {hasCredentials(bm) && (
-                          <Popover
-                            open={credentialsPopoverOpen === bm.id}
-                            onOpenChange={(open) => setCredentialsPopoverOpen(open ? bm.id : null)}
+            {/* Lista com scroll - flex-1 min-h-0 */}
+            <ScrollArea className="flex-1 min-h-0">
+              <div className="space-y-1.5 pr-2">
+                {displayedVinculados.length === 0 ? (
+                  <div className="text-center py-6 text-muted-foreground text-xs">
+                    <AlertCircle className="h-6 w-6 mx-auto mb-1 opacity-30" />
+                    Nenhuma casa vinculada
+                  </div>
+                ) : (
+                  displayedVinculados.map((bm) => (
+                    <div
+                      key={bm.id}
+                      className="flex items-center gap-2 p-2 border border-border rounded-lg hover:bg-muted/20"
+                    >
+                      {bm.logo_url ? (
+                        <img
+                          src={bm.logo_url}
+                          alt={bm.nome}
+                          className="h-10 w-10 rounded object-contain bg-white p-0.5 shrink-0"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
+                          <Building2 className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      )}
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-medium truncate">{bm.nome}</p>
+                          {hasCredentials(bm) && (
+                            <Popover
+                              open={credentialsPopoverOpen === bm.id}
+                              onOpenChange={(open) => setCredentialsPopoverOpen(open ? bm.id : null)}
+                            >
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="h-6 w-6 p-0.5 shrink-0 rounded hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCredentialsPopoverOpen(credentialsPopoverOpen === bm.id ? null : bm.id);
+                                  }}
+                                >
+                                  <IdCard className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-52 p-2" align="start">
+                                <div className="space-y-2">
+                                  <div>
+                                    <label className="text-[10px] text-muted-foreground">Usuário</label>
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                      <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
+                                        {showSensitiveData ? bm.login_username : "••••••"}
+                                      </code>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => copyToClipboard(bm.login_username, "Usuário")}
+                                        className="h-6 w-6 p-0 shrink-0"
+                                      >
+                                        {copiedField === "Usuário" ? (
+                                          <Check className="h-3 w-3 text-success" />
+                                        ) : (
+                                          <Copy className="h-3 w-3" />
+                                        )}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] text-muted-foreground">Senha</label>
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                      <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
+                                        {showSensitiveData ? decryptPassword(bm.login_password_encrypted) : "••••••"}
+                                      </code>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => copyToClipboard(decryptPassword(bm.login_password_encrypted), "Senha")}
+                                        className="h-6 w-6 p-0 shrink-0"
+                                      >
+                                        {copiedField === "Senha" ? (
+                                          <Check className="h-3 w-3 text-success" />
+                                        ) : (
+                                          <Copy className="h-3 w-3" />
+                                        )}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-muted-foreground truncate">
+                            {maskUsername(bm.login_username)}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">•</span>
+                          <Badge 
+                            variant="outline" 
+                            className={`text-[8px] px-1 py-0 h-3.5 ${
+                              isUSDMoeda(bm.moeda) 
+                                ? "border-amber-500/50 text-amber-500" 
+                                : "border-emerald-500/50 text-emerald-500"
+                            }`}
                           >
-                            <PopoverTrigger asChild>
-                              <button
-                                type="button"
-                                className="h-6 w-6 p-0.5 shrink-0 rounded hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center"
+                            {isUSDMoeda(bm.moeda) ? "USD" : "BRL"}
+                          </Badge>
+                          <span className="text-[10px] font-medium">
+                            {maskCurrency(getSaldoCorreto(bm), bm.moeda)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-1.5"
+                            disabled={editingStatus === bm.id}
+                          >
+                            {bm.status === "ativo" ? (
+                              <ShieldCheck className="h-4 w-4 text-success" />
+                            ) : (
+                              <ShieldAlert className="h-4 w-4 text-warning" />
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-3" align="end">
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">
+                              Alterar status para{" "}
+                              <span className="font-semibold">
+                                {bm.status === "ativo" ? "LIMITADA" : "ATIVO"}
+                              </span>
+                              ?
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs"
                                 onClick={(e) => {
-                                  e.stopPropagation();
-                                  setCredentialsPopoverOpen(credentialsPopoverOpen === bm.id ? null : bm.id);
+                                  const popover = e.currentTarget.closest('[data-radix-popper-content-wrapper]');
+                                  if (popover) {
+                                    const trigger = document.querySelector(`[aria-expanded="true"]`) as HTMLButtonElement;
+                                    trigger?.click();
+                                  }
                                 }}
                               >
-                                <IdCard className="h-5 w-5 text-muted-foreground hover:text-foreground" />
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-52 p-2" align="start">
-                              <div className="space-y-2">
-                                <div>
-                                  <label className="text-[10px] text-muted-foreground">Usuário</label>
-                                  <div className="flex items-center gap-1 mt-0.5">
-                                    <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
-                                      {showSensitiveData ? bm.login_username : "••••••"}
-                                    </code>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => copyToClipboard(bm.login_username, "Usuário")}
-                                      className="h-6 w-6 p-0 shrink-0"
-                                    >
-                                      {copiedField === "Usuário" ? (
-                                        <Check className="h-3 w-3 text-success" />
-                                      ) : (
-                                        <Copy className="h-3 w-3" />
-                                      )}
-                                    </Button>
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="text-[10px] text-muted-foreground">Senha</label>
-                                  <div className="flex items-center gap-1 mt-0.5">
-                                    <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
-                                      {showSensitiveData ? decryptPassword(bm.login_password_encrypted) : "••••••"}
-                                    </code>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => copyToClipboard(decryptPassword(bm.login_password_encrypted), "Senha")}
-                                      className="h-6 w-6 p-0 shrink-0"
-                                    >
-                                      {copiedField === "Senha" ? (
-                                        <Check className="h-3 w-3 text-success" />
-                                      ) : (
-                                        <Copy className="h-3 w-3" />
-                                      )}
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-muted-foreground truncate">
-                          {maskUsername(bm.login_username)}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground">•</span>
-                        <Badge 
-                          variant="outline" 
-                          className={`text-[8px] px-1 py-0 h-3.5 ${
-                            isUSDMoeda(bm.moeda) 
-                              ? "border-amber-500/50 text-amber-500" 
-                              : "border-emerald-500/50 text-emerald-500"
-                          }`}
-                        >
-                          {isUSDMoeda(bm.moeda) ? "USD" : "BRL"}
-                        </Badge>
-                        <span className="text-[10px] font-medium">
-                          {maskCurrency(getSaldoCorreto(bm), bm.moeda)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-1.5"
-                          disabled={editingStatus === bm.id}
-                        >
-                          {bm.status === "ativo" ? (
-                            <ShieldCheck className="h-4 w-4 text-success" />
-                          ) : (
-                            <ShieldAlert className="h-4 w-4 text-warning" />
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-3" align="end">
-                        <div className="space-y-2">
-                          <p className="text-xs text-muted-foreground">
-                            Alterar status para{" "}
-                            <span className="font-semibold">
-                              {bm.status === "ativo" ? "LIMITADA" : "ATIVO"}
-                            </span>
-                            ?
-                          </p>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-xs"
-                              onClick={(e) => {
-                                const popover = e.currentTarget.closest('[data-radix-popper-content-wrapper]');
-                                if (popover) {
-                                  const trigger = document.querySelector(`[aria-expanded="true"]`) as HTMLButtonElement;
-                                  trigger?.click();
-                                }
-                              }}
-                            >
-                              Cancelar
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => handleToggleStatus(bm.id, bm.status)}
-                            >
-                              Confirmar
-                            </Button>
+                                Cancelar
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => handleToggleStatus(bm.id, bm.status)}
+                                disabled={editingStatus === bm.id}
+                              >
+                                Confirmar
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                ))
-              )}
-
-              {hasMoreVinculados && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full h-7 text-xs"
-                  onClick={() => setShowAllVinculados(!showAllVinculados)}
-                >
-                  {showAllVinculados ? (
-                    <>
-                      <ChevronUp className="h-3 w-3 mr-1" />
-                      Ver menos
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="h-3 w-3 mr-1" />
-                      Ver mais ({filteredVinculados.length - 6})
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-
-        {/* Coluna: Casas Disponíveis */}
-        <div className="flex flex-col min-h-0 gap-2">
-          <div className="flex items-center gap-2 shrink-0">
-            <Plus className="h-4 w-4 text-muted-foreground" />
-            <h4 className="text-sm font-medium">Casas Disponíveis</h4>
-            <Badge variant="outline" className="text-xs ml-auto">
-              {bookmakersDisponiveis.length}
-            </Badge>
-          </div>
-
-          <div className="relative shrink-0">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Buscar..."
-              value={searchDisponiveis}
-              onChange={(e) => setSearchDisponiveis(e.target.value)}
-              className="pl-7 h-8 text-xs"
-            />
-          </div>
-
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="space-y-1.5 pb-3">
-              {filteredDisponiveis.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground text-xs">
-                  <AlertCircle className="h-6 w-6 mx-auto mb-1 opacity-30" />
-                  {bookmakersDisponiveis.length === 0
-                    ? "Todas as casas já estão vinculadas"
-                    : "Nenhuma casa encontrada"}
-                </div>
-              ) : (
-                filteredDisponiveis.map((bm) => (
-                  <div
-                    key={bm.id}
-                    className="flex items-center gap-2 p-2 border border-border rounded-lg hover:bg-muted/20"
-                  >
-                    {bm.logo_url ? (
-                      <img
-                        src={bm.logo_url}
-                        alt={bm.nome}
-                        className="h-10 w-10 rounded object-contain bg-white p-0.5 shrink-0"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
-                        <Building2 className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    )}
-                    
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate">{bm.nome}</p>
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] px-1 py-0 h-4 ${
-                          bm.status === 'REGULAMENTADA' 
-                            ? 'border-green-500/30 text-green-500' 
-                            : 'border-amber-500/30 text-amber-500'
-                        }`}
-                      >
-                        {bm.status === 'REGULAMENTADA' ? 'Regulamentada' : 'Não Regulamentada'}
-                      </Badge>
+                        </PopoverContent>
+                      </Popover>
                     </div>
+                  ))
+                )}
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0"
-                          onClick={() => handleCreateVinculo(bm.id)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Vincular casa</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                ))
-              )}
+                {/* Botão "Ver mais" */}
+                {hasMoreVinculados && !showAllVinculados && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full h-7 text-xs text-muted-foreground"
+                    onClick={() => setShowAllVinculados(true)}
+                  >
+                    <ChevronDown className="h-3 w-3 mr-1" />
+                    Ver mais ({filteredVinculados.length - 6})
+                  </Button>
+                )}
+
+                {showAllVinculados && hasMoreVinculados && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full h-7 text-xs text-muted-foreground"
+                    onClick={() => setShowAllVinculados(false)}
+                  >
+                    <ChevronUp className="h-3 w-3 mr-1" />
+                    Ver menos
+                  </Button>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+
+          {/* Coluna: Casas Disponíveis */}
+          <div className="flex flex-col min-h-0 gap-2">
+            {/* Header fixo */}
+            <div className="flex items-center gap-2 shrink-0">
+              <Plus className="h-4 w-4 text-muted-foreground" />
+              <h4 className="text-sm font-medium">Casas Disponíveis</h4>
+              <Badge variant="outline" className="text-xs ml-auto">
+                {bookmakersDisponiveis.length}
+              </Badge>
             </div>
-          </ScrollArea>
+
+            {/* Search fixo */}
+            <div className="relative shrink-0">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Buscar casa..."
+                value={searchDisponiveis}
+                onChange={(e) => setSearchDisponiveis(e.target.value)}
+                className="pl-7 h-8 text-xs"
+              />
+            </div>
+
+            {/* Lista com scroll - flex-1 min-h-0 */}
+            <ScrollArea className="flex-1 min-h-0">
+              <div className="space-y-1.5 pr-2">
+                {filteredDisponiveis.length === 0 ? (
+                  <div className="text-center py-6 text-muted-foreground text-xs">
+                    <AlertCircle className="h-6 w-6 mx-auto mb-1 opacity-30" />
+                    Nenhuma casa disponível
+                  </div>
+                ) : (
+                  filteredDisponiveis.map((bm) => (
+                    <div
+                      key={bm.id}
+                      className="flex items-center gap-2 p-2 border border-border rounded-lg hover:bg-muted/20"
+                    >
+                      {bm.logo_url ? (
+                        <img
+                          src={bm.logo_url}
+                          alt={bm.nome}
+                          className="h-10 w-10 rounded object-contain bg-white p-0.5 shrink-0"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
+                          <Building2 className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      )}
+                      
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{bm.nome}</p>
+                      </div>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={() => handleCreateVinculo(bm.id)}
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Vincular casa</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </div>
         </div>
       </div>
     </TooltipProvider>
