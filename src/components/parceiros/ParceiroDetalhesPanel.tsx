@@ -673,23 +673,27 @@ export function ParceiroDetalhesPanel({
             </div>
           </TabsContent>
 
-          {/* Aba Movimentações - flex-1 min-h-0 para ocupar espaço disponível */}
-          <TabsContent value="movimentacoes" className="flex-1 min-h-0 mt-0 data-[state=active]:flex data-[state=active]:flex-col">
-            <ParceiroMovimentacoesTab 
-              parceiroId={parceiroId} 
-              showSensitiveData={showSensitiveData}
-            />
+          {/* Aba Movimentações - MESMA estrutura do Resumo */}
+          <TabsContent value="movimentacoes" className="flex-1 min-h-0 mt-0 flex flex-col overflow-hidden">
+            <div className="p-4 flex-1 min-h-0 flex flex-col overflow-hidden">
+              <ParceiroMovimentacoesTab 
+                parceiroId={parceiroId} 
+                showSensitiveData={showSensitiveData}
+              />
+            </div>
           </TabsContent>
 
-          {/* Aba Bookmakers - flex-1 min-h-0 para ocupar espaço disponível */}
-          <TabsContent value="bookmakers" className="flex-1 min-h-0 mt-0 data-[state=active]:flex data-[state=active]:flex-col">
-            <ParceiroBookmakersTab
-              parceiroId={parceiroId}
-              showSensitiveData={showSensitiveData}
-              diasRestantes={diasRestantes}
-              onCreateVinculo={onCreateVinculo}
-              onDataChange={handleBookmakersDataChange}
-            />
+          {/* Aba Bookmakers - MESMA estrutura do Resumo */}
+          <TabsContent value="bookmakers" className="flex-1 min-h-0 mt-0 flex flex-col overflow-hidden">
+            <div className="p-4 flex-1 min-h-0 flex flex-col overflow-hidden">
+              <ParceiroBookmakersTab
+                parceiroId={parceiroId}
+                showSensitiveData={showSensitiveData}
+                diasRestantes={diasRestantes}
+                onCreateVinculo={onCreateVinculo}
+                onDataChange={handleBookmakersDataChange}
+              />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
