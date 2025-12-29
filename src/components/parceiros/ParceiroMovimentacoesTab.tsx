@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowRight, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -308,38 +309,40 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
     );
   }
 
-  // Conteúdo real: flex-1 com scroll interno
+  // Conteúdo real: ScrollArea gerencia o scroll
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
-      {transacoes.map((transacao) => (
-        <div
-          key={transacao.id}
-          className="p-3 border border-border rounded-lg hover:bg-muted/20 transition-colors"
-        >
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <Badge variant="outline" className={`text-xs ${getTipoBadgeColor(transacao.tipo_transacao, transacao.status)}`}>
-              {getTipoLabel(transacao.tipo_transacao, transacao)}
-            </Badge>
-            <span className="text-xs text-muted-foreground">{formatDate(transacao.data_transacao)}</span>
-          </div>
+    <ScrollArea className="flex-1 min-h-0">
+      <div className="space-y-2 pr-2">
+        {transacoes.map((transacao) => (
+          <div
+            key={transacao.id}
+            className="p-3 border border-border rounded-lg hover:bg-muted/20 transition-colors"
+          >
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <Badge variant="outline" className={`text-xs ${getTipoBadgeColor(transacao.tipo_transacao, transacao.status)}`}>
+                {getTipoLabel(transacao.tipo_transacao, transacao)}
+              </Badge>
+              <span className="text-xs text-muted-foreground">{formatDate(transacao.data_transacao)}</span>
+            </div>
 
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-            <span className="truncate max-w-[120px]">{getOrigemLabel(transacao)}</span>
-            <ArrowRight className="h-3 w-3 shrink-0" />
-            <span className="truncate max-w-[120px]">{getDestinoLabel(transacao)}</span>
-          </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+              <span className="truncate max-w-[120px]">{getOrigemLabel(transacao)}</span>
+              <ArrowRight className="h-3 w-3 shrink-0" />
+              <span className="truncate max-w-[120px]">{getDestinoLabel(transacao)}</span>
+            </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold flex items-center">
-              {maskCurrency(transacao)}
-              {getMoedaBadge(transacao)}
-            </span>
-            {transacao.descricao && (
-              <span className="text-xs text-muted-foreground truncate max-w-[150px]">{transacao.descricao}</span>
-            )}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold flex items-center">
+                {maskCurrency(transacao)}
+                {getMoedaBadge(transacao)}
+              </span>
+              {transacao.descricao && (
+                <span className="text-xs text-muted-foreground truncate max-w-[150px]">{transacao.descricao}</span>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </ScrollArea>
   );
 }
