@@ -357,7 +357,9 @@ export function CaixaTransacaoDialog({
   // Track SAQUE flow state changes
   const prevDestinoParceiroId = useRef<string>("");
   const prevDestinoContaId = useRef<string>("");
+  const prevDestinoWalletId = useRef<string>("");
   const prevOrigemBookmakerId = useRef<string>("");
+  const prevCoin = useRef<string>("");
 
   // Data for selects
   const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([]);
@@ -421,7 +423,8 @@ export function CaixaTransacaoDialog({
     } else if (tipoTransacao === "SAQUE") {
       setOrigemTipo("BOOKMAKER");
       setDestinoTipo("PARCEIRO_CONTA");
-      setTipoMoeda("FIAT"); // SAQUE only supports FIAT
+      // SAQUE suporta FIAT e CRYPTO - padrão FIAT
+      setTipoMoeda("FIAT");
     } else if (tipoTransacao === "TRANSFERENCIA") {
       setOrigemTipo("CAIXA_OPERACIONAL");
       setDestinoTipo("PARCEIRO_CONTA");
@@ -462,6 +465,18 @@ export function CaixaTransacaoDialog({
       // Clear previous selection when type changes
       setOrigemContaId("");
       setOrigemWalletId("");
+    }
+    
+    // Update destino type for SAQUE based on currency type
+    if (tipoTransacao === "SAQUE") {
+      if (tipoMoeda === "FIAT") {
+        setDestinoTipo("PARCEIRO_CONTA");
+      } else {
+        setDestinoTipo("PARCEIRO_WALLET");
+      }
+      // Clear previous selection when type changes
+      setDestinoContaId("");
+      setDestinoWalletId("");
     }
   }, [fluxoTransferencia, tipoTransacao, tipoMoeda]);
 
@@ -569,19 +584,82 @@ export function CaixaTransacaoDialog({
     prevDestinoContaId.current = destinoContaId;
   }, [destinoContaId, tipoTransacao, tipoMoeda]);
 
-  // SAQUE: quando bookmaker (origem) é selecionada, foca no campo Valor
+  // SAQUE: quando bookmaker (origem) é selecionada, foca no campo Valor/Quantidade
   useEffect(() => {
     if (tipoTransacao !== "SAQUE") return;
     if (!origemBookmakerId || origemBookmakerId === prevOrigemBookmakerId.current) return;
     
-    if (valorFiatInputRef.current) {
+    // CRYPTO: foca no campo Quantidade de Coins
+    if (tipoMoeda === "CRYPTO" && qtdCoinInputRef.current) {
+      setTimeout(() => {
+        qtdCoinInputRef.current?.focus();
+      }, 150);
+    } 
+    // FIAT: foca no campo Valor
+    else if (tipoMoeda === "FIAT" && valorFiatInputRef.current) {
       setTimeout(() => {
         valorFiatInputRef.current?.focus();
       }, 150);
     }
     
     prevOrigemBookmakerId.current = origemBookmakerId;
-  }, [origemBookmakerId, tipoTransacao]);
+  }, [origemBookmakerId, tipoTransacao, tipoMoeda]);
+
+  // ====== AUTO-FOCUS CHAIN FOR SAQUE CRYPTO FLOW ======
+  
+  // SAQUE CRYPTO: quando coin é selecionado, abre o select Parceiro
+  useEffect(() => {
+    if (tipoTransacao !== "SAQUE" || tipoMoeda !== "CRYPTO") return;
+    if (!coin || coin === prevCoin.current) return;
+    
+    // Abrir select de parceiro automaticamente
+    if (parceiroSelectRef.current) {
+      setTimeout(() => {
+        parceiroSelectRef.current?.open();
+      }, 150);
+    }
+    
+    prevCoin.current = coin;
+  }, [coin, tipoTransacao, tipoMoeda]);
+
+  // SAQUE CRYPTO: quando parceiro é selecionado, abre o select Wallet (DESTINO)
+  // Também auto-seleciona se houver apenas uma wallet disponível
+  useEffect(() => {
+    if (tipoTransacao !== "SAQUE" || tipoMoeda !== "CRYPTO") return;
+    if (!destinoParceiroId || destinoParceiroId === prevDestinoParceiroId.current) return;
+    
+    // Verificar quantas wallets o parceiro tem para a moeda selecionada
+    const walletsDoParceiro = walletsCrypto.filter(
+      (w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin)
+    );
+    
+    // Se houver exatamente uma wallet, auto-selecionar
+    if (walletsDoParceiro.length === 1) {
+      setDestinoWalletId(walletsDoParceiro[0].id);
+      // O próximo useEffect (destinoWalletId) vai cuidar de abrir o BookmakerSelect
+    } else if (walletCryptoSelectRef.current) {
+      setTimeout(() => {
+        walletCryptoSelectRef.current?.focus();
+        walletCryptoSelectRef.current?.click();
+      }, 150);
+    }
+    
+    prevDestinoParceiroId.current = destinoParceiroId;
+  }, [destinoParceiroId, tipoTransacao, tipoMoeda, walletsCrypto, coin]);
+
+  // SAQUE CRYPTO: quando wallet (destino) é selecionada, abre o select Bookmaker (origem)
+  useEffect(() => {
+    if (tipoTransacao !== "SAQUE" || tipoMoeda !== "CRYPTO") return;
+    if (!destinoWalletId || destinoWalletId === prevDestinoWalletId.current) return;
+    
+    if (bookmakerSelectRef.current) {
+      setTimeout(() => {
+        bookmakerSelectRef.current?.open();
+      }, 150);
+    }
+    
+    prevDestinoWalletId.current = destinoWalletId;
+  }, [destinoWalletId, tipoTransacao, tipoMoeda]);
 
   // Auto-focus CRYPTO: quando wallet é selecionada, abre o select Bookmaker
   useEffect(() => {
@@ -1561,27 +1639,69 @@ export function CaixaTransacaoDialog({
     }
 
     if (tipoTransacao === "SAQUE") {
-      // Check if destino is complete
-      const isDestinoCompleta = destinoParceiroId && destinoContaId;
+      // SAQUE FIAT: destino = conta bancária, origem = bookmaker com saldo_atual
+      if (tipoMoeda === "FIAT") {
+        const isDestinoCompleta = destinoParceiroId && destinoContaId;
+        
+        return (
+          <>
+            {!isDestinoCompleta && (
+              <Alert className="border-blue-500/50 bg-blue-500/10">
+                <AlertTriangle className="h-4 w-4 text-blue-500" />
+                <AlertDescription className="text-blue-500">
+                  Selecione primeiro o parceiro e a conta bancária de destino
+                </AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-2">
+              <Label>Bookmaker</Label>
+              <BookmakerSelect
+                ref={bookmakerSelectRef}
+                value={origemBookmakerId}
+                onValueChange={setOrigemBookmakerId}
+                disabled={!isDestinoCompleta}
+                parceiroId={destinoParceiroId}
+                somenteComSaldo={true}
+              />
+            </div>
+          </>
+        );
+      }
+      
+      // SAQUE CRYPTO: destino = wallet crypto, origem = bookmaker com saldo_usd
+      const isDestinoCompletaCrypto = destinoParceiroId && destinoWalletId;
+      
+      // Verificar se há bookmakers com saldo USD disponível
+      const bookmakersComSaldoUsd = bookmakers.filter(b => b.saldo_usd > 0);
       
       return (
         <>
-          {!isDestinoCompleta && (
+          {!isDestinoCompletaCrypto && (
             <Alert className="border-blue-500/50 bg-blue-500/10">
               <AlertTriangle className="h-4 w-4 text-blue-500" />
               <AlertDescription className="text-blue-500">
-                Selecione primeiro o parceiro e a conta bancária de destino
+                Selecione primeiro o parceiro e a wallet crypto de destino
+              </AlertDescription>
+            </Alert>
+          )}
+          {bookmakersComSaldoUsd.length === 0 && (
+            <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+              <AlertTriangle className="h-4 w-4 text-warning" />
+              <AlertDescription className="text-warning">
+                Nenhuma bookmaker com saldo USD disponível para saque crypto.
               </AlertDescription>
             </Alert>
           )}
           <div className="space-y-2">
-            <Label>Bookmaker</Label>
+            <Label>Bookmaker (com saldo USD)</Label>
             <BookmakerSelect
+              ref={bookmakerSelectRef}
               value={origemBookmakerId}
               onValueChange={setOrigemBookmakerId}
-              disabled={!isDestinoCompleta}
+              disabled={!isDestinoCompletaCrypto}
               parceiroId={destinoParceiroId}
               somenteComSaldo={true}
+              somenteComSaldoUsd={true}
             />
           </div>
         </>
@@ -1818,55 +1938,170 @@ export function CaixaTransacaoDialog({
     }
 
     if (tipoTransacao === "SAQUE") {
+      // SAQUE FIAT: Parceiro + Conta Bancária
+      if (tipoMoeda === "FIAT") {
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Parceiro</Label>
+              <ParceiroSelect
+                ref={parceiroSelectRef}
+                value={destinoParceiroId}
+                onValueChange={(value) => {
+                  setDestinoParceiroId(value);
+                  setDestinoContaId("");
+                }}
+                showSaldo={true}
+                tipoMoeda="FIAT"
+                moeda={moeda}
+                saldosContas={saldosParceirosContas}
+              />
+            </div>
+            {destinoParceiroId && (
+              <div className="space-y-2">
+                <Label>Conta Bancária</Label>
+                <Select 
+                  value={destinoContaId} 
+                  onValueChange={(value) => {
+                    setDestinoContaId(value);
+                  }}
+                >
+                  <SelectTrigger ref={contaBancariaSelectRef}>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contasBancarias
+                      .filter((c) => c.parceiro_id === destinoParceiroId)
+                      .map((conta) => (
+                        <SelectItem key={conta.id} value={conta.id}>
+                          {conta.banco}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {destinoParceiroId && contasBancarias.filter((c) => c.parceiro_id === destinoParceiroId).length === 0 && (
+              <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <AlertDescription className="text-warning">
+                  Este parceiro não possui contas bancárias cadastradas.{' '}
+                  <button
+                    onClick={() => {
+                      setAlertParceiroId(destinoParceiroId);
+                      setShowNoBankAlert(true);
+                    }}
+                    className="underline font-medium"
+                  >
+                    Cadastrar agora
+                  </button>
+                </AlertDescription>
+              </Alert>
+            )}
+          </>
+        );
+      }
+      
+      // SAQUE CRYPTO: Parceiro + Wallet Crypto
+      // Importante: a moeda (coin) já deve estar selecionada antes
+      const moedasCryptoDisponiveis = getMoedasDisponiveis().crypto;
+      const temMoedaCryptoDisponivel = moedasCryptoDisponiveis.length > 0;
+      
+      if (!temMoedaCryptoDisponivel) {
+        return (
+          <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+            <AlertTriangle className="h-4 w-4 text-warning" />
+            <AlertDescription className="text-warning">
+              Nenhuma moeda crypto disponível para saque. Verifique se existem bookmakers com saldo USD e wallets crypto cadastradas.
+            </AlertDescription>
+          </Alert>
+        );
+      }
+      
+      if (!coin) {
+        return (
+          <Alert className="border-blue-500/50 bg-blue-500/10">
+            <Info className="h-4 w-4 text-blue-500" />
+            <AlertDescription className="text-blue-500">
+              Selecione primeiro a moeda crypto para continuar.
+            </AlertDescription>
+          </Alert>
+        );
+      }
+      
+      // Parceiros que têm wallets que suportam a moeda selecionada
+      const parceirosComWalletMoeda = [...new Set(
+        walletsCrypto
+          .filter(w => w.moeda?.includes(coin))
+          .map(w => w.parceiro_id)
+      )];
+      
       return (
         <>
           <div className="space-y-2">
-            <Label>Parceiro</Label>
+            <Label>Parceiro (com wallet {coin})</Label>
             <ParceiroSelect
+              ref={parceiroSelectRef}
               value={destinoParceiroId}
               onValueChange={(value) => {
                 setDestinoParceiroId(value);
-                setDestinoContaId("");
+                setDestinoWalletId("");
               }}
+              onlyParceiros={parceirosComWalletMoeda}
               showSaldo={true}
-              tipoMoeda="FIAT"
-              moeda={moeda}
-              saldosContas={saldosParceirosContas}
+              tipoMoeda="CRYPTO"
+              coin={coin}
+              saldosWallets={saldosParceirosWallets}
             />
           </div>
+          {parceirosComWalletMoeda.length === 0 && (
+            <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+              <AlertTriangle className="h-4 w-4 text-warning" />
+              <AlertDescription className="text-warning">
+                Nenhum parceiro possui wallet {coin} cadastrada. Cadastre uma wallet para continuar.
+              </AlertDescription>
+            </Alert>
+          )}
           {destinoParceiroId && (
             <div className="space-y-2">
-              <Label>Conta Bancária</Label>
+              <Label>Wallet Crypto</Label>
               <Select 
-                value={destinoContaId} 
+                value={destinoWalletId} 
                 onValueChange={(value) => {
-                  setDestinoContaId(value);
+                  setDestinoWalletId(value);
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger ref={walletCryptoSelectRef}>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  {contasBancarias
-                    .filter((c) => c.parceiro_id === destinoParceiroId)
-                    .map((conta) => (
-                      <SelectItem key={conta.id} value={conta.id}>
-                        {conta.banco}
-                      </SelectItem>
-                    ))}
+                  {walletsCrypto
+                    .filter((w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin))
+                    .map((wallet) => {
+                      const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
+                      const shortenedAddress = wallet.endereco 
+                        ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
+                        : '';
+                      return (
+                        <SelectItem key={wallet.id} value={wallet.id}>
+                          <span className="font-mono">{walletName} - {shortenedAddress}</span>
+                        </SelectItem>
+                      );
+                    })}
                 </SelectContent>
               </Select>
             </div>
           )}
-          {destinoParceiroId && contasBancarias.filter((c) => c.parceiro_id === destinoParceiroId).length === 0 && (
+          {destinoParceiroId && walletsCrypto.filter((w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin)).length === 0 && (
             <Alert variant="destructive" className="border-warning/50 bg-warning/10">
               <AlertTriangle className="h-4 w-4 text-warning" />
               <AlertDescription className="text-warning">
-                Este parceiro não possui contas bancárias cadastradas.{' '}
+                Este parceiro não possui wallet {coin} cadastrada.{' '}
                 <button
                   onClick={() => {
                     setAlertParceiroId(destinoParceiroId);
-                    setShowNoBankAlert(true);
+                    setAlertTipo("CRYPTO");
+                    setShowNoWalletAlert(true);
                   }}
                   className="underline font-medium"
                 >
@@ -2372,17 +2607,27 @@ export function CaixaTransacaoDialog({
       };
     }
     
-    // SAQUE (Bookmaker → Parceiro): moedas das bookmakers com saldo
+    // SAQUE (Bookmaker → Parceiro): moedas derivadas do saldo disponível
     if (tipoTransacao === "SAQUE") {
-      const moedasBookmakers = [...new Set(
+      // FIAT: moedas das bookmakers com saldo em BRL/moeda base
+      const moedasFiatBookmakers = [...new Set(
         bookmakers
           .filter(b => b.saldo_atual > 0)
           .map(b => b.moeda)
       )];
       
+      // CRYPTO: moedas das bookmakers com saldo em USD (operações crypto usam USD)
+      // Para SAQUE CRYPTO, a moeda é derivada das wallets cripto dos parceiros
+      // que possam receber o saldo das bookmakers com saldo_usd > 0
+      const temBookmakerComSaldoUsd = bookmakers.some(b => b.saldo_usd > 0);
+      const moedasCryptoWallets = temBookmakerComSaldoUsd ? [...new Set(
+        saldosParceirosWallets
+          .map(s => s.coin)
+      )] : [];
+      
       return {
-        fiat: MOEDAS_FIAT.filter(m => moedasBookmakers.includes(m.value)),
-        crypto: [] // SAQUE só suporta FIAT
+        fiat: MOEDAS_FIAT.filter(m => moedasFiatBookmakers.includes(m.value)),
+        crypto: MOEDAS_CRYPTO.filter(m => moedasCryptoWallets.includes(m.value))
       };
     }
     
@@ -2690,7 +2935,8 @@ export function CaixaTransacaoDialog({
                         <Card className="bg-card/30 border-border/50">
                           <CardContent className="pt-6 text-center">
                             <div className="text-sm font-medium uppercase">{getDestinoLabel()}</div>
-                            {destinoContaId && (
+                            {/* FIAT: Conta Bancária */}
+                            {tipoMoeda === "FIAT" && destinoContaId && (
                               <div className="mt-3 space-y-1">
                                 {parseFloat(String(valor)) > 0 ? (
                                   <>
@@ -2707,6 +2953,28 @@ export function CaixaTransacaoDialog({
                                 ) : (
                                   <div className="text-xs text-muted-foreground">
                                     Saldo atual: {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {/* CRYPTO: Wallet Crypto */}
+                            {tipoMoeda === "CRYPTO" && destinoWalletId && (
+                              <div className="mt-3 space-y-1">
+                                {parseFloat(String(valor)) > 0 ? (
+                                  <>
+                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                      <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                      <span className="line-through opacity-70 text-cyan-400">
+                                        {formatCurrency(getSaldoAtual("PARCEIRO_WALLET", destinoWalletId), "USD")}
+                                      </span>
+                                    </div>
+                                    <div className="text-sm font-semibold text-cyan-400">
+                                      +{formatCurrency(parseFloat(String(valor)), "USD")}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-xs text-muted-foreground text-cyan-400">
+                                    Saldo atual: {formatCurrency(getSaldoAtual("PARCEIRO_WALLET", destinoWalletId), "USD")}
                                   </div>
                                 )}
                               </div>
