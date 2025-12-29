@@ -110,6 +110,15 @@ export function useParceiroFinanceiroCache() {
 
     if (bookmakersError) throw bookmakersError;
 
+    if (import.meta.env.DEV) {
+      console.debug("[Parceiros/Resumo] parceiroId=", parceiroId);
+      console.debug(
+        "[Parceiros/Resumo] bookmakers fetched:",
+        (bookmakers || []).length,
+        (bookmakers || []).map((b) => b.nome)
+      );
+    }
+
     const catalogoIds = [...new Set((bookmakers || [])
       .map(b => b.bookmaker_catalogo_id)
       .filter(Boolean))];
