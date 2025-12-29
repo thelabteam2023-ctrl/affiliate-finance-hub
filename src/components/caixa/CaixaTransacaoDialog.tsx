@@ -607,19 +607,33 @@ export function CaixaTransacaoDialog({
 
   // ====== AUTO-FOCUS CHAIN FOR SAQUE CRYPTO FLOW ======
   
-  // SAQUE CRYPTO: quando tipo de moeda muda para CRYPTO, abre o select Moeda (Coin)
+  // SAQUE CRYPTO: quando tipo de moeda muda para CRYPTO, auto-seleciona moeda se só houver uma, ou abre o select
   useEffect(() => {
     if (tipoTransacao !== "SAQUE") return;
-    if (tipoMoeda !== "CRYPTO" || prevTipoMoeda.current === "CRYPTO") return;
+    if (tipoMoeda !== "CRYPTO") return;
     
-    // Abrir select de moeda automaticamente
-    if (coinSelectRef.current) {
+    // Buscar moedas crypto disponíveis para saque
+    // Baseado nas bookmakers com saldo USD e wallets crypto dos parceiros
+    const temBookmakerComSaldoUsd = bookmakers.some(b => b.saldo_usd > 0);
+    if (!temBookmakerComSaldoUsd) return;
+    
+    const moedasCryptoWallets = [...new Set(
+      saldosParceirosWallets.map(s => s.coin)
+    )];
+    const moedasDisponiveis = MOEDAS_CRYPTO.filter(m => moedasCryptoWallets.includes(m.value));
+    
+    // Se há exatamente uma moeda disponível, auto-selecionar
+    if (moedasDisponiveis.length === 1 && !coin) {
+      setCoin(moedasDisponiveis[0].value);
+      // O próximo useEffect (coin change) vai cuidar de abrir o ParceiroSelect
+    } else if (coinSelectRef.current) {
+      // Abrir select de moeda automaticamente
       setTimeout(() => {
         coinSelectRef.current?.focus();
         coinSelectRef.current?.click();
       }, 100);
     }
-  }, [tipoMoeda, tipoTransacao]);
+  }, [tipoMoeda, tipoTransacao, bookmakers, saldosParceirosWallets, coin]);
   
   // SAQUE CRYPTO: quando coin é selecionado, abre o select Parceiro
   useEffect(() => {
