@@ -1,7 +1,6 @@
 import {
   Edit,
   Trash2,
-  FileText,
   DollarSign,
   Bitcoin,
   Eye,
@@ -59,7 +58,6 @@ interface InvestidorPainelCardProps {
   projetosCount?: number;
   onEdit: () => void;
   onDelete: () => void;
-  onExtrato: () => void;
   onSimular?: () => void;
   onClick?: () => void;
   onVerDetalhes?: () => void;
@@ -85,7 +83,6 @@ export function InvestidorPainelCard({
   projetosCount = 0,
   onEdit,
   onDelete,
-  onExtrato,
   onClick,
   onVerDetalhes,
 }: InvestidorPainelCardProps) {
@@ -257,18 +254,9 @@ export function InvestidorPainelCard({
             </Tooltip>
           )}
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" onClick={onExtrato}>
-                <FileText className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Ver Extrato</TooltipContent>
-          </Tooltip>
-
           {canDelete('investidores', 'investidores.delete') && (
             <Tooltip>
-              <TooltipTrigger asChild>
+            <TooltipTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
