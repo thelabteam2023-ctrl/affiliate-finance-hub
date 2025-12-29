@@ -273,9 +273,10 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
     return "-";
   };
 
+  // Estados de loading/erro/vazio ocupam 100% do container pai
   if (loading) {
     return (
-      <div className="flex flex-col flex-1 min-h-0 p-3 gap-2">
+      <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-y-auto">
         {[...Array(5)].map((_, i) => (
           <Skeleton key={i} className="h-16 shrink-0" />
         ))}
@@ -285,7 +286,7 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
 
   if (error) {
     return (
-      <div className="flex flex-col flex-1 min-h-0 items-center justify-center text-destructive gap-3">
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-destructive gap-3">
         <AlertCircle className="h-8 w-8 opacity-50" />
         <p className="text-sm">Erro ao carregar movimentações</p>
         <Button variant="outline" size="sm" onClick={fetchData}>
@@ -300,47 +301,45 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
 
   if (transacoes.length === 0) {
     return (
-      <div className="flex flex-col flex-1 min-h-0 items-center justify-center text-muted-foreground">
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-muted-foreground">
         <AlertCircle className="h-8 w-8 mb-2 opacity-30" />
         <p className="text-sm">Nenhuma movimentação encontrada</p>
       </div>
     );
   }
 
-  // Scroll ÚNICO da aba (sem ScrollArea Radix) para evitar layout instável
+  // Conteúdo real: flex-1 com scroll interno
   return (
-    <div className="flex flex-col flex-1 min-h-0">
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
-        {transacoes.map((transacao) => (
-          <div
-            key={transacao.id}
-            className="p-3 border border-border rounded-lg hover:bg-muted/20 transition-colors"
-          >
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <Badge variant="outline" className={`text-xs ${getTipoBadgeColor(transacao.tipo_transacao, transacao.status)}`}>
-                {getTipoLabel(transacao.tipo_transacao, transacao)}
-              </Badge>
-              <span className="text-xs text-muted-foreground">{formatDate(transacao.data_transacao)}</span>
-            </div>
-
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-              <span className="truncate max-w-[120px]">{getOrigemLabel(transacao)}</span>
-              <ArrowRight className="h-3 w-3 shrink-0" />
-              <span className="truncate max-w-[120px]">{getDestinoLabel(transacao)}</span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold flex items-center">
-                {maskCurrency(transacao)}
-                {getMoedaBadge(transacao)}
-              </span>
-              {transacao.descricao && (
-                <span className="text-xs text-muted-foreground truncate max-w-[150px]">{transacao.descricao}</span>
-              )}
-            </div>
+    <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
+      {transacoes.map((transacao) => (
+        <div
+          key={transacao.id}
+          className="p-3 border border-border rounded-lg hover:bg-muted/20 transition-colors"
+        >
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <Badge variant="outline" className={`text-xs ${getTipoBadgeColor(transacao.tipo_transacao, transacao.status)}`}>
+              {getTipoLabel(transacao.tipo_transacao, transacao)}
+            </Badge>
+            <span className="text-xs text-muted-foreground">{formatDate(transacao.data_transacao)}</span>
           </div>
-        ))}
-      </div>
+
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+            <span className="truncate max-w-[120px]">{getOrigemLabel(transacao)}</span>
+            <ArrowRight className="h-3 w-3 shrink-0" />
+            <span className="truncate max-w-[120px]">{getDestinoLabel(transacao)}</span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold flex items-center">
+              {maskCurrency(transacao)}
+              {getMoedaBadge(transacao)}
+            </span>
+            {transacao.descricao && (
+              <span className="text-xs text-muted-foreground truncate max-w-[150px]">{transacao.descricao}</span>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
