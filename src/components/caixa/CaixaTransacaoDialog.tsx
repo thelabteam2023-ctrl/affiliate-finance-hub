@@ -162,6 +162,9 @@ export function CaixaTransacaoDialog({
   const prevValor = useRef<string>(valor);
   const prevQtdCoin = useRef<string>(qtdCoin);
   const prevOrigemContaId = useRef<string>("");
+  
+  // Flag para evitar re-execução de efeitos durante reset
+  const isResettingContext = useRef<boolean>(false);
 
   // Aplicar defaults quando dialog abre
   useEffect(() => {
@@ -177,57 +180,166 @@ export function CaixaTransacaoDialog({
     }
   }, [open, defaultTipoTransacao, defaultOrigemBookmakerId]);
 
-  // Auto-focus CRYPTO: quando tipo de moeda muda para CRYPTO, foca no campo Moeda
-  // E reseta campos relacionados ao fluxo anterior (FIAT)
+  // ============================================================================
+  // FUNÇÃO CENTRALIZADA: Reset de contexto de transação
+  // Qualquer mudança em tipoMoeda/moeda/coin deve chamar esta função
+  // ============================================================================
+  const resetContextoDependente = (resetMoedaCoin: boolean = true, resetValores: boolean = true) => {
+    isResettingContext.current = true;
+    
+    // Reset valores monetários
+    if (resetValores) {
+      setValor("");
+      setValorDisplay("");
+      setQtdCoin("");
+      setCotacao("");
+    }
+    
+    // Reset moeda/coin (quando muda tipoMoeda)
+    if (resetMoedaCoin) {
+      setCoin("");
+      setMoeda("BRL");
+    }
+    
+    // Reset ORIGEM (parceiro, conta, wallet, bookmaker)
+    setOrigemParceiroId("");
+    setOrigemContaId("");
+    setOrigemWalletId("");
+    setOrigemBookmakerId("");
+    
+    // Reset DESTINO (parceiro, conta, wallet, bookmaker)
+    setDestinoParceiroId("");
+    setDestinoContaId("");
+    setDestinoWalletId("");
+    setDestinoBookmakerId("");
+    
+    // Reset descrição
+    setDescricao("");
+    
+    // Reset TODOS os refs de tracking (evitar auto-focus indevido)
+    prevCoin.current = "";
+    prevDestinoParceiroId.current = "";
+    prevDestinoWalletId.current = "";
+    prevDestinoContaId.current = "";
+    prevOrigemBookmakerId.current = "";
+    prevOrigemParceiroId.current = "";
+    prevOrigemContaId.current = "";
+    prevOrigemWalletId.current = "";
+    prevDestinoBookmakerId.current = "";
+    prevMoeda.current = resetMoedaCoin ? "BRL" : moeda;
+    prevValor.current = "";
+    prevQtdCoin.current = "";
+    
+    // Liberar flag após reset (usar setTimeout para garantir que os estados foram atualizados)
+    setTimeout(() => {
+      isResettingContext.current = false;
+    }, 50);
+  };
+
+  // ============================================================================
+  // CONTEXTO GLOBAL: Quando tipoMoeda muda, RESET TOTAL
+  // Nenhum dado do contexto anterior pode sobreviver
+  // NOTA: O auto-focus para SAQUE CRYPTO (bookmaker first) é tratado em outro useEffect
+  //       após bookmakers serem carregados
+  // ============================================================================
   useEffect(() => {
-    if (tipoMoeda === "CRYPTO" && prevTipoMoeda.current !== "CRYPTO") {
-      // Resetar bookmaker de origem que pode ter sido selecionada no fluxo FIAT
-      setOrigemBookmakerId("");
-      
-      if (coinSelectRef.current) {
-        setTimeout(() => {
+    if (tipoMoeda === prevTipoMoeda.current) return; // Sem mudança real
+    
+    // 🔒 RESET TOTAL - Invalidar todo o fluxo dependente
+    resetContextoDependente(true, true);
+    
+    // Auto-focus baseado no novo contexto
+    setTimeout(() => {
+      if (tipoMoeda === "CRYPTO") {
+        // DEPÓSITO CRYPTO: abre CoinSelect
+        // SAQUE CRYPTO: será tratado em useEffect separado (depende de bookmakers)
+        if (tipoTransacao !== "SAQUE") {
           coinSelectRef.current?.focus();
           coinSelectRef.current?.click();
-        }, 100);
+        }
+      } else {
+        // FIAT: abre MoedaSelect
+        moedaFiatSelectRef.current?.focus();
+        moedaFiatSelectRef.current?.click();
       }
-    }
+    }, 100);
+    
     prevTipoMoeda.current = tipoMoeda;
-  }, [tipoMoeda]);
+  }, [tipoMoeda, tipoTransacao]);
 
-  // Auto-focus CRYPTO: quando coin é selecionado, abre o select Parceiro (novo fluxo)
+  // ============================================================================
+  // CONTEXTO: Quando coin muda, resetar seleções de origem/destino
+  // (a moeda crypto determina quais wallets são válidas)
+  // ============================================================================
   useEffect(() => {
-    if (tipoMoeda === "CRYPTO" && coin && tipoTransacao === "DEPOSITO" && parceiroSelectRef.current) {
+    if (tipoMoeda !== "CRYPTO") return;
+    if (isResettingContext.current) return; // Ignorar durante reset de contexto
+    if (coin === prevCoin.current) return;
+    
+    // Resetar valores (cotação pode ser diferente)
+    setValor("");
+    setValorDisplay("");
+    setQtdCoin("");
+    setCotacao("");
+    
+    // Resetar wallets (pode não aceitar a nova moeda)
+    setOrigemWalletId("");
+    setDestinoWalletId("");
+    
+    // Resetar parceiros (para forçar re-seleção de wallet compatível)
+    setOrigemParceiroId("");
+    setDestinoParceiroId("");
+    
+    // Refs
+    prevOrigemWalletId.current = "";
+    prevDestinoWalletId.current = "";
+    prevOrigemParceiroId.current = "";
+    prevDestinoParceiroId.current = "";
+    
+    prevCoin.current = coin;
+    
+    // Auto-focus para próximo passo (se não estiver no fluxo de SAQUE CRYPTO que já tem bookmaker)
+    if (tipoTransacao === "DEPOSITO" && coin && parceiroSelectRef.current) {
       setTimeout(() => {
         parceiroSelectRef.current?.open();
       }, 100);
     }
   }, [coin, tipoMoeda, tipoTransacao]);
 
-  // Auto-focus FIAT: quando tipo de moeda muda para FIAT (para DEPÓSITO ou SAQUE), foca no campo Moeda
+  // ============================================================================
+  // CONTEXTO: Quando moeda FIAT muda (BRL/USD), resetar seleções dependentes
+  // ============================================================================
   useEffect(() => {
-    if (tipoMoeda === "FIAT" && prevTipoMoeda.current === "CRYPTO" && moedaFiatSelectRef.current) {
-      setTimeout(() => {
-        moedaFiatSelectRef.current?.focus();
-        moedaFiatSelectRef.current?.click();
-      }, 100);
-    }
-    // Fluxo DEPÓSITO+FIAT ou SAQUE+FIAT: quando FIAT é selecionado inicialmente, abrir select de Moeda
-    if ((tipoTransacao === "DEPOSITO" || tipoTransacao === "SAQUE") && tipoMoeda === "FIAT" && prevTipoMoeda.current !== "FIAT" && moedaFiatSelectRef.current) {
-      setTimeout(() => {
-        moedaFiatSelectRef.current?.focus();
-        moedaFiatSelectRef.current?.click();
-      }, 100);
-    }
-  }, [tipoMoeda, tipoTransacao]);
-
-  // Auto-focus DEPÓSITO ou SAQUE FIAT: quando moeda é selecionada, foca no Parceiro
-  useEffect(() => {
-    if ((tipoTransacao === "DEPOSITO" || tipoTransacao === "SAQUE") && tipoMoeda === "FIAT" && moeda && moeda !== prevMoeda.current && parceiroSelectRef.current) {
+    if (tipoMoeda !== "FIAT") return;
+    if (isResettingContext.current) return; // Ignorar durante reset de contexto
+    if (moeda === prevMoeda.current) return;
+    
+    // Resetar valores
+    setValor("");
+    setValorDisplay("");
+    
+    // Resetar contas (saldo é por moeda)
+    setOrigemContaId("");
+    setDestinoContaId("");
+    
+    // Resetar bookmaker (saldo pode não ser compatível)
+    setOrigemBookmakerId("");
+    setDestinoBookmakerId("");
+    
+    // Refs
+    prevOrigemContaId.current = "";
+    prevDestinoContaId.current = "";
+    prevOrigemBookmakerId.current = "";
+    prevDestinoBookmakerId.current = "";
+    
+    prevMoeda.current = moeda;
+    
+    // Auto-focus para próximo passo
+    if ((tipoTransacao === "DEPOSITO" || tipoTransacao === "SAQUE") && moeda && parceiroSelectRef.current) {
       setTimeout(() => {
         parceiroSelectRef.current?.open();
       }, 100);
     }
-    prevMoeda.current = moeda;
   }, [moeda, tipoMoeda, tipoTransacao]);
 
   // Auto-focus para outros tipos (não DEPÓSITO): quando moeda é selecionada, foca no Valor
@@ -458,6 +570,7 @@ export function CaixaTransacaoDialog({
   
   useEffect(() => {
     // Update origem/destino based on transfer flow and currency type
+    // NOTA: Os resets de seleção são tratados pelo resetContextoDependente quando tipoMoeda muda
     if (tipoTransacao === "TRANSFERENCIA") {
       if (fluxoTransferencia === "CAIXA_PARCEIRO") {
         setOrigemTipo("CAIXA_OPERACIONAL");
@@ -466,6 +579,7 @@ export function CaixaTransacaoDialog({
         } else {
           setDestinoTipo("PARCEIRO_WALLET");
         }
+        // Limpar origem apenas quando fluxo muda para CAIXA_PARCEIRO
         setOrigemParceiroId("");
         setOrigemContaId("");
         setOrigemWalletId("");
@@ -487,9 +601,7 @@ export function CaixaTransacaoDialog({
       } else {
         setOrigemTipo("PARCEIRO_WALLET");
       }
-      // Clear previous selection when type changes
-      setOrigemContaId("");
-      setOrigemWalletId("");
+      // NOTA: Resets são tratados pelo resetContextoDependente
     }
     
     // Update destino type for SAQUE based on currency type
@@ -499,9 +611,7 @@ export function CaixaTransacaoDialog({
       } else {
         setDestinoTipo("PARCEIRO_WALLET");
       }
-      // Clear previous selection when type changes
-      setDestinoContaId("");
-      setDestinoWalletId("");
+      // NOTA: Resets são tratados pelo resetContextoDependente
     }
   }, [fluxoTransferencia, tipoTransacao, tipoMoeda]);
 
