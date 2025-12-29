@@ -427,163 +427,169 @@ export default function Caixa() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6 overflow-y-auto">
-      {/* Header */}
-      <PageHeader
-        title="Caixa Operacional"
-        description="Gestão centralizada de movimentações financeiras"
-        pagePath="/caixa"
-        pageIcon="Wallet"
-        actions={
-          <div className="flex items-center gap-2">
-            <SaldosParceirosSheet />
-            {canCreate('caixa', 'caixa.transactions.create') && (
-              <Button onClick={() => setDialogOpen(true)} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Nova Transação
-              </Button>
-            )}
-          </div>
-        }
-      />
-
-      {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Saldos FIAT consolidados */}
-        <Card className="bg-card/50 backdrop-blur border-border/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldos FIAT</CardTitle>
-            <Wallet className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {saldosFiat.map((saldoFiat) => (
-                <div key={saldoFiat.moeda} className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">{saldoFiat.moeda}</span>
-                  <span className="text-lg font-bold text-emerald-400">
-                    {formatCurrency(saldoFiat.saldo, saldoFiat.moeda)}
-                  </span>
-                </div>
-              ))}
-              {saldosFiat.length === 0 && (
-                <div className="text-sm text-muted-foreground italic">Nenhum saldo FIAT</div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Exposição Crypto com Popover */}
-        <Card className="bg-card/50 backdrop-blur border-border/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Exposição Crypto (USD)</CardTitle>
-            <TrendingUp className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
+    <div className="flex flex-col min-h-0 h-full">
+      {/* PageHeader - altura fixa no topo */}
+      <div className="flex-shrink-0 px-6 pt-6">
+        <PageHeader
+          title="Caixa Operacional"
+          description="Gestão centralizada de movimentações financeiras"
+          pagePath="/caixa"
+          pageIcon="Wallet"
+          actions={
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-blue-400">
-                {formatCurrency(getTotalCryptoUSD(), "USD")}
-              </span>
-              {saldosCrypto.length > 0 && (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 rounded-full hover:bg-blue-500/20"
-                    >
-                      <Info className="h-4 w-4 text-muted-foreground hover:text-blue-400 transition-colors" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent 
-                    className="w-auto min-w-[240px] z-50 bg-popover" 
-                    align="start"
-                    side="right"
-                    sideOffset={8}
-                  >
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground mb-2">Cotações em tempo real (Binance)</p>
-                      <div className={`grid gap-3 ${saldosCrypto.length > 3 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                        {saldosCrypto.map((saldo) => {
-                          const price = cryptoPrices[saldo.coin];
-                          const usdValue = getCryptoUSDValue(saldo.coin, saldo.saldo_coin, saldo.saldo_usd);
-                          return (
-                            <div key={saldo.coin} className="flex items-center justify-between gap-4 text-sm">
-                              <div>
-                                <span className="font-medium">{saldo.coin}</span>
-                                {price && (
-                                  <div className="text-[10px] text-blue-400">
-                                    ${price.toFixed(price < 1 ? 6 : 2)}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <div className="font-mono text-xs">{saldo.saldo_coin.toFixed(saldo.saldo_coin < 1 ? 8 : 2)}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  ≈ {formatCurrency(usdValue, "USD")}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
+              <SaldosParceirosSheet />
+              {canCreate('caixa', 'caixa.transactions.create') && (
+                <Button onClick={() => setDialogOpen(true)} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Nova Transação
+                </Button>
               )}
             </div>
-          </CardContent>
-        </Card>
+          }
+        />
       </div>
 
-      {/* Posição de Capital */}
-      <PosicaoCapital
-        saldoCaixaFiat={saldosFiat.reduce((sum, s) => s.moeda === 'BRL' ? sum + s.saldo : sum, 0)}
-        saldoCaixaCrypto={getTotalCryptoUSD()}
-        saldoBookmakersBRL={saldoBookmakersBRL}
-        saldoBookmakersUSD={saldoBookmakersUSD}
-        saldoContasParceiros={saldoContasParceiros}
-        saldoWalletsParceiros={saldoWalletsParceiros}
-        cotacaoUSD={cotacaoUSD}
-      />
+      {/* PageContent - ÚNICO scroll vertical */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="px-6 pb-6 space-y-6">
+          {/* KPIs */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Saldos FIAT consolidados */}
+            <Card className="bg-card/50 backdrop-blur border-border/50">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Saldos FIAT</CardTitle>
+                <Wallet className="h-4 w-4 text-emerald-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {saldosFiat.map((saldoFiat) => (
+                    <div key={saldoFiat.moeda} className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">{saldoFiat.moeda}</span>
+                      <span className="text-lg font-bold text-emerald-400">
+                        {formatCurrency(saldoFiat.saldo, saldoFiat.moeda)}
+                      </span>
+                    </div>
+                  ))}
+                  {saldosFiat.length === 0 && (
+                    <div className="text-sm text-muted-foreground italic">Nenhum saldo FIAT</div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-      {/* Análise Financeira */}
-      <FluxoFinanceiroOperacional
-        transacoes={transacoes}
-        dataInicio={dataInicio}
-        dataFim={dataFim}
-        setDataInicio={setDataInicio}
-        setDataFim={setDataFim}
-        saldoBookmakers={saldoBookmakers}
-      />
+            {/* Exposição Crypto com Popover */}
+            <Card className="bg-card/50 backdrop-blur border-border/50">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Exposição Crypto (USD)</CardTitle>
+                <TrendingUp className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-blue-400">
+                    {formatCurrency(getTotalCryptoUSD(), "USD")}
+                  </span>
+                  {saldosCrypto.length > 0 && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 rounded-full hover:bg-blue-500/20"
+                        >
+                          <Info className="h-4 w-4 text-muted-foreground hover:text-blue-400 transition-colors" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent 
+                        className="w-auto min-w-[240px] z-50 bg-popover" 
+                        align="start"
+                        side="right"
+                        sideOffset={8}
+                      >
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground mb-2">Cotações em tempo real (Binance)</p>
+                          <div className={`grid gap-3 ${saldosCrypto.length > 3 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                            {saldosCrypto.map((saldo) => {
+                              const price = cryptoPrices[saldo.coin];
+                              const usdValue = getCryptoUSDValue(saldo.coin, saldo.saldo_coin, saldo.saldo_usd);
+                              return (
+                                <div key={saldo.coin} className="flex items-center justify-between gap-4 text-sm">
+                                  <div>
+                                    <span className="font-medium">{saldo.coin}</span>
+                                    {price && (
+                                      <div className="text-[10px] text-blue-400">
+                                        ${price.toFixed(price < 1 ? 6 : 2)}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="font-mono text-xs">{saldo.saldo_coin.toFixed(saldo.saldo_coin < 1 ? 8 : 2)}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      ≈ {formatCurrency(usdValue, "USD")}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
+          {/* Posição de Capital */}
+          <PosicaoCapital
+            saldoCaixaFiat={saldosFiat.reduce((sum, s) => s.moeda === 'BRL' ? sum + s.saldo : sum, 0)}
+            saldoCaixaCrypto={getTotalCryptoUSD()}
+            saldoBookmakersBRL={saldoBookmakersBRL}
+            saldoBookmakersUSD={saldoBookmakersUSD}
+            saldoContasParceiros={saldoContasParceiros}
+            saldoWalletsParceiros={saldoWalletsParceiros}
+            cotacaoUSD={cotacaoUSD}
+          />
 
-      {/* Relatórios Consolidados */}
-      <CaixaRelatorios
-        transacoes={transacoes}
-        parceiros={parceiros}
-        contas={contas}
-        contasBancarias={contasBancarias}
-        wallets={wallets}
-        walletsDetalhes={walletsDetalhes}
-        bookmakers={bookmakers}
-        loading={loading}
-        filtroTipo={filtroTipo}
-        setFiltroTipo={setFiltroTipo}
-        dataInicio={dataInicio}
-        setDataInicio={setDataInicio}
-        dataFim={dataFim}
-        setDataFim={setDataFim}
-        getTransacoesFiltradas={getTransacoesFiltradas}
-        getTipoLabel={getTipoLabel}
-        getTipoColor={getTipoColor}
-        getOrigemLabel={getOrigemLabel}
-        getDestinoLabel={getDestinoLabel}
-        formatCurrency={formatCurrency}
-        onConfirmarSaque={(transacao) => {
-          setSaqueParaConfirmar(transacao);
-          setConfirmSaqueDialogOpen(true);
-        }}
-      />
+          {/* Análise Financeira */}
+          <FluxoFinanceiroOperacional
+            transacoes={transacoes}
+            dataInicio={dataInicio}
+            dataFim={dataFim}
+            setDataInicio={setDataInicio}
+            setDataFim={setDataFim}
+            saldoBookmakers={saldoBookmakers}
+          />
+
+          {/* Relatórios Consolidados */}
+          <CaixaRelatorios
+            transacoes={transacoes}
+            parceiros={parceiros}
+            contas={contas}
+            contasBancarias={contasBancarias}
+            wallets={wallets}
+            walletsDetalhes={walletsDetalhes}
+            bookmakers={bookmakers}
+            loading={loading}
+            filtroTipo={filtroTipo}
+            setFiltroTipo={setFiltroTipo}
+            dataInicio={dataInicio}
+            setDataInicio={setDataInicio}
+            dataFim={dataFim}
+            setDataFim={setDataFim}
+            getTransacoesFiltradas={getTransacoesFiltradas}
+            getTipoLabel={getTipoLabel}
+            getTipoColor={getTipoColor}
+            getOrigemLabel={getOrigemLabel}
+            getDestinoLabel={getDestinoLabel}
+            formatCurrency={formatCurrency}
+            onConfirmarSaque={(transacao) => {
+              setSaqueParaConfirmar(transacao);
+              setConfirmSaqueDialogOpen(true);
+            }}
+          />
+        </div>
+      </div>
 
       {/* Dialog Nova Transação */}
       <CaixaTransacaoDialog
@@ -591,7 +597,6 @@ export default function Caixa() {
         onClose={() => setDialogOpen(false)}
         onSuccess={async () => {
           setDialogOpen(false);
-          // Delay para garantir que o trigger do banco tenha atualizado os saldos
           await new Promise(resolve => setTimeout(resolve, 300));
           fetchData();
         }}
@@ -605,7 +610,6 @@ export default function Caixa() {
           setSaqueParaConfirmar(null);
         }}
         onSuccess={async () => {
-          // Delay para garantir que o trigger do banco tenha atualizado os saldos
           await new Promise(resolve => setTimeout(resolve, 300));
           fetchData();
         }}
