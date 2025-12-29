@@ -516,17 +516,26 @@ export function CaixaTransacaoDialog({
   }, [open]);
 
   useEffect(() => {
-    // Reset ALL fields when transaction type changes to avoid inheriting data
+    // ========================================================================
+    // CONTEXTO GLOBAL: Mudança de Tipo de Transação = RESET TOTAL
+    // Nenhum dado do contexto anterior pode sobreviver
+    // ========================================================================
+    
+    // Reset ORIGEM
     setOrigemTipo("");
     setOrigemParceiroId("");
     setOrigemContaId("");
     setOrigemWalletId("");
     setOrigemBookmakerId("");
+    
+    // Reset DESTINO
     setDestinoTipo("");
     setDestinoParceiroId("");
     setDestinoContaId("");
     setDestinoWalletId("");
     setDestinoBookmakerId("");
+    
+    // Reset fluxos específicos
     setFluxoTransferencia("CAIXA_PARCEIRO");
     setFluxoAporte("APORTE");
     setInvestidorId("");
@@ -541,7 +550,7 @@ export function CaixaTransacaoDialog({
     setMoeda("BRL");
     setDescricao("");
     
-    // Reset refs de tracking para auto-focus
+    // Reset TODOS os refs de tracking (evita auto-focus indevido e herança de estado)
     prevCoin.current = "";
     prevDestinoParceiroId.current = "";
     prevDestinoWalletId.current = "";
@@ -551,6 +560,10 @@ export function CaixaTransacaoDialog({
     prevOrigemContaId.current = "";
     prevOrigemWalletId.current = "";
     prevDestinoBookmakerId.current = "";
+    prevMoeda.current = "BRL";
+    prevTipoMoeda.current = "FIAT";
+    prevValor.current = "";
+    prevQtdCoin.current = "";
 
     // Set defaults based on transaction type
     if (tipoTransacao === "APORTE_FINANCEIRO") {
