@@ -78,9 +78,12 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<BookmakerItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(true);
+  // CRÍTICO: Iniciar como false para evitar flash - loading só deve ser true durante fetch ativo
+  const [loading, setLoading] = useState(false);
   const [displayData, setDisplayData] = useState<{ nome: string; logo_url: string | null } | null>(null);
   const [loadingDisplay, setLoadingDisplay] = useState(false);
+  // Flag para indicar se os pré-requisitos estão completos para fetch
+  const [prerequisitesReady, setPrerequisitesReady] = useState(false);
   
   const lastFetchedValue = useRef<string>("");
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -117,12 +120,64 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     }
   }, [value, items, onBookmakerData]);
 
+  // ============================================================================
+  // CONTROLE DETERMINÍSTICO: Lista só carrega quando pré-requisitos estão completos
+  // Quando qualquer dependência muda, a lista é LIMPA IMEDIATAMENTE antes de refetch
+  // ============================================================================
+  
+  // Refs para detectar mudanças reais de contexto (não montagem inicial)
+  const prevContextRef = useRef<{
+    parceiroId?: string;
+    moedaOperacional?: string;
+    initialized: boolean;
+  }>({ initialized: false });
+  
+  // Limpar estado imediatamente quando dependências mudam (evita flash)
+  useEffect(() => {
+    const prev = prevContextRef.current;
+    
+    // Na montagem inicial, apenas marcar como inicializado
+    if (!prev.initialized) {
+      prevContextRef.current = { 
+        parceiroId, 
+        moedaOperacional, 
+        initialized: true 
+      };
+      return;
+    }
+    
+    // Detectar se houve mudança REAL de contexto
+    const contextChanged = prev.parceiroId !== parceiroId || prev.moedaOperacional !== moedaOperacional;
+    
+    if (contextChanged) {
+      // CRÍTICO: Limpar lista quando contexto muda
+      setItems([]);
+      setPrerequisitesReady(false);
+      setDisplayData(null);
+      lastFetchedValue.current = "";
+      
+      // Se o value atual não pode mais existir no novo contexto, limpar
+      if (value) {
+        onValueChange("");
+      }
+    }
+    
+    // Atualizar ref
+    prevContextRef.current = { parceiroId, moedaOperacional, initialized: true };
+  }, [parceiroId, moedaOperacional, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat]);
+  
   // Buscar lista de bookmakers para o dropdown
   useEffect(() => {
+    // Abortar fetch anterior se houver
+    const abortController = new AbortController();
+    
     const fetchBookmakers = async () => {
-      setLoading(true);
-      try {
-        if (parceiroId) {
+      // MODO VÍNCULO: Requer parceiroId
+      if (parceiroId) {
+        setPrerequisitesReady(true);
+        setLoading(true);
+        
+        try {
           let query = supabase
             .from("bookmakers")
             .select(`
@@ -156,6 +211,10 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
           }
 
           const { data, error } = await query.order("nome");
+          
+          // Verificar se foi abortado antes de atualizar estado
+          if (abortController.signal.aborted) return;
+          
           if (error) throw error;
 
           const mapped: BookmakerItem[] = (data || []).map((b: any) => ({
@@ -170,12 +229,30 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
           }));
 
           setItems(mapped);
-        } else {
+        } catch (error) {
+          if (!abortController.signal.aborted) {
+            console.error("Erro ao carregar bookmakers:", error);
+            setItems([]);
+          }
+        } finally {
+          if (!abortController.signal.aborted) {
+            setLoading(false);
+          }
+        }
+      } 
+      // MODO CATÁLOGO (sem parceiroId): Buscar do catálogo global
+      else if (!parceiroId && !moedaOperacional && !somenteComSaldo && !somenteComSaldoUsd && !somenteComSaldoFiat) {
+        // Modo catálogo só é permitido quando não há nenhum filtro de contexto
+        setPrerequisitesReady(true);
+        setLoading(true);
+        
+        try {
           const { data, error } = await supabase
             .from("bookmakers_catalogo")
             .select("id, nome, logo_url")
             .order("nome");
 
+          if (abortController.signal.aborted) return;
           if (error) throw error;
           
           let catalogoItems = data || [];
@@ -196,16 +273,30 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
           }
           
           setItems(catalogoItems);
+        } catch (error) {
+          if (!abortController.signal.aborted) {
+            console.error("Erro ao carregar bookmakers:", error);
+            setItems([]);
+          }
+        } finally {
+          if (!abortController.signal.aborted) {
+            setLoading(false);
+          }
         }
-      } catch (error) {
-        console.error("Erro ao carregar bookmakers:", error);
+      } else {
+        // Pré-requisitos não atendidos - manter lista vazia
+        setPrerequisitesReady(false);
         setItems([]);
-      } finally {
         setLoading(false);
       }
     };
 
     fetchBookmakers();
+    
+    // Cleanup: abortar fetch se dependências mudarem
+    return () => {
+      abortController.abort();
+    };
   }, [parceiroId, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat, excludeVinculosDoParceiro, moedaOperacional]);
 
   // Buscar dados de exibição quando value muda - execução imediata e determinística
@@ -298,7 +389,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                 variant="outline"
                 role="combobox"
                 aria-expanded={open}
-                disabled={disabled || loading}
+                disabled={disabled || loading || !prerequisitesReady}
                 className="w-full h-12 justify-center"
               >
                 <div className="flex items-center justify-center gap-2 w-full">
@@ -313,9 +404,13 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                   <span className="uppercase truncate text-center">
                     {displayData?.nome 
                       ? displayData.nome 
-                      : (loading || loadingDisplay) 
+                      : loading
                         ? "Carregando..." 
-                        : "Selecione..."}
+                        : loadingDisplay
+                          ? "Carregando..."
+                          : !prerequisitesReady
+                            ? "Aguardando..."
+                            : "Selecione..."}
                   </span>
                   <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
                 </div>
@@ -357,13 +452,17 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
               }}
             >
               <CommandEmpty>
-                {parceiroId 
-                  ? (moedaOperacional
-                      ? `Nenhuma bookmaker compatível com ${moedaOperacional} neste parceiro`
-                      : somenteComSaldo 
-                        ? "Este parceiro não possui bookmakers com saldo disponível" 
-                        : "Este parceiro não possui bookmakers vinculadas")
-                  : "Nenhuma bookmaker encontrada"}
+                {loading
+                  ? "Carregando..."
+                  : !prerequisitesReady
+                    ? "Selecione os campos anteriores"
+                    : parceiroId 
+                      ? (moedaOperacional
+                          ? `Nenhuma bookmaker compatível com ${moedaOperacional} neste parceiro`
+                          : somenteComSaldo || somenteComSaldoFiat || somenteComSaldoUsd
+                            ? "Este parceiro não possui bookmakers com saldo disponível" 
+                            : "Este parceiro não possui bookmakers vinculadas")
+                      : "Nenhuma bookmaker encontrada"}
               </CommandEmpty>
               <CommandGroup>
                 {filteredItems.map((item) => {
