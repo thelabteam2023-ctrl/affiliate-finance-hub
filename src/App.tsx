@@ -49,19 +49,19 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         />
       )}
       
-      <div className="min-h-screen flex w-full">
+      <div className="h-screen flex w-full overflow-hidden">
         <AppSidebar />
         
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Header com trigger da sidebar */}
-          <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <header className="shrink-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
             <div className="flex h-14 items-center px-4">
               <SidebarTrigger className="hover:bg-accent hover:text-accent-foreground" />
             </div>
           </header>
 
-          {/* Main content */}
-          <main className="flex-1">
+          {/* Main content - flex-1 + min-h-0 para permitir scroll interno correto */}
+          <main className="flex-1 min-h-0 overflow-hidden">
             {children}
           </main>
         </div>
