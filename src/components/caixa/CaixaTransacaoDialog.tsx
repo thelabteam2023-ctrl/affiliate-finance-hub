@@ -197,7 +197,7 @@ export function CaixaTransacaoDialog({
     }
   }, [coin, tipoMoeda, tipoTransacao]);
 
-  // Auto-focus FIAT: quando tipo de moeda muda para FIAT (para DEPÓSITO), foca no campo Moeda
+  // Auto-focus FIAT: quando tipo de moeda muda para FIAT (para DEPÓSITO ou SAQUE), foca no campo Moeda
   useEffect(() => {
     if (tipoMoeda === "FIAT" && prevTipoMoeda.current === "CRYPTO" && moedaFiatSelectRef.current) {
       setTimeout(() => {
@@ -205,8 +205,8 @@ export function CaixaTransacaoDialog({
         moedaFiatSelectRef.current?.click();
       }, 100);
     }
-    // Fluxo DEPÓSITO+FIAT: quando FIAT é selecionado inicialmente, abrir select de Moeda
-    if (tipoTransacao === "DEPOSITO" && tipoMoeda === "FIAT" && prevTipoMoeda.current !== "FIAT" && moedaFiatSelectRef.current) {
+    // Fluxo DEPÓSITO+FIAT ou SAQUE+FIAT: quando FIAT é selecionado inicialmente, abrir select de Moeda
+    if ((tipoTransacao === "DEPOSITO" || tipoTransacao === "SAQUE") && tipoMoeda === "FIAT" && prevTipoMoeda.current !== "FIAT" && moedaFiatSelectRef.current) {
       setTimeout(() => {
         moedaFiatSelectRef.current?.focus();
         moedaFiatSelectRef.current?.click();
@@ -214,9 +214,9 @@ export function CaixaTransacaoDialog({
     }
   }, [tipoMoeda, tipoTransacao]);
 
-  // Auto-focus DEPÓSITO FIAT: quando moeda é selecionada, foca no Parceiro (não no valor)
+  // Auto-focus DEPÓSITO ou SAQUE FIAT: quando moeda é selecionada, foca no Parceiro
   useEffect(() => {
-    if (tipoTransacao === "DEPOSITO" && tipoMoeda === "FIAT" && moeda && moeda !== prevMoeda.current && parceiroSelectRef.current) {
+    if ((tipoTransacao === "DEPOSITO" || tipoTransacao === "SAQUE") && tipoMoeda === "FIAT" && moeda && moeda !== prevMoeda.current && parceiroSelectRef.current) {
       setTimeout(() => {
         parceiroSelectRef.current?.open();
       }, 100);
@@ -353,6 +353,11 @@ export function CaixaTransacaoDialog({
 
   // Track destinoBookmakerId changes for auto-focus (CRYPTO deposito flow)
   const prevDestinoBookmakerId = useRef<string>("");
+  
+  // Track SAQUE flow state changes
+  const prevDestinoParceiroId = useRef<string>("");
+  const prevDestinoContaId = useRef<string>("");
+  const prevOrigemBookmakerId = useRef<string>("");
 
   // Data for selects
   const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([]);
@@ -524,6 +529,59 @@ export function CaixaTransacaoDialog({
     }
     prevOrigemContaId.current = origemContaId;
   }, [origemContaId, tipoMoeda, tipoTransacao]);
+
+  // ====== AUTO-FOCUS CHAIN FOR SAQUE (WITHDRAWAL) FLOW ======
+  
+  // SAQUE: quando parceiro é selecionado, abre o select Conta Bancária (DESTINO)
+  // Também auto-seleciona se houver apenas uma conta disponível
+  useEffect(() => {
+    if (tipoTransacao !== "SAQUE" || tipoMoeda !== "FIAT") return;
+    if (!destinoParceiroId || destinoParceiroId === prevDestinoParceiroId.current) return;
+    
+    // Verificar quantas contas o parceiro tem
+    const contasDoParceiro = contasBancarias.filter((c) => c.parceiro_id === destinoParceiroId);
+    
+    // Se houver exatamente uma conta, auto-selecionar
+    if (contasDoParceiro.length === 1) {
+      setDestinoContaId(contasDoParceiro[0].id);
+      // O próximo useEffect (destinoContaId) vai cuidar de abrir o BookmakerSelect
+    } else if (contaBancariaSelectRef.current) {
+      setTimeout(() => {
+        contaBancariaSelectRef.current?.focus();
+        contaBancariaSelectRef.current?.click();
+      }, 150);
+    }
+    
+    prevDestinoParceiroId.current = destinoParceiroId;
+  }, [destinoParceiroId, tipoTransacao, tipoMoeda, contasBancarias]);
+
+  // SAQUE: quando conta bancária (destino) é selecionada, abre o select Bookmaker (origem)
+  useEffect(() => {
+    if (tipoTransacao !== "SAQUE" || tipoMoeda !== "FIAT") return;
+    if (!destinoContaId || destinoContaId === prevDestinoContaId.current) return;
+    
+    if (bookmakerSelectRef.current) {
+      setTimeout(() => {
+        bookmakerSelectRef.current?.open();
+      }, 150);
+    }
+    
+    prevDestinoContaId.current = destinoContaId;
+  }, [destinoContaId, tipoTransacao, tipoMoeda]);
+
+  // SAQUE: quando bookmaker (origem) é selecionada, foca no campo Valor
+  useEffect(() => {
+    if (tipoTransacao !== "SAQUE") return;
+    if (!origemBookmakerId || origemBookmakerId === prevOrigemBookmakerId.current) return;
+    
+    if (valorFiatInputRef.current) {
+      setTimeout(() => {
+        valorFiatInputRef.current?.focus();
+      }, 150);
+    }
+    
+    prevOrigemBookmakerId.current = origemBookmakerId;
+  }, [origemBookmakerId, tipoTransacao]);
 
   // Auto-focus CRYPTO: quando wallet é selecionada, abre o select Bookmaker
   useEffect(() => {
