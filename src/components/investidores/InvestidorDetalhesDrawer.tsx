@@ -239,34 +239,78 @@ export function InvestidorDetalhesDrawer({
 
                 <Separator />
 
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <p className="text-[10px] text-muted-foreground uppercase">Total Aportado</p>
-                    <p className="text-sm font-semibold font-mono mt-1">
-                      {formatCurrency(totalAportesFiat, "BRL")}
-                    </p>
+                {/* Aportes e Recebidos - FIAT */}
+                <div className="space-y-2">
+                  <p className="text-[10px] text-amber-500 uppercase font-medium">FIAT (BRL)</p>
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase">Aportado</p>
+                      <p className="text-sm font-semibold font-mono mt-1">
+                        {formatCurrency(totalAportesFiat, "BRL")}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase">Recebido</p>
+                      <p className="text-sm font-semibold font-mono mt-1">
+                        {formatCurrency(totalLiquidacoesFiat, "BRL")}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase">Saldo</p>
+                      <p className={`text-sm font-semibold font-mono mt-1 ${saldoFiat > 0 ? "text-amber-500" : "text-muted-foreground"}`}>
+                        {formatCurrency(saldoFiat, "BRL")}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] text-muted-foreground uppercase">Total Recebido</p>
-                    <p className="text-sm font-semibold font-mono mt-1">
-                      {formatCurrency(totalLiquidacoesFiat, "BRL")}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-muted-foreground uppercase">ROI</p>
-                    <Badge
-                      variant="outline"
-                      className={`mt-1 font-mono ${
-                        roiPercentual > 0
-                          ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
-                          : roiPercentual < 0
-                          ? "bg-destructive/10 text-destructive border-destructive/30"
-                          : "bg-muted/20 text-muted-foreground"
-                      }`}
-                    >
-                      {roiPercentual > 0 ? "+" : ""}{roiPercentual.toFixed(1)}%
-                    </Badge>
-                  </div>
+                </div>
+
+                {/* Aportes e Recebidos - CRYPTO */}
+                {(totalAportesCrypto > 0 || totalLiquidacoesCrypto > 0) && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-violet-500 uppercase font-medium">CRYPTO (USD)</p>
+                      <div className="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase">Aportado</p>
+                          <p className="text-sm font-semibold font-mono mt-1">
+                            {formatCurrency(totalAportesCrypto, "USD")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase">Recebido</p>
+                          <p className="text-sm font-semibold font-mono mt-1">
+                            {formatCurrency(totalLiquidacoesCrypto, "USD")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase">Saldo</p>
+                          <p className={`text-sm font-semibold font-mono mt-1 ${saldoCrypto > 0 ? "text-violet-500" : "text-muted-foreground"}`}>
+                            {formatCurrency(saldoCrypto, "USD")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <Separator />
+
+                {/* ROI Consolidado */}
+                <div className="text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase">ROI Consolidado</p>
+                  <Badge
+                    variant="outline"
+                    className={`mt-1 font-mono ${
+                      roiPercentual > 0
+                        ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                        : roiPercentual < 0
+                        ? "bg-destructive/10 text-destructive border-destructive/30"
+                        : "bg-muted/20 text-muted-foreground"
+                    }`}
+                  >
+                    {roiPercentual > 0 ? "+" : ""}{roiPercentual.toFixed(1)}%
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
