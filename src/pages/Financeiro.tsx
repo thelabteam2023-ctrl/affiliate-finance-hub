@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -184,6 +184,7 @@ interface WalletParceiro {
 
 export default function Financeiro() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [caixaFiat, setCaixaFiat] = useState<CaixaFiat[]>([]);
@@ -231,6 +232,10 @@ export default function Financeiro() {
 
   // Ordenação do histórico mensal
   const [historicoSort, setHistoricoSort] = useState<{ field: "mes" | "lucroLiquido" | "patrimonio"; direction: "asc" | "desc" }>({ field: "mes", direction: "desc" });
+
+  // Parâmetros da URL para filtro e aba inicial
+  const tabFromUrl = searchParams.get("tab");
+  const investidorFiltroId = searchParams.get("investidor");
 
   useEffect(() => {
     checkAuth();
@@ -1063,7 +1068,7 @@ export default function Financeiro() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview" className="space-y-6">
+      <Tabs defaultValue={tabFromUrl || "overview"} className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -1307,6 +1312,7 @@ export default function Financeiro() {
           <ParticipacaoInvestidoresTab 
             formatCurrency={formatCurrency}
             onRefresh={fetchData}
+            investidorFiltroId={investidorFiltroId || undefined}
           />
         </TabsContent>
 
