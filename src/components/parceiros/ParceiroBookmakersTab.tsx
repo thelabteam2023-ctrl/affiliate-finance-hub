@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Building2,
@@ -302,9 +303,9 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
           </div>
         </div>
 
-        {/* ÚNICA área com scroll */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="grid grid-cols-2 gap-3">
+        {/* ScrollArea gerencia o scroll */}
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="grid grid-cols-2 gap-3 pr-2">
             {/* Lista vinculadas */}
             <div className="space-y-1.5">
               {displayedVinculados.length === 0 ? (
@@ -496,7 +497,7 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
               )}
             </div>
           </div>
-        </div>
+        </ScrollArea>
       </div>
     </TooltipProvider>
   );
