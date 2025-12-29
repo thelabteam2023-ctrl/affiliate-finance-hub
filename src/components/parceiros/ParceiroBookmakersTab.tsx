@@ -14,6 +14,7 @@ interface BookmakerVinculado {
   id: string;
   nome: string;
   saldo_atual: number;
+  saldo_usd: number;
   status: string;
   moeda: string;
   login_username: string;
@@ -68,7 +69,7 @@ export function ParceiroBookmakersTab({
     try {
       const { data: vinculadosData, error: vinculadosError } = await supabase
         .from("bookmakers")
-        .select("id, nome, saldo_atual, status, moeda, login_username, login_password_encrypted, bookmaker_catalogo_id")
+        .select("id, nome, saldo_atual, saldo_usd, status, moeda, login_username, login_password_encrypted, bookmaker_catalogo_id")
         .eq("parceiro_id", parceiroId);
 
       if (vinculadosError) throw vinculadosError;
@@ -164,6 +165,13 @@ export function ParceiroBookmakersTab({
 
   const isUSDMoeda = (moeda: string) => moeda === "USD" || moeda === "USDT";
 
+  const getSaldoCorreto = (bm: BookmakerVinculado) => {
+    if (isUSDMoeda(bm.moeda)) {
+      return bm.saldo_usd || 0;
+    }
+    return bm.saldo_atual || 0;
+  };
+
   const formatCurrency = (value: number, moeda: string = "BRL") => {
     const symbol = isUSDMoeda(moeda) ? "$" : "R$";
     return new Intl.NumberFormat("pt-BR", {
@@ -249,7 +257,7 @@ export function ParceiroBookmakersTab({
   // Filter and sort
   const filteredVinculados = bookmakersVinculados
     .filter((b) => b.nome.toLowerCase().includes(searchVinculados.toLowerCase()))
-    .sort((a, b) => b.saldo_atual - a.saldo_atual);
+    .sort((a, b) => getSaldoCorreto(b) - getSaldoCorreto(a));
 
   const displayedVinculados = showAllVinculados ? filteredVinculados : filteredVinculados.slice(0, 6);
   const hasMoreVinculados = filteredVinculados.length > 6;
@@ -384,7 +392,7 @@ export function ParceiroBookmakersTab({
                           </Badge>
                         )}
                         <span className="text-[10px] font-medium">
-                          {maskCurrency(bm.saldo_atual, bm.moeda)}
+                          {maskCurrency(getSaldoCorreto(bm), bm.moeda)}
                         </span>
                       </div>
                     </div>
