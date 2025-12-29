@@ -65,6 +65,7 @@ export default function GestaoInvestidores() {
   const [investidores, setInvestidores] = useState<Investidor[]>([]);
   const [roiData, setRoiData] = useState<Map<string, InvestidorROI>>(new Map());
   const [dealsData, setDealsData] = useState<Map<string, InvestidorDeal>>(new Map());
+  const [projetosCount, setProjetosCount] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
@@ -78,6 +79,29 @@ export default function GestaoInvestidores() {
   const [extratoDialogOpen, setExtratoDialogOpen] = useState(false);
   const [detalhesDrawerOpen, setDetalhesDrawerOpen] = useState(false);
   const { canCreate } = useActionAccess();
+
+  const fetchProjetosCount = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("projetos")
+        .select("id, investidor_id");
+
+      if (error) throw error;
+      
+      const countMap = new Map<string, number>();
+      data?.forEach((projeto) => {
+        if (projeto.investidor_id) {
+          countMap.set(
+            projeto.investidor_id, 
+            (countMap.get(projeto.investidor_id) || 0) + 1
+          );
+        }
+      });
+      setProjetosCount(countMap);
+    } catch (error: any) {
+      console.error("Erro ao carregar contagem de projetos:", error);
+    }
+  };
 
   const fetchInvestidores = async () => {
     try {
@@ -93,6 +117,7 @@ export default function GestaoInvestidores() {
       await Promise.all([
         fetchROIData(),
         fetchDealsData(),
+        fetchProjetosCount(),
       ]);
     } catch (error: any) {
       toast.error("Erro ao carregar investidores", {
@@ -386,6 +411,7 @@ export default function GestaoInvestidores() {
                       investidor={investidor}
                       roi={roiData.get(investidor.id)}
                       deal={dealsData.get(investidor.id)}
+                      projetosCount={projetosCount.get(investidor.id) || 0}
                       onClick={() => {
                         setSelectedInvestidor(investidor);
                         setDialogMode("view");
@@ -419,6 +445,7 @@ export default function GestaoInvestidores() {
                       investidor={investidor}
                       roi={roiData.get(investidor.id)}
                       deal={dealsData.get(investidor.id)}
+                      projetosCount={projetosCount.get(investidor.id) || 0}
                       onClick={() => {
                         setSelectedInvestidor(investidor);
                         setDialogMode("view");
