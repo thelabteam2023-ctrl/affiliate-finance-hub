@@ -429,7 +429,8 @@ export function ParceiroDetalhesPanel({
                     </div>
 
                     {/* Lista - ÚNICA área com scroll interno */}
-                    <ScrollArea className="flex-1 min-h-0">
+                    {/* height: 0 + flex-1 força o cálculo correto de altura para o ScrollArea */}
+                    <ScrollArea className="flex-1" style={{ height: 0 }}>
                       <div className="divide-y divide-border">
                         {data.bookmakers.map((bm) => (
                           <div
