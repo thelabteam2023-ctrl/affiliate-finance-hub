@@ -617,7 +617,7 @@ export default function GestaoParceiros() {
           <Card className="border-border bg-gradient-surface overflow-hidden flex-1 min-h-0">
             <div className="grid grid-cols-[340px_1fr] lg:grid-cols-[360px_1fr] h-full min-h-0">
               {/* Painel Esquerdo - Lista de Parceiros */}
-              <div className="min-h-0 overflow-hidden">
+              <div className="h-full min-h-0 overflow-hidden">
                 <ParceiroListaSidebar
                   parceiros={parceirosParaSidebar}
                   selectedId={selectedParceiroDetalhes}
@@ -628,7 +628,7 @@ export default function GestaoParceiros() {
               </div>
 
               {/* Painel Direito - Detalhes */}
-              <div className="min-h-0 overflow-hidden">
+              <div className="h-full min-h-0 overflow-hidden">
                 <ParceiroDetalhesPanel 
                   parceiroId={selectedParceiroDetalhes} 
                   showSensitiveData={showSensitiveData}

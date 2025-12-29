@@ -275,7 +275,7 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
 
   if (loading) {
     return (
-      <div className="h-full flex flex-col p-3 gap-2">
+      <div className="flex flex-col flex-1 min-h-0 p-3 gap-2">
         {[...Array(5)].map((_, i) => (
           <Skeleton key={i} className="h-16 shrink-0" />
         ))}
@@ -285,7 +285,7 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
 
   if (error) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-destructive gap-3">
+      <div className="flex flex-col flex-1 min-h-0 items-center justify-center text-destructive gap-3">
         <AlertCircle className="h-8 w-8 opacity-50" />
         <p className="text-sm">Erro ao carregar movimentações</p>
         <Button variant="outline" size="sm" onClick={fetchData}>
@@ -300,7 +300,7 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
 
   if (transacoes.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+      <div className="flex flex-col flex-1 min-h-0 items-center justify-center text-muted-foreground">
         <AlertCircle className="h-8 w-8 mb-2 opacity-30" />
         <p className="text-sm">Nenhuma movimentação encontrada</p>
       </div>
@@ -309,7 +309,7 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
 
   // Scroll ÚNICO da aba (sem ScrollArea Radix) para evitar layout instável
   return (
-    <div className="h-full flex flex-col min-h-0">
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
         {transacoes.map((transacao) => (
           <div
