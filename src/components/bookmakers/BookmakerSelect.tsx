@@ -41,6 +41,7 @@ interface BookmakerSelectProps {
   disabled?: boolean;
   parceiroId?: string;
   somenteComSaldo?: boolean;
+  somenteComSaldoUsd?: boolean;
   excludeVinculosDoParceiro?: string;
 }
 
@@ -67,6 +68,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   disabled, 
   parceiroId, 
   somenteComSaldo,
+  somenteComSaldoUsd,
   excludeVinculosDoParceiro
 }, ref) => {
   const [open, setOpen] = useState(false);
@@ -133,7 +135,10 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
             `)
             .eq("parceiro_id", parceiroId);
 
-          if (somenteComSaldo) {
+          if (somenteComSaldoUsd) {
+            // Apenas bookmakers com saldo_usd > 0
+            query = query.gt('saldo_usd', 0);
+          } else if (somenteComSaldo) {
             // Com saldo significa saldo_atual > 0 OU saldo_usd > 0
             query = query.or('saldo_atual.gt.0,saldo_usd.gt.0');
           }
@@ -189,7 +194,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     };
 
     fetchBookmakers();
-  }, [parceiroId, somenteComSaldo, excludeVinculosDoParceiro]);
+  }, [parceiroId, somenteComSaldo, somenteComSaldoUsd, excludeVinculosDoParceiro]);
 
   // Buscar dados de exibição quando value muda - execução imediata e determinística
   useEffect(() => {
