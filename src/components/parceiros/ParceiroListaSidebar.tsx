@@ -81,7 +81,7 @@ export function ParceiroListaSidebar({
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-2 space-y-1">
+        <div className="p-2 space-y-1 pb-4">
           {filteredParceiros.map((parceiro) => (
             <button
               key={parceiro.id}
@@ -114,7 +114,7 @@ export function ParceiroListaSidebar({
                     size="xs"
                     variant="auto"
                     masked={!showSensitiveData}
-                    stacked={false}
+                    stacked
                     showDashOnZero
                   />
                 </div>

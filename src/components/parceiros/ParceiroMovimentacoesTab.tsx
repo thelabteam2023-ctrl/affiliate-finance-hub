@@ -310,8 +310,8 @@ export function ParceiroMovimentacoesTab({
   }
 
   return (
-    <ScrollArea className="h-[400px]">
-      <div className="space-y-2 p-2">
+    <ScrollArea className="h-full">
+      <div className="space-y-2 p-2 pb-4">
         {transacoes.map((transacao) => (
           <div
             key={transacao.id}
