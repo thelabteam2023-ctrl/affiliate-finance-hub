@@ -757,16 +757,15 @@ export function CaixaTransacaoDialog({
     prevDestinoParceiroId.current = destinoParceiroId;
   }, [destinoParceiroId, tipoTransacao, tipoMoeda, walletsCrypto, coin]);
 
-  // SAQUE CRYPTO: quando wallet (destino) é selecionada, foca no campo Quantidade de Coins
-  // (bookmaker já foi selecionada antes no novo fluxo invertido)
+  // SAQUE CRYPTO: quando wallet (destino) é selecionada, abre o BookmakerSelect (origem)
   useEffect(() => {
     if (tipoTransacao !== "SAQUE" || tipoMoeda !== "CRYPTO") return;
     if (!destinoWalletId || destinoWalletId === prevDestinoWalletId.current) return;
     
-    // Focar no campo de quantidade de coins
-    if (qtdCoinInputRef.current) {
+    // Abrir BookmakerSelect para selecionar a origem
+    if (bookmakerSelectRef.current) {
       setTimeout(() => {
-        qtdCoinInputRef.current?.focus();
+        bookmakerSelectRef.current?.open();
       }, 150);
     }
     
