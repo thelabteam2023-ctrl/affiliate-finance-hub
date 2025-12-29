@@ -195,7 +195,7 @@ export function ModernBarChart({
         <BarChart 
           data={data} 
           margin={{ top: 25, right: 10, left: 0, bottom: 5 }}
-          barCategoryGap="8%"
+          barCategoryGap="2%"
           barGap={1}
         >
           <defs>
