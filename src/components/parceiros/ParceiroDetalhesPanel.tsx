@@ -674,22 +674,26 @@ export function ParceiroDetalhesPanel({
           </TabsContent>
 
           {/* Aba Movimentações - flex-1 min-h-0 overflow-hidden */}
-          <TabsContent value="movimentacoes" className="flex-1 min-h-0 mt-0 overflow-hidden">
-            <ParceiroMovimentacoesTab 
-              parceiroId={parceiroId} 
-              showSensitiveData={showSensitiveData}
-            />
+          <TabsContent value="movimentacoes" className="flex-1 min-h-0 mt-0 flex flex-col overflow-hidden">
+            <div className="flex-1 min-h-0 h-full overflow-hidden">
+              <ParceiroMovimentacoesTab 
+                parceiroId={parceiroId} 
+                showSensitiveData={showSensitiveData}
+              />
+            </div>
           </TabsContent>
 
           {/* Aba Bookmakers - flex-1 min-h-0 overflow-hidden */}
-          <TabsContent value="bookmakers" className="flex-1 min-h-0 mt-0 overflow-hidden">
-            <ParceiroBookmakersTab
-              parceiroId={parceiroId}
-              showSensitiveData={showSensitiveData}
-              diasRestantes={diasRestantes}
-              onCreateVinculo={onCreateVinculo}
-              onDataChange={handleBookmakersDataChange}
-            />
+          <TabsContent value="bookmakers" className="flex-1 min-h-0 mt-0 flex flex-col overflow-hidden">
+            <div className="flex-1 min-h-0 h-full overflow-hidden">
+              <ParceiroBookmakersTab
+                parceiroId={parceiroId}
+                showSensitiveData={showSensitiveData}
+                diasRestantes={diasRestantes}
+                onCreateVinculo={onCreateVinculo}
+                onDataChange={handleBookmakersDataChange}
+              />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
