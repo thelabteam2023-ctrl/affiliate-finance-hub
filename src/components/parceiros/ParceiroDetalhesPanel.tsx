@@ -310,9 +310,9 @@ export function ParceiroDetalhesPanel({
               <div className="p-4 space-y-3">
                 {/* KPIs compactos - 4 colunas - PADRONIZADO */}
                 <div className="grid gap-2 grid-cols-2 lg:grid-cols-4">
-                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
-                    <ArrowDownToLine className="h-4 w-4 text-blue-500 shrink-0" />
-                    <div className="min-w-0">
+                  <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
+                    <ArrowDownToLine className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Depositado</p>
                       <MultiCurrencyDisplay
                         valueBRL={data.total_depositado_brl}
@@ -320,13 +320,14 @@ export function ParceiroDetalhesPanel({
                         size="sm"
                         masked={!showSensitiveData}
                         showDashOnZero
+                        stacked
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
-                    <ArrowUpFromLine className="h-4 w-4 text-green-500 shrink-0" />
-                    <div className="min-w-0">
+                  <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
+                    <ArrowUpFromLine className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Sacado</p>
                       <MultiCurrencyDisplay
                         valueBRL={data.total_sacado_brl}
@@ -334,21 +335,22 @@ export function ParceiroDetalhesPanel({
                         size="sm"
                         masked={!showSensitiveData}
                         showDashOnZero
+                        stacked
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
+                  <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
                     {showSensitiveData ? (
                       data.lucro_prejuizo >= 0 ? (
-                        <TrendingUp className="h-4 w-4 text-success shrink-0" />
+                        <TrendingUp className="h-4 w-4 text-success shrink-0 mt-0.5" />
                       ) : (
-                        <TrendingDown className="h-4 w-4 text-destructive shrink-0" />
+                        <TrendingDown className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
                       )
                     ) : (
-                      <TrendingUp className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <TrendingUp className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     )}
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Resultado</p>
                       <MultiCurrencyDisplay
                         valueBRL={data.lucro_prejuizo_brl}
@@ -357,13 +359,14 @@ export function ParceiroDetalhesPanel({
                         variant="auto"
                         masked={!showSensitiveData}
                         showDashOnZero
+                        stacked
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
-                    <Target className="h-4 w-4 text-purple-500 shrink-0" />
-                    <div className="min-w-0">
+                  <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
+                    <Target className="h-4 w-4 text-purple-500 shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Apostas</p>
                       <p className="text-sm font-semibold">{data.qtd_apostas_total.toLocaleString("pt-BR")}</p>
                     </div>
@@ -397,8 +400,8 @@ export function ParceiroDetalhesPanel({
                   </div>
                 </div>
 
-                {/* Tabela por Casa de Apostas - altura flexível com scroll seguro */}
-                <div className="border border-border rounded-lg overflow-hidden flex flex-col flex-1 min-h-0">
+                {/* Tabela por Casa de Apostas */}
+                <div className="border border-border rounded-lg overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 420px)', minHeight: '200px' }}>
                   <div className="px-3 py-2 bg-muted/30 border-b border-border shrink-0">
                     <h3 className="text-xs font-medium flex items-center gap-1.5">
                       <Building2 className="h-3.5 w-3.5 text-primary" />
@@ -411,9 +414,9 @@ export function ParceiroDetalhesPanel({
                       Nenhuma casa vinculada
                     </div>
                   ) : (
-                    <div className="flex flex-col flex-1 min-h-0">
-                      {/* Header fixo */}
-                      <div className="grid grid-cols-6 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/20 border-b border-border shrink-0">
+                    <>
+                      {/* Header fixo - STICKY */}
+                      <div className="grid grid-cols-6 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/30 border-b border-border shrink-0 sticky top-0 z-10">
                         <div className="col-span-2">Casa</div>
                         <div className="text-right">Dep.</div>
                         <div className="text-right">Saq.</div>
@@ -421,9 +424,9 @@ export function ParceiroDetalhesPanel({
                         <div className="text-right">Apost.</div>
                       </div>
 
-                      {/* Rows com scroll e padding inferior de segurança */}
-                      <div className="flex-1 overflow-y-auto min-h-0">
-                        <div className="divide-y divide-border pb-2">
+                      {/* Rows com scroll */}
+                      <div className="flex-1 overflow-y-auto">
+                        <div className="divide-y divide-border pb-4">
 
                       {/* Rows */}
                       {data.bookmakers.map((bm) => (
@@ -609,7 +612,7 @@ export function ParceiroDetalhesPanel({
                       ))}
                         </div>
                       </div>
-                    </div>
+                    </>
                   )}
                 </div>
               </div>
