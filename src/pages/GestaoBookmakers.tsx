@@ -405,7 +405,7 @@ export default function GestaoBookmakers() {
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-3xl font-bold text-primary">
+                <span className="text-xl font-semibold text-primary">
                   {formatCurrency(stats.saldoTotalBrl, "BRL")}
                 </span>
                 <Badge variant="outline" className="text-green-600 border-green-600">BRL</Badge>
