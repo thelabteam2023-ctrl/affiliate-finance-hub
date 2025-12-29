@@ -188,41 +188,29 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
   const hasMoreVinculados = filteredVinculados.length > 6;
   const filteredDisponiveis = bookmakersDisponiveis.filter((b) => b.nome.toLowerCase().includes(searchDisponiveis.toLowerCase()));
 
-  // CONTENT: h-full flex-col com header fixo e área de scroll
+  // CONTENT: h-full flex-col, SEM scroll global, cada lista com scroll próprio
   return (
     <TooltipProvider>
       <div className="h-full flex flex-col gap-3">
-        {/* Header fixo */}
-        <div className="shrink-0 grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-primary" />
-              <h4 className="text-sm font-medium">Casas Vinculadas</h4>
-              <Badge variant="secondary" className="text-xs ml-auto">{bookmakersVinculados.length}</Badge>
+        {/* Container de colunas - flex-1 para ocupar espaço restante */}
+        <div className="flex-1 min-h-0 grid grid-cols-2 gap-3">
+          
+          {/* Card: Casas Vinculadas */}
+          <div className="flex flex-col border border-border rounded-lg overflow-hidden">
+            {/* Header do card - fixo */}
+            <div className="shrink-0 p-3 bg-muted/30 border-b border-border space-y-2">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary" />
+                <h4 className="text-sm font-medium">Casas Vinculadas</h4>
+                <Badge variant="secondary" className="text-xs ml-auto">{bookmakersVinculados.length}</Badge>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input placeholder="Buscar..." value={searchVinculados} onChange={(e) => setSearchVinculados(e.target.value)} className="pl-7 h-8 text-xs" />
+              </div>
             </div>
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input placeholder="Buscar..." value={searchVinculados} onChange={(e) => setSearchVinculados(e.target.value)} className="pl-7 h-8 text-xs" />
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <Plus className="h-4 w-4 text-muted-foreground" />
-              <h4 className="text-sm font-medium">Casas Disponíveis</h4>
-              <Badge variant="outline" className="text-xs ml-auto">{bookmakersDisponiveis.length}</Badge>
-            </div>
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input placeholder="Buscar casa..." value={searchDisponiveis} onChange={(e) => setSearchDisponiveis(e.target.value)} className="pl-7 h-8 text-xs" />
-            </div>
-          </div>
-        </div>
-
-        {/* Lista com scroll */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="grid grid-cols-2 gap-3 pr-1">
-            {/* Lista vinculadas */}
-            <div className="space-y-1.5">
+            {/* Lista de Casas Vinculadas - scroll independente */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1.5">
               {displayedVinculados.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground text-xs"><AlertCircle className="h-6 w-6 mx-auto mb-1 opacity-30" />Nenhuma casa vinculada</div>
               ) : displayedVinculados.map((bm) => (
@@ -265,9 +253,24 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
               {hasMoreVinculados && !showAllVinculados && <Button variant="ghost" size="sm" className="w-full h-7 text-xs text-muted-foreground" onClick={() => setShowAllVinculados(true)}><ChevronDown className="h-3 w-3 mr-1" />Ver mais ({filteredVinculados.length - 6})</Button>}
               {showAllVinculados && hasMoreVinculados && <Button variant="ghost" size="sm" className="w-full h-7 text-xs text-muted-foreground" onClick={() => setShowAllVinculados(false)}><ChevronUp className="h-3 w-3 mr-1" />Ver menos</Button>}
             </div>
+          </div>
 
-            {/* Lista disponíveis */}
-            <div className="space-y-1.5">
+          {/* Card: Casas Disponíveis */}
+          <div className="flex flex-col border border-border rounded-lg overflow-hidden">
+            {/* Header do card - fixo */}
+            <div className="shrink-0 p-3 bg-muted/30 border-b border-border space-y-2">
+              <div className="flex items-center gap-2">
+                <Plus className="h-4 w-4 text-muted-foreground" />
+                <h4 className="text-sm font-medium">Casas Disponíveis</h4>
+                <Badge variant="outline" className="text-xs ml-auto">{bookmakersDisponiveis.length}</Badge>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input placeholder="Buscar casa..." value={searchDisponiveis} onChange={(e) => setSearchDisponiveis(e.target.value)} className="pl-7 h-8 text-xs" />
+              </div>
+            </div>
+            {/* Lista de Casas Disponíveis - scroll independente */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1.5">
               {filteredDisponiveis.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground text-xs"><AlertCircle className="h-6 w-6 mx-auto mb-1 opacity-30" />Nenhuma casa disponível</div>
               ) : filteredDisponiveis.map((bm) => (
@@ -279,6 +282,7 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
               ))}
             </div>
           </div>
+
         </div>
       </div>
     </TooltipProvider>
