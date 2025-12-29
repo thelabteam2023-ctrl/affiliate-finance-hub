@@ -1733,14 +1733,14 @@ export function CaixaTransacaoDialog({
               </Alert>
             )}
             <div className="space-y-2">
-              <Label>Bookmaker</Label>
+              <Label>Bookmaker (com saldo {moeda})</Label>
               <BookmakerSelect
                 ref={bookmakerSelectRef}
                 value={origemBookmakerId}
                 onValueChange={setOrigemBookmakerId}
                 disabled={!isDestinoCompleta}
                 parceiroId={destinoParceiroId}
-                somenteComSaldo={true}
+                somenteComSaldoFiat={true}
               />
             </div>
           </>
