@@ -555,7 +555,14 @@ export function FluxoFinanceiroOperacional({
                   },
                 ]}
                 height={300}
-                barSize={16}
+                barSize={24}
+                showLabels={true}
+                formatLabel={(value, ctx) => {
+                  if (value === 0) return '';
+                  const isUSD = ctx?.dataKey?.toString().includes('_usd');
+                  const prefix = isUSD ? 'US$ ' : 'R$ ';
+                  return prefix + Math.abs(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                }}
                 customTooltipContent={(payload, label) => {
                   const data = payload[0]?.payload;
                   const hasAnyUSD = (data?.aportes_usd || 0) > 0 || Math.abs(data?.liquidacoes_usd || 0) > 0;
@@ -684,7 +691,14 @@ export function FluxoFinanceiroOperacional({
                   },
                 ]}
                 height={300}
-                barSize={16}
+                barSize={24}
+                showLabels={true}
+                formatLabel={(value, ctx) => {
+                  if (value === 0) return '';
+                  const isUSD = ctx?.dataKey?.toString().includes('_usd');
+                  const prefix = isUSD ? 'US$ ' : 'R$ ';
+                  return prefix + Math.abs(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                }}
                 customTooltipContent={(payload, label) => {
                   const data = payload[0]?.payload;
                   const hasAnyUSD = (data?.depositos_usd || 0) > 0 || (data?.saques_usd || 0) > 0;
