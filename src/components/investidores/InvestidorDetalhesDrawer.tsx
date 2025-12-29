@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FolderOpen, Layers, DollarSign, LayoutDashboard, ExternalLink } from "lucide-react";
+import { FolderOpen, Layers, DollarSign, LayoutDashboard } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { InvestidorProjetosTab } from "./InvestidorProjetosTab";
 import { InvestidorParticipacoesList } from "./InvestidorParticipacoesList";
+import { InvestidorFinanceiroTab } from "./InvestidorFinanceiroTab";
 
 interface InvestidorROI {
   investidor_id: string;
@@ -373,18 +374,11 @@ export function InvestidorDetalhesDrawer({
           </TabsContent>
 
           {/* Financeiro Tab */}
-          <TabsContent value="financeiro" className="space-y-4">
-            <Card className="bg-card/50">
-              <CardContent className="py-8 text-center">
-                <DollarSign className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-                <p className="text-sm text-muted-foreground">
-                  Para ver o histórico financeiro completo,
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  acesse o Extrato do investidor.
-                </p>
-              </CardContent>
-            </Card>
+          <TabsContent value="financeiro">
+            <InvestidorFinanceiroTab 
+              investidorId={investidor.id} 
+              investidorNome={investidor.nome} 
+            />
           </TabsContent>
         </Tabs>
       </SheetContent>

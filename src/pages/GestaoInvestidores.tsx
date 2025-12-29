@@ -426,10 +426,6 @@ export default function GestaoInvestidores() {
                         setInvestidorToDelete(investidor);
                         setDeleteDialogOpen(true);
                       }}
-                      onExtrato={() => {
-                        setSelectedInvestidor(investidor);
-                        setExtratoDialogOpen(true);
-                      }}
                       onVerDetalhes={() => {
                         setSelectedInvestidor(investidor);
                         setDetalhesDrawerOpen(true);
@@ -459,10 +455,6 @@ export default function GestaoInvestidores() {
                       onDelete={() => {
                         setInvestidorToDelete(investidor);
                         setDeleteDialogOpen(true);
-                      }}
-                      onExtrato={() => {
-                        setSelectedInvestidor(investidor);
-                        setExtratoDialogOpen(true);
                       }}
                       onVerDetalhes={() => {
                         setSelectedInvestidor(investidor);
