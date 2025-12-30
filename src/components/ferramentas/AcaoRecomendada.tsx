@@ -117,7 +117,30 @@ export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
   );
 };
 
-export const SemAcaoRecomendada: React.FC<{ motivo: 'concluido' | 'red' }> = ({ motivo }) => {
+interface SemAcaoRecomendadaProps {
+  motivo: 'concluido' | 'red';
+  valorExtraido?: number;
+  juicePerdido?: number;
+  moeda?: MoedaCalc;
+}
+
+export const SemAcaoRecomendada: React.FC<SemAcaoRecomendadaProps> = ({ 
+  motivo, 
+  valorExtraido = 0, 
+  juicePerdido = 0,
+  moeda = 'BRL'
+}) => {
+  const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
+
+  const formatValue = (value: number) => {
+    const prefix = value >= 0 ? '+' : '';
+    return `${prefix}${currencySymbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const formatPercent = (value: number) => {
+    return `${value.toFixed(2)}%`;
+  };
+
   const config = {
     concluido: {
       title: 'Operação Concluída',
@@ -136,7 +159,7 @@ export const SemAcaoRecomendada: React.FC<{ motivo: 'concluido' | 'red' }> = ({ 
   const c = config[motivo];
 
   return (
-    <div className={cn('rounded-lg border-2 p-4', c.bg)}>
+    <div className={cn('rounded-lg border-2 p-4 space-y-3', c.bg)}>
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-full bg-background/50">
           {c.icon}
@@ -144,6 +167,25 @@ export const SemAcaoRecomendada: React.FC<{ motivo: 'concluido' | 'red' }> = ({ 
         <div>
           <h4 className="font-bold text-foreground">{c.title}</h4>
           <p className="text-sm text-muted-foreground">{c.description}</p>
+        </div>
+      </div>
+
+      {/* Resumo da operação */}
+      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/30">
+        <div className="p-2 rounded bg-background/50">
+          <span className="text-xs text-muted-foreground block mb-0.5">Valor Extraído</span>
+          <span className={cn(
+            'text-base font-bold',
+            valorExtraido >= 0 ? 'text-success' : 'text-destructive'
+          )}>
+            {formatValue(valorExtraido)}
+          </span>
+        </div>
+        <div className="p-2 rounded bg-background/50">
+          <span className="text-xs text-muted-foreground block mb-0.5">Juice Perdido</span>
+          <span className="text-base font-bold text-destructive">
+            {formatPercent(juicePerdido)}
+          </span>
         </div>
       </div>
     </div>
