@@ -8,13 +8,13 @@ interface SimulacaoAtivaCardProps {
   simulacao: {
     pernaId: number;
     passivo: number;
-    extracao: number;
+    percentualExtracao: number;
     target: number;
     stakeLay: number;
     oddLay: number;
     oddBack: number;
     responsabilidade: number;
-    seRed: { capitalExtraido: number; resultado: string };
+    seRed: { capitalExtraido: number; resultado: string; passivoRestante: number };
     seGreen: { resultado: number; novoPassivo: number; proxPerna: number | null };
   };
   moeda: MoedaCalc;
@@ -63,9 +63,9 @@ export const SimulacaoAtivaCard: React.FC<SimulacaoAtivaCardProps> = ({
           </span>
         </div>
         <div className="p-2 rounded-lg bg-background border border-border text-center">
-          <span className="text-[10px] text-muted-foreground block">Extração</span>
+          <span className="text-[10px] text-muted-foreground block">% Extração</span>
           <span className="text-sm font-bold text-foreground">
-            {formatValue(simulacao.extracao)}
+            {simulacao.percentualExtracao}%
           </span>
         </div>
         <div className="p-2 rounded-lg bg-primary/10 border border-primary/30 text-center">
@@ -142,7 +142,9 @@ export const SimulacaoAtivaCard: React.FC<SimulacaoAtivaCardProps> = ({
             </div>
             
             <div className="mt-2 pt-2 border-t border-success/20 text-center">
-              <span className="text-xs text-success font-medium">Passivo zerado ✓</span>
+              <span className="text-xs text-success font-medium">
+                {simulacao.seRed.passivoRestante <= 0 ? 'Passivo zerado ✓' : `Restará: ${formatValue(simulacao.seRed.passivoRestante)}`}
+              </span>
             </div>
           </div>
 

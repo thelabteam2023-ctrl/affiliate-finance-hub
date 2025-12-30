@@ -2,20 +2,21 @@ import React, { useMemo } from 'react';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { MoedaCalc } from '@/contexts/CalculadoraContext';
-import { AlertTriangle, Target, TrendingUp, Wallet } from 'lucide-react';
+import { AlertTriangle, Target, TrendingUp, Wallet, HelpCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ExtracaoSliderProps {
   passivoAtual: number;
-  extracaoAtual: number;
+  percentualExtracao: number; // 0-100
   oddLay: number;
   comissao: number; // Em decimal, ex: 0.05 para 5%
   moeda: MoedaCalc;
-  onExtracaoChange: (valor: number) => void;
+  onExtracaoChange: (percentual: number) => void;
 }
 
 export const ExtracaoSlider: React.FC<ExtracaoSliderProps> = ({
   passivoAtual,
-  extracaoAtual,
+  percentualExtracao,
   oddLay,
   comissao,
   moeda,
@@ -23,27 +24,29 @@ export const ExtracaoSlider: React.FC<ExtracaoSliderProps> = ({
 }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
   
-  // Limite máximo: 200% do passivo atual (mínimo de 10 para não ter slider vazio)
-  const maxExtracao = Math.max(passivoAtual * 2, 10);
-  
-  // Calcular valores em tempo real
+  // Calcular valores em tempo real baseado no percentual
   const calculos = useMemo(() => {
-    const targetMin = passivoAtual + extracaoAtual;
-    const stakeLayMin = targetMin / (1 - comissao);
+    // Target = Passivo × (% / 100) → NUNCA maior que o passivo!
+    const target = passivoAtual * (percentualExtracao / 100);
+    const stakeLayMin = target / (1 - comissao);
     const riscoMax = stakeLayMin * (oddLay - 1);
     
-    // Razão risco/extração para determinar nível de risco
-    const razaoRisco = extracaoAtual > 0 ? riscoMax / extracaoAtual : 0;
+    // Passivo restante se RED (o que sobra após extração)
+    const passivoRestante = passivoAtual - target;
+    
+    // Razão risco/target para determinar nível de risco
+    const razaoRisco = target > 0 ? riscoMax / target : 0;
     
     return {
-      targetMin,
+      target,
       stakeLayMin,
       riscoMax,
       razaoRisco,
+      passivoRestante,
     };
-  }, [passivoAtual, extracaoAtual, oddLay, comissao]);
+  }, [passivoAtual, percentualExtracao, oddLay, comissao]);
   
-  // Determinar cor baseado na razão risco/extração
+  // Determinar cor baseado na razão risco/target
   const getRiskLevel = (razao: number): { color: string; bgColor: string; borderColor: string; label: string } => {
     if (razao < 1.5) {
       return {
@@ -71,11 +74,6 @@ export const ExtracaoSlider: React.FC<ExtracaoSliderProps> = ({
   
   const riskLevel = getRiskLevel(calculos.razaoRisco);
   
-  // Calcular porcentagem do passivo
-  const percentualPassivo = passivoAtual > 0 
-    ? ((extracaoAtual / passivoAtual) * 100).toFixed(0) 
-    : '0';
-  
   const formatValue = (value: number) => {
     return `${currencySymbol} ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
@@ -91,10 +89,21 @@ export const ExtracaoSlider: React.FC<ExtracaoSliderProps> = ({
     <div className="space-y-3 p-3 rounded-lg border border-border/50 bg-background/50">
       {/* Header do slider */}
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-foreground flex items-center gap-1">
-          <TrendingUp className="h-3 w-3 text-primary" />
-          Extração desejada
-        </span>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-xs font-medium text-foreground flex items-center gap-1 cursor-help">
+                <TrendingUp className="h-3 w-3 text-primary" />
+                % do Passivo a Extrair
+                <HelpCircle className="h-3 w-3 text-muted-foreground" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[280px] text-xs">
+              <p>Este valor representa quanto do capital atualmente preso na Bookmaker você deseja retirar via Exchange.</p>
+              <p className="mt-1 text-muted-foreground">100% = extrair todo o passivo (recuperação total)</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <div className={cn(
           'px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1',
           riskLevel.bgColor,
@@ -105,13 +114,13 @@ export const ExtracaoSlider: React.FC<ExtracaoSliderProps> = ({
         </div>
       </div>
       
-      {/* Slider com cores dinâmicas */}
+      {/* Slider com cores dinâmicas - agora de 0 a 100% */}
       <div className="relative">
         <Slider
-          value={[extracaoAtual]}
-          min={0}
-          max={maxExtracao}
-          step={passivoAtual > 100 ? 10 : 1}
+          value={[percentualExtracao]}
+          min={10}
+          max={100}
+          step={5}
           onValueChange={(value) => onExtracaoChange(value[0])}
           className="w-full"
         />
@@ -122,20 +131,27 @@ export const ExtracaoSlider: React.FC<ExtracaoSliderProps> = ({
             getSliderTrackColor()
           )}
           style={{ 
-            width: `${(extracaoAtual / maxExtracao) * 100}%`,
+            width: `${percentualExtracao}%`,
             maxWidth: 'calc(100% - 10px)'
           }}
         />
       </div>
       
-      {/* Valor atual */}
+      {/* Valor atual - agora mostra o percentual com destaque */}
       <div className="flex justify-between items-center">
-        <span className="text-lg font-bold text-primary">
-          {formatValue(extracaoAtual)}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          {percentualPassivo}% do passivo
-        </span>
+        <div className="flex items-baseline gap-2">
+          <span className="text-2xl font-bold text-primary">
+            {percentualExtracao}%
+          </span>
+          <span className="text-sm text-muted-foreground">
+            = {formatValue(calculos.target)}
+          </span>
+        </div>
+        {percentualExtracao < 100 && (
+          <span className="text-xs text-muted-foreground">
+            Restará: {formatValue(calculos.passivoRestante)}
+          </span>
+        )}
       </div>
       
       {/* Indicadores calculados em tempo real */}
@@ -146,7 +162,7 @@ export const ExtracaoSlider: React.FC<ExtracaoSliderProps> = ({
           </div>
           <span className="text-[10px] text-muted-foreground block">Target</span>
           <span className="text-xs font-bold text-primary">
-            {formatValue(calculos.targetMin)}
+            {formatValue(calculos.target)}
           </span>
         </div>
         
@@ -176,9 +192,12 @@ export const ExtracaoSlider: React.FC<ExtracaoSliderProps> = ({
         </div>
       </div>
       
-      {/* Texto auxiliar */}
+      {/* Texto auxiliar atualizado */}
       <p className="text-[10px] text-muted-foreground text-center italic">
-        Quanto maior a extração desejada, maior o risco assumido.
+        {percentualExtracao === 100 
+          ? 'Extração total: recupera todo o passivo se RED.' 
+          : `Extração parcial: restará ${formatValue(calculos.passivoRestante)} na Bookmaker.`
+        }
       </p>
     </div>
   );

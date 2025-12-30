@@ -14,7 +14,7 @@ interface PernaTimelineProps {
   stakeInicial: number;
   onOddBackChange: (id: number, odd: number) => void;
   onOddLayChange: (id: number, odd: number) => void;
-  onExtracaoChange: (id: number, valor: number) => void;
+  onExtracaoChange: (id: number, percentual: number) => void;
   onConfirmar: (id: number, resultado: 'green' | 'red') => void;
 }
 
@@ -178,28 +178,32 @@ const PernaCard: React.FC<{
           )}
         </div>
         
-        {/* Extração - Input simples para pernas não ativas */}
+        {/* Extração Percentual - Input simples para pernas não ativas */}
         {!canEditExtracao && (
           <div className="flex items-center gap-2">
             <Label className="text-xs text-muted-foreground w-16">Extração:</Label>
-            <Input
-              type="number"
-              step="10"
-              min="0"
-              value={perna.extracaoDesejada}
-              onChange={(e) => onExtracaoChange(parseFloat(e.target.value) || 0)}
-              className="w-20 h-8 text-sm bg-muted/50"
-              disabled={true}
-            />
+            <div className="flex items-center gap-1">
+              <Input
+                type="number"
+                step="10"
+                min="0"
+                max="100"
+                value={perna.percentualExtracao}
+                onChange={(e) => onExtracaoChange(parseFloat(e.target.value) || 0)}
+                className="w-16 h-8 text-sm bg-muted/50"
+                disabled={true}
+              />
+              <span className="text-xs text-muted-foreground">%</span>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Slider de Extração - Aparece apenas na perna ativa */}
+      {/* Slider de Extração Percentual - Aparece apenas na perna ativa */}
       {canEditExtracao && (
         <ExtracaoSlider
           passivoAtual={perna.passivoAtual}
-          extracaoAtual={perna.extracaoDesejada}
+          percentualExtracao={perna.percentualExtracao}
           oddLay={perna.oddLay}
           comissao={0.05} // 5% comissão padrão
           moeda={moeda}
