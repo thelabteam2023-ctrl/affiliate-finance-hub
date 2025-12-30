@@ -1,14 +1,21 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react';
-import { X, Minus, Maximize2, Minimize2, GripVertical, Calculator, GripHorizontal } from 'lucide-react';
+import { X, Minus, Maximize2, Minimize2, GripVertical, Calculator, GripHorizontal, ExternalLink, SquareArrowOutUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCalculadora } from '@/contexts/CalculadoraContext';
 import { Button } from '@/components/ui/button';
 import { CalculadoraProtecaoContent } from './CalculadoraProtecaoContent';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const MIN_WIDTH = 400;
 const MIN_HEIGHT = 400;
 const DEFAULT_WIDTH = 720;
 const DEFAULT_HEIGHT = 600;
+const EXTERNAL_URL = '/ferramentas/protecao-progressiva';
 
 export const CalculadoraProtecaoPopup: React.FC = () => {
   const { isOpen, isMinimized, position, closeCalculadora, toggleMinimize, setPosition } = useCalculadora();
@@ -19,6 +26,27 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
   const dragOffset = useRef({ x: 0, y: 0 });
   const resizeStart = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Abrir em nova aba
+  const handleOpenInNewTab = () => {
+    window.open(EXTERNAL_URL, '_blank');
+    closeCalculadora();
+  };
+
+  // Abrir em nova janela externa (popup)
+  const handleOpenInNewWindow = () => {
+    const width = 800;
+    const height = 700;
+    const left = (window.screen.width - width) / 2;
+    const top = (window.screen.height - height) / 2;
+    
+    window.open(
+      EXTERNAL_URL,
+      'ProtecaoProgressiva',
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=no,menubar=no,toolbar=no,location=no`
+    );
+    closeCalculadora();
+  };
 
   // Carregar tamanho salvo do localStorage
   useEffect(() => {
@@ -146,7 +174,28 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
     );
   }
 
-  // Versão expandida (tela cheia)
+  // Botões de ação externa (compartilhados entre versões)
+  const ExternalActionsButtons = () => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-7 w-7" title="Abrir externamente">
+          <ExternalLink className="h-3.5 w-3.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="z-[10000]">
+        <DropdownMenuItem onClick={handleOpenInNewTab} className="gap-2 cursor-pointer">
+          <ExternalLink className="h-4 w-4" />
+          Abrir em nova aba
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleOpenInNewWindow} className="gap-2 cursor-pointer">
+          <SquareArrowOutUpRight className="h-4 w-4" />
+          Abrir em janela externa
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  // Versão expandida (tela cheia interna)
   if (isExpanded) {
     return (
       <div className="fixed inset-0 z-[9999] bg-background">
@@ -158,6 +207,7 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
               <h2 className="font-semibold text-foreground">Proteção Progressiva</h2>
             </div>
             <div className="flex items-center gap-1">
+              <ExternalActionsButtons />
               {/* Só mostra botão de sair do fullscreen se não for mobile */}
               {window.innerWidth >= 768 && (
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsExpanded(false)}>
@@ -182,7 +232,7 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
     );
   }
 
-  // Versão janela flutuante redimensionável
+  // Versão janela flutuante redimensionável (modal interno)
   return (
     <div
       ref={containerRef}
@@ -211,13 +261,14 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
           <h2 className="font-semibold text-foreground text-sm">Proteção Progressiva</h2>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsExpanded(true)}>
+          <ExternalActionsButtons />
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsExpanded(true)} title="Tela cheia">
             <Maximize2 className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={toggleMinimize}>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={toggleMinimize} title="Minimizar">
             <Minus className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={closeCalculadora}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={closeCalculadora} title="Fechar">
             <X className="h-3.5 w-3.5" />
           </Button>
         </div>

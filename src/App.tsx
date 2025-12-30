@@ -33,6 +33,7 @@ import ComunidadeDetalhe from "./pages/ComunidadeDetalhe";
 import ComunidadeChatPopout from "./pages/ComunidadeChatPopout";
 import SystemAdmin from "./pages/SystemAdmin";
 import AcceptInvite from "./pages/AcceptInvite";
+import ProtecaoProgressiva from "./pages/ProtecaoProgressiva";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -237,6 +238,13 @@ const App = () => (
             <Route path="/comunidade/chat" element={
               <ProtectedRoute>
                 <ComunidadeChatPopout />
+              </ProtectedRoute>
+            } />
+            
+            {/* Proteção Progressiva - standalone, sem layout */}
+            <Route path="/ferramentas/protecao-progressiva" element={
+              <ProtectedRoute>
+                <ProtecaoProgressiva />
               </ProtectedRoute>
             } />
             
