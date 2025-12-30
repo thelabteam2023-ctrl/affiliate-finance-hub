@@ -1,82 +1,73 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
 /**
- * CALCULADORA DE SIMULAÇÃO FINANCEIRA
+ * CALCULADORA DE RECUPERAÇÃO PROGRESSIVA + EXTRAÇÃO VIA LAY
  * 
- * DOIS MODOS DE OPERAÇÃO:
+ * CONCEITO FUNDAMENTAL:
+ * - Cada perna herda todo o passivo anterior
+ * - Adiciona um objetivo explícito de extração
+ * - Calcula o stake LAY necessário para recuperar passivo + extrair valor desejado
+ * - Se cair na Exchange → sistema limpo, operação encerrada
+ * - Se ganhar na Bookmaker → passivo cresce
  * 
- * 1. SIMULAÇÃO MANUAL:
- *    - stakeLay = valor inserido pelo usuário
- *    - Simula consequências da combinação escolhida
- * 
- * 2. MATCHED BET BALANCEADO:
- *    - stakeLay = calculado automaticamente para equalizar resultados
- *    - Fórmula: stakeLay = (stakeBack × oddBack) / (oddLay - comissão)
- *    - Resultado GREEN ≈ Resultado RED (ambos com pequeno custo = juice)
- * 
- * NUNCA BLOQUEIA - apenas exibe avisos informativos
+ * FÓRMULAS CENTRAIS:
+ * - Target_n = Passivo_n + Extração_n
+ * - Stake_LAY_n = Target_n / (1 - comissão)
+ * - Se RED: Ganho_LAY = Stake_LAY × (1 - c), Resultado = 0 (passivo zerado)
+ * - Se GREEN: Resultado = Lucro_BACK - Perda_LAY, Novo_Passivo = Target - Resultado
  */
 
 export type StatusPerna = 'aguardando' | 'ativa' | 'green' | 'red' | 'travada';
 export type TipoAposta = 'dupla' | 'tripla' | 'multipla';
 export type MoedaCalc = 'BRL' | 'USD';
-export type ModoCalculo = 'manual' | 'balanceado';
 
 export interface PernaAposta {
   id: number;
   oddBack: number;
   oddLay: number;
-  stakeLay: number;        // INPUT do usuário OU calculado (modo balanceado)
-  stakeLayManual: number;  // Valor inserido manualmente (para restaurar ao trocar modo)
+  extracaoDesejada: number;  // Eₙ - Valor que deseja extrair nesta perna
   status: StatusPerna;
   
-  // Calculados automaticamente
-  responsabilidade: number;    // stakeLay × (oddLay − 1)
+  // Calculados automaticamente com base no modelo
+  passivoAnterior: number;   // Pₙ - Passivo herdado das pernas anteriores
+  target: number;            // Tₙ = Pₙ + Eₙ - Target total a recuperar
+  stakeLayNecessario: number; // Stake_LAY = Target / (1 - c)
+  responsabilidade: number;   // Stake_LAY × (oddLay - 1)
   
-  // Se RED (perde na bookmaker, ganha LAY na exchange)
-  ganhoLayBruto: number;       // stakeLay
-  ganhoLayLiquido: number;     // stakeLay × (1 − comissão)
-  resultadoSeRed: number;      // ganhoLayLiquido - stakeInicial
-  
-  // Se GREEN (ganha na bookmaker, perde LAY)
-  lucroBack: number;           // stakeInicial × (oddBack − 1)
-  resultadoSeGreen: number;    // lucroBack - responsabilidade
-  
-  // Métricas
-  juicePerna: number;          // custo percentual da operação
-  
-  // Avisos (nunca bloqueios)
-  avisos: string[];
+  // Resultados projetados
+  lucroBack: number;           // S0 × (oddBack - 1)
+  perdaLay: number;            // Stake_LAY × (oddLay - 1)
+  resultadoSeGreen: number;    // Lucro_BACK - Perda_LAY
+  novoPassivoSeGreen: number;  // Target - Resultado_GREEN (se negativo, vira novo passivo)
+  resultadoSeRed: number;      // Sempre 0 (passivo zerado)
+  capitalExtraidoSeRed: number; // Stake_LAY × (1 - c) = Target (recupera tudo)
 }
 
 export interface MetricasGlobais {
   stakeInicial: number;
   
-  // VOLUME OPERADO (informativo, NÃO é custo)
-  volumeExchange: number;       // Soma dos stakes LAY - apenas para controle operacional
-  totalResponsabilidade: number; // Soma das responsabilidades - exposição máxima
+  // Volume operado (informativo)
+  volumeExchange: number;       // Soma dos stakes LAY
+  exposicaoMaxima: number;      // Maior responsabilidade
   
-  // CUSTO REAL (o que realmente importa)
-  custoTotalAcumulado: number;  // Soma dos Resultado_GREEN de cada perna (normalmente negativo)
-  
-  // Se todas GREEN
-  resultadoTotalSeGreen: number;
-  eficienciaSeGreen: number;     // 1 - (|Custo_Total| / Stake) × 100
+  // Passivo atual
+  passivoAtual: number;
+  targetAtual: number;
   
   // Se RED na perna ativa
-  resultadoSeRedAgora: number;
+  capitalExtraidoSeRedAgora: number;
   
-  // Juice (custo percentual)
-  juiceTotal: number;           // (Custo_Total / Stake) × 100
-  
-  // Avisos globais
-  avisos: string[];
+  // Se todas GREEN (pior cenário)
+  passivoFinalSeTodasGreen: number;
   
   // Status
   operacaoEncerrada: boolean;
-  motivoEncerramento: 'red' | 'todas_green' | null;
+  motivoEncerramento: 'red' | null;
   capitalFinal: number;
   eficienciaFinal: number;
+  
+  // Aviso de risco
+  avisoRisco: string;
 }
 
 interface CalculadoraState {
@@ -87,7 +78,6 @@ interface CalculadoraState {
   stakeInicial: number;
   comissaoExchange: number;
   moeda: MoedaCalc;
-  modoCalculo: ModoCalculo;
   pernas: PernaAposta[];
   numPernas: number;
   pernaAtiva: number;
@@ -102,23 +92,24 @@ interface CalculadoraContextType extends CalculadoraState {
   setStakeInicial: (stake: number) => void;
   setComissaoExchange: (comissao: number) => void;
   setMoeda: (moeda: MoedaCalc) => void;
-  setModoCalculo: (modo: ModoCalculo) => void;
   setNumPernas: (num: number) => void;
   updatePernaOddBack: (id: number, odd: number) => void;
   updatePernaOddLay: (id: number, odd: number) => void;
-  updatePernaStakeLay: (id: number, stake: number) => void;
+  updatePernaExtracao: (id: number, valor: number) => void;
   confirmarPerna: (id: number, resultado: 'green' | 'red') => void;
   resetCalculadora: () => void;
   getMetricasGlobais: () => MetricasGlobais;
   getSimulacaoAtiva: () => {
     pernaId: number;
+    passivo: number;
+    extracao: number;
+    target: number;
     stakeLay: number;
     oddLay: number;
     oddBack: number;
     responsabilidade: number;
-    seRed: { resultado: number; eficiencia: number };
-    seGreen: { resultado: number; eficiencia: number; proxPerna: number | null };
-    avisos: string[];
+    seRed: { capitalExtraido: number; resultado: string };
+    seGreen: { resultado: number; novoPassivo: number; proxPerna: number | null };
   } | null;
 }
 
@@ -130,7 +121,6 @@ const defaultState: CalculadoraState = {
   stakeInicial: 100,
   comissaoExchange: 5,
   moeda: 'BRL',
-  modoCalculo: 'balanceado',
   pernas: [],
   numPernas: 2,
   pernaAtiva: 1,
@@ -151,34 +141,19 @@ const createPernas = (num: number, stakeInicial: number): PernaAposta[] => {
     id: i + 1,
     oddBack: 2.0,
     oddLay: 2.0,
-    stakeLay: stakeInicial,  // Default = stake inicial
-    stakeLayManual: stakeInicial,  // Para restaurar ao trocar modo
+    extracaoDesejada: stakeInicial, // Por padrão, extrai o stake inicial em cada perna
     status: i === 0 ? 'ativa' : 'aguardando',
+    passivoAnterior: 0,
+    target: 0,
+    stakeLayNecessario: 0,
     responsabilidade: 0,
-    ganhoLayBruto: 0,
-    ganhoLayLiquido: 0,
-    resultadoSeRed: 0,
     lucroBack: 0,
+    perdaLay: 0,
     resultadoSeGreen: 0,
-    juicePerna: 0,
-    avisos: [],
+    novoPassivoSeGreen: 0,
+    resultadoSeRed: 0,
+    capitalExtraidoSeRed: 0,
   }));
-};
-
-/**
- * Calcula o stake LAY balanceado (matched bet clássico)
- * Fórmula: stakeLay = (stakeBack × oddBack) / (oddLay - comissão)
- * Onde comissão é a taxa da exchange (ex: 0.028 para 2.8%)
- */
-const calcularStakeLayBalanceado = (
-  stakeBack: number,
-  oddBack: number,
-  oddLay: number,
-  comissaoDecimal: number
-): number => {
-  const divisor = oddLay - comissaoDecimal;
-  if (divisor <= 0) return stakeBack; // Fallback seguro
-  return (stakeBack * oddBack) / divisor;
 };
 
 export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -188,118 +163,127 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
   }));
 
   /**
-   * RECALCULAR PERNAS - Simulação pura
+   * RECALCULAR PERNAS - Modelo de Recuperação Progressiva
    * 
-   * Para cada perna, calcula:
-   * - Resultado se GREEN
-   * - Resultado se RED
-   * - Juice
-   * - Avisos (nunca bloqueia)
+   * Para cada perna n:
+   * - Passivo_n = passivo acumulado (0 na primeira, ou Target_anterior - Resultado_GREEN_anterior)
+   * - Target_n = Passivo_n + Extração_n
+   * - Stake_LAY_n = Target_n / (1 - comissão)
+   * - Se GREEN: Resultado = Lucro_BACK - Perda_LAY, Novo_Passivo = Target - Resultado
+   * - Se RED: Resultado = 0 (passivo zerado)
    */
   const recalcularPernas = useCallback((
     pernas: PernaAposta[],
     stakeInicial: number,
-    comissao: number,
-    modoCalculo: ModoCalculo
+    comissao: number
   ): PernaAposta[] => {
     const comissaoDecimal = comissao / 100;
     let operacaoEncerrada = false;
     let pernaAtiva = 1;
-    
-    // Calcular resultado acumulado das pernas já confirmadas
-    let lucroAcumulado = 0;
-    let custoAcumulado = 0;
+    let passivoAcumulado = 0;
     
     return pernas.map((perna, index) => {
-      const { oddBack, oddLay, stakeLayManual } = perna;
-      
-      // Determinar stake LAY baseado no modo
-      const stakeLay = modoCalculo === 'balanceado'
-        ? calcularStakeLayBalanceado(stakeInicial, oddBack, oddLay, comissaoDecimal)
-        : stakeLayManual;
+      const { oddBack, oddLay, extracaoDesejada } = perna;
       
       // Se operação já encerrou (RED anterior)
       if (operacaoEncerrada) {
         return {
           ...perna,
-          stakeLay,
           status: 'travada' as StatusPerna,
+          passivoAnterior: 0,
+          target: 0,
+          stakeLayNecessario: 0,
           responsabilidade: 0,
-          ganhoLayBruto: 0,
-          ganhoLayLiquido: 0,
-          resultadoSeRed: 0,
           lucroBack: 0,
+          perdaLay: 0,
           resultadoSeGreen: 0,
-          juicePerna: 0,
-          avisos: [],
+          novoPassivoSeGreen: 0,
+          resultadoSeRed: 0,
+          capitalExtraidoSeRed: 0,
         };
       }
       
-      // Calcular valores
-      const responsabilidade = stakeLay * (oddLay - 1);
-      const ganhoLayBruto = stakeLay;
-      const ganhoLayLiquido = stakeLay * (1 - comissaoDecimal);
+      // ==========================================
+      // MODELO DE RECUPERAÇÃO PROGRESSIVA
+      // ==========================================
+      
+      // Passivo anterior (0 na primeira perna, ou calculado das anteriores)
+      const passivoAnterior = passivoAcumulado;
+      
+      // Target = Passivo + Extração desejada
+      const target = passivoAnterior + extracaoDesejada;
+      
+      // Stake LAY necessário = Target / (1 - comissão)
+      const stakeLayNecessario = target / (1 - comissaoDecimal);
+      
+      // Responsabilidade = Stake_LAY × (oddLay - 1)
+      const responsabilidade = stakeLayNecessario * (oddLay - 1);
+      
+      // Lucro BACK = S0 × (oddBack - 1)
       const lucroBack = stakeInicial * (oddBack - 1);
       
-      // Se GREEN (bookmaker ganha, LAY perde):
-      // - Você GANHA lucro da back: stakeInicial × (oddBack - 1)
-      // - Você PAGA a responsabilidade do LAY: stakeLay × (oddLay - 1)
-      const resultadoSeGreen = lucroBack - responsabilidade;
+      // Perda LAY = Stake_LAY × (oddLay - 1) = responsabilidade
+      const perdaLay = responsabilidade;
       
-      // Se RED (bookmaker perde, LAY ganha):
-      // - Você PERDE o stake na bookmaker: -stakeInicial
-      // - Você GANHA o stakeLay líquido: stakeLay × (1 - comissão)
-      const resultadoSeRed = ganhoLayLiquido - stakeInicial;
+      // ==========================================
+      // SE GREEN (ganha na Bookmaker)
+      // ==========================================
+      const resultadoSeGreen = lucroBack - perdaLay;
       
-      // Juice = custo percentual sobre o stake inicial
-      // Usando a média dos piores cenários ou o próprio resultado se negativo
-      const juicePerna = stakeInicial > 0 ? (resultadoSeGreen / stakeInicial) * 100 : 0;
+      // Novo passivo = Target - Resultado_GREEN
+      // Se resultado positivo, passivo diminui
+      // Se resultado negativo, passivo aumenta
+      const novoPassivoSeGreen = target - resultadoSeGreen;
       
-      // Avisos informativos - mostrar custo em juice quando aplicável
-      const avisos: string[] = [];
-      if (resultadoSeGreen < 0) {
-        const custoAbsoluto = Math.abs(resultadoSeGreen);
-        avisos.push(`Custo juice: ${custoAbsoluto.toFixed(2)} (${Math.abs(juicePerna).toFixed(2)}%)`);
-      }
+      // ==========================================
+      // SE RED (cai na Exchange)
+      // ==========================================
+      // Ganho LAY Líquido = Stake_LAY × (1 - c) = Target
+      const capitalExtraidoSeRed = stakeLayNecessario * (1 - comissaoDecimal);
+      // Resultado = 0 (passivo zerado, sistema limpo)
+      const resultadoSeRed = 0;
+      
+      // ==========================================
+      // ATUALIZAR STATUS
+      // ==========================================
       
       // Se perna já foi confirmada como RED
       if (perna.status === 'red') {
         operacaoEncerrada = true;
-        lucroAcumulado += resultadoSeRed;
         
         return {
           ...perna,
-          stakeLay,
-          status: 'red' as StatusPerna,
+          passivoAnterior,
+          target,
+          stakeLayNecessario,
           responsabilidade,
-          ganhoLayBruto,
-          ganhoLayLiquido,
-          resultadoSeRed,
           lucroBack,
+          perdaLay,
           resultadoSeGreen,
-          juicePerna,
-          avisos,
+          novoPassivoSeGreen,
+          resultadoSeRed,
+          capitalExtraidoSeRed,
         };
       }
       
       // Se perna já foi confirmada como GREEN
       if (perna.status === 'green') {
-        lucroAcumulado += resultadoSeGreen;
-        custoAcumulado += Math.max(0, -resultadoSeGreen);
+        // Atualizar passivo acumulado para próxima perna
+        passivoAcumulado = novoPassivoSeGreen;
         pernaAtiva = index + 2;
         
         return {
           ...perna,
-          stakeLay,
-          status: 'green' as StatusPerna,
+          passivoAnterior,
+          target,
+          stakeLayNecessario,
           responsabilidade,
-          ganhoLayBruto,
-          ganhoLayLiquido,
-          resultadoSeRed,
           lucroBack,
+          perdaLay,
           resultadoSeGreen,
-          juicePerna,
-          avisos,
+          novoPassivoSeGreen,
+          resultadoSeRed,
+          capitalExtraidoSeRed,
         };
       }
       
@@ -311,16 +295,17 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       
       return {
         ...perna,
-        stakeLay,
         status,
+        passivoAnterior,
+        target,
+        stakeLayNecessario,
         responsabilidade,
-        ganhoLayBruto,
-        ganhoLayLiquido,
-        resultadoSeRed,
         lucroBack,
+        perdaLay,
         resultadoSeGreen,
-        juicePerna,
-        avisos,
+        novoPassivoSeGreen,
+        resultadoSeRed,
+        capitalExtraidoSeRed,
       };
     });
   }, []);
@@ -355,22 +340,22 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         tipoAposta: tipo,
         numPernas: num,
         pernaAtiva: 1,
-        pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange, prev.modoCalculo),
+        pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange),
       };
     });
   }, [recalcularPernas]);
 
   const setStakeInicial = useCallback((stake: number) => {
     setState(prev => {
-      // Atualizar stake LAY manual das pernas que ainda usam o default
+      // Atualizar extração padrão das pernas que ainda usam o default
       const newPernas = prev.pernas.map(p => ({
         ...p,
-        stakeLayManual: p.stakeLayManual === prev.stakeInicial ? stake : p.stakeLayManual,
+        extracaoDesejada: p.extracaoDesejada === prev.stakeInicial ? stake : p.extracaoDesejada,
       }));
       return {
         ...prev,
         stakeInicial: stake,
-        pernas: recalcularPernas(newPernas, stake, prev.comissaoExchange, prev.modoCalculo),
+        pernas: recalcularPernas(newPernas, stake, prev.comissaoExchange),
       };
     });
   }, [recalcularPernas]);
@@ -379,21 +364,13 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     setState(prev => ({
       ...prev,
       comissaoExchange: comissao,
-      pernas: recalcularPernas(prev.pernas, prev.stakeInicial, comissao, prev.modoCalculo),
+      pernas: recalcularPernas(prev.pernas, prev.stakeInicial, comissao),
     }));
   }, [recalcularPernas]);
 
   const setMoeda = useCallback((moeda: MoedaCalc) => {
     setState(prev => ({ ...prev, moeda }));
   }, []);
-
-  const setModoCalculo = useCallback((modo: ModoCalculo) => {
-    setState(prev => ({
-      ...prev,
-      modoCalculo: modo,
-      pernas: recalcularPernas(prev.pernas, prev.stakeInicial, prev.comissaoExchange, modo),
-    }));
-  }, [recalcularPernas]);
 
   const setNumPernas = useCallback((num: number) => {
     setState(prev => {
@@ -403,7 +380,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         numPernas: num,
         tipoAposta: num === 2 ? 'dupla' : num === 3 ? 'tripla' : 'multipla',
         pernaAtiva: 1,
-        pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange, prev.modoCalculo),
+        pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange),
       };
     });
   }, [recalcularPernas]);
@@ -415,7 +392,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         const newPernas = prev.pernas.map(p => p.id === id ? { ...p, oddBack: odd } : p);
         return {
           ...prev,
-          pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange, prev.modoCalculo),
+          pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange),
         };
       }
       return prev;
@@ -429,22 +406,21 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         const newPernas = prev.pernas.map(p => p.id === id ? { ...p, oddLay: odd } : p);
         return {
           ...prev,
-          pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange, prev.modoCalculo),
+          pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange),
         };
       }
       return prev;
     });
   }, [recalcularPernas]);
 
-  const updatePernaStakeLay = useCallback((id: number, stake: number) => {
+  const updatePernaExtracao = useCallback((id: number, valor: number) => {
     setState(prev => {
       const perna = prev.pernas.find(p => p.id === id);
       if (perna && (perna.status === 'aguardando' || perna.status === 'ativa')) {
-        // Quando o usuário altera manualmente, também atualizar stakeLayManual
-        const newPernas = prev.pernas.map(p => p.id === id ? { ...p, stakeLayManual: stake } : p);
+        const newPernas = prev.pernas.map(p => p.id === id ? { ...p, extracaoDesejada: valor } : p);
         return {
           ...prev,
-          pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange, prev.modoCalculo),
+          pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange),
         };
       }
       return prev;
@@ -475,7 +451,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       return {
         ...prev,
         pernaAtiva: resultado === 'green' ? id + 1 : id,
-        pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange, prev.modoCalculo),
+        pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange),
       };
     });
   }, [recalcularPernas]);
@@ -484,7 +460,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     setState(prev => ({
       ...prev,
       pernaAtiva: 1,
-      pernas: recalcularPernas(createPernas(prev.numPernas, prev.stakeInicial), prev.stakeInicial, prev.comissaoExchange, prev.modoCalculo),
+      pernas: recalcularPernas(createPernas(prev.numPernas, prev.stakeInicial), prev.stakeInicial, prev.comissaoExchange),
     }));
   }, [recalcularPernas]);
 
@@ -493,91 +469,55 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     
     // Verificar status
     const pernaRed = pernas.find(p => p.status === 'red');
-    const todasGreen = pernas.every(p => p.status === 'green');
-    
-    // ==========================================
-    // VOLUME OPERADO (informativo, NÃO é custo)
-    // ==========================================
-    const volumeExchange = pernas.reduce((sum, p) => sum + p.stakeLay, 0);
-    const totalResponsabilidade = pernas.reduce((sum, p) => sum + p.responsabilidade, 0);
-    
-    // ==========================================
-    // CUSTO REAL (o que realmente importa)
-    // Custo = soma dos resultadoSeGreen de cada perna
-    // Resultado_GREEN = Lucro_BACK - Responsabilidade
-    // ==========================================
-    const custoTotalAcumulado = pernas.reduce((sum, p) => sum + p.resultadoSeGreen, 0);
-    
-    // Se todas GREEN - o resultado é o custo acumulado
-    const resultadoTotalSeGreen = custoTotalAcumulado;
-    
-    // Eficiência = 1 - (|Custo_Total| / Stake) × 100
-    // Se custo é negativo (normal), eficiência < 100%
-    const eficienciaSeGreen = stakeInicial > 0 
-      ? (1 - Math.abs(custoTotalAcumulado) / stakeInicial) * 100 
-      : 100;
-    
-    // Se RED agora (perna ativa) - resultado acumulado até aqui + resultado se RED
     const pernaAtiva = pernas.find(p => p.status === 'ativa');
-    const custoAnterior = pernas
-      .filter(p => p.status === 'green')
-      .reduce((sum, p) => sum + p.resultadoSeGreen, 0);
-    const resultadoSeRedAgora = pernaAtiva 
-      ? custoAnterior + pernaAtiva.resultadoSeRed 
-      : 0;
     
-    // ==========================================
-    // JUICE TOTAL (%)
-    // Juice = (Custo_Total / Stake) × 100
-    // Negativo = custo, Positivo = lucro
-    // ==========================================
-    const juiceTotal = stakeInicial > 0 
-      ? (custoTotalAcumulado / stakeInicial) * 100 
-      : 0;
+    // Volume operado
+    const volumeExchange = pernas.reduce((sum, p) => sum + p.stakeLayNecessario, 0);
+    const exposicaoMaxima = Math.max(...pernas.map(p => p.responsabilidade));
     
-    // Avisos globais
-    const avisos: string[] = [];
-    // Não mostrar aviso de prejuízo, juice negativo é esperado em matched bet
+    // Passivo atual (da perna ativa)
+    const passivoAtual = pernaAtiva?.passivoAnterior || 0;
+    const targetAtual = pernaAtiva?.target || 0;
+    
+    // Se RED agora
+    const capitalExtraidoSeRedAgora = pernaAtiva?.capitalExtraidoSeRed || stakeInicial;
+    
+    // Se todas GREEN (calcular passivo final)
+    const ultimaPerna = pernas[pernas.length - 1];
+    const passivoFinalSeTodasGreen = ultimaPerna?.novoPassivoSeGreen || 0;
     
     // Calcular capital final e eficiência
     let capitalFinal = stakeInicial;
     let eficienciaFinal = 100;
     
     if (pernaRed) {
-      // Somar resultados até o RED
-      const resultadoAteRed = pernas
-        .filter(p => p.status === 'green' || p.status === 'red')
-        .reduce((sum, p) => {
-          if (p.status === 'green') return sum + p.resultadoSeGreen;
-          if (p.status === 'red') return sum + p.resultadoSeRed;
-          return sum;
-        }, 0);
-      capitalFinal = stakeInicial + resultadoAteRed;
+      // RED = capital extraído
+      capitalFinal = pernaRed.capitalExtraidoSeRed;
       eficienciaFinal = stakeInicial > 0 ? (capitalFinal / stakeInicial) * 100 : 0;
-    } else if (todasGreen) {
-      capitalFinal = stakeInicial + resultadoTotalSeGreen;
-      eficienciaFinal = eficienciaSeGreen;
     }
+    
+    // Aviso de risco progressivo
+    const maiorStake = Math.max(...pernas.map(p => p.stakeLayNecessario));
+    const avisoRisco = `O risco cresce progressivamente a cada GREEN. Maior stake LAY necessário: ${maiorStake.toFixed(2)}`;
     
     return {
       stakeInicial,
       volumeExchange,
-      totalResponsabilidade,
-      custoTotalAcumulado,
-      resultadoTotalSeGreen,
-      eficienciaSeGreen,
-      resultadoSeRedAgora,
-      juiceTotal,
-      avisos,
-      operacaoEncerrada: !!pernaRed || todasGreen,
-      motivoEncerramento: pernaRed ? 'red' : todasGreen ? 'todas_green' : null,
+      exposicaoMaxima,
+      passivoAtual,
+      targetAtual,
+      capitalExtraidoSeRedAgora,
+      passivoFinalSeTodasGreen,
+      operacaoEncerrada: !!pernaRed,
+      motivoEncerramento: pernaRed ? 'red' : null,
       capitalFinal,
       eficienciaFinal,
+      avisoRisco,
     };
   }, [state]);
 
   const getSimulacaoAtiva = useCallback(() => {
-    const { pernas, stakeInicial } = state;
+    const { pernas } = state;
     
     const pernaAtiva = pernas.find(p => p.status === 'ativa');
     if (!pernaAtiva) return null;
@@ -586,37 +526,24 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     
     const proxPerna = pernas.find(p => p.id === pernaAtiva.id + 1);
     
-    // Calcular resultados considerando pernas anteriores
-    const resultadoAnteriores = pernas
-      .filter(p => p.status === 'green' && p.id < pernaAtiva.id)
-      .reduce((sum, p) => sum + p.resultadoSeGreen, 0);
-    
-    const resultadoSeGreenTotal = resultadoAnteriores + pernaAtiva.resultadoSeGreen;
-    const resultadoSeRedTotal = resultadoAnteriores + pernaAtiva.resultadoSeRed;
-    
-    const eficienciaSeGreen = stakeInicial > 0 
-      ? ((stakeInicial + resultadoSeGreenTotal) / stakeInicial) * 100 
-      : 0;
-    const eficienciaSeRed = stakeInicial > 0 
-      ? ((stakeInicial + resultadoSeRedTotal) / stakeInicial) * 100 
-      : 0;
-    
     return {
       pernaId: pernaAtiva.id,
-      stakeLay: pernaAtiva.stakeLay,
+      passivo: pernaAtiva.passivoAnterior,
+      extracao: pernaAtiva.extracaoDesejada,
+      target: pernaAtiva.target,
+      stakeLay: pernaAtiva.stakeLayNecessario,
       oddLay: pernaAtiva.oddLay,
       oddBack: pernaAtiva.oddBack,
       responsabilidade: pernaAtiva.responsabilidade,
       seRed: {
-        resultado: resultadoSeRedTotal,
-        eficiencia: eficienciaSeRed,
+        capitalExtraido: pernaAtiva.capitalExtraidoSeRed,
+        resultado: 'Passivo zerado, sistema limpo',
       },
       seGreen: {
-        resultado: resultadoSeGreenTotal,
-        eficiencia: eficienciaSeGreen,
+        resultado: pernaAtiva.resultadoSeGreen,
+        novoPassivo: pernaAtiva.novoPassivoSeGreen,
         proxPerna: proxPerna ? proxPerna.id : null,
       },
-      avisos: pernaAtiva.avisos,
     };
   }, [state]);
 
@@ -630,11 +557,10 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     setStakeInicial,
     setComissaoExchange,
     setMoeda,
-    setModoCalculo,
     setNumPernas,
     updatePernaOddBack,
     updatePernaOddLay,
-    updatePernaStakeLay,
+    updatePernaExtracao,
     confirmarPerna,
     resetCalculadora,
     getMetricasGlobais,

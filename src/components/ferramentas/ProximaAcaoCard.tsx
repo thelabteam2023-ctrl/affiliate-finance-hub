@@ -1,18 +1,20 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { MoedaCalc } from '@/contexts/CalculadoraContext';
-import { AlertCircle, AlertTriangle, ArrowRight, Check, TrendingUp, ChevronRight, PartyPopper } from 'lucide-react';
+import { AlertCircle, ArrowUpRight, Check, ChevronRight, PartyPopper, Target, Wallet } from 'lucide-react';
 
 interface SimulacaoAtivaCardProps {
   simulacao: {
     pernaId: number;
+    passivo: number;
+    extracao: number;
+    target: number;
     stakeLay: number;
     oddLay: number;
     oddBack: number;
     responsabilidade: number;
-    seRed: { resultado: number; eficiencia: number };
-    seGreen: { resultado: number; eficiencia: number; proxPerna: number | null };
-    avisos: string[];
+    seRed: { capitalExtraido: number; resultado: string };
+    seGreen: { resultado: number; novoPassivo: number; proxPerna: number | null };
   };
   moeda: MoedaCalc;
   stakeInicial: number;
@@ -30,11 +32,6 @@ export const SimulacaoAtivaCard: React.FC<SimulacaoAtivaCardProps> = ({
     return `${prefix}${currencySymbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const formatPercent = (value: number) => `${value.toFixed(1)}%`;
-
-  const capitalSeGreen = stakeInicial + simulacao.seGreen.resultado;
-  const capitalSeRed = stakeInicial + simulacao.seRed.resultado;
-
   return (
     <div className="rounded-lg border-2 border-primary/50 bg-primary/5 p-4 space-y-4">
       {/* Header */}
@@ -43,138 +40,121 @@ export const SimulacaoAtivaCard: React.FC<SimulacaoAtivaCardProps> = ({
           <AlertCircle className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h4 className="font-bold text-foreground">SIMULAÇÃO - Perna {simulacao.pernaId}</h4>
-          <p className="text-xs text-muted-foreground">Resultados projetados</p>
+          <h4 className="font-bold text-foreground">PERNA {simulacao.pernaId} - Ativa</h4>
+          <p className="text-xs text-muted-foreground">Recuperação Progressiva</p>
         </div>
       </div>
 
-      {/* Resumo do LAY */}
+      {/* Situação atual */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="p-2 rounded-lg bg-background border border-border text-center">
-          <span className="text-[10px] text-muted-foreground block">Stake LAY</span>
-          <span className="text-sm font-bold text-primary">
-            {formatValue(simulacao.stakeLay)}
+        <div className="p-2 rounded-lg bg-warning/10 border border-warning/30 text-center">
+          <span className="text-[10px] text-muted-foreground block">
+            <Wallet className="h-3 w-3 inline mr-1" />
+            Passivo
           </span>
-        </div>
-        <div className="p-2 rounded-lg bg-background border border-border text-center">
-          <span className="text-[10px] text-muted-foreground block">Odd LAY</span>
-          <span className="text-sm font-bold text-primary">
-            {simulacao.oddLay.toFixed(2)}
-          </span>
-        </div>
-        <div className="p-2 rounded-lg bg-background border border-border text-center">
-          <span className="text-[10px] text-muted-foreground block">Responsab.</span>
           <span className="text-sm font-bold text-warning">
-            {formatValue(simulacao.responsabilidade)}
+            {formatValue(simulacao.passivo)}
+          </span>
+        </div>
+        <div className="p-2 rounded-lg bg-background border border-border text-center">
+          <span className="text-[10px] text-muted-foreground block">Extração</span>
+          <span className="text-sm font-bold text-foreground">
+            {formatValue(simulacao.extracao)}
+          </span>
+        </div>
+        <div className="p-2 rounded-lg bg-primary/10 border border-primary/30 text-center">
+          <span className="text-[10px] text-muted-foreground block">
+            <Target className="h-3 w-3 inline mr-1" />
+            Target
+          </span>
+          <span className="text-sm font-bold text-primary">
+            {formatValue(simulacao.target)}
           </span>
         </div>
       </div>
 
-      {/* Avisos */}
-      {simulacao.avisos.length > 0 && (
-        <div className="space-y-1">
-          {simulacao.avisos.map((aviso, i) => (
-            <div key={i} className="flex items-start gap-2 p-2 rounded bg-warning/10 border border-warning/30">
-              <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-              <span className="text-xs text-warning">{aviso}</span>
-            </div>
-          ))}
+      {/* Stake LAY calculado */}
+      <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <span className="text-xs text-muted-foreground block">Stake LAY necessário:</span>
+            <span className="text-lg font-bold text-primary">
+              {formatValue(simulacao.stakeLay)}
+            </span>
+          </div>
+          <div>
+            <span className="text-xs text-muted-foreground block">Responsabilidade:</span>
+            <span className="text-lg font-bold text-warning">
+              {formatValue(simulacao.responsabilidade)}
+            </span>
+          </div>
         </div>
-      )}
+      </div>
 
       {/* Cenários */}
       <div className="space-y-2 pt-2 border-t border-border/50">
-        {/* Se GREEN */}
-        <div className={cn(
-          'p-3 rounded-lg border',
-          simulacao.seGreen.resultado >= 0 
-            ? 'bg-success/10 border-success/30' 
-            : 'bg-destructive/10 border-destructive/30'
-        )}>
+        {/* Se RED (objetivo!) */}
+        <div className="p-3 rounded-lg border bg-success/10 border-success/30">
           <div className="flex items-center gap-2 mb-2">
-            <Check className={cn(
-              'h-4 w-4',
-              simulacao.seGreen.resultado >= 0 ? 'text-success' : 'text-destructive'
-            )} />
-            <span className={cn(
-              'text-sm font-medium',
-              simulacao.seGreen.resultado >= 0 ? 'text-success' : 'text-destructive'
-            )}>
-              Se GREEN:
+            <Check className="h-4 w-4 text-success" />
+            <span className="text-sm font-medium text-success">
+              Se RED (objetivo!):
             </span>
           </div>
           
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div>
-              <span className="text-muted-foreground block text-xs">Capital final:</span>
-              <span className={cn(
-                'font-bold',
-                capitalSeGreen >= stakeInicial ? 'text-success' : 'text-destructive'
-              )}>
-                {formatValue(capitalSeGreen)}
+              <span className="text-muted-foreground block text-xs">Capital extraído:</span>
+              <span className="font-bold text-success">
+                {formatValue(simulacao.seRed.capitalExtraido)}
               </span>
             </div>
             <div>
               <span className="text-muted-foreground block text-xs">Eficiência:</span>
+              <span className="font-bold text-success">
+                {((simulacao.seRed.capitalExtraido / stakeInicial) * 100).toFixed(1)}%
+              </span>
+            </div>
+          </div>
+          
+          <div className="text-xs text-success mt-2 pt-2 border-t border-success/20">
+            ✓ Passivo zerado, sistema limpo
+          </div>
+        </div>
+
+        {/* Se GREEN (passivo cresce) */}
+        <div className="p-3 rounded-lg border bg-warning/10 border-warning/30">
+          <div className="flex items-center gap-2 mb-2">
+            <ArrowUpRight className="h-4 w-4 text-warning" />
+            <span className="text-sm font-medium text-warning">
+              Se GREEN (passivo cresce):
+            </span>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <span className="text-muted-foreground block text-xs">Resultado perna:</span>
               <span className={cn(
                 'font-bold',
-                simulacao.seGreen.eficiencia >= 100 ? 'text-success' : 
-                simulacao.seGreen.eficiencia >= 50 ? 'text-warning' : 'text-destructive'
+                simulacao.seGreen.resultado >= 0 ? 'text-success' : 'text-destructive'
               )}>
-                {formatPercent(simulacao.seGreen.eficiencia)}
+                {formatValue(simulacao.seGreen.resultado, true)}
+              </span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block text-xs">Novo passivo:</span>
+              <span className="font-bold text-warning">
+                {formatValue(simulacao.seGreen.novoPassivo)}
               </span>
             </div>
           </div>
           
           {simulacao.seGreen.proxPerna && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2 pt-2 border-t border-border/30">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2 pt-2 border-t border-warning/20">
               <ChevronRight className="h-3 w-3" />
               <span>Próxima: Perna {simulacao.seGreen.proxPerna}</span>
             </div>
           )}
-        </div>
-
-        {/* Se RED */}
-        <div className={cn(
-          'p-3 rounded-lg border',
-          simulacao.seRed.resultado >= 0 
-            ? 'bg-success/10 border-success/30' 
-            : 'bg-destructive/10 border-destructive/30'
-        )}>
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className={cn(
-              'h-4 w-4',
-              simulacao.seRed.resultado >= 0 ? 'text-success' : 'text-destructive'
-            )} />
-            <span className={cn(
-              'text-sm font-medium',
-              simulacao.seRed.resultado >= 0 ? 'text-success' : 'text-destructive'
-            )}>
-              Se RED:
-            </span>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <span className="text-muted-foreground block text-xs">Capital final:</span>
-              <span className={cn(
-                'font-bold',
-                capitalSeRed >= stakeInicial ? 'text-success' : 'text-destructive'
-              )}>
-                {formatValue(capitalSeRed)}
-              </span>
-            </div>
-            <div>
-              <span className="text-muted-foreground block text-xs">Eficiência:</span>
-              <span className={cn(
-                'font-bold',
-                simulacao.seRed.eficiencia >= 100 ? 'text-success' : 
-                simulacao.seRed.eficiencia >= 50 ? 'text-warning' : 'text-destructive'
-              )}>
-                {formatPercent(simulacao.seRed.eficiencia)}
-              </span>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -182,53 +162,33 @@ export const SimulacaoAtivaCard: React.FC<SimulacaoAtivaCardProps> = ({
 };
 
 export const SemSimulacao: React.FC<{
-  motivo: 'red' | 'todas_green';
   capitalFinal: number;
   eficiencia: number;
   moeda: MoedaCalc;
   stakeInicial: number;
-}> = ({ motivo, capitalFinal, eficiencia, moeda, stakeInicial }) => {
+}> = ({ capitalFinal, eficiencia, moeda, stakeInicial }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
   
   const formatValue = (value: number) => {
     return `${currencySymbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const lucrou = capitalFinal >= stakeInicial;
-
-  const config = {
-    red: {
-      title: 'Extração Concluída',
-      description: 'Capital extraído com sucesso via LAY.',
-      icon: <PartyPopper className="h-5 w-5 text-primary" />,
-      bg: 'bg-primary/10 border-primary/30',
-    },
-    todas_green: {
-      title: 'Operação Concluída',
-      description: 'Todas as pernas finalizaram com GREEN.',
-      icon: <Check className="h-5 w-5 text-success" />,
-      bg: 'bg-success/10 border-success/30',
-    },
-  };
-
-  const c = config[motivo];
-
   return (
-    <div className={cn('rounded-lg border-2 p-4 space-y-3', c.bg)}>
+    <div className="rounded-lg border-2 p-4 space-y-3 bg-success/10 border-success/30">
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-full bg-background/50">
-          {c.icon}
+          <PartyPopper className="h-5 w-5 text-success" />
         </div>
         <div>
-          <h4 className="font-bold text-foreground">{c.title}</h4>
-          <p className="text-sm text-muted-foreground">{c.description}</p>
+          <h4 className="font-bold text-foreground">Extração Concluída!</h4>
+          <p className="text-sm text-muted-foreground">Capital extraído com sucesso via LAY.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/30">
         <div className="p-2 rounded bg-background/50">
           <span className="text-xs text-muted-foreground block mb-0.5">Capital Final</span>
-          <span className="text-lg font-bold text-primary">
+          <span className="text-lg font-bold text-success">
             {formatValue(capitalFinal)}
           </span>
         </div>
