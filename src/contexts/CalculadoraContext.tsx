@@ -164,9 +164,12 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         
         const LPRNoMomento = S * ((oddsConfirmadasAteMomento * oddsPendentesAposMomento) - 1);
         const stakeLayNoMomento = LPRNoMomento / (1 - comissaoDecimal);
-        const juiceNoMomento = stakeLayNoMomento * (perna.oddLay - 1);
+        const responsabilidadeNoMomento = stakeLayNoMomento * (perna.oddLay - 1);
         
-        juiceAcumulado += juiceNoMomento;
+        // Juice LÍQUIDO = max(0, Responsabilidade - LPR)
+        const juiceLiquidoNoMomento = Math.max(0, responsabilidadeNoMomento - LPRNoMomento);
+        
+        juiceAcumulado += juiceLiquidoNoMomento;
       }
     }
     
@@ -213,18 +216,21 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         // Stake_LAY = LPR / (1 − comissão)
         stakeLay = LPR / (1 - comissaoDecimal);
         
-        // Juice = Stake_LAY × (odd_lay − 1) - CUSTO se GREEN
-        juice = stakeLay * (oddLay - 1);
+        // Responsabilidade = Stake_LAY × (odd_lay − 1)
+        const responsabilidade = stakeLay * (oddLay - 1);
+        
+        // Juice LÍQUIDO = max(0, Responsabilidade - LPR)
+        // Se GREEN: pagamos responsabilidade mas recebemos LPR da bookmaker
+        // Se odds balanceadas e comissão = 0: Juice = 0
+        juice = Math.max(0, responsabilidade - LPR);
         
         // Juice total se GREEN = acumulados + atual
         const juiceTotalSeGreen = juiceAcumulado + juice;
         
-        // RESULTADO SE GREEN = Capital Extraído - Juice Total
-        // Capital sai da bookmaker, mas pagamos o juice
+        // RESULTADO SE GREEN = Capital Extraído - Juice Líquido Total
         resultadoSeGreen = S - juiceTotalSeGreen;
         
         // RESULTADO SE RED = Capital Extraído (100% - juice NÃO consumido)
-        // O stake é "liberado" via exchange, sem custo
         resultadoSeRed = S;
         
         // Eficiência = Resultado / Capital Extraído × 100
@@ -236,7 +242,8 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
           const lucroMaximoDesejado = S * 0.1;
           const LPRAjustado = Math.max(0, LPR - lucroMaximoDesejado);
           stakeLay = LPRAjustado / (1 - comissaoDecimal);
-          juice = stakeLay * (oddLay - 1);
+          const responsabilidadeAjustada = stakeLay * (oddLay - 1);
+          juice = Math.max(0, responsabilidadeAjustada - LPRAjustado);
           const juiceTotalSeGreenAjustado = juiceAcumulado + juice;
           resultadoSeGreen = S - juiceTotalSeGreenAjustado;
           eficienciaSeGreen = S > 0 ? (resultadoSeGreen / S) * 100 : 0;
@@ -248,7 +255,10 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
           pernas.slice(index + 1).reduce((prod, p) => prod * p.oddBack, 1)) - 1);
         
         stakeLay = LPRNoMomento / (1 - comissaoDecimal);
-        juice = stakeLay * (oddLay - 1);
+        const responsabilidadeNoMomento = stakeLay * (oddLay - 1);
+        
+        // Juice LÍQUIDO no momento = max(0, Responsabilidade - LPR)
+        juice = Math.max(0, responsabilidadeNoMomento - LPRNoMomento);
         
         // Resultados zerados pois já aconteceu
         resultadoSeGreen = 0;
@@ -488,7 +498,10 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     
     // Stake LAY recomendado para esta perna
     const stakeLay = LPR / (1 - comissaoDecimal);
-    const juiceAtual = stakeLay * (proximaPerna.oddLay - 1);
+    const responsabilidade = stakeLay * (proximaPerna.oddLay - 1);
+    
+    // Juice LÍQUIDO = max(0, Responsabilidade - LPR)
+    const juiceAtual = Math.max(0, responsabilidade - LPR);
     
     // Juice TOTAL se executar este LAY
     const juiceTotal = juiceAcumulado + juiceAtual;
