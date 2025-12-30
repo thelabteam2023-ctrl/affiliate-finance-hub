@@ -121,6 +121,7 @@ interface SemAcaoRecomendadaProps {
   motivo: 'concluido' | 'red';
   valorExtraido?: number;
   juicePerdido?: number;
+  responsabilidade?: number;
   moeda?: MoedaCalc;
 }
 
@@ -128,6 +129,7 @@ export const SemAcaoRecomendada: React.FC<SemAcaoRecomendadaProps> = ({
   motivo, 
   valorExtraido = 0, 
   juicePerdido = 0,
+  responsabilidade = 0,
   moeda = 'BRL'
 }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
@@ -171,19 +173,25 @@ export const SemAcaoRecomendada: React.FC<SemAcaoRecomendadaProps> = ({
       </div>
 
       {/* Resumo da operação */}
-      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/30">
+      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/30">
         <div className="p-2 rounded bg-background/50">
           <span className="text-xs text-muted-foreground block mb-0.5">Valor Extraído</span>
           <span className={cn(
-            'text-base font-bold',
+            'text-sm font-bold',
             valorExtraido >= 0 ? 'text-success' : 'text-destructive'
           )}>
             {formatValue(valorExtraido)}
           </span>
         </div>
         <div className="p-2 rounded bg-background/50">
+          <span className="text-xs text-muted-foreground block mb-0.5">Responsabilidade</span>
+          <span className="text-sm font-bold text-foreground">
+            {currencySymbol} {responsabilidade.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        </div>
+        <div className="p-2 rounded bg-background/50">
           <span className="text-xs text-muted-foreground block mb-0.5">Juice Perdido</span>
-          <span className="text-base font-bold text-destructive">
+          <span className="text-sm font-bold text-destructive">
             {formatPercent(juicePerdido)}
           </span>
         </div>

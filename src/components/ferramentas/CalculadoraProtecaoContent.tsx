@@ -207,6 +207,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                   motivo="red" 
                   valorExtraido={juiceData.resultadoEsperado}
                   juicePerdido={Math.abs(juiceData.juiceMedioRed)}
+                  responsabilidade={juiceData.exposicaoTotal}
                   moeda={moeda}
                 />
               ) : todasProcessadas ? (
@@ -214,6 +215,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                   motivo="concluido" 
                   valorExtraido={juiceData.resultadoEsperado}
                   juicePerdido={Math.abs(juiceData.juiceMedioRed)}
+                  responsabilidade={juiceData.exposicaoTotal}
                   moeda={moeda}
                 />
               ) : (
