@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { MoedaCalc } from '@/contexts/CalculadoraContext';
-import { AlertCircle, AlertTriangle, ArrowRight, Check, TrendingUp, ChevronRight } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowRight, Check, TrendingUp, ChevronRight, PartyPopper } from 'lucide-react';
 
 interface SimulacaoAtivaCardProps {
   simulacao: {
@@ -198,16 +198,16 @@ export const SemSimulacao: React.FC<{
 
   const config = {
     red: {
-      title: 'Operação Encerrada (RED)',
-      description: 'A operação foi encerrada por resultado RED.',
-      icon: <TrendingUp className={cn('h-5 w-5', lucrou ? 'text-success' : 'text-destructive')} />,
-      bg: lucrou ? 'bg-success/10 border-success/30' : 'bg-destructive/10 border-destructive/30',
+      title: 'Extração Concluída',
+      description: 'Capital extraído com sucesso via LAY.',
+      icon: <PartyPopper className="h-5 w-5 text-primary" />,
+      bg: 'bg-primary/10 border-primary/30',
     },
     todas_green: {
       title: 'Operação Concluída',
       description: 'Todas as pernas finalizaram com GREEN.',
-      icon: <Check className={cn('h-5 w-5', lucrou ? 'text-success' : 'text-destructive')} />,
-      bg: lucrou ? 'bg-success/10 border-success/30' : 'bg-destructive/10 border-destructive/30',
+      icon: <Check className="h-5 w-5 text-success" />,
+      bg: 'bg-success/10 border-success/30',
     },
   };
 
@@ -228,10 +228,7 @@ export const SemSimulacao: React.FC<{
       <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/30">
         <div className="p-2 rounded bg-background/50">
           <span className="text-xs text-muted-foreground block mb-0.5">Capital Final</span>
-          <span className={cn(
-            'text-lg font-bold',
-            lucrou ? 'text-success' : 'text-destructive'
-          )}>
+          <span className="text-lg font-bold text-primary">
             {formatValue(capitalFinal)}
           </span>
         </div>
@@ -239,8 +236,7 @@ export const SemSimulacao: React.FC<{
           <span className="text-xs text-muted-foreground block mb-0.5">Eficiência</span>
           <span className={cn(
             'text-lg font-bold',
-            eficiencia >= 100 ? 'text-success' : 
-            eficiencia >= 50 ? 'text-warning' : 'text-destructive'
+            eficiencia >= 100 ? 'text-success' : 'text-primary'
           )}>
             {eficiencia.toFixed(1)}%
           </span>
@@ -248,9 +244,9 @@ export const SemSimulacao: React.FC<{
       </div>
 
       <div className="text-center text-xs text-muted-foreground">
-        {lucrou 
+        {capitalFinal >= stakeInicial 
           ? `Lucro de ${formatValue(capitalFinal - stakeInicial)}`
-          : `Prejuízo de ${formatValue(stakeInicial - capitalFinal)}`
+          : `Custo de extração: ${formatValue(stakeInicial - capitalFinal)}`
         }
       </div>
     </div>
