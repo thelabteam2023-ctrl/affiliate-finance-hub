@@ -96,7 +96,7 @@ const PernaCard: React.FC<{
 
   return (
     <div className={cn(
-      'rounded-lg border-2 p-3 transition-all w-full max-w-[300px] flex-shrink-0',
+      'rounded-lg border-2 p-3 transition-all w-full max-w-[315px] flex-shrink-0',
       config.bg,
       config.border,
       perna.status === 'travada' && 'opacity-50',
