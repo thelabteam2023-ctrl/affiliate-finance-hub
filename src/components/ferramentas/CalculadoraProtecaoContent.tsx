@@ -203,9 +203,19 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                   moeda={moeda}
                 />
               ) : algumRed ? (
-                <SemAcaoRecomendada motivo="red" />
+                <SemAcaoRecomendada 
+                  motivo="red" 
+                  valorExtraido={juiceData.resultadoEsperado}
+                  juicePerdido={Math.abs(juiceData.juiceMedioRed)}
+                  moeda={moeda}
+                />
               ) : todasProcessadas ? (
-                <SemAcaoRecomendada motivo="concluido" />
+                <SemAcaoRecomendada 
+                  motivo="concluido" 
+                  valorExtraido={juiceData.resultadoEsperado}
+                  juicePerdido={Math.abs(juiceData.juiceMedioRed)}
+                  moeda={moeda}
+                />
               ) : (
                 <div className="p-4 rounded-lg bg-muted/30 border border-border h-full flex items-center justify-center">
                   <p className="text-sm text-muted-foreground text-center">
