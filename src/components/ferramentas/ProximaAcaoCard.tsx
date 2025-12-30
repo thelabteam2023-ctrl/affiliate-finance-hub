@@ -19,12 +19,16 @@ interface SimulacaoAtivaCardProps {
   };
   moeda: MoedaCalc;
   stakeInicial: number;
+  volumeExchange: number;
+  exposicaoMaxima: number;
 }
 
 export const SimulacaoAtivaCard: React.FC<SimulacaoAtivaCardProps> = ({
   simulacao,
   moeda,
   stakeInicial,
+  volumeExchange,
+  exposicaoMaxima,
 }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
   
@@ -181,6 +185,18 @@ export const SimulacaoAtivaCard: React.FC<SimulacaoAtivaCardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Volume Operado */}
+      <div className="pt-3 border-t border-border/50">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">Vol. movimentado:</span>
+          <span className="font-medium text-foreground">{formatValue(volumeExchange)}</span>
+        </div>
+        <div className="flex items-center justify-between text-xs mt-1">
+          <span className="text-muted-foreground">Exposição máx.:</span>
+          <span className="font-medium text-warning">{formatValue(exposicaoMaxima)}</span>
+        </div>
+      </div>
     </div>
   );
 };
@@ -190,7 +206,9 @@ export const SemSimulacao: React.FC<{
   eficiencia: number;
   moeda: MoedaCalc;
   stakeInicial: number;
-}> = ({ capitalFinal, eficiencia, moeda, stakeInicial }) => {
+  volumeExchange: number;
+  exposicaoMaxima: number;
+}> = ({ capitalFinal, eficiencia, moeda, stakeInicial, volumeExchange, exposicaoMaxima }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
   
   const formatValue = (value: number) => {
@@ -232,6 +250,18 @@ export const SemSimulacao: React.FC<{
           <span className={cn('font-bold', roi >= 0 ? 'text-success' : 'text-destructive')}>
             {roi >= 0 ? '+' : ''}{roi.toFixed(1)}%
           </span>
+        </div>
+      </div>
+
+      {/* Volume Operado */}
+      <div className="pt-3 border-t border-border/50">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">Vol. movimentado:</span>
+          <span className="font-medium text-foreground">{formatValue(volumeExchange)}</span>
+        </div>
+        <div className="flex items-center justify-between text-xs mt-1">
+          <span className="text-muted-foreground">Exposição máx.:</span>
+          <span className="font-medium text-warning">{formatValue(exposicaoMaxima)}</span>
         </div>
       </div>
     </div>
