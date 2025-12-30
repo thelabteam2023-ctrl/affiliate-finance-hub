@@ -1,17 +1,56 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react';
-import { X, Minus, Maximize2, Minimize2, GripVertical, Calculator } from 'lucide-react';
+import { X, Minus, Maximize2, Minimize2, GripVertical, Calculator, GripHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCalculadora } from '@/contexts/CalculadoraContext';
 import { Button } from '@/components/ui/button';
 import { CalculadoraProtecaoContent } from './CalculadoraProtecaoContent';
 
+const MIN_WIDTH = 400;
+const MIN_HEIGHT = 400;
+const DEFAULT_WIDTH = 720;
+const DEFAULT_HEIGHT = 600;
+
 export const CalculadoraProtecaoPopup: React.FC = () => {
   const { isOpen, isMinimized, position, closeCalculadora, toggleMinimize, setPosition } = useCalculadora();
   const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [size, setSize] = useState({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
   const dragOffset = useRef({ x: 0, y: 0 });
+  const resizeStart = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Carregar tamanho salvo do localStorage
+  useEffect(() => {
+    const savedSize = localStorage.getItem('calculadora-protecao-size');
+    if (savedSize) {
+      try {
+        const parsed = JSON.parse(savedSize);
+        setSize({
+          width: Math.max(MIN_WIDTH, Math.min(parsed.width, window.innerWidth * 0.95)),
+          height: Math.max(MIN_HEIGHT, Math.min(parsed.height, window.innerHeight * 0.9)),
+        });
+      } catch {
+        // Ignora erro de parse
+      }
+    }
+  }, []);
+
+  // Salvar tamanho no localStorage
+  useEffect(() => {
+    if (!isResizing && size.width !== DEFAULT_WIDTH) {
+      localStorage.setItem('calculadora-protecao-size', JSON.stringify(size));
+    }
+  }, [size, isResizing]);
+
+  // Auto-expandir em telas pequenas (mobile)
+  useEffect(() => {
+    if (isOpen && !isMinimized && window.innerWidth < 768) {
+      setIsExpanded(true);
+    }
+  }, [isOpen, isMinimized]);
+
+  // Drag handlers
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest('button')) return;
     
@@ -23,20 +62,46 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
   }, [position]);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging) return;
+    if (isDragging) {
+      const newX = Math.max(0, Math.min(window.innerWidth - size.width, e.clientX - dragOffset.current.x));
+      const newY = Math.max(0, Math.min(window.innerHeight - 100, e.clientY - dragOffset.current.y));
+      setPosition({ x: newX, y: newY });
+    }
     
-    const newX = Math.max(0, Math.min(window.innerWidth - 500, e.clientX - dragOffset.current.x));
-    const newY = Math.max(0, Math.min(window.innerHeight - 100, e.clientY - dragOffset.current.y));
-    
-    setPosition({ x: newX, y: newY });
-  }, [isDragging, setPosition]);
+    if (isResizing) {
+      const deltaX = e.clientX - resizeStart.current.x;
+      const deltaY = e.clientY - resizeStart.current.y;
+      
+      const maxWidth = window.innerWidth * 0.95;
+      const maxHeight = window.innerHeight * 0.9;
+      
+      setSize({
+        width: Math.max(MIN_WIDTH, Math.min(maxWidth, resizeStart.current.width + deltaX)),
+        height: Math.max(MIN_HEIGHT, Math.min(maxHeight, resizeStart.current.height + deltaY)),
+      });
+    }
+  }, [isDragging, isResizing, size.width, setPosition]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
+    setIsResizing(false);
   }, []);
 
+  // Resize handler
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    resizeStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+      width: size.width,
+      height: size.height,
+    };
+  }, [size]);
+
   useEffect(() => {
-    if (isDragging) {
+    if (isDragging || isResizing) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -44,13 +109,13 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
         window.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
   // Ajustar posição inicial para não sair da tela
   useEffect(() => {
-    if (isOpen && !isMinimized) {
-      const maxX = window.innerWidth - 500;
-      const maxY = window.innerHeight - 600;
+    if (isOpen && !isMinimized && !isExpanded) {
+      const maxX = window.innerWidth - size.width;
+      const maxY = window.innerHeight - size.height;
       if (position.x > maxX || position.y > maxY) {
         setPosition({
           x: Math.min(position.x, Math.max(20, maxX)),
@@ -58,7 +123,7 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
         });
       }
     }
-  }, [isOpen, isMinimized, position, setPosition]);
+  }, [isOpen, isMinimized, isExpanded, position, size, setPosition]);
 
   if (!isOpen) return null;
 
@@ -93,9 +158,12 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
               <h2 className="font-semibold text-foreground">Proteção Progressiva</h2>
             </div>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsExpanded(false)}>
-                <Minimize2 className="h-4 w-4" />
-              </Button>
+              {/* Só mostra botão de sair do fullscreen se não for mobile */}
+              {window.innerWidth >= 768 && (
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsExpanded(false)}>
+                  <Minimize2 className="h-4 w-4" />
+                </Button>
+              )}
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleMinimize}>
                 <Minus className="h-4 w-4" />
               </Button>
@@ -114,20 +182,27 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
     );
   }
 
-  // Versão janela flutuante
+  // Versão janela flutuante redimensionável
   return (
     <div
       ref={containerRef}
       className={cn(
         'fixed z-[9999] bg-background border border-border rounded-lg shadow-2xl flex flex-col',
-        'w-[480px] h-[600px]',
-        isDragging && 'cursor-grabbing select-none'
+        (isDragging || isResizing) && 'select-none',
+        isDragging && 'cursor-grabbing'
       )}
-      style={{ top: position.y, left: position.x }}
+      style={{ 
+        top: position.y, 
+        left: position.x,
+        width: size.width,
+        height: size.height,
+        maxWidth: '95vw',
+        maxHeight: '90vh',
+      }}
     >
       {/* Header arrastável */}
       <div
-        className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30 rounded-t-lg cursor-grab"
+        className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30 rounded-t-lg cursor-grab shrink-0"
         onMouseDown={handleMouseDown}
       >
         <div className="flex items-center gap-3">
@@ -149,8 +224,16 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
       </div>
       
       {/* Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden min-h-0">
         <CalculadoraProtecaoContent />
+      </div>
+
+      {/* Resize handle */}
+      <div
+        className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize flex items-center justify-center"
+        onMouseDown={handleResizeMouseDown}
+      >
+        <GripHorizontal className="h-4 w-4 text-muted-foreground/50 rotate-[-45deg]" />
       </div>
     </div>
   );
