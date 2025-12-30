@@ -7,14 +7,16 @@ export type MoedaCalc = 'BRL' | 'USD';
 
 export interface PernaAposta {
   id: number;
-  odd: number;
+  oddBack: number;        // Odd do back (na casa)
+  oddLay: number;         // Odd do lay (que o usuário conseguiu na exchange)
   status: StatusPerna;
   lucroAcumulado: number;
-  protecaoLay: number;
-  oddMinimaLay: number;
+  stakeLay: number;       // Valor a apostar no lay
   responsabilidade: number;
   resultadoSeGreen: number;
   resultadoSeRed: number;
+  juiceSeGreen: number;   // Juice % em caso de green
+  juiceSeRed: number;     // Juice % em caso de red
 }
 
 export interface JuiceData {
@@ -22,6 +24,8 @@ export interface JuiceData {
   lucroVirtual: number;
   protecaoTotal: number;
   resultadoEsperado: number;
+  juiceMedioGreen: number;
+  juiceMedioRed: number;
 }
 
 interface CalculadoraState {
@@ -48,11 +52,12 @@ interface CalculadoraContextType extends CalculadoraState {
   setComissaoExchange: (comissao: number) => void;
   setMoeda: (moeda: MoedaCalc) => void;
   setNumPernas: (num: number) => void;
-  updatePernaOdd: (id: number, odd: number) => void;
+  updatePernaOddBack: (id: number, odd: number) => void;
+  updatePernaOddLay: (id: number, odd: number) => void;
   setPernaStatus: (id: number, status: StatusPerna) => void;
   resetCalculadora: () => void;
   getJuiceData: () => JuiceData;
-  getAcaoRecomendada: () => { valorLay: number; oddMinima: number; resultadoSeGanhar: number; resultadoSePerder: number; pernaAtual: number } | null;
+  getAcaoRecomendada: () => { stakeLay: number; oddLay: number; resultadoSeGanhar: number; resultadoSePerder: number; pernaAtual: number; juiceGreen: number; juiceRed: number } | null;
 }
 
 const defaultState: CalculadoraState = {
@@ -81,14 +86,16 @@ export const useCalculadora = () => {
 const createPernas = (num: number): PernaAposta[] => {
   return Array.from({ length: num }, (_, i) => ({
     id: i + 1,
-    odd: 1.5,
+    oddBack: 1.5,
+    oddLay: 1.5,
     status: 'pendente' as StatusPerna,
     lucroAcumulado: 0,
-    protecaoLay: 0,
-    oddMinimaLay: 0,
+    stakeLay: 0,
     responsabilidade: 0,
     resultadoSeGreen: 0,
     resultadoSeRed: 0,
+    juiceSeGreen: 0,
+    juiceSeRed: 0,
   }));
 };
 
@@ -106,6 +113,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
   ): PernaAposta[] => {
     let stakeAcumulado = stakeInicial;
     let lucroAcumulado = 0;
+    const comissaoDecimal = comissao / 100;
     
     return pernas.map((perna, index) => {
       // Se já deu red, não calcula mais nada
@@ -114,79 +122,76 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         return {
           ...perna,
           lucroAcumulado: 0,
-          protecaoLay: 0,
-          oddMinimaLay: 0,
+          stakeLay: 0,
           responsabilidade: 0,
           resultadoSeGreen: 0,
           resultadoSeRed: 0,
+          juiceSeGreen: 0,
+          juiceSeRed: 0,
         };
       }
 
-      const odd = perna.odd;
-      const comissaoDecimal = comissao / 100;
+      const oddBack = perna.oddBack;
+      const oddLay = perna.oddLay;
       
-      // Para objetivo de perder na casa, queremos que o lucro final seja negativo (perdemos stake)
-      // A cada green, precisamos fazer lay para neutralizar o ganho
+      // Retorno potencial se ganhar na casa
+      const retornoPotencial = stakeAcumulado * oddBack;
+      const lucroBackBruto = retornoPotencial - stakeAcumulado;
       
-      // Retorno potencial se ganhar esta perna
-      const retornoPotencial = stakeAcumulado * odd;
-      const lucroSeBruto = retornoPotencial - stakeAcumulado;
-      
-      // Odd mínima para lay (com margem de segurança)
-      const oddMinimaLay = Math.max(odd * 0.95, 1.01);
-      
-      // Valor do lay para neutralizar o lucro
-      // Se objetivo é perder na casa: queremos que lay cubra todo o lucro
-      let valorLay = 0;
+      // Cálculo do stake lay baseado no objetivo
+      let stakeLay = 0;
       let responsabilidade = 0;
       let resultadoSeGreen = 0;
       let resultadoSeRed = 0;
 
       if (objetivo === 'perder_casa') {
-        // Lay para perder exatamente o stake se ganhar todas as pernas
-        // valorLay * (oddLay - 1) = lucro potencial na casa
-        valorLay = lucroSeBruto / (oddMinimaLay - 1);
-        responsabilidade = valorLay * (oddMinimaLay - 1);
+        // Para perder na casa: lay cobre todo o lucro potencial
+        // stakeLay * (oddLay - 1) = lucroBackBruto
+        stakeLay = lucroBackBruto / (oddLay - 1);
+        responsabilidade = stakeLay * (oddLay - 1);
         
-        // Se der green na casa:
-        // Ganhamos: lucroSeBruto
-        // Perdemos no lay: responsabilidade
-        resultadoSeGreen = lucroSeBruto - responsabilidade;
+        // Se GREEN na casa: ganha back, perde lay
+        resultadoSeGreen = lucroBackBruto - responsabilidade;
         
-        // Se der red na casa:
-        // Perdemos: stake
-        // Ganhamos no lay: valorLay * (1 - comissao)
-        resultadoSeRed = valorLay * (1 - comissaoDecimal) - stakeAcumulado;
+        // Se RED na casa: perde stake, ganha lay (menos comissão)
+        resultadoSeRed = stakeLay * (1 - comissaoDecimal) - stakeAcumulado;
+        
       } else if (objetivo === 'limitar_lucro') {
-        // Lay parcial para limitar o lucro a um valor controlado
-        const lucroMaximoDesejado = stakeAcumulado * 0.1; // 10% do stake
-        valorLay = (lucroSeBruto - lucroMaximoDesejado) / (oddMinimaLay - 1);
-        valorLay = Math.max(0, valorLay);
-        responsabilidade = valorLay * (oddMinimaLay - 1);
-        resultadoSeGreen = lucroSeBruto - responsabilidade;
-        resultadoSeRed = valorLay * (1 - comissaoDecimal) - stakeAcumulado;
+        // Limitar lucro a 10% do stake
+        const lucroMaximoDesejado = stakeAcumulado * 0.1;
+        stakeLay = Math.max(0, (lucroBackBruto - lucroMaximoDesejado) / (oddLay - 1));
+        responsabilidade = stakeLay * (oddLay - 1);
+        resultadoSeGreen = lucroBackBruto - responsabilidade;
+        resultadoSeRed = stakeLay * (1 - comissaoDecimal) - stakeAcumulado;
+        
       } else {
-        // Neutralizar greens: lay total
-        valorLay = retornoPotencial / oddMinimaLay;
-        responsabilidade = valorLay * (oddMinimaLay - 1);
-        resultadoSeGreen = lucroSeBruto - responsabilidade;
-        resultadoSeRed = valorLay * (1 - comissaoDecimal) - stakeAcumulado;
+        // Neutralizar greens: lay total para zerar
+        stakeLay = retornoPotencial / oddLay;
+        responsabilidade = stakeLay * (oddLay - 1);
+        resultadoSeGreen = lucroBackBruto - responsabilidade;
+        resultadoSeRed = stakeLay * (1 - comissaoDecimal) - stakeAcumulado;
       }
+
+      // Cálculo do juice (%) = resultado / exposição total
+      const exposicaoTotal = stakeAcumulado + responsabilidade;
+      const juiceSeGreen = exposicaoTotal > 0 ? (resultadoSeGreen / exposicaoTotal) * 100 : 0;
+      const juiceSeRed = exposicaoTotal > 0 ? (resultadoSeRed / exposicaoTotal) * 100 : 0;
 
       // Se esta perna já deu green, acumula
       if (perna.status === 'green') {
         lucroAcumulado += resultadoSeGreen;
-        stakeAcumulado = retornoPotencial; // stake para próxima perna
+        stakeAcumulado = retornoPotencial;
       }
 
       return {
         ...perna,
         lucroAcumulado,
-        protecaoLay: Math.max(0, valorLay),
-        oddMinimaLay,
+        stakeLay: Math.max(0, stakeLay),
         responsabilidade: Math.max(0, responsabilidade),
         resultadoSeGreen,
         resultadoSeRed,
+        juiceSeGreen,
+        juiceSeRed,
       };
     });
   }, []);
@@ -266,9 +271,19 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     });
   }, [recalcularPernas]);
 
-  const updatePernaOdd = useCallback((id: number, odd: number) => {
+  const updatePernaOddBack = useCallback((id: number, odd: number) => {
     setState(prev => {
-      const newPernas = prev.pernas.map(p => p.id === id ? { ...p, odd } : p);
+      const newPernas = prev.pernas.map(p => p.id === id ? { ...p, oddBack: odd } : p);
+      return {
+        ...prev,
+        pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange, prev.objetivo),
+      };
+    });
+  }, [recalcularPernas]);
+
+  const updatePernaOddLay = useCallback((id: number, odd: number) => {
+    setState(prev => {
+      const newPernas = prev.pernas.map(p => p.id === id ? { ...p, oddLay: odd } : p);
       return {
         ...prev,
         pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange, prev.objetivo),
@@ -296,7 +311,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
   const getJuiceData = useCallback((): JuiceData => {
     const { pernas, stakeInicial } = state;
     
-    const protecaoTotal = pernas.reduce((sum, p) => sum + p.protecaoLay, 0);
+    const protecaoTotal = pernas.reduce((sum, p) => sum + p.stakeLay, 0);
     const lucroVirtual = pernas.reduce((sum, p) => {
       if (p.status === 'green') return sum + p.resultadoSeGreen;
       return sum;
@@ -307,36 +322,45 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     
     let resultadoEsperado = lucroVirtual;
     if (proximaPerna) {
-      // Se der red agora
       resultadoEsperado = proximaPerna.resultadoSeRed;
     }
+
+    // Média dos juices
+    const pernasAtivas = pernas.filter(p => p.status !== 'red' && !pernas.slice(0, pernas.indexOf(p)).some(pr => pr.status === 'red'));
+    const juiceMedioGreen = pernasAtivas.length > 0 
+      ? pernasAtivas.reduce((sum, p) => sum + p.juiceSeGreen, 0) / pernasAtivas.length 
+      : 0;
+    const juiceMedioRed = pernasAtivas.length > 0 
+      ? pernasAtivas.reduce((sum, p) => sum + p.juiceSeRed, 0) / pernasAtivas.length 
+      : 0;
 
     return {
       exposicaoTotal: stakeInicial,
       lucroVirtual,
       protecaoTotal,
       resultadoEsperado,
+      juiceMedioGreen,
+      juiceMedioRed,
     };
   }, [state]);
 
   const getAcaoRecomendada = useCallback(() => {
     const { pernas } = state;
     
-    // Encontra a próxima perna pendente
     const proximaPerna = pernas.find(p => p.status === 'pendente');
-    
     if (!proximaPerna) return null;
     
-    // Verifica se alguma perna anterior deu red
     const algumRed = pernas.some(p => p.status === 'red');
     if (algumRed) return null;
 
     return {
-      valorLay: proximaPerna.protecaoLay,
-      oddMinima: proximaPerna.oddMinimaLay,
+      stakeLay: proximaPerna.stakeLay,
+      oddLay: proximaPerna.oddLay,
       resultadoSeGanhar: proximaPerna.resultadoSeGreen,
       resultadoSePerder: proximaPerna.resultadoSeRed,
       pernaAtual: proximaPerna.id,
+      juiceGreen: proximaPerna.juiceSeGreen,
+      juiceRed: proximaPerna.juiceSeRed,
     };
   }, [state]);
 
@@ -354,7 +378,8 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         setComissaoExchange,
         setMoeda,
         setNumPernas,
-        updatePernaOdd,
+        updatePernaOddBack,
+        updatePernaOddLay,
         setPernaStatus,
         resetCalculadora,
         getJuiceData,

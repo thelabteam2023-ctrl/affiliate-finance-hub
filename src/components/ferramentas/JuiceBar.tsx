@@ -15,6 +15,11 @@ export const JuiceBar: React.FC<JuiceBarProps> = ({ data, moeda }) => {
     return `${prefix}${currencySymbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  const formatPercent = (value: number) => {
+    const prefix = value >= 0 ? '+' : '';
+    return `${prefix}${value.toFixed(2)}%`;
+  };
+
   // Calcular proporções para a barra
   const total = Math.max(data.exposicaoTotal, data.protecaoTotal, Math.abs(data.lucroVirtual)) || 100;
   const exposicaoWidth = (data.exposicaoTotal / total) * 100;
@@ -73,6 +78,28 @@ export const JuiceBar: React.FC<JuiceBarProps> = ({ data, moeda }) => {
           <div className="w-3 h-3 rounded-full bg-destructive/50 mb-1" />
           <span className="text-muted-foreground">Proteção Total</span>
           <span className="font-semibold text-destructive">{formatValue(data.protecaoTotal, false)}</span>
+        </div>
+      </div>
+
+      {/* Juices médios */}
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className={cn(
+          'flex flex-col items-center p-2 rounded border',
+          data.juiceMedioGreen >= 0 ? 'bg-success/5 border-success/20' : 'bg-destructive/5 border-destructive/20'
+        )}>
+          <span className="text-muted-foreground">Juice se GREEN</span>
+          <span className={cn('font-bold text-sm', data.juiceMedioGreen >= 0 ? 'text-success' : 'text-destructive')}>
+            {formatPercent(data.juiceMedioGreen)}
+          </span>
+        </div>
+        <div className={cn(
+          'flex flex-col items-center p-2 rounded border',
+          data.juiceMedioRed >= 0 ? 'bg-success/5 border-success/20' : 'bg-destructive/5 border-destructive/20'
+        )}>
+          <span className="text-muted-foreground">Juice se RED</span>
+          <span className={cn('font-bold text-sm', data.juiceMedioRed >= 0 ? 'text-success' : 'text-destructive')}>
+            {formatPercent(data.juiceMedioRed)}
+          </span>
         </div>
       </div>
 

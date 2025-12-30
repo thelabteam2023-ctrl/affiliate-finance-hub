@@ -9,7 +9,8 @@ import { PernaAposta, StatusPerna, MoedaCalc } from '@/contexts/CalculadoraConte
 interface ProtecaoPernaCardProps {
   perna: PernaAposta;
   moeda: MoedaCalc;
-  onOddChange: (odd: number) => void;
+  onOddBackChange: (odd: number) => void;
+  onOddLayChange: (odd: number) => void;
   onStatusChange: (status: StatusPerna) => void;
   disabled?: boolean;
 }
@@ -17,7 +18,8 @@ interface ProtecaoPernaCardProps {
 export const ProtecaoPernaCard: React.FC<ProtecaoPernaCardProps> = ({
   perna,
   moeda,
-  onOddChange,
+  onOddBackChange,
+  onOddLayChange,
   onStatusChange,
   disabled = false,
 }) => {
@@ -26,6 +28,11 @@ export const ProtecaoPernaCard: React.FC<ProtecaoPernaCardProps> = ({
   const formatValue = (value: number) => {
     const prefix = value >= 0 ? '+' : '';
     return `${prefix}${currencySymbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const formatPercent = (value: number) => {
+    const prefix = value >= 0 ? '+' : '';
+    return `${prefix}${value.toFixed(2)}%`;
   };
 
   const statusConfig = {
@@ -66,15 +73,30 @@ export const ProtecaoPernaCard: React.FC<ProtecaoPernaCardProps> = ({
       </div>
 
       <div className="space-y-2">
+        {/* Odd Back */}
         <div className="flex items-center gap-2">
-          <Label className="text-xs text-muted-foreground shrink-0">Odd:</Label>
+          <Label className="text-xs text-muted-foreground shrink-0 w-10">Back:</Label>
           <Input
             type="number"
             step="0.01"
             min="1.01"
-            value={perna.odd}
-            onChange={(e) => onOddChange(parseFloat(e.target.value) || 1.01)}
-            className="w-20 h-7 text-sm"
+            value={perna.oddBack}
+            onChange={(e) => onOddBackChange(parseFloat(e.target.value) || 1.01)}
+            className="w-16 h-7 text-sm"
+            disabled={perna.status !== 'pendente'}
+          />
+        </div>
+
+        {/* Odd Lay */}
+        <div className="flex items-center gap-2">
+          <Label className="text-xs text-muted-foreground shrink-0 w-10">Lay:</Label>
+          <Input
+            type="number"
+            step="0.01"
+            min="1.01"
+            value={perna.oddLay}
+            onChange={(e) => onOddLayChange(parseFloat(e.target.value) || 1.01)}
+            className="w-16 h-7 text-sm"
             disabled={perna.status !== 'pendente'}
           />
         </div>
@@ -105,7 +127,7 @@ export const ProtecaoPernaCard: React.FC<ProtecaoPernaCardProps> = ({
         <div className="pt-2 border-t border-border/50 space-y-0.5 text-xs">
           {perna.status === 'green' && (
             <div className="flex justify-between gap-2">
-              <span className="text-muted-foreground truncate">Lucro obtido:</span>
+              <span className="text-muted-foreground truncate">Resultado:</span>
               <span className="font-medium text-success shrink-0">{formatValue(perna.resultadoSeGreen)}</span>
             </div>
           )}
@@ -121,20 +143,30 @@ export const ProtecaoPernaCard: React.FC<ProtecaoPernaCardProps> = ({
             <>
               <div className="flex justify-between gap-2">
                 <span className="text-muted-foreground">Se GREEN:</span>
-                <span className={cn('font-medium shrink-0', perna.resultadoSeGreen >= 0 ? 'text-success' : 'text-destructive')}>
-                  {formatValue(perna.resultadoSeGreen)}
-                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className={cn('font-medium', perna.resultadoSeGreen >= 0 ? 'text-success' : 'text-destructive')}>
+                    {formatValue(perna.resultadoSeGreen)}
+                  </span>
+                  <span className={cn('text-[10px]', perna.juiceSeGreen >= 0 ? 'text-success/70' : 'text-destructive/70')}>
+                    ({formatPercent(perna.juiceSeGreen)})
+                  </span>
+                </div>
               </div>
               <div className="flex justify-between gap-2">
                 <span className="text-muted-foreground">Se RED:</span>
-                <span className={cn('font-medium shrink-0', perna.resultadoSeRed >= 0 ? 'text-success' : 'text-destructive')}>
-                  {formatValue(perna.resultadoSeRed)}
-                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className={cn('font-medium', perna.resultadoSeRed >= 0 ? 'text-success' : 'text-destructive')}>
+                    {formatValue(perna.resultadoSeRed)}
+                  </span>
+                  <span className={cn('text-[10px]', perna.juiceSeRed >= 0 ? 'text-success/70' : 'text-destructive/70')}>
+                    ({formatPercent(perna.juiceSeRed)})
+                  </span>
+                </div>
               </div>
               <div className="flex flex-col gap-0.5 pt-1 border-t border-border/30">
-                <span className="text-muted-foreground">LAY sugerido:</span>
+                <span className="text-muted-foreground">Stake LAY:</span>
                 <span className="font-medium text-primary truncate">
-                  {currencySymbol} {perna.protecaoLay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} @ {perna.oddMinimaLay.toFixed(2)}
+                  {currencySymbol} {perna.stakeLay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
               </div>
             </>
