@@ -29,7 +29,8 @@ export const CalculadoraProtecaoContent: React.FC = () => {
     setComissaoExchange,
     setMoeda,
     setNumPernas,
-    updatePernaOdd,
+    updatePernaOddBack,
+    updatePernaOddLay,
     setPernaStatus,
     resetCalculadora,
     getJuiceData,
@@ -192,11 +193,13 @@ export const CalculadoraProtecaoContent: React.FC = () => {
             <div className="sm:col-span-2 lg:col-span-1">
               {acaoRecomendada ? (
                 <AcaoRecomendada
-                  valorLay={acaoRecomendada.valorLay}
-                  oddMinima={acaoRecomendada.oddMinima}
+                  stakeLay={acaoRecomendada.stakeLay}
+                  oddLay={acaoRecomendada.oddLay}
                   resultadoSeGanhar={acaoRecomendada.resultadoSeGanhar}
                   resultadoSePerder={acaoRecomendada.resultadoSePerder}
                   pernaAtual={acaoRecomendada.pernaAtual}
+                  juiceGreen={acaoRecomendada.juiceGreen}
+                  juiceRed={acaoRecomendada.juiceRed}
                   moeda={moeda}
                 />
               ) : algumRed ? (
@@ -215,6 +218,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
 
           <Separator />
 
+          {/* Timeline das pernas */}
           <div className="space-y-3">
             <h3 className="font-semibold text-sm text-foreground">Progressão das Entradas</h3>
             <div className="flex flex-wrap justify-center gap-3">
@@ -225,7 +229,8 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                     key={perna.id}
                     perna={perna}
                     moeda={moeda}
-                    onOddChange={(odd) => updatePernaOdd(perna.id, odd)}
+                    onOddBackChange={(odd) => updatePernaOddBack(perna.id, odd)}
+                    onOddLayChange={(odd) => updatePernaOddLay(perna.id, odd)}
                     onStatusChange={(status) => setPernaStatus(perna.id, status)}
                     disabled={pernaAnteriorRed}
                   />

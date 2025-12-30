@@ -4,20 +4,24 @@ import { cn } from '@/lib/utils';
 import { MoedaCalc } from '@/contexts/CalculadoraContext';
 
 interface AcaoRecomendadaProps {
-  valorLay: number;
-  oddMinima: number;
+  stakeLay: number;
+  oddLay: number;
   resultadoSeGanhar: number;
   resultadoSePerder: number;
   pernaAtual: number;
+  juiceGreen: number;
+  juiceRed: number;
   moeda: MoedaCalc;
 }
 
 export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
-  valorLay,
-  oddMinima,
+  stakeLay,
+  oddLay,
   resultadoSeGanhar,
   resultadoSePerder,
   pernaAtual,
+  juiceGreen,
+  juiceRed,
   moeda,
 }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
@@ -25,6 +29,11 @@ export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
   const formatValue = (value: number) => {
     const prefix = value >= 0 ? '+' : '';
     return `${prefix}${currencySymbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const formatPercent = (value: number) => {
+    const prefix = value >= 0 ? '+' : '';
+    return `${prefix}${value.toFixed(2)}%`;
   };
 
   return (
@@ -47,15 +56,15 @@ export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
 
         <div className="grid grid-cols-2 gap-2">
           <div className="p-2 sm:p-3 rounded-lg bg-background border border-border">
-            <span className="text-xs text-muted-foreground block mb-0.5">Valor</span>
+            <span className="text-xs text-muted-foreground block mb-0.5">Stake LAY</span>
             <span className="text-base sm:text-xl font-bold text-primary">
-              {currencySymbol} {valorLay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              {currencySymbol} {stakeLay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
           <div className="p-2 sm:p-3 rounded-lg bg-background border border-border">
-            <span className="text-xs text-muted-foreground block mb-0.5">Odd mínima</span>
+            <span className="text-xs text-muted-foreground block mb-0.5">Odd LAY</span>
             <span className="text-base sm:text-xl font-bold text-primary">
-              {oddMinima.toFixed(2)}
+              {oddLay.toFixed(2)}
             </span>
           </div>
         </div>
@@ -64,27 +73,43 @@ export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
           <div className="flex items-center justify-between p-1.5 sm:p-2 rounded bg-success/10 gap-2">
             <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
               <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-success shrink-0" />
-              <span className="text-xs sm:text-sm text-muted-foreground truncate">Se GANHAR:</span>
+              <span className="text-xs sm:text-sm text-muted-foreground truncate">Se GREEN:</span>
             </div>
-            <span className={cn(
-              'font-bold text-sm sm:text-base shrink-0',
-              resultadoSeGanhar >= 0 ? 'text-success' : 'text-destructive'
-            )}>
-              {formatValue(resultadoSeGanhar)}
-            </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className={cn(
+                'font-bold text-sm sm:text-base',
+                resultadoSeGanhar >= 0 ? 'text-success' : 'text-destructive'
+              )}>
+                {formatValue(resultadoSeGanhar)}
+              </span>
+              <span className={cn(
+                'text-xs',
+                juiceGreen >= 0 ? 'text-success/70' : 'text-destructive/70'
+              )}>
+                ({formatPercent(juiceGreen)})
+              </span>
+            </div>
           </div>
           
           <div className="flex items-center justify-between p-1.5 sm:p-2 rounded bg-destructive/10 gap-2">
             <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
               <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive shrink-0" />
-              <span className="text-xs sm:text-sm text-muted-foreground truncate">Se PERDER:</span>
+              <span className="text-xs sm:text-sm text-muted-foreground truncate">Se RED:</span>
             </div>
-            <span className={cn(
-              'font-bold text-sm sm:text-base shrink-0',
-              resultadoSePerder >= 0 ? 'text-success' : 'text-destructive'
-            )}>
-              {formatValue(resultadoSePerder)}
-            </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className={cn(
+                'font-bold text-sm sm:text-base',
+                resultadoSePerder >= 0 ? 'text-success' : 'text-destructive'
+              )}>
+                {formatValue(resultadoSePerder)}
+              </span>
+              <span className={cn(
+                'text-xs',
+                juiceRed >= 0 ? 'text-success/70' : 'text-destructive/70'
+              )}>
+                ({formatPercent(juiceRed)})
+              </span>
+            </div>
           </div>
         </div>
       </div>
