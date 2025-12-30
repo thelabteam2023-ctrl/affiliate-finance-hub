@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, X, Clock } from 'lucide-react';
+import { Check, X, Clock, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { PernaAposta, StatusPerna, MoedaCalc } from '@/contexts/CalculadoraConte
 interface ProtecaoPernaCardProps {
   perna: PernaAposta;
   moeda: MoedaCalc;
+  totalPernas: number;
   onOddBackChange: (odd: number) => void;
   onOddLayChange: (odd: number) => void;
   onStatusChange: (status: StatusPerna) => void;
@@ -18,12 +19,14 @@ interface ProtecaoPernaCardProps {
 export const ProtecaoPernaCard: React.FC<ProtecaoPernaCardProps> = ({
   perna,
   moeda,
+  totalPernas,
   onOddBackChange,
   onOddLayChange,
   onStatusChange,
   disabled = false,
 }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
+  const isUltimaPerna = perna.id === totalPernas;
   
   const formatValue = (value: number) => {
     const prefix = value >= 0 ? '+' : '';
@@ -60,7 +63,7 @@ export const ProtecaoPernaCard: React.FC<ProtecaoPernaCardProps> = ({
 
   return (
     <div className={cn(
-      'rounded-lg border-2 p-3 transition-all overflow-hidden w-full max-w-[200px]',
+      'rounded-lg border-2 p-3 transition-all overflow-hidden w-full max-w-[220px]',
       config.bg,
       disabled && 'opacity-50 pointer-events-none'
     )}>
@@ -124,7 +127,7 @@ export const ProtecaoPernaCard: React.FC<ProtecaoPernaCardProps> = ({
           </div>
         )}
 
-        <div className="pt-2 border-t border-border/50 space-y-0.5 text-xs">
+        <div className="pt-2 border-t border-border/50 space-y-1 text-xs">
           {perna.status === 'green' && (
             <div className="flex justify-between gap-2">
               <span className="text-muted-foreground truncate">Resultado:</span>
@@ -141,28 +144,51 @@ export const ProtecaoPernaCard: React.FC<ProtecaoPernaCardProps> = ({
 
           {perna.status === 'pendente' && (
             <>
-              <div className="flex justify-between gap-2">
-                <span className="text-muted-foreground">Se GREEN:</span>
-                <div className="flex items-center gap-1 shrink-0">
-                  <span className={cn('font-medium', perna.resultadoSeGreen >= 0 ? 'text-success' : 'text-destructive')}>
-                    {formatValue(perna.resultadoSeGreen)}
-                  </span>
-                  <span className={cn('text-[10px]', perna.juiceSeGreen >= 0 ? 'text-success/70' : 'text-destructive/70')}>
-                    ({formatPercent(perna.juiceSeGreen)})
-                  </span>
+              {/* Se GREEN na casa */}
+              <div className="bg-success/5 rounded p-1.5 border border-success/20">
+                <div className="flex items-center gap-1 text-success font-medium mb-1">
+                  <Check className="h-3 w-3" />
+                  <span>Se GREEN na casa:</span>
+                </div>
+                {isUltimaPerna ? (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Resultado final:</span>
+                    <div className="flex items-center gap-1">
+                      <span className={cn('font-medium', perna.resultadoSeGreen >= 0 ? 'text-success' : 'text-destructive')}>
+                        {formatValue(perna.resultadoSeGreen)}
+                      </span>
+                      <span className={cn('text-[10px]', perna.juiceSeGreen >= 0 ? 'text-success/70' : 'text-destructive/70')}>
+                        ({formatPercent(perna.juiceSeGreen)})
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <ArrowRight className="h-3 w-3" />
+                    <span>Continua p/ Entrada {perna.id + 1}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Se RED na casa */}
+              <div className="bg-destructive/5 rounded p-1.5 border border-destructive/20">
+                <div className="flex items-center gap-1 text-destructive font-medium mb-1">
+                  <X className="h-3 w-3" />
+                  <span>Se RED na casa:</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Resultado final:</span>
+                  <div className="flex items-center gap-1">
+                    <span className={cn('font-medium', perna.resultadoSeRed >= 0 ? 'text-success' : 'text-destructive')}>
+                      {formatValue(perna.resultadoSeRed)}
+                    </span>
+                    <span className={cn('text-[10px]', perna.juiceSeRed >= 0 ? 'text-success/70' : 'text-destructive/70')}>
+                      ({formatPercent(perna.juiceSeRed)})
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="flex justify-between gap-2">
-                <span className="text-muted-foreground">Se RED:</span>
-                <div className="flex items-center gap-1 shrink-0">
-                  <span className={cn('font-medium', perna.resultadoSeRed >= 0 ? 'text-success' : 'text-destructive')}>
-                    {formatValue(perna.resultadoSeRed)}
-                  </span>
-                  <span className={cn('text-[10px]', perna.juiceSeRed >= 0 ? 'text-success/70' : 'text-destructive/70')}>
-                    ({formatPercent(perna.juiceSeRed)})
-                  </span>
-                </div>
-              </div>
+
               <div className="flex flex-col gap-0.5 pt-1 border-t border-border/30">
                 <span className="text-muted-foreground">Stake LAY:</span>
                 <span className="font-medium text-primary truncate">
