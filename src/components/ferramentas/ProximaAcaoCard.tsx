@@ -231,16 +231,129 @@ export const SemSimulacao: React.FC<{
   stakeInicial: number;
   volumeExchange: number;
   exposicaoMaxima: number;
-}> = ({ capitalFinal, eficiencia, moeda, stakeInicial, volumeExchange, exposicaoMaxima }) => {
+  motivoEncerramento: 'red' | 'green_final' | null;
+  greenFinal: {
+    retornoBrutoBookmaker: number;
+    custosTotaisLay: number;
+    novoSaldoNaCasa: number;
+    lucroLiquidoReal: number;
+    percentualExtracao: number;
+    houvePerda: boolean;
+  } | null;
+}> = ({ capitalFinal, eficiencia, moeda, stakeInicial, volumeExchange, exposicaoMaxima, motivoEncerramento, greenFinal }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
   
-  const formatValue = (value: number) => {
-    return `${currencySymbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatValue = (value: number, showSign = false) => {
+    const prefix = showSign ? (value >= 0 ? '+' : '-') : '';
+    return `${prefix}${currencySymbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const lucroLiquido = capitalFinal - stakeInicial;
   const roi = (lucroLiquido / stakeInicial) * 100;
 
+  // GREEN FINAL - Última perna terminou GREEN na Bookmaker
+  if (motivoEncerramento === 'green_final' && greenFinal) {
+    return (
+      <div className={cn(
+        "rounded-lg border-2 p-4 space-y-3",
+        greenFinal.houvePerda 
+          ? "bg-destructive/10 border-destructive/30" 
+          : "bg-success/10 border-success/30"
+      )}>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-full bg-background/50">
+            <PartyPopper className={cn(
+              "h-5 w-5",
+              greenFinal.houvePerda ? "text-destructive" : "text-success"
+            )} />
+          </div>
+          <div>
+            <h4 className="font-bold text-foreground">Operação Finalizada</h4>
+            <p className="text-sm text-muted-foreground">Bookmaker pagou - Proteção concluída</p>
+          </div>
+        </div>
+
+        <div className="space-y-2 pt-2 border-t border-border/30">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Stake Inicial:</span>
+            <span className="font-medium text-foreground">{formatValue(stakeInicial)}</span>
+          </div>
+          
+          <div className="flex justify-between text-sm">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-muted-foreground flex items-center gap-1 cursor-help">
+                    Novo Saldo na Casa:
+                    <HelpCircle className="h-3 w-3" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[220px] text-xs">
+                  <p>Lucro bruto recebido da Bookmaker: Stake × (Odd - 1)</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <span className="font-bold text-success">{formatValue(greenFinal.novoSaldoNaCasa, true)}</span>
+          </div>
+          
+          <div className="flex justify-between text-sm">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-muted-foreground flex items-center gap-1 cursor-help">
+                    Custos LAY (proteções):
+                    <HelpCircle className="h-3 w-3" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[220px] text-xs">
+                  <p>Soma de todas as responsabilidades pagas nas proteções LAY ao longo da operação.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <span className="font-bold text-destructive">-{formatValue(greenFinal.custosTotaisLay)}</span>
+          </div>
+          
+          <div className="flex justify-between text-sm pt-2 border-t border-border/30">
+            <span className="text-foreground font-medium">Lucro Líquido Real:</span>
+            <span className={cn('font-bold text-lg', greenFinal.lucroLiquidoReal >= 0 ? 'text-success' : 'text-destructive')}>
+              {formatValue(greenFinal.lucroLiquidoReal, true)}
+            </span>
+          </div>
+          
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Extração Real:</span>
+            <span className={cn('font-bold', greenFinal.percentualExtracao >= 0 ? 'text-success' : 'text-destructive')}>
+              {greenFinal.percentualExtracao >= 0 ? '+' : ''}{greenFinal.percentualExtracao.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+
+        {/* Alerta se houve perda */}
+        {greenFinal.houvePerda && (
+          <div className="p-3 rounded-lg bg-destructive/20 border border-destructive/30">
+            <p className="text-xs text-destructive font-medium flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              Juice negativo: os custos de proteção excederam o lucro da Bookmaker.
+            </p>
+          </div>
+        )}
+
+        {/* Volume Operado */}
+        <div className="pt-3 border-t border-border/50">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Vol. movimentado:</span>
+            <span className="font-medium text-foreground">{formatValue(volumeExchange)}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs mt-1">
+            <span className="text-muted-foreground">Custos totais LAY:</span>
+            <span className="font-medium text-warning">{formatValue(greenFinal.custosTotaisLay)}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // RED - Capital recuperado via Exchange (mantém comportamento original)
   return (
     <div className="rounded-lg border-2 p-4 space-y-3 bg-success/10 border-success/30">
       <div className="flex items-center gap-3">
@@ -265,7 +378,7 @@ export const SemSimulacao: React.FC<{
         <div className="flex justify-between text-sm pt-2 border-t border-border/30">
           <span className="text-muted-foreground">Lucro Líquido:</span>
           <span className={cn('font-bold', lucroLiquido >= 0 ? 'text-success' : 'text-destructive')}>
-            {lucroLiquido >= 0 ? '+' : ''}{formatValue(lucroLiquido)}
+            {formatValue(lucroLiquido, true)}
           </span>
         </div>
         <div className="flex justify-between text-sm">

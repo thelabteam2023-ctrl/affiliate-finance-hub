@@ -73,9 +73,19 @@ export interface MetricasGlobais {
   
   // Status
   operacaoEncerrada: boolean;
-  motivoEncerramento: 'red' | null;
+  motivoEncerramento: 'red' | 'green_final' | null;
   capitalFinal: number;
   eficienciaFinal: number;
+  
+  // GREEN FINAL - Quando a última perna termina GREEN
+  greenFinal: {
+    retornoBrutoBookmaker: number;     // Stake × OddBack (retorno total da bookmaker)
+    custosTotaisLay: number;           // Soma de todos os custos LAY pagos
+    novoSaldoNaCasa: number;           // Retorno bruto - stake inicial (lucro na bookmaker)
+    lucroLiquidoReal: number;          // novoSaldoNaCasa - custosTotaisLay
+    percentualExtracao: number;        // lucroLiquidoReal / stakeInicial × 100
+    houvePerda: boolean;               // lucroLiquidoReal < 0
+  } | null;
   
   // Aviso de risco
   avisoRisco: string;
@@ -466,6 +476,9 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     // Verificar status
     const pernaRed = pernas.find(p => p.status === 'red');
     const pernaAtiva = pernas.find(p => p.status === 'ativa');
+    const todasGreen = pernas.every(p => p.status === 'green');
+    const ultimaPerna = pernas[pernas.length - 1];
+    const ultimaPernaGreen = ultimaPerna?.status === 'green';
     
     // Volume operado
     const volumeExchange = pernas.reduce((sum, p) => sum + p.stakeLayNecessario, 0);
@@ -480,7 +493,6 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     const lucroSeRedAgora = pernaAtiva?.lucroSeRed || 0;
     
     // Se todas GREEN (pior cenário - maior capital comprometido)
-    const ultimaPerna = pernas[pernas.length - 1];
     const capitalComprometidoFinal = ultimaPerna?.novoCapitalComprometido || 0;
     
     // Se parar agora (sem proteger)
@@ -489,10 +501,46 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     // Calcular capital final e eficiência
     let capitalFinal = stakeInicial;
     let eficienciaFinal = 100;
+    let motivoEncerramento: 'red' | 'green_final' | null = null;
+    let greenFinal: MetricasGlobais['greenFinal'] = null;
     
     if (pernaRed) {
-      // RED = capital recuperado
+      // RED = capital recuperado via Exchange
       capitalFinal = pernaRed.capitalRecuperado;
+      eficienciaFinal = stakeInicial > 0 ? (capitalFinal / stakeInicial) * 100 : 0;
+      motivoEncerramento = 'red';
+    } else if (ultimaPernaGreen) {
+      // GREEN FINAL = Última perna terminou GREEN
+      // A Bookmaker pagou, mas perdemos capital nos LAYs
+      motivoEncerramento = 'green_final';
+      
+      // Soma de todos os custos LAY (responsabilidades pagas)
+      const custosTotaisLay = pernas.reduce((sum, p) => sum + p.custoLay, 0);
+      
+      // Retorno da Bookmaker: stake × oddBack da última perna
+      // Mas o importante é o lucro que temos NA BOOKMAKER agora
+      const lucroNaBookmaker = stakeInicial * (ultimaPerna.oddBack - 1);
+      const retornoBrutoBookmaker = stakeInicial + lucroNaBookmaker;
+      
+      // Novo saldo na casa = lucro bruto que a bookmaker pagou
+      const novoSaldoNaCasa = lucroNaBookmaker;
+      
+      // Lucro líquido real = lucro bookmaker - custos LAY
+      const lucroLiquidoReal = novoSaldoNaCasa - custosTotaisLay;
+      
+      // Percentual de extração real
+      const percentualExtracao = stakeInicial > 0 ? (lucroLiquidoReal / stakeInicial) * 100 : 0;
+      
+      greenFinal = {
+        retornoBrutoBookmaker,
+        custosTotaisLay,
+        novoSaldoNaCasa,
+        lucroLiquidoReal,
+        percentualExtracao,
+        houvePerda: lucroLiquidoReal < 0,
+      };
+      
+      capitalFinal = stakeInicial + lucroLiquidoReal;
       eficienciaFinal = stakeInicial > 0 ? (capitalFinal / stakeInicial) * 100 : 0;
     }
     
@@ -510,10 +558,11 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       lucroSeRedAgora,
       capitalComprometidoFinal,
       custoSeParar,
-      operacaoEncerrada: !!pernaRed,
-      motivoEncerramento: pernaRed ? 'red' : null,
+      operacaoEncerrada: !!pernaRed || ultimaPernaGreen,
+      motivoEncerramento,
       capitalFinal,
       eficienciaFinal,
+      greenFinal,
       avisoRisco,
     };
   }, [state]);
