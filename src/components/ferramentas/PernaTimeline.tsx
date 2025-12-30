@@ -1,14 +1,15 @@
 import React from 'react';
-import { Clock, Check, TrendingUp, Lock, ChevronRight, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Clock, Check, TrendingUp, Lock, ChevronRight, AlertTriangle, RotateCcw, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PernaAposta, StatusPerna, MoedaCalc } from '@/contexts/CalculadoraContext';
+import { PernaAposta, StatusPerna, MoedaCalc, ModoCalculo } from '@/contexts/CalculadoraContext';
 
 interface PernaTimelineProps {
   pernas: PernaAposta[];
   moeda: MoedaCalc;
+  modoCalculo: ModoCalculo;
   stakeInicial: number;
   onOddBackChange: (id: number, odd: number) => void;
   onOddLayChange: (id: number, odd: number) => void;
@@ -63,6 +64,7 @@ const statusConfig: Record<StatusPerna, {
 const PernaCard: React.FC<{
   perna: PernaAposta;
   moeda: MoedaCalc;
+  modoCalculo: ModoCalculo;
   stakeInicial: number;
   totalPernas: number;
   onOddBackChange: (odd: number) => void;
@@ -72,6 +74,7 @@ const PernaCard: React.FC<{
 }> = ({
   perna,
   moeda,
+  modoCalculo,
   stakeInicial,
   totalPernas,
   onOddBackChange,
@@ -82,6 +85,7 @@ const PernaCard: React.FC<{
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
   const config = statusConfig[perna.status];
   const isEditavel = perna.status === 'ativa' || perna.status === 'aguardando';
+  const isBalanceado = modoCalculo === 'balanceado';
   const isUltima = perna.id === totalPernas;
   
   const formatValue = (value: number, showSign = false) => {
@@ -138,25 +142,40 @@ const PernaCard: React.FC<{
         </div>
         <div className="flex items-center gap-2">
           <Label className="text-xs text-muted-foreground w-14">Stake:</Label>
-          <Input
-            type="number"
-            step="1"
-            min="1"
-            value={perna.stakeLay}
-            onChange={(e) => onStakeLayChange(parseFloat(e.target.value) || 1)}
-            className="w-20 h-8 text-sm"
-            disabled={!isEditavel}
-          />
-          <Button 
-            size="sm" 
-            variant="ghost" 
-            onClick={() => onStakeLayChange(stakeInicial)}
-            className="h-8 px-2 text-[10px]"
-            disabled={!isEditavel}
-            title="Igualar ao stake inicial"
-          >
-            <RotateCcw className="h-3 w-3" />
-          </Button>
+          {isBalanceado ? (
+            // Modo balanceado: mostrar valor calculado (não editável)
+            <div className="flex items-center gap-2">
+            <div className="w-20 h-8 px-2 flex items-center bg-primary/10 border border-primary/30 rounded-md text-sm font-medium text-primary">
+              {perna.stakeLay.toFixed(2)}
+            </div>
+            <span title="Calculado automaticamente">
+              <Calculator className="h-3 w-3 text-primary" />
+            </span>
+            </div>
+          ) : (
+            // Modo manual: input editável
+            <>
+              <Input
+                type="number"
+                step="1"
+                min="1"
+                value={perna.stakeLayManual}
+                onChange={(e) => onStakeLayChange(parseFloat(e.target.value) || 1)}
+                className="w-20 h-8 text-sm"
+                disabled={!isEditavel}
+              />
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => onStakeLayChange(stakeInicial)}
+                className="h-8 px-2 text-[10px]"
+                disabled={!isEditavel}
+                title="Igualar ao stake inicial"
+              >
+                <RotateCcw className="h-3 w-3" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -306,6 +325,7 @@ const PernaCard: React.FC<{
 export const PernaTimeline: React.FC<PernaTimelineProps> = ({
   pernas,
   moeda,
+  modoCalculo,
   stakeInicial,
   onOddBackChange,
   onOddLayChange,
@@ -323,6 +343,7 @@ export const PernaTimeline: React.FC<PernaTimelineProps> = ({
             <PernaCard
               perna={perna}
               moeda={moeda}
+              modoCalculo={modoCalculo}
               stakeInicial={stakeInicial}
               totalPernas={pernas.length}
               onOddBackChange={(odd) => onOddBackChange(perna.id, odd)}

@@ -1,16 +1,18 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
 /**
- * CALCULADORA DE SIMULAÇÃO FINANCEIRA (OBEDIENTE)
+ * CALCULADORA DE SIMULAÇÃO FINANCEIRA
  * 
- * CONCEITO CENTRAL:
- * - A calculadora NÃO resolve equações
- * - Ela SIMULA consequências de qualquer combinação de inputs
- * - Stake LAY é INPUT do usuário (default = stake inicial)
+ * DOIS MODOS DE OPERAÇÃO:
  * 
- * CENÁRIOS SIMULADOS:
- * - Se GREEN: lucro back - responsabilidade LAY
- * - Se RED: ganho LAY líquido - responsabilidade - stake
+ * 1. SIMULAÇÃO MANUAL:
+ *    - stakeLay = valor inserido pelo usuário
+ *    - Simula consequências da combinação escolhida
+ * 
+ * 2. MATCHED BET BALANCEADO:
+ *    - stakeLay = calculado automaticamente para equalizar resultados
+ *    - Fórmula: stakeLay = (stakeBack × oddBack) / (oddLay - comissão)
+ *    - Resultado GREEN ≈ Resultado RED (ambos com pequeno custo = juice)
  * 
  * NUNCA BLOQUEIA - apenas exibe avisos informativos
  */
@@ -18,12 +20,14 @@ import React, { createContext, useContext, useState, useCallback, ReactNode } fr
 export type StatusPerna = 'aguardando' | 'ativa' | 'green' | 'red' | 'travada';
 export type TipoAposta = 'dupla' | 'tripla' | 'multipla';
 export type MoedaCalc = 'BRL' | 'USD';
+export type ModoCalculo = 'manual' | 'balanceado';
 
 export interface PernaAposta {
   id: number;
   oddBack: number;
   oddLay: number;
-  stakeLay: number;        // INPUT do usuário (default = stake inicial)
+  stakeLay: number;        // INPUT do usuário OU calculado (modo balanceado)
+  stakeLayManual: number;  // Valor inserido manualmente (para restaurar ao trocar modo)
   status: StatusPerna;
   
   // Calculados automaticamente
@@ -32,7 +36,7 @@ export interface PernaAposta {
   // Se RED (perde na bookmaker, ganha LAY na exchange)
   ganhoLayBruto: number;       // stakeLay
   ganhoLayLiquido: number;     // stakeLay × (1 − comissão)
-  resultadoSeRed: number;      // ganhoLayLiquido - responsabilidade - stakeInicial
+  resultadoSeRed: number;      // ganhoLayLiquido - stakeInicial
   
   // Se GREEN (ganha na bookmaker, perde LAY)
   lucroBack: number;           // stakeInicial × (oddBack − 1)
@@ -80,6 +84,7 @@ interface CalculadoraState {
   stakeInicial: number;
   comissaoExchange: number;
   moeda: MoedaCalc;
+  modoCalculo: ModoCalculo;
   pernas: PernaAposta[];
   numPernas: number;
   pernaAtiva: number;
@@ -94,6 +99,7 @@ interface CalculadoraContextType extends CalculadoraState {
   setStakeInicial: (stake: number) => void;
   setComissaoExchange: (comissao: number) => void;
   setMoeda: (moeda: MoedaCalc) => void;
+  setModoCalculo: (modo: ModoCalculo) => void;
   setNumPernas: (num: number) => void;
   updatePernaOddBack: (id: number, odd: number) => void;
   updatePernaOddLay: (id: number, odd: number) => void;
@@ -121,6 +127,7 @@ const defaultState: CalculadoraState = {
   stakeInicial: 100,
   comissaoExchange: 5,
   moeda: 'BRL',
+  modoCalculo: 'balanceado',
   pernas: [],
   numPernas: 2,
   pernaAtiva: 1,
@@ -142,6 +149,7 @@ const createPernas = (num: number, stakeInicial: number): PernaAposta[] => {
     oddBack: 2.0,
     oddLay: 2.0,
     stakeLay: stakeInicial,  // Default = stake inicial
+    stakeLayManual: stakeInicial,  // Para restaurar ao trocar modo
     status: i === 0 ? 'ativa' : 'aguardando',
     responsabilidade: 0,
     ganhoLayBruto: 0,
@@ -152,6 +160,22 @@ const createPernas = (num: number, stakeInicial: number): PernaAposta[] => {
     juicePerna: 0,
     avisos: [],
   }));
+};
+
+/**
+ * Calcula o stake LAY balanceado (matched bet clássico)
+ * Fórmula: stakeLay = (stakeBack × oddBack) / (oddLay - comissão)
+ * Onde comissão é a taxa da exchange (ex: 0.028 para 2.8%)
+ */
+const calcularStakeLayBalanceado = (
+  stakeBack: number,
+  oddBack: number,
+  oddLay: number,
+  comissaoDecimal: number
+): number => {
+  const divisor = oddLay - comissaoDecimal;
+  if (divisor <= 0) return stakeBack; // Fallback seguro
+  return (stakeBack * oddBack) / divisor;
 };
 
 export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -172,7 +196,8 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
   const recalcularPernas = useCallback((
     pernas: PernaAposta[],
     stakeInicial: number,
-    comissao: number
+    comissao: number,
+    modoCalculo: ModoCalculo
   ): PernaAposta[] => {
     const comissaoDecimal = comissao / 100;
     let operacaoEncerrada = false;
@@ -183,12 +208,18 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     let custoAcumulado = 0;
     
     return pernas.map((perna, index) => {
-      const { oddBack, oddLay, stakeLay } = perna;
+      const { oddBack, oddLay, stakeLayManual } = perna;
+      
+      // Determinar stake LAY baseado no modo
+      const stakeLay = modoCalculo === 'balanceado'
+        ? calcularStakeLayBalanceado(stakeInicial, oddBack, oddLay, comissaoDecimal)
+        : stakeLayManual;
       
       // Se operação já encerrou (RED anterior)
       if (operacaoEncerrada) {
         return {
           ...perna,
+          stakeLay,
           status: 'travada' as StatusPerna,
           responsabilidade: 0,
           ganhoLayBruto: 0,
@@ -217,10 +248,9 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       // - Você GANHA o stakeLay líquido: stakeLay × (1 - comissão)
       const resultadoSeRed = ganhoLayLiquido - stakeInicial;
       
-      // Juice = custo operacional percentual
-      // Quanto menor o juice, melhor
-      const custoMedio = Math.max(0, -resultadoSeGreen, -resultadoSeRed);
-      const juicePerna = stakeInicial > 0 ? (custoMedio / stakeInicial) * 100 : 0;
+      // Juice = custo percentual sobre o stake inicial
+      // Usando a média dos piores cenários ou o próprio resultado se negativo
+      const juicePerna = stakeInicial > 0 ? (resultadoSeGreen / stakeInicial) * 100 : 0;
       
       // Avisos informativos (nunca bloqueios)
       const avisos: string[] = [];
@@ -237,6 +267,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         
         return {
           ...perna,
+          stakeLay,
           status: 'red' as StatusPerna,
           responsabilidade,
           ganhoLayBruto,
@@ -257,6 +288,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         
         return {
           ...perna,
+          stakeLay,
           status: 'green' as StatusPerna,
           responsabilidade,
           ganhoLayBruto,
@@ -277,6 +309,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       
       return {
         ...perna,
+        stakeLay,
         status,
         responsabilidade,
         ganhoLayBruto,
@@ -320,22 +353,22 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         tipoAposta: tipo,
         numPernas: num,
         pernaAtiva: 1,
-        pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange),
+        pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange, prev.modoCalculo),
       };
     });
   }, [recalcularPernas]);
 
   const setStakeInicial = useCallback((stake: number) => {
     setState(prev => {
-      // Atualizar stake LAY das pernas que ainda usam o default
+      // Atualizar stake LAY manual das pernas que ainda usam o default
       const newPernas = prev.pernas.map(p => ({
         ...p,
-        stakeLay: p.stakeLay === prev.stakeInicial ? stake : p.stakeLay,
+        stakeLayManual: p.stakeLayManual === prev.stakeInicial ? stake : p.stakeLayManual,
       }));
       return {
         ...prev,
         stakeInicial: stake,
-        pernas: recalcularPernas(newPernas, stake, prev.comissaoExchange),
+        pernas: recalcularPernas(newPernas, stake, prev.comissaoExchange, prev.modoCalculo),
       };
     });
   }, [recalcularPernas]);
@@ -344,13 +377,21 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     setState(prev => ({
       ...prev,
       comissaoExchange: comissao,
-      pernas: recalcularPernas(prev.pernas, prev.stakeInicial, comissao),
+      pernas: recalcularPernas(prev.pernas, prev.stakeInicial, comissao, prev.modoCalculo),
     }));
   }, [recalcularPernas]);
 
   const setMoeda = useCallback((moeda: MoedaCalc) => {
     setState(prev => ({ ...prev, moeda }));
   }, []);
+
+  const setModoCalculo = useCallback((modo: ModoCalculo) => {
+    setState(prev => ({
+      ...prev,
+      modoCalculo: modo,
+      pernas: recalcularPernas(prev.pernas, prev.stakeInicial, prev.comissaoExchange, modo),
+    }));
+  }, [recalcularPernas]);
 
   const setNumPernas = useCallback((num: number) => {
     setState(prev => {
@@ -360,7 +401,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         numPernas: num,
         tipoAposta: num === 2 ? 'dupla' : num === 3 ? 'tripla' : 'multipla',
         pernaAtiva: 1,
-        pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange),
+        pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange, prev.modoCalculo),
       };
     });
   }, [recalcularPernas]);
@@ -372,7 +413,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         const newPernas = prev.pernas.map(p => p.id === id ? { ...p, oddBack: odd } : p);
         return {
           ...prev,
-          pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange),
+          pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange, prev.modoCalculo),
         };
       }
       return prev;
@@ -386,7 +427,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         const newPernas = prev.pernas.map(p => p.id === id ? { ...p, oddLay: odd } : p);
         return {
           ...prev,
-          pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange),
+          pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange, prev.modoCalculo),
         };
       }
       return prev;
@@ -397,10 +438,11 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     setState(prev => {
       const perna = prev.pernas.find(p => p.id === id);
       if (perna && (perna.status === 'aguardando' || perna.status === 'ativa')) {
-        const newPernas = prev.pernas.map(p => p.id === id ? { ...p, stakeLay: stake } : p);
+        // Quando o usuário altera manualmente, também atualizar stakeLayManual
+        const newPernas = prev.pernas.map(p => p.id === id ? { ...p, stakeLayManual: stake } : p);
         return {
           ...prev,
-          pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange),
+          pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange, prev.modoCalculo),
         };
       }
       return prev;
@@ -431,7 +473,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       return {
         ...prev,
         pernaAtiva: resultado === 'green' ? id + 1 : id,
-        pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange),
+        pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange, prev.modoCalculo),
       };
     });
   }, [recalcularPernas]);
@@ -440,7 +482,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     setState(prev => ({
       ...prev,
       pernaAtiva: 1,
-      pernas: recalcularPernas(createPernas(prev.numPernas, prev.stakeInicial), prev.stakeInicial, prev.comissaoExchange),
+      pernas: recalcularPernas(createPernas(prev.numPernas, prev.stakeInicial), prev.stakeInicial, prev.comissaoExchange, prev.modoCalculo),
     }));
   }, [recalcularPernas]);
 
@@ -567,6 +609,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     setStakeInicial,
     setComissaoExchange,
     setMoeda,
+    setModoCalculo,
     setNumPernas,
     updatePernaOddBack,
     updatePernaOddLay,
