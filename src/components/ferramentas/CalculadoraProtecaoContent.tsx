@@ -214,6 +214,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                   volumeExchange={metricas.volumeExchange}
                   exposicaoMaxima={metricas.exposicaoMaxima}
                   motivoEncerramento={metricas.motivoEncerramento}
+                  redFinal={metricas.redFinal}
                   greenFinal={metricas.greenFinal}
                 />
               ) : null}

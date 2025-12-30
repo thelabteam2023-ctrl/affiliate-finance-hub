@@ -77,6 +77,15 @@ export interface MetricasGlobais {
   capitalFinal: number;
   eficienciaFinal: number;
   
+  // RED - Quando ocorre RED (extração via Exchange)
+  redFinal: {
+    capitalExtraido: number;           // Valor recebido da Exchange
+    custosTotaisLay: number;           // Soma de todos os custos LAY pagos nas pernas GREEN anteriores
+    resultadoLiquido: number;          // capitalExtraido - custosTotaisLay
+    percentualExtracao: number;        // resultadoLiquido / stakeInicial × 100
+    extracaoCompleta: boolean;         // resultadoLiquido >= stakeInicial (100%+)
+  } | null;
+  
   // GREEN FINAL - Quando a última perna termina GREEN
   greenFinal: {
     retornoBrutoBookmaker: number;     // Stake × OddBack (retorno total da bookmaker)
@@ -503,12 +512,35 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     let eficienciaFinal = 100;
     let motivoEncerramento: 'red' | 'green_final' | null = null;
     let greenFinal: MetricasGlobais['greenFinal'] = null;
+    let redFinal: MetricasGlobais['redFinal'] = null;
     
     if (pernaRed) {
       // RED = capital recuperado via Exchange
-      capitalFinal = pernaRed.capitalRecuperado;
-      eficienciaFinal = stakeInicial > 0 ? (capitalFinal / stakeInicial) * 100 : 0;
       motivoEncerramento = 'red';
+      
+      // Capital extraído da Exchange
+      const capitalExtraido = pernaRed.capitalRecuperado;
+      
+      // Soma dos custos LAY das pernas GREEN anteriores (só as que deram GREEN)
+      const pernasGreenAnteriores = pernas.filter(p => p.status === 'green');
+      const custosTotaisLay = pernasGreenAnteriores.reduce((sum, p) => sum + p.custoLay, 0);
+      
+      // Resultado líquido = o que recebeu - o que pagou
+      const resultadoLiquido = capitalExtraido - custosTotaisLay;
+      
+      // Percentual de extração em relação ao stake inicial
+      const percentualExtracao = stakeInicial > 0 ? (resultadoLiquido / stakeInicial) * 100 : 0;
+      
+      redFinal = {
+        capitalExtraido,
+        custosTotaisLay,
+        resultadoLiquido,
+        percentualExtracao,
+        extracaoCompleta: resultadoLiquido >= stakeInicial,
+      };
+      
+      capitalFinal = resultadoLiquido;
+      eficienciaFinal = percentualExtracao;
     } else if (ultimaPernaGreen) {
       // GREEN FINAL = Última perna terminou GREEN
       // A Bookmaker pagou, mas perdemos capital nos LAYs
@@ -562,6 +594,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       motivoEncerramento,
       capitalFinal,
       eficienciaFinal,
+      redFinal,
       greenFinal,
       avisoRisco,
     };

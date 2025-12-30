@@ -232,6 +232,13 @@ export const SemSimulacao: React.FC<{
   volumeExchange: number;
   exposicaoMaxima: number;
   motivoEncerramento: 'red' | 'green_final' | null;
+  redFinal: {
+    capitalExtraido: number;
+    custosTotaisLay: number;
+    resultadoLiquido: number;
+    percentualExtracao: number;
+    extracaoCompleta: boolean;
+  } | null;
   greenFinal: {
     retornoBrutoBookmaker: number;
     custosTotaisLay: number;
@@ -240,16 +247,13 @@ export const SemSimulacao: React.FC<{
     percentualExtracao: number;
     houvePerda: boolean;
   } | null;
-}> = ({ capitalFinal, eficiencia, moeda, stakeInicial, volumeExchange, exposicaoMaxima, motivoEncerramento, greenFinal }) => {
+}> = ({ moeda, stakeInicial, volumeExchange, motivoEncerramento, redFinal, greenFinal }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
   
   const formatValue = (value: number, showSign = false) => {
     const prefix = showSign ? (value >= 0 ? '+' : '-') : '';
     return `${prefix}${currencySymbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
-
-  const lucroLiquido = capitalFinal - stakeInicial;
-  const roi = (lucroLiquido / stakeInicial) * 100;
 
   // GREEN FINAL - Última perna terminou GREEN na Bookmaker
   if (motivoEncerramento === 'green_final' && greenFinal) {
@@ -289,7 +293,7 @@ export const SemSimulacao: React.FC<{
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="max-w-[220px] text-xs">
-                  <p>Lucro bruto recebido da Bookmaker: Stake × (Odd - 1)</p>
+                  <p>Lucro bruto recebido da Bookmaker: Stake × Π(Odds) - Stake</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -314,7 +318,7 @@ export const SemSimulacao: React.FC<{
           </div>
           
           <div className="flex justify-between text-sm pt-2 border-t border-border/30">
-            <span className="text-foreground font-medium">Lucro Líquido Real:</span>
+            <span className="text-foreground font-medium">Resultado Líquido:</span>
             <span className={cn('font-bold text-lg', greenFinal.lucroLiquidoReal >= 0 ? 'text-success' : 'text-destructive')}>
               {formatValue(greenFinal.lucroLiquidoReal, true)}
             </span>
@@ -353,51 +357,135 @@ export const SemSimulacao: React.FC<{
     );
   }
 
-  // RED - Capital recuperado via Exchange (mantém comportamento original)
+  // RED - Extração via Exchange
+  if (motivoEncerramento === 'red' && redFinal) {
+    const extracaoPorcentagem = (redFinal.resultadoLiquido / stakeInicial) * 100;
+    const tevePerdaNoJuice = redFinal.resultadoLiquido < stakeInicial;
+    
+    return (
+      <div className={cn(
+        "rounded-lg border-2 p-4 space-y-3",
+        redFinal.resultadoLiquido >= stakeInicial 
+          ? "bg-success/10 border-success/30"
+          : "bg-warning/10 border-warning/30"
+      )}>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-full bg-background/50">
+            <Check className={cn(
+              "h-5 w-5",
+              redFinal.resultadoLiquido >= stakeInicial ? "text-success" : "text-warning"
+            )} />
+          </div>
+          <div>
+            <h4 className="font-bold text-foreground">Extração Concluída!</h4>
+            <p className="text-sm text-muted-foreground">Capital recuperado via Exchange.</p>
+          </div>
+        </div>
+
+        <div className="space-y-2 pt-2 border-t border-border/30">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Stake Inicial:</span>
+            <span className="font-medium text-foreground">{formatValue(stakeInicial)}</span>
+          </div>
+          
+          <div className="flex justify-between text-sm">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-muted-foreground flex items-center gap-1 cursor-help">
+                    Capital Extraído (Exchange):
+                    <HelpCircle className="h-3 w-3" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[220px] text-xs">
+                  <p>Valor recebido da Exchange quando o LAY ganhou.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <span className="font-bold text-success">{formatValue(redFinal.capitalExtraido)}</span>
+          </div>
+          
+          {redFinal.custosTotaisLay > 0 && (
+            <div className="flex justify-between text-sm">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-muted-foreground flex items-center gap-1 cursor-help">
+                      Custos LAY (proteções anteriores):
+                      <HelpCircle className="h-3 w-3" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="max-w-[220px] text-xs">
+                    <p>Soma das responsabilidades pagas nas pernas que deram GREEN.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <span className="font-bold text-destructive">-{formatValue(redFinal.custosTotaisLay)}</span>
+            </div>
+          )}
+          
+          <div className="flex justify-between text-sm pt-2 border-t border-border/30">
+            <span className="text-foreground font-medium">Resultado Líquido:</span>
+            <span className={cn('font-bold text-lg', redFinal.resultadoLiquido >= stakeInicial ? 'text-success' : 'text-warning')}>
+              {formatValue(redFinal.resultadoLiquido)}
+            </span>
+          </div>
+          
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Extração Real:</span>
+            <span className={cn('font-bold', extracaoPorcentagem >= 100 ? 'text-success' : 'text-warning')}>
+              {extracaoPorcentagem.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+
+        {/* Alerta se não extraiu 100% */}
+        {tevePerdaNoJuice && (
+          <div className="p-3 rounded-lg bg-warning/20 border border-warning/30">
+            <p className="text-xs text-warning font-medium flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              Extração parcial: custos de proteção reduziram o capital recuperado.
+            </p>
+          </div>
+        )}
+        
+        {/* Sucesso se extraiu 100%+ */}
+        {!tevePerdaNoJuice && (
+          <div className="p-3 rounded-lg bg-success/20 border border-success/30">
+            <p className="text-xs text-success font-medium flex items-center gap-2">
+              <Check className="h-4 w-4" />
+              Extração completa: capital inicial recuperado com sucesso.
+            </p>
+          </div>
+        )}
+
+        {/* Volume Operado */}
+        <div className="pt-3 border-t border-border/50">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Vol. movimentado:</span>
+            <span className="font-medium text-foreground">{formatValue(volumeExchange)}</span>
+          </div>
+          {redFinal.custosTotaisLay > 0 && (
+            <div className="flex items-center justify-between text-xs mt-1">
+              <span className="text-muted-foreground">Custos totais LAY:</span>
+              <span className="font-medium text-warning">{formatValue(redFinal.custosTotaisLay)}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback (não deveria acontecer)
   return (
-    <div className="rounded-lg border-2 p-4 space-y-3 bg-success/10 border-success/30">
+    <div className="rounded-lg border-2 p-4 space-y-3 bg-muted/20 border-muted/30">
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-full bg-background/50">
-          <PartyPopper className="h-5 w-5 text-success" />
+          <AlertCircle className="h-5 w-5 text-muted-foreground" />
         </div>
         <div>
-          <h4 className="font-bold text-foreground">Operação Concluída!</h4>
-          <p className="text-sm text-muted-foreground">Capital recuperado via Exchange.</p>
-        </div>
-      </div>
-
-      <div className="space-y-2 pt-2 border-t border-border/30">
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Capital Inicial:</span>
-          <span className="font-medium text-foreground">{formatValue(stakeInicial)}</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Capital Recuperado:</span>
-          <span className="font-bold text-success">{formatValue(capitalFinal)}</span>
-        </div>
-        <div className="flex justify-between text-sm pt-2 border-t border-border/30">
-          <span className="text-muted-foreground">Lucro Líquido:</span>
-          <span className={cn('font-bold', lucroLiquido >= 0 ? 'text-success' : 'text-destructive')}>
-            {formatValue(lucroLiquido, true)}
-          </span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">ROI da Operação:</span>
-          <span className={cn('font-bold', roi >= 0 ? 'text-success' : 'text-destructive')}>
-            {roi >= 0 ? '+' : ''}{roi.toFixed(1)}%
-          </span>
-        </div>
-      </div>
-
-      {/* Volume Operado */}
-      <div className="pt-3 border-t border-border/50">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">Vol. movimentado:</span>
-          <span className="font-medium text-foreground">{formatValue(volumeExchange)}</span>
-        </div>
-        <div className="flex items-center justify-between text-xs mt-1">
-          <span className="text-muted-foreground">Exposição máx.:</span>
-          <span className="font-medium text-warning">{formatValue(exposicaoMaxima)}</span>
+          <h4 className="font-bold text-foreground">Operação Encerrada</h4>
+          <p className="text-sm text-muted-foreground">Status não identificado.</p>
         </div>
       </div>
     </div>
