@@ -230,57 +230,70 @@ const PernaCard: React.FC<{
         </div>
       )}
 
-      {/* Simulação de resultados (perna ativa) */}
+      {/* Cenários da Perna - Grid lado a lado */}
       {isAtiva && (
-        <div className="space-y-2 pt-2 border-t border-border/30">
-          {/* Se GREEN - resultado normalmente é NEGATIVO (prejuízo) */}
-          <div className="p-2 rounded bg-warning/5 border border-warning/20">
-            <div className="flex items-center gap-1 text-warning text-xs font-medium mb-1">
-              <ArrowUpRight className="h-3 w-3" />
-              Se GREEN:
+        <div className="pt-2 border-t border-border/30">
+          <p className="text-[10px] text-muted-foreground mb-2 text-center">Cenários possíveis</p>
+          <div className="grid grid-cols-2 gap-2">
+            {/* Coluna Esquerda - Se RED (objetivo) */}
+            <div className="p-2 rounded bg-success/10 border border-success/30 flex flex-col">
+              <div className="flex items-center gap-1 text-success text-xs font-medium mb-2">
+                <Check className="h-3 w-3" />
+                Se RED
+              </div>
+              <div className="space-y-1 flex-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-muted-foreground">Recuperado:</span>
+                  <span className="font-bold text-success">
+                    {formatValue(perna.capitalExtraidoSeRed)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-muted-foreground">Lucro Líq.:</span>
+                  <span className="font-bold text-success">
+                    {formatValue(perna.capitalExtraidoSeRed - stakeInicial, true)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-muted-foreground">ROI:</span>
+                  <span className="font-bold text-success">
+                    +{(((perna.capitalExtraidoSeRed - stakeInicial) / stakeInicial) * 100).toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+              <div className="mt-2 pt-1 border-t border-success/20 text-center">
+                <span className="text-[9px] text-success font-medium">Passivo zerado ✓</span>
+              </div>
             </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">
-                {perna.resultadoSeGreen < 0 ? 'Prejuízo da perna:' : 'Resultado perna:'}
-              </span>
-              <span className={cn(
-                'font-bold',
-                perna.resultadoSeGreen < 0 ? 'text-destructive' : 'text-success'
-              )}>
-                {formatValue(perna.resultadoSeGreen, true)}
-              </span>
-            </div>
-            <div className="flex justify-between text-xs mt-1">
-              <span className="text-muted-foreground">Novo passivo:</span>
-              <span className="font-bold text-warning">
-                {formatValue(perna.novoPassivoSeGreen)}
-              </span>
-            </div>
-          </div>
 
-          {/* Se RED */}
-          <div className="p-2 rounded bg-success/5 border border-success/20">
-            <div className="flex items-center gap-1 text-success text-xs font-medium mb-1">
-              <Check className="h-3 w-3" />
-              Se RED (objetivo!):
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Capital Recuperado:</span>
-              <span className="font-bold text-success">
-                {formatValue(perna.capitalExtraidoSeRed)}
-              </span>
-            </div>
-            <div className="flex justify-between text-xs mt-1">
-              <span className="text-muted-foreground">Lucro Líquido:</span>
-              <span className="font-bold text-success">
-                {formatValue(perna.capitalExtraidoSeRed - stakeInicial, true)}
-              </span>
-            </div>
-            <div className="flex justify-between text-xs mt-1">
-              <span className="text-muted-foreground">Passivo:</span>
-              <span className="font-bold text-success">
-                Zerado ✓
-              </span>
+            {/* Coluna Direita - Se GREEN (passivo cresce) */}
+            <div className="p-2 rounded bg-warning/10 border border-warning/30 flex flex-col">
+              <div className="flex items-center gap-1 text-warning text-xs font-medium mb-2">
+                <ArrowUpRight className="h-3 w-3" />
+                Se GREEN
+              </div>
+              <div className="space-y-1 flex-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-muted-foreground">
+                    {perna.resultadoSeGreen < 0 ? 'Prejuízo:' : 'Resultado:'}
+                  </span>
+                  <span className={cn(
+                    'font-bold',
+                    perna.resultadoSeGreen < 0 ? 'text-destructive' : 'text-success'
+                  )}>
+                    {formatValue(perna.resultadoSeGreen, true)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-muted-foreground">Novo passivo:</span>
+                  <span className="font-bold text-warning">
+                    {formatValue(perna.novoPassivoSeGreen)}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-2 pt-1 border-t border-warning/20 text-center">
+                <span className="text-[9px] text-warning font-medium">→ Próxima perna</span>
+              </div>
             </div>
           </div>
         </div>
