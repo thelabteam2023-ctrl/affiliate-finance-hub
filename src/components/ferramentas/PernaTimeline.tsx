@@ -1,15 +1,16 @@
 import React from 'react';
-import { Clock, Check, TrendingUp, Lock, ChevronRight, Target, Wallet, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Clock, Check, TrendingUp, Lock, ChevronRight, Target, Wallet, ArrowUpRight, ArrowDownRight, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PernaAposta, StatusPerna, MoedaCalc } from '@/contexts/CalculadoraContext';
+import { PernaAposta, StatusPerna, MoedaCalc, FaseCalculadora } from '@/contexts/CalculadoraContext';
 
 interface PernaTimelineProps {
   pernas: PernaAposta[];
   moeda: MoedaCalc;
   stakeInicial: number;
+  fase: FaseCalculadora;
   onOddBackChange: (id: number, odd: number) => void;
   onOddLayChange: (id: number, odd: number) => void;
   onExtracaoChange: (id: number, valor: number) => void;
@@ -64,6 +65,7 @@ const PernaCard: React.FC<{
   perna: PernaAposta;
   moeda: MoedaCalc;
   stakeInicial: number;
+  fase: FaseCalculadora;
   onOddBackChange: (odd: number) => void;
   onOddLayChange: (odd: number) => void;
   onExtracaoChange: (valor: number) => void;
@@ -72,6 +74,7 @@ const PernaCard: React.FC<{
   perna,
   moeda,
   stakeInicial,
+  fase,
   onOddBackChange,
   onOddLayChange,
   onExtracaoChange,
@@ -79,7 +82,12 @@ const PernaCard: React.FC<{
 }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
   const config = statusConfig[perna.status];
-  const isEditavel = perna.status === 'ativa' || perna.status === 'aguardando';
+  
+  // Na fase de configuração: todos editáveis
+  // Na fase de execução: APENAS a perna ativa é interativa (não edita odds, apenas confirma)
+  const isEditavel = fase === 'configuracao' || (fase === 'execucao' && perna.status === 'ativa');
+  const canEditOdds = fase === 'configuracao'; // Odds só editáveis na configuração
+  const canConfirm = fase === 'execucao' && perna.status === 'ativa'; // Só confirma na execução
   
   const formatValue = (value: number, showSign = false) => {
     const prefix = showSign ? (value >= 0 ? '+' : '') : '';
@@ -141,7 +149,7 @@ const PernaCard: React.FC<{
             value={perna.oddBack}
             onChange={(e) => onOddBackChange(parseFloat(e.target.value) || 1.01)}
             className="w-20 h-8 text-sm"
-            disabled={!isEditavel}
+            disabled={!canEditOdds}
           />
         </div>
         <div className="flex items-center gap-2">
@@ -153,7 +161,7 @@ const PernaCard: React.FC<{
             value={perna.oddLay}
             onChange={(e) => onOddLayChange(parseFloat(e.target.value) || 1.01)}
             className="w-20 h-8 text-sm"
-            disabled={!isEditavel}
+            disabled={!canEditOdds}
           />
         </div>
         <div className="flex items-center gap-2">
@@ -165,7 +173,7 @@ const PernaCard: React.FC<{
             value={perna.extracaoDesejada}
             onChange={(e) => onExtracaoChange(parseFloat(e.target.value) || 0)}
             className="w-20 h-8 text-sm"
-            disabled={!isEditavel}
+            disabled={!canEditOdds}
           />
         </div>
       </div>
@@ -182,8 +190,8 @@ const PernaCard: React.FC<{
         </div>
       </div>
 
-      {/* Botões de confirmação */}
-      {perna.status === 'ativa' && (
+      {/* Botões de confirmação - só aparecem na execução e na perna ativa */}
+      {canConfirm && (
         <div className="space-y-2 mb-3">
           <Button
             size="sm"
@@ -209,17 +217,19 @@ const PernaCard: React.FC<{
       {/* Simulação de resultados (perna ativa ou aguardando) */}
       {(perna.status === 'ativa' || perna.status === 'aguardando') && (
         <div className="space-y-2 pt-2 border-t border-border/30">
-          {/* Se GREEN */}
+          {/* Se GREEN - resultado normalmente é NEGATIVO (prejuízo) */}
           <div className="p-2 rounded bg-warning/5 border border-warning/20">
             <div className="flex items-center gap-1 text-warning text-xs font-medium mb-1">
               <ArrowUpRight className="h-3 w-3" />
               Se GREEN:
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Resultado perna:</span>
+              <span className="text-muted-foreground">
+                {perna.resultadoSeGreen < 0 ? 'Prejuízo da perna:' : 'Resultado perna:'}
+              </span>
               <span className={cn(
                 'font-bold',
-                perna.resultadoSeGreen >= 0 ? 'text-success' : 'text-destructive'
+                perna.resultadoSeGreen < 0 ? 'text-destructive' : 'text-success'
               )}>
                 {formatValue(perna.resultadoSeGreen, true)}
               </span>
@@ -254,7 +264,7 @@ const PernaCard: React.FC<{
         </div>
       )}
 
-      {/* Resultado confirmado GREEN */}
+      {/* Resultado confirmado GREEN - resultado normalmente é NEGATIVO (prejuízo) */}
       {perna.status === 'green' && (
         <div className="pt-2 border-t border-border/30">
           <div className="p-2 rounded bg-warning/10 border border-warning/30">
@@ -267,10 +277,12 @@ const PernaCard: React.FC<{
               <span className="font-medium text-destructive">{formatValue(-perna.perdaLay)}</span>
             </div>
             <div className="flex justify-between text-xs pt-1 border-t border-warning/20">
-              <span className="text-muted-foreground">Resultado:</span>
+              <span className="text-muted-foreground">
+                {perna.resultadoSeGreen < 0 ? 'Prejuízo da perna:' : 'Resultado:'}
+              </span>
               <span className={cn(
                 'font-bold',
-                perna.resultadoSeGreen >= 0 ? 'text-success' : 'text-destructive'
+                perna.resultadoSeGreen < 0 ? 'text-destructive' : 'text-success'
               )}>
                 {formatValue(perna.resultadoSeGreen, true)}
               </span>
@@ -311,6 +323,7 @@ export const PernaTimeline: React.FC<PernaTimelineProps> = ({
   pernas,
   moeda,
   stakeInicial,
+  fase,
   onOddBackChange,
   onOddLayChange,
   onExtracaoChange,
@@ -318,7 +331,28 @@ export const PernaTimeline: React.FC<PernaTimelineProps> = ({
 }) => {
   return (
     <div className="space-y-3">
-      <h3 className="font-semibold text-sm text-foreground">Timeline das Pernas</h3>
+      <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
+        {fase === 'configuracao' ? (
+          <>
+            <Settings className="h-4 w-4 text-primary" />
+            Configuração das Pernas
+          </>
+        ) : (
+          'Timeline das Pernas'
+        )}
+      </h3>
+      
+      {fase === 'configuracao' && (
+        <p className="text-xs text-muted-foreground">
+          Todas as pernas estão editáveis. Configure as odds e extrações desejadas.
+        </p>
+      )}
+      
+      {fase === 'execucao' && (
+        <p className="text-xs text-muted-foreground">
+          Apenas a perna ativa pode ser confirmada. Pernas futuras estão congeladas.
+        </p>
+      )}
       
       {/* Timeline horizontal scrollável */}
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
@@ -328,6 +362,7 @@ export const PernaTimeline: React.FC<PernaTimelineProps> = ({
               perna={perna}
               moeda={moeda}
               stakeInicial={stakeInicial}
+              fase={fase}
               onOddBackChange={(odd) => onOddBackChange(perna.id, odd)}
               onOddLayChange={(odd) => onOddLayChange(perna.id, odd)}
               onExtracaoChange={(valor) => onExtracaoChange(perna.id, valor)}
