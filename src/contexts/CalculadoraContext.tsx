@@ -517,13 +517,13 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       // Soma de todos os custos LAY (responsabilidades pagas)
       const custosTotaisLay = pernas.reduce((sum, p) => sum + p.custoLay, 0);
       
-      // Retorno da Bookmaker: stake × oddBack da última perna
-      // Mas o importante é o lucro que temos NA BOOKMAKER agora
-      const lucroNaBookmaker = stakeInicial * (ultimaPerna.oddBack - 1);
-      const retornoBrutoBookmaker = stakeInicial + lucroNaBookmaker;
+      // Retorno da Bookmaker em MÚLTIPLA: stake × Π(odds)
+      // Produto de todas as odds BACK
+      const produtoOdds = pernas.reduce((prod, p) => prod * p.oddBack, 1);
+      const retornoBrutoBookmaker = stakeInicial * produtoOdds;
       
-      // Novo saldo na casa = lucro bruto que a bookmaker pagou
-      const novoSaldoNaCasa = lucroNaBookmaker;
+      // Novo saldo na casa = retorno total - stake inicial (lucro bruto)
+      const novoSaldoNaCasa = retornoBrutoBookmaker - stakeInicial;
       
       // Lucro líquido real = lucro bookmaker - custos LAY
       const lucroLiquidoReal = novoSaldoNaCasa - custosTotaisLay;
