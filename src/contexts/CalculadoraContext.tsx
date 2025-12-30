@@ -52,19 +52,22 @@ export interface PernaAposta {
 export interface MetricasGlobais {
   stakeInicial: number;
   
-  // Totais
-  totalStakeLay: number;
-  totalResponsabilidade: number;
+  // VOLUME OPERADO (informativo, NÃO é custo)
+  volumeExchange: number;       // Soma dos stakes LAY - apenas para controle operacional
+  totalResponsabilidade: number; // Soma das responsabilidades - exposição máxima
+  
+  // CUSTO REAL (o que realmente importa)
+  custoTotalAcumulado: number;  // Soma dos Resultado_GREEN de cada perna (normalmente negativo)
   
   // Se todas GREEN
   resultadoTotalSeGreen: number;
-  eficienciaSeGreen: number;
+  eficienciaSeGreen: number;     // 1 - (|Custo_Total| / Stake) × 100
   
   // Se RED na perna ativa
   resultadoSeRedAgora: number;
   
-  // Juice acumulado
-  juiceTotal: number;
+  // Juice (custo percentual)
+  juiceTotal: number;           // (Custo_Total / Stake) × 100
   
   // Avisos globais
   avisos: string[];
@@ -492,31 +495,49 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     const pernaRed = pernas.find(p => p.status === 'red');
     const todasGreen = pernas.every(p => p.status === 'green');
     
-    // Totais
-    const totalStakeLay = pernas.reduce((sum, p) => sum + p.stakeLay, 0);
+    // ==========================================
+    // VOLUME OPERADO (informativo, NÃO é custo)
+    // ==========================================
+    const volumeExchange = pernas.reduce((sum, p) => sum + p.stakeLay, 0);
     const totalResponsabilidade = pernas.reduce((sum, p) => sum + p.responsabilidade, 0);
     
-    // Se todas GREEN
-    const resultadoTotalSeGreen = pernas.reduce((sum, p) => sum + p.resultadoSeGreen, 0);
+    // ==========================================
+    // CUSTO REAL (o que realmente importa)
+    // Custo = soma dos resultadoSeGreen de cada perna
+    // Resultado_GREEN = Lucro_BACK - Responsabilidade
+    // ==========================================
+    const custoTotalAcumulado = pernas.reduce((sum, p) => sum + p.resultadoSeGreen, 0);
+    
+    // Se todas GREEN - o resultado é o custo acumulado
+    const resultadoTotalSeGreen = custoTotalAcumulado;
+    
+    // Eficiência = 1 - (|Custo_Total| / Stake) × 100
+    // Se custo é negativo (normal), eficiência < 100%
     const eficienciaSeGreen = stakeInicial > 0 
-      ? ((stakeInicial + resultadoTotalSeGreen) / stakeInicial) * 100 
+      ? (1 - Math.abs(custoTotalAcumulado) / stakeInicial) * 100 
+      : 100;
+    
+    // Se RED agora (perna ativa) - resultado acumulado até aqui + resultado se RED
+    const pernaAtiva = pernas.find(p => p.status === 'ativa');
+    const custoAnterior = pernas
+      .filter(p => p.status === 'green')
+      .reduce((sum, p) => sum + p.resultadoSeGreen, 0);
+    const resultadoSeRedAgora = pernaAtiva 
+      ? custoAnterior + pernaAtiva.resultadoSeRed 
       : 0;
     
-    // Se RED agora (perna ativa)
-    const pernaAtiva = pernas.find(p => p.status === 'ativa');
-    const resultadoSeRedAgora = pernaAtiva ? pernaAtiva.resultadoSeRed : 0;
-    
-    // Juice total
-    const juiceTotal = pernas.reduce((sum, p) => sum + p.juicePerna, 0);
+    // ==========================================
+    // JUICE TOTAL (%)
+    // Juice = (Custo_Total / Stake) × 100
+    // Negativo = custo, Positivo = lucro
+    // ==========================================
+    const juiceTotal = stakeInicial > 0 
+      ? (custoTotalAcumulado / stakeInicial) * 100 
+      : 0;
     
     // Avisos globais
     const avisos: string[] = [];
-    if (resultadoTotalSeGreen < 0) {
-      avisos.push(`Se todas GREEN: prejuízo de ${Math.abs(resultadoTotalSeGreen).toFixed(2)}`);
-    }
-    if (juiceTotal > 30) {
-      avisos.push('Juice acumulado elevado');
-    }
+    // Não mostrar aviso de prejuízo, juice negativo é esperado em matched bet
     
     // Calcular capital final e eficiência
     let capitalFinal = stakeInicial;
@@ -540,8 +561,9 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     
     return {
       stakeInicial,
-      totalStakeLay,
+      volumeExchange,
       totalResponsabilidade,
+      custoTotalAcumulado,
       resultadoTotalSeGreen,
       eficienciaSeGreen,
       resultadoSeRedAgora,
