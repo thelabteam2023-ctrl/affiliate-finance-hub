@@ -55,8 +55,8 @@ export const CalculadoraProtecaoContent: React.FC = () => {
             </Button>
           </div>
 
-          {/* Cards lado a lado: Configuração + Objetivo */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Cards lado a lado: Configuração + Objetivo + Ação Recomendada */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {/* Card 1 — Configuração Inicial */}
             <div className="p-4 rounded-lg bg-muted/30 border border-border space-y-3">
               <h3 className="font-semibold text-sm text-foreground">Configuração Inicial</h3>
@@ -187,6 +187,30 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                 </div>
               </RadioGroup>
             </div>
+
+            {/* Card 3 — Ação Recomendada */}
+            <div className="md:col-span-2 xl:col-span-1">
+              {acaoRecomendada ? (
+                <AcaoRecomendada
+                  valorLay={acaoRecomendada.valorLay}
+                  oddMinima={acaoRecomendada.oddMinima}
+                  resultadoSeGanhar={acaoRecomendada.resultadoSeGanhar}
+                  resultadoSePerder={acaoRecomendada.resultadoSePerder}
+                  pernaAtual={acaoRecomendada.pernaAtual}
+                  moeda={moeda}
+                />
+              ) : algumRed ? (
+                <SemAcaoRecomendada motivo="red" />
+              ) : todasProcessadas ? (
+                <SemAcaoRecomendada motivo="concluido" />
+              ) : (
+                <div className="p-4 rounded-lg bg-muted/30 border border-border h-full flex items-center justify-center">
+                  <p className="text-sm text-muted-foreground text-center">
+                    Configure as odds e marque o resultado de cada perna para ver a ação recomendada
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           <Separator />
@@ -215,22 +239,6 @@ export const CalculadoraProtecaoContent: React.FC = () => {
 
           {/* JuiceBar */}
           <JuiceBar data={juiceData} moeda={moeda} />
-
-          {/* Ação Recomendada */}
-          {acaoRecomendada ? (
-            <AcaoRecomendada
-              valorLay={acaoRecomendada.valorLay}
-              oddMinima={acaoRecomendada.oddMinima}
-              resultadoSeGanhar={acaoRecomendada.resultadoSeGanhar}
-              resultadoSePerder={acaoRecomendada.resultadoSePerder}
-              pernaAtual={acaoRecomendada.pernaAtual}
-              moeda={moeda}
-            />
-          ) : algumRed ? (
-            <SemAcaoRecomendada motivo="red" />
-          ) : todasProcessadas ? (
-            <SemAcaoRecomendada motivo="concluido" />
-          ) : null}
         </div>
       </ScrollArea>
     </div>
