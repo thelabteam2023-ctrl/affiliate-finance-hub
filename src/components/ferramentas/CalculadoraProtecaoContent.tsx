@@ -1,6 +1,6 @@
 import React from 'react';
-import { RotateCcw, Plus, Minus } from 'lucide-react';
-import { useCalculadora, TipoAposta, MoedaCalc, ModoCalculo } from '@/contexts/CalculadoraContext';
+import { RotateCcw, Plus, Minus, AlertTriangle } from 'lucide-react';
+import { useCalculadora, TipoAposta, MoedaCalc } from '@/contexts/CalculadoraContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +11,6 @@ import { PernaTimeline } from './PernaTimeline';
 import { MetricasGlobaisCard } from './MetricasGlobaisCard';
 import { SimulacaoAtivaCard, SemSimulacao } from './ProximaAcaoCard';
 import { GuiaProtecao } from './GuiaProtecao';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export const CalculadoraProtecaoContent: React.FC = () => {
   const {
@@ -19,18 +18,16 @@ export const CalculadoraProtecaoContent: React.FC = () => {
     stakeInicial,
     comissaoExchange,
     moeda,
-    modoCalculo,
     pernas,
     numPernas,
     setTipoAposta,
     setStakeInicial,
     setComissaoExchange,
     setMoeda,
-    setModoCalculo,
     setNumPernas,
     updatePernaOddBack,
     updatePernaOddLay,
-    updatePernaStakeLay,
+    updatePernaExtracao,
     confirmarPerna,
     resetCalculadora,
     getMetricasGlobais,
@@ -54,35 +51,23 @@ export const CalculadoraProtecaoContent: React.FC = () => {
             </Button>
           </div>
 
+          {/* Aviso de Risco */}
+          <div className="p-3 rounded-lg bg-warning/10 border border-warning/30 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-warning text-sm">Modelo de Recuperação Progressiva</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                O risco cresce a cada GREEN. Quanto mais você ganha na bookmaker, maior o passivo a carregar.
+                Cair na Exchange (RED) é o objetivo — limpa o sistema e extrai o capital.
+              </p>
+            </div>
+          </div>
+
           {/* Configuração + Simulação */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Configuração Inicial */}
             <div className="p-4 rounded-lg bg-muted/30 border border-border space-y-3">
               <h3 className="font-semibold text-sm text-foreground">Configuração Inicial</h3>
-              
-              {/* Toggle Modo de Cálculo */}
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Modo de Cálculo</Label>
-                <ToggleGroup
-                  type="single"
-                  value={modoCalculo}
-                  onValueChange={(v) => v && setModoCalculo(v as ModoCalculo)}
-                  className="justify-start"
-                >
-                  <ToggleGroupItem value="balanceado" className="text-xs px-3">
-                    Matched Bet
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="manual" className="text-xs px-3">
-                    Simulação
-                  </ToggleGroupItem>
-                </ToggleGroup>
-                <p className="text-[10px] text-muted-foreground">
-                  {modoCalculo === 'balanceado' 
-                    ? '📐 Stake LAY calculado para equalizar resultados'
-                    : '🎛️ Stake LAY manual para simular cenários'
-                  }
-                </p>
-              </div>
               
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -113,7 +98,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Stake ({currencySymbol})</Label>
+                  <Label className="text-xs text-muted-foreground">Stake Inicial ({currencySymbol})</Label>
                   <Input
                     type="number"
                     min="1"
@@ -166,7 +151,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
               {/* Nota explicativa */}
               <div className="pt-2 border-t border-border/50">
                 <p className="text-[10px] text-muted-foreground">
-                  💡 Defina as odds e stake LAY para cada perna. A calculadora simula os resultados para cada cenário (GREEN ou RED).
+                  💡 Defina as odds e o valor de extração desejado para cada perna. O sistema calcula automaticamente o stake LAY necessário.
                 </p>
               </div>
             </div>
@@ -181,7 +166,6 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                 />
               ) : metricas.operacaoEncerrada ? (
                 <SemSimulacao
-                  motivo={metricas.motivoEncerramento || 'todas_green'}
                   capitalFinal={metricas.capitalFinal}
                   eficiencia={metricas.eficienciaFinal}
                   moeda={moeda}
@@ -197,11 +181,10 @@ export const CalculadoraProtecaoContent: React.FC = () => {
           <PernaTimeline
             pernas={pernas}
             moeda={moeda}
-            modoCalculo={modoCalculo}
             stakeInicial={stakeInicial}
             onOddBackChange={updatePernaOddBack}
             onOddLayChange={updatePernaOddLay}
-            onStakeLayChange={updatePernaStakeLay}
+            onExtracaoChange={updatePernaExtracao}
             onConfirmar={confirmarPerna}
           />
 
