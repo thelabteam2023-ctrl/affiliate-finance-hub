@@ -213,6 +213,8 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                   stakeInicial={stakeInicial}
                   volumeExchange={metricas.volumeExchange}
                   exposicaoMaxima={metricas.exposicaoMaxima}
+                  motivoEncerramento={metricas.motivoEncerramento}
+                  greenFinal={metricas.greenFinal}
                 />
               ) : null}
             </div>
