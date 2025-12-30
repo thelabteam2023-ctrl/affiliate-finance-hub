@@ -12,14 +12,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 export const GuiaProtecao: React.FC = () => {
   return (
-    <Dialog>
+    <Dialog modal={true}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
           <HelpCircle className="h-4 w-4" />
           Como usar?
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg z-[10000]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
