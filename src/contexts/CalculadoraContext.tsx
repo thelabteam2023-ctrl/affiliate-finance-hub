@@ -207,12 +207,15 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       const ganhoLayLiquido = stakeLay * (1 - comissaoDecimal);
       const lucroBack = stakeInicial * (oddBack - 1);
       
-      // Se RED: ganho LAY líquido - responsabilidade perdida em pernas anteriores - stake original
-      // Simplificação: se RED aqui, você ganha o LAY mas perde o stake original
-      const resultadoSeRed = ganhoLayLiquido - responsabilidade;
-      
-      // Se GREEN: lucro da back - responsabilidade do LAY
+      // Se GREEN (bookmaker ganha, LAY perde):
+      // - Você GANHA lucro da back: stakeInicial × (oddBack - 1)
+      // - Você PAGA a responsabilidade do LAY: stakeLay × (oddLay - 1)
       const resultadoSeGreen = lucroBack - responsabilidade;
+      
+      // Se RED (bookmaker perde, LAY ganha):
+      // - Você PERDE o stake na bookmaker: -stakeInicial
+      // - Você GANHA o stakeLay líquido: stakeLay × (1 - comissão)
+      const resultadoSeRed = ganhoLayLiquido - stakeInicial;
       
       // Juice = custo operacional percentual
       // Quanto menor o juice, melhor
