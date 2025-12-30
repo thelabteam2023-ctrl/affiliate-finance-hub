@@ -105,18 +105,18 @@ const PernaCard: React.FC<{
         </div>
       </div>
 
-      {/* Passivo + Target (modelo de recuperação) */}
+      {/* Passivo Atual + Target (modelo de recuperação) */}
       <div className="mb-3 p-2 rounded bg-background/50 border border-border/30 space-y-1">
         <div className="flex justify-between text-xs">
           <span className="text-muted-foreground flex items-center gap-1">
             <Wallet className="h-3 w-3" />
-            Passivo anterior:
+            Passivo Atual:
           </span>
           <span className={cn(
             'font-bold',
-            perna.passivoAnterior > 0 ? 'text-warning' : 'text-muted-foreground'
+            perna.passivoAtual > 0 ? 'text-warning' : 'text-muted-foreground'
           )}>
-            {formatValue(perna.passivoAnterior)}
+            {formatValue(perna.passivoAtual)}
           </span>
         </div>
         <div className="flex justify-between text-xs">
