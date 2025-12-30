@@ -10,9 +10,8 @@ export interface PernaAposta {
   oddBack: number;        // Odd do back (na casa)
   oddLay: number;         // Odd do lay (que o usuário conseguiu na exchange)
   status: StatusPerna;
-  capitalRetiravel: number; // CR - Capital que pode ser retirado da bookmaker
   stakeLay: number;       // Valor a apostar no lay
-  juice: number;          // Custo da retirada (responsabilidade)
+  juice: number;          // Custo da retirada (responsabilidade do LAY)
   resultadoSeGreen: number; // Resultado líquido se GREEN
   resultadoSeRed: number;   // Resultado líquido se RED
   eficienciaSeGreen: number; // % do capital preservado se GREEN
@@ -20,14 +19,13 @@ export interface PernaAposta {
 }
 
 export interface JuiceData {
-  capitalRetiravel: number;    // CR - Capital total retirável da bookmaker
-  custoRetirada: number;       // Juice total - custo da operação
-  resultadoLiquido: number;    // CR - Juice
-  eficiencia: number;          // % do capital preservado
+  capitalExtraido: number;     // = Stake Inicial (sempre)
+  custoRetirada: number;       // Juice total - custo se GREEN
   resultadoSeGreen: number;    // Resultado se tudo GREEN
   resultadoSeRed: number;      // Resultado se RED agora
   eficienciaSeGreen: number;   // Eficiência se GREEN
   eficienciaSeRed: number;     // Eficiência se RED
+  compensacaoExchange: number; // Valor pago pela exchange (para info)
 }
 
 interface CalculadoraState {
@@ -62,15 +60,14 @@ interface CalculadoraContextType extends CalculadoraState {
   getAcaoRecomendada: () => { 
     stakeLay: number; 
     oddLay: number; 
-    capitalRetiravel: number;
+    capitalExtraido: number;
     custoRetirada: number;
-    resultadoLiquido: number;
-    eficiencia: number;
     resultadoSeGreen: number; 
     resultadoSeRed: number; 
     eficienciaSeGreen: number;
     eficienciaSeRed: number;
-    pernaAtual: number; 
+    pernaAtual: number;
+    compensacaoExchange: number;
   } | null;
 }
 
@@ -103,7 +100,6 @@ const createPernas = (num: number): PernaAposta[] => {
     oddBack: 1.5,
     oddLay: 1.5,
     status: 'pendente' as StatusPerna,
-    capitalRetiravel: 0,
     stakeLay: 0,
     juice: 0,
     resultadoSeGreen: 0,
@@ -120,23 +116,22 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
   });
 
   /**
-   * MODELO DE RETIRADA DE CAPITAL (não é modelo de apostas!)
+   * MODELO DE RETIRADA DE CAPITAL (CORRIGIDO)
    * 
-   * REGRA-MÃE: O objetivo é RETIRAR CAPITAL da bookmaker, pagando um custo (juice) na exchange.
+   * REGRA-MÃE: O objetivo é RETIRAR o CAPITAL (stake) da bookmaker.
+   * A exchange é apenas um MECANISMO de conversão/compensação.
    * 
-   * DEFINIÇÕES:
-   * - S: Stake inicial
-   * - CR: Capital Retirável = S × (odd1 × odd2 − 1)
-   * - Stake_LAY = CR / (1 − comissão)
-   * - Juice = Stake_LAY × (odd_lay − 1) [CUSTO, não prejuízo]
-   * - Resultado Líquido = CR − Juice
-   * - Eficiência = (CR − Juice) / CR × 100
+   * DEFINIÇÕES CORRETAS:
+   * - Capital Extraído = Stake Inicial (SEMPRE) - é o capital "preso" na bookmaker
+   * - Juice = custo pago na exchange quando LAY PERDE (GREEN)
+   * - Resultado Líquido = Capital Extraído - Juice
+   * - Eficiência = Resultado / Capital Extraído × 100
    * 
-   * INTERPRETAÇÃO DOS CENÁRIOS:
-   * - Se GREEN: capital sai via vitória, juice é pago → Resultado = CR - Juice
-   * - Se RED: capital sai via exchange (LAY), juice NÃO é consumido → Resultado = CR (100% eficiência)
+   * CENÁRIOS:
+   * - Se GREEN: Capital sai via vitória, mas pagamos juice → Resultado = S - Juice
+   * - Se RED: Capital sai via exchange (LAY ganha), juice NÃO é consumido → Resultado = S (100% eficiência)
    * 
-   * RED é o MELHOR cenário de extração (0% juice consumido)
+   * A exchange NÃO É FONTE de capital extraído - ela apenas viabiliza a retirada.
    */
   const recalcularPernas = useCallback((
     pernas: PernaAposta[],
@@ -145,7 +140,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     objetivo: ObjetivoAposta
   ): PernaAposta[] => {
     const comissaoDecimal = comissao / 100;
-    const S = stakeInicial;
+    const S = stakeInicial; // Capital a ser extraído (FIXO)
     
     // Verificar se já existe RED
     const temRed = pernas.some(p => p.status === 'red');
@@ -157,7 +152,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       if (perna.status === 'green') {
         const indexPerna = pernas.indexOf(perna);
         
-        // Calcular o CR que existia no momento dessa perna
+        // Calcular o LPR (Lucro Potencial Real) que existia no momento dessa perna
         const oddsConfirmadasAteMomento = pernas
           .slice(0, indexPerna + 1)
           .filter(p => p.status === 'green')
@@ -167,8 +162,8 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
           .slice(indexPerna + 1)
           .reduce((prod, p) => prod * p.oddBack, 1);
         
-        const CRNoMomento = S * ((oddsConfirmadasAteMomento * oddsPendentesAposMomento) - 1);
-        const stakeLayNoMomento = CRNoMomento / (1 - comissaoDecimal);
+        const LPRNoMomento = S * ((oddsConfirmadasAteMomento * oddsPendentesAposMomento) - 1);
+        const stakeLayNoMomento = LPRNoMomento / (1 - comissaoDecimal);
         const juiceNoMomento = stakeLayNoMomento * (perna.oddLay - 1);
         
         juiceAcumulado += juiceNoMomento;
@@ -181,7 +176,6 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       if (pernaAnteriorRed || (temRed && perna.status !== 'red')) {
         return {
           ...perna,
-          capitalRetiravel: 0,
           stakeLay: 0,
           juice: 0,
           resultadoSeGreen: 0,
@@ -203,8 +197,8 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         .filter(p => p.status === 'pendente')
         .reduce((prod, p) => prod * p.oddBack, 1);
       
-      // CAPITAL RETIRÁVEL (CR) = S × ((Π odds_confirmadas × Π odds_pendentes) − 1)
-      const CR = S * ((oddsConfirmadas * oddsPendentes) - 1);
+      // LPR = Lucro Potencial Real (usado para calcular stake LAY)
+      const LPR = S * ((oddsConfirmadas * oddsPendentes) - 1);
       
       const oddLay = perna.oddLay;
       
@@ -216,46 +210,44 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       let eficienciaSeRed = 0;
 
       if (perna.status === 'pendente') {
-        // Stake_LAY = CR / (1 − comissão)
-        stakeLay = CR / (1 - comissaoDecimal);
+        // Stake_LAY = LPR / (1 − comissão)
+        stakeLay = LPR / (1 - comissaoDecimal);
         
-        // Juice = Stake_LAY × (odd_lay − 1) - CUSTO da retirada
+        // Juice = Stake_LAY × (odd_lay − 1) - CUSTO se GREEN
         juice = stakeLay * (oddLay - 1);
         
         // Juice total se GREEN = acumulados + atual
         const juiceTotalSeGreen = juiceAcumulado + juice;
         
-        // Resultado se GREEN = CR - Juice Total
-        // Capital sai da bookmaker, mas pagamos todo o juice acumulado
-        resultadoSeGreen = CR - juiceTotalSeGreen;
+        // RESULTADO SE GREEN = Capital Extraído - Juice Total
+        // Capital sai da bookmaker, mas pagamos o juice
+        resultadoSeGreen = S - juiceTotalSeGreen;
         
-        // Resultado se RED = CR (melhor cenário!)
-        // Capital sai via exchange, juice NÃO é consumido
-        // Na prática: perdemos S na bookmaker, ganhamos stake_lay × (1 - comissão) na exchange
-        // Que resulta em: CR (porque stake_lay × (1 - comissão) = CR)
-        resultadoSeRed = CR;
+        // RESULTADO SE RED = Capital Extraído (100% - juice NÃO consumido)
+        // O stake é "liberado" via exchange, sem custo
+        resultadoSeRed = S;
         
-        // Eficiência = (Resultado / CR) × 100
-        eficienciaSeGreen = CR > 0 ? (resultadoSeGreen / CR) * 100 : 0;
-        eficienciaSeRed = 100; // RED sempre tem 100% de eficiência (juice não consumido)
+        // Eficiência = Resultado / Capital Extraído × 100
+        eficienciaSeGreen = S > 0 ? (resultadoSeGreen / S) * 100 : 0;
+        eficienciaSeRed = 100; // RED sempre 100% (juice não consumido)
         
         // Ajuste para objetivo "limitar_lucro"
         if (objetivo === 'limitar_lucro') {
           const lucroMaximoDesejado = S * 0.1;
-          const CRAjustado = Math.max(0, CR - lucroMaximoDesejado);
-          stakeLay = CRAjustado / (1 - comissaoDecimal);
+          const LPRAjustado = Math.max(0, LPR - lucroMaximoDesejado);
+          stakeLay = LPRAjustado / (1 - comissaoDecimal);
           juice = stakeLay * (oddLay - 1);
           const juiceTotalSeGreenAjustado = juiceAcumulado + juice;
-          resultadoSeGreen = CR - juiceTotalSeGreenAjustado;
-          eficienciaSeGreen = CR > 0 ? (resultadoSeGreen / CR) * 100 : 0;
+          resultadoSeGreen = S - juiceTotalSeGreenAjustado;
+          eficienciaSeGreen = S > 0 ? (resultadoSeGreen / S) * 100 : 0;
         }
         
       } else if (perna.status === 'green') {
         // Perna já confirmada GREEN - calcular valores históricos
-        const CRNoMomento = S * ((oddsConfirmadas * perna.oddBack * 
+        const LPRNoMomento = S * ((oddsConfirmadas * perna.oddBack * 
           pernas.slice(index + 1).reduce((prod, p) => prod * p.oddBack, 1)) - 1);
         
-        stakeLay = CRNoMomento / (1 - comissaoDecimal);
+        stakeLay = LPRNoMomento / (1 - comissaoDecimal);
         juice = stakeLay * (oddLay - 1);
         
         // Resultados zerados pois já aconteceu
@@ -265,10 +257,9 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         eficienciaSeRed = 0;
         
       } else if (perna.status === 'red') {
-        // RED aconteceu - melhor cenário de extração!
-        // O capital foi extraído via exchange com 0% de juice consumido
+        // RED aconteceu - extração perfeita!
+        // Capital foi extraído via exchange com 0% de juice consumido
         
-        // Recalcular o CR que existia antes do RED
         const oddsConfirmadasAntes = pernas
           .slice(0, index)
           .filter(p => p.status === 'green')
@@ -278,17 +269,16 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
           .slice(index)
           .reduce((prod, p) => prod * p.oddBack, 1);
         
-        const CRAntes = S * ((oddsConfirmadasAntes * oddsPendentesIncluindoEsta) - 1);
+        const LPRAntes = S * ((oddsConfirmadasAntes * oddsPendentesIncluindoEsta) - 1);
         
-        stakeLay = CRAntes / (1 - comissaoDecimal);
+        stakeLay = LPRAntes / (1 - comissaoDecimal);
         juice = 0; // Juice NÃO foi consumido no RED
-        resultadoSeRed = CRAntes; // Capital total extraído
+        resultadoSeRed = S; // Capital extraído = Stake inicial
         eficienciaSeRed = 100; // 100% de eficiência
       }
 
       return {
         ...perna,
-        capitalRetiravel: CR,
         stakeLay: Math.max(0, stakeLay),
         juice: Math.max(0, juice),
         resultadoSeGreen,
@@ -413,7 +403,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const getJuiceData = useCallback((): JuiceData => {
     const { pernas, stakeInicial, comissaoExchange } = state;
-    const S = stakeInicial;
+    const S = stakeInicial; // Capital Extraído = Stake Inicial (SEMPRE)
     const comissaoDecimal = comissaoExchange / 100;
     
     // Calcular odds confirmadas (green)
@@ -426,8 +416,8 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       .filter(p => p.status === 'pendente')
       .reduce((prod, p) => prod * p.oddBack, 1);
     
-    // CR atual (Capital Retirável)
-    const CR = S * ((oddsConfirmadas * oddsPendentes) - 1);
+    // LPR atual (para calcular compensação)
+    const LPR = S * ((oddsConfirmadas * oddsPendentes) - 1);
     
     // Próxima perna pendente
     const proximaPerna = pernas.find(p => p.status === 'pendente');
@@ -443,31 +433,35 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     // Juice TOTAL se GREEN = acumulado + atual
     const juiceTotal = juiceAcumulado + juiceAtual;
     
-    // Resultado se GREEN = CR - Juice Total
-    const resultadoSeGreen = CR - juiceTotal;
+    // Compensação da exchange (apenas para info)
+    const stakeLayAtual = proximaPerna?.stakeLay || 0;
+    const compensacaoExchange = stakeLayAtual * (1 - comissaoDecimal);
     
-    // Resultado se RED = CR (melhor cenário - 0% juice consumido)
-    const resultadoSeRed = CR;
+    // RESULTADOS CORRETOS:
+    // Se GREEN = Capital Extraído - Juice
+    const resultadoSeGreen = S - juiceTotal;
+    
+    // Se RED = Capital Extraído (100%, juice não consumido)
+    const resultadoSeRed = S;
     
     // Eficiência
-    const eficienciaSeGreen = CR > 0 ? (resultadoSeGreen / CR) * 100 : 0;
+    const eficienciaSeGreen = S > 0 ? (resultadoSeGreen / S) * 100 : 0;
     const eficienciaSeRed = 100; // RED sempre 100%
 
     return {
-      capitalRetiravel: CR,
+      capitalExtraido: S,
       custoRetirada: juiceTotal,
-      resultadoLiquido: resultadoSeGreen, // Conservador: assume GREEN
-      eficiencia: eficienciaSeGreen,
       resultadoSeGreen,
       resultadoSeRed,
       eficienciaSeGreen,
       eficienciaSeRed,
+      compensacaoExchange,
     };
   }, [state]);
 
   const getAcaoRecomendada = useCallback(() => {
     const { pernas, stakeInicial, comissaoExchange } = state;
-    const S = stakeInicial;
+    const S = stakeInicial; // Capital Extraído = Stake Inicial (SEMPRE)
     const comissaoDecimal = comissaoExchange / 100;
     
     const proximaPerna = pernas.find(p => p.status === 'pendente');
@@ -481,7 +475,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       .filter(p => p.status === 'green')
       .reduce((sum, p) => sum + p.juice, 0);
 
-    // Calcular CR atual
+    // Calcular LPR atual
     const oddsConfirmadas = pernas
       .filter(p => p.status === 'green')
       .reduce((prod, p) => prod * p.oddBack, 1);
@@ -490,37 +484,40 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       .filter(p => p.status === 'pendente')
       .reduce((prod, p) => prod * p.oddBack, 1);
     
-    const CR = S * ((oddsConfirmadas * oddsPendentes) - 1);
+    const LPR = S * ((oddsConfirmadas * oddsPendentes) - 1);
     
     // Stake LAY recomendado para esta perna
-    const stakeLay = CR / (1 - comissaoDecimal);
+    const stakeLay = LPR / (1 - comissaoDecimal);
     const juiceAtual = stakeLay * (proximaPerna.oddLay - 1);
     
     // Juice TOTAL se executar este LAY
     const juiceTotal = juiceAcumulado + juiceAtual;
     
-    // Resultado se GREEN = CR - Juice Total
-    const resultadoSeGreen = CR - juiceTotal;
+    // Compensação da exchange (para info)
+    const compensacaoExchange = stakeLay * (1 - comissaoDecimal);
     
-    // Resultado se RED = CR (melhor cenário!)
-    const resultadoSeRed = CR;
+    // RESULTADOS CORRETOS:
+    // Se GREEN = Capital Extraído - Juice
+    const resultadoSeGreen = S - juiceTotal;
+    
+    // Se RED = Capital Extraído (100%, juice não consumido)
+    const resultadoSeRed = S;
     
     // Eficiência
-    const eficienciaSeGreen = CR > 0 ? (resultadoSeGreen / CR) * 100 : 0;
+    const eficienciaSeGreen = S > 0 ? (resultadoSeGreen / S) * 100 : 0;
     const eficienciaSeRed = 100; // RED sempre 100%
 
     return {
       stakeLay,
       oddLay: proximaPerna.oddLay,
-      capitalRetiravel: CR,
+      capitalExtraido: S,
       custoRetirada: juiceTotal,
-      resultadoLiquido: resultadoSeGreen,
-      eficiencia: eficienciaSeGreen,
       resultadoSeGreen,
       resultadoSeRed,
       eficienciaSeGreen,
       eficienciaSeRed,
       pernaAtual: proximaPerna.id,
+      compensacaoExchange,
     };
   }, [state]);
 

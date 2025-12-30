@@ -195,7 +195,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                 <AcaoRecomendada
                   stakeLay={acaoRecomendada.stakeLay}
                   oddLay={acaoRecomendada.oddLay}
-                  capitalRetiravel={acaoRecomendada.capitalRetiravel}
+                  capitalExtraido={acaoRecomendada.capitalExtraido}
                   custoRetirada={acaoRecomendada.custoRetirada}
                   resultadoSeGreen={acaoRecomendada.resultadoSeGreen}
                   resultadoSeRed={acaoRecomendada.resultadoSeRed}

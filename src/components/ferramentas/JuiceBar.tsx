@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { JuiceData, MoedaCalc } from '@/contexts/CalculadoraContext';
-import { ArrowDown, ArrowUp, Percent, Banknote } from 'lucide-react';
+import { ArrowDown, ArrowUp, Banknote } from 'lucide-react';
 
 interface JuiceBarProps {
   data: JuiceData;
@@ -22,7 +22,6 @@ export const JuiceBar: React.FC<JuiceBarProps> = ({ data, moeda }) => {
 
   // Barra de eficiência visual
   const eficienciaGreen = Math.max(0, Math.min(100, data.eficienciaSeGreen));
-  const eficienciaRed = 100; // RED sempre 100%
 
   return (
     <div className="space-y-4 p-4 rounded-lg bg-muted/30 border border-border">
@@ -35,13 +34,13 @@ export const JuiceBar: React.FC<JuiceBarProps> = ({ data, moeda }) => {
         <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
           <div className="flex items-center gap-2 mb-1">
             <Banknote className="h-4 w-4 text-primary" />
-            <span className="text-xs text-muted-foreground">Capital Retirável</span>
+            <span className="text-xs text-muted-foreground">Capital a Extrair</span>
           </div>
           <span className="text-lg font-bold text-primary">
-            {formatValue(data.capitalRetiravel, false)}
+            {formatValue(data.capitalExtraido, false)}
           </span>
           <p className="text-[10px] text-muted-foreground mt-0.5">
-            Valor que pode sair da bookmaker
+            Stake inicial (capital "preso")
           </p>
         </div>
         
@@ -122,7 +121,7 @@ export const JuiceBar: React.FC<JuiceBarProps> = ({ data, moeda }) => {
           <div className="space-y-1">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Eficiência da retirada</span>
-              <span className="font-medium text-emerald-600">{formatPercent(eficienciaRed)}</span>
+              <span className="font-medium text-emerald-600">{formatPercent(data.eficienciaSeRed)}</span>
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div className="h-full bg-emerald-500 w-full" />
@@ -134,10 +133,10 @@ export const JuiceBar: React.FC<JuiceBarProps> = ({ data, moeda }) => {
         </div>
       </div>
 
-      {/* Resultado líquido destacado */}
+      {/* Resultado líquido destacado (conservador = GREEN) */}
       <div className={cn(
         'flex items-center justify-between p-3 rounded-lg border-2',
-        data.resultadoLiquido >= 0 
+        data.resultadoSeGreen >= 0 
           ? 'bg-success/10 border-success/30' 
           : 'bg-destructive/10 border-destructive/30'
       )}>
@@ -147,9 +146,9 @@ export const JuiceBar: React.FC<JuiceBarProps> = ({ data, moeda }) => {
         </div>
         <span className={cn(
           'text-lg font-bold',
-          data.resultadoLiquido >= 0 ? 'text-success' : 'text-destructive'
+          data.resultadoSeGreen >= 0 ? 'text-success' : 'text-destructive'
         )}>
-          {formatValue(data.resultadoLiquido)}
+          {formatValue(data.resultadoSeGreen)}
         </span>
       </div>
     </div>

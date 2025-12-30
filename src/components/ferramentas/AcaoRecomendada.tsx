@@ -1,12 +1,12 @@
 import React from 'react';
-import { AlertCircle, ArrowRight, Check, X, ChevronRight, TrendingUp, Percent } from 'lucide-react';
+import { AlertCircle, ArrowRight, Check, ChevronRight, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MoedaCalc, PernaAposta } from '@/contexts/CalculadoraContext';
 
 interface AcaoRecomendadaProps {
   stakeLay: number;
   oddLay: number;
-  capitalRetiravel: number;
+  capitalExtraido: number;
   custoRetirada: number;
   resultadoSeGreen: number;
   resultadoSeRed: number;
@@ -21,7 +21,7 @@ interface AcaoRecomendadaProps {
 export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
   stakeLay,
   oddLay,
-  capitalRetiravel,
+  capitalExtraido,
   custoRetirada,
   resultadoSeGreen,
   resultadoSeRed,
@@ -183,9 +183,9 @@ export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
         {/* Resumo */}
         <div className="mt-2 p-2 rounded bg-muted/50 border border-border/50">
           <div className="flex justify-between items-center text-xs">
-            <span className="text-muted-foreground">Capital retirável:</span>
+            <span className="text-muted-foreground">Capital a extrair:</span>
             <span className="font-bold text-primary">
-              {currencySymbol} {capitalRetiravel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              {currencySymbol} {capitalExtraido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
           <div className="flex justify-between items-center text-xs mt-1">
