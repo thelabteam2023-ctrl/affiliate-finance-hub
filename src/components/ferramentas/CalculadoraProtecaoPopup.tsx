@@ -23,17 +23,22 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
 
   // Abrir em nova janela externa (popup do navegador)
   const handleOpenInNewWindow = () => {
-    const width = 800;
-    const height = 700;
-    const left = (window.screen.width - width) / 2;
-    const top = (window.screen.height - height) / 2;
+    const width = 900;
+    const height = 750;
+    const left = Math.max(0, (window.screen.width - width) / 2);
+    const top = Math.max(0, (window.screen.height - height) / 2);
     
-    window.open(
+    // Usar window.open sem parâmetros restritivos para garantir compartilhamento de sessão
+    const popup = window.open(
       EXTERNAL_URL,
-      'ProtecaoProgressiva',
-      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=no,menubar=no,toolbar=no,location=no`
+      '_blank',
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
     );
-    closeCalculadora();
+    
+    if (popup) {
+      popup.focus();
+      closeCalculadora();
+    }
   };
 
   // Carregar tamanho salvo do localStorage
