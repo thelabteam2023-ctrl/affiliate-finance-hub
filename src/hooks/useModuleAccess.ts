@@ -40,6 +40,9 @@ const MODULE_ACCESS_MAP: Record<string, ModuleConfig> = {
   // CRESCIMENTO - Usa permission keys do banco
   'captacao': { permission: 'captacao.read', roles: null },
   
+  // FERRAMENTAS - Disponível para todos os usuários autenticados
+  'ferramentas': { permission: null, roles: null },
+  
   // COMUNIDADE - Requer plano PRO+ OU ser owner
   'comunidade': { 
     permission: null, // Verificado por plano
