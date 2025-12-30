@@ -1,4 +1,4 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -27,6 +27,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { useCalculadora } from "@/contexts/CalculadoraContext";
 
 interface MenuItem {
   title: string;
@@ -49,7 +50,7 @@ interface ProjectInfo {
 // Icon mapping for favorites
 const iconMap: Record<string, any> = {
   Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, 
-  UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, Star, Shield
+  UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, Star, Shield, Calculator
 };
 
 // Menu structure organized by functional domain
@@ -88,6 +89,12 @@ const menuGroups: MenuGroup[] = [
     label: "CRESCIMENTO",
     items: [
       { title: "Captação", url: "/programa-indicacao", icon: UserPlus, iconName: "UserPlus", moduleKey: "captacao" },
+    ],
+  },
+  {
+    label: "FERRAMENTAS",
+    items: [
+      { title: "Calculadora Lay", url: "#calculadora-lay", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
     ],
   },
   {
