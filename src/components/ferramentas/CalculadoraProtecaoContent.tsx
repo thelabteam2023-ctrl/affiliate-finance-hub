@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { PernaTimeline } from './PernaTimeline';
-import { MetricasGlobaisCard } from './MetricasGlobaisCard';
 import { SimulacaoAtivaCard, SemSimulacao } from './ProximaAcaoCard';
 import { GuiaProtecao } from './GuiaProtecao';
 
@@ -204,6 +203,8 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                   simulacao={simulacao}
                   moeda={moeda}
                   stakeInicial={stakeInicial}
+                  volumeExchange={metricas.volumeExchange}
+                  exposicaoMaxima={metricas.exposicaoMaxima}
                 />
               ) : metricas.operacaoEncerrada ? (
                 <SemSimulacao
@@ -211,6 +212,8 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                   eficiencia={metricas.eficienciaFinal}
                   moeda={moeda}
                   stakeInicial={stakeInicial}
+                  volumeExchange={metricas.volumeExchange}
+                  exposicaoMaxima={metricas.exposicaoMaxima}
                 />
               ) : null}
             </div>
@@ -228,11 +231,6 @@ export const CalculadoraProtecaoContent: React.FC = () => {
             onExtracaoChange={updatePernaExtracao}
             onConfirmar={confirmarPerna}
           />
-
-          <Separator />
-
-          {/* Métricas Globais */}
-          <MetricasGlobaisCard metricas={metricas} moeda={moeda} />
         </div>
       </ScrollArea>
     </div>
