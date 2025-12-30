@@ -253,9 +253,11 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       const resultadoSeGreen = lucroBack - perdaLay;
       
       // Novo passivo se GREEN:
-      // - Se resultado positivo: diminui o passivo
-      // - Se resultado negativo (perdeu mais do que ganhou): aumenta o passivo
-      const novoPassivoSeGreen = passivoAtual - target - resultadoSeGreen;
+      // O passivo é ajustado pelo resultado da operação:
+      // - Se resultado positivo (lucro): passivo DIMINUI
+      // - Se resultado negativo (prejuízo): passivo AUMENTA
+      // Fórmula: novoPassivo = passivoAtual - resultadoSeGreen
+      const novoPassivoSeGreen = passivoAtual - resultadoSeGreen;
       
       // ==========================================
       // SE RED (cai na Exchange)
