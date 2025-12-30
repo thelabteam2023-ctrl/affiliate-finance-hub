@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { PernaTimeline } from './PernaTimeline';
 import { MetricasGlobaisCard } from './MetricasGlobaisCard';
-import { ProximaAcaoCard, SemProximaAcao } from './ProximaAcaoCard';
+import { SimulacaoAtivaCard, SemSimulacao } from './ProximaAcaoCard';
 import { GuiaProtecao } from './GuiaProtecao';
 
 export const CalculadoraProtecaoContent: React.FC = () => {
@@ -27,14 +27,15 @@ export const CalculadoraProtecaoContent: React.FC = () => {
     setNumPernas,
     updatePernaOddBack,
     updatePernaOddLay,
+    updatePernaStakeLay,
     confirmarPerna,
     resetCalculadora,
     getMetricasGlobais,
-    getProximaAcao,
+    getSimulacaoAtiva,
   } = useCalculadora();
 
   const metricas = getMetricasGlobais();
-  const proximaAcao = getProximaAcao();
+  const simulacao = getSimulacaoAtiva();
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
 
   return (
@@ -50,7 +51,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
             </Button>
           </div>
 
-          {/* Configuração + Ação Recomendada */}
+          {/* Configuração + Simulação */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Configuração Inicial */}
             <div className="p-4 rounded-lg bg-muted/30 border border-border space-y-3">
@@ -134,26 +135,32 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {/* Nota explicativa */}
+              <div className="pt-2 border-t border-border/50">
+                <p className="text-[10px] text-muted-foreground">
+                  💡 Defina as odds e stake LAY para cada perna. A calculadora simula os resultados para cada cenário (GREEN ou RED).
+                </p>
+              </div>
             </div>
 
-            {/* Ação Recomendada */}
+            {/* Simulação */}
             <div>
-              {proximaAcao ? (
-                <ProximaAcaoCard
-                  acao={proximaAcao}
+              {simulacao ? (
+                <SimulacaoAtivaCard
+                  simulacao={simulacao}
                   moeda={moeda}
                   stakeInicial={stakeInicial}
                 />
               ) : metricas.operacaoEncerrada ? (
-                <SemProximaAcao
+                <SemSimulacao
                   motivo={metricas.motivoEncerramento || 'todas_green'}
-                  capitalRecuperado={metricas.motivoEncerramento === 'red' ? stakeInicial : metricas.capitalFinalSeGreen}
-                  eficiencia={metricas.eficienciaAtual}
+                  capitalFinal={metricas.capitalFinal}
+                  eficiencia={metricas.eficienciaFinal}
                   moeda={moeda}
+                  stakeInicial={stakeInicial}
                 />
-              ) : (
-                <SemProximaAcao motivo="inviavel" moeda={moeda} />
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -166,6 +173,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
             stakeInicial={stakeInicial}
             onOddBackChange={updatePernaOddBack}
             onOddLayChange={updatePernaOddLay}
+            onStakeLayChange={updatePernaStakeLay}
             onConfirmar={confirmarPerna}
           />
 
