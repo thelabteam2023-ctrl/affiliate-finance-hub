@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PernaAposta, StatusPerna, MoedaCalc } from '@/contexts/CalculadoraContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ExtracaoSlider } from './ExtracaoSlider';
 
 interface PernaTimelineProps {
   pernas: PernaAposta[];
@@ -177,23 +178,34 @@ const PernaCard: React.FC<{
           )}
         </div>
         
-        {/* Extração - Editável apenas na perna ativa */}
-        <div className="flex items-center gap-2">
-          <Label className="text-xs text-muted-foreground w-16">Extração:</Label>
-          <Input
-            type="number"
-            step="10"
-            min="0"
-            value={perna.extracaoDesejada}
-            onChange={(e) => onExtracaoChange(parseFloat(e.target.value) || 0)}
-            className={cn(
-              'w-20 h-8 text-sm',
-              canEditExtracao ? 'bg-background border-primary/50' : 'bg-muted/50'
-            )}
-            disabled={!canEditExtracao}
-          />
-        </div>
+        {/* Extração - Input simples para pernas não ativas */}
+        {!canEditExtracao && (
+          <div className="flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground w-16">Extração:</Label>
+            <Input
+              type="number"
+              step="10"
+              min="0"
+              value={perna.extracaoDesejada}
+              onChange={(e) => onExtracaoChange(parseFloat(e.target.value) || 0)}
+              className="w-20 h-8 text-sm bg-muted/50"
+              disabled={true}
+            />
+          </div>
+        )}
       </div>
+
+      {/* Slider de Extração - Aparece apenas na perna ativa */}
+      {canEditExtracao && (
+        <ExtracaoSlider
+          passivoAtual={perna.passivoAtual}
+          extracaoAtual={perna.extracaoDesejada}
+          oddLay={perna.oddLay}
+          comissao={0.05} // 5% comissão padrão
+          moeda={moeda}
+          onExtracaoChange={onExtracaoChange}
+        />
+      )}
 
       {/* Stake LAY calculado automaticamente */}
       <div className="mb-3 p-2 rounded bg-primary/10 border border-primary/30">
