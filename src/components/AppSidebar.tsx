@@ -173,6 +173,16 @@ export function AppSidebar() {
     navigate("/auth");
   };
 
+  // Hook para abrir calculadora
+  const { openCalculadora } = useCalculadora();
+
+  const handleMenuItemClick = (item: MenuItem, e: React.MouseEvent) => {
+    if (item.url === '#calculadora-lay') {
+      e.preventDefault();
+      openCalculadora();
+    }
+  };
+
   const getUserInitials = () => {
     if (!user?.email) return "U";
     return user.email.charAt(0).toUpperCase();
@@ -195,6 +205,42 @@ export function AppSidebar() {
 
     const isCentral = item.moduleKey === "central";
     const showBadge = isCentral && alertsCount > 0;
+    const isToolLink = item.url.startsWith('#');
+
+    // Para links de ferramentas (que abrem popups), usamos button ao invés de NavLink
+    if (isToolLink) {
+      return (
+        <SidebarMenuItem key={item.title}>
+          {isCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <SidebarMenuButton asChild>
+                  <button 
+                    onClick={(e) => handleMenuItemClick(item, e)}
+                    className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-accent/50"
+                  >
+                    <item.icon className="h-4 w-4" />
+                  </button>
+                </SidebarMenuButton>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-medium">
+                {item.title}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <SidebarMenuButton asChild>
+              <button 
+                onClick={(e) => handleMenuItemClick(item, e)}
+                className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-accent/50 w-full text-left"
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                <span className="text-sm flex-1">{item.title}</span>
+              </button>
+            </SidebarMenuButton>
+          )}
+        </SidebarMenuItem>
+      );
+    }
 
     return (
       <SidebarMenuItem key={item.title}>
