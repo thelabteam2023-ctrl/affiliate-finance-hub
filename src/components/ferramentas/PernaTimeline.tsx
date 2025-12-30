@@ -1,16 +1,15 @@
 import React from 'react';
-import { Clock, Check, TrendingUp, Lock, ChevronRight, Target, Wallet, ArrowUpRight, ArrowDownRight, Settings } from 'lucide-react';
+import { Clock, Check, Lock, ChevronRight, Target, Wallet, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PernaAposta, StatusPerna, MoedaCalc, FaseCalculadora } from '@/contexts/CalculadoraContext';
+import { PernaAposta, StatusPerna, MoedaCalc } from '@/contexts/CalculadoraContext';
 
 interface PernaTimelineProps {
   pernas: PernaAposta[];
   moeda: MoedaCalc;
   stakeInicial: number;
-  fase: FaseCalculadora;
   onOddBackChange: (id: number, odd: number) => void;
   onOddLayChange: (id: number, odd: number) => void;
   onExtracaoChange: (id: number, valor: number) => void;
@@ -65,7 +64,6 @@ const PernaCard: React.FC<{
   perna: PernaAposta;
   moeda: MoedaCalc;
   stakeInicial: number;
-  fase: FaseCalculadora;
   onOddBackChange: (odd: number) => void;
   onOddLayChange: (odd: number) => void;
   onExtracaoChange: (valor: number) => void;
@@ -74,7 +72,6 @@ const PernaCard: React.FC<{
   perna,
   moeda,
   stakeInicial,
-  fase,
   onOddBackChange,
   onOddLayChange,
   onExtracaoChange,
@@ -83,11 +80,14 @@ const PernaCard: React.FC<{
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
   const config = statusConfig[perna.status];
   
-  // Na fase de configuração: todos editáveis
-  // Na fase de execução: APENAS a perna ativa é interativa (não edita odds, apenas confirma)
-  const isEditavel = fase === 'configuracao' || (fase === 'execucao' && perna.status === 'ativa');
-  const canEditOdds = fase === 'configuracao'; // Odds só editáveis na configuração
-  const canConfirm = fase === 'execucao' && perna.status === 'ativa'; // Só confirma na execução
+  // REGRAS DE EDIÇÃO SIMPLIFICADAS:
+  // - BACK: sempre read-only (definido na configuração inicial)
+  // - LAY: editável APENAS na perna ativa
+  // - Extração: editável APENAS na perna ativa
+  const isAtiva = perna.status === 'ativa';
+  const canEditLay = isAtiva;
+  const canEditExtracao = isAtiva;
+  const canConfirm = isAtiva;
   
   const formatValue = (value: number, showSign = false) => {
     const prefix = showSign ? (value >= 0 ? '+' : '') : '';
@@ -99,7 +99,8 @@ const PernaCard: React.FC<{
       'rounded-lg border-2 p-3 transition-all w-full max-w-[300px] flex-shrink-0',
       config.bg,
       config.border,
-      perna.status === 'travada' && 'opacity-50'
+      perna.status === 'travada' && 'opacity-50',
+      perna.status === 'aguardando' && 'opacity-70'
     )}>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
@@ -138,8 +139,9 @@ const PernaCard: React.FC<{
         </div>
       </div>
 
-      {/* Inputs: Odds + Extração */}
+      {/* Inputs: BACK (read-only) + LAY + Extração */}
       <div className="space-y-2 mb-3">
+        {/* BACK - Sempre read-only */}
         <div className="flex items-center gap-2">
           <Label className="text-xs text-muted-foreground w-16">Back:</Label>
           <Input
@@ -148,10 +150,13 @@ const PernaCard: React.FC<{
             min="1.01"
             value={perna.oddBack}
             onChange={(e) => onOddBackChange(parseFloat(e.target.value) || 1.01)}
-            className="w-20 h-8 text-sm"
-            disabled={!canEditOdds}
+            className="w-20 h-8 text-sm bg-muted/50"
+            disabled={true}
           />
+          <span className="text-[10px] text-muted-foreground">(fixo)</span>
         </div>
+        
+        {/* LAY - Editável apenas na perna ativa */}
         <div className="flex items-center gap-2">
           <Label className="text-xs text-muted-foreground w-16">Lay:</Label>
           <Input
@@ -160,10 +165,18 @@ const PernaCard: React.FC<{
             min="1.01"
             value={perna.oddLay}
             onChange={(e) => onOddLayChange(parseFloat(e.target.value) || 1.01)}
-            className="w-20 h-8 text-sm"
-            disabled={!canEditOdds}
+            className={cn(
+              'w-20 h-8 text-sm',
+              canEditLay ? 'bg-background border-primary/50' : 'bg-muted/50'
+            )}
+            disabled={!canEditLay}
           />
+          {!canEditLay && perna.status === 'aguardando' && (
+            <span className="text-[10px] text-muted-foreground">(aguardando)</span>
+          )}
         </div>
+        
+        {/* Extração - Editável apenas na perna ativa */}
         <div className="flex items-center gap-2">
           <Label className="text-xs text-muted-foreground w-16">Extração:</Label>
           <Input
@@ -172,8 +185,11 @@ const PernaCard: React.FC<{
             min="0"
             value={perna.extracaoDesejada}
             onChange={(e) => onExtracaoChange(parseFloat(e.target.value) || 0)}
-            className="w-20 h-8 text-sm"
-            disabled={!canEditOdds}
+            className={cn(
+              'w-20 h-8 text-sm',
+              canEditExtracao ? 'bg-background border-primary/50' : 'bg-muted/50'
+            )}
+            disabled={!canEditExtracao}
           />
         </div>
       </div>
@@ -190,7 +206,7 @@ const PernaCard: React.FC<{
         </div>
       </div>
 
-      {/* Botões de confirmação - só aparecem na execução e na perna ativa */}
+      {/* Botões de confirmação - só aparecem na perna ativa */}
       {canConfirm && (
         <div className="space-y-2 mb-3">
           <Button
@@ -214,8 +230,8 @@ const PernaCard: React.FC<{
         </div>
       )}
 
-      {/* Simulação de resultados (perna ativa ou aguardando) */}
-      {(perna.status === 'ativa' || perna.status === 'aguardando') && (
+      {/* Simulação de resultados (perna ativa) */}
+      {isAtiva && (
         <div className="space-y-2 pt-2 border-t border-border/30">
           {/* Se GREEN - resultado normalmente é NEGATIVO (prejuízo) */}
           <div className="p-2 rounded bg-warning/5 border border-warning/20">
@@ -323,7 +339,6 @@ export const PernaTimeline: React.FC<PernaTimelineProps> = ({
   pernas,
   moeda,
   stakeInicial,
-  fase,
   onOddBackChange,
   onOddLayChange,
   onExtracaoChange,
@@ -331,28 +346,11 @@ export const PernaTimeline: React.FC<PernaTimelineProps> = ({
 }) => {
   return (
     <div className="space-y-3">
-      <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
-        {fase === 'configuracao' ? (
-          <>
-            <Settings className="h-4 w-4 text-primary" />
-            Configuração das Pernas
-          </>
-        ) : (
-          'Timeline das Pernas'
-        )}
-      </h3>
+      <h3 className="font-semibold text-sm text-foreground">Timeline das Pernas</h3>
       
-      {fase === 'configuracao' && (
-        <p className="text-xs text-muted-foreground">
-          Todas as pernas estão editáveis. Configure as odds e extrações desejadas.
-        </p>
-      )}
-      
-      {fase === 'execucao' && (
-        <p className="text-xs text-muted-foreground">
-          Apenas a perna ativa pode ser confirmada. Pernas futuras estão congeladas.
-        </p>
-      )}
+      <p className="text-xs text-muted-foreground">
+        O BACK já está definido. Ajuste a odd LAY e extração apenas na perna ativa.
+      </p>
       
       {/* Timeline horizontal scrollável */}
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
@@ -362,7 +360,6 @@ export const PernaTimeline: React.FC<PernaTimelineProps> = ({
               perna={perna}
               moeda={moeda}
               stakeInicial={stakeInicial}
-              fase={fase}
               onOddBackChange={(odd) => onOddBackChange(perna.id, odd)}
               onOddLayChange={(odd) => onOddLayChange(perna.id, odd)}
               onExtracaoChange={(valor) => onExtracaoChange(perna.id, valor)}

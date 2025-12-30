@@ -20,13 +20,12 @@ import React, { createContext, useContext, useState, useCallback, ReactNode } fr
 export type StatusPerna = 'aguardando' | 'ativa' | 'green' | 'red' | 'travada';
 export type TipoAposta = 'dupla' | 'tripla' | 'multipla';
 export type MoedaCalc = 'BRL' | 'USD';
-export type FaseCalculadora = 'configuracao' | 'execucao';
 
 export interface PernaAposta {
   id: number;
-  oddBack: number;
-  oddLay: number;
-  extracaoDesejada: number;  // Eₙ - Valor que deseja extrair nesta perna
+  oddBack: number;            // Definido na configuração inicial (read-only durante execução)
+  oddLay: number;             // Editável APENAS quando a perna está ativa
+  extracaoDesejada: number;   // Editável APENAS quando a perna está ativa
   status: StatusPerna;
   
   // Calculados automaticamente com base no modelo
@@ -82,7 +81,6 @@ interface CalculadoraState {
   pernas: PernaAposta[];
   numPernas: number;
   pernaAtiva: number;
-  fase: FaseCalculadora;  // Fase atual: configuracao ou execucao
 }
 
 interface CalculadoraContextType extends CalculadoraState {
@@ -99,7 +97,6 @@ interface CalculadoraContextType extends CalculadoraState {
   updatePernaOddLay: (id: number, odd: number) => void;
   updatePernaExtracao: (id: number, valor: number) => void;
   confirmarPerna: (id: number, resultado: 'green' | 'red') => void;
-  iniciarExecucao: () => void;  // Confirma configuração e inicia execução
   resetCalculadora: () => void;
   getMetricasGlobais: () => MetricasGlobais;
   getSimulacaoAtiva: () => {
@@ -127,7 +124,6 @@ const defaultState: CalculadoraState = {
   pernas: [],
   numPernas: 2,
   pernaAtiva: 1,
-  fase: 'configuracao',  // Começa na fase de configuração
 };
 
 const CalculadoraContext = createContext<CalculadoraContextType | null>(null);
@@ -480,27 +476,8 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     setState(prev => ({
       ...prev,
       pernaAtiva: 1,
-      fase: 'configuracao',  // Volta para fase de configuração
       pernas: recalcularPernas(createPernas(prev.numPernas, prev.stakeInicial), prev.stakeInicial, prev.comissaoExchange),
     }));
-  }, [recalcularPernas]);
-
-  // Iniciar execução (confirma configuração)
-  const iniciarExecucao = useCallback(() => {
-    setState(prev => {
-      // Recalcular pernas com status correto
-      const pernasParaExecucao = prev.pernas.map((p, i) => ({
-        ...p,
-        status: i === 0 ? 'ativa' as StatusPerna : 'aguardando' as StatusPerna,
-      }));
-      
-      return {
-        ...prev,
-        fase: 'execucao',
-        pernaAtiva: 1,
-        pernas: recalcularPernas(pernasParaExecucao, prev.stakeInicial, prev.comissaoExchange),
-      };
-    });
   }, [recalcularPernas]);
 
   const getMetricasGlobais = useCallback((): MetricasGlobais => {
@@ -601,7 +578,6 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     updatePernaOddLay,
     updatePernaExtracao,
     confirmarPerna,
-    iniciarExecucao,
     resetCalculadora,
     getMetricasGlobais,
     getSimulacaoAtiva,
