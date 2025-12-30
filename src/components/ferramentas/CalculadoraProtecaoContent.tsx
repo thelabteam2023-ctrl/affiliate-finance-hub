@@ -56,12 +56,12 @@ export const CalculadoraProtecaoContent: React.FC = () => {
           </div>
 
           {/* Cards lado a lado: Configuração + Objetivo + Ação Recomendada */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {/* Card 1 — Configuração Inicial */}
-            <div className="p-4 rounded-lg bg-muted/30 border border-border space-y-3">
+            <div className="p-3 sm:p-4 rounded-lg bg-muted/30 border border-border space-y-2 sm:space-y-3">
               <h3 className="font-semibold text-sm text-foreground">Configuração Inicial</h3>
               
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 {/* Tipo de Aposta */}
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Tipo</Label>
@@ -148,7 +148,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
             </div>
 
             {/* Card 2 — Objetivo */}
-            <div className="p-4 rounded-lg bg-muted/30 border border-border space-y-3">
+            <div className="p-3 sm:p-4 rounded-lg bg-muted/30 border border-border space-y-2 sm:space-y-3">
               <h3 className="font-semibold text-sm text-foreground">Objetivo da Proteção</h3>
               <RadioGroup 
                 value={objetivo} 
@@ -189,7 +189,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
             </div>
 
             {/* Card 3 — Ação Recomendada */}
-            <div className="md:col-span-2 xl:col-span-1">
+            <div className="sm:col-span-2 lg:col-span-1">
               {acaoRecomendada ? (
                 <AcaoRecomendada
                   valorLay={acaoRecomendada.valorLay}

@@ -28,59 +28,59 @@ export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
   };
 
   return (
-    <div className="rounded-lg border-2 border-primary/50 bg-primary/5 p-4 space-y-4">
+    <div className="rounded-lg border-2 border-primary/50 bg-primary/5 p-3 sm:p-4 space-y-3 h-full">
       <div className="flex items-center gap-2">
-        <div className="p-2 rounded-full bg-primary/20">
-          <AlertCircle className="h-5 w-5 text-primary" />
+        <div className="p-1.5 sm:p-2 rounded-full bg-primary/20">
+          <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
         </div>
         <div>
-          <h4 className="font-bold text-foreground">AÇÃO RECOMENDADA</h4>
+          <h4 className="font-bold text-foreground text-sm sm:text-base">AÇÃO RECOMENDADA</h4>
           <p className="text-xs text-muted-foreground">Entrada {pernaAtual}</p>
         </div>
       </div>
 
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-lg">
-          <ArrowRight className="h-5 w-5 text-primary" />
-          <span className="font-medium text-foreground">Faça LAY agora:</span>
+      <div className="space-y-2 sm:space-y-3">
+        <div className="flex items-center gap-2">
+          <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+          <span className="font-medium text-foreground text-sm sm:text-base">Faça LAY agora:</span>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 rounded-lg bg-background border border-border">
-            <span className="text-xs text-muted-foreground block mb-1">Valor</span>
-            <span className="text-xl font-bold text-primary">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="p-2 sm:p-3 rounded-lg bg-background border border-border">
+            <span className="text-xs text-muted-foreground block mb-0.5">Valor</span>
+            <span className="text-base sm:text-xl font-bold text-primary">
               {currencySymbol} {valorLay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
-          <div className="p-3 rounded-lg bg-background border border-border">
-            <span className="text-xs text-muted-foreground block mb-1">Odd mínima</span>
-            <span className="text-xl font-bold text-primary">
+          <div className="p-2 sm:p-3 rounded-lg bg-background border border-border">
+            <span className="text-xs text-muted-foreground block mb-0.5">Odd mínima</span>
+            <span className="text-base sm:text-xl font-bold text-primary">
               {oddMinima.toFixed(2)}
             </span>
           </div>
         </div>
 
-        <div className="space-y-2 pt-2 border-t border-border/50">
-          <div className="flex items-center justify-between p-2 rounded bg-success/10">
-            <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-success" />
-              <span className="text-sm text-muted-foreground">Se GANHAR na casa:</span>
+        <div className="space-y-1.5 pt-2 border-t border-border/50">
+          <div className="flex items-center justify-between p-1.5 sm:p-2 rounded bg-success/10 gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+              <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-success shrink-0" />
+              <span className="text-xs sm:text-sm text-muted-foreground truncate">Se GANHAR:</span>
             </div>
             <span className={cn(
-              'font-bold',
+              'font-bold text-sm sm:text-base shrink-0',
               resultadoSeGanhar >= 0 ? 'text-success' : 'text-destructive'
             )}>
               {formatValue(resultadoSeGanhar)}
             </span>
           </div>
           
-          <div className="flex items-center justify-between p-2 rounded bg-destructive/10">
-            <div className="flex items-center gap-2">
-              <X className="h-4 w-4 text-destructive" />
-              <span className="text-sm text-muted-foreground">Se PERDER na casa:</span>
+          <div className="flex items-center justify-between p-1.5 sm:p-2 rounded bg-destructive/10 gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+              <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive shrink-0" />
+              <span className="text-xs sm:text-sm text-muted-foreground truncate">Se PERDER:</span>
             </div>
             <span className={cn(
-              'font-bold',
+              'font-bold text-sm sm:text-base shrink-0',
               resultadoSePerder >= 0 ? 'text-success' : 'text-destructive'
             )}>
               {formatValue(resultadoSePerder)}
