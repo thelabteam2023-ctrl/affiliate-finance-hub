@@ -252,12 +252,11 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       // Usando a média dos piores cenários ou o próprio resultado se negativo
       const juicePerna = stakeInicial > 0 ? (resultadoSeGreen / stakeInicial) * 100 : 0;
       
-      // Avisos informativos (nunca bloqueios)
+      // Avisos informativos - mostrar custo em juice quando aplicável
       const avisos: string[] = [];
-      if (resultadoSeGreen < 0 && resultadoSeRed < 0) {
-        avisos.push('Alto custo operacional: ambos cenários negativos');
-      } else if (juicePerna > 20) {
-        avisos.push('Esta combinação gera custo operacional elevado');
+      if (resultadoSeGreen < 0) {
+        const custoAbsoluto = Math.abs(resultadoSeGreen);
+        avisos.push(`Custo juice: ${custoAbsoluto.toFixed(2)} (${Math.abs(juicePerna).toFixed(2)}%)`);
       }
       
       // Se perna já foi confirmada como RED
