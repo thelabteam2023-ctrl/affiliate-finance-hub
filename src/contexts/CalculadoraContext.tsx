@@ -29,8 +29,8 @@ export interface PernaAposta {
   status: StatusPerna;
   
   // Calculados automaticamente com base no modelo
-  passivoAnterior: number;   // Pₙ - Passivo herdado das pernas anteriores
-  target: number;            // Tₙ = Pₙ + Eₙ - Target total a recuperar
+  passivoAtual: number;       // Pₙ - Passivo ATUAL da perna (na Perna 1 = stakeInicial, demais = herdado)
+  target: number;             // Tₙ = Pₙ + Eₙ - Target total a recuperar
   stakeLayNecessario: number; // Stake_LAY = Target / (1 - c)
   responsabilidade: number;   // Stake_LAY × (oddLay - 1)
   
@@ -143,7 +143,9 @@ const createPernas = (num: number, stakeInicial: number): PernaAposta[] => {
     oddLay: 2.0,
     extracaoDesejada: stakeInicial, // Por padrão, extrai o stake inicial em cada perna
     status: i === 0 ? 'ativa' : 'aguardando',
-    passivoAnterior: 0,
+    // Perna 1: passivoAtual = stakeInicial (o capital já está em jogo!)
+    // Demais: será calculado pelo recalcularPernas
+    passivoAtual: i === 0 ? stakeInicial : 0,
     target: 0,
     stakeLayNecessario: 0,
     responsabilidade: 0,
@@ -165,9 +167,12 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
   /**
    * RECALCULAR PERNAS - Modelo de Recuperação Progressiva
    * 
-   * Para cada perna n:
-   * - Passivo_n = passivo acumulado (0 na primeira, ou Target_anterior - Resultado_GREEN_anterior)
-   * - Target_n = Passivo_n + Extração_n
+   * REGRA FUNDAMENTAL:
+   * - Perna 1: Passivo Atual = Stake Inicial (o capital já está em jogo!)
+   * - Perna n > 1: Passivo Atual = herdado da perna anterior (novoPassivoSeGreen)
+   * 
+   * Fórmulas:
+   * - Target_n = Passivo_Atual_n + Extração_n
    * - Stake_LAY_n = Target_n / (1 - comissão)
    * - Se GREEN: Resultado = Lucro_BACK - Perda_LAY, Novo_Passivo = Target - Resultado
    * - Se RED: Resultado = 0 (passivo zerado)
@@ -180,7 +185,8 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     const comissaoDecimal = comissao / 100;
     let operacaoEncerrada = false;
     let pernaAtiva = 1;
-    let passivoAcumulado = 0;
+    // Perna 1 começa com o stake inicial como passivo (REGRA ABSOLUTA)
+    let passivoParaProximaPerna = stakeInicial;
     
     return pernas.map((perna, index) => {
       const { oddBack, oddLay, extracaoDesejada } = perna;
@@ -190,7 +196,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         return {
           ...perna,
           status: 'travada' as StatusPerna,
-          passivoAnterior: 0,
+          passivoAtual: 0,
           target: 0,
           stakeLayNecessario: 0,
           responsabilidade: 0,
@@ -207,11 +213,18 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       // MODELO DE RECUPERAÇÃO PROGRESSIVA
       // ==========================================
       
-      // Passivo anterior (0 na primeira perna, ou calculado das anteriores)
-      const passivoAnterior = passivoAcumulado;
+      // PASSIVO ATUAL:
+      // - Perna 1: = stakeInicial (o capital JÁ está em jogo desde o início!)
+      // - Perna n > 1: = passivo herdado da perna anterior
+      const passivoAtual = index === 0 ? stakeInicial : passivoParaProximaPerna;
       
-      // Target = Passivo + Extração desejada
-      const target = passivoAnterior + extracaoDesejada;
+      // VALIDAÇÃO: Perna 1 NUNCA pode ter passivo zero (isso seria um bug)
+      if (index === 0 && passivoAtual === 0 && stakeInicial > 0) {
+        console.error('ERRO: Perna 1 com passivo zero - isso não deveria acontecer!');
+      }
+      
+      // Target = Passivo Atual + Extração desejada
+      const target = passivoAtual + extracaoDesejada;
       
       // Stake LAY necessário = Target / (1 - comissão)
       const stakeLayNecessario = target / (1 - comissaoDecimal);
@@ -253,7 +266,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         
         return {
           ...perna,
-          passivoAnterior,
+          passivoAtual,
           target,
           stakeLayNecessario,
           responsabilidade,
@@ -268,13 +281,13 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       
       // Se perna já foi confirmada como GREEN
       if (perna.status === 'green') {
-        // Atualizar passivo acumulado para próxima perna
-        passivoAcumulado = novoPassivoSeGreen;
+        // Atualizar passivo para próxima perna
+        passivoParaProximaPerna = novoPassivoSeGreen;
         pernaAtiva = index + 2;
         
         return {
           ...perna,
-          passivoAnterior,
+          passivoAtual,
           target,
           stakeLayNecessario,
           responsabilidade,
@@ -293,10 +306,13 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         status = 'ativa';
       }
       
+      // Preparar passivo para próxima perna (se esta for GREEN)
+      passivoParaProximaPerna = novoPassivoSeGreen;
+      
       return {
         ...perna,
         status,
-        passivoAnterior,
+        passivoAtual,
         target,
         stakeLayNecessario,
         responsabilidade,
@@ -475,8 +491,8 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     const volumeExchange = pernas.reduce((sum, p) => sum + p.stakeLayNecessario, 0);
     const exposicaoMaxima = Math.max(...pernas.map(p => p.responsabilidade));
     
-    // Passivo atual (da perna ativa)
-    const passivoAtual = pernaAtiva?.passivoAnterior || 0;
+    // Passivo atual (da perna ativa) - nunca é zero na Perna 1
+    const passivoAtual = pernaAtiva?.passivoAtual || stakeInicial;
     const targetAtual = pernaAtiva?.target || 0;
     
     // Se RED agora
@@ -528,7 +544,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     
     return {
       pernaId: pernaAtiva.id,
-      passivo: pernaAtiva.passivoAnterior,
+      passivo: pernaAtiva.passivoAtual,
       extracao: pernaAtiva.extracaoDesejada,
       target: pernaAtiva.target,
       stakeLay: pernaAtiva.stakeLayNecessario,
