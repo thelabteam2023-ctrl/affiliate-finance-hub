@@ -229,6 +229,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                     key={perna.id}
                     perna={perna}
                     moeda={moeda}
+                    totalPernas={pernas.length}
                     onOddBackChange={(odd) => updatePernaOddBack(perna.id, odd)}
                     onOddLayChange={(odd) => updatePernaOddLay(perna.id, odd)}
                     onStatusChange={(status) => setPernaStatus(perna.id, status)}
