@@ -1,15 +1,9 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react';
-import { X, Minus, Maximize2, Minimize2, GripVertical, Calculator, GripHorizontal, ExternalLink, SquareArrowOutUpRight } from 'lucide-react';
+import { X, Minus, Maximize2, Minimize2, GripVertical, Calculator, GripHorizontal, SquareArrowOutUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCalculadora } from '@/contexts/CalculadoraContext';
 import { Button } from '@/components/ui/button';
 import { CalculadoraProtecaoContent } from './CalculadoraProtecaoContent';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 const MIN_WIDTH = 400;
 const MIN_HEIGHT = 400;
@@ -27,13 +21,7 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
   const resizeStart = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Abrir em nova aba
-  const handleOpenInNewTab = () => {
-    window.open(EXTERNAL_URL, '_blank');
-    closeCalculadora();
-  };
-
-  // Abrir em nova janela externa (popup)
+  // Abrir em nova janela externa (popup do navegador)
   const handleOpenInNewWindow = () => {
     const width = 800;
     const height = 700;
@@ -174,25 +162,17 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
     );
   }
 
-  // Botões de ação externa (compartilhados entre versões)
-  const ExternalActionsButtons = () => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-7 w-7" title="Abrir externamente">
-          <ExternalLink className="h-3.5 w-3.5" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="z-[10000]">
-        <DropdownMenuItem onClick={handleOpenInNewTab} className="gap-2 cursor-pointer">
-          <ExternalLink className="h-4 w-4" />
-          Abrir em nova aba
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleOpenInNewWindow} className="gap-2 cursor-pointer">
-          <SquareArrowOutUpRight className="h-4 w-4" />
-          Abrir em janela externa
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+  // Botão de ação externa
+  const ExternalWindowButton = ({ size: btnSize = 'sm' }: { size?: 'sm' | 'default' }) => (
+    <Button 
+      variant="ghost" 
+      size="icon" 
+      className={btnSize === 'sm' ? 'h-7 w-7' : 'h-8 w-8'}
+      onClick={handleOpenInNewWindow}
+      title="Abrir em janela externa"
+    >
+      <SquareArrowOutUpRight className={btnSize === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+    </Button>
   );
 
   // Versão expandida (tela cheia interna)
@@ -207,7 +187,7 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
               <h2 className="font-semibold text-foreground">Proteção Progressiva</h2>
             </div>
             <div className="flex items-center gap-1">
-              <ExternalActionsButtons />
+              <ExternalWindowButton size="default" />
               {/* Só mostra botão de sair do fullscreen se não for mobile */}
               {window.innerWidth >= 768 && (
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsExpanded(false)}>
@@ -261,7 +241,7 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
           <h2 className="font-semibold text-foreground text-sm">Proteção Progressiva</h2>
         </div>
         <div className="flex items-center gap-1">
-          <ExternalActionsButtons />
+          <ExternalWindowButton />
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsExpanded(true)} title="Tela cheia">
             <Maximize2 className="h-3.5 w-3.5" />
           </Button>
