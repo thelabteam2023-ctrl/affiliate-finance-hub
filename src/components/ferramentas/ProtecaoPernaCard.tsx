@@ -53,7 +53,7 @@ export const ProtecaoPernaCard: React.FC<ProtecaoPernaCardProps> = ({
 
   return (
     <div className={cn(
-      'rounded-lg border-2 p-3 transition-all overflow-hidden',
+      'rounded-lg border-2 p-3 transition-all overflow-hidden w-full max-w-[200px]',
       config.bg,
       disabled && 'opacity-50 pointer-events-none'
     )}>
