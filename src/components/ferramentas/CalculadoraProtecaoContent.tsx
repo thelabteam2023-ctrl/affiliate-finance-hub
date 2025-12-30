@@ -201,6 +201,8 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                   juiceGreen={acaoRecomendada.juiceGreen}
                   juiceRed={acaoRecomendada.juiceRed}
                   moeda={moeda}
+                  pernas={pernas}
+                  stakeInicial={stakeInicial}
                 />
               ) : algumRed ? (
                 <SemAcaoRecomendada 
@@ -209,6 +211,8 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                   juicePerdido={Math.abs(juiceData.juiceMedioRed)}
                   responsabilidade={juiceData.exposicaoTotal}
                   moeda={moeda}
+                  pernas={pernas}
+                  stakeInicial={stakeInicial}
                 />
               ) : todasProcessadas ? (
                 <SemAcaoRecomendada 
@@ -217,6 +221,8 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                   juicePerdido={Math.abs(juiceData.juiceMedioRed)}
                   responsabilidade={juiceData.exposicaoTotal}
                   moeda={moeda}
+                  pernas={pernas}
+                  stakeInicial={stakeInicial}
                 />
               ) : (
                 <div className="p-4 rounded-lg bg-muted/30 border border-border h-full flex items-center justify-center">

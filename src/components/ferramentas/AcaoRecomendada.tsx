@@ -1,7 +1,7 @@
 import React from 'react';
-import { AlertCircle, ArrowRight, Check, X } from 'lucide-react';
+import { AlertCircle, ArrowRight, Check, X, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { MoedaCalc } from '@/contexts/CalculadoraContext';
+import { MoedaCalc, PernaAposta } from '@/contexts/CalculadoraContext';
 
 interface AcaoRecomendadaProps {
   stakeLay: number;
@@ -12,6 +12,8 @@ interface AcaoRecomendadaProps {
   juiceGreen: number;
   juiceRed: number;
   moeda: MoedaCalc;
+  pernas: PernaAposta[];
+  stakeInicial: number;
 }
 
 export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
@@ -23,6 +25,8 @@ export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
   juiceGreen,
   juiceRed,
   moeda,
+  pernas,
+  stakeInicial,
 }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
   
@@ -35,6 +39,9 @@ export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
     const prefix = value >= 0 ? '+' : '';
     return `${prefix}${value.toFixed(2)}%`;
   };
+
+  // Calcular investimento total se todas as entradas derem GREEN
+  const investimentoTotalGreen = pernas.reduce((acc, p) => acc + p.stakeLay, 0);
 
   return (
     <div className="rounded-lg border-2 border-primary/50 bg-primary/5 p-3 sm:p-4 space-y-3 h-full">
@@ -113,6 +120,79 @@ export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Fluxo por Etapa */}
+      <div className="pt-2 border-t border-border/50">
+        <h5 className="text-xs font-semibold text-muted-foreground mb-2">FLUXO POR ETAPA</h5>
+        <div className="space-y-1">
+          {pernas.map((perna, index) => {
+            const isAtual = perna.id === pernaAtual;
+            const isProcessada = perna.status !== 'pendente';
+            const isFutura = perna.id > pernaAtual;
+            
+            return (
+              <div 
+                key={perna.id}
+                className={cn(
+                  'flex items-center gap-2 p-1.5 rounded text-xs',
+                  isAtual && 'bg-primary/10 border border-primary/30',
+                  isProcessada && perna.status === 'green' && 'bg-success/5',
+                  isProcessada && perna.status === 'red' && 'bg-destructive/5',
+                  isFutura && 'opacity-50'
+                )}
+              >
+                <span className={cn(
+                  'font-medium w-12 shrink-0',
+                  isAtual && 'text-primary',
+                  isProcessada && perna.status === 'green' && 'text-success',
+                  isProcessada && perna.status === 'red' && 'text-destructive'
+                )}>
+                  E{perna.id}
+                </span>
+                
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <span className="text-[10px]">LAY:</span>
+                  <span className="font-medium text-foreground">
+                    {currencySymbol} {perna.stakeLay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                
+                <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                
+                {isProcessada ? (
+                  <span className={cn(
+                    'font-medium',
+                    perna.status === 'green' ? 'text-success' : 'text-destructive'
+                  )}>
+                    {perna.status === 'green' ? formatValue(perna.resultadoSeGreen) : formatValue(perna.resultadoSeRed)}
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-success text-[10px]">G: {formatValue(perna.resultadoSeGreen)}</span>
+                    <span className="text-destructive text-[10px]">R: {formatValue(perna.resultadoSeRed)}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* Resumo: Investimento total se cobertura total */}
+        <div className="mt-2 p-2 rounded bg-muted/50 border border-border/50">
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-muted-foreground">Invest. Total (se tudo GREEN):</span>
+            <span className="font-bold text-foreground">
+              {currencySymbol} {(stakeInicial + investimentoTotalGreen).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+          <div className="flex justify-between items-center text-xs mt-1">
+            <span className="text-muted-foreground">Responsabilidade Total:</span>
+            <span className="font-bold text-foreground">
+              {currencySymbol} {pernas.reduce((acc, p) => acc + p.responsabilidade, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -123,6 +203,8 @@ interface SemAcaoRecomendadaProps {
   juicePerdido?: number;
   responsabilidade?: number;
   moeda?: MoedaCalc;
+  pernas?: PernaAposta[];
+  stakeInicial?: number;
 }
 
 export const SemAcaoRecomendada: React.FC<SemAcaoRecomendadaProps> = ({ 
@@ -130,7 +212,9 @@ export const SemAcaoRecomendada: React.FC<SemAcaoRecomendadaProps> = ({
   valorExtraido = 0, 
   juicePerdido = 0,
   responsabilidade = 0,
-  moeda = 'BRL'
+  moeda = 'BRL',
+  pernas = [],
+  stakeInicial = 0
 }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
 
@@ -159,6 +243,12 @@ export const SemAcaoRecomendada: React.FC<SemAcaoRecomendadaProps> = ({
   };
 
   const c = config[motivo];
+  
+  // Total investido (stakes lay que foram executados)
+  const totalInvestido = stakeInicial + pernas.reduce((acc, p) => {
+    if (p.status !== 'pendente') return acc + p.stakeLay;
+    return acc;
+  }, 0);
 
   return (
     <div className={cn('rounded-lg border-2 p-4 space-y-3', c.bg)}>
@@ -172,8 +262,61 @@ export const SemAcaoRecomendada: React.FC<SemAcaoRecomendadaProps> = ({
         </div>
       </div>
 
+      {/* Fluxo por Etapa - Histórico */}
+      {pernas.length > 0 && (
+        <div className="pt-2 border-t border-border/30">
+          <h5 className="text-xs font-semibold text-muted-foreground mb-2">HISTÓRICO DAS ETAPAS</h5>
+          <div className="space-y-1">
+            {pernas.map((perna) => {
+              const isProcessada = perna.status !== 'pendente';
+              
+              return (
+                <div 
+                  key={perna.id}
+                  className={cn(
+                    'flex items-center gap-2 p-1.5 rounded text-xs',
+                    isProcessada && perna.status === 'green' && 'bg-success/10',
+                    isProcessada && perna.status === 'red' && 'bg-destructive/10',
+                    !isProcessada && 'opacity-50'
+                  )}
+                >
+                  <div className={cn(
+                    'flex items-center gap-1 w-12 shrink-0',
+                    perna.status === 'green' && 'text-success',
+                    perna.status === 'red' && 'text-destructive'
+                  )}>
+                    {perna.status === 'green' && <Check className="h-3 w-3" />}
+                    {perna.status === 'red' && <X className="h-3 w-3" />}
+                    <span className="font-medium">E{perna.id}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <span className="text-[10px]">LAY:</span>
+                    <span className="font-medium text-foreground">
+                      {currencySymbol} {perna.stakeLay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  
+                  <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                  
+                  <span className={cn(
+                    'font-medium',
+                    perna.status === 'green' ? 'text-success' : perna.status === 'red' ? 'text-destructive' : 'text-muted-foreground'
+                  )}>
+                    {isProcessada 
+                      ? (perna.status === 'green' ? formatValue(perna.resultadoSeGreen) : formatValue(perna.resultadoSeRed))
+                      : '—'
+                    }
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Resumo da operação */}
-      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/30">
+      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/30">
         <div className="p-2 rounded bg-background/50">
           <span className="text-xs text-muted-foreground block mb-0.5">Valor Extraído</span>
           <span className={cn(
@@ -184,15 +327,21 @@ export const SemAcaoRecomendada: React.FC<SemAcaoRecomendadaProps> = ({
           </span>
         </div>
         <div className="p-2 rounded bg-background/50">
-          <span className="text-xs text-muted-foreground block mb-0.5">Responsabilidade</span>
-          <span className="text-sm font-bold text-foreground">
-            {currencySymbol} {responsabilidade.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-        </div>
-        <div className="p-2 rounded bg-background/50">
           <span className="text-xs text-muted-foreground block mb-0.5">Juice Perdido</span>
           <span className="text-sm font-bold text-destructive">
             {formatPercent(juicePerdido)}
+          </span>
+        </div>
+        <div className="p-2 rounded bg-background/50">
+          <span className="text-xs text-muted-foreground block mb-0.5">Invest. Total</span>
+          <span className="text-sm font-bold text-foreground">
+            {currencySymbol} {totalInvestido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </span>
+        </div>
+        <div className="p-2 rounded bg-background/50">
+          <span className="text-xs text-muted-foreground block mb-0.5">Responsabilidade</span>
+          <span className="text-sm font-bold text-foreground">
+            {currencySymbol} {responsabilidade.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </span>
         </div>
       </div>
