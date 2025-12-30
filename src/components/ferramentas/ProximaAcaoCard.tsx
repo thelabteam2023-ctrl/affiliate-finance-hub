@@ -91,70 +91,81 @@ export const SimulacaoAtivaCard: React.FC<SimulacaoAtivaCardProps> = ({
         </div>
       </div>
 
-      {/* Cenários */}
-      <div className="space-y-2 pt-2 border-t border-border/50">
-        {/* Se RED (objetivo!) */}
-        <div className="p-3 rounded-lg border bg-success/10 border-success/30">
-          <div className="flex items-center gap-2 mb-2">
-            <Check className="h-4 w-4 text-success" />
-            <span className="text-sm font-medium text-success">
-              Se RED (objetivo!):
-            </span>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <span className="text-muted-foreground block text-xs">Capital Recuperado:</span>
-              <span className="font-bold text-success">
-                {formatValue(simulacao.seRed.capitalExtraido)}
-              </span>
+      {/* Cenários - Grid lado a lado */}
+      <div className="pt-2 border-t border-border/50">
+        <p className="text-[10px] text-muted-foreground mb-2 text-center">Cenários possíveis</p>
+        <div className="grid grid-cols-2 gap-3">
+          {/* Coluna Esquerda - Se RED (objetivo) */}
+          <div className="p-3 rounded-lg border bg-success/10 border-success/30 flex flex-col">
+            <div className="flex items-center gap-2 mb-2">
+              <Check className="h-4 w-4 text-success" />
+              <span className="text-sm font-medium text-success">Se RED</span>
             </div>
-            <div>
-              <span className="text-muted-foreground block text-xs">Lucro Líquido:</span>
-              <span className="font-bold text-success">
-                {formatValue(simulacao.seRed.capitalExtraido - stakeInicial, true)}
-              </span>
+            
+            <div className="space-y-2 flex-1">
+              <div>
+                <span className="text-muted-foreground block text-xs">Recuperado:</span>
+                <span className="font-bold text-success">
+                  {formatValue(simulacao.seRed.capitalExtraido)}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-xs">Lucro Líq.:</span>
+                <span className="font-bold text-success">
+                  {formatValue(simulacao.seRed.capitalExtraido - stakeInicial, true)}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-xs">ROI:</span>
+                <span className="font-bold text-success">
+                  +{(((simulacao.seRed.capitalExtraido - stakeInicial) / stakeInicial) * 100).toFixed(0)}%
+                </span>
+              </div>
+            </div>
+            
+            <div className="mt-2 pt-2 border-t border-success/20 text-center">
+              <span className="text-xs text-success font-medium">Passivo zerado ✓</span>
             </div>
           </div>
-          
-          <div className="text-xs text-muted-foreground mt-2 pt-2 border-t border-success/20">
-            ROI: +{(((simulacao.seRed.capitalExtraido - stakeInicial) / stakeInicial) * 100).toFixed(1)}% · Passivo zerado ✓
-          </div>
-        </div>
 
-        {/* Se GREEN (passivo cresce) */}
-        <div className="p-3 rounded-lg border bg-warning/10 border-warning/30">
-          <div className="flex items-center gap-2 mb-2">
-            <ArrowUpRight className="h-4 w-4 text-warning" />
-            <span className="text-sm font-medium text-warning">
-              Se GREEN (passivo cresce):
-            </span>
+          {/* Coluna Direita - Se GREEN (passivo cresce) */}
+          <div className="p-3 rounded-lg border bg-warning/10 border-warning/30 flex flex-col">
+            <div className="flex items-center gap-2 mb-2">
+              <ArrowUpRight className="h-4 w-4 text-warning" />
+              <span className="text-sm font-medium text-warning">Se GREEN</span>
+            </div>
+            
+            <div className="space-y-2 flex-1">
+              <div>
+                <span className="text-muted-foreground block text-xs">
+                  {simulacao.seGreen.resultado < 0 ? 'Prejuízo:' : 'Resultado:'}
+                </span>
+                <span className={cn(
+                  'font-bold',
+                  simulacao.seGreen.resultado >= 0 ? 'text-success' : 'text-destructive'
+                )}>
+                  {formatValue(simulacao.seGreen.resultado, true)}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-xs">Novo passivo:</span>
+                <span className="font-bold text-warning">
+                  {formatValue(simulacao.seGreen.novoPassivo)}
+                </span>
+              </div>
+            </div>
+            
+            <div className="mt-2 pt-2 border-t border-warning/20 text-center">
+              {simulacao.seGreen.proxPerna ? (
+                <span className="text-xs text-warning font-medium flex items-center justify-center gap-1">
+                  <ChevronRight className="h-3 w-3" />
+                  Próxima perna
+                </span>
+              ) : (
+                <span className="text-xs text-warning font-medium">Risco aumenta</span>
+              )}
+            </div>
           </div>
-          
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <span className="text-muted-foreground block text-xs">Resultado perna:</span>
-              <span className={cn(
-                'font-bold',
-                simulacao.seGreen.resultado >= 0 ? 'text-success' : 'text-destructive'
-              )}>
-                {formatValue(simulacao.seGreen.resultado, true)}
-              </span>
-            </div>
-            <div>
-              <span className="text-muted-foreground block text-xs">Novo passivo:</span>
-              <span className="font-bold text-warning">
-                {formatValue(simulacao.seGreen.novoPassivo)}
-              </span>
-            </div>
-          </div>
-          
-          {simulacao.seGreen.proxPerna && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2 pt-2 border-t border-warning/20">
-              <ChevronRight className="h-3 w-3" />
-              <span>Próxima: Perna {simulacao.seGreen.proxPerna}</span>
-            </div>
-          )}
         </div>
       </div>
     </div>
