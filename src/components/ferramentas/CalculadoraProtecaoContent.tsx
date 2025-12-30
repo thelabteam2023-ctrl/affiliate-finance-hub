@@ -184,7 +184,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
           {/* Timeline das pernas */}
           <div className="space-y-3">
             <h3 className="font-semibold text-sm text-foreground">Progressão das Entradas</h3>
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {pernas.map((perna, index) => {
                 const pernaAnteriorRed = pernas.slice(0, index).some(p => p.status === 'red');
                 return (
