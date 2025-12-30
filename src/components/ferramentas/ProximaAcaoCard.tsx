@@ -1,7 +1,8 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { MoedaCalc } from '@/contexts/CalculadoraContext';
-import { AlertCircle, ArrowUpRight, Check, ChevronRight, PartyPopper, Target, Wallet } from 'lucide-react';
+import { AlertCircle, ArrowUpRight, Check, ChevronRight, HelpCircle, PartyPopper, Target, Wallet } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SimulacaoAtivaCardProps {
   simulacao: {
@@ -83,7 +84,19 @@ export const SimulacaoAtivaCard: React.FC<SimulacaoAtivaCardProps> = ({
             </span>
           </div>
           <div>
-            <span className="text-xs text-muted-foreground block">Responsabilidade:</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1 cursor-help">
+                    Resp. LAY (Risco Máx.):
+                    <HelpCircle className="h-3 w-3" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[220px] text-xs">
+                  <p>Risco máximo assumido nesta perna caso o evento ganhe na Bookmaker. Não representa o prejuízo final.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <span className="text-lg font-bold text-warning">
               {formatValue(simulacao.responsabilidade)}
             </span>

@@ -1,10 +1,11 @@
 import React from 'react';
-import { Clock, Check, Lock, ChevronRight, Target, Wallet, ArrowUpRight } from 'lucide-react';
+import { Clock, Check, Lock, ChevronRight, Target, Wallet, ArrowUpRight, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PernaAposta, StatusPerna, MoedaCalc } from '@/contexts/CalculadoraContext';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface PernaTimelineProps {
   pernas: PernaAposta[];
@@ -201,7 +202,19 @@ const PernaCard: React.FC<{
           <span className="font-bold text-primary">{formatValue(perna.stakeLayNecessario)}</span>
         </div>
         <div className="flex justify-between text-xs mt-1">
-          <span className="text-muted-foreground">Responsabilidade:</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-muted-foreground flex items-center gap-1 cursor-help">
+                  Resp. LAY (Risco Máx.):
+                  <HelpCircle className="h-3 w-3" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[200px] text-xs">
+                <p>Risco máximo assumido nesta perna caso o evento ganhe na Bookmaker. Não representa o prejuízo final.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <span className="font-bold text-warning">{formatValue(perna.responsabilidade)}</span>
         </div>
       </div>
