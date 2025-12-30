@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Check, TrendingUp, Lock, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Clock, Check, TrendingUp, Lock, ChevronRight, AlertTriangle, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ interface PernaTimelineProps {
   stakeInicial: number;
   onOddBackChange: (id: number, odd: number) => void;
   onOddLayChange: (id: number, odd: number) => void;
+  onStakeLayChange: (id: number, stake: number) => void;
   onConfirmar: (id: number, resultado: 'green' | 'red') => void;
 }
 
@@ -44,11 +45,11 @@ const statusConfig: Record<StatusPerna, {
     textColor: 'text-success',
   },
   red: {
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/50',
-    icon: <TrendingUp className="h-4 w-4 text-emerald-600" />,
+    bg: 'bg-destructive/10',
+    border: 'border-destructive/50',
+    icon: <TrendingUp className="h-4 w-4 text-destructive" />,
     label: 'RED',
-    textColor: 'text-emerald-600',
+    textColor: 'text-destructive',
   },
   travada: {
     bg: 'bg-muted/20',
@@ -66,6 +67,7 @@ const PernaCard: React.FC<{
   totalPernas: number;
   onOddBackChange: (odd: number) => void;
   onOddLayChange: (odd: number) => void;
+  onStakeLayChange: (stake: number) => void;
   onConfirmar: (resultado: 'green' | 'red') => void;
 }> = ({
   perna,
@@ -74,6 +76,7 @@ const PernaCard: React.FC<{
   totalPernas,
   onOddBackChange,
   onOddLayChange,
+  onStakeLayChange,
   onConfirmar,
 }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
@@ -86,9 +89,11 @@ const PernaCard: React.FC<{
     return `${prefix}${currencySymbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  const formatPercent = (value: number) => `${value.toFixed(1)}%`;
+
   return (
     <div className={cn(
-      'rounded-lg border-2 p-3 transition-all w-full max-w-[260px] flex-shrink-0',
+      'rounded-lg border-2 p-3 transition-all w-full max-w-[280px] flex-shrink-0',
       config.bg,
       config.border,
       perna.status === 'travada' && 'opacity-50'
@@ -105,20 +110,10 @@ const PernaCard: React.FC<{
         </div>
       </div>
 
-      {/* Passivo antes */}
-      {perna.status !== 'travada' && (
-        <div className="mb-3 p-2 rounded bg-background/50 border border-border/30">
-          <div className="flex justify-between text-xs">
-            <span className="text-muted-foreground">Passivo antes:</span>
-            <span className="font-bold text-foreground">{formatValue(perna.passivoAntes)}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Odds */}
+      {/* Inputs: Odds + Stake LAY */}
       <div className="space-y-2 mb-3">
         <div className="flex items-center gap-2">
-          <Label className="text-xs text-muted-foreground w-12">Back:</Label>
+          <Label className="text-xs text-muted-foreground w-14">Back:</Label>
           <Input
             type="number"
             step="0.01"
@@ -130,7 +125,7 @@ const PernaCard: React.FC<{
           />
         </div>
         <div className="flex items-center gap-2">
-          <Label className="text-xs text-muted-foreground w-12">Lay:</Label>
+          <Label className="text-xs text-muted-foreground w-14">Lay:</Label>
           <Input
             type="number"
             step="0.01"
@@ -141,31 +136,52 @@ const PernaCard: React.FC<{
             disabled={!isEditavel}
           />
         </div>
+        <div className="flex items-center gap-2">
+          <Label className="text-xs text-muted-foreground w-14">Stake:</Label>
+          <Input
+            type="number"
+            step="1"
+            min="1"
+            value={perna.stakeLay}
+            onChange={(e) => onStakeLayChange(parseFloat(e.target.value) || 1)}
+            className="w-20 h-8 text-sm"
+            disabled={!isEditavel}
+          />
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            onClick={() => onStakeLayChange(stakeInicial)}
+            className="h-8 px-2 text-[10px]"
+            disabled={!isEditavel}
+            title="Igualar ao stake inicial"
+          >
+            <RotateCcw className="h-3 w-3" />
+          </Button>
+        </div>
       </div>
 
-      {/* Erro de viabilidade */}
-      {!perna.viavel && (
-        <div className="mb-3 p-2 rounded bg-destructive/10 border border-destructive/30 flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
-          <span className="text-xs text-destructive">{perna.mensagemErro}</span>
+      {/* Responsabilidade */}
+      <div className="mb-3 p-2 rounded bg-background/50 border border-border/30">
+        <div className="flex justify-between text-xs">
+          <span className="text-muted-foreground">Responsabilidade:</span>
+          <span className="font-bold text-warning">{formatValue(perna.responsabilidade)}</span>
         </div>
-      )}
+      </div>
 
-      {/* Stake LAY recomendado */}
-      {perna.viavel && perna.status === 'ativa' && (
-        <div className="mb-3 p-2 rounded bg-primary/10 border border-primary/30">
-          <div className="text-xs text-muted-foreground mb-1">Stake LAY:</div>
-          <div className="text-lg font-bold text-primary">
-            {formatValue(perna.stakeLay)}
-          </div>
-          <div className="text-[10px] text-muted-foreground mt-1">
-            Responsabilidade: {formatValue(perna.responsabilidade)}
+      {/* Avisos informativos (nunca bloqueios) */}
+      {perna.avisos.length > 0 && (
+        <div className="mb-3 p-2 rounded bg-warning/10 border border-warning/30 flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+          <div className="text-xs text-warning space-y-0.5">
+            {perna.avisos.map((aviso, i) => (
+              <div key={i}>{aviso}</div>
+            ))}
           </div>
         </div>
       )}
 
       {/* Botões de confirmação */}
-      {perna.status === 'ativa' && perna.viavel && (
+      {perna.status === 'ativa' && (
         <div className="space-y-2 mb-3">
           <Button
             size="sm"
@@ -178,7 +194,7 @@ const PernaCard: React.FC<{
           </Button>
           <Button
             size="sm"
-            className="w-full h-8 text-xs bg-emerald-500/20 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/30"
+            className="w-full h-8 text-xs bg-destructive/20 border-destructive/30 text-destructive hover:bg-destructive/30"
             variant="outline"
             onClick={() => onConfirmar('red')}
           >
@@ -188,8 +204,8 @@ const PernaCard: React.FC<{
         </div>
       )}
 
-      {/* Resultados projetados (perna ativa) */}
-      {perna.status === 'ativa' && perna.viavel && (
+      {/* Simulação de resultados (perna ativa ou aguardando) */}
+      {(perna.status === 'ativa' || perna.status === 'aguardando') && (
         <div className="space-y-2 pt-2 border-t border-border/30">
           {/* Se GREEN */}
           <div className="p-2 rounded bg-success/5 border border-success/20">
@@ -197,41 +213,40 @@ const PernaCard: React.FC<{
               <Check className="h-3 w-3" />
               Se GREEN:
             </div>
-            {isUltima ? (
-              <div className="text-xs space-y-0.5">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Capital final:</span>
-                  <span className="font-medium text-success">
-                    {formatValue(stakeInicial - (perna.passivoDepois - stakeInicial))}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <ChevronRight className="h-3 w-3" />
-                <span>Novo passivo: <strong>{formatValue(perna.passivoDepois)}</strong></span>
-              </div>
-            )}
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Resultado:</span>
+              <span className={cn(
+                'font-bold',
+                perna.resultadoSeGreen >= 0 ? 'text-success' : 'text-destructive'
+              )}>
+                {formatValue(perna.resultadoSeGreen, true)}
+              </span>
+            </div>
           </div>
 
-          {/* Se RED (melhor) */}
-          <div className="p-2 rounded bg-emerald-500/10 border border-emerald-500/30">
-            <div className="flex items-center gap-2 text-emerald-600 text-xs font-medium mb-1">
+          {/* Se RED */}
+          <div className="p-2 rounded bg-destructive/5 border border-destructive/20">
+            <div className="flex items-center gap-1 text-destructive text-xs font-medium mb-1">
               <TrendingUp className="h-3 w-3" />
               Se RED:
-              <span className="px-1 py-0.5 rounded bg-emerald-500/20 text-[8px] font-bold">MELHOR</span>
             </div>
-            <div className="text-xs space-y-0.5">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Capital recuperado:</span>
-                <span className="font-medium text-emerald-600">{formatValue(stakeInicial)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Eficiência:</span>
-                <span className="font-medium text-emerald-600">100%</span>
-              </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Resultado:</span>
+              <span className={cn(
+                'font-bold',
+                perna.resultadoSeRed >= 0 ? 'text-success' : 'text-destructive'
+              )}>
+                {formatValue(perna.resultadoSeRed, true)}
+              </span>
             </div>
           </div>
+
+          {/* Juice */}
+          {perna.juicePerna > 0 && (
+            <div className="text-center text-[10px] text-muted-foreground">
+              Juice: {formatPercent(perna.juicePerna)}
+            </div>
+          )}
         </div>
       )}
 
@@ -240,12 +255,21 @@ const PernaCard: React.FC<{
         <div className="pt-2 border-t border-border/30">
           <div className="p-2 rounded bg-success/10 border border-success/20">
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-muted-foreground">Custo LAY:</span>
-              <span className="font-medium text-warning">{formatValue(perna.custoLay)}</span>
+              <span className="text-muted-foreground">Lucro back:</span>
+              <span className="font-medium text-success">{formatValue(perna.lucroBack, true)}</span>
             </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Novo passivo:</span>
-              <span className="font-bold text-foreground">{formatValue(perna.passivoDepois)}</span>
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-muted-foreground">Custo LAY:</span>
+              <span className="font-medium text-warning">{formatValue(-perna.responsabilidade)}</span>
+            </div>
+            <div className="flex justify-between text-xs pt-1 border-t border-success/20">
+              <span className="text-muted-foreground">Resultado:</span>
+              <span className={cn(
+                'font-bold',
+                perna.resultadoSeGreen >= 0 ? 'text-success' : 'text-destructive'
+              )}>
+                {formatValue(perna.resultadoSeGreen, true)}
+              </span>
             </div>
           </div>
         </div>
@@ -254,11 +278,23 @@ const PernaCard: React.FC<{
       {/* Resultado confirmado RED */}
       {perna.status === 'red' && (
         <div className="pt-2 border-t border-border/30">
-          <div className="p-2 rounded bg-emerald-500/10 border border-emerald-500/30">
-            <div className="text-center">
-              <div className="text-emerald-600 text-xs font-bold mb-1">EXTRAÇÃO PERFEITA!</div>
-              <div className="text-lg font-bold text-emerald-600">{formatValue(stakeInicial)}</div>
-              <div className="text-[10px] text-emerald-600/80">100% do capital recuperado</div>
+          <div className="p-2 rounded bg-destructive/10 border border-destructive/30">
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-muted-foreground">Ganho LAY:</span>
+              <span className="font-medium text-success">{formatValue(perna.ganhoLayLiquido, true)}</span>
+            </div>
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-muted-foreground">Responsabilidade:</span>
+              <span className="font-medium text-destructive">{formatValue(-perna.responsabilidade)}</span>
+            </div>
+            <div className="flex justify-between text-xs pt-1 border-t border-destructive/20">
+              <span className="text-muted-foreground">Resultado:</span>
+              <span className={cn(
+                'font-bold',
+                perna.resultadoSeRed >= 0 ? 'text-success' : 'text-destructive'
+              )}>
+                {formatValue(perna.resultadoSeRed, true)}
+              </span>
             </div>
           </div>
         </div>
@@ -273,6 +309,7 @@ export const PernaTimeline: React.FC<PernaTimelineProps> = ({
   stakeInicial,
   onOddBackChange,
   onOddLayChange,
+  onStakeLayChange,
   onConfirmar,
 }) => {
   return (
@@ -290,6 +327,7 @@ export const PernaTimeline: React.FC<PernaTimelineProps> = ({
               totalPernas={pernas.length}
               onOddBackChange={(odd) => onOddBackChange(perna.id, odd)}
               onOddLayChange={(odd) => onOddLayChange(perna.id, odd)}
+              onStakeLayChange={(stake) => onStakeLayChange(perna.id, stake)}
               onConfirmar={(resultado) => onConfirmar(perna.id, resultado)}
             />
             
@@ -299,7 +337,7 @@ export const PernaTimeline: React.FC<PernaTimelineProps> = ({
                 <div className={cn(
                   'w-8 h-0.5',
                   perna.status === 'green' ? 'bg-success' :
-                  perna.status === 'red' ? 'bg-emerald-500' :
+                  perna.status === 'red' ? 'bg-destructive' :
                   'bg-border'
                 )} />
               </div>

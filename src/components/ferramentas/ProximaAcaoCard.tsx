@@ -1,23 +1,25 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { MoedaCalc } from '@/contexts/CalculadoraContext';
-import { AlertCircle, ArrowRight, Check, TrendingUp, ChevronRight } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowRight, Check, TrendingUp, ChevronRight } from 'lucide-react';
 
-interface ProximaAcaoCardProps {
-  acao: {
+interface SimulacaoAtivaCardProps {
+  simulacao: {
     pernaId: number;
     stakeLay: number;
     oddLay: number;
+    oddBack: number;
     responsabilidade: number;
-    seRed: { valorRecuperavel: number; eficiencia: number };
-    seGreen: { novoPassivo: number; proxPerna: number | null };
+    seRed: { resultado: number; eficiencia: number };
+    seGreen: { resultado: number; eficiencia: number; proxPerna: number | null };
+    avisos: string[];
   };
   moeda: MoedaCalc;
   stakeInicial: number;
 }
 
-export const ProximaAcaoCard: React.FC<ProximaAcaoCardProps> = ({
-  acao,
+export const SimulacaoAtivaCard: React.FC<SimulacaoAtivaCardProps> = ({
+  simulacao,
   moeda,
   stakeInicial,
 }) => {
@@ -30,9 +32,8 @@ export const ProximaAcaoCard: React.FC<ProximaAcaoCardProps> = ({
 
   const formatPercent = (value: number) => `${value.toFixed(1)}%`;
 
-  // Calcular capital final se GREEN (considerando custo)
-  const custoSeGreen = acao.seGreen.novoPassivo - stakeInicial;
-  const capitalFinalSeGreen = stakeInicial - custoSeGreen;
+  const capitalSeGreen = stakeInicial + simulacao.seGreen.resultado;
+  const capitalSeRed = stakeInicial + simulacao.seRed.resultado;
 
   return (
     <div className="rounded-lg border-2 border-primary/50 bg-primary/5 p-4 space-y-4">
@@ -42,96 +43,136 @@ export const ProximaAcaoCard: React.FC<ProximaAcaoCardProps> = ({
           <AlertCircle className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h4 className="font-bold text-foreground">AÇÃO RECOMENDADA</h4>
-          <p className="text-xs text-muted-foreground">Perna {acao.pernaId}</p>
+          <h4 className="font-bold text-foreground">SIMULAÇÃO - Perna {simulacao.pernaId}</h4>
+          <p className="text-xs text-muted-foreground">Resultados projetados</p>
         </div>
       </div>
 
-      {/* Stake LAY */}
-      <div className="flex items-center gap-2">
-        <ArrowRight className="h-5 w-5 text-primary" />
-        <span className="font-medium text-foreground">Faça LAY agora:</span>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="p-3 rounded-lg bg-background border border-border">
-          <span className="text-xs text-muted-foreground block mb-0.5">Stake LAY</span>
-          <span className="text-xl font-bold text-primary">
-            {formatValue(acao.stakeLay)}
+      {/* Resumo do LAY */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="p-2 rounded-lg bg-background border border-border text-center">
+          <span className="text-[10px] text-muted-foreground block">Stake LAY</span>
+          <span className="text-sm font-bold text-primary">
+            {formatValue(simulacao.stakeLay)}
           </span>
         </div>
-        <div className="p-3 rounded-lg bg-background border border-border">
-          <span className="text-xs text-muted-foreground block mb-0.5">Odd LAY</span>
-          <span className="text-xl font-bold text-primary">
-            {acao.oddLay.toFixed(2)}
+        <div className="p-2 rounded-lg bg-background border border-border text-center">
+          <span className="text-[10px] text-muted-foreground block">Odd LAY</span>
+          <span className="text-sm font-bold text-primary">
+            {simulacao.oddLay.toFixed(2)}
+          </span>
+        </div>
+        <div className="p-2 rounded-lg bg-background border border-border text-center">
+          <span className="text-[10px] text-muted-foreground block">Responsab.</span>
+          <span className="text-sm font-bold text-warning">
+            {formatValue(simulacao.responsabilidade)}
           </span>
         </div>
       </div>
 
-      <div className="p-2 rounded bg-muted/50">
-        <span className="text-xs text-muted-foreground">
-          Responsabilidade: <strong className="text-foreground">{formatValue(acao.responsabilidade)}</strong>
-        </span>
-      </div>
+      {/* Avisos */}
+      {simulacao.avisos.length > 0 && (
+        <div className="space-y-1">
+          {simulacao.avisos.map((aviso, i) => (
+            <div key={i} className="flex items-start gap-2 p-2 rounded bg-warning/10 border border-warning/30">
+              <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+              <span className="text-xs text-warning">{aviso}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Cenários */}
       <div className="space-y-2 pt-2 border-t border-border/50">
         {/* Se GREEN */}
-        <div className="p-3 rounded-lg bg-success/10 border border-success/20">
+        <div className={cn(
+          'p-3 rounded-lg border',
+          simulacao.seGreen.resultado >= 0 
+            ? 'bg-success/10 border-success/30' 
+            : 'bg-destructive/10 border-destructive/30'
+        )}>
           <div className="flex items-center gap-2 mb-2">
-            <Check className="h-4 w-4 text-success" />
-            <span className="text-sm font-medium text-success">Se GREEN:</span>
+            <Check className={cn(
+              'h-4 w-4',
+              simulacao.seGreen.resultado >= 0 ? 'text-success' : 'text-destructive'
+            )} />
+            <span className={cn(
+              'text-sm font-medium',
+              simulacao.seGreen.resultado >= 0 ? 'text-success' : 'text-destructive'
+            )}>
+              Se GREEN:
+            </span>
           </div>
-          {acao.seGreen.proxPerna ? (
-            <div className="flex items-center gap-2 text-sm">
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">
-                Novo passivo: <strong className="text-foreground">{formatValue(acao.seGreen.novoPassivo)}</strong>
+          
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <span className="text-muted-foreground block text-xs">Capital final:</span>
+              <span className={cn(
+                'font-bold',
+                capitalSeGreen >= stakeInicial ? 'text-success' : 'text-destructive'
+              )}>
+                {formatValue(capitalSeGreen)}
               </span>
-              <span className="text-muted-foreground">→</span>
-              <span className="text-muted-foreground">Perna {acao.seGreen.proxPerna}</span>
             </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <span className="text-muted-foreground block text-xs">Capital final:</span>
-                <span className={cn(
-                  'font-bold',
-                  capitalFinalSeGreen >= 0 ? 'text-success' : 'text-destructive'
-                )}>
-                  {formatValue(capitalFinalSeGreen)}
-                </span>
-              </div>
-              <div>
-                <span className="text-muted-foreground block text-xs">Eficiência:</span>
-                <span className={cn(
-                  'font-bold',
-                  (capitalFinalSeGreen / stakeInicial) * 100 >= 50 ? 'text-success' : 'text-warning'
-                )}>
-                  {formatPercent((capitalFinalSeGreen / stakeInicial) * 100)}
-                </span>
-              </div>
+            <div>
+              <span className="text-muted-foreground block text-xs">Eficiência:</span>
+              <span className={cn(
+                'font-bold',
+                simulacao.seGreen.eficiencia >= 100 ? 'text-success' : 
+                simulacao.seGreen.eficiencia >= 50 ? 'text-warning' : 'text-destructive'
+              )}>
+                {formatPercent(simulacao.seGreen.eficiencia)}
+              </span>
+            </div>
+          </div>
+          
+          {simulacao.seGreen.proxPerna && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2 pt-2 border-t border-border/30">
+              <ChevronRight className="h-3 w-3" />
+              <span>Próxima: Perna {simulacao.seGreen.proxPerna}</span>
             </div>
           )}
         </div>
 
-        {/* Se RED (melhor) */}
-        <div className="p-3 rounded-lg bg-emerald-500/10 border-2 border-emerald-500/30">
+        {/* Se RED */}
+        <div className={cn(
+          'p-3 rounded-lg border',
+          simulacao.seRed.resultado >= 0 
+            ? 'bg-success/10 border-success/30' 
+            : 'bg-destructive/10 border-destructive/30'
+        )}>
           <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="h-4 w-4 text-emerald-600" />
-            <span className="text-sm font-medium text-emerald-600">Se RED:</span>
-            <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-[10px] font-bold text-emerald-600">
-              MELHOR
+            <TrendingUp className={cn(
+              'h-4 w-4',
+              simulacao.seRed.resultado >= 0 ? 'text-success' : 'text-destructive'
+            )} />
+            <span className={cn(
+              'text-sm font-medium',
+              simulacao.seRed.resultado >= 0 ? 'text-success' : 'text-destructive'
+            )}>
+              Se RED:
             </span>
           </div>
+          
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div>
-              <span className="text-muted-foreground block text-xs">Capital recuperado:</span>
-              <span className="font-bold text-emerald-600">{formatValue(acao.seRed.valorRecuperavel)}</span>
+              <span className="text-muted-foreground block text-xs">Capital final:</span>
+              <span className={cn(
+                'font-bold',
+                capitalSeRed >= stakeInicial ? 'text-success' : 'text-destructive'
+              )}>
+                {formatValue(capitalSeRed)}
+              </span>
             </div>
             <div>
               <span className="text-muted-foreground block text-xs">Eficiência:</span>
-              <span className="font-bold text-emerald-600">{formatPercent(acao.seRed.eficiencia)}</span>
+              <span className={cn(
+                'font-bold',
+                simulacao.seRed.eficiencia >= 100 ? 'text-success' : 
+                simulacao.seRed.eficiencia >= 50 ? 'text-warning' : 'text-destructive'
+              )}>
+                {formatPercent(simulacao.seRed.eficiencia)}
+              </span>
             </div>
           </div>
         </div>
@@ -140,36 +181,33 @@ export const ProximaAcaoCard: React.FC<ProximaAcaoCardProps> = ({
   );
 };
 
-export const SemProximaAcao: React.FC<{
-  motivo: 'red' | 'todas_green' | 'inviavel';
-  capitalRecuperado?: number;
-  eficiencia?: number;
+export const SemSimulacao: React.FC<{
+  motivo: 'red' | 'todas_green';
+  capitalFinal: number;
+  eficiencia: number;
   moeda: MoedaCalc;
-}> = ({ motivo, capitalRecuperado = 0, eficiencia = 0, moeda }) => {
+  stakeInicial: number;
+}> = ({ motivo, capitalFinal, eficiencia, moeda, stakeInicial }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
   
   const formatValue = (value: number) => {
     return `${currencySymbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  const lucrou = capitalFinal >= stakeInicial;
+
   const config = {
     red: {
-      title: 'Extração Perfeita!',
-      description: 'Capital recuperado via exchange. 0% de custo operacional.',
-      icon: <TrendingUp className="h-5 w-5 text-emerald-600" />,
-      bg: 'bg-emerald-500/10 border-emerald-500/30',
+      title: 'Operação Encerrada (RED)',
+      description: 'A operação foi encerrada por resultado RED.',
+      icon: <TrendingUp className={cn('h-5 w-5', lucrou ? 'text-success' : 'text-destructive')} />,
+      bg: lucrou ? 'bg-success/10 border-success/30' : 'bg-destructive/10 border-destructive/30',
     },
     todas_green: {
       title: 'Operação Concluída',
       description: 'Todas as pernas finalizaram com GREEN.',
-      icon: <Check className="h-5 w-5 text-success" />,
-      bg: 'bg-success/10 border-success/30',
-    },
-    inviavel: {
-      title: 'Cobertura Inviável',
-      description: 'Odd LAY muito alta para cobertura matemática.',
-      icon: <AlertCircle className="h-5 w-5 text-destructive" />,
-      bg: 'bg-destructive/10 border-destructive/30',
+      icon: <Check className={cn('h-5 w-5', lucrou ? 'text-success' : 'text-destructive')} />,
+      bg: lucrou ? 'bg-success/10 border-success/30' : 'bg-destructive/10 border-destructive/30',
     },
   };
 
@@ -187,28 +225,34 @@ export const SemProximaAcao: React.FC<{
         </div>
       </div>
 
-      {motivo !== 'inviavel' && (
-        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/30">
-          <div className="p-2 rounded bg-background/50">
-            <span className="text-xs text-muted-foreground block mb-0.5">Capital Recuperado</span>
-            <span className={cn(
-              'text-sm font-bold',
-              motivo === 'red' ? 'text-emerald-600' : 'text-success'
-            )}>
-              {formatValue(capitalRecuperado)}
-            </span>
-          </div>
-          <div className="p-2 rounded bg-background/50">
-            <span className="text-xs text-muted-foreground block mb-0.5">Eficiência</span>
-            <span className={cn(
-              'text-sm font-bold',
-              eficiencia >= 50 ? 'text-success' : 'text-warning'
-            )}>
-              {eficiencia.toFixed(1)}%
-            </span>
-          </div>
+      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/30">
+        <div className="p-2 rounded bg-background/50">
+          <span className="text-xs text-muted-foreground block mb-0.5">Capital Final</span>
+          <span className={cn(
+            'text-lg font-bold',
+            lucrou ? 'text-success' : 'text-destructive'
+          )}>
+            {formatValue(capitalFinal)}
+          </span>
         </div>
-      )}
+        <div className="p-2 rounded bg-background/50">
+          <span className="text-xs text-muted-foreground block mb-0.5">Eficiência</span>
+          <span className={cn(
+            'text-lg font-bold',
+            eficiencia >= 100 ? 'text-success' : 
+            eficiencia >= 50 ? 'text-warning' : 'text-destructive'
+          )}>
+            {eficiencia.toFixed(1)}%
+          </span>
+        </div>
+      </div>
+
+      <div className="text-center text-xs text-muted-foreground">
+        {lucrou 
+          ? `Lucro de ${formatValue(capitalFinal - stakeInicial)}`
+          : `Prejuízo de ${formatValue(stakeInicial - capitalFinal)}`
+        }
+      </div>
     </div>
   );
 };
