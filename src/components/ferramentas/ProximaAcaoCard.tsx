@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { MoedaCalc } from '@/contexts/CalculadoraContext';
-import { AlertCircle, ArrowUpRight, Check, ChevronRight, HelpCircle, PartyPopper, Target, Wallet } from 'lucide-react';
+import { AlertCircle, ArrowUpRight, Check, ChevronDown, ChevronRight, ChevronUp, HelpCircle, PartyPopper, Target, Wallet } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SimulacaoAtivaCardProps {
@@ -30,6 +30,7 @@ export const SimulacaoAtivaCard: React.FC<SimulacaoAtivaCardProps> = ({
   volumeExchange,
   exposicaoMaxima,
 }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
   
   const formatValue = (value: number, showSign = false) => {
@@ -186,17 +187,37 @@ export const SimulacaoAtivaCard: React.FC<SimulacaoAtivaCardProps> = ({
         </div>
       </div>
 
-      {/* Volume Operado */}
-      <div className="pt-3 border-t border-border/50">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">Vol. movimentado:</span>
-          <span className="font-medium text-foreground">{formatValue(volumeExchange)}</span>
+      {/* Toggle para expandir/colapsar detalhes secundários */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+      >
+        {isExpanded ? (
+          <>
+            <ChevronUp className="h-3 w-3" />
+            Ocultar detalhes
+          </>
+        ) : (
+          <>
+            <ChevronDown className="h-3 w-3" />
+            Ver detalhes
+          </>
+        )}
+      </button>
+
+      {/* Volume Operado - Apenas visível quando expandido */}
+      {isExpanded && (
+        <div className="pt-3 border-t border-border/50 animate-fade-in">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Vol. movimentado:</span>
+            <span className="font-medium text-foreground">{formatValue(volumeExchange)}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs mt-1">
+            <span className="text-muted-foreground">Exposição máx.:</span>
+            <span className="font-medium text-warning">{formatValue(exposicaoMaxima)}</span>
+          </div>
         </div>
-        <div className="flex items-center justify-between text-xs mt-1">
-          <span className="text-muted-foreground">Exposição máx.:</span>
-          <span className="font-medium text-warning">{formatValue(exposicaoMaxima)}</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
