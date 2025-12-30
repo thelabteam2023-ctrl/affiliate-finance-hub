@@ -90,7 +90,7 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
             <div className="flex items-center gap-3">
               <Calculator className="h-5 w-5 text-primary" />
-              <h2 className="font-semibold text-foreground">Calculadora de Proteção Lay</h2>
+              <h2 className="font-semibold text-foreground">Proteção Progressiva</h2>
             </div>
             <div className="flex items-center gap-1">
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsExpanded(false)}>
@@ -133,7 +133,7 @@ export const CalculadoraProtecaoPopup: React.FC = () => {
         <div className="flex items-center gap-3">
           <GripVertical className="h-4 w-4 text-muted-foreground" />
           <Calculator className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold text-foreground text-sm">Calculadora de Proteção Lay</h2>
+          <h2 className="font-semibold text-foreground text-sm">Proteção Progressiva</h2>
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsExpanded(true)}>
