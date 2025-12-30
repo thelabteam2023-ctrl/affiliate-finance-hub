@@ -195,11 +195,13 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                 <AcaoRecomendada
                   stakeLay={acaoRecomendada.stakeLay}
                   oddLay={acaoRecomendada.oddLay}
-                  resultadoSeGanhar={acaoRecomendada.resultadoSeGanhar}
-                  resultadoSePerder={acaoRecomendada.resultadoSePerder}
+                  capitalRetiravel={acaoRecomendada.capitalRetiravel}
+                  custoRetirada={acaoRecomendada.custoRetirada}
+                  resultadoSeGreen={acaoRecomendada.resultadoSeGreen}
+                  resultadoSeRed={acaoRecomendada.resultadoSeRed}
+                  eficienciaSeGreen={acaoRecomendada.eficienciaSeGreen}
+                  eficienciaSeRed={acaoRecomendada.eficienciaSeRed}
                   pernaAtual={acaoRecomendada.pernaAtual}
-                  juiceGreen={acaoRecomendada.juiceGreen}
-                  juiceRed={acaoRecomendada.juiceRed}
                   moeda={moeda}
                   pernas={pernas}
                   stakeInicial={stakeInicial}
@@ -207,9 +209,9 @@ export const CalculadoraProtecaoContent: React.FC = () => {
               ) : algumRed ? (
                 <SemAcaoRecomendada 
                   motivo="red" 
-                  valorExtraido={juiceData.resultadoEsperado}
-                  juicePerdido={Math.abs(juiceData.juiceMedioRed)}
-                  responsabilidade={juiceData.exposicaoTotal}
+                  capitalExtraido={juiceData.resultadoSeRed}
+                  eficiencia={100}
+                  custoJuice={0}
                   moeda={moeda}
                   pernas={pernas}
                   stakeInicial={stakeInicial}
@@ -217,9 +219,9 @@ export const CalculadoraProtecaoContent: React.FC = () => {
               ) : todasProcessadas ? (
                 <SemAcaoRecomendada 
                   motivo="concluido" 
-                  valorExtraido={juiceData.resultadoEsperado}
-                  juicePerdido={Math.abs(juiceData.juiceMedioRed)}
-                  responsabilidade={juiceData.exposicaoTotal}
+                  capitalExtraido={juiceData.resultadoSeGreen}
+                  eficiencia={juiceData.eficienciaSeGreen}
+                  custoJuice={juiceData.custoRetirada}
                   moeda={moeda}
                   pernas={pernas}
                   stakeInicial={stakeInicial}
