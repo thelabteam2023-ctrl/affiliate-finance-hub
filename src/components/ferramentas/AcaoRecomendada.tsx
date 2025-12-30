@@ -1,16 +1,18 @@
 import React from 'react';
-import { AlertCircle, ArrowRight, Check, X, ChevronRight } from 'lucide-react';
+import { AlertCircle, ArrowRight, Check, X, ChevronRight, TrendingUp, Percent } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MoedaCalc, PernaAposta } from '@/contexts/CalculadoraContext';
 
 interface AcaoRecomendadaProps {
   stakeLay: number;
   oddLay: number;
-  resultadoSeGanhar: number;
-  resultadoSePerder: number;
+  capitalRetiravel: number;
+  custoRetirada: number;
+  resultadoSeGreen: number;
+  resultadoSeRed: number;
+  eficienciaSeGreen: number;
+  eficienciaSeRed: number;
   pernaAtual: number;
-  juiceGreen: number;
-  juiceRed: number;
   moeda: MoedaCalc;
   pernas: PernaAposta[];
   stakeInicial: number;
@@ -19,29 +21,27 @@ interface AcaoRecomendadaProps {
 export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
   stakeLay,
   oddLay,
-  resultadoSeGanhar,
-  resultadoSePerder,
+  capitalRetiravel,
+  custoRetirada,
+  resultadoSeGreen,
+  resultadoSeRed,
+  eficienciaSeGreen,
+  eficienciaSeRed,
   pernaAtual,
-  juiceGreen,
-  juiceRed,
   moeda,
   pernas,
   stakeInicial,
 }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
   
-  const formatValue = (value: number) => {
-    const prefix = value >= 0 ? '+' : '';
+  const formatValue = (value: number, showSign = true) => {
+    const prefix = showSign ? (value >= 0 ? '+' : '') : '';
     return `${prefix}${currencySymbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatPercent = (value: number) => {
-    const prefix = value >= 0 ? '+' : '';
-    return `${prefix}${value.toFixed(2)}%`;
+    return `${value.toFixed(1)}%`;
   };
-
-  // Calcular investimento total se todas as entradas derem GREEN
-  const investimentoTotalGreen = pernas.reduce((acc, p) => acc + p.stakeLay, 0);
 
   return (
     <div className="rounded-lg border-2 border-primary/50 bg-primary/5 p-3 sm:p-4 space-y-3 h-full">
@@ -76,46 +76,49 @@ export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
           </div>
         </div>
 
+        {/* Cenários de extração */}
         <div className="space-y-1.5 pt-2 border-t border-border/50">
-          <div className="flex items-center justify-between p-1.5 sm:p-2 rounded bg-success/10 gap-2">
-            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-              <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-success shrink-0" />
-              <span className="text-xs sm:text-sm text-muted-foreground truncate">Se GREEN:</span>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
+          {/* Se GREEN */}
+          <div className="p-1.5 sm:p-2 rounded bg-success/10 gap-2">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-success shrink-0" />
+                <span className="text-xs sm:text-sm text-muted-foreground">Se GREEN:</span>
+              </div>
               <span className={cn(
                 'font-bold text-sm sm:text-base',
-                resultadoSeGanhar >= 0 ? 'text-success' : 'text-destructive'
+                resultadoSeGreen >= 0 ? 'text-success' : 'text-destructive'
               )}>
-                {formatValue(resultadoSeGanhar)}
+                {formatValue(resultadoSeGreen)}
               </span>
+            </div>
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+              <span>Eficiência</span>
               <span className={cn(
-                'text-xs',
-                juiceGreen >= 0 ? 'text-success/70' : 'text-destructive/70'
+                'font-medium',
+                eficienciaSeGreen >= 50 ? 'text-success' : eficienciaSeGreen >= 0 ? 'text-warning' : 'text-destructive'
               )}>
-                ({formatPercent(juiceGreen)})
+                {formatPercent(eficienciaSeGreen)}
               </span>
             </div>
           </div>
           
-          <div className="flex items-center justify-between p-1.5 sm:p-2 rounded bg-destructive/10 gap-2">
-            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-              <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive shrink-0" />
-              <span className="text-xs sm:text-sm text-muted-foreground truncate">Se RED:</span>
+          {/* Se RED - Melhor cenário */}
+          <div className="p-1.5 sm:p-2 rounded bg-emerald-500/10 border border-emerald-500/20 gap-2">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                <div className="px-1 py-0.5 rounded bg-emerald-500/20 text-[8px] font-bold text-emerald-600">
+                  MELHOR
+                </div>
+                <span className="text-xs sm:text-sm text-muted-foreground">Se RED:</span>
+              </div>
+              <span className="font-bold text-sm sm:text-base text-emerald-600">
+                {formatValue(resultadoSeRed)}
+              </span>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className={cn(
-                'font-bold text-sm sm:text-base',
-                resultadoSePerder >= 0 ? 'text-success' : 'text-destructive'
-              )}>
-                {formatValue(resultadoSePerder)}
-              </span>
-              <span className={cn(
-                'text-xs',
-                juiceRed >= 0 ? 'text-success/70' : 'text-destructive/70'
-              )}>
-                ({formatPercent(juiceRed)})
-              </span>
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+              <span>Eficiência (0% juice)</span>
+              <span className="font-medium text-emerald-600">{formatPercent(eficienciaSeRed)}</span>
             </div>
           </div>
         </div>
@@ -137,7 +140,7 @@ export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
                   'flex items-center gap-2 p-1.5 rounded text-xs',
                   isAtual && 'bg-primary/10 border border-primary/30',
                   isProcessada && perna.status === 'green' && 'bg-success/5',
-                  isProcessada && perna.status === 'red' && 'bg-destructive/5',
+                  isProcessada && perna.status === 'red' && 'bg-emerald-500/5',
                   isFutura && 'opacity-50'
                 )}
               >
@@ -145,7 +148,7 @@ export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
                   'font-medium w-12 shrink-0',
                   isAtual && 'text-primary',
                   isProcessada && perna.status === 'green' && 'text-success',
-                  isProcessada && perna.status === 'red' && 'text-destructive'
+                  isProcessada && perna.status === 'red' && 'text-emerald-600'
                 )}>
                   E{perna.id}
                 </span>
@@ -162,14 +165,14 @@ export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
                 {isProcessada ? (
                   <span className={cn(
                     'font-medium',
-                    perna.status === 'green' ? 'text-success' : 'text-destructive'
+                    perna.status === 'green' ? 'text-success' : 'text-emerald-600'
                   )}>
                     {perna.status === 'green' ? formatValue(perna.resultadoSeGreen) : formatValue(perna.resultadoSeRed)}
                   </span>
                 ) : (
                   <div className="flex items-center gap-2">
                     <span className="text-success text-[10px]">G: {formatValue(perna.resultadoSeGreen)}</span>
-                    <span className="text-destructive text-[10px]">R: {formatValue(perna.resultadoSeRed)}</span>
+                    <span className="text-emerald-600 text-[10px]">R: {formatValue(perna.resultadoSeRed)}</span>
                   </div>
                 )}
               </div>
@@ -177,18 +180,18 @@ export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
           })}
         </div>
         
-        {/* Resumo: Investimento total se cobertura total */}
+        {/* Resumo */}
         <div className="mt-2 p-2 rounded bg-muted/50 border border-border/50">
           <div className="flex justify-between items-center text-xs">
-            <span className="text-muted-foreground">Invest. Total (se tudo GREEN):</span>
-            <span className="font-bold text-foreground">
-              {currencySymbol} {(stakeInicial + investimentoTotalGreen).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <span className="text-muted-foreground">Capital retirável:</span>
+            <span className="font-bold text-primary">
+              {currencySymbol} {capitalRetiravel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
           <div className="flex justify-between items-center text-xs mt-1">
-            <span className="text-muted-foreground">Responsabilidade Total:</span>
-            <span className="font-bold text-foreground">
-              {currencySymbol} {pernas.reduce((acc, p) => acc + p.responsabilidade, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <span className="text-muted-foreground">Custo (juice) se GREEN:</span>
+            <span className="font-bold text-warning">
+              {currencySymbol} {custoRetirada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
         </div>
@@ -199,9 +202,9 @@ export const AcaoRecomendada: React.FC<AcaoRecomendadaProps> = ({
 
 interface SemAcaoRecomendadaProps {
   motivo: 'concluido' | 'red';
-  valorExtraido?: number;
-  juicePerdido?: number;
-  responsabilidade?: number;
+  capitalExtraido?: number;
+  eficiencia?: number;
+  custoJuice?: number;
   moeda?: MoedaCalc;
   pernas?: PernaAposta[];
   stakeInicial?: number;
@@ -209,46 +212,42 @@ interface SemAcaoRecomendadaProps {
 
 export const SemAcaoRecomendada: React.FC<SemAcaoRecomendadaProps> = ({ 
   motivo, 
-  valorExtraido = 0, 
-  juicePerdido = 0,
-  responsabilidade = 0,
+  capitalExtraido = 0, 
+  eficiencia = 0,
+  custoJuice = 0,
   moeda = 'BRL',
   pernas = [],
   stakeInicial = 0
 }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
 
-  const formatValue = (value: number) => {
-    const prefix = value >= 0 ? '+' : '';
+  const formatValue = (value: number, showSign = true) => {
+    const prefix = showSign ? (value >= 0 ? '+' : '') : '';
     return `${prefix}${currencySymbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatPercent = (value: number) => {
-    return `${value.toFixed(2)}%`;
+    return `${value.toFixed(1)}%`;
   };
+
+  const isRed = motivo === 'red';
 
   const config = {
     concluido: {
-      title: 'Operação Concluída',
-      description: 'Todas as pernas foram processadas.',
+      title: 'Extração Concluída',
+      description: 'Capital retirado via vitória na bookmaker.',
       icon: <Check className="h-5 w-5 text-success" />,
       bg: 'bg-success/10 border-success/30',
     },
     red: {
-      title: 'Operação Encerrada',
-      description: 'Uma perna deu RED. Objetivo atingido.',
-      icon: <X className="h-5 w-5 text-destructive" />,
-      bg: 'bg-destructive/10 border-destructive/30',
+      title: 'Extração Perfeita!',
+      description: 'Capital retirado via exchange. 0% de juice consumido.',
+      icon: <TrendingUp className="h-5 w-5 text-emerald-600" />,
+      bg: 'bg-emerald-500/10 border-emerald-500/30',
     },
   };
 
   const c = config[motivo];
-  
-  // Total investido (stakes lay que foram executados)
-  const totalInvestido = stakeInicial + pernas.reduce((acc, p) => {
-    if (p.status !== 'pendente') return acc + p.stakeLay;
-    return acc;
-  }, 0);
 
   return (
     <div className={cn('rounded-lg border-2 p-4 space-y-3', c.bg)}>
@@ -276,17 +275,17 @@ export const SemAcaoRecomendada: React.FC<SemAcaoRecomendadaProps> = ({
                   className={cn(
                     'flex items-center gap-2 p-1.5 rounded text-xs',
                     isProcessada && perna.status === 'green' && 'bg-success/10',
-                    isProcessada && perna.status === 'red' && 'bg-destructive/10',
+                    isProcessada && perna.status === 'red' && 'bg-emerald-500/10',
                     !isProcessada && 'opacity-50'
                   )}
                 >
                   <div className={cn(
                     'flex items-center gap-1 w-12 shrink-0',
                     perna.status === 'green' && 'text-success',
-                    perna.status === 'red' && 'text-destructive'
+                    perna.status === 'red' && 'text-emerald-600'
                   )}>
                     {perna.status === 'green' && <Check className="h-3 w-3" />}
-                    {perna.status === 'red' && <X className="h-3 w-3" />}
+                    {perna.status === 'red' && <TrendingUp className="h-3 w-3" />}
                     <span className="font-medium">E{perna.id}</span>
                   </div>
                   
@@ -301,7 +300,7 @@ export const SemAcaoRecomendada: React.FC<SemAcaoRecomendadaProps> = ({
                   
                   <span className={cn(
                     'font-medium',
-                    perna.status === 'green' ? 'text-success' : perna.status === 'red' ? 'text-destructive' : 'text-muted-foreground'
+                    perna.status === 'green' ? 'text-success' : perna.status === 'red' ? 'text-emerald-600' : 'text-muted-foreground'
                   )}>
                     {isProcessada 
                       ? (perna.status === 'green' ? formatValue(perna.resultadoSeGreen) : formatValue(perna.resultadoSeRed))
@@ -318,30 +317,36 @@ export const SemAcaoRecomendada: React.FC<SemAcaoRecomendadaProps> = ({
       {/* Resumo da operação */}
       <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/30">
         <div className="p-2 rounded bg-background/50">
-          <span className="text-xs text-muted-foreground block mb-0.5">Valor Extraído</span>
+          <span className="text-xs text-muted-foreground block mb-0.5">Capital Extraído</span>
           <span className={cn(
             'text-sm font-bold',
-            valorExtraido >= 0 ? 'text-success' : 'text-destructive'
+            capitalExtraido >= 0 ? 'text-success' : 'text-destructive'
           )}>
-            {formatValue(valorExtraido)}
+            {formatValue(capitalExtraido)}
           </span>
         </div>
         <div className="p-2 rounded bg-background/50">
-          <span className="text-xs text-muted-foreground block mb-0.5">Juice Perdido</span>
-          <span className="text-sm font-bold text-destructive">
-            {formatPercent(juicePerdido)}
+          <span className="text-xs text-muted-foreground block mb-0.5">Eficiência</span>
+          <span className={cn(
+            'text-sm font-bold',
+            isRed ? 'text-emerald-600' : eficiencia >= 50 ? 'text-success' : 'text-warning'
+          )}>
+            {formatPercent(isRed ? 100 : eficiencia)}
           </span>
         </div>
         <div className="p-2 rounded bg-background/50">
-          <span className="text-xs text-muted-foreground block mb-0.5">Invest. Total</span>
+          <span className="text-xs text-muted-foreground block mb-0.5">Stake Inicial</span>
           <span className="text-sm font-bold text-foreground">
-            {currencySymbol} {totalInvestido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            {currencySymbol} {stakeInicial.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </span>
         </div>
         <div className="p-2 rounded bg-background/50">
-          <span className="text-xs text-muted-foreground block mb-0.5">Responsabilidade</span>
-          <span className="text-sm font-bold text-foreground">
-            {currencySymbol} {responsabilidade.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          <span className="text-xs text-muted-foreground block mb-0.5">Juice Consumido</span>
+          <span className={cn(
+            'text-sm font-bold',
+            isRed ? 'text-emerald-600' : 'text-warning'
+          )}>
+            {isRed ? 'R$ 0,00' : formatValue(custoJuice, false)}
           </span>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, X, Clock, ArrowRight } from 'lucide-react';
+import { Check, X, Clock, ArrowRight, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,14 +28,13 @@ export const ProtecaoPernaCard: React.FC<ProtecaoPernaCardProps> = ({
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
   const isUltimaPerna = perna.id === totalPernas;
   
-  const formatValue = (value: number) => {
-    const prefix = value >= 0 ? '+' : '';
+  const formatValue = (value: number, showSign = true) => {
+    const prefix = showSign ? (value >= 0 ? '+' : '') : '';
     return `${prefix}${currencySymbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatPercent = (value: number) => {
-    const prefix = value >= 0 ? '+' : '';
-    return `${prefix}${value.toFixed(2)}%`;
+    return `${value.toFixed(1)}%`;
   };
 
   const statusConfig = {
@@ -52,10 +51,10 @@ export const ProtecaoPernaCard: React.FC<ProtecaoPernaCardProps> = ({
       textColor: 'text-success',
     },
     red: {
-      bg: 'bg-destructive/10 border-destructive/30',
-      icon: <X className="h-4 w-4 text-destructive" />,
+      bg: 'bg-emerald-500/10 border-emerald-500/30',
+      icon: <TrendingUp className="h-4 w-4 text-emerald-600" />,
       label: 'Red',
-      textColor: 'text-destructive',
+      textColor: 'text-emerald-600',
     },
   };
 
@@ -118,10 +117,10 @@ export const ProtecaoPernaCard: React.FC<ProtecaoPernaCardProps> = ({
             <Button
               size="sm"
               variant="outline"
-              className="flex-1 h-7 text-xs bg-destructive/10 border-destructive/30 text-destructive hover:bg-destructive/20 px-2"
+              className="flex-1 h-7 text-xs bg-emerald-500/10 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/20 px-2"
               onClick={() => onStatusChange('red')}
             >
-              <X className="h-3 w-3 mr-1" />
+              <TrendingUp className="h-3 w-3 mr-1" />
               Red
             </Button>
           </div>
@@ -136,9 +135,14 @@ export const ProtecaoPernaCard: React.FC<ProtecaoPernaCardProps> = ({
           )}
           
           {perna.status === 'red' && (
-            <div className="flex justify-between gap-2">
-              <span className="text-muted-foreground truncate">Resultado:</span>
-              <span className="font-medium text-destructive shrink-0">{formatValue(perna.resultadoSeRed)}</span>
+            <div className="space-y-1">
+              <div className="flex justify-between gap-2">
+                <span className="text-muted-foreground truncate">Capital extraído:</span>
+                <span className="font-medium text-emerald-600 shrink-0">{formatValue(perna.resultadoSeRed)}</span>
+              </div>
+              <div className="text-[10px] text-emerald-600 text-center">
+                Extração perfeita! 0% juice consumido
+              </div>
             </div>
           )}
 
@@ -151,14 +155,20 @@ export const ProtecaoPernaCard: React.FC<ProtecaoPernaCardProps> = ({
                   <span>Se GREEN na casa:</span>
                 </div>
                 {isUltimaPerna ? (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Resultado final:</span>
-                    <div className="flex items-center gap-1">
+                  <div className="space-y-0.5">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Resultado:</span>
                       <span className={cn('font-medium', perna.resultadoSeGreen >= 0 ? 'text-success' : 'text-destructive')}>
                         {formatValue(perna.resultadoSeGreen)}
                       </span>
-                      <span className={cn('text-[10px]', perna.juiceSeGreen >= 0 ? 'text-success/70' : 'text-destructive/70')}>
-                        ({formatPercent(perna.juiceSeGreen)})
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Eficiência:</span>
+                      <span className={cn(
+                        'font-medium',
+                        perna.eficienciaSeGreen >= 50 ? 'text-success' : perna.eficienciaSeGreen >= 0 ? 'text-warning' : 'text-destructive'
+                      )}>
+                        {formatPercent(perna.eficienciaSeGreen)}
                       </span>
                     </div>
                   </div>
@@ -170,21 +180,23 @@ export const ProtecaoPernaCard: React.FC<ProtecaoPernaCardProps> = ({
                 )}
               </div>
 
-              {/* Se RED na casa */}
-              <div className="bg-destructive/5 rounded p-1.5 border border-destructive/20">
-                <div className="flex items-center gap-1 text-destructive font-medium mb-1">
-                  <X className="h-3 w-3" />
+              {/* Se RED na casa - Melhor cenário */}
+              <div className="bg-emerald-500/5 rounded p-1.5 border border-emerald-500/20">
+                <div className="flex items-center gap-1 text-emerald-600 font-medium mb-1">
+                  <TrendingUp className="h-3 w-3" />
                   <span>Se RED na casa:</span>
+                  <span className="px-1 py-0.5 rounded bg-emerald-500/20 text-[8px] font-bold">MELHOR</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Resultado final:</span>
-                  <div className="flex items-center gap-1">
-                    <span className={cn('font-medium', perna.resultadoSeRed >= 0 ? 'text-success' : 'text-destructive')}>
+                <div className="space-y-0.5">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Capital extraído:</span>
+                    <span className="font-medium text-emerald-600">
                       {formatValue(perna.resultadoSeRed)}
                     </span>
-                    <span className={cn('text-[10px]', perna.juiceSeRed >= 0 ? 'text-success/70' : 'text-destructive/70')}>
-                      ({formatPercent(perna.juiceSeRed)})
-                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Eficiência:</span>
+                    <span className="font-medium text-emerald-600">100%</span>
                   </div>
                 </div>
               </div>
