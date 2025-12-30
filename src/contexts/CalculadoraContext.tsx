@@ -105,20 +105,39 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     pernas: createPernas(2),
   });
 
+  /**
+   * ALGORITMO CORRETO - Proteção Progressiva
+   * 
+   * Regra-mãe: Todo LAY conversa com o LUCRO POTENCIAL TOTAL REMANESCENTE,
+   * nunca com o lucro "da perna" nem com o delta visual.
+   * 
+   * Fórmulas:
+   * - LPR = S × ((Π odds_confirmadas × Π odds_pendentes) − 1)
+   * - Stake_LAY = LPR / (1 − comissão)
+   * - Responsabilidade = Stake_LAY × (odd_lay − 1)
+   * - Resultado_GREEN = LPR − Responsabilidade
+   * - Resultado_RED = −S + Stake_LAY × (1 − comissão)
+   */
   const recalcularPernas = useCallback((
     pernas: PernaAposta[],
     stakeInicial: number,
     comissao: number,
     objetivo: ObjetivoAposta
   ): PernaAposta[] => {
-    let stakeAcumulado = stakeInicial;
-    let lucroAcumulado = 0;
     const comissaoDecimal = comissao / 100;
+    const S = stakeInicial;
+    
+    // Verificar se já existe RED
+    const temRed = pernas.some(p => p.status === 'red');
+    
+    // Calcular responsabilidades já acumuladas (de pernas green anteriores)
+    let responsabilidadeAcumulada = 0;
+    let stakesLayAcumulados = 0;
     
     return pernas.map((perna, index) => {
-      // Se já deu red, não calcula mais nada
+      // Se já deu red em alguma perna anterior, zera tudo
       const pernaAnteriorRed = pernas.slice(0, index).some(p => p.status === 'red');
-      if (pernaAnteriorRed) {
+      if (pernaAnteriorRed || (temRed && perna.status !== 'red')) {
         return {
           ...perna,
           lucroAcumulado: 0,
@@ -131,61 +150,88 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         };
       }
 
-      const oddBack = perna.oddBack;
+      // Calcular produto das odds confirmadas (GREEN) até aqui
+      const oddsConfirmadas = pernas
+        .slice(0, index)
+        .filter(p => p.status === 'green')
+        .reduce((prod, p) => prod * p.oddBack, 1);
+      
+      // Calcular produto das odds pendentes (incluindo a atual se pendente)
+      const oddsPendentes = pernas
+        .slice(index)
+        .filter(p => p.status === 'pendente')
+        .reduce((prod, p) => prod * p.oddBack, 1);
+      
+      // Se a perna atual é GREEN, ela entra nas confirmadas para cálculo do próximo
+      const produtoTotalOdds = oddsConfirmadas * perna.oddBack * 
+        pernas.slice(index + 1).filter(p => p.status === 'pendente').reduce((prod, p) => prod * p.oddBack, 1);
+      
+      // LUCRO POTENCIAL REAL (LPR) = S × ((Π odds_confirmadas × Π odds_pendentes) − 1)
+      const LPR = S * ((oddsConfirmadas * oddsPendentes) - 1);
+      
       const oddLay = perna.oddLay;
       
-      // Retorno potencial se ganhar na casa
-      const retornoPotencial = stakeAcumulado * oddBack;
-      const lucroBackBruto = retornoPotencial - stakeAcumulado;
-      
-      // Cálculo do stake lay baseado no objetivo
       let stakeLay = 0;
       let responsabilidade = 0;
       let resultadoSeGreen = 0;
       let resultadoSeRed = 0;
 
-      if (objetivo === 'perder_casa') {
-        // Para perder na casa: lay cobre todo o lucro potencial
-        // stakeLay * (oddLay - 1) = lucroBackBruto
-        stakeLay = lucroBackBruto / (oddLay - 1);
+      if (perna.status === 'pendente') {
+        if (objetivo === 'perder_casa') {
+          // Stake_LAY = LPR / (1 − comissão)
+          stakeLay = LPR / (1 - comissaoDecimal);
+          
+          // Responsabilidade = Stake_LAY × (odd_lay − 1)
+          responsabilidade = stakeLay * (oddLay - 1);
+          
+          // Resultado_GREEN = LPR − Responsabilidade (global)
+          // Considerando responsabilidades anteriores já comprometidas
+          resultadoSeGreen = LPR - responsabilidade - responsabilidadeAcumulada;
+          
+          // Resultado_RED = −S + Stake_LAY × (1 − comissão)
+          // Considerando stakes lay anteriores
+          resultadoSeRed = -S + (stakeLay + stakesLayAcumulados) * (1 - comissaoDecimal);
+          
+        } else if (objetivo === 'limitar_lucro') {
+          // Limitar lucro a 10% do stake
+          const lucroMaximoDesejado = S * 0.1;
+          const LPRAjustado = Math.max(0, LPR - lucroMaximoDesejado);
+          stakeLay = LPRAjustado / (1 - comissaoDecimal);
+          responsabilidade = stakeLay * (oddLay - 1);
+          resultadoSeGreen = LPR - responsabilidade - responsabilidadeAcumulada;
+          resultadoSeRed = -S + (stakeLay + stakesLayAcumulados) * (1 - comissaoDecimal);
+          
+        } else {
+          // Neutralizar greens: hedge total
+          stakeLay = LPR / (1 - comissaoDecimal);
+          responsabilidade = stakeLay * (oddLay - 1);
+          resultadoSeGreen = LPR - responsabilidade - responsabilidadeAcumulada;
+          resultadoSeRed = -S + (stakeLay + stakesLayAcumulados) * (1 - comissaoDecimal);
+        }
+      } else if (perna.status === 'green') {
+        // Perna já confirmada GREEN - calcular o que foi travado
+        const LPRNaMomento = S * ((oddsConfirmadas * perna.oddBack * 
+          pernas.slice(index + 1).reduce((prod, p) => prod * p.oddBack, 1)) - 1);
+        
+        stakeLay = LPRNaMomento / (1 - comissaoDecimal);
         responsabilidade = stakeLay * (oddLay - 1);
         
-        // Se GREEN na casa: ganha back, perde lay
-        resultadoSeGreen = lucroBackBruto - responsabilidade;
+        // Acumular para próximas pernas
+        responsabilidadeAcumulada += responsabilidade;
+        stakesLayAcumulados += stakeLay;
         
-        // Se RED na casa: perde stake, ganha lay (menos comissão)
-        resultadoSeRed = stakeLay * (1 - comissaoDecimal) - stakeAcumulado;
-        
-      } else if (objetivo === 'limitar_lucro') {
-        // Limitar lucro a 10% do stake
-        const lucroMaximoDesejado = stakeAcumulado * 0.1;
-        stakeLay = Math.max(0, (lucroBackBruto - lucroMaximoDesejado) / (oddLay - 1));
-        responsabilidade = stakeLay * (oddLay - 1);
-        resultadoSeGreen = lucroBackBruto - responsabilidade;
-        resultadoSeRed = stakeLay * (1 - comissaoDecimal) - stakeAcumulado;
-        
-      } else {
-        // Neutralizar greens: lay total para zerar
-        stakeLay = retornoPotencial / oddLay;
-        responsabilidade = stakeLay * (oddLay - 1);
-        resultadoSeGreen = lucroBackBruto - responsabilidade;
-        resultadoSeRed = stakeLay * (1 - comissaoDecimal) - stakeAcumulado;
+        resultadoSeGreen = 0; // Já aconteceu
+        resultadoSeRed = 0;
       }
 
       // Cálculo do juice (%) = resultado / exposição total
-      const exposicaoTotal = stakeAcumulado + responsabilidade;
+      const exposicaoTotal = S + responsabilidade + responsabilidadeAcumulada;
       const juiceSeGreen = exposicaoTotal > 0 ? (resultadoSeGreen / exposicaoTotal) * 100 : 0;
       const juiceSeRed = exposicaoTotal > 0 ? (resultadoSeRed / exposicaoTotal) * 100 : 0;
 
-      // Se esta perna já deu green, acumula
-      if (perna.status === 'green') {
-        lucroAcumulado += resultadoSeGreen;
-        stakeAcumulado = retornoPotencial;
-      }
-
       return {
         ...perna,
-        lucroAcumulado,
+        lucroAcumulado: 0, // Será recalculado globalmente
         stakeLay: Math.max(0, stakeLay),
         responsabilidade: Math.max(0, responsabilidade),
         resultadoSeGreen,
@@ -309,43 +355,59 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, [recalcularPernas]);
 
   const getJuiceData = useCallback((): JuiceData => {
-    const { pernas, stakeInicial } = state;
+    const { pernas, stakeInicial, comissaoExchange } = state;
+    const S = stakeInicial;
+    const comissaoDecimal = comissaoExchange / 100;
     
-    const protecaoTotal = pernas.reduce((sum, p) => sum + p.stakeLay, 0);
-    const lucroVirtual = pernas.reduce((sum, p) => {
-      if (p.status === 'green') return sum + p.resultadoSeGreen;
-      return sum;
-    }, 0);
+    // Responsabilidade total = soma de todas as responsabilidades das pernas green + próxima pendente
+    const responsabilidadeTotal = pernas.reduce((sum, p) => sum + p.responsabilidade, 0);
     
-    const pernasPendentes = pernas.filter(p => p.status === 'pendente');
-    const proximaPerna = pernasPendentes[0];
+    // Stakes LAY acumulados
+    const stakesLayTotal = pernas.reduce((sum, p) => sum + p.stakeLay, 0);
     
-    let resultadoEsperado = lucroVirtual;
-    if (proximaPerna) {
-      resultadoEsperado = proximaPerna.resultadoSeRed;
-    }
-
-    // Média dos juices
-    const pernasAtivas = pernas.filter(p => p.status !== 'red' && !pernas.slice(0, pernas.indexOf(p)).some(pr => pr.status === 'red'));
-    const juiceMedioGreen = pernasAtivas.length > 0 
-      ? pernasAtivas.reduce((sum, p) => sum + p.juiceSeGreen, 0) / pernasAtivas.length 
-      : 0;
-    const juiceMedioRed = pernasAtivas.length > 0 
-      ? pernasAtivas.reduce((sum, p) => sum + p.juiceSeRed, 0) / pernasAtivas.length 
-      : 0;
+    // Exposição total = Stake inicial + Responsabilidades
+    const exposicaoTotal = S + responsabilidadeTotal;
+    
+    // Calcular odds confirmadas (green)
+    const oddsConfirmadas = pernas
+      .filter(p => p.status === 'green')
+      .reduce((prod, p) => prod * p.oddBack, 1);
+    
+    // Calcular odds pendentes
+    const oddsPendentes = pernas
+      .filter(p => p.status === 'pendente')
+      .reduce((prod, p) => prod * p.oddBack, 1);
+    
+    // LPR atual
+    const LPR = S * ((oddsConfirmadas * oddsPendentes) - 1);
+    
+    // Próxima perna pendente
+    const proximaPerna = pernas.find(p => p.status === 'pendente');
+    
+    // Resultado se tudo der GREEN
+    const resultadoGreenFinal = LPR - responsabilidadeTotal;
+    
+    // Resultado se der RED agora
+    const resultadoRedFinal = -S + stakesLayTotal * (1 - comissaoDecimal);
+    
+    // Juice médio
+    const juiceMedioGreen = exposicaoTotal > 0 ? (resultadoGreenFinal / exposicaoTotal) * 100 : 0;
+    const juiceMedioRed = exposicaoTotal > 0 ? (resultadoRedFinal / exposicaoTotal) * 100 : 0;
 
     return {
-      exposicaoTotal: stakeInicial,
-      lucroVirtual,
-      protecaoTotal,
-      resultadoEsperado,
+      exposicaoTotal,
+      lucroVirtual: LPR,
+      protecaoTotal: stakesLayTotal,
+      resultadoEsperado: proximaPerna ? resultadoRedFinal : resultadoGreenFinal,
       juiceMedioGreen,
       juiceMedioRed,
     };
   }, [state]);
 
   const getAcaoRecomendada = useCallback(() => {
-    const { pernas } = state;
+    const { pernas, stakeInicial, comissaoExchange } = state;
+    const S = stakeInicial;
+    const comissaoDecimal = comissaoExchange / 100;
     
     const proximaPerna = pernas.find(p => p.status === 'pendente');
     if (!proximaPerna) return null;
@@ -353,14 +415,47 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     const algumRed = pernas.some(p => p.status === 'red');
     if (algumRed) return null;
 
+    // Calcular responsabilidades acumuladas até agora
+    const responsabilidadeAcumulada = pernas
+      .filter(p => p.status === 'green')
+      .reduce((sum, p) => sum + p.responsabilidade, 0);
+    
+    const stakesLayAcumulados = pernas
+      .filter(p => p.status === 'green')
+      .reduce((sum, p) => sum + p.stakeLay, 0);
+
+    // Calcular LPR atual
+    const oddsConfirmadas = pernas
+      .filter(p => p.status === 'green')
+      .reduce((prod, p) => prod * p.oddBack, 1);
+    
+    const oddsPendentes = pernas
+      .filter(p => p.status === 'pendente')
+      .reduce((prod, p) => prod * p.oddBack, 1);
+    
+    const LPR = S * ((oddsConfirmadas * oddsPendentes) - 1);
+    
+    // Stake LAY recomendado
+    const stakeLay = LPR / (1 - comissaoDecimal);
+    const responsabilidade = stakeLay * (proximaPerna.oddLay - 1);
+    
+    // Resultados globais
+    const resultadoSeGreen = LPR - responsabilidade - responsabilidadeAcumulada;
+    const resultadoSeRed = -S + (stakeLay + stakesLayAcumulados) * (1 - comissaoDecimal);
+    
+    // Juice
+    const exposicaoTotal = S + responsabilidade + responsabilidadeAcumulada;
+    const juiceGreen = exposicaoTotal > 0 ? (resultadoSeGreen / exposicaoTotal) * 100 : 0;
+    const juiceRed = exposicaoTotal > 0 ? (resultadoSeRed / exposicaoTotal) * 100 : 0;
+
     return {
-      stakeLay: proximaPerna.stakeLay,
+      stakeLay,
       oddLay: proximaPerna.oddLay,
-      resultadoSeGanhar: proximaPerna.resultadoSeGreen,
-      resultadoSePerder: proximaPerna.resultadoSeRed,
+      resultadoSeGanhar: resultadoSeGreen,
+      resultadoSePerder: resultadoSeRed,
       pernaAtual: proximaPerna.id,
-      juiceGreen: proximaPerna.juiceSeGreen,
-      juiceRed: proximaPerna.juiceSeRed,
+      juiceGreen,
+      juiceRed,
     };
   }, [state]);
 
