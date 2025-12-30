@@ -48,7 +48,7 @@ const statusConfig: Record<StatusPerna, {
     bg: 'bg-success/10',
     border: 'border-success/50',
     icon: <Check className="h-4 w-4 text-success" />,
-    label: 'RED (Extraído!)',
+    label: 'RED (Recuperado!)',
     textColor: 'text-success',
   },
   travada: {
@@ -265,9 +265,15 @@ const PernaCard: React.FC<{
               Se RED (objetivo!):
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Capital extraído:</span>
+              <span className="text-muted-foreground">Capital Recuperado:</span>
               <span className="font-bold text-success">
                 {formatValue(perna.capitalExtraidoSeRed)}
+              </span>
+            </div>
+            <div className="flex justify-between text-xs mt-1">
+              <span className="text-muted-foreground">Lucro Líquido:</span>
+              <span className="font-bold text-success">
+                {formatValue(perna.capitalExtraidoSeRed - stakeInicial, true)}
               </span>
             </div>
             <div className="flex justify-between text-xs mt-1">
@@ -318,15 +324,24 @@ const PernaCard: React.FC<{
         <div className="pt-2 border-t border-border/30">
           <div className="p-2 rounded bg-success/10 border border-success/30">
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-muted-foreground">Capital extraído:</span>
+              <span className="text-muted-foreground">Capital Inicial:</span>
+              <span className="font-medium text-foreground">{formatValue(stakeInicial)}</span>
+            </div>
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-muted-foreground">Capital Recuperado (via Exchange):</span>
               <span className="font-medium text-success">{formatValue(perna.capitalExtraidoSeRed)}</span>
+            </div>
+            <div className="flex justify-between text-xs mb-1 pt-1 border-t border-success/20">
+              <span className="text-muted-foreground">Lucro Líquido Real:</span>
+              <span className="font-bold text-success">{formatValue(perna.capitalExtraidoSeRed - stakeInicial, true)}</span>
+            </div>
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-muted-foreground">ROI:</span>
+              <span className="font-bold text-success">+{(((perna.capitalExtraidoSeRed - stakeInicial) / stakeInicial) * 100).toFixed(1)}%</span>
             </div>
             <div className="flex justify-between text-xs pt-1 border-t border-success/20">
               <span className="text-muted-foreground">Passivo:</span>
               <span className="font-bold text-success">Zerado ✓</span>
-            </div>
-            <div className="text-center text-xs text-success mt-2">
-              🎉 Extração concluída com sucesso!
             </div>
           </div>
         </div>

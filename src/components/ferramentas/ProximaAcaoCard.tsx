@@ -104,21 +104,21 @@ export const SimulacaoAtivaCard: React.FC<SimulacaoAtivaCardProps> = ({
           
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div>
-              <span className="text-muted-foreground block text-xs">Capital extraído:</span>
+              <span className="text-muted-foreground block text-xs">Capital Recuperado:</span>
               <span className="font-bold text-success">
                 {formatValue(simulacao.seRed.capitalExtraido)}
               </span>
             </div>
             <div>
-              <span className="text-muted-foreground block text-xs">Eficiência:</span>
+              <span className="text-muted-foreground block text-xs">Lucro Líquido:</span>
               <span className="font-bold text-success">
-                {((simulacao.seRed.capitalExtraido / stakeInicial) * 100).toFixed(1)}%
+                {formatValue(simulacao.seRed.capitalExtraido - stakeInicial, true)}
               </span>
             </div>
           </div>
           
-          <div className="text-xs text-success mt-2 pt-2 border-t border-success/20">
-            ✓ Passivo zerado, sistema limpo
+          <div className="text-xs text-muted-foreground mt-2 pt-2 border-t border-success/20">
+            ROI: +{(((simulacao.seRed.capitalExtraido - stakeInicial) / stakeInicial) * 100).toFixed(1)}% · Passivo zerado ✓
           </div>
         </div>
 
@@ -173,6 +173,9 @@ export const SemSimulacao: React.FC<{
     return `${currencySymbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  const lucroLiquido = capitalFinal - stakeInicial;
+  const roi = (lucroLiquido / stakeInicial) * 100;
+
   return (
     <div className="rounded-lg border-2 p-4 space-y-3 bg-success/10 border-success/30">
       <div className="flex items-center gap-3">
@@ -180,34 +183,32 @@ export const SemSimulacao: React.FC<{
           <PartyPopper className="h-5 w-5 text-success" />
         </div>
         <div>
-          <h4 className="font-bold text-foreground">Extração Concluída!</h4>
-          <p className="text-sm text-muted-foreground">Capital extraído com sucesso via LAY.</p>
+          <h4 className="font-bold text-foreground">Operação Concluída!</h4>
+          <p className="text-sm text-muted-foreground">Capital recuperado via Exchange.</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/30">
-        <div className="p-2 rounded bg-background/50">
-          <span className="text-xs text-muted-foreground block mb-0.5">Capital Final</span>
-          <span className="text-lg font-bold text-success">
-            {formatValue(capitalFinal)}
+      <div className="space-y-2 pt-2 border-t border-border/30">
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Capital Inicial:</span>
+          <span className="font-medium text-foreground">{formatValue(stakeInicial)}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Capital Recuperado (via Exchange):</span>
+          <span className="font-bold text-success">{formatValue(capitalFinal)}</span>
+        </div>
+        <div className="flex justify-between text-sm pt-2 border-t border-border/30">
+          <span className="text-muted-foreground">Lucro Líquido Real:</span>
+          <span className={cn('font-bold', lucroLiquido >= 0 ? 'text-success' : 'text-destructive')}>
+            {lucroLiquido >= 0 ? '+' : ''}{formatValue(lucroLiquido)}
           </span>
         </div>
-        <div className="p-2 rounded bg-background/50">
-          <span className="text-xs text-muted-foreground block mb-0.5">Eficiência</span>
-          <span className={cn(
-            'text-lg font-bold',
-            eficiencia >= 100 ? 'text-success' : 'text-primary'
-          )}>
-            {eficiencia.toFixed(1)}%
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">ROI da Operação:</span>
+          <span className={cn('font-bold', roi >= 0 ? 'text-success' : 'text-destructive')}>
+            {roi >= 0 ? '+' : ''}{roi.toFixed(1)}%
           </span>
         </div>
-      </div>
-
-      <div className="text-center text-xs text-muted-foreground">
-        {capitalFinal >= stakeInicial 
-          ? `Lucro de ${formatValue(capitalFinal - stakeInicial)}`
-          : `Custo de extração: ${formatValue(stakeInicial - capitalFinal)}`
-        }
       </div>
     </div>
   );
