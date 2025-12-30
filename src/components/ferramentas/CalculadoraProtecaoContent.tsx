@@ -157,27 +157,33 @@ export const CalculadoraProtecaoContent: React.FC = () => {
               >
                 <div className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50 transition-colors">
                   <RadioGroupItem value="perder_casa" id="perder_casa" />
-                  <Label htmlFor="perder_casa" className="text-sm cursor-pointer flex-1">
-                    Perder na casa
-                    <span className="block text-xs text-muted-foreground font-normal">Extração de bônus</span>
+                  <Label htmlFor="perder_casa" className="text-sm cursor-pointer inline-flex items-center gap-1.5">
+                    <span>
+                      Perder na casa
+                      <span className="block text-xs text-muted-foreground font-normal">Extração de bônus</span>
+                    </span>
+                    <ObjetivoExplicacaoDialog tipo="perder_casa" />
                   </Label>
-                  <ObjetivoExplicacaoDialog tipo="perder_casa" />
                 </div>
                 <div className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50 transition-colors">
                   <RadioGroupItem value="limitar_lucro" id="limitar_lucro" />
-                  <Label htmlFor="limitar_lucro" className="text-sm cursor-pointer flex-1">
-                    Limitar lucro
-                    <span className="block text-xs text-muted-foreground font-normal">Trava resultado máximo</span>
+                  <Label htmlFor="limitar_lucro" className="text-sm cursor-pointer inline-flex items-center gap-1.5">
+                    <span>
+                      Limitar lucro
+                      <span className="block text-xs text-muted-foreground font-normal">Trava resultado máximo</span>
+                    </span>
+                    <ObjetivoExplicacaoDialog tipo="limitar_lucro" />
                   </Label>
-                  <ObjetivoExplicacaoDialog tipo="limitar_lucro" />
                 </div>
                 <div className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50 transition-colors">
                   <RadioGroupItem value="neutralizar_greens" id="neutralizar_greens" />
-                  <Label htmlFor="neutralizar_greens" className="text-sm cursor-pointer flex-1">
-                    Neutralizar greens
-                    <span className="block text-xs text-muted-foreground font-normal">Anular ganhos inesperados</span>
+                  <Label htmlFor="neutralizar_greens" className="text-sm cursor-pointer inline-flex items-center gap-1.5">
+                    <span>
+                      Neutralizar greens
+                      <span className="block text-xs text-muted-foreground font-normal">Anular ganhos inesperados</span>
+                    </span>
+                    <ObjetivoExplicacaoDialog tipo="neutralizar_greens" />
                   </Label>
-                  <ObjetivoExplicacaoDialog tipo="neutralizar_greens" />
                 </div>
               </RadioGroup>
             </div>

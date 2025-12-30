@@ -94,7 +94,7 @@ const menuGroups: MenuGroup[] = [
   {
     label: "FERRAMENTAS",
     items: [
-      { title: "Calculadora Lay", url: "#calculadora-lay", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
+      { title: "Proteção Progressiva", url: "#calculadora-lay", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
     ],
   },
   {
