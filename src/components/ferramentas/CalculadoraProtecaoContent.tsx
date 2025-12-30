@@ -1,6 +1,6 @@
 import React from 'react';
 import { RotateCcw, Plus, Minus } from 'lucide-react';
-import { useCalculadora, TipoAposta, MoedaCalc } from '@/contexts/CalculadoraContext';
+import { useCalculadora, TipoAposta, MoedaCalc, ModoCalculo } from '@/contexts/CalculadoraContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ import { PernaTimeline } from './PernaTimeline';
 import { MetricasGlobaisCard } from './MetricasGlobaisCard';
 import { SimulacaoAtivaCard, SemSimulacao } from './ProximaAcaoCard';
 import { GuiaProtecao } from './GuiaProtecao';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export const CalculadoraProtecaoContent: React.FC = () => {
   const {
@@ -18,12 +19,14 @@ export const CalculadoraProtecaoContent: React.FC = () => {
     stakeInicial,
     comissaoExchange,
     moeda,
+    modoCalculo,
     pernas,
     numPernas,
     setTipoAposta,
     setStakeInicial,
     setComissaoExchange,
     setMoeda,
+    setModoCalculo,
     setNumPernas,
     updatePernaOddBack,
     updatePernaOddLay,
@@ -56,6 +59,30 @@ export const CalculadoraProtecaoContent: React.FC = () => {
             {/* Configuração Inicial */}
             <div className="p-4 rounded-lg bg-muted/30 border border-border space-y-3">
               <h3 className="font-semibold text-sm text-foreground">Configuração Inicial</h3>
+              
+              {/* Toggle Modo de Cálculo */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Modo de Cálculo</Label>
+                <ToggleGroup
+                  type="single"
+                  value={modoCalculo}
+                  onValueChange={(v) => v && setModoCalculo(v as ModoCalculo)}
+                  className="justify-start"
+                >
+                  <ToggleGroupItem value="balanceado" className="text-xs px-3">
+                    Matched Bet
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="manual" className="text-xs px-3">
+                    Simulação
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                <p className="text-[10px] text-muted-foreground">
+                  {modoCalculo === 'balanceado' 
+                    ? '📐 Stake LAY calculado para equalizar resultados'
+                    : '🎛️ Stake LAY manual para simular cenários'
+                  }
+                </p>
+              </div>
               
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -103,7 +130,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                     type="number"
                     min="0"
                     max="20"
-                    step="0.5"
+                    step="0.1"
                     value={comissaoExchange}
                     onChange={(e) => setComissaoExchange(parseFloat(e.target.value) || 0)}
                     className="h-9"
@@ -170,6 +197,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
           <PernaTimeline
             pernas={pernas}
             moeda={moeda}
+            modoCalculo={modoCalculo}
             stakeInicial={stakeInicial}
             onOddBackChange={updatePernaOddBack}
             onOddLayChange={updatePernaOddLay}
