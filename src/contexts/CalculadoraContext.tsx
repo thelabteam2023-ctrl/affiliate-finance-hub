@@ -1,21 +1,25 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
 /**
- * CALCULADORA DE RECUPERAÇÃO PROGRESSIVA + EXTRAÇÃO VIA LAY
+ * CALCULADORA DE RECUPERAÇÃO PROGRESSIVA - MODELO CAPITAL COMPROMETIDO
  * 
- * CONCEITO FUNDAMENTAL CORRIGIDO:
- * - Passivo: capital atualmente preso na Bookmaker
- * - Extração: FRAÇÃO do passivo que se deseja retirar via Exchange (0% a 100%)
- * - Target: Passivo × Percentual_Extração (NUNCA maior que o passivo!)
- * - Lucro: valor acima do passivo (não é objetivo padrão)
+ * CONCEITO FUNDAMENTAL:
+ * - Capital Comprometido: TODO o valor já colocado em risco enquanto a aposta NÃO foi resolvida
+ *   Inclui: stake inicial + todo capital utilizado em LAYs anteriores
+ * - Target: SEMPRE igual ao Capital Comprometido (recuperação de 100%)
+ * - Custo se GREEN: responsabilidade do LAY (aumenta o capital comprometido)
+ * - Recuperação se RED: capital comprometido é recuperado via Exchange
  * 
  * FÓRMULAS CENTRAIS:
- * - Target_n = Passivo_n × (Percentual_Extração / 100)
+ * - Capital_Comprometido_1 = Stake_Inicial
+ * - Capital_Comprometido_n = Capital_Comprometido_{n-1} + Custo_LAY_{n-1}
+ * - Target_n = Capital_Comprometido_n (SEMPRE 100%)
  * - Stake_LAY_n = Target_n / (1 - comissão)
- * - Se RED: Ganho_LAY = Stake_LAY × (1 - c), Passivo restante = Passivo - Target
- * - Se GREEN: Resultado = Lucro_BACK - Perda_LAY, Novo_Passivo depende do resultado
+ * - Custo_LAY = Responsabilidade = Stake_LAY × (oddLay - 1)
+ * - Se RED: Recuperado = Stake_LAY × (1 - c) = Target
+ * - Se GREEN: Novo_Capital_Comprometido = Capital_Comprometido + Custo_LAY
  * 
- * REGRA ABSOLUTA: Target ≤ Passivo (nunca pode extrair mais do que tem)
+ * REGRA ABSOLUTA: Capital Comprometido só aumenta (nunca diminui, exceto em RED onde zera)
  */
 
 export type StatusPerna = 'aguardando' | 'ativa' | 'green' | 'red' | 'travada';
@@ -26,41 +30,46 @@ export interface PernaAposta {
   id: number;
   oddBack: number;            // Definido na configuração inicial (read-only durante execução)
   oddLay: number;             // Editável APENAS quando a perna está ativa
-  percentualExtracao: number; // % do passivo a extrair (0-100)
   status: StatusPerna;
   
-  // Calculados automaticamente com base no modelo
-  passivoAtual: number;       // Pₙ - Passivo ATUAL da perna
-  target: number;             // Tₙ = Pₙ × (% Extração) - O quanto queremos recuperar
-  stakeLayNecessario: number; // Stake_LAY = Target / (1 - c)
-  responsabilidade: number;   // Stake_LAY × (oddLay - 1)
+  // MODELO CAPITAL COMPROMETIDO
+  capitalComprometido: number;    // Todo capital já em risco (Stake Inicial + Σ custos LAY anteriores)
+  target: number;                 // = capitalComprometido (sempre 100%)
+  stakeLayNecessario: number;     // = Target / (1 - comissão)
+  custoLay: number;               // = Stake_LAY × (oddLay - 1) = responsabilidade
   
   // Resultados projetados
-  lucroBack: number;           // S0 × (oddBack - 1)
-  perdaLay: number;            // Stake_LAY × (oddLay - 1)
-  resultadoSeGreen: number;    // Lucro_BACK - Perda_LAY
-  novoPassivoSeGreen: number;  // Depende do resultado GREEN
-  resultadoSeRed: number;      // Sempre 0 (passivo parcialmente zerado)
-  capitalExtraidoSeRed: number; // Stake_LAY × (1 - c) = Target
-  passivoRestanteSeRed: number; // Passivo - Target (o que sobra se RED)
+  lucroBack: number;              // S0 × (oddBack - 1)
+  
+  // SE GREEN (Bookmaker ganha, aposta continua)
+  custoSeGreen: number;                  // = custoLay (o que perdemos no LAY)
+  novoCapitalComprometido: number;       // = capitalComprometido + custoLay
+  
+  // SE RED (Exchange ganha, operação encerra)
+  capitalRecuperado: number;             // = Stake_LAY × (1 - c) = Target
+  lucroSeRed: number;                    // = capitalRecuperado - stakeInicial
 }
 
 export interface MetricasGlobais {
   stakeInicial: number;
   
+  // Capital comprometido atual
+  capitalComprometidoAtual: number;
+  targetAtual: number;
+  
   // Volume operado (informativo)
   volumeExchange: number;       // Soma dos stakes LAY
   exposicaoMaxima: number;      // Maior responsabilidade
   
-  // Passivo atual
-  passivoAtual: number;
-  targetAtual: number;
-  
   // Se RED na perna ativa
-  capitalExtraidoSeRedAgora: number;
+  capitalRecuperadoSeRedAgora: number;
+  lucroSeRedAgora: number;
   
   // Se todas GREEN (pior cenário)
-  passivoFinalSeTodasGreen: number;
+  capitalComprometidoFinal: number;
+  
+  // Se parar agora (sem proteger)
+  custoSeParar: number;         // Capital comprometido que seria perdido
   
   // Status
   operacaoEncerrada: boolean;
@@ -97,21 +106,19 @@ interface CalculadoraContextType extends CalculadoraState {
   setNumPernas: (num: number) => void;
   updatePernaOddBack: (id: number, odd: number) => void;
   updatePernaOddLay: (id: number, odd: number) => void;
-  updatePernaExtracao: (id: number, percentual: number) => void;
   confirmarPerna: (id: number, resultado: 'green' | 'red') => void;
   resetCalculadora: () => void;
   getMetricasGlobais: () => MetricasGlobais;
   getSimulacaoAtiva: () => {
     pernaId: number;
-    passivo: number;
-    percentualExtracao: number;
+    capitalComprometido: number;
     target: number;
     stakeLay: number;
     oddLay: number;
     oddBack: number;
-    responsabilidade: number;
-    seRed: { capitalExtraido: number; resultado: string; passivoRestante: number };
-    seGreen: { resultado: number; novoPassivo: number; proxPerna: number | null };
+    custoLay: number;
+    seRed: { capitalRecuperado: number; lucro: number };
+    seGreen: { custo: number; novoCapitalComprometido: number; proxPerna: number | null };
   } | null;
 }
 
@@ -143,21 +150,17 @@ const createPernas = (num: number, stakeInicial: number): PernaAposta[] => {
     id: i + 1,
     oddBack: 2.0,
     oddLay: 2.0,
-    percentualExtracao: 100, // Por padrão, 100% = extrair todo o passivo
     status: i === 0 ? 'ativa' : 'aguardando',
-    // Perna 1: passivoAtual = stakeInicial (o capital já está em jogo!)
-    // Demais: será calculado pelo recalcularPernas
-    passivoAtual: i === 0 ? stakeInicial : 0,
+    // Perna 1: capitalComprometido = stakeInicial
+    capitalComprometido: i === 0 ? stakeInicial : 0,
     target: 0,
     stakeLayNecessario: 0,
-    responsabilidade: 0,
+    custoLay: 0,
     lucroBack: 0,
-    perdaLay: 0,
-    resultadoSeGreen: 0,
-    novoPassivoSeGreen: 0,
-    resultadoSeRed: 0,
-    capitalExtraidoSeRed: 0,
-    passivoRestanteSeRed: 0,
+    custoSeGreen: 0,
+    novoCapitalComprometido: 0,
+    capitalRecuperado: 0,
+    lucroSeRed: 0,
   }));
 };
 
@@ -168,18 +171,14 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
   }));
 
   /**
-   * RECALCULAR PERNAS - Modelo de Extração Percentual
+   * RECALCULAR PERNAS - Modelo Capital Comprometido
    * 
-   * CONCEITO CORRIGIDO:
-   * - Passivo = capital preso na Bookmaker
-   * - Extração = PERCENTUAL do passivo a retirar (0-100%)
-   * - Target = Passivo × (% Extração) → NUNCA maior que o passivo!
-   * 
-   * Fórmulas:
-   * - Target_n = Passivo_Atual_n × (Percentual_Extração / 100)
-   * - Stake_LAY_n = Target_n / (1 - comissão)
-   * - Se RED: recupera Target, sobra (Passivo - Target)
-   * - Se GREEN: Resultado = Lucro_BACK - Perda_LAY
+   * CONCEITO:
+   * - Capital Comprometido = todo capital já em risco
+   * - Target = Capital Comprometido (sempre 100%)
+   * - Custo do LAY = responsabilidade = Stake_LAY × (oddLay - 1)
+   * - Se GREEN: novo Capital Comprometido = atual + custo do LAY
+   * - Se RED: recupera todo o Capital Comprometido
    */
   const recalcularPernas = useCallback((
     pernas: PernaAposta[],
@@ -189,85 +188,75 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     const comissaoDecimal = comissao / 100;
     let operacaoEncerrada = false;
     let pernaAtiva = 1;
-    // Perna 1 começa com o stake inicial como passivo (REGRA ABSOLUTA)
-    let passivoParaProximaPerna = stakeInicial;
+    // Perna 1 começa com o stake inicial como capital comprometido
+    let capitalParaProximaPerna = stakeInicial;
     
     return pernas.map((perna, index) => {
-      const { oddBack, oddLay, percentualExtracao } = perna;
+      const { oddBack, oddLay } = perna;
       
       // Se operação já encerrou (RED anterior)
       if (operacaoEncerrada) {
         return {
           ...perna,
           status: 'travada' as StatusPerna,
-          passivoAtual: 0,
+          capitalComprometido: 0,
           target: 0,
           stakeLayNecessario: 0,
-          responsabilidade: 0,
+          custoLay: 0,
           lucroBack: 0,
-          perdaLay: 0,
-          resultadoSeGreen: 0,
-          novoPassivoSeGreen: 0,
-          resultadoSeRed: 0,
-          capitalExtraidoSeRed: 0,
-          passivoRestanteSeRed: 0,
+          custoSeGreen: 0,
+          novoCapitalComprometido: 0,
+          capitalRecuperado: 0,
+          lucroSeRed: 0,
         };
       }
       
       // ==========================================
-      // MODELO DE EXTRAÇÃO PERCENTUAL (CORRIGIDO)
+      // MODELO CAPITAL COMPROMETIDO
       // ==========================================
       
-      // PASSIVO ATUAL:
-      // - Perna 1: = stakeInicial (o capital JÁ está em jogo desde o início!)
-      // - Perna n > 1: = passivo herdado da perna anterior
-      const passivoAtual = index === 0 ? stakeInicial : passivoParaProximaPerna;
+      // CAPITAL COMPROMETIDO:
+      // - Perna 1: = stakeInicial (o capital JÁ está em jogo!)
+      // - Perna n > 1: = capital comprometido anterior + custo do LAY anterior
+      const capitalComprometido = index === 0 ? stakeInicial : capitalParaProximaPerna;
       
-      // VALIDAÇÃO: Perna 1 NUNCA pode ter passivo zero (isso seria um bug)
-      if (index === 0 && passivoAtual === 0 && stakeInicial > 0) {
-        console.error('ERRO: Perna 1 com passivo zero - isso não deveria acontecer!');
+      // VALIDAÇÃO: Capital Comprometido só pode aumentar (nunca diminuir)
+      if (index > 0 && capitalComprometido < stakeInicial) {
+        console.error('ERRO: Capital Comprometido menor que stake inicial - isso não deveria acontecer!');
       }
       
       // ==========================================
-      // FÓRMULA CORRIGIDA: Target = Passivo × % Extração
+      // FÓRMULA: Target = Capital Comprometido (sempre 100%)
       // ==========================================
-      // REGRA ABSOLUTA: Target NUNCA pode ser maior que o Passivo!
-      const percentualLimitado = Math.min(Math.max(percentualExtracao, 0), 100);
-      const target = passivoAtual * (percentualLimitado / 100);
+      const target = capitalComprometido;
       
       // Stake LAY necessário = Target / (1 - comissão)
       const stakeLayNecessario = target / (1 - comissaoDecimal);
       
-      // Responsabilidade = Stake_LAY × (oddLay - 1)
-      const responsabilidade = stakeLayNecessario * (oddLay - 1);
+      // Custo do LAY (responsabilidade) = Stake_LAY × (oddLay - 1)
+      const custoLay = stakeLayNecessario * (oddLay - 1);
       
       // Lucro BACK = S0 × (oddBack - 1)
       const lucroBack = stakeInicial * (oddBack - 1);
       
-      // Perda LAY = Stake_LAY × (oddLay - 1) = responsabilidade
-      const perdaLay = responsabilidade;
+      // ==========================================
+      // SE GREEN (Bookmaker ganha, aposta continua)
+      // ==========================================
+      // O LAY perde, pagamos a responsabilidade
+      const custoSeGreen = custoLay;
+      
+      // Novo capital comprometido = atual + custo do LAY
+      // REGRA: Capital Comprometido SÓ AUMENTA!
+      const novoCapitalComprometido = capitalComprometido + custoLay;
       
       // ==========================================
-      // SE GREEN (ganha na Bookmaker)
+      // SE RED (Exchange ganha, operação encerra)
       // ==========================================
-      const resultadoSeGreen = lucroBack - perdaLay;
+      // Recuperamos todo o capital comprometido via Exchange
+      const capitalRecuperado = stakeLayNecessario * (1 - comissaoDecimal); // = target
       
-      // Novo passivo se GREEN:
-      // O passivo é ajustado pelo resultado da operação:
-      // - Se resultado positivo (lucro): passivo DIMINUI
-      // - Se resultado negativo (prejuízo): passivo AUMENTA
-      // Fórmula: novoPassivo = passivoAtual - resultadoSeGreen
-      const novoPassivoSeGreen = passivoAtual - resultadoSeGreen;
-      
-      // ==========================================
-      // SE RED (cai na Exchange)
-      // ==========================================
-      // Ganho LAY Líquido = Stake_LAY × (1 - c) = Target (exatamente o que queríamos extrair!)
-      const capitalExtraidoSeRed = stakeLayNecessario * (1 - comissaoDecimal);
-      // Passivo restante = Passivo - Target (o que NÃO conseguimos extrair)
-      const passivoRestanteSeRed = passivoAtual - target;
-      // Resultado = 0 (não é lucro nem prejuízo, é extração do próprio capital)
-      const resultadoSeRed = 0;
+      // Lucro = capital recuperado - stake inicial
+      const lucroSeRed = capitalRecuperado - stakeInicial;
       
       // ==========================================
       // ATUALIZAR STATUS
@@ -279,39 +268,35 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         
         return {
           ...perna,
-          passivoAtual,
+          capitalComprometido,
           target,
           stakeLayNecessario,
-          responsabilidade,
+          custoLay,
           lucroBack,
-          perdaLay,
-          resultadoSeGreen,
-          novoPassivoSeGreen,
-          resultadoSeRed,
-          capitalExtraidoSeRed,
-          passivoRestanteSeRed,
+          custoSeGreen,
+          novoCapitalComprometido,
+          capitalRecuperado,
+          lucroSeRed,
         };
       }
       
       // Se perna já foi confirmada como GREEN
       if (perna.status === 'green') {
-        // Atualizar passivo para próxima perna
-        passivoParaProximaPerna = novoPassivoSeGreen;
+        // Atualizar capital comprometido para próxima perna
+        capitalParaProximaPerna = novoCapitalComprometido;
         pernaAtiva = index + 2;
         
         return {
           ...perna,
-          passivoAtual,
+          capitalComprometido,
           target,
           stakeLayNecessario,
-          responsabilidade,
+          custoLay,
           lucroBack,
-          perdaLay,
-          resultadoSeGreen,
-          novoPassivoSeGreen,
-          resultadoSeRed,
-          capitalExtraidoSeRed,
-          passivoRestanteSeRed,
+          custoSeGreen,
+          novoCapitalComprometido,
+          capitalRecuperado,
+          lucroSeRed,
         };
       }
       
@@ -321,23 +306,21 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
         status = 'ativa';
       }
       
-      // Preparar passivo para próxima perna (se esta for GREEN)
-      passivoParaProximaPerna = novoPassivoSeGreen;
+      // Preparar capital comprometido para próxima perna (se esta for GREEN)
+      capitalParaProximaPerna = novoCapitalComprometido;
       
       return {
         ...perna,
         status,
-        passivoAtual,
+        capitalComprometido,
         target,
         stakeLayNecessario,
-        responsabilidade,
+        custoLay,
         lucroBack,
-        perdaLay,
-        resultadoSeGreen,
-        novoPassivoSeGreen,
-        resultadoSeRed,
-        capitalExtraidoSeRed,
-        passivoRestanteSeRed,
+        custoSeGreen,
+        novoCapitalComprometido,
+        capitalRecuperado,
+        lucroSeRed,
       };
     });
   }, []);
@@ -379,7 +362,6 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const setStakeInicial = useCallback((stake: number) => {
     setState(prev => {
-      // Percentual de extração permanece o mesmo (não depende do valor do stake)
       return {
         ...prev,
         stakeInicial: stake,
@@ -441,22 +423,6 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     });
   }, [recalcularPernas]);
 
-  const updatePernaExtracao = useCallback((id: number, percentual: number) => {
-    setState(prev => {
-      const perna = prev.pernas.find(p => p.id === id);
-      if (perna && (perna.status === 'aguardando' || perna.status === 'ativa')) {
-        // Limitar percentual entre 0 e 100
-        const percentualLimitado = Math.min(Math.max(percentual, 0), 100);
-        const newPernas = prev.pernas.map(p => p.id === id ? { ...p, percentualExtracao: percentualLimitado } : p);
-        return {
-          ...prev,
-          pernas: recalcularPernas(newPernas, prev.stakeInicial, prev.comissaoExchange),
-        };
-      }
-      return prev;
-    });
-  }, [recalcularPernas]);
-
   const confirmarPerna = useCallback((id: number, resultado: 'green' | 'red') => {
     setState(prev => {
       const pernaIndex = prev.pernas.findIndex(p => p.id === id);
@@ -503,41 +469,47 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     
     // Volume operado
     const volumeExchange = pernas.reduce((sum, p) => sum + p.stakeLayNecessario, 0);
-    const exposicaoMaxima = Math.max(...pernas.map(p => p.responsabilidade));
+    const exposicaoMaxima = Math.max(...pernas.map(p => p.custoLay));
     
-    // Passivo atual (da perna ativa) - nunca é zero na Perna 1
-    const passivoAtual = pernaAtiva?.passivoAtual || stakeInicial;
-    const targetAtual = pernaAtiva?.target || 0;
+    // Capital comprometido atual (da perna ativa)
+    const capitalComprometidoAtual = pernaAtiva?.capitalComprometido || stakeInicial;
+    const targetAtual = pernaAtiva?.target || stakeInicial;
     
     // Se RED agora
-    const capitalExtraidoSeRedAgora = pernaAtiva?.capitalExtraidoSeRed || stakeInicial;
+    const capitalRecuperadoSeRedAgora = pernaAtiva?.capitalRecuperado || stakeInicial;
+    const lucroSeRedAgora = pernaAtiva?.lucroSeRed || 0;
     
-    // Se todas GREEN (calcular passivo final)
+    // Se todas GREEN (pior cenário - maior capital comprometido)
     const ultimaPerna = pernas[pernas.length - 1];
-    const passivoFinalSeTodasGreen = ultimaPerna?.novoPassivoSeGreen || 0;
+    const capitalComprometidoFinal = ultimaPerna?.novoCapitalComprometido || 0;
+    
+    // Se parar agora (sem proteger)
+    const custoSeParar = capitalComprometidoAtual;
     
     // Calcular capital final e eficiência
     let capitalFinal = stakeInicial;
     let eficienciaFinal = 100;
     
     if (pernaRed) {
-      // RED = capital extraído
-      capitalFinal = pernaRed.capitalExtraidoSeRed;
+      // RED = capital recuperado
+      capitalFinal = pernaRed.capitalRecuperado;
       eficienciaFinal = stakeInicial > 0 ? (capitalFinal / stakeInicial) * 100 : 0;
     }
     
     // Aviso de risco progressivo
-    const maiorStake = Math.max(...pernas.map(p => p.stakeLayNecessario));
-    const avisoRisco = `O risco cresce progressivamente a cada GREEN. Maior stake LAY necessário: ${maiorStake.toFixed(2)}`;
+    const maiorCusto = Math.max(...pernas.map(p => p.custoLay));
+    const avisoRisco = `O risco cresce progressivamente a cada GREEN. Maior custo LAY: ${maiorCusto.toFixed(2)}`;
     
     return {
       stakeInicial,
+      capitalComprometidoAtual,
+      targetAtual,
       volumeExchange,
       exposicaoMaxima,
-      passivoAtual,
-      targetAtual,
-      capitalExtraidoSeRedAgora,
-      passivoFinalSeTodasGreen,
+      capitalRecuperadoSeRedAgora,
+      lucroSeRedAgora,
+      capitalComprometidoFinal,
+      custoSeParar,
       operacaoEncerrada: !!pernaRed,
       motivoEncerramento: pernaRed ? 'red' : null,
       capitalFinal,
@@ -547,7 +519,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, [state]);
 
   const getSimulacaoAtiva = useCallback(() => {
-    const { pernas } = state;
+    const { pernas, stakeInicial } = state;
     
     const pernaAtiva = pernas.find(p => p.status === 'ativa');
     if (!pernaAtiva) return null;
@@ -558,21 +530,19 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     
     return {
       pernaId: pernaAtiva.id,
-      passivo: pernaAtiva.passivoAtual,
-      percentualExtracao: pernaAtiva.percentualExtracao,
+      capitalComprometido: pernaAtiva.capitalComprometido,
       target: pernaAtiva.target,
       stakeLay: pernaAtiva.stakeLayNecessario,
       oddLay: pernaAtiva.oddLay,
       oddBack: pernaAtiva.oddBack,
-      responsabilidade: pernaAtiva.responsabilidade,
+      custoLay: pernaAtiva.custoLay,
       seRed: {
-        capitalExtraido: pernaAtiva.capitalExtraidoSeRed,
-        resultado: pernaAtiva.percentualExtracao === 100 ? 'Passivo zerado' : `Passivo restante: ${pernaAtiva.passivoRestanteSeRed.toFixed(2)}`,
-        passivoRestante: pernaAtiva.passivoRestanteSeRed,
+        capitalRecuperado: pernaAtiva.capitalRecuperado,
+        lucro: pernaAtiva.lucroSeRed,
       },
       seGreen: {
-        resultado: pernaAtiva.resultadoSeGreen,
-        novoPassivo: pernaAtiva.novoPassivoSeGreen,
+        custo: pernaAtiva.custoSeGreen,
+        novoCapitalComprometido: pernaAtiva.novoCapitalComprometido,
         proxPerna: proxPerna ? proxPerna.id : null,
       },
     };
@@ -591,7 +561,6 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
     setNumPernas,
     updatePernaOddBack,
     updatePernaOddLay,
-    updatePernaExtracao,
     confirmarPerna,
     resetCalculadora,
     getMetricasGlobais,

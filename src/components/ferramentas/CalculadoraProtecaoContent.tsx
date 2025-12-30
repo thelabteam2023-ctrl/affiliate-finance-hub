@@ -26,7 +26,6 @@ export const CalculadoraProtecaoContent: React.FC = () => {
     setNumPernas,
     updatePernaOddBack,
     updatePernaOddLay,
-    updatePernaExtracao,
     confirmarPerna,
     resetCalculadora,
     getMetricasGlobais,
@@ -57,10 +56,10 @@ export const CalculadoraProtecaoContent: React.FC = () => {
           <div className="p-3 rounded-lg bg-warning/10 border border-warning/30 flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-warning text-sm">Modelo de Recuperação Progressiva</p>
+              <p className="font-medium text-warning text-sm">Modelo Capital Comprometido</p>
               <p className="text-xs text-muted-foreground mt-1">
-                O risco cresce a cada GREEN. Quanto mais você ganha na bookmaker, maior o passivo a carregar.
-                Cair na Exchange (RED) é o objetivo — limpa o sistema e extrai o capital.
+                O Capital Comprometido cresce a cada GREEN. Quanto mais você ganha na bookmaker, maior o custo acumulado.
+                Cair na Exchange (RED) é o objetivo — recupera todo o capital comprometido e encerra a operação.
               </p>
             </div>
           </div>
@@ -228,7 +227,6 @@ export const CalculadoraProtecaoContent: React.FC = () => {
             stakeInicial={stakeInicial}
             onOddBackChange={updatePernaOddBack}
             onOddLayChange={updatePernaOddLay}
-            onExtracaoChange={updatePernaExtracao}
             onConfirmar={confirmarPerna}
           />
         </div>

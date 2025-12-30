@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PernaAposta, StatusPerna, MoedaCalc } from '@/contexts/CalculadoraContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ExtracaoSlider } from './ExtracaoSlider';
 
 interface PernaTimelineProps {
   pernas: PernaAposta[];
@@ -14,7 +13,6 @@ interface PernaTimelineProps {
   stakeInicial: number;
   onOddBackChange: (id: number, odd: number) => void;
   onOddLayChange: (id: number, odd: number) => void;
-  onExtracaoChange: (id: number, percentual: number) => void;
   onConfirmar: (id: number, resultado: 'green' | 'red') => void;
 }
 
@@ -43,7 +41,7 @@ const statusConfig: Record<StatusPerna, {
     bg: 'bg-warning/10',
     border: 'border-warning/50',
     icon: <ArrowUpRight className="h-4 w-4 text-warning" />,
-    label: 'GREEN (Passivo +)',
+    label: 'GREEN (Custo +)',
     textColor: 'text-warning',
   },
   red: {
@@ -68,7 +66,6 @@ const PernaCard: React.FC<{
   stakeInicial: number;
   onOddBackChange: (odd: number) => void;
   onOddLayChange: (odd: number) => void;
-  onExtracaoChange: (valor: number) => void;
   onConfirmar: (resultado: 'green' | 'red') => void;
 }> = ({
   perna,
@@ -76,19 +73,16 @@ const PernaCard: React.FC<{
   stakeInicial,
   onOddBackChange,
   onOddLayChange,
-  onExtracaoChange,
   onConfirmar,
 }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
   const config = statusConfig[perna.status];
   
-  // REGRAS DE EDIÇÃO SIMPLIFICADAS:
+  // REGRAS DE EDIÇÃO:
   // - BACK: sempre read-only (definido na configuração inicial)
   // - LAY: editável APENAS na perna ativa
-  // - Extração: editável APENAS na perna ativa
   const isAtiva = perna.status === 'ativa';
   const canEditLay = isAtiva;
-  const canEditExtracao = isAtiva;
   const canConfirm = isAtiva;
   
   const formatValue = (value: number, showSign = false) => {
@@ -116,24 +110,34 @@ const PernaCard: React.FC<{
         </div>
       </div>
 
-      {/* Passivo Atual + Target (modelo de recuperação) */}
+      {/* Capital Comprometido + Target */}
       <div className="mb-3 p-2 rounded bg-background/50 border border-border/30 space-y-1">
         <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground flex items-center gap-1">
-            <Wallet className="h-3 w-3" />
-            Passivo Atual:
-          </span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-muted-foreground flex items-center gap-1 cursor-help">
+                  <Wallet className="h-3 w-3" />
+                  Capital Comprometido:
+                  <HelpCircle className="h-3 w-3" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[220px] text-xs">
+                <p>Todo o capital já em risco: stake inicial + custos dos LAYs anteriores.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <span className={cn(
             'font-bold',
-            perna.passivoAtual > 0 ? 'text-warning' : 'text-muted-foreground'
+            perna.capitalComprometido > 0 ? 'text-warning' : 'text-muted-foreground'
           )}>
-            {formatValue(perna.passivoAtual)}
+            {formatValue(perna.capitalComprometido)}
           </span>
         </div>
         <div className="flex justify-between text-xs">
           <span className="text-muted-foreground flex items-center gap-1">
             <Target className="h-3 w-3" />
-            Target a recuperar:
+            Target (= Comprometido):
           </span>
           <span className="font-bold text-primary">
             {formatValue(perna.target)}
@@ -141,7 +145,7 @@ const PernaCard: React.FC<{
         </div>
       </div>
 
-      {/* Inputs: BACK (read-only) + LAY + Extração */}
+      {/* Inputs: BACK (read-only) + LAY */}
       <div className="space-y-2 mb-3">
         {/* BACK - Sempre read-only */}
         <div className="flex items-center gap-2">
@@ -177,39 +181,7 @@ const PernaCard: React.FC<{
             <span className="text-[10px] text-muted-foreground">(aguardando)</span>
           )}
         </div>
-        
-        {/* Extração Percentual - Input simples para pernas não ativas */}
-        {!canEditExtracao && (
-          <div className="flex items-center gap-2">
-            <Label className="text-xs text-muted-foreground w-16">Extração:</Label>
-            <div className="flex items-center gap-1">
-              <Input
-                type="number"
-                step="10"
-                min="0"
-                max="100"
-                value={perna.percentualExtracao}
-                onChange={(e) => onExtracaoChange(parseFloat(e.target.value) || 0)}
-                className="w-16 h-8 text-sm bg-muted/50"
-                disabled={true}
-              />
-              <span className="text-xs text-muted-foreground">%</span>
-            </div>
-          </div>
-        )}
       </div>
-
-      {/* Slider de Extração Percentual - Aparece apenas na perna ativa */}
-      {canEditExtracao && (
-        <ExtracaoSlider
-          passivoAtual={perna.passivoAtual}
-          percentualExtracao={perna.percentualExtracao}
-          oddLay={perna.oddLay}
-          comissao={0.05} // 5% comissão padrão
-          moeda={moeda}
-          onExtracaoChange={onExtracaoChange}
-        />
-      )}
 
       {/* Stake LAY calculado automaticamente */}
       <div className="mb-3 p-2 rounded bg-primary/10 border border-primary/30">
@@ -222,16 +194,16 @@ const PernaCard: React.FC<{
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="text-muted-foreground flex items-center gap-1 cursor-help">
-                  Resp. LAY (Risco Máx.):
+                  Custo do LAY (se GREEN):
                   <HelpCircle className="h-3 w-3" />
                 </span>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-[200px] text-xs">
-                <p>Risco máximo assumido nesta perna caso o evento ganhe na Bookmaker. Não representa o prejuízo final.</p>
+                <p>Valor que será adicionado ao Capital Comprometido caso o evento ganhe na Bookmaker.</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <span className="font-bold text-warning">{formatValue(perna.responsabilidade)}</span>
+          <span className="font-bold text-warning">{formatValue(perna.custoLay)}</span>
         </div>
       </div>
 
@@ -245,7 +217,7 @@ const PernaCard: React.FC<{
             onClick={() => onConfirmar('green')}
           >
             <ArrowUpRight className="h-3 w-3 mr-1" />
-            GREEN - Passivo aumenta
+            GREEN - Custo aumenta
           </Button>
           <Button
             size="sm"
@@ -254,7 +226,7 @@ const PernaCard: React.FC<{
             onClick={() => onConfirmar('red')}
           >
             <Check className="h-3 w-3 mr-1" />
-            RED - Extrai e encerra!
+            RED - Recupera tudo!
           </Button>
         </div>
       )}
@@ -274,28 +246,28 @@ const PernaCard: React.FC<{
                 <div className="flex justify-between text-[10px]">
                   <span className="text-muted-foreground">Recuperado:</span>
                   <span className="font-bold text-success">
-                    {formatValue(perna.capitalExtraidoSeRed)}
+                    {formatValue(perna.capitalRecuperado)}
                   </span>
                 </div>
                 <div className="flex justify-between text-[10px]">
                   <span className="text-muted-foreground">Lucro Líq.:</span>
                   <span className="font-bold text-success">
-                    {formatValue(perna.capitalExtraidoSeRed - stakeInicial, true)}
+                    {formatValue(perna.lucroSeRed, true)}
                   </span>
                 </div>
                 <div className="flex justify-between text-[10px]">
                   <span className="text-muted-foreground">ROI:</span>
                   <span className="font-bold text-success">
-                    +{(((perna.capitalExtraidoSeRed - stakeInicial) / stakeInicial) * 100).toFixed(0)}%
+                    +{((perna.lucroSeRed / stakeInicial) * 100).toFixed(0)}%
                   </span>
                 </div>
               </div>
               <div className="mt-2 pt-1 border-t border-success/20 text-center">
-                <span className="text-[9px] text-success font-medium">Passivo zerado ✓</span>
+                <span className="text-[9px] text-success font-medium">Encerra operação ✓</span>
               </div>
             </div>
 
-            {/* Coluna Direita - Se GREEN (passivo cresce) */}
+            {/* Coluna Direita - Se GREEN (custo cresce) */}
             <div className="p-2 rounded bg-warning/10 border border-warning/30 flex flex-col">
               <div className="flex items-center gap-1 text-warning text-xs font-medium mb-2">
                 <ArrowUpRight className="h-3 w-3" />
@@ -303,20 +275,15 @@ const PernaCard: React.FC<{
               </div>
               <div className="space-y-1 flex-1">
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-muted-foreground">
-                    {perna.resultadoSeGreen < 0 ? 'Prejuízo:' : 'Resultado:'}
-                  </span>
-                  <span className={cn(
-                    'font-bold',
-                    perna.resultadoSeGreen < 0 ? 'text-destructive' : 'text-success'
-                  )}>
-                    {formatValue(perna.resultadoSeGreen, true)}
+                  <span className="text-muted-foreground">Custo LAY:</span>
+                  <span className="font-bold text-destructive">
+                    {formatValue(perna.custoSeGreen)}
                   </span>
                 </div>
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-muted-foreground">Novo passivo:</span>
+                  <span className="text-muted-foreground">Novo Comprom.:</span>
                   <span className="font-bold text-warning">
-                    {formatValue(perna.novoPassivoSeGreen)}
+                    {formatValue(perna.novoCapitalComprometido)}
                   </span>
                 </div>
               </div>
@@ -328,33 +295,18 @@ const PernaCard: React.FC<{
         </div>
       )}
 
-      {/* Resultado confirmado GREEN - resultado normalmente é NEGATIVO (prejuízo) */}
+      {/* Resultado confirmado GREEN */}
       {perna.status === 'green' && (
         <div className="pt-2 border-t border-border/30">
           <div className="p-2 rounded bg-warning/10 border border-warning/30">
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-muted-foreground">Lucro BACK:</span>
-              <span className="font-medium text-success">{formatValue(perna.lucroBack, true)}</span>
-            </div>
-            <div className="flex justify-between text-xs mb-1">
-              <span className="text-muted-foreground">Perda LAY:</span>
-              <span className="font-medium text-destructive">{formatValue(-perna.perdaLay)}</span>
+              <span className="text-muted-foreground">Custo do LAY:</span>
+              <span className="font-medium text-destructive">{formatValue(perna.custoLay)}</span>
             </div>
             <div className="flex justify-between text-xs pt-1 border-t border-warning/20">
-              <span className="text-muted-foreground">
-                {perna.resultadoSeGreen < 0 ? 'Prejuízo da perna:' : 'Resultado:'}
-              </span>
-              <span className={cn(
-                'font-bold',
-                perna.resultadoSeGreen < 0 ? 'text-destructive' : 'text-success'
-              )}>
-                {formatValue(perna.resultadoSeGreen, true)}
-              </span>
-            </div>
-            <div className="flex justify-between text-xs mt-1">
-              <span className="text-muted-foreground">Novo passivo:</span>
+              <span className="text-muted-foreground">Novo Capital Comprometido:</span>
               <span className="font-bold text-warning">
-                {formatValue(perna.novoPassivoSeGreen)}
+                {formatValue(perna.novoCapitalComprometido)}
               </span>
             </div>
           </div>
@@ -370,20 +322,20 @@ const PernaCard: React.FC<{
               <span className="font-medium text-foreground">{formatValue(stakeInicial)}</span>
             </div>
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-muted-foreground">Capital Recuperado (via Exchange):</span>
-              <span className="font-medium text-success">{formatValue(perna.capitalExtraidoSeRed)}</span>
+              <span className="text-muted-foreground">Capital Recuperado:</span>
+              <span className="font-medium text-success">{formatValue(perna.capitalRecuperado)}</span>
             </div>
             <div className="flex justify-between text-xs mb-1 pt-1 border-t border-success/20">
-              <span className="text-muted-foreground">Lucro Líquido Real:</span>
-              <span className="font-bold text-success">{formatValue(perna.capitalExtraidoSeRed - stakeInicial, true)}</span>
+              <span className="text-muted-foreground">Lucro Líquido:</span>
+              <span className="font-bold text-success">{formatValue(perna.lucroSeRed, true)}</span>
             </div>
             <div className="flex justify-between text-xs mb-1">
               <span className="text-muted-foreground">ROI:</span>
-              <span className="font-bold text-success">+{(((perna.capitalExtraidoSeRed - stakeInicial) / stakeInicial) * 100).toFixed(1)}%</span>
+              <span className="font-bold text-success">+{((perna.lucroSeRed / stakeInicial) * 100).toFixed(1)}%</span>
             </div>
             <div className="flex justify-between text-xs pt-1 border-t border-success/20">
-              <span className="text-muted-foreground">Passivo:</span>
-              <span className="font-bold text-success">Zerado ✓</span>
+              <span className="text-muted-foreground">Status:</span>
+              <span className="font-bold text-success">Operação Encerrada ✓</span>
             </div>
           </div>
         </div>
@@ -398,7 +350,6 @@ export const PernaTimeline: React.FC<PernaTimelineProps> = ({
   stakeInicial,
   onOddBackChange,
   onOddLayChange,
-  onExtracaoChange,
   onConfirmar,
 }) => {
   return (
@@ -406,7 +357,7 @@ export const PernaTimeline: React.FC<PernaTimelineProps> = ({
       <h3 className="font-semibold text-sm text-foreground">Timeline das Pernas</h3>
       
       <p className="text-xs text-muted-foreground">
-        O BACK já está definido. Ajuste a odd LAY e extração apenas na perna ativa.
+        O BACK já está definido. Ajuste a odd LAY apenas na perna ativa.
       </p>
       
       {/* Timeline horizontal scrollável */}
@@ -419,7 +370,6 @@ export const PernaTimeline: React.FC<PernaTimelineProps> = ({
               stakeInicial={stakeInicial}
               onOddBackChange={(odd) => onOddBackChange(perna.id, odd)}
               onOddLayChange={(odd) => onOddLayChange(perna.id, odd)}
-              onExtracaoChange={(valor) => onExtracaoChange(perna.id, valor)}
               onConfirmar={(resultado) => onConfirmar(perna.id, resultado)}
             />
             
