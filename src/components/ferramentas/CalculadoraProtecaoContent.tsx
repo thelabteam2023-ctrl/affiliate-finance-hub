@@ -12,6 +12,7 @@ import { ProtecaoPernaCard } from './ProtecaoPernaCard';
 import { JuiceBar } from './JuiceBar';
 import { AcaoRecomendada, SemAcaoRecomendada } from './AcaoRecomendada';
 import { GuiaProtecao } from './GuiaProtecao';
+import { ObjetivoExplicacaoDialog } from './ObjetivoExplicacaoDialog';
 
 export const CalculadoraProtecaoContent: React.FC = () => {
   const {
@@ -160,6 +161,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                     Perder na casa
                     <span className="block text-xs text-muted-foreground font-normal">Extração de bônus</span>
                   </Label>
+                  <ObjetivoExplicacaoDialog tipo="perder_casa" />
                 </div>
                 <div className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50 transition-colors">
                   <RadioGroupItem value="limitar_lucro" id="limitar_lucro" />
@@ -167,6 +169,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                     Limitar lucro
                     <span className="block text-xs text-muted-foreground font-normal">Trava resultado máximo</span>
                   </Label>
+                  <ObjetivoExplicacaoDialog tipo="limitar_lucro" />
                 </div>
                 <div className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50 transition-colors">
                   <RadioGroupItem value="neutralizar_greens" id="neutralizar_greens" />
@@ -174,6 +177,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                     Neutralizar greens
                     <span className="block text-xs text-muted-foreground font-normal">Anular ganhos inesperados</span>
                   </Label>
+                  <ObjetivoExplicacaoDialog tipo="neutralizar_greens" />
                 </div>
               </RadioGroup>
             </div>
