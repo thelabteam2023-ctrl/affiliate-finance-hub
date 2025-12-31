@@ -60,14 +60,14 @@ export const CalculadoraProtecaoContent: React.FC = () => {
             )}
 
             {/* Tipo */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] uppercase text-muted-foreground font-medium">Tipo</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase text-muted-foreground font-medium whitespace-nowrap">Tipo</span>
               <Select 
                 value={tipoAposta} 
                 onValueChange={(v) => setTipoAposta(v as TipoAposta)}
                 disabled={temPernaConfirmada}
               >
-                <SelectTrigger className="h-7 w-[90px] text-xs px-2">
+                <SelectTrigger className="h-7 w-[100px] text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -104,14 +104,14 @@ export const CalculadoraProtecaoContent: React.FC = () => {
             <div className="h-4 w-px bg-border/50 hidden sm:block" />
 
             {/* Moeda */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] uppercase text-muted-foreground font-medium">Moeda</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase text-muted-foreground font-medium whitespace-nowrap">Moeda</span>
               <Select 
                 value={moeda} 
                 onValueChange={(v) => setMoeda(v as MoedaCalc)}
                 disabled={temPernaConfirmada}
               >
-                <SelectTrigger className="h-7 w-[80px] text-xs px-2">
+                <SelectTrigger className="h-7 w-[90px] text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -124,15 +124,15 @@ export const CalculadoraProtecaoContent: React.FC = () => {
             <div className="h-4 w-px bg-border/50 hidden sm:block" />
 
             {/* Stake */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] uppercase text-muted-foreground font-medium">Stake</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase text-muted-foreground font-medium whitespace-nowrap">Stake</span>
               <Input
                 type="number"
                 min="1"
                 step="10"
                 value={stakeInicial}
                 onChange={(e) => setStakeInicial(parseFloat(e.target.value) || 0)}
-                className="h-7 w-[70px] text-xs px-2"
+                className="h-7 w-[80px] text-xs"
                 disabled={temPernaConfirmada}
               />
             </div>
@@ -140,8 +140,8 @@ export const CalculadoraProtecaoContent: React.FC = () => {
             <div className="h-4 w-px bg-border/50 hidden sm:block" />
 
             {/* Comissão */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] uppercase text-muted-foreground font-medium">Comissão %</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase text-muted-foreground font-medium whitespace-nowrap">Comissão %</span>
               <Input
                 type="number"
                 min="0"
@@ -149,7 +149,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                 step="0.1"
                 value={comissaoExchange}
                 onChange={(e) => setComissaoExchange(parseFloat(e.target.value) || 0)}
-                className="h-7 w-[50px] text-xs px-2"
+                className="h-7 w-[60px] text-xs"
                 disabled={temPernaConfirmada}
               />
             </div>
@@ -157,8 +157,8 @@ export const CalculadoraProtecaoContent: React.FC = () => {
             <div className="h-4 w-px bg-border/50 hidden sm:block" />
 
             {/* Odds BACK */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] uppercase text-muted-foreground font-medium">Odds</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] uppercase text-muted-foreground font-medium whitespace-nowrap">Odds</span>
               {pernas.map((perna) => (
                 <Input
                   key={perna.id}
@@ -168,7 +168,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                   placeholder={`E${perna.id}`}
                   value={perna.oddBack}
                   onChange={(e) => updatePernaOddBack(perna.id, parseFloat(e.target.value) || 1.01)}
-                  className="h-7 w-[55px] text-xs px-2"
+                  className="h-7 w-[60px] text-xs"
                   disabled={temPernaConfirmada}
                   title={`Entrada ${perna.id}`}
                 />
