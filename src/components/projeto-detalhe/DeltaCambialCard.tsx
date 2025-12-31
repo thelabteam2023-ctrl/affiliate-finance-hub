@@ -154,189 +154,123 @@ export function DeltaCambialCard({
     <Card className={`${classification.bgColor} ${classification.borderColor} border`}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-          <ArrowUpDown className="h-4 w-4" />
-          Delta Cambial
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full">
-                      <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80" align="start">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <HelpCircle className="h-4 w-4 text-primary" />
-                        <h4 className="font-semibold">Como usar esse alerta?</h4>
-                      </div>
-                      
-                      <div className="space-y-3 text-sm">
-                        <div className="flex gap-2 p-2 rounded bg-muted/50">
-                          <span className="text-blue-400 font-medium">🔵</span>
-                          <div>
-                            <p className="font-medium text-muted-foreground">Delta próximo de 0%</p>
-                            <p className="text-xs text-muted-foreground">
-                              Cotação de trabalho alinhada ao mercado. ✔ Não há necessidade de ajuste.
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex gap-2 p-2 rounded bg-yellow-500/10">
-                          <span className="text-yellow-400 font-medium">🟡</span>
-                          <div>
-                            <p className="font-medium text-yellow-400">Delta moderado (1% a 3%)</p>
-                            <p className="text-xs text-muted-foreground">
-                              O mercado já se afastou da cotação usada nas apostas. ⚠ Avalie atualizar se estiver iniciando novas operações.
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex gap-2 p-2 rounded bg-red-500/10">
-                          <span className="text-red-400 font-medium">🔴</span>
-                          <div>
-                            <p className="font-medium text-red-400">Delta alto (≥ 3%)</p>
-                            <p className="text-xs text-muted-foreground">
-                              Cotação de trabalho defasada. ❗ Pode distorcer cálculo de stakes e extração. 👉 Recomendado atualizar antes de novas apostas.
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="pt-2 border-t border-border/50">
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Info className="h-3 w-3" />
-                            <strong>Importante:</strong> Atualizar a cotação não afeta apostas já criadas. Apenas novas apostas utilizarão o novo valor.
-                          </p>
-                        </div>
-                      </div>
+          Δ Cambial
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-4 w-4 rounded-full p-0">
+                <HelpCircle className="h-3 w-3 text-muted-foreground" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72" align="start">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="h-4 w-4 text-primary" />
+                  <h4 className="font-semibold text-sm">Como usar?</h4>
+                </div>
+                
+                <div className="space-y-2 text-xs">
+                  <div className="flex gap-2 p-1.5 rounded bg-muted/50">
+                    <span className="text-blue-400">🔵</span>
+                    <div>
+                      <p className="font-medium text-muted-foreground">Δ &lt; 1%</p>
+                      <p className="text-muted-foreground">Alinhado, sem ajuste necessário</p>
                     </div>
-                  </PopoverContent>
-                </Popover>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Clique para entender como usar</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                  </div>
+                  
+                  <div className="flex gap-2 p-1.5 rounded bg-yellow-500/10">
+                    <span className="text-yellow-400">🟡</span>
+                    <div>
+                      <p className="font-medium text-yellow-400">1% a 3%</p>
+                      <p className="text-muted-foreground">Avalie atualizar</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2 p-1.5 rounded bg-red-500/10">
+                    <span className="text-red-400">🔴</span>
+                    <div>
+                      <p className="font-medium text-red-400">≥ 3%</p>
+                      <p className="text-muted-foreground">Recomendado atualizar</p>
+                    </div>
+                  </div>
+                  
+                  <p className="text-muted-foreground flex items-center gap-1 pt-1 border-t border-border/50">
+                    <Info className="h-3 w-3" />
+                    Atualizar não afeta apostas existentes
+                  </p>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </CardTitle>
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6"
+          className="h-5 w-5"
           onClick={() => refreshAll()}
           disabled={cotacaoLoading}
         >
-          <RefreshCw className={`h-3.5 w-3.5 ${cotacaoLoading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`h-3 w-3 ${cotacaoLoading ? "animate-spin" : ""}`} />
         </Button>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {/* Cotação Atual */}
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Cotação Atual (PTAX)</span>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="font-mono font-medium">
-                  {cotacaoLoading ? "..." : cotacaoUSD.toFixed(2)}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Fonte: {source.usd}</p>
-                <p className="text-xs text-muted-foreground">Atualização automática a cada 60s</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+      <CardContent className="space-y-1 pt-0">
+        {/* Delta Badge - Destaque principal */}
+        <div className="flex items-center justify-between">
+          <Badge 
+            variant="outline" 
+            className={`${classification.bgColor} ${classification.borderColor} ${classification.color} font-mono text-sm px-2 py-0.5`}
+          >
+            <DeltaIcon className="h-3 w-3 mr-1" />
+            {delta > 0 ? "+" : ""}{delta.toFixed(2)}%
+          </Badge>
+          <span className={`text-[10px] ${classification.color}`}>{classification.label}</span>
         </div>
         
-        {/* Cotação de Trabalho */}
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Cotação de Trabalho</span>
-          {isEditing ? (
-            <div className="flex items-center gap-1">
-              <Input
-                type="text"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                className="h-6 w-16 text-xs font-mono text-right px-1"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSaveEdit();
-                  if (e.key === "Escape") handleCancelEdit();
-                }}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5"
-                onClick={handleSaveEdit}
-                disabled={saving}
-              >
-                <Check className="h-3 w-3 text-emerald-400" />
+        {/* Cotações lado a lado */}
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+          <span>PTAX: <span className="font-mono text-foreground">{cotacaoLoading ? "..." : cotacaoUSD.toFixed(2)}</span></span>
+          <span className="flex items-center gap-0.5">
+            Trab: <span className="font-mono text-foreground">{cotacaoTrabalhoValue.toFixed(2)}</span>
+            {isEditing ? (
+              <div className="flex items-center gap-0.5 ml-1">
+                <Input
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="h-5 w-12 text-[10px] font-mono text-right px-1"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveEdit();
+                    if (e.key === "Escape") handleCancelEdit();
+                  }}
+                />
+                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={handleSaveEdit} disabled={saving}>
+                  <Check className="h-2.5 w-2.5 text-emerald-400" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={handleCancelEdit} disabled={saving}>
+                  <X className="h-2.5 w-2.5 text-red-400" />
+                </Button>
+              </div>
+            ) : (
+              <Button variant="ghost" size="icon" className="h-4 w-4" onClick={handleStartEdit}>
+                <Pencil className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5"
-                onClick={handleCancelEdit}
-                disabled={saving}
-              >
-                <X className="h-3 w-3 text-red-400" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1">
-              <span className="font-mono font-medium">
-                {cotacaoTrabalhoValue.toFixed(2)}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5"
-                onClick={handleStartEdit}
-              >
-                <Pencil className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-              </Button>
-            </div>
-          )}
-        </div>
-        
-        {/* Delta */}
-        <div className="flex items-center justify-between pt-2 border-t border-border/50">
-          <span className={`text-sm font-medium ${classification.color}`}>
-            Δ Cambial
+            )}
           </span>
-          <div className="flex items-center gap-2">
-            <Badge 
-              variant="outline" 
-              className={`${classification.bgColor} ${classification.borderColor} ${classification.color} font-mono`}
-            >
-              <DeltaIcon className="h-3 w-3 mr-1" />
-              {delta > 0 ? "+" : ""}{delta.toFixed(2)}%
-            </Badge>
-          </div>
         </div>
 
-        {/* Ação rápida para atualizar */}
-        {deltaAbs >= 1 && (
-          <div className="pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-xs"
-              onClick={handleUseCurrent}
-              disabled={saving || cotacaoLoading}
-            >
-              <RefreshCw className={`h-3 w-3 mr-1.5 ${saving ? "animate-spin" : ""}`} />
-              Usar cotação atual ({cotacaoUSD.toFixed(2)})
-            </Button>
-          </div>
+        {/* Ação rápida - compacta */}
+        {deltaAbs >= 1 && !isEditing && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full h-6 text-[10px] text-muted-foreground hover:text-foreground"
+            onClick={handleUseCurrent}
+            disabled={saving || cotacaoLoading}
+          >
+            <RefreshCw className={`h-2.5 w-2.5 mr-1 ${saving ? "animate-spin" : ""}`} />
+            Usar {cotacaoUSD.toFixed(2)}
+          </Button>
         )}
-        
-        {/* Indicador de status */}
-        <p className="text-[10px] text-muted-foreground text-center">
-          {classification.description}
-        </p>
       </CardContent>
     </Card>
   );

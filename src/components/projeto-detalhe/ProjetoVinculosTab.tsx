@@ -597,8 +597,8 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       </TabsList>
 
       <TabsContent value="ativos" className="space-y-4">
-        {/* KPIs */}
-        <div className="grid gap-4 md:grid-cols-4">
+        {/* KPIs - Grid unificada incluindo Delta Cambial */}
+        <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Contas no Projeto</CardTitle>
@@ -738,18 +738,16 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             </p>
           </CardContent>
         </Card>
-      </div>
 
-        {/* Delta Cambial - Exibido apenas quando há moeda estrangeira ou sempre para consciência cambial */}
+        {/* Delta Cambial - compacto na mesma linha dos KPIs */}
         {consolidatedTotals.hasForeignCurrency && (
-          <div className="grid gap-4 md:grid-cols-3">
-            <DeltaCambialCard
-              projetoId={projetoId}
-              cotacaoTrabalho={cotacaoTrabalho}
-              onCotacaoUpdated={fetchCotacaoTrabalho}
-            />
-          </div>
+          <DeltaCambialCard
+            projetoId={projetoId}
+            cotacaoTrabalho={cotacaoTrabalho}
+            onCotacaoUpdated={fetchCotacaoTrabalho}
+          />
         )}
+      </div>
       <div className="flex items-center gap-4 flex-wrap">
         <Button onClick={handleOpenAddDialog}>
           <Plus className="mr-2 h-4 w-4" />
