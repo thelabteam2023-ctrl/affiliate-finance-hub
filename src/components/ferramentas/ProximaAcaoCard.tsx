@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { MoedaCalc } from '@/contexts/CalculadoraContext';
-import { AlertCircle, ArrowUpRight, Check, ChevronDown, ChevronRight, ChevronUp, HelpCircle, PartyPopper, Target, Wallet } from 'lucide-react';
+import { AlertCircle, ArrowUpRight, Check, ChevronDown, ChevronRight, ChevronUp, HelpCircle, Target, TrendingDown, Wallet } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SimulacaoAtivaCardProps {
@@ -269,14 +269,19 @@ export const SemSimulacao: React.FC<{
       )}>
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-full bg-background/50">
-            <PartyPopper className={cn(
-              "h-5 w-5",
-              greenFinal.houvePerda ? "text-destructive" : "text-success"
-            )} />
+            {greenFinal.houvePerda ? (
+              <TrendingDown className="h-5 w-5 text-destructive" />
+            ) : (
+              <Check className="h-5 w-5 text-success" />
+            )}
           </div>
           <div>
             <h4 className="font-bold text-foreground">Operação Finalizada</h4>
-            <p className="text-sm text-muted-foreground">Bookmaker pagou - Proteção concluída</p>
+            <p className="text-sm text-muted-foreground">
+              {greenFinal.houvePerda 
+                ? "Capital direcionado à Bookmaker" 
+                : "Proteção concluída com sucesso"}
+            </p>
           </div>
         </div>
 
@@ -355,8 +360,8 @@ export const SemSimulacao: React.FC<{
         {greenFinal.houvePerda && (
           <div className="p-3 rounded-lg bg-destructive/20 border border-destructive/30">
             <p className="text-xs text-destructive font-medium flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" />
-              Juice negativo: os custos de proteção excederam o lucro da Bookmaker.
+              <TrendingDown className="h-4 w-4" />
+              Perda de capital de {formatValue(Math.abs(greenFinal.lucroLiquidoReal))} ao realizar essa operação.
             </p>
           </div>
         )}
