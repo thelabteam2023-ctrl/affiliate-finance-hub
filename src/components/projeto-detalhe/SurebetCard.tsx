@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { format as formatDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowLeftRight, Zap, CheckCircle2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,7 +39,16 @@ interface SurebetCardProps {
   surebet: SurebetData;
   onEdit?: (surebet: SurebetData) => void;
   className?: string;
+  formatCurrency?: (value: number) => string;
 }
+
+// Fallback para formatação de moeda quando não é passada via props
+const defaultFormatCurrency = (value: number): string => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+};
 
 function ResultadoBadge({ resultado }: { resultado: string | null | undefined }) {
   const getConfig = (r: string | null | undefined) => {
@@ -64,14 +73,9 @@ function ResultadoBadge({ resultado }: { resultado: string | null | undefined })
   );
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
-export function SurebetCard({ surebet, onEdit, className }: SurebetCardProps) {
+export function SurebetCard({ surebet, onEdit, className, formatCurrency }: SurebetCardProps) {
+  // Usa formatCurrency do projeto ou fallback para BRL
+  const formatValue = formatCurrency || defaultFormatCurrency;
   const isDuploGreen = surebet.estrategia === "DUPLO_GREEN";
   const isLiquidada = surebet.status === "LIQUIDADA";
   
@@ -144,15 +148,15 @@ export function SurebetCard({ surebet, onEdit, className }: SurebetCardProps) {
         <div className="flex justify-between items-center pt-2 border-t">
           <div className="flex flex-col">
             <span className="text-xs text-muted-foreground">
-              {format(parseLocalDateTime(surebet.data_operacao), "dd/MM/yy", { locale: ptBR })}
+              {formatDate(parseLocalDateTime(surebet.data_operacao), "dd/MM/yy", { locale: ptBR })}
             </span>
           </div>
           <div className="text-right">
-            <p className="text-xs text-muted-foreground">Stake: {formatCurrency(surebet.stake_total)}</p>
+            <p className="text-xs text-muted-foreground">Stake: {formatValue(surebet.stake_total)}</p>
             {lucroExibir !== null && lucroExibir !== undefined && (
               <div className="flex items-center gap-2 justify-end">
                 <span className={cn("text-sm font-medium", lucroExibir >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                  {formatCurrency(lucroExibir)}
+                  {formatValue(lucroExibir)}
                 </span>
                 {roiExibir !== null && roiExibir !== undefined && (
                   <span className={cn("text-xs", roiExibir >= 0 ? 'text-emerald-400' : 'text-red-400')}>
