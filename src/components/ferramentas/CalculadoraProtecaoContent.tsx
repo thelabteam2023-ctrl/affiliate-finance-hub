@@ -67,7 +67,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                 onValueChange={(v) => setTipoAposta(v as TipoAposta)}
                 disabled={temPernaConfirmada}
               >
-                <SelectTrigger className="h-7 w-[100px] text-xs">
+                <SelectTrigger className="h-7 min-w-[85px] text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -111,7 +111,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                 onValueChange={(v) => setMoeda(v as MoedaCalc)}
                 disabled={temPernaConfirmada}
               >
-                <SelectTrigger className="h-7 w-[90px] text-xs">
+                <SelectTrigger className="h-7 min-w-[75px] text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
