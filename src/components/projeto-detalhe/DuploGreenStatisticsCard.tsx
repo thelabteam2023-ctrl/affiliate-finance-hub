@@ -27,6 +27,7 @@ interface Aposta {
 
 interface DuploGreenStatisticsCardProps {
   apostas: Aposta[];
+  formatCurrency?: (value: number) => string;
 }
 
 // Componente de KPI âncora (destaque máximo)
@@ -121,7 +122,12 @@ const SectionHeader = ({
   );
 };
 
-export function DuploGreenStatisticsCard({ apostas }: DuploGreenStatisticsCardProps) {
+const defaultFormatCurrency = (value: number) =>
+  value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+export function DuploGreenStatisticsCard({ apostas, formatCurrency: formatCurrencyProp }: DuploGreenStatisticsCardProps) {
+  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
+
   const stats = useMemo(() => {
     const getStake = (a: Aposta) => {
       const value = typeof a.stake_total === "number" ? a.stake_total : typeof a.stake === "number" ? a.stake : 0;
@@ -221,10 +227,6 @@ export function DuploGreenStatisticsCard({ apostas }: DuploGreenStatisticsCardPr
       pendentes: pendentes.length
     };
   }, [apostas]);
-
-  const formatCurrency = (value: number) => {
-    return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  };
 
   const formatPercent = (value: number) => {
     return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;

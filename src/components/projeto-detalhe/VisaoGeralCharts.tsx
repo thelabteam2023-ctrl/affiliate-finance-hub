@@ -81,13 +81,14 @@ interface VisaoGeralChartsProps {
   showEvolucaoChart?: boolean;
   showCasasCard?: boolean;
   isSingleDayPeriod?: boolean;
+  formatCurrency?: (value: number) => string;
 }
 
 // =====================================================
 // HELPERS
 // =====================================================
 
-const formatCurrency = (value: number) =>
+const defaultFormatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
 const getStake = (a: ApostaBase): number => {
@@ -103,37 +104,40 @@ interface EvolucaoLucroChartProps {
   data: EvolucaoData[];
   accentColor: string;
   isSingleDayPeriod: boolean;
+  formatCurrency: (value: number) => string;
 }
 
 // Tooltip customizado para mostrar detalhes da entrada
-const CustomTooltip = ({ active, payload }: any) => {
-  if (!active || !payload || !payload.length) return null;
-  
-  const data = payload[0].payload as EvolucaoData;
-  const isPositive = data.impacto >= 0;
-  
-  return (
-    <div className="bg-popover border border-border rounded-lg p-3 shadow-lg text-sm space-y-1.5">
-      <div className="font-semibold text-foreground border-b border-border pb-1.5 mb-1.5">
-        Entrada #{data.entrada}
+const createCustomTooltip = (formatCurrency: (value: number) => string) => {
+  return ({ active, payload }: any) => {
+    if (!active || !payload || !payload.length) return null;
+    
+    const data = payload[0].payload as EvolucaoData;
+    const isPositive = data.impacto >= 0;
+    
+    return (
+      <div className="bg-popover border border-border rounded-lg p-3 shadow-lg text-sm space-y-1.5">
+        <div className="font-semibold text-foreground border-b border-border pb-1.5 mb-1.5">
+          Entrada #{data.entrada}
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+          <span className="text-muted-foreground">Data/Hora:</span>
+          <span className="text-foreground font-medium">{data.data} {data.hora}</span>
+          <span className="text-muted-foreground">Impacto:</span>
+          <span className={`font-semibold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+            {isPositive ? '+' : ''}{formatCurrency(data.impacto)}
+          </span>
+          <span className="text-muted-foreground">Acumulado:</span>
+          <span className={`font-bold ${data.acumulado >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+            {formatCurrency(data.acumulado)}
+          </span>
+        </div>
       </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-        <span className="text-muted-foreground">Data/Hora:</span>
-        <span className="text-foreground font-medium">{data.data} {data.hora}</span>
-        <span className="text-muted-foreground">Impacto:</span>
-        <span className={`font-semibold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
-          {isPositive ? '+' : ''}{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(data.impacto)}
-        </span>
-        <span className="text-muted-foreground">Acumulado:</span>
-        <span className={`font-bold ${data.acumulado >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-          {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(data.acumulado)}
-        </span>
-      </div>
-    </div>
-  );
+    );
+  };
 };
 
-function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod }: EvolucaoLucroChartProps) {
+function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod, formatCurrency }: EvolucaoLucroChartProps) {
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
@@ -194,9 +198,9 @@ function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod }: EvolucaoLu
           fontSize={11}
           tickLine={false}
           axisLine={false}
-          tickFormatter={(v) => `R$${v}`}
+          tickFormatter={(v) => formatCurrency(v)}
         />
-        <RechartsTooltip content={<CustomTooltip />} />
+        <RechartsTooltip content={createCustomTooltip(formatCurrency)} />
         <Area
           type="monotone"
           dataKey="acumulado"
@@ -217,9 +221,10 @@ interface CasasMaisUtilizadasCardProps {
   casas: CasaUsada[];
   accentColor: string;
   logoMap?: Map<string, string | null>;
+  formatCurrency: (value: number) => string;
 }
 
-function CasasMaisUtilizadasCard({ casas, accentColor, logoMap }: CasasMaisUtilizadasCardProps) {
+function CasasMaisUtilizadasCard({ casas, accentColor, logoMap, formatCurrency }: CasasMaisUtilizadasCardProps) {
   const topCasas = useMemo(() => 
     [...casas].sort((a, b) => b.volume - a.volume).slice(0, 6), 
     [casas]
@@ -372,8 +377,11 @@ export function VisaoGeralCharts({
   showCalendar = true,
   showEvolucaoChart = true,
   showCasasCard = true,
-  isSingleDayPeriod = false
+  isSingleDayPeriod = false,
+  formatCurrency: formatCurrencyProp
 }: VisaoGeralChartsProps) {
+  // Usar prop ou fallback
+  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [calendarOpen, setCalendarOpen] = useState(false);
   const evolucaoData = useMemo((): EvolucaoData[] => {
     const sorted = [...apostas].sort(
@@ -514,7 +522,7 @@ export function VisaoGeralCharts({
 
   // Só casas
   if (!showEvolucaoChart && showCasasCard) {
-    return <CasasMaisUtilizadasCard casas={casasData} accentColor={accentColor} logoMap={logoMap} />;
+    return <CasasMaisUtilizadasCard casas={casasData} accentColor={accentColor} logoMap={logoMap} formatCurrency={formatCurrency} />;
   }
 
   // Só evolução
@@ -565,7 +573,7 @@ export function VisaoGeralCharts({
         </CardHeader>
         <CardContent className="pt-0">
           <div className="h-[280px]">
-            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} />
+            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} />
           </div>
         </CardContent>
       </Card>
@@ -621,13 +629,13 @@ export function VisaoGeralCharts({
         </CardHeader>
         <CardContent className="pt-0">
           <div className="h-[280px]">
-            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} />
+            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} />
           </div>
         </CardContent>
       </Card>
 
       {/* Card — Casas Mais Utilizadas (CONTEXTUAL - 1 coluna) */}
-      <CasasMaisUtilizadasCard casas={casasData} accentColor={accentColor} logoMap={logoMap} />
+      <CasasMaisUtilizadasCard casas={casasData} accentColor={accentColor} logoMap={logoMap} formatCurrency={formatCurrency} />
     </div>
   );
 }

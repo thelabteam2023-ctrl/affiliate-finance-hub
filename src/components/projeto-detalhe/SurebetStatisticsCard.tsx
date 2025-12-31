@@ -38,6 +38,7 @@ interface Surebet {
 
 interface SurebetStatisticsCardProps {
   surebets: Surebet[];
+  formatCurrency?: (value: number) => string;
 }
 
 const StatCell = ({ 
@@ -122,7 +123,12 @@ const SectionHeader = ({ title }: { title: string }) => (
   </div>
 );
 
-export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) {
+const defaultFormatCurrency = (value: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+
+export function SurebetStatisticsCard({ surebets, formatCurrency: formatCurrencyProp }: SurebetStatisticsCardProps) {
+  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
+
   const stats = useMemo(() => {
     // Operações resolvidas (não pendentes)
     const resolvidas = surebets.filter(s => 
@@ -447,13 +453,6 @@ export function SurebetStatisticsCard({ surebets }: SurebetStatisticsCardProps) 
       mediaOdds,
     };
   }, [surebets]);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   const formatPercent = (value: number) => {
     const sign = value >= 0 ? "+" : "";
