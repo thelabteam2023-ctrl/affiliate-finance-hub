@@ -240,6 +240,7 @@ export function FreebetApostaCard({
             )}
             <ResultadoPill
               apostaId={aposta.id}
+              projetoId={projetoId}
               bookmarkerId={aposta.bookmaker_id}
               layExchangeBookmakerId={operationType === "cobertura" ? aposta.lay_exchange : undefined}
               resultado={aposta.resultado}
