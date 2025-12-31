@@ -33,6 +33,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
 import { detectarMoedaOperacao, calcularValorBRLReferencia, type MoedaOperacao } from "@/types/apostasUnificada";
+import { 
+  BookmakerSelectOption, 
+  CurrencyBadge, 
+  formatCurrency, 
+  getCurrencySymbol, 
+  getCurrencyTextColor 
+} from "@/components/bookmakers/BookmakerSelectOption";
 
 // Interface local DEPRECATED - agora usamos BookmakerSaldo do hook canônico diretamente
 interface LegacyBookmaker {
@@ -608,21 +615,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     return shortName ? `${bk.nome} - ${shortName}` : bk.nome;
   };
 
-  // MULTI-MOEDA: formatCurrency agora respeita a moeda de origem
-  const formatCurrency = (value: number, moeda: string = "BRL") => {
-    const currencyCode = moeda === "USDT" ? "USD" : moeda;
-    const locale = currencyCode === "USD" ? "en-US" : "pt-BR";
-    return new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency: currencyCode,
-    }).format(value);
-  };
-  
-  // Helper para símbolo de moeda
-  const getCurrencySymbol = (moeda: string): string => {
-    const symbols: Record<string, string> = { BRL: "R$", USD: "$", EUR: "€", GBP: "£", USDT: "$" };
-    return symbols[moeda] || moeda;
-  };
+  // NOTA: formatCurrency e getCurrencySymbol são importados de BookmakerSelectOption
 
   // Cálculos em tempo real - TOTALMENTE reativo aos inputs atuais
   // NOVO COMPORTAMENTO: Calcular todos os cenários com ROI máximo/mínimo e risco
@@ -1774,17 +1767,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                       const saldoDisponivelParaEssaPosicao = saldoLivreBase - stakesOutrasPosicoes;
                                       const isIndisponivel = saldoDisponivelParaEssaPosicao < 0.50;
                                       
-                                      const parceiroNomeBk = bk.parceiro_nome?.split(" ");
-                                      const parceiroShortBk = parceiroNomeBk 
-                                        ? `${parceiroNomeBk[0]} ${parceiroNomeBk[parceiroNomeBk.length - 1] || ""}`.trim()
-                                        : "";
-                                      
-                                      // Breakdown do saldo - MULTI-MOEDA
-                                      const symbol = getCurrencySymbol(bk.moeda);
-                                      const breakdownParts = [`${symbol} ${bk.saldo_disponivel.toFixed(0)}`];
-                                      if (bk.saldo_freebet > 0) breakdownParts.push(`FB: ${bk.saldo_freebet.toFixed(0)}`);
-                                      if (bk.saldo_bonus > 0) breakdownParts.push(`🎁: ${bk.saldo_bonus.toFixed(0)}`);
-                                      
                                       return (
                                         <SelectItem 
                                           key={bk.id} 
@@ -1792,32 +1774,21 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                           disabled={isIndisponivel}
                                           className={isIndisponivel ? "opacity-50" : ""}
                                         >
-                                          <div className="flex items-center justify-between w-full gap-2 min-w-0">
-                                            <div className="flex flex-col min-w-0 flex-1">
-                                              <div className="flex items-center gap-1">
-                                                <span className="uppercase text-xs truncate">{bk.nome}</span>
-                                                {/* Badge de moeda estrangeira */}
-                                                {bk.moeda !== "BRL" && (
-                                                  <Badge variant="outline" className="text-[8px] px-1 py-0 h-4 bg-blue-500/10 border-blue-500/30 text-blue-400">
-                                                    {bk.moeda}
-                                                  </Badge>
-                                                )}
-                                              </div>
-                                              {parceiroShortBk && (
-                                                <span className="text-[10px] text-muted-foreground truncate">{parceiroShortBk}</span>
-                                              )}
-                                            </div>
-                                            <div className="flex flex-col items-end flex-shrink-0">
-                                              <span className={`text-[10px] font-medium ${isIndisponivel ? "text-destructive" : "text-blue-400"}`}>
-                                                {isIndisponivel ? "Indisponível" : formatCurrency(saldoDisponivelParaEssaPosicao, bk.moeda)}
-                                              </span>
-                                              {!isIndisponivel && (bk.saldo_freebet > 0 || bk.saldo_bonus > 0) && (
-                                                <span className="text-[9px] text-muted-foreground/70">
-                                                  {breakdownParts.join(" + ")}
-                                                </span>
-                                              )}
-                                            </div>
-                                          </div>
+                                          <BookmakerSelectOption
+                                            bookmaker={{
+                                              id: bk.id,
+                                              nome: bk.nome,
+                                              parceiro_nome: bk.parceiro_nome,
+                                              moeda: bk.moeda,
+                                              saldo_operavel: saldoDisponivelParaEssaPosicao,
+                                              saldo_disponivel: bk.saldo_disponivel,
+                                              saldo_freebet: bk.saldo_freebet,
+                                              saldo_bonus: bk.saldo_bonus,
+                                              logo_url: bk.logo_url,
+                                            }}
+                                            disabled={isIndisponivel}
+                                            showBreakdown={!isIndisponivel}
+                                          />
                                         </SelectItem>
                                       );
                                     })}
@@ -1898,8 +1869,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                 </span>
                                 {!isEditing && saldoDisponivelPosicao !== null && (
                                   <div className="flex items-center gap-1 flex-shrink-0">
-                                    <Wallet className="h-2.5 w-2.5 text-blue-400" />
-                                    <span className={`font-medium ${saldoInsuficiente ? "text-destructive" : "text-blue-400"}`}>
+                                    <Wallet className={`h-2.5 w-2.5 ${saldoInsuficiente ? "text-destructive" : getCurrencyTextColor(selectedBookmaker?.moeda || "BRL")}`} />
+                                    <span className={`font-medium ${saldoInsuficiente ? "text-destructive" : getCurrencyTextColor(selectedBookmaker?.moeda || "BRL")}`}>
                                       {formatCurrency(saldoDisponivelPosicao, selectedBookmaker?.moeda || "BRL")}
                                     </span>
                                   </div>
