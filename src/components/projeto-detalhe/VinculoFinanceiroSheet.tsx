@@ -30,6 +30,7 @@ interface VinculoFinanceiroSheetProps {
     nome: string;
     status: string;
     saldo_atual: number;
+    moeda?: string;
   } | null;
   projetoId: string;
 }
@@ -58,12 +59,18 @@ export function VinculoFinanceiroSheet({
 }: VinculoFinanceiroSheetProps) {
   const [loading, setLoading] = useState(true);
   const [lucroTotal, setLucroTotal] = useState(0);
+  const [lucroByMoeda, setLucroByMoeda] = useState({ BRL: 0, USD: 0 });
   const [volumeTotal, setVolumeTotal] = useState(0);
   const [qtdApostas, setQtdApostas] = useState(0);
   const [totalDepositado, setTotalDepositado] = useState(0);
+  const [depositosByMoeda, setDepositosByMoeda] = useState({ BRL: 0, USD: 0 });
   const [totalSacado, setTotalSacado] = useState(0);
+  const [saquesByMoeda, setSaquesByMoeda] = useState({ BRL: 0, USD: 0 });
   const [ciclos, setCiclos] = useState<CicloParticipacao[]>([]);
-  const [eventosRisco, setEventosRisco] = useState<EventoRisco[]>([]);
+  const [eventosRisco, setEventosRisco] = useState<EventoRisco[]>();
+  
+  const moeda = bookmaker?.moeda || 'BRL';
+  const USD_TO_BRL = 6.1;
 
   useEffect(() => {
     if (open && bookmaker) {
@@ -77,25 +84,25 @@ export function VinculoFinanceiroSheet({
     try {
       setLoading(true);
 
-      // Buscar apostas usando apostas_unificada
+      // Buscar apostas usando apostas_unificada com moeda
       const { data: apostas } = await supabase
         .from("apostas_unificada")
-        .select("lucro_prejuizo, stake, status, data_aposta")
+        .select("lucro_prejuizo, lucro_prejuizo_brl_referencia, moeda_operacao, stake, status, data_aposta")
         .eq("projeto_id", projetoId)
         .eq("bookmaker_id", bookmaker.id);
 
-      // Buscar depósitos
+      // Buscar depósitos com moeda
       const { data: depositos } = await supabase
         .from("cash_ledger")
-        .select("valor, data_transacao")
+        .select("valor, moeda, data_transacao")
         .eq("tipo_transacao", "DEPOSITO")
         .eq("status", "CONFIRMADO")
         .eq("destino_bookmaker_id", bookmaker.id);
 
-      // Buscar saques
+      // Buscar saques com moeda
       const { data: saques } = await supabase
         .from("cash_ledger")
-        .select("valor, data_transacao")
+        .select("valor, moeda, data_transacao")
         .eq("tipo_transacao", "SAQUE")
         .eq("status", "CONFIRMADO")
         .eq("origem_bookmaker_id", bookmaker.id);
@@ -114,18 +121,60 @@ export function VinculoFinanceiroSheet({
         .eq("projeto_id", projetoId)
         .order("numero_ciclo", { ascending: false });
 
-      // Calcular lucro
-      const lucroApostas = (apostas || [])
+      // Calcular lucro COM BREAKDOWN POR MOEDA
+      const lucroCalc = { BRL: 0, USD: 0, totalBRL: 0 };
+      (apostas || [])
         .filter(a => a.status === "LIQUIDADA")
-        .reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0);
+        .forEach(a => {
+          const lucro = Number(a.lucro_prejuizo || 0);
+          const moedaOp = a.moeda_operacao || 'BRL';
+          if (moedaOp === 'USD') {
+            lucroCalc.USD += lucro;
+            lucroCalc.totalBRL += a.lucro_prejuizo_brl_referencia ?? (lucro * USD_TO_BRL);
+          } else {
+            lucroCalc.BRL += lucro;
+            lucroCalc.totalBRL += lucro;
+          }
+        });
 
-      setLucroTotal(lucroApostas);
+      setLucroTotal(lucroCalc.totalBRL);
+      setLucroByMoeda({ BRL: lucroCalc.BRL, USD: lucroCalc.USD });
       setVolumeTotal(
         (apostas || []).reduce((acc, a) => acc + Number(a.stake || 0), 0)
       );
       setQtdApostas((apostas || []).length);
-      setTotalDepositado((depositos || []).reduce((acc, d) => acc + Number(d.valor), 0));
-      setTotalSacado((saques || []).reduce((acc, s) => acc + Number(s.valor), 0));
+      
+      // Depósitos por moeda
+      const depCalc = { BRL: 0, USD: 0, totalBRL: 0 };
+      (depositos || []).forEach(d => {
+        const valor = Number(d.valor);
+        const m = d.moeda || 'BRL';
+        if (m === 'USD') {
+          depCalc.USD += valor;
+          depCalc.totalBRL += valor * USD_TO_BRL;
+        } else {
+          depCalc.BRL += valor;
+          depCalc.totalBRL += valor;
+        }
+      });
+      setTotalDepositado(depCalc.totalBRL);
+      setDepositosByMoeda({ BRL: depCalc.BRL, USD: depCalc.USD });
+      
+      // Saques por moeda
+      const saqCalc = { BRL: 0, USD: 0, totalBRL: 0 };
+      (saques || []).forEach(s => {
+        const valor = Number(s.valor);
+        const m = s.moeda || 'BRL';
+        if (m === 'USD') {
+          saqCalc.USD += valor;
+          saqCalc.totalBRL += valor * USD_TO_BRL;
+        } else {
+          saqCalc.BRL += valor;
+          saqCalc.totalBRL += valor;
+        }
+      });
+      setTotalSacado(saqCalc.totalBRL);
+      setSaquesByMoeda({ BRL: saqCalc.BRL, USD: saqCalc.USD });
 
       // Mapear eventos de risco
       const eventos: EventoRisco[] = (perdas || [])
@@ -157,12 +206,18 @@ export function VinculoFinanceiroSheet({
     }
   };
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number, currency: string = 'BRL') => {
+    if (currency === 'USD') {
+      return `$ ${value.toFixed(2)}`;
+    }
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
     }).format(value);
   };
+
+  // Helper para mostrar breakdown
+  const hasMultiCurrency = (brl: number, usd: number) => usd !== 0 || (brl !== 0 && usd !== 0);
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
