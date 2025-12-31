@@ -53,6 +53,11 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 
+interface SaldoByMoeda {
+  BRL: number;
+  USD: number;
+}
+
 interface Projeto {
   id: string;
   projeto_id?: string;
@@ -65,12 +70,14 @@ interface Projeto {
   operadores_ativos?: number;
   total_gasto_operadores?: number;
   saldo_bookmakers?: number;
+  saldo_bookmakers_by_moeda?: SaldoByMoeda;
   saldo_irrecuperavel?: number;
   total_depositado?: number;
   total_sacado?: number;
   total_bookmakers?: number;
   perdas_confirmadas?: number;
   lucro_operacional?: number;
+  lucro_by_moeda?: SaldoByMoeda;
 }
 
 export default function GestaoProjetos() {
@@ -183,42 +190,63 @@ export default function GestaoProjetos() {
       ]);
       
       // Taxa de conversão USD->BRL aproximada (idealmente vir de uma API ou cache)
-      const USD_TO_BRL = 5.5;
+      const USD_TO_BRL = 6.1;
       
-      // Agregar dados de bookmakers por projeto (considerando moeda e freebet)
-      const bookmakersByProjeto: Record<string, { saldo: number; count: number; irrecuperavel: number }> = {};
+      // Agregar dados de bookmakers por projeto COM BREAKDOWN POR MOEDA
+      const bookmakersByProjeto: Record<string, { 
+        saldo: number; 
+        saldoBRL: number;
+        saldoUSD: number;
+        count: number; 
+        irrecuperavel: number 
+      }> = {};
+      
       (bookmarkersResult.data || []).forEach((bk: any) => {
         if (!bk.projeto_id) return;
         if (!bookmakersByProjeto[bk.projeto_id]) {
-          bookmakersByProjeto[bk.projeto_id] = { saldo: 0, count: 0, irrecuperavel: 0 };
+          bookmakersByProjeto[bk.projeto_id] = { saldo: 0, saldoBRL: 0, saldoUSD: 0, count: 0, irrecuperavel: 0 };
         }
         
         // Soma saldo_atual + saldo_freebet
         const saldoTotal = (bk.saldo_atual || 0) + (bk.saldo_freebet || 0);
         const irrecuperavel = bk.saldo_irrecuperavel || 0;
+        const moeda = bk.moeda || 'BRL';
         
-        // Converter para BRL se moeda for USD
-        const multiplier = bk.moeda === 'USD' ? USD_TO_BRL : 1;
-        
-        bookmakersByProjeto[bk.projeto_id].saldo += saldoTotal * multiplier;
-        bookmakersByProjeto[bk.projeto_id].irrecuperavel += irrecuperavel * multiplier;
+        // Acumular por moeda
+        if (moeda === 'USD') {
+          bookmakersByProjeto[bk.projeto_id].saldoUSD += saldoTotal;
+          // Converter para BRL para total consolidado
+          bookmakersByProjeto[bk.projeto_id].saldo += saldoTotal * USD_TO_BRL;
+          bookmakersByProjeto[bk.projeto_id].irrecuperavel += irrecuperavel * USD_TO_BRL;
+        } else {
+          bookmakersByProjeto[bk.projeto_id].saldoBRL += saldoTotal;
+          bookmakersByProjeto[bk.projeto_id].saldo += saldoTotal;
+          bookmakersByProjeto[bk.projeto_id].irrecuperavel += irrecuperavel;
+        }
         bookmakersByProjeto[bk.projeto_id].count += 1;
       });
       
-      // Agregar lucro de apostas por projeto (usando lucro_prejuizo_brl_referencia quando disponível)
-      const lucroByProjeto: Record<string, number> = {};
+      // Agregar lucro de apostas por projeto COM BREAKDOWN POR MOEDA
+      const lucroByProjeto: Record<string, { total: number; BRL: number; USD: number }> = {};
       (apostasResult.data || []).forEach((ap: any) => {
         if (!ap.projeto_id) return;
-        // Priorizar valor em BRL já convertido, senão usar lucro_prejuizo com conversão
-        let valorLucro = ap.lucro_prejuizo_brl_referencia;
-        if (valorLucro == null) {
-          valorLucro = ap.lucro_prejuizo || 0;
-          // Converter USD para BRL se necessário
-          if (ap.moeda_operacao === 'USD') {
-            valorLucro = valorLucro * USD_TO_BRL;
-          }
+        if (!lucroByProjeto[ap.projeto_id]) {
+          lucroByProjeto[ap.projeto_id] = { total: 0, BRL: 0, USD: 0 };
         }
-        lucroByProjeto[ap.projeto_id] = (lucroByProjeto[ap.projeto_id] || 0) + valorLucro;
+        
+        const lucroOriginal = ap.lucro_prejuizo || 0;
+        const moeda = ap.moeda_operacao || 'BRL';
+        
+        // Acumular por moeda original
+        if (moeda === 'USD') {
+          lucroByProjeto[ap.projeto_id].USD += lucroOriginal;
+          // Para total consolidado, usar BRL referência se existir, senão converter
+          const valorBRL = ap.lucro_prejuizo_brl_referencia ?? (lucroOriginal * USD_TO_BRL);
+          lucroByProjeto[ap.projeto_id].total += valorBRL;
+        } else {
+          lucroByProjeto[ap.projeto_id].BRL += lucroOriginal;
+          lucroByProjeto[ap.projeto_id].total += lucroOriginal;
+        }
       });
       
       // Agregar operadores ativos por projeto
@@ -245,9 +273,17 @@ export default function GestaoProjetos() {
         data_fim_prevista: proj.data_fim_prevista,
         orcamento_inicial: proj.orcamento_inicial || 0,
         saldo_bookmakers: bookmakersByProjeto[proj.id]?.saldo || 0,
+        saldo_bookmakers_by_moeda: {
+          BRL: bookmakersByProjeto[proj.id]?.saldoBRL || 0,
+          USD: bookmakersByProjeto[proj.id]?.saldoUSD || 0,
+        },
         saldo_irrecuperavel: bookmakersByProjeto[proj.id]?.irrecuperavel || 0,
         total_bookmakers: bookmakersByProjeto[proj.id]?.count || 0,
-        lucro_operacional: lucroByProjeto[proj.id] || 0,
+        lucro_operacional: lucroByProjeto[proj.id]?.total || 0,
+        lucro_by_moeda: {
+          BRL: lucroByProjeto[proj.id]?.BRL || 0,
+          USD: lucroByProjeto[proj.id]?.USD || 0,
+        },
         operadores_ativos: operadoresByProjeto[proj.id] || 0,
         perdas_confirmadas: perdasByProjeto[proj.id] || 0,
       }));
@@ -504,32 +540,103 @@ export default function GestaoProjetos() {
                   </div>
                   
                   <div className="pt-2 border-t space-y-2">
+                    {/* Saldo Bookmakers com breakdown por moeda */}
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Wallet className="h-4 w-4" />
                         <span>Saldo Bookmakers</span>
                       </div>
-                      <span className="font-medium">{formatCurrency(projeto.saldo_bookmakers || 0)}</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="font-medium cursor-help">
+                            {formatCurrency(projeto.saldo_bookmakers || 0)}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="text-xs">
+                          <div className="space-y-1">
+                            {(projeto.saldo_bookmakers_by_moeda?.BRL || 0) > 0 && (
+                              <div>BRL: {formatCurrency(projeto.saldo_bookmakers_by_moeda?.BRL || 0)}</div>
+                            )}
+                            {(projeto.saldo_bookmakers_by_moeda?.USD || 0) > 0 && (
+                              <div>USD: ${(projeto.saldo_bookmakers_by_moeda?.USD || 0).toFixed(2)}</div>
+                            )}
+                            {(projeto.saldo_bookmakers_by_moeda?.USD || 0) > 0 && (
+                              <div className="text-muted-foreground pt-1 border-t">
+                                Total consolidado em BRL (PTAX)
+                              </div>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
+                    
+                    {/* Mostrar breakdown visual se houver USD */}
+                    {(projeto.saldo_bookmakers_by_moeda?.USD || 0) > 0 && (
+                      <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground -mt-1">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          R$ {(projeto.saldo_bookmakers_by_moeda?.BRL || 0).toFixed(0)}
+                        </Badge>
+                        <span>+</span>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-emerald-500/30 text-emerald-400">
+                          $ {(projeto.saldo_bookmakers_by_moeda?.USD || 0).toFixed(2)}
+                        </Badge>
+                      </div>
+                    )}
                     
                     {(() => {
                       // Lucro operacional = soma de lucro_prejuizo das apostas LIQUIDADAS - perdas confirmadas
                       const lucroOperacional = (projeto.lucro_operacional || 0) - (projeto.perdas_confirmadas || 0);
                       const isPositive = lucroOperacional >= 0;
+                      const hasUSD = (projeto.lucro_by_moeda?.USD || 0) !== 0;
+                      
                       return (
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            {isPositive ? (
-                              <TrendingUp className="h-4 w-4 text-emerald-500" />
-                            ) : (
-                              <TrendingDown className="h-4 w-4 text-red-500" />
-                            )}
-                            <span>Lucro</span>
+                        <>
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              {isPositive ? (
+                                <TrendingUp className="h-4 w-4 text-emerald-500" />
+                              ) : (
+                                <TrendingDown className="h-4 w-4 text-red-500" />
+                              )}
+                              <span>Lucro</span>
+                            </div>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className={`font-medium cursor-help ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                                  {isPositive ? '+' : ''}{formatCurrency(lucroOperacional)}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="left" className="text-xs">
+                                <div className="space-y-1">
+                                  {(projeto.lucro_by_moeda?.BRL || 0) !== 0 && (
+                                    <div>BRL: {formatCurrency(projeto.lucro_by_moeda?.BRL || 0)}</div>
+                                  )}
+                                  {hasUSD && (
+                                    <div>USD: ${(projeto.lucro_by_moeda?.USD || 0).toFixed(2)}</div>
+                                  )}
+                                  {hasUSD && (
+                                    <div className="text-muted-foreground pt-1 border-t">
+                                      Total consolidado em BRL (PTAX)
+                                    </div>
+                                  )}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
-                          <span className={`font-medium ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {isPositive ? '+' : ''}{formatCurrency(lucroOperacional)}
-                          </span>
-                        </div>
+                          
+                          {/* Breakdown visual de lucro se houver USD */}
+                          {hasUSD && (
+                            <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground -mt-1">
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                R$ {(projeto.lucro_by_moeda?.BRL || 0).toFixed(0)}
+                              </Badge>
+                              <span>+</span>
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-emerald-500/30 text-emerald-400">
+                                $ {(projeto.lucro_by_moeda?.USD || 0).toFixed(2)}
+                              </Badge>
+                            </div>
+                          )}
+                        </>
                       );
                     })()}
                     

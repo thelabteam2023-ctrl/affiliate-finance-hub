@@ -33,6 +33,12 @@ interface HistoricoVinculo {
   data_vinculacao: string;
   data_desvinculacao: string | null;
   status_final: string | null;
+  moeda: string;
+  // Valores por moeda (BRL e USD separados)
+  depositos_by_moeda: { BRL: number; USD: number };
+  saques_by_moeda: { BRL: number; USD: number };
+  lucro_by_moeda: { BRL: number; USD: number };
+  // Totais consolidados em BRL
   total_depositado: number;
   total_sacado: number;
   lucro_operacional: number;
@@ -50,10 +56,13 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
     try {
       setLoading(true);
 
+      // Taxa PTAX aproximada
+      const USD_TO_BRL = 6.1;
+
       // Buscar histórico de vínculos
       const { data: historicoData, error: historicoError } = await supabase
         .from("projeto_bookmaker_historico")
-        .select("*")
+        .select("*, bookmaker:bookmaker_id(moeda)")
         .eq("projeto_id", projetoId)
         .order("data_vinculacao", { ascending: false });
 
@@ -67,58 +76,88 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
       // Buscar dados financeiros para cada bookmaker
       const bookmakerIds = historicoData.map((h) => h.bookmaker_id);
 
-      // Depósitos (cash_ledger onde destino_bookmaker_id é uma das bookmakers)
+      // Depósitos com moeda
       const { data: depositos } = await supabase
         .from("cash_ledger")
-        .select("destino_bookmaker_id, valor")
+        .select("destino_bookmaker_id, valor, moeda")
         .eq("tipo_transacao", "DEPOSITO")
         .eq("status", "CONFIRMADO")
         .in("destino_bookmaker_id", bookmakerIds);
 
-      // Saques (cash_ledger onde origem_bookmaker_id é uma das bookmakers)
+      // Saques com moeda
       const { data: saques } = await supabase
         .from("cash_ledger")
-        .select("origem_bookmaker_id, valor")
+        .select("origem_bookmaker_id, valor, moeda")
         .eq("tipo_transacao", "SAQUE")
         .eq("status", "CONFIRMADO")
         .in("origem_bookmaker_id", bookmakerIds);
 
-      // Lucro de apostas usando apostas_unificada
+      // Lucro de apostas com moeda
       const { data: apostasData } = await supabase
         .from("apostas_unificada")
-        .select("bookmaker_id, lucro_prejuizo")
+        .select("bookmaker_id, lucro_prejuizo, lucro_prejuizo_brl_referencia, moeda_operacao")
         .eq("projeto_id", projetoId)
         .eq("status", "LIQUIDADA")
         .not("bookmaker_id", "is", null)
         .in("bookmaker_id", bookmakerIds);
 
-      // Agregar dados por bookmaker
-      const depositosMap: Record<string, number> = {};
-      const saquesMap: Record<string, number> = {};
-      const lucroMap: Record<string, number> = {};
+      // Agregar dados por bookmaker COM BREAKDOWN POR MOEDA
+      const depositosMap: Record<string, { BRL: number; USD: number; total: number }> = {};
+      const saquesMap: Record<string, { BRL: number; USD: number; total: number }> = {};
+      const lucroMap: Record<string, { BRL: number; USD: number; total: number }> = {};
 
       // Agregar depósitos
       depositos?.forEach((d) => {
-        depositosMap[d.destino_bookmaker_id] =
-          (depositosMap[d.destino_bookmaker_id] || 0) + Number(d.valor);
+        if (!depositosMap[d.destino_bookmaker_id]) {
+          depositosMap[d.destino_bookmaker_id] = { BRL: 0, USD: 0, total: 0 };
+        }
+        const valor = Number(d.valor);
+        const moeda = d.moeda || 'BRL';
+        if (moeda === 'USD') {
+          depositosMap[d.destino_bookmaker_id].USD += valor;
+          depositosMap[d.destino_bookmaker_id].total += valor * USD_TO_BRL;
+        } else {
+          depositosMap[d.destino_bookmaker_id].BRL += valor;
+          depositosMap[d.destino_bookmaker_id].total += valor;
+        }
       });
 
       // Agregar saques
       saques?.forEach((s) => {
-        saquesMap[s.origem_bookmaker_id] =
-          (saquesMap[s.origem_bookmaker_id] || 0) + Number(s.valor);
+        if (!saquesMap[s.origem_bookmaker_id]) {
+          saquesMap[s.origem_bookmaker_id] = { BRL: 0, USD: 0, total: 0 };
+        }
+        const valor = Number(s.valor);
+        const moeda = s.moeda || 'BRL';
+        if (moeda === 'USD') {
+          saquesMap[s.origem_bookmaker_id].USD += valor;
+          saquesMap[s.origem_bookmaker_id].total += valor * USD_TO_BRL;
+        } else {
+          saquesMap[s.origem_bookmaker_id].BRL += valor;
+          saquesMap[s.origem_bookmaker_id].total += valor;
+        }
       });
 
       // Agregar lucro de apostas
       apostasData?.forEach((a) => {
-        if (a.bookmaker_id) {
-          lucroMap[a.bookmaker_id] =
-            (lucroMap[a.bookmaker_id] || 0) + Number(a.lucro_prejuizo || 0);
+        if (!a.bookmaker_id) return;
+        if (!lucroMap[a.bookmaker_id]) {
+          lucroMap[a.bookmaker_id] = { BRL: 0, USD: 0, total: 0 };
+        }
+        const lucro = Number(a.lucro_prejuizo || 0);
+        const moeda = a.moeda_operacao || 'BRL';
+        if (moeda === 'USD') {
+          lucroMap[a.bookmaker_id].USD += lucro;
+          const valorBRL = a.lucro_prejuizo_brl_referencia ?? (lucro * USD_TO_BRL);
+          lucroMap[a.bookmaker_id].total += valorBRL;
+        } else {
+          lucroMap[a.bookmaker_id].BRL += lucro;
+          lucroMap[a.bookmaker_id].total += lucro;
         }
       });
 
       // Montar dados do histórico
-      const mappedHistorico: HistoricoVinculo[] = historicoData.map((h) => ({
+      const mappedHistorico: HistoricoVinculo[] = historicoData.map((h: any) => ({
         id: h.id,
         bookmaker_id: h.bookmaker_id,
         bookmaker_nome: h.bookmaker_nome,
@@ -127,9 +166,22 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
         data_vinculacao: h.data_vinculacao,
         data_desvinculacao: h.data_desvinculacao,
         status_final: h.status_final,
-        total_depositado: depositosMap[h.bookmaker_id] || 0,
-        total_sacado: saquesMap[h.bookmaker_id] || 0,
-        lucro_operacional: lucroMap[h.bookmaker_id] || 0,
+        moeda: h.bookmaker?.moeda || 'BRL',
+        depositos_by_moeda: {
+          BRL: depositosMap[h.bookmaker_id]?.BRL || 0,
+          USD: depositosMap[h.bookmaker_id]?.USD || 0,
+        },
+        saques_by_moeda: {
+          BRL: saquesMap[h.bookmaker_id]?.BRL || 0,
+          USD: saquesMap[h.bookmaker_id]?.USD || 0,
+        },
+        lucro_by_moeda: {
+          BRL: lucroMap[h.bookmaker_id]?.BRL || 0,
+          USD: lucroMap[h.bookmaker_id]?.USD || 0,
+        },
+        total_depositado: depositosMap[h.bookmaker_id]?.total || 0,
+        total_sacado: saquesMap[h.bookmaker_id]?.total || 0,
+        lucro_operacional: lucroMap[h.bookmaker_id]?.total || 0,
       }));
 
       setHistorico(mappedHistorico);
@@ -140,12 +192,41 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
     }
   };
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number, moeda: string = 'BRL') => {
+    if (moeda === 'USD') {
+      return `$ ${value.toFixed(2)}`;
+    }
+    return `R$ ${value.toFixed(2).replace(".", ",")}`;
+  };
+
+  const formatCurrencyBRL = (value: number) => {
     return `R$ ${value.toFixed(2).replace(".", ",")}`;
   };
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
+  };
+
+  // Helper para mostrar breakdown por moeda
+  const renderCurrencyBreakdown = (brl: number, usd: number, consolidated: number, label: string, colorClass: string) => {
+    const hasUSD = usd !== 0;
+    const hasBRL = brl !== 0;
+    
+    return (
+      <div className="text-right flex-shrink-0 min-w-[110px]">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className={`font-medium ${colorClass}`}>
+          {formatCurrencyBRL(consolidated)}
+        </p>
+        {(hasUSD || (hasUSD && hasBRL)) && (
+          <div className="flex justify-end gap-1 text-[10px] text-muted-foreground mt-0.5">
+            {hasBRL && <span>R${brl.toFixed(0)}</span>}
+            {hasBRL && hasUSD && <span>+</span>}
+            {hasUSD && <span className="text-emerald-400">${usd.toFixed(2)}</span>}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const getStatusBadge = (status: string | null, isActive: boolean) => {
@@ -347,48 +428,47 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
                         </div>
 
                         {/* Depósitos */}
-                        <div className="text-right flex-shrink-0 min-w-[90px]">
-                          <p className="text-xs text-muted-foreground">Depositado</p>
-                          <p className="font-medium text-blue-400">
-                            {formatCurrency(item.total_depositado)}
-                          </p>
-                        </div>
+                        {renderCurrencyBreakdown(
+                          item.depositos_by_moeda.BRL,
+                          item.depositos_by_moeda.USD,
+                          item.total_depositado,
+                          "Depositado",
+                          "text-blue-400"
+                        )}
 
                         {/* Saques */}
-                        <div className="text-right flex-shrink-0 min-w-[90px]">
-                          <p className="text-xs text-muted-foreground">Sacado</p>
-                          <p className="font-medium text-emerald-400">
-                            {formatCurrency(item.total_sacado)}
-                          </p>
-                        </div>
+                        {renderCurrencyBreakdown(
+                          item.saques_by_moeda.BRL,
+                          item.saques_by_moeda.USD,
+                          item.total_sacado,
+                          "Sacado",
+                          "text-emerald-400"
+                        )}
 
-                        {/* Resultado Caixa */}
-                        <div className="text-right flex-shrink-0 min-w-[90px]">
-                          <p className="text-xs text-muted-foreground">Resultado Caixa</p>
-                          <p
-                            className={`font-semibold ${
-                              resultadoCaixa >= 0 ? "text-emerald-400" : "text-red-400"
-                            }`}
-                          >
-                            {resultadoCaixa >= 0 ? "+" : ""}
-                            {formatCurrency(resultadoCaixa)}
-                          </p>
-                        </div>
+                        {/* Resultado Caixa - calculado por moeda */}
+                        {(() => {
+                          const resultadoBRL = item.saques_by_moeda.BRL - item.depositos_by_moeda.BRL;
+                          const resultadoUSD = item.saques_by_moeda.USD - item.depositos_by_moeda.USD;
+                          const resultadoTotal = item.total_sacado - item.total_depositado;
+                          const colorClass = resultadoTotal >= 0 ? "text-emerald-400" : "text-red-400";
+                          
+                          return renderCurrencyBreakdown(
+                            resultadoBRL,
+                            resultadoUSD,
+                            resultadoTotal,
+                            "Resultado Caixa",
+                            colorClass
+                          );
+                        })()}
 
                         {/* Lucro Operacional */}
-                        <div className="text-right flex-shrink-0 min-w-[100px]">
-                          <p className="text-xs text-muted-foreground">Lucro Operacional</p>
-                          <p
-                            className={`font-semibold ${
-                              item.lucro_operacional >= 0
-                                ? "text-emerald-400"
-                                : "text-red-400"
-                            }`}
-                          >
-                            {item.lucro_operacional >= 0 ? "+" : ""}
-                            {formatCurrency(item.lucro_operacional)}
-                          </p>
-                        </div>
+                        {renderCurrencyBreakdown(
+                          item.lucro_by_moeda.BRL,
+                          item.lucro_by_moeda.USD,
+                          item.lucro_operacional,
+                          "Lucro Operacional",
+                          item.lucro_operacional >= 0 ? "text-emerald-400" : "text-red-400"
+                        )}
                       </div>
                     </div>
                   );
