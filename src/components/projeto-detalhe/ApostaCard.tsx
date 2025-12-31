@@ -65,6 +65,8 @@ interface ApostaCardProps {
   variant?: "card" | "list";
   accentColor?: string;
   className?: string;
+  /** Função de formatação de moeda (usa moeda do projeto quando fornecida) */
+  formatCurrency?: (value: number) => string;
 }
 
 // Configuração de cores por estratégia
@@ -215,7 +217,7 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   GBP: "£",
 };
 
-function formatCurrency(value: number, moeda: string = "BRL"): string {
+function defaultFormatCurrency(value: number, moeda: string = "BRL"): string {
   const symbol = CURRENCY_SYMBOLS[moeda] || moeda;
   return `${symbol} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -227,8 +229,14 @@ export function ApostaCard({
   onQuickResolve,
   variant = "card",
   accentColor,
-  className 
+  className,
+  formatCurrency: formatCurrencyProp
 }: ApostaCardProps) {
+  // Usa formatação do projeto se fornecida, senão usa a padrão local
+  const formatValue = (value: number) => {
+    if (formatCurrencyProp) return formatCurrencyProp(value);
+    return defaultFormatCurrency(value, aposta.moeda || "BRL");
+  };
   const config = ESTRATEGIA_CONFIG[estrategia] || ESTRATEGIA_CONFIG.NORMAL;
   const Icon = config.icon;
   
@@ -325,7 +333,7 @@ export function ApostaCard({
           
           {/* Stake */}
           <div className="text-right shrink-0">
-            <p className="text-xs text-muted-foreground">{formatCurrency(stake, moeda)}</p>
+            <p className="text-xs text-muted-foreground">{formatValue(stake)}</p>
           </div>
         </div>
         
@@ -334,7 +342,7 @@ export function ApostaCard({
           {aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined && (
             <>
               <span className={cn("text-sm font-medium", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                {formatCurrency(aposta.lucro_prejuizo, moeda)}
+                {formatValue(aposta.lucro_prejuizo)}
               </span>
               {roi !== null && (
                 <span className={cn("text-xs", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
@@ -444,11 +452,11 @@ export function ApostaCard({
             )}
           </div>
           <div className="text-right">
-            <p className="text-xs text-muted-foreground">Stake: {formatCurrency(stake, moeda)}</p>
+            <p className="text-xs text-muted-foreground">Stake: {formatValue(stake)}</p>
             {aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined && (
               <div className="flex items-center gap-2 justify-end">
                 <span className={cn("text-sm font-medium", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                  {formatCurrency(aposta.lucro_prejuizo, moeda)}
+                  {formatValue(aposta.lucro_prejuizo)}
                 </span>
                 {roi !== null && (
                   <span className={cn("text-xs", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
