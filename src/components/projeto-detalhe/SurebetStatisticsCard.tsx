@@ -38,9 +38,10 @@ interface Surebet {
 
 interface SurebetStatisticsCardProps {
   surebets: Surebet[];
-  formatCurrency?: (value: number) => string;
+  /** Função de formatação obrigatória - deve vir do useProjetoCurrency */
+  formatCurrency: (value: number) => string;
   /** Símbolo da moeda do projeto (ex: "$", "R$") */
-  currencySymbol?: string;
+  currencySymbol: string;
 }
 
 const StatCell = ({ 
@@ -125,11 +126,7 @@ const SectionHeader = ({ title }: { title: string }) => (
   </div>
 );
 
-const defaultFormatCurrency = (value: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-
-export function SurebetStatisticsCard({ surebets, formatCurrency: formatCurrencyProp, currencySymbol = "R$" }: SurebetStatisticsCardProps) {
-  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
+export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol }: SurebetStatisticsCardProps) {
 
   const stats = useMemo(() => {
     // Operações resolvidas (não pendentes)

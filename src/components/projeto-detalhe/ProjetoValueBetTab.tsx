@@ -682,7 +682,7 @@ export function ProjetoValueBetTab({
       {/* Gráficos e Estatísticas */}
       {metricas.total > 0 && (
         <>
-          <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" logoMap={logoMap} isSingleDayPeriod={internalPeriod === "1dia"} />
+          <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" logoMap={logoMap} isSingleDayPeriod={internalPeriod === "1dia"} formatCurrency={formatCurrency} />
           <UnifiedStatisticsCard apostas={apostas} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
         </>
       )}

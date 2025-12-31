@@ -81,15 +81,15 @@ interface VisaoGeralChartsProps {
   showEvolucaoChart?: boolean;
   showCasasCard?: boolean;
   isSingleDayPeriod?: boolean;
-  formatCurrency?: (value: number) => string;
+  /** Função de formatação obrigatória - deve vir do useProjetoCurrency */
+  formatCurrency: (value: number) => string;
 }
 
 // =====================================================
 // HELPERS
 // =====================================================
 
-const defaultFormatCurrency = (value: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+// defaultFormatCurrency removido - formatCurrency agora é obrigatório
 
 const getStake = (a: ApostaBase): number => {
   const val = typeof a.stake_total === "number" ? a.stake_total : a.stake;
@@ -378,10 +378,8 @@ export function VisaoGeralCharts({
   showEvolucaoChart = true,
   showCasasCard = true,
   isSingleDayPeriod = false,
-  formatCurrency: formatCurrencyProp
+  formatCurrency
 }: VisaoGeralChartsProps) {
-  // Usar prop ou fallback
-  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [calendarOpen, setCalendarOpen] = useState(false);
   const evolucaoData = useMemo((): EvolucaoData[] => {
     const sorted = [...apostas].sort(

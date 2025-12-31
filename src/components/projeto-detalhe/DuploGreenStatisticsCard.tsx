@@ -27,7 +27,8 @@ interface Aposta {
 
 interface DuploGreenStatisticsCardProps {
   apostas: Aposta[];
-  formatCurrency?: (value: number) => string;
+  /** Função de formatação obrigatória - deve vir do useProjetoCurrency */
+  formatCurrency: (value: number) => string;
 }
 
 // Componente de KPI âncora (destaque máximo)
@@ -122,11 +123,7 @@ const SectionHeader = ({
   );
 };
 
-const defaultFormatCurrency = (value: number) =>
-  value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-export function DuploGreenStatisticsCard({ apostas, formatCurrency: formatCurrencyProp }: DuploGreenStatisticsCardProps) {
-  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
+export function DuploGreenStatisticsCard({ apostas, formatCurrency }: DuploGreenStatisticsCardProps) {
 
   const stats = useMemo(() => {
     const getStake = (a: Aposta) => {
