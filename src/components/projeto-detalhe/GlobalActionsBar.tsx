@@ -49,6 +49,25 @@ interface Bookmaker {
   } | null;
 }
 
+/**
+ * WHITELIST DE ABAS OPERACIONAIS
+ * 
+ * O botão "Nova Aposta" só aparece nas abas listadas abaixo.
+ * Abas administrativas (Vínculos, Gestão, Ciclos) NUNCA exibem o botão.
+ * 
+ * REGRA: Novas abas NÃO exibem o botão por padrão.
+ * Para exibir, adicione explicitamente à whitelist.
+ */
+const ABAS_OPERACIONAIS_APOSTA: readonly string[] = [
+  "visao-geral",
+  "apostas",
+  "freebets", 
+  "bonus",
+  "surebet",
+  "valuebet",
+  "duplogreen",
+] as const;
+
 export function GlobalActionsBar({ 
   projetoId, 
   activeTab,
@@ -57,6 +76,9 @@ export function GlobalActionsBar({
   onNavigateToTab 
 }: GlobalActionsBarProps) {
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
+  
+  // Verificação centralizada: botão só aparece em abas operacionais
+  const showNovaApostaButton = ABAS_OPERACIONAIS_APOSTA.includes(activeTab || "");
   
   // Dialog states
   const [apostaDialogOpen, setApostaDialogOpen] = useState(false);
@@ -163,39 +185,41 @@ export function GlobalActionsBar({
     <>
       {/* Actions Bar */}
       <div className="flex items-center gap-2">
-        {/* Nova Aposta Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" className="h-9">
-              <Plus className="mr-1 h-4 w-4" />
-              Nova Aposta
-              <ChevronDown className="ml-1 h-3 w-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => setApostaDialogOpen(true)}>
-              <Target className="mr-2 h-4 w-4" />
-              Aposta Simples
-            </DropdownMenuItem>
-            {/* Ocultar Aposta Múltipla na aba Duplo Green e Surebet */}
-            {activeTab !== "duplogreen" && activeTab !== "surebet" && (
-              <DropdownMenuItem onClick={() => setMultiplaDialogOpen(true)}>
-                <Layers className="mr-2 h-4 w-4" />
-                Aposta Múltipla
+        {/* Nova Aposta Dropdown - APENAS em abas operacionais (whitelist) */}
+        {showNovaApostaButton && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" className="h-9">
+                <Plus className="mr-1 h-4 w-4" />
+                Nova Aposta
+                <ChevronDown className="ml-1 h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => setApostaDialogOpen(true)}>
+                <Target className="mr-2 h-4 w-4" />
+                Aposta Simples
               </DropdownMenuItem>
-            )}
-            {/* Ocultar Surebet na aba ValueBet */}
-            {activeTab !== "valuebet" && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setSurebetDialogOpen(true)}>
-                  <ArrowLeftRight className="mr-2 h-4 w-4" />
-                  Surebet
+              {/* Ocultar Aposta Múltipla na aba Duplo Green e Surebet */}
+              {activeTab !== "duplogreen" && activeTab !== "surebet" && (
+                <DropdownMenuItem onClick={() => setMultiplaDialogOpen(true)}>
+                  <Layers className="mr-2 h-4 w-4" />
+                  Aposta Múltipla
                 </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              )}
+              {/* Ocultar Surebet na aba ValueBet */}
+              {activeTab !== "valuebet" && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setSurebetDialogOpen(true)}>
+                    <ArrowLeftRight className="mr-2 h-4 w-4" />
+                    Surebet
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {/* Novo Bônus Button - only visible on Bônus tab */}
         {activeTab === "bonus" && (
