@@ -608,11 +608,20 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     return shortName ? `${bk.nome} - ${shortName}` : bk.nome;
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
+  // MULTI-MOEDA: formatCurrency agora respeita a moeda de origem
+  const formatCurrency = (value: number, moeda: string = "BRL") => {
+    const currencyCode = moeda === "USDT" ? "USD" : moeda;
+    const locale = currencyCode === "USD" ? "en-US" : "pt-BR";
+    return new Intl.NumberFormat(locale, {
       style: "currency",
-      currency: "BRL",
+      currency: currencyCode,
     }).format(value);
+  };
+  
+  // Helper para símbolo de moeda
+  const getCurrencySymbol = (moeda: string): string => {
+    const symbols: Record<string, string> = { BRL: "R$", USD: "$", EUR: "€", GBP: "£", USDT: "$" };
+    return symbols[moeda] || moeda;
   };
 
   // Cálculos em tempo real - TOTALMENTE reativo aos inputs atuais
@@ -621,6 +630,16 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   const analysis = useMemo(() => {
     const parsedOdds = odds.map(o => parseFloat(o.odd) || 0);
     const validOddsCount = parsedOdds.filter(o => o > 1).length;
+    
+    // ============ MULTI-MOEDA: Detectar moedas da operação ============
+    const moedasSelecionadas = odds
+      .filter(o => o.bookmaker_id)
+      .map(o => o.moeda)
+      .filter((m): m is SupportedCurrency => !!m);
+    
+    const moedasUnicas = [...new Set(moedasSelecionadas)];
+    const isMultiCurrency = moedasUnicas.length > 1;
+    const moedaDominante: SupportedCurrency = moedasUnicas.length === 1 ? moedasUnicas[0] : "BRL";
     
     // Probabilidades implícitas (mesmo com dados parciais)
     const impliedProbs = parsedOdds.map(odd => odd > 1 ? 1 / odd : 0);
@@ -671,7 +690,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     });
     
     // StakeTotal = soma de todas as stakes atuais
-    const stakeTotal = actualStakes.reduce((a, b) => a + b, 0);
+    // NOTA: Só somamos se todas são da mesma moeda; caso contrário a soma não tem significado
+    const stakeTotal = isMultiCurrency ? 0 : actualStakes.reduce((a, b) => a + b, 0);
     
     // Calcular saldos disponíveis por posição para validação
     const saldosPorPosicao = odds.map((entry, idx) => {
@@ -759,7 +779,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         };
       } else if (allPositive && guaranteedProfit > 0) {
         recommendation = { 
-          text: `Arbitragem! Lucro garantido: ${formatCurrency(guaranteedProfit)}`, 
+          text: `Arbitragem! Lucro garantido: ${formatCurrency(guaranteedProfit, moedaDominante)}`, 
           color: "text-emerald-500",
           icon: "check"
         };
@@ -777,7 +797,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         };
       } else if (anyNegative) {
         recommendation = { 
-          text: `Risco: ${formatCurrency(riscoMaximo)} de perda máxima`, 
+          text: `Risco: ${formatCurrency(riscoMaximo, moedaDominante)} de perda máxima`, 
           color: "text-red-400",
           icon: "x"
         };
@@ -809,7 +829,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       // Saldos para reatividade
       saldosPorPosicao,
       saldoTotalOperavel,
-      hasSaldoInsuficiente
+      hasSaldoInsuficiente,
+      // MULTI-MOEDA
+      isMultiCurrency,
+      moedaDominante,
+      moedasUnicas
     };
   }, [
     // Dependências explícitas para garantir reatividade total
@@ -908,8 +932,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       // 4. Verificar saldo considerando uso compartilhado (APENAS para criação, não edição)
       if (!isEditing) {
         const saldoDisponivel = getSaldoDisponivelParaPosicao(entry.bookmaker_id, i);
+        const bkMoeda = bookmakerSaldos.find(b => b.id === entry.bookmaker_id)?.moeda || "BRL";
         if (saldoDisponivel !== null && stake > saldoDisponivel + 0.01) {
-          toast.error(`Saldo insuficiente em ${getBookmakerNome(entry.bookmaker_id)} para "${selecaoLabel}": ${formatCurrency(saldoDisponivel)} disponível nesta operação, ${formatCurrency(stake)} necessário`);
+          toast.error(`Saldo insuficiente em ${getBookmakerNome(entry.bookmaker_id)} para "${selecaoLabel}": ${formatCurrency(saldoDisponivel, bkMoeda)} disponível nesta operação, ${formatCurrency(stake, bkMoeda)} necessário`);
           return;
         }
       }
@@ -1754,8 +1779,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                         ? `${parceiroNomeBk[0]} ${parceiroNomeBk[parceiroNomeBk.length - 1] || ""}`.trim()
                                         : "";
                                       
-                                      // Breakdown do saldo
-                                      const breakdownParts = [`R$ ${bk.saldo_disponivel.toFixed(0)}`];
+                                      // Breakdown do saldo - MULTI-MOEDA
+                                      const symbol = getCurrencySymbol(bk.moeda);
+                                      const breakdownParts = [`${symbol} ${bk.saldo_disponivel.toFixed(0)}`];
                                       if (bk.saldo_freebet > 0) breakdownParts.push(`FB: ${bk.saldo_freebet.toFixed(0)}`);
                                       if (bk.saldo_bonus > 0) breakdownParts.push(`🎁: ${bk.saldo_bonus.toFixed(0)}`);
                                       
@@ -1768,14 +1794,22 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                         >
                                           <div className="flex items-center justify-between w-full gap-2 min-w-0">
                                             <div className="flex flex-col min-w-0 flex-1">
-                                              <span className="uppercase text-xs truncate">{bk.nome}</span>
+                                              <div className="flex items-center gap-1">
+                                                <span className="uppercase text-xs truncate">{bk.nome}</span>
+                                                {/* Badge de moeda estrangeira */}
+                                                {bk.moeda !== "BRL" && (
+                                                  <Badge variant="outline" className="text-[8px] px-1 py-0 h-4 bg-blue-500/10 border-blue-500/30 text-blue-400">
+                                                    {bk.moeda}
+                                                  </Badge>
+                                                )}
+                                              </div>
                                               {parceiroShortBk && (
                                                 <span className="text-[10px] text-muted-foreground truncate">{parceiroShortBk}</span>
                                               )}
                                             </div>
                                             <div className="flex flex-col items-end flex-shrink-0">
                                               <span className={`text-[10px] font-medium ${isIndisponivel ? "text-destructive" : "text-blue-400"}`}>
-                                                {isIndisponivel ? "Indisponível" : formatCurrency(saldoDisponivelParaEssaPosicao)}
+                                                {isIndisponivel ? "Indisponível" : formatCurrency(saldoDisponivelParaEssaPosicao, bk.moeda)}
                                               </span>
                                               {!isIndisponivel && (bk.saldo_freebet > 0 || bk.saldo_bonus > 0) && (
                                                 <span className="text-[9px] text-muted-foreground/70">
@@ -1820,7 +1854,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               </Label>
                               {isEditing ? (
                                 <div className="h-8 px-1.5 text-[10px] flex items-center justify-center bg-muted/50 rounded-md border font-medium">
-                                  {formatCurrency(parseFloat(entry.stake) || 0)}
+                                  {formatCurrency(parseFloat(entry.stake) || 0, entry.moeda)}
                                 </div>
                               ) : (
                                 <div className="relative">
@@ -1866,16 +1900,16 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                   <div className="flex items-center gap-1 flex-shrink-0">
                                     <Wallet className="h-2.5 w-2.5 text-blue-400" />
                                     <span className={`font-medium ${saldoInsuficiente ? "text-destructive" : "text-blue-400"}`}>
-                                      {formatCurrency(saldoDisponivelPosicao)}
+                                      {formatCurrency(saldoDisponivelPosicao, selectedBookmaker?.moeda || "BRL")}
                                     </span>
                                   </div>
                                 )}
                               </div>
-                              {/* Breakdown do saldo operável */}
+                              {/* Breakdown do saldo operável - MULTI-MOEDA */}
                               {!isEditing && selectedBookmaker && (
                                 <div className="flex items-center justify-center gap-2 text-[9px] text-muted-foreground/70 flex-wrap">
                                   <span className="text-emerald-400/80">
-                                    R$ {(Number(selectedBookmaker.saldo_real) || 0).toFixed(0)}
+                                    {getCurrencySymbol(selectedBookmaker.moeda)} {(Number(selectedBookmaker.saldo_real) || 0).toFixed(0)}
                                   </span>
                                   {(Number(selectedBookmaker.saldo_freebet) || 0) > 0 && (
                                     <span className="text-amber-400/80">
@@ -1964,7 +1998,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               <div className="flex items-center justify-center gap-2">
                                 <Gift className="h-3 w-3 text-emerald-400" />
                                 <span className="text-[10px] font-medium text-emerald-400">
-                                  Freebet: {formatCurrency(parseFloat(entry.valorFreebetGerada) || 0)}
+                                  Freebet: {formatCurrency(parseFloat(entry.valorFreebetGerada) || 0, entry.moeda)}
                                 </span>
                                 {entry.freebetStatus && (
                                   <Badge className={`text-[9px] h-4 px-1 ${
@@ -2035,13 +2069,26 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     <p className="text-[10px] text-muted-foreground">Stake Total</p>
                     {!isEditing && arredondarAtivado && (
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
-                        ≈ R$ {arredondarValor}
+                        ≈ {getCurrencySymbol(analysis.moedaDominante)} {arredondarValor}
                       </Badge>
                     )}
                   </div>
-                  <p className="text-lg font-bold text-primary">
-                    {analysis.stakeTotal > 0 ? formatCurrency(analysis.stakeTotal) : "—"}
-                  </p>
+                  {/* MULTI-MOEDA: Alerta quando moedas diferentes */}
+                  {analysis.isMultiCurrency ? (
+                    <div className="flex flex-col gap-1">
+                      <p className="text-sm font-bold text-amber-400">Operação Multi-Moeda</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Moedas: {analysis.moedasUnicas.join(" + ")}
+                      </p>
+                      <p className="text-[9px] text-amber-400/70">
+                        ⚠️ Stakes não podem ser somadas
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-lg font-bold text-primary">
+                      {analysis.stakeTotal > 0 ? formatCurrency(analysis.stakeTotal, analysis.moedaDominante) : "—"}
+                    </p>
+                  )}
                 </div>
 
                 {/* Modo Resultado Real (quando resolvida) */}
@@ -2057,7 +2104,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                       <p className={`text-xl font-bold ${
                         analysisReal.lucroReal >= 0 ? "text-emerald-500" : "text-red-500"
                       }`}>
-                        {analysisReal.lucroReal >= 0 ? "+" : ""}{formatCurrency(analysisReal.lucroReal)}
+                        {analysisReal.lucroReal >= 0 ? "+" : ""}{formatCurrency(analysisReal.lucroReal, analysis.moedaDominante)}
                       </p>
                       <p className={`text-sm font-medium ${
                         analysisReal.roiReal >= 0 ? "text-emerald-400" : "text-red-400"
@@ -2127,7 +2174,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                   <span className="text-xs font-medium truncate min-w-0 flex-shrink">{scenario.selecao}</span>
                                   <div className="text-right flex-shrink-0 whitespace-nowrap">
                                     <span className={`text-xs font-bold ${scenario.isPositive ? "text-emerald-500" : "text-red-500"}`}>
-                                      {scenario.lucro >= 0 ? "+" : ""}{formatCurrency(scenario.lucro)}
+                                      {scenario.lucro >= 0 ? "+" : ""}{formatCurrency(scenario.lucro, analysis.moedaDominante)}
                                     </span>
                                     <span className={`text-[10px] ml-1 ${scenario.isPositive ? "text-emerald-400" : "text-red-400"}`}>
                                       ({scenario.roi >= 0 ? "+" : ""}{scenario.roi.toFixed(1)}%)
