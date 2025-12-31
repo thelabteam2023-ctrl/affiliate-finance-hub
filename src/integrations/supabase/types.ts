@@ -4340,6 +4340,7 @@ export type Database = {
           archived_at: string | null
           base_calculo_investidor: string | null
           conciliado: boolean
+          cotacao_trabalho: number | null
           created_at: string
           data_fim_prevista: string | null
           data_fim_real: string | null
@@ -4364,6 +4365,7 @@ export type Database = {
           archived_at?: string | null
           base_calculo_investidor?: string | null
           conciliado?: boolean
+          cotacao_trabalho?: number | null
           created_at?: string
           data_fim_prevista?: string | null
           data_fim_real?: string | null
@@ -4388,6 +4390,7 @@ export type Database = {
           archived_at?: string | null
           base_calculo_investidor?: string | null
           conciliado?: boolean
+          cotacao_trabalho?: number | null
           created_at?: string
           data_fim_prevista?: string | null
           data_fim_real?: string | null

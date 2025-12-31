@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
@@ -12,6 +12,7 @@ import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HistoricoVinculosTab } from "./HistoricoVinculosTab";
 import { VinculoBonusDrawer } from "./VinculoBonusDrawer";
+import { DeltaCambialCard } from "./DeltaCambialCard";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import {
   AlertDialog,
@@ -135,6 +136,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [bonusDrawerOpen, setBonusDrawerOpen] = useState(false);
   const [selectedBookmakerForBonus, setSelectedBookmakerForBonus] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmakerCatalogoId?: string | null } | null>(null);
   const [filterBonusOnly, setFilterBonusOnly] = useState(false);
+  const [cotacaoTrabalho, setCotacaoTrabalho] = useState<number | null>(null);
 
   const { bonuses, fetchBonuses: refetchBonuses, getSummary, getActiveBonusByBookmaker, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
 
@@ -163,10 +165,26 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     return isUSDMoeda(moeda) ? (b.saldo_usd ?? 0) : (b.saldo_atual ?? 0);
   };
 
+  const fetchCotacaoTrabalho = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("projetos")
+        .select("cotacao_trabalho")
+        .eq("id", projetoId)
+        .single();
+
+      if (error) throw error;
+      setCotacaoTrabalho(data?.cotacao_trabalho ?? null);
+    } catch (error: any) {
+      console.error("Erro ao buscar cotação de trabalho:", error.message);
+    }
+  }, [projetoId]);
+
   useEffect(() => {
     fetchVinculos();
     fetchHistoricoCount();
-  }, [projetoId]);
+    fetchCotacaoTrabalho();
+  }, [projetoId, fetchCotacaoTrabalho]);
 
   const fetchVinculos = async () => {
     try {
@@ -722,7 +740,16 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         </Card>
       </div>
 
-      {/* Toolbar */}
+        {/* Delta Cambial - Exibido apenas quando há moeda estrangeira ou sempre para consciência cambial */}
+        {consolidatedTotals.hasForeignCurrency && (
+          <div className="grid gap-4 md:grid-cols-3">
+            <DeltaCambialCard
+              projetoId={projetoId}
+              cotacaoTrabalho={cotacaoTrabalho}
+              onCotacaoUpdated={fetchCotacaoTrabalho}
+            />
+          </div>
+        )}
       <div className="flex items-center gap-4 flex-wrap">
         <Button onClick={handleOpenAddDialog}>
           <Plus className="mr-2 h-4 w-4" />
