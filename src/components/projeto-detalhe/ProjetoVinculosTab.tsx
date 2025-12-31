@@ -790,9 +790,10 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         </div>
       </div>
 
-      {/* Vínculos Grid - com scroll interno */}
-      <ScrollArea className="max-h-[400px] pr-2">
-      {filteredVinculos.length === 0 ? (
+      {/* Lista de Vínculos Ativos — scroll interno (anti-regressão) */}
+      <div className="relative">
+        <ScrollArea className="h-[520px] pr-2">
+          {filteredVinculos.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-10">
@@ -1278,7 +1279,11 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           </CardContent>
         </Card>
       )}
-      </ScrollArea>
+        </ScrollArea>
+        {/* Indicador visual sutil de scroll (fade) */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-5 bg-gradient-to-b from-background/90 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-7 bg-gradient-to-t from-background/90 to-transparent" />
+      </div>
 
       {/* Add Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
