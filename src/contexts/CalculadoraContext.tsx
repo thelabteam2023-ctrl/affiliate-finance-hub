@@ -543,28 +543,25 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       eficienciaFinal = percentualExtracao;
     } else if (ultimaPernaGreen) {
       // GREEN FINAL = Última perna terminou GREEN
-      // A Bookmaker pagou, mas perdemos capital nos LAYs
+      // A Bookmaker pagou, e os ganhos cobriram os custos LAY
       motivoEncerramento = 'green_final';
       
       // Soma de todos os custos LAY (responsabilidades pagas)
       const custosTotaisLay = pernas.reduce((sum, p) => sum + p.custoLay, 0);
       
-      // Retorno da Bookmaker em MÚLTIPLA: stake × Π(odds)
-      // Produto de todas as odds BACK
-      const produtoOdds = pernas.reduce((prod, p) => prod * p.oddBack, 1);
-      const retornoBrutoBookmaker = stakeInicial * produtoOdds;
+      // Novo saldo na casa = stake inicial + custos LAY acumulados
+      // Porque: a cada GREEN, o pagamento da bookmaker cobre o custo LAY daquela perna
+      // Então você mantém o stake + acumula os custos que foram "bancados"
+      const novoSaldoNaCasa = stakeInicial + custosTotaisLay;
       
-      // Novo saldo na casa = retorno total - stake inicial (lucro bruto)
-      const novoSaldoNaCasa = retornoBrutoBookmaker - stakeInicial;
-      
-      // Lucro líquido real = lucro bookmaker - custos LAY
+      // Lucro líquido real = novo saldo - custos LAY = stake inicial (break-even ideal)
       const lucroLiquidoReal = novoSaldoNaCasa - custosTotaisLay;
       
-      // Percentual de extração real
+      // Percentual de extração real (em relação ao stake inicial)
       const percentualExtracao = stakeInicial > 0 ? (lucroLiquidoReal / stakeInicial) * 100 : 0;
       
       greenFinal = {
-        retornoBrutoBookmaker,
+        retornoBrutoBookmaker: novoSaldoNaCasa, // mantém compatibilidade, agora representa o saldo total
         custosTotaisLay,
         novoSaldoNaCasa,
         lucroLiquidoReal,
