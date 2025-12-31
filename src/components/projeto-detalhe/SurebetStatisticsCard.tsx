@@ -39,6 +39,8 @@ interface Surebet {
 interface SurebetStatisticsCardProps {
   surebets: Surebet[];
   formatCurrency?: (value: number) => string;
+  /** Símbolo da moeda do projeto (ex: "$", "R$") */
+  currencySymbol?: string;
 }
 
 const StatCell = ({ 
@@ -126,7 +128,7 @@ const SectionHeader = ({ title }: { title: string }) => (
 const defaultFormatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
-export function SurebetStatisticsCard({ surebets, formatCurrency: formatCurrencyProp }: SurebetStatisticsCardProps) {
+export function SurebetStatisticsCard({ surebets, formatCurrency: formatCurrencyProp, currencySymbol = "R$" }: SurebetStatisticsCardProps) {
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
 
   const stats = useMemo(() => {
@@ -609,10 +611,10 @@ export function SurebetStatisticsCard({ surebets, formatCurrency: formatCurrency
 
             <SectionHeader title="Eficiência" />
             <StatCell 
-              label="Lucro por R$1.000" 
+              label={`Lucro por ${currencySymbol}1.000`}
               value={formatCurrency(stats.lucroPorMilAlocados)}
               valueClass={stats.lucroPorMilAlocados >= 0 ? "text-emerald-400" : "text-red-400"}
-              tooltip="(Lucro ÷ Stake) × 1.000"
+              tooltip={`(Lucro ÷ Stake) × 1.000`}
             />
             <StatCell 
               label="Lucro por vínculo ativo" 
