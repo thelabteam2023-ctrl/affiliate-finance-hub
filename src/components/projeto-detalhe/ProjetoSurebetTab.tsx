@@ -111,6 +111,32 @@ interface CasaAgregada {
   vinculos: VinculoData[];
 }
 
+// Função utilitária para calcular lucro individual de uma perna baseado no resultado
+const calcularLucroPerna = (perna: SurebetPerna): number => {
+  const stake = perna.stake || 0;
+  const odd = perna.odd || 0;
+  const resultado = perna.resultado;
+  
+  if (!resultado || resultado === "PENDENTE") {
+    return 0; // Ainda não liquidada
+  }
+  
+  switch (resultado) {
+    case "GREEN":
+      return (odd * stake) - stake; // Ganhou: retorno - stake = lucro
+    case "MEIO_GREEN":
+      return ((odd * stake) - stake) / 2; // Metade do lucro
+    case "RED":
+      return -stake; // Perdeu toda a stake
+    case "MEIO_RED":
+      return -stake / 2; // Perdeu metade da stake
+    case "VOID":
+      return 0; // Anulada, sem lucro/prejuízo
+    default:
+      return 0;
+  }
+};
+
 export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: ProjetoSurebetTabProps) {
   const [surebets, setSurebets] = useState<Surebet[]>([]);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
@@ -402,32 +428,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       vinculoEntry.lucro += lucro;
     };
 
-    // Função para calcular lucro individual de uma perna baseado no resultado
-    const calcularLucroPerna = (perna: SurebetPerna): number => {
-      const stake = perna.stake || 0;
-      const odd = perna.odd || 0;
-      const resultado = perna.resultado;
-      
-      if (!resultado || resultado === "PENDENTE") {
-        return 0; // Ainda não liquidada
-      }
-      
-      switch (resultado) {
-        case "GREEN":
-          return (odd * stake) - stake; // Ganhou: retorno - stake = lucro
-        case "MEIO_GREEN":
-          return ((odd * stake) - stake) / 2; // Metade do lucro
-        case "RED":
-          return -stake; // Perdeu toda a stake
-        case "MEIO_RED":
-          return -stake / 2; // Perdeu metade da stake
-        case "VOID":
-          return 0; // Anulada, sem lucro/prejuízo
-        default:
-          return 0;
-      }
-    };
-
     surebets.forEach((surebet) => {
       surebet.pernas?.forEach(perna => {
         const nomeCompleto = perna.bookmaker_nome || "Desconhecida";
@@ -628,7 +628,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                 bookmaker_nome: s.pernas?.[0]?.bookmaker_nome || "—",
                 pernas: s.pernas?.map(p => ({
                   bookmaker_nome: p.bookmaker_nome,
-                  stake: p.stake
+                  stake: p.stake,
+                  odd: p.odd,
+                  resultado: p.resultado,
+                  lucro_prejuizo: calcularLucroPerna(p)
                 }))
               }))} 
               accentColor="hsl(var(--primary))"
@@ -649,7 +652,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                 bookmaker_nome: s.pernas?.[0]?.bookmaker_nome || "—",
                 pernas: s.pernas?.map(p => ({
                   bookmaker_nome: p.bookmaker_nome,
-                  stake: p.stake
+                  stake: p.stake,
+                  odd: p.odd,
+                  resultado: p.resultado,
+                  lucro_prejuizo: calcularLucroPerna(p)
                 }))
               }))} 
               accentColor="hsl(var(--primary))"
