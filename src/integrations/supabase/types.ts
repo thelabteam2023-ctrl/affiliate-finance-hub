@@ -191,7 +191,10 @@ export type Database = {
           cancel_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
+          consolidation_currency: string | null
           contexto_operacional: string
+          conversion_rate_used: number | null
+          conversion_source: string | null
           cotacao_snapshot: number | null
           cotacao_snapshot_at: string | null
           created_at: string
@@ -203,6 +206,7 @@ export type Database = {
           gerou_freebet: boolean | null
           id: string
           is_bonus_bet: boolean | null
+          is_multicurrency: boolean | null
           lado_aposta: string | null
           lay_comissao: number | null
           lay_exchange: string | null
@@ -222,8 +226,10 @@ export type Database = {
           odd: number | null
           odd_final: number | null
           pernas: Json | null
+          pl_consolidado: number | null
           projeto_id: string
           resultado: string | null
+          retorno_consolidado: number | null
           retorno_potencial: number | null
           roi_esperado: number | null
           roi_real: number | null
@@ -232,6 +238,7 @@ export type Database = {
           spread_calculado: number | null
           stake: number | null
           stake_bonus: number | null
+          stake_consolidado: number | null
           stake_real: number | null
           stake_total: number | null
           status: string
@@ -253,7 +260,10 @@ export type Database = {
           cancel_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          consolidation_currency?: string | null
           contexto_operacional?: string
+          conversion_rate_used?: number | null
+          conversion_source?: string | null
           cotacao_snapshot?: number | null
           cotacao_snapshot_at?: string | null
           created_at?: string
@@ -265,6 +275,7 @@ export type Database = {
           gerou_freebet?: boolean | null
           id?: string
           is_bonus_bet?: boolean | null
+          is_multicurrency?: boolean | null
           lado_aposta?: string | null
           lay_comissao?: number | null
           lay_exchange?: string | null
@@ -284,8 +295,10 @@ export type Database = {
           odd?: number | null
           odd_final?: number | null
           pernas?: Json | null
+          pl_consolidado?: number | null
           projeto_id: string
           resultado?: string | null
+          retorno_consolidado?: number | null
           retorno_potencial?: number | null
           roi_esperado?: number | null
           roi_real?: number | null
@@ -294,6 +307,7 @@ export type Database = {
           spread_calculado?: number | null
           stake?: number | null
           stake_bonus?: number | null
+          stake_consolidado?: number | null
           stake_real?: number | null
           stake_total?: number | null
           status?: string
@@ -315,7 +329,10 @@ export type Database = {
           cancel_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          consolidation_currency?: string | null
           contexto_operacional?: string
+          conversion_rate_used?: number | null
+          conversion_source?: string | null
           cotacao_snapshot?: number | null
           cotacao_snapshot_at?: string | null
           created_at?: string
@@ -327,6 +344,7 @@ export type Database = {
           gerou_freebet?: boolean | null
           id?: string
           is_bonus_bet?: boolean | null
+          is_multicurrency?: boolean | null
           lado_aposta?: string | null
           lay_comissao?: number | null
           lay_exchange?: string | null
@@ -346,8 +364,10 @@ export type Database = {
           odd?: number | null
           odd_final?: number | null
           pernas?: Json | null
+          pl_consolidado?: number | null
           projeto_id?: string
           resultado?: string | null
+          retorno_consolidado?: number | null
           retorno_potencial?: number | null
           roi_esperado?: number | null
           roi_real?: number | null
@@ -356,6 +376,7 @@ export type Database = {
           spread_calculado?: number | null
           stake?: number | null
           stake_bonus?: number | null
+          stake_consolidado?: number | null
           stake_real?: number | null
           stake_total?: number | null
           status?: string
@@ -4347,9 +4368,11 @@ export type Database = {
           data_inicio: string | null
           descricao: string | null
           first_operation_at: string | null
+          fonte_cotacao: string | null
           id: string
           investidor_id: string | null
           modelo_absorcao_taxas: string
+          moeda_consolidacao: string | null
           nome: string
           observacoes: string | null
           orcamento_inicial: number | null
@@ -4372,9 +4395,11 @@ export type Database = {
           data_inicio?: string | null
           descricao?: string | null
           first_operation_at?: string | null
+          fonte_cotacao?: string | null
           id?: string
           investidor_id?: string | null
           modelo_absorcao_taxas?: string
+          moeda_consolidacao?: string | null
           nome: string
           observacoes?: string | null
           orcamento_inicial?: number | null
@@ -4397,9 +4422,11 @@ export type Database = {
           data_inicio?: string | null
           descricao?: string | null
           first_operation_at?: string | null
+          fonte_cotacao?: string | null
           id?: string
           investidor_id?: string | null
           modelo_absorcao_taxas?: string
+          moeda_consolidacao?: string | null
           nome?: string
           observacoes?: string | null
           orcamento_inicial?: number | null

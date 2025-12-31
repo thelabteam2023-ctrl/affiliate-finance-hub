@@ -40,6 +40,11 @@ import {
   getCurrencySymbol, 
   getCurrencyTextColor 
 } from "@/components/bookmakers/BookmakerSelectOption";
+import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
+import { 
+  MultiCurrencyIndicator, 
+  MultiCurrencyWarning 
+} from "@/components/projeto-detalhe/MultiCurrencyIndicator";
 
 // Interface local DEPRECATED - agora usamos BookmakerSaldo do hook canônico diretamente
 interface LegacyBookmaker {
@@ -179,6 +184,17 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   
   // ========== HOOK DE MULTI-MOEDA ==========
   const { getSnapshotFields, isForeignCurrency, formatCurrency: formatCurrencySnapshot } = useCurrencySnapshot();
+  
+  // ========== HOOK DE CONSOLIDAÇÃO DO PROJETO ==========
+  const {
+    moedaConsolidacao,
+    fonteCotacao,
+    cotacaoAtual,
+    ptaxAtual,
+    deltaCambial,
+    isMultiCurrency: checkMultiCurrency,
+    gerarDadosConsolidacao,
+  } = useProjetoConsolidacao({ projetoId });
   
   // ========== HOOK CANÔNICO DE SALDOS ==========
   // Esta é a ÚNICA fonte de verdade para saldos de bookmaker
@@ -2026,6 +2042,19 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
           {/* Análise - Sidebar Direita Compacta */}
           <div className="w-full lg:w-48 xl:w-52 flex-shrink-0 space-y-2">
+            {/* INDICADOR DE CONSOLIDAÇÃO MULTI-MOEDA */}
+            {analysis.isMultiCurrency && (
+              <MultiCurrencyIndicator
+                moedaConsolidacao={moedaConsolidacao}
+                cotacaoAtual={cotacaoAtual}
+                fonteCotacao={fonteCotacao}
+                ptaxAtual={ptaxAtual}
+                deltaCambial={deltaCambial}
+                isMultiCurrency={true}
+                compact
+              />
+            )}
+            
             <Card>
               <CardHeader className="pb-2 pt-3 px-3">
                 <CardTitle className="text-xs flex items-center gap-1.5">
@@ -2044,16 +2073,27 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                       </Badge>
                     )}
                   </div>
-                  {/* MULTI-MOEDA: Alerta quando moedas diferentes */}
+                  {/* MULTI-MOEDA: Exibir valores consolidados com transparência */}
                   {analysis.isMultiCurrency ? (
                     <div className="flex flex-col gap-1">
-                      <p className="text-sm font-bold text-amber-400">Operação Multi-Moeda</p>
+                      <p className="text-sm font-bold text-amber-400">Multi-Moeda</p>
                       <p className="text-[10px] text-muted-foreground">
                         Moedas: {analysis.moedasUnicas.join(" + ")}
                       </p>
-                      <p className="text-[9px] text-amber-400/70">
-                        ⚠️ Stakes não podem ser somadas
-                      </p>
+                      {/* Exibir consolidação quando há stakes válidas */}
+                      {analysis.stakeTotal > 0 && (
+                        <div className="pt-1 border-t border-border/50 mt-1">
+                          <p className="text-[9px] text-muted-foreground">
+                            Consolidado em {moedaConsolidacao}:
+                          </p>
+                          <p className="text-sm font-semibold text-primary">
+                            {formatCurrency(analysis.stakeTotal, moedaConsolidacao)}
+                          </p>
+                          <p className="text-[8px] text-muted-foreground/70">
+                            Cotação: {cotacaoAtual.toFixed(2)} ({fonteCotacao})
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <p className="text-lg font-bold text-primary">
