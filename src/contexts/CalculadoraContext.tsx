@@ -574,11 +574,12 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       const produtoOdds = pernasGreen.reduce((prod, p) => prod * p.oddBack, 1);
       const retornoBrutoBookmaker = stakeInicial * produtoOdds;
       
-      // Novo saldo na casa = retorno total - stake inicial (lucro bruto na bookmaker)
-      const novoSaldoNaCasa = retornoBrutoBookmaker - stakeInicial;
+      // Novo saldo na casa = retorno total da bookmaker (stake + lucros)
+      const novoSaldoNaCasa = retornoBrutoBookmaker;
       
-      // Lucro líquido real = lucro bookmaker - custos LAY pagos
-      const lucroLiquidoReal = novoSaldoNaCasa - custosTotaisLay;
+      // Lucro líquido real = saldo total - stake investido - custos LAY
+      // Representa a variação patrimonial total da operação
+      const lucroLiquidoReal = novoSaldoNaCasa - stakeInicial - custosTotaisLay;
       
       // Percentual de extração real (em relação ao stake inicial)
       const percentualExtracao = stakeInicial > 0 ? (lucroLiquidoReal / stakeInicial) * 100 : 0;
