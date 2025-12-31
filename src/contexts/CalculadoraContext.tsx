@@ -562,25 +562,29 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       eficienciaFinal = percentualExtracao;
     } else if (ultimaPernaGreen) {
       // GREEN FINAL = Última perna terminou GREEN
-      // A Bookmaker pagou, e os ganhos cobriram os custos LAY
+      // A Bookmaker pagou a múltipla completa
       motivoEncerramento = 'green_final';
       
-      // Soma de todos os custos LAY (responsabilidades pagas)
+      // Soma de todos os custos LAY (responsabilidades pagas nas proteções)
       const custosTotaisLay = pernas.reduce((sum, p) => sum + p.custoLay, 0);
       
-      // Novo saldo na casa = stake inicial + custos LAY acumulados
-      // Porque: a cada GREEN, o pagamento da bookmaker cobre o custo LAY daquela perna
-      // Então você mantém o stake + acumula os custos que foram "bancados"
-      const novoSaldoNaCasa = stakeInicial + custosTotaisLay;
+      // Retorno da Bookmaker em MÚLTIPLA: stake × Π(odds)
+      // Produto de todas as odds BACK das pernas confirmadas como GREEN
+      const pernasGreen = pernas.filter(p => p.status === 'green');
+      const produtoOdds = pernasGreen.reduce((prod, p) => prod * p.oddBack, 1);
+      const retornoBrutoBookmaker = stakeInicial * produtoOdds;
       
-      // Lucro líquido real = novo saldo - custos LAY = stake inicial (break-even ideal)
+      // Novo saldo na casa = retorno total - stake inicial (lucro bruto na bookmaker)
+      const novoSaldoNaCasa = retornoBrutoBookmaker - stakeInicial;
+      
+      // Lucro líquido real = lucro bookmaker - custos LAY pagos
       const lucroLiquidoReal = novoSaldoNaCasa - custosTotaisLay;
       
       // Percentual de extração real (em relação ao stake inicial)
       const percentualExtracao = stakeInicial > 0 ? (lucroLiquidoReal / stakeInicial) * 100 : 0;
       
       greenFinal = {
-        retornoBrutoBookmaker: novoSaldoNaCasa, // mantém compatibilidade, agora representa o saldo total
+        retornoBrutoBookmaker,
         custosTotaisLay,
         novoSaldoNaCasa,
         lucroLiquidoReal,
