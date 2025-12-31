@@ -98,9 +98,6 @@ export function BookmakerSelectOption({
  * Badge de moeda com cores distintas por tipo
  */
 export function CurrencyBadge({ moeda, size = "sm" }: { moeda: string; size?: "sm" | "xs" }) {
-  // BRL não exibe badge (padrão do sistema)
-  if (moeda === "BRL") return null;
-  
   const colorClasses = getCurrencyBadgeColors(moeda);
   const sizeClasses = size === "xs" 
     ? "text-[8px] px-1 py-0 h-3.5" 
@@ -121,6 +118,8 @@ export function CurrencyBadge({ moeda, size = "sm" }: { moeda: string; size?: "s
  */
 function getCurrencyBadgeColors(moeda: string): string {
   switch (moeda) {
+    case "BRL":
+      return "bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
     case "USD":
     case "USDT":
       return "bg-blue-500/10 border-blue-500/30 text-blue-400";
