@@ -20,6 +20,7 @@ import {
 } from "@/types/apostasUnificada";
 import { SupportedCurrency } from "@/types/currency";
 import { useCurrencySnapshot } from "./useCurrencySnapshot";
+import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 
 export interface UseApostasUnificadaReturn {
   loading: boolean;
@@ -397,63 +398,27 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
   };
 }
 
-// Helpers internos para manipulação de saldos
+// Helpers internos para manipulação de saldos - CORRIGIDO PARA MULTI-MOEDA
 async function atualizarSaldoBookmaker(bookmakerId: string, perna: PernaArbitragem): Promise<void> {
   if (!perna.resultado || perna.resultado === "PENDENTE") return;
 
-  const { data: bk } = await supabase
-    .from("bookmakers")
-    .select("saldo_atual")
-    .eq("id", bookmakerId)
-    .single();
-
-  if (!bk) return;
-
-  let novoSaldo = bk.saldo_atual;
-
-  if (perna.resultado === "GREEN") {
-    // GREEN: adiciona o lucro (retorno - stake já estava "em aposta")
-    novoSaldo += perna.stake * (perna.odd - 1);
-  } else if (perna.resultado === "RED") {
-    // RED: remove a stake (já estava "em aposta", agora é perda real)
-    novoSaldo -= perna.stake;
-  }
-  // VOID: stake retorna, saldo não muda
-
-  if (novoSaldo !== bk.saldo_atual) {
-    await supabase
-      .from("bookmakers")
-      .update({ saldo_atual: novoSaldo })
-      .eq("id", bookmakerId);
+  // Calcular delta usando helper canônico
+  const delta = calcularImpactoResultado(perna.stake, perna.odd, perna.resultado);
+  
+  if (delta !== 0) {
+    // Usar helper que respeita moeda do bookmaker (USD vs BRL)
+    await updateBookmakerBalance(bookmakerId, delta);
   }
 }
 
 async function reverterSaldoBookmaker(bookmakerId: string, perna: PernaArbitragem): Promise<void> {
   if (!perna.resultado || perna.resultado === "PENDENTE") return;
 
-  const { data: bk } = await supabase
-    .from("bookmakers")
-    .select("saldo_atual")
-    .eq("id", bookmakerId)
-    .single();
-
-  if (!bk) return;
-
-  let novoSaldo = bk.saldo_atual;
-
-  if (perna.resultado === "GREEN") {
-    // Reverter GREEN: remove o lucro que foi creditado
-    novoSaldo -= perna.stake * (perna.odd - 1);
-  } else if (perna.resultado === "RED") {
-    // Reverter RED: devolve a stake que foi debitada
-    novoSaldo += perna.stake;
-  }
-  // VOID: não precisa reverter
-
-  if (novoSaldo !== bk.saldo_atual) {
-    await supabase
-      .from("bookmakers")
-      .update({ saldo_atual: novoSaldo })
-      .eq("id", bookmakerId);
+  // Calcular delta negativo (reversão) usando helper canônico
+  const delta = -calcularImpactoResultado(perna.stake, perna.odd, perna.resultado);
+  
+  if (delta !== 0) {
+    // Usar helper que respeita moeda do bookmaker (USD vs BRL)
+    await updateBookmakerBalance(bookmakerId, delta);
   }
 }

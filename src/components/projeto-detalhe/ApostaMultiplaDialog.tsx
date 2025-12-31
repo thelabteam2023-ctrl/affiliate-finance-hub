@@ -46,6 +46,7 @@ import {
   formatCurrency as formatCurrencyCanonical,
   getCurrencyTextColor 
 } from "@/components/bookmakers/BookmakerSelectOption";
+import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
 
 interface Selecao {
   descricao: string;
@@ -699,45 +700,34 @@ export function ApostaMultiplaDialog({
     }
   };
 
+  // CORREÇÃO MULTI-MOEDA: Usar helper centralizado
   const debitarSaldo = async (
     bkId: string,
     valor: number,
     isFreebet: boolean
   ) => {
-    const { data: bk } = await supabase
-      .from("bookmakers")
-      .select("saldo_atual, saldo_freebet")
-      .eq("id", bkId)
-      .single();
-
-    if (!bk) return;
-
     if (isFreebet) {
-      await supabase
+      const { data: bk } = await supabase
         .from("bookmakers")
-        .update({ saldo_freebet: bk.saldo_freebet - valor })
-        .eq("id", bkId);
+        .select("saldo_freebet")
+        .eq("id", bkId)
+        .single();
+
+      if (bk) {
+        await supabase
+          .from("bookmakers")
+          .update({ saldo_freebet: bk.saldo_freebet - valor })
+          .eq("id", bkId);
+      }
     } else {
-      await supabase
-        .from("bookmakers")
-        .update({ saldo_atual: bk.saldo_atual - valor })
-        .eq("id", bkId);
+      // Usar helper que respeita moeda do bookmaker
+      await updateBookmakerBalance(bkId, -valor);
     }
   };
 
+  // CORREÇÃO MULTI-MOEDA: Usar helper centralizado
   const creditarRetorno = async (bkId: string, valor: number) => {
-    const { data: bk } = await supabase
-      .from("bookmakers")
-      .select("saldo_atual")
-      .eq("id", bkId)
-      .single();
-
-    if (bk) {
-      await supabase
-        .from("bookmakers")
-        .update({ saldo_atual: bk.saldo_atual + valor })
-        .eq("id", bkId);
-    }
+    await updateBookmakerBalance(bkId, valor);
   };
 
   const registrarFreebetGerada = async (
