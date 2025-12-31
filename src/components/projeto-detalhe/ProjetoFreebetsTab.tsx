@@ -44,7 +44,16 @@ interface ProjetoFreebetsTabProps {
   projetoId: string;
   onDataChange?: () => void;
   refreshTrigger?: number;
+  formatCurrency?: (value: number) => string;
 }
+
+// Fallback para formatação de moeda
+const defaultFormatCurrency = (value: number): string => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+};
 
 type NavigationMode = "tabs" | "sidebar";
 type NavTabValue = "visao-geral" | "apostas" | "por-casa";
@@ -57,7 +66,8 @@ const NAV_ITEMS = [
   { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
 ];
 
-export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: ProjetoFreebetsTabProps) {
+export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, formatCurrency: formatCurrencyProp }: ProjetoFreebetsTabProps) {
+  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [loading, setLoading] = useState(true);
   const [freebets, setFreebets] = useState<FreebetRecebida[]>([]);
   const [bookmakersComFreebet, setBookmakersComFreebet] = useState<BookmakerComFreebet[]>([]);
@@ -304,12 +314,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger }: 
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+// formatCurrency agora vem como prop
 
   // Handlers para atualização de resultado e edição
   const handleApostaUpdated = () => {

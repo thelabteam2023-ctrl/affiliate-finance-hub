@@ -29,13 +29,35 @@ interface CalendarioLucrosProps {
   titulo?: string;
   accentColor?: string;
   compact?: boolean;
+  formatCurrency?: (value: number) => string;
 }
+
+// Fallback para formatação de moeda
+const defaultFormatCurrencyCompact = (value: number): string => {
+  if (Math.abs(value) >= 1000) {
+    return `${value >= 0 ? "" : "-"}R$ ${(Math.abs(value) / 1000).toFixed(1)}K`;
+  }
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value);
+};
+
+const defaultFormatCurrencyFull = (value: number): string => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+};
 
 export function CalendarioLucros({ 
   apostas, 
   titulo = "Calendário de Lucros",
   accentColor = "purple",
-  compact = false
+  compact = false,
+  formatCurrency: formatCurrencyProp
 }: CalendarioLucrosProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -99,24 +121,8 @@ export function CalendarioLucros({
     return { lucroTotal, totalApostas };
   }, [apostas, currentMonth]);
 
-  const formatCurrency = (value: number) => {
-    if (Math.abs(value) >= 1000) {
-      return `${value >= 0 ? "" : "-"}${(Math.abs(value) / 1000).toFixed(1)}K`;
-    }
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value);
-  };
-
-  const formatFullCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+  const formatCurrencyValue = formatCurrencyProp || defaultFormatCurrencyCompact;
+  const formatFullCurrency = formatCurrencyProp || defaultFormatCurrencyFull;
 
   const hoje = new Date();
   const diasSemana = ["D", "S", "T", "Q", "Q", "S", "S"];
@@ -190,7 +196,7 @@ export function CalendarioLucros({
             return (
               <div key={idx} className={cn("relative aspect-square flex flex-col items-center justify-center rounded text-xs p-0.5", bgClass, isHoje && "ring-1 ring-primary", !isMesAtual && "opacity-30")}>
                 <span className={cn("font-medium", !isMesAtual ? "text-muted-foreground/50" : "text-foreground")}>{format(dia, "d")}</span>
-                {temApostas && isMesAtual && <span className={cn("text-[10px] font-medium tabular-nums", textClass)}>{formatCurrency(lucro)}</span>}
+                {temApostas && isMesAtual && <span className={cn("text-[10px] font-medium tabular-nums", textClass)}>{formatCurrencyValue(lucro)}</span>}
               </div>
             );
           })}
@@ -308,7 +314,7 @@ export function CalendarioLucros({
                 </span>
                 {temApostas && isMesAtual && (
                   <span className={cn("text-[10px] font-medium tabular-nums", textClass)}>
-                    {formatCurrency(lucro)}
+                    {formatCurrencyValue(lucro)}
                   </span>
                 )}
               </div>

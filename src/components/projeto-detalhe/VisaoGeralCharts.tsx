@@ -557,6 +557,7 @@ export function VisaoGeralCharts({
                       titulo="Calendário de Lucros"
                       accentColor="purple"
                       compact
+                      formatCurrency={formatCurrency}
                     />
                   </PopoverContent>
                 </Popover>
@@ -613,6 +614,7 @@ export function VisaoGeralCharts({
                       titulo="Calendário de Lucros"
                       accentColor="purple"
                       compact
+                      formatCurrency={formatCurrency}
                     />
                   </PopoverContent>
                 </Popover>

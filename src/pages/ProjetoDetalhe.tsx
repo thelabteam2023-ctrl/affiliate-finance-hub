@@ -554,6 +554,7 @@ export default function ProjetoDetalhe() {
             projetoId={id!} 
             onDataChange={triggerGlobalRefresh}
             refreshTrigger={refreshTrigger}
+            formatCurrency={formatCurrency}
           />
         </TabsContent>
 
@@ -562,6 +563,7 @@ export default function ProjetoDetalhe() {
             projetoId={id!} 
             refreshTrigger={refreshTrigger}
             onDataChange={triggerGlobalRefresh}
+            formatCurrency={formatCurrency}
           />
         </TabsContent>
 
@@ -601,11 +603,11 @@ export default function ProjetoDetalhe() {
         </TabsContent>
 
         <TabsContent value="ciclos">
-          <ProjetoCiclosTab projetoId={id!} />
+          <ProjetoCiclosTab projetoId={id!} formatCurrency={formatCurrency} />
         </TabsContent>
 
         <TabsContent value="perdas">
-          <ProjetoPerdasTab projetoId={id!} onDataChange={triggerGlobalRefresh} />
+          <ProjetoPerdasTab projetoId={id!} onDataChange={triggerGlobalRefresh} formatCurrency={formatCurrency} />
         </TabsContent>
 
       </Tabs>

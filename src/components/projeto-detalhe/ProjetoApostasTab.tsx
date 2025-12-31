@@ -56,7 +56,16 @@ interface ProjetoApostasTabProps {
   projetoId: string;
   onDataChange?: () => void;
   refreshTrigger?: number;
+  formatCurrency?: (value: number) => string;
 }
+
+// Fallback para formatação de moeda
+const defaultFormatCurrency = (value: number): string => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+};
 
 interface Aposta {
   id: string;
@@ -239,7 +248,8 @@ function getSurebetContexto(
   return "NORMAL";
 }
 
-export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: ProjetoApostasTabProps) {
+export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, formatCurrency: formatCurrencyProp }: ProjetoApostasTabProps) {
+  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [apostasMultiplas, setApostasMultiplas] = useState<ApostaMultipla[]>([]);
   const [surebets, setSurebets] = useState<Surebet[]>([]);
@@ -699,12 +709,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger }: P
     };
   }, [apostas, apostasMultiplas, surebets, bookmakersComBonusAtivo]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+  // formatCurrency definido no escopo do componente
 
   const parseLocalDateTime = (dateString: string): Date => {
     if (!dateString) return new Date();
