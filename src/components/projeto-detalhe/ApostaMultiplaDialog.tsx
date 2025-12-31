@@ -904,33 +904,15 @@ export function ApostaMultiplaDialog({
               .eq("id", antigoBkId);
           }
         } else {
-          const { data: bk } = await supabase
-            .from("bookmakers")
-            .select("saldo_atual")
-            .eq("id", antigoBkId)
-            .single();
-          if (bk) {
-            await supabase
-              .from("bookmakers")
-              .update({ saldo_atual: bk.saldo_atual + antigaStake })
-              .eq("id", antigoBkId);
-          }
+          // CORREÇÃO MULTI-MOEDA: Usar helper centralizado
+          await updateBookmakerBalance(antigoBkId, antigaStake);
         }
       } else if ((resultadoAntigo === "GREEN" || resultadoAntigo === "MEIO_GREEN") && apostaAntiga.valor_retorno) {
         // GREEN antiga: lucro foi creditado, reverter (debitar lucro)
         const lucroAntigo = apostaAntiga.valor_retorno - antigaStake;
         if (lucroAntigo !== 0) {
-          const { data: bk } = await supabase
-            .from("bookmakers")
-            .select("saldo_atual")
-            .eq("id", antigoBkId)
-            .single();
-          if (bk) {
-            await supabase
-              .from("bookmakers")
-              .update({ saldo_atual: bk.saldo_atual - lucroAntigo })
-              .eq("id", antigoBkId);
-          }
+          // CORREÇÃO MULTI-MOEDA: Usar helper centralizado
+          await updateBookmakerBalance(antigoBkId, -lucroAntigo);
         }
       }
       // VOID antiga: não alterou saldo, não precisa reverter
@@ -981,46 +963,15 @@ export function ApostaMultiplaDialog({
                 .eq("id", aposta.bookmaker_id);
             }
           } else {
-            const { data: bk } = await supabase
-              .from("bookmakers")
-              .select("saldo_atual")
-              .eq("id", aposta.bookmaker_id)
-              .single();
-            if (bk) {
-              await supabase
-                .from("bookmakers")
-                .update({ saldo_atual: bk.saldo_atual + aposta.stake })
-                .eq("id", aposta.bookmaker_id);
-            }
+            // CORREÇÃO MULTI-MOEDA: Usar helper centralizado
+            await updateBookmakerBalance(aposta.bookmaker_id, aposta.stake);
           }
         } else if ((resultado === "GREEN" || resultado === "MEIO_GREEN") && aposta.valor_retorno) {
           // GREEN/MEIO_GREEN: lucro foi creditado, reverter (debitar lucro)
           const lucro = aposta.valor_retorno - aposta.stake;
-          if (lucro > 0) {
-            const { data: bk } = await supabase
-              .from("bookmakers")
-              .select("saldo_atual")
-              .eq("id", aposta.bookmaker_id)
-              .single();
-            if (bk) {
-              await supabase
-                .from("bookmakers")
-                .update({ saldo_atual: bk.saldo_atual - lucro })
-                .eq("id", aposta.bookmaker_id);
-            }
-          } else if (lucro < 0) {
-            // Caso raro: retorno menor que stake, creditar a diferença
-            const { data: bk } = await supabase
-              .from("bookmakers")
-              .select("saldo_atual")
-              .eq("id", aposta.bookmaker_id)
-              .single();
-            if (bk) {
-              await supabase
-                .from("bookmakers")
-                .update({ saldo_atual: bk.saldo_atual + Math.abs(lucro) })
-                .eq("id", aposta.bookmaker_id);
-            }
+          if (lucro !== 0) {
+            // CORREÇÃO MULTI-MOEDA: Usar helper centralizado
+            await updateBookmakerBalance(aposta.bookmaker_id, -lucro);
           }
         }
         // VOID: não alterou saldo, não precisa reverter

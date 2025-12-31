@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -99,7 +100,10 @@ export function ConfirmarSaqueDialog({
 
       // ATUALIZAR SALDO DO BOOKMAKER DE ORIGEM (decrementar o valor sacado)
       if (saque.origem_bookmaker_id) {
-        // Buscar saldo atual da bookmaker
+        // Usar helper centralizado que respeita moeda do bookmaker
+        await updateBookmakerBalance(saque.origem_bookmaker_id, -saque.valor);
+        
+        // Verificar se precisa atualizar status baseado no saldo restante
         const { data: bookmaker } = await supabase
           .from("bookmakers")
           .select("saldo_atual, saldo_usd, moeda")
@@ -108,17 +112,16 @@ export function ConfirmarSaqueDialog({
 
         if (bookmaker) {
           const moedaBk = bookmaker.moeda || "BRL";
-          const campoSaldo = moedaBk === "USD" ? "saldo_usd" : "saldo_atual";
-          const saldoAtual = moedaBk === "USD" ? (bookmaker.saldo_usd || 0) : (bookmaker.saldo_atual || 0);
-          const novoSaldo = Math.max(0, saldoAtual - saque.valor);
+          const saldoAtual = moedaBk === "USD" || moedaBk === "USDT" 
+            ? (bookmaker.saldo_usd || 0) 
+            : (bookmaker.saldo_atual || 0);
           
-          // Atualizar saldo e status
-          const novoStatus = novoSaldo > 0.5 ? "AGUARDANDO_SAQUE" : "ativo";
+          // Atualizar status baseado no saldo restante
+          const novoStatus = saldoAtual > 0.5 ? "AGUARDANDO_SAQUE" : "ativo";
           
           await supabase
             .from("bookmakers")
             .update({ 
-              [campoSaldo]: novoSaldo,
               status: novoStatus,
               updated_at: new Date().toISOString()
             })

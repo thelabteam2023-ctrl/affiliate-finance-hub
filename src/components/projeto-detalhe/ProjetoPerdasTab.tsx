@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -145,66 +146,24 @@ export function ProjetoPerdasTab({ projetoId, onDataChange, formatCurrency: form
         updates.data_confirmacao = new Date().toISOString();
         updates.data_reversao = null;
         
-        // When confirming, deduct from bookmaker's saldo_atual
+        // When confirming, deduct from bookmaker balance using helper
         if (perda.bookmaker_id) {
-          const { data: bkData } = await supabase
-            .from("bookmakers")
-            .select("saldo_atual")
-            .eq("id", perda.bookmaker_id)
-            .single();
-          
-          if (bkData) {
-            await supabase
-              .from("bookmakers")
-              .update({ 
-                saldo_atual: Math.max(0, bkData.saldo_atual - perda.valor),
-                updated_at: new Date().toISOString()
-              })
-              .eq("id", perda.bookmaker_id);
-          }
+          await updateBookmakerBalance(perda.bookmaker_id, -perda.valor);
         }
       } else if (newStatus === 'REVERSA') {
         updates.data_reversao = new Date().toISOString();
         
-        // When reversing a confirmed loss, add back to bookmaker's saldo_atual
+        // When reversing a confirmed loss, add back to bookmaker balance
         if (perda.status === 'CONFIRMADA' && perda.bookmaker_id) {
-          const { data: bkData } = await supabase
-            .from("bookmakers")
-            .select("saldo_atual")
-            .eq("id", perda.bookmaker_id)
-            .single();
-          
-          if (bkData) {
-            await supabase
-              .from("bookmakers")
-              .update({ 
-                saldo_atual: bkData.saldo_atual + perda.valor,
-                updated_at: new Date().toISOString()
-              })
-              .eq("id", perda.bookmaker_id);
-          }
+          await updateBookmakerBalance(perda.bookmaker_id, perda.valor);
         }
       } else if (newStatus === 'PENDENTE') {
         updates.data_confirmacao = null;
         updates.data_reversao = null;
         
-        // If going back to pending from confirmed, add back to saldo
+        // If going back to pending from confirmed, add back to balance
         if (perda.status === 'CONFIRMADA' && perda.bookmaker_id) {
-          const { data: bkData } = await supabase
-            .from("bookmakers")
-            .select("saldo_atual")
-            .eq("id", perda.bookmaker_id)
-            .single();
-          
-          if (bkData) {
-            await supabase
-              .from("bookmakers")
-              .update({ 
-                saldo_atual: bkData.saldo_atual + perda.valor,
-                updated_at: new Date().toISOString()
-              })
-              .eq("id", perda.bookmaker_id);
-          }
+          await updateBookmakerBalance(perda.bookmaker_id, perda.valor);
         }
       }
 
@@ -241,21 +200,7 @@ export function ProjetoPerdasTab({ projetoId, onDataChange, formatCurrency: form
       
       // If deleting a confirmed loss, add back to bookmaker balance
       if (perda && perda.status === 'CONFIRMADA' && perda.bookmaker_id) {
-        const { data: bkData } = await supabase
-          .from("bookmakers")
-          .select("saldo_atual")
-          .eq("id", perda.bookmaker_id)
-          .single();
-        
-        if (bkData) {
-          await supabase
-            .from("bookmakers")
-            .update({ 
-              saldo_atual: bkData.saldo_atual + perda.valor,
-              updated_at: new Date().toISOString()
-            })
-            .eq("id", perda.bookmaker_id);
-        }
+        await updateBookmakerBalance(perda.bookmaker_id, perda.valor);
       }
       
       const { error } = await supabase
