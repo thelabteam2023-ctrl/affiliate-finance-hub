@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
+import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -153,6 +155,9 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   const [surebetDialogOpen, setSurebetDialogOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
   const [selectedSurebet, setSelectedSurebet] = useState<any>(null);
+
+  // Hook para invalidar cache de saldos
+  const invalidateSaldos = useInvalidateBookmakerSaldos();
   
   // Sub-abas Abertas/Histórico
   const [apostasSubTab, setApostasSubTab] = useState<"abertas" | "historico">("abertas");
@@ -261,7 +266,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
     }
   };
 
-  // Resolução rápida de apostas simples
+  // Resolução rápida de apostas simples - USA HELPER FINANCEIRO
   const handleQuickResolve = useCallback(async (apostaId: string, resultado: string) => {
     try {
       const aposta = apostas.find(a => a.id === apostaId);
@@ -273,28 +278,23 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
 
       const stake = typeof aposta.stake_total === "number" ? aposta.stake_total : aposta.stake;
       const odd = aposta.odd || 1;
-      let lucro: number;
+      
+      // Calcular lucro usando função canônica
+      const lucro = calcularImpactoResultado(stake, odd, resultado);
 
-      switch (resultado) {
-        case "GREEN":
-          lucro = stake * (odd - 1);
-          break;
-        case "RED":
-          lucro = -stake;
-          break;
-        case "MEIO_GREEN":
-          lucro = (stake * (odd - 1)) / 2;
-          break;
-        case "MEIO_RED":
-          lucro = -stake / 2;
-          break;
-        case "VOID":
-          lucro = 0;
-          break;
-        default:
-          lucro = 0;
+      // 1. Calcular delta financeiro (PENDENTE → novo resultado)
+      const delta = calcularImpactoResultado(stake, odd, resultado);
+
+      // 2. Atualizar saldo da bookmaker via helper canônico
+      if (aposta.bookmaker_id && delta !== 0) {
+        const balanceUpdated = await updateBookmakerBalance(aposta.bookmaker_id, delta);
+        if (!balanceUpdated) {
+          toast.error("Erro ao atualizar saldo da bookmaker. Liquidação cancelada.");
+          return;
+        }
       }
 
+      // 3. Atualizar aposta no banco
       const { error } = await supabase
         .from("apostas_unificada")
         .update({
@@ -306,11 +306,15 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
 
       if (error) throw error;
 
+      // 4. Atualizar estado local
       setApostas(prev => prev.map(a => 
         a.id === apostaId 
           ? { ...a, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
           : a
       ));
+
+      // 5. Invalidar cache de saldos
+      invalidateSaldos(projetoId);
 
       const resultLabel = {
         GREEN: "Green",
@@ -326,7 +330,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       console.error("Erro ao atualizar aposta:", error);
       toast.error("Erro ao atualizar resultado");
     }
-  }, [apostas, onDataChange]);
+  }, [apostas, onDataChange, projetoId, invalidateSaldos]);
 
   const metricas = useMemo(() => {
     const total = apostas.length;
