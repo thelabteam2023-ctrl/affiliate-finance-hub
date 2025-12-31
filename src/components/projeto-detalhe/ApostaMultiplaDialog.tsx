@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import {
   Dialog,
   DialogContent,
@@ -68,21 +69,18 @@ interface ApostaMultipla {
   contexto_operacional?: string | null;
 }
 
+// Interface de Bookmaker local (mapeada do hook canônico)
 interface Bookmaker {
   id: string;
   nome: string;
-  parceiro_id: string;
+  parceiro_id: string | null;
+  parceiro_nome: string | null;
   saldo_atual: number;
   saldo_freebet: number;
   saldo_bonus: number;
   saldo_operavel: number;
   moeda: string;
-  parceiro?: {
-    nome: string;
-  };
-  bookmakers_catalogo?: {
-    logo_url: string | null;
-  } | null;
+  logo_url: string | null;
 }
 
 interface ApostaMultiplaDialogProps {
@@ -106,8 +104,37 @@ export function ApostaMultiplaDialog({
 }: ApostaMultiplaDialogProps) {
   const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
-  const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // ========== HOOK CANÔNICO DE SALDOS ==========
+  // Esta é a ÚNICA fonte de verdade para saldos de bookmaker
+  const { 
+    data: bookmakerSaldos = [], 
+    isLoading: saldosLoading,
+    refetch: refetchSaldos 
+  } = useBookmakerSaldosQuery({
+    projetoId,
+    enabled: open,
+    includeZeroBalance: !!aposta, // Em edição, mostrar todos
+    currentBookmakerId: aposta?.bookmaker_id || null
+  });
+  const invalidateSaldos = useInvalidateBookmakerSaldos();
+  
+  // Mapear saldos canônicos para formato local (retrocompatibilidade)
+  const bookmakers = useMemo((): Bookmaker[] => {
+    return bookmakerSaldos.map(bk => ({
+      id: bk.id,
+      nome: bk.nome,
+      parceiro_id: bk.parceiro_id,
+      parceiro_nome: bk.parceiro_nome,
+      saldo_atual: bk.saldo_real,
+      saldo_freebet: bk.saldo_freebet,
+      saldo_bonus: bk.saldo_bonus,
+      saldo_operavel: bk.saldo_operavel,
+      moeda: bk.moeda,
+      logo_url: bk.logo_url
+    }));
+  }, [bookmakerSaldos]);
 
   // Form state
   const [bookmakerId, setBookmakerId] = useState("");
@@ -148,10 +175,10 @@ export function ApostaMultiplaDialog({
     moeda: string;
   } | null>(null);
 
-  // Carregar bookmakers
+  // Carregar bookmakers via hook canônico (automático quando open=true)
   useEffect(() => {
     if (open) {
-      fetchBookmakers();
+      // Bookmakers são carregados via useBookmakerSaldosQuery automaticamente
       if (!aposta) {
         // Reset form for new aposta
         resetForm();
@@ -278,91 +305,7 @@ export function ApostaMultiplaDialog({
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  const fetchBookmakers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("bookmakers")
-        .select(
-          `
-          id,
-          nome,
-          parceiro_id,
-          saldo_atual,
-          saldo_freebet,
-          moeda,
-          parceiro:parceiros (nome),
-          bookmakers_catalogo (logo_url)
-        `
-        )
-        .eq("projeto_id", projetoId)
-        .in("status", ["ativo", "ATIVO", "EM_USO", "LIMITADA", "limitada"]);
-
-      if (error) throw error;
-      
-      const bookmakerIds = (data || []).map(b => b.id);
-      
-      // Buscar em paralelo: apostas pendentes e bônus creditados
-      let pendingStakes: Record<string, number> = {};
-      let bonusByBookmaker: Record<string, number> = {};
-      
-      if (bookmakerIds.length > 0) {
-        const [pendingBetsResult, bonusResult] = await Promise.all([
-          // Apostas pendentes
-          supabase
-            .from("apostas_unificada")
-            .select("bookmaker_id, stake")
-            .in("bookmaker_id", bookmakerIds)
-            .eq("status", "PENDENTE")
-            .not("bookmaker_id", "is", null),
-          // CONTRATO: saldo_bonus = SUM(project_bookmaker_link_bonuses.saldo_atual) WHERE status='credited' AND project_id=X
-          supabase
-            .from("project_bookmaker_link_bonuses")
-            .select("bookmaker_id, saldo_atual")
-            .eq("project_id", projetoId)
-            .in("bookmaker_id", bookmakerIds)
-            .eq("status", "credited")
-        ]);
-        
-        // Agregar apostas pendentes
-        (pendingBetsResult.data || []).forEach((bet: any) => {
-          if (bet.bookmaker_id) {
-            pendingStakes[bet.bookmaker_id] = (pendingStakes[bet.bookmaker_id] || 0) + (bet.stake || 0);
-          }
-        });
-        
-        // Agregar bônus
-        (bonusResult.data || []).forEach((b: any) => {
-          bonusByBookmaker[b.bookmaker_id] = (bonusByBookmaker[b.bookmaker_id] || 0) + (b.saldo_atual || 0);
-        });
-      }
-      
-      // Enriquecer bookmakers com saldos calculados corretamente
-      // CONTRATO CANÔNICO:
-      // saldo_disponivel = saldo_atual - saldo_em_aposta
-      // saldo_operavel = saldo_disponivel + saldo_freebet + saldo_bonus
-      const enriched = (data || []).map((bk: any) => {
-        const saldoReal = Number(bk.saldo_atual) || 0;
-        const saldoFreebet = Number(bk.saldo_freebet) || 0;
-        const saldoBonus = bonusByBookmaker[bk.id] || 0;
-        const saldoEmAposta = pendingStakes[bk.id] || 0;
-        const saldoDisponivel = saldoReal - saldoEmAposta;
-        const saldoOperavel = saldoDisponivel + saldoFreebet + saldoBonus;
-        
-        return {
-          ...bk,
-          saldo_real: saldoReal,
-          saldo_bonus: saldoBonus,
-          saldo_em_aposta: saldoEmAposta,
-          saldo_disponivel: saldoDisponivel,
-          saldo_operavel: saldoOperavel,
-        };
-      });
-      
-      setBookmakers(enriched);
-    } catch (error: any) {
-      toast.error("Erro ao carregar bookmakers: " + error.message);
-    }
-  };
+  // fetchBookmakers REMOVIDO - agora usa useBookmakerSaldosQuery como fonte canônica
 
   // Calcular odd final (produto das odds) - considerando VOIDs como odd 1.00
   const { oddFinal, oddFinalReal } = useMemo(() => {
@@ -1144,15 +1087,15 @@ export function ApostaMultiplaDialog({
                     return (
                       <SelectItem key={bk.id} value={bk.id} className="py-2">
                         <div className="flex items-center gap-2 w-full">
-                          {bk.bookmakers_catalogo?.logo_url && (
+                          {bk.logo_url && (
                             <img
-                              src={bk.bookmakers_catalogo.logo_url}
+                              src={bk.logo_url}
                               alt=""
                               className="h-4 w-4 rounded object-contain flex-shrink-0"
                             />
                           )}
                           <span className="uppercase text-sm flex-1 truncate">
-                            {bk.nome} • {getFirstLastName(bk.parceiro?.nome || "")}
+                            {bk.nome} • {getFirstLastName(bk.parceiro_nome || "")}
                           </span>
                           <span className="text-xs font-medium text-emerald-400 flex-shrink-0 ml-auto">
                             {formatCurrency(saldoOperavel)}
