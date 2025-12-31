@@ -40,6 +40,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
 import { getFirstLastName } from "@/lib/utils";
+import { 
+  BookmakerSelectOption, 
+  SaldoBreakdownDisplay, 
+  formatCurrency as formatCurrencyCanonical,
+  getCurrencyTextColor 
+} from "@/components/bookmakers/BookmakerSelectOption";
 
 interface Selecao {
   descricao: string;
@@ -431,11 +437,9 @@ export function ApostaMultiplaDialog({
     return retornoPotencial - stakeNum;
   }, [retornoPotencial, stake]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
+  // Usar formatCurrency canônico com suporte multi-moeda
+  const formatCurrency = (value: number, moeda?: string) => {
+    return formatCurrencyCanonical(value, moeda || bookmakerSaldo?.moeda || "BRL");
   };
 
 
@@ -1078,76 +1082,35 @@ export function ApostaMultiplaDialog({
                   <SelectValue placeholder="Selecione a casa..." />
                 </SelectTrigger>
                 <SelectContent className="z-50 w-[var(--radix-select-trigger-width)] min-w-[300px]">
-                  {bookmakers.map((bk) => {
-                    const saldoReal = bk.saldo_atual || 0;
-                    const saldoFreebet = bk.saldo_freebet || 0;
-                    const saldoBonus = bk.saldo_bonus || 0;
-                    const saldoOperavel = bk.saldo_operavel || (saldoReal + saldoFreebet + saldoBonus);
-                    
-                    return (
-                      <SelectItem key={bk.id} value={bk.id} className="py-2">
-                        <div className="flex items-center gap-2 w-full">
-                          {bk.logo_url && (
-                            <img
-                              src={bk.logo_url}
-                              alt=""
-                              className="h-4 w-4 rounded object-contain flex-shrink-0"
-                            />
-                          )}
-                          <span className="uppercase text-sm flex-1 truncate">
-                            {bk.nome} • {getFirstLastName(bk.parceiro_nome || "")}
-                          </span>
-                          <span className="text-xs font-medium text-emerald-400 flex-shrink-0 ml-auto">
-                            {formatCurrency(saldoOperavel)}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
+                  {bookmakers.map((bk) => (
+                    <SelectItem key={bk.id} value={bk.id} className="py-2">
+                      <BookmakerSelectOption 
+                        bookmaker={{
+                          id: bk.id,
+                          nome: bk.nome,
+                          parceiro_nome: bk.parceiro_nome,
+                          moeda: bk.moeda,
+                          saldo_operavel: bk.saldo_operavel,
+                          saldo_disponivel: bk.saldo_atual,
+                          saldo_freebet: bk.saldo_freebet,
+                          saldo_bonus: bk.saldo_bonus,
+                          logo_url: bk.logo_url,
+                        }}
+                      />
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
-              {/* Saldos com breakdown visual */}
+              {/* Saldos com breakdown visual - usando componente canônico */}
               {bookmakerSaldo && (
-                <div className="text-xs text-center space-y-0.5">
-                  <p className="text-muted-foreground">
-                    Saldo Operável: <span className="text-blue-500 font-medium">{formatCurrency(bookmakerSaldo.saldoOperavel)}</span>
-                  </p>
-                  <p className="text-muted-foreground/70 text-[10px] flex items-center justify-center gap-3 flex-wrap">
-                    <span className="text-emerald-400 flex items-center gap-1">
-                      <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="3" y="8" width="18" height="11" rx="2" className="fill-emerald-500/20 stroke-emerald-400" strokeWidth="1.5"/>
-                        <path d="M3 10h18" className="stroke-emerald-400" strokeWidth="1.5"/>
-                        <path d="M7 4h10M9 4v4M15 4v4" className="stroke-emerald-400" strokeWidth="1.5" strokeLinecap="round"/>
-                        <rect x="6" y="13" width="4" height="3" rx="0.5" className="fill-emerald-400/50"/>
-                      </svg>
-                      {formatCurrency(bookmakerSaldo.saldo)}
-                    </span>
-                    {bookmakerSaldo.saldoFreebet > 0 && (
-                      <span className="text-amber-400 flex items-center gap-1">
-                        <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
-                          <rect x="2" y="6" width="20" height="12" rx="2" className="fill-amber-500/20 stroke-amber-400" strokeWidth="1.5"/>
-                          <path d="M2 10h20" className="stroke-amber-400" strokeWidth="1"/>
-                          <circle cx="12" cy="14" r="2" className="stroke-amber-400" strokeWidth="1.5"/>
-                          <path d="M6 14h2M16 14h2" className="stroke-amber-400/60" strokeWidth="1" strokeLinecap="round"/>
-                        </svg>
-                        {formatCurrency(bookmakerSaldo.saldoFreebet)}
-                      </span>
-                    )}
-                    {bookmakerSaldo.saldoBonus > 0 && (
-                      <span className="text-purple-400 flex items-center gap-1">
-                        <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
-                          <rect x="2" y="4" width="20" height="16" rx="3" className="fill-purple-500/20 stroke-purple-400" strokeWidth="1.5"/>
-                          <circle cx="12" cy="12" r="4" className="stroke-purple-400" strokeWidth="1.5"/>
-                          <path d="M12 10v4M10.5 11.5l1.5-1.5 1.5 1.5" className="stroke-purple-400" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                          <circle cx="5.5" cy="8" r="1" className="fill-purple-400/60"/>
-                          <circle cx="18.5" cy="16" r="1" className="fill-purple-400/60"/>
-                        </svg>
-                        {formatCurrency(bookmakerSaldo.saldoBonus)}
-                      </span>
-                    )}
-                  </p>
-                </div>
+                <SaldoBreakdownDisplay
+                  saldoReal={bookmakerSaldo.saldo}
+                  saldoFreebet={bookmakerSaldo.saldoFreebet}
+                  saldoBonus={bookmakerSaldo.saldoBonus}
+                  saldoOperavel={bookmakerSaldo.saldoOperavel}
+                  moeda={bookmakerSaldo.moeda}
+                />
               )}
             </div>
 

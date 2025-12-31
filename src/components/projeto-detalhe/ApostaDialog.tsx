@@ -46,6 +46,13 @@ import { useImportBetPrint } from "@/hooks/useImportBetPrint";
 import { BetPrintDetectedFields } from "./BetPrintDetectedFields";
 import { RegistroApostaFields, RegistroApostaValues, validateRegistroAposta, getSuggestionsForTab } from "./RegistroApostaFields";
 import { FORMA_REGISTRO, APOSTA_ESTRATEGIA, CONTEXTO_OPERACIONAL, isAbaEstrategiaFixa, getEstrategiaFromTab, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional } from "@/lib/apostaConstants";
+import { 
+  BookmakerSelectOption, 
+  SaldoBreakdownDisplay, 
+  formatCurrency as formatCurrencyCanonical,
+  getCurrencyTextColor,
+  getCurrencySymbol 
+} from "@/components/bookmakers/BookmakerSelectOption";
 
 interface Aposta {
   id: string;
@@ -1054,15 +1061,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     return selected?.moeda || "BRL";
   };
 
-  const formatCurrencyWithSymbol = (value: number, moeda: string) => {
-    const symbols: Record<string, string> = {
-      BRL: "R$",
-      USD: "$",
-      EUR: "€",
-      GBP: "£"
-    };
-    return `${symbols[moeda] || moeda} ${value.toFixed(2)}`;
-  };
+  // Usar função canônica do componente centralizado
+  const formatCurrencyWithSymbol = formatCurrencyCanonical;
 
   const handleSave = async () => {
     // Validação de campos de registro obrigatórios (Prompt Oficial)
@@ -2494,64 +2494,34 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                             Nenhuma bookmaker com saldo disponível
                           </div>
                         ) : (
-                          bookmakers.map((bk) => {
-                            const displayName = `${bk.nome} • ${bk.parceiro_nome || ""}`;
-                            return (
-                              <SelectItem key={bk.id} value={bk.id} className="max-w-full">
-                                <div className="flex items-center justify-between w-full gap-2 min-w-0">
-                                  <span className="truncate min-w-0 flex-1" title={displayName}>
-                                    {displayName}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground flex-shrink-0">
-                                    Disp: {formatCurrencyWithSymbol(bk.saldo_operavel, bk.moeda)}
-                                  </span>
-                                </div>
+                          bookmakers.map((bk) => (
+                              <SelectItem key={bk.id} value={bk.id} className="max-w-full py-2">
+                                <BookmakerSelectOption 
+                                  bookmaker={{
+                                    id: bk.id,
+                                    nome: bk.nome,
+                                    parceiro_nome: bk.parceiro_nome,
+                                    moeda: bk.moeda,
+                                    saldo_operavel: bk.saldo_operavel,
+                                    saldo_disponivel: bk.saldo_disponivel,
+                                    saldo_freebet: bk.saldo_freebet,
+                                    saldo_bonus: bk.saldo_bonus,
+                                    logo_url: bk.logo_url,
+                                  }}
+                                />
                               </SelectItem>
-                            );
-                          })
+                            ))
                         )}
                       </SelectContent>
                     </Select>
                     {bookmakerSaldo && (
-                      <div className="text-xs text-center space-y-0.5">
-                        <p className="text-muted-foreground">
-                          Saldo Operável: <span className="text-blue-500 font-medium">{formatCurrencyWithSymbol(bookmakerSaldo.saldoOperavel, bookmakerSaldo.moeda)}</span>
-                        </p>
-                        <p className="text-muted-foreground/70 text-[10px] flex items-center justify-center gap-3 flex-wrap">
-                          <span className="text-emerald-400 flex items-center gap-1">
-                            <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
-                              <rect x="3" y="8" width="18" height="11" rx="2" className="fill-emerald-500/20 stroke-emerald-400" strokeWidth="1.5"/>
-                              <path d="M3 10h18" className="stroke-emerald-400" strokeWidth="1.5"/>
-                              <path d="M7 4h10M9 4v4M15 4v4" className="stroke-emerald-400" strokeWidth="1.5" strokeLinecap="round"/>
-                              <rect x="6" y="13" width="4" height="3" rx="0.5" className="fill-emerald-400/50"/>
-                            </svg>
-                            {formatCurrencyWithSymbol(bookmakerSaldo.saldoDisponivel, bookmakerSaldo.moeda)}
-                          </span>
-                          {bookmakerSaldo.saldoFreebet > 0 && (
-                            <span className="text-amber-400 flex items-center gap-1">
-                              <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="2" y="6" width="20" height="12" rx="2" className="fill-amber-500/20 stroke-amber-400" strokeWidth="1.5"/>
-                                <path d="M2 10h20" className="stroke-amber-400" strokeWidth="1"/>
-                                <circle cx="12" cy="14" r="2" className="stroke-amber-400" strokeWidth="1.5"/>
-                                <path d="M6 14h2M16 14h2" className="stroke-amber-400/60" strokeWidth="1" strokeLinecap="round"/>
-                              </svg>
-                              {formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)}
-                            </span>
-                          )}
-                          {bookmakerSaldo.saldoBonus > 0 && (
-                            <span className="text-purple-400 flex items-center gap-1">
-                              <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="2" y="4" width="20" height="16" rx="3" className="fill-purple-500/20 stroke-purple-400" strokeWidth="1.5"/>
-                                <circle cx="12" cy="12" r="4" className="stroke-purple-400" strokeWidth="1.5"/>
-                                <path d="M12 10v4M10.5 11.5l1.5-1.5 1.5 1.5" className="stroke-purple-400" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                                <circle cx="5.5" cy="8" r="1" className="fill-purple-400/60"/>
-                                <circle cx="18.5" cy="16" r="1" className="fill-purple-400/60"/>
-                              </svg>
-                              {formatCurrencyWithSymbol(bookmakerSaldo.saldoBonus, bookmakerSaldo.moeda)}
-                            </span>
-                          )}
-                        </p>
-                      </div>
+                      <SaldoBreakdownDisplay
+                        saldoReal={bookmakerSaldo.saldoDisponivel}
+                        saldoFreebet={bookmakerSaldo.saldoFreebet}
+                        saldoBonus={bookmakerSaldo.saldoBonus}
+                        saldoOperavel={bookmakerSaldo.saldoOperavel}
+                        moeda={bookmakerSaldo.moeda}
+                      />
                     )}
                   </div>
                   <div className="space-y-2">
