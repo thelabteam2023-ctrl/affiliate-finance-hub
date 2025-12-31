@@ -37,15 +37,19 @@ interface AnalisePorCasaSectionProps {
   bookmakerAnalises: BookmakerAnalise[];
   lucroTotalCiclo: number;
   projetoContexto?: ProjetoContexto | null;
+  formatCurrency?: (value: number) => string;
 }
 
-export function AnalisePorCasaSection({ bookmakerAnalises, lucroTotalCiclo, projetoContexto }: AnalisePorCasaSectionProps) {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+// Fallback para formatação de moeda
+const defaultFormatCurrency = (value: number): string => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+};
+
+export function AnalisePorCasaSection({ bookmakerAnalises, lucroTotalCiclo, projetoContexto, formatCurrency: formatCurrencyProp }: AnalisePorCasaSectionProps) {
+  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
 
   const formatNumber = (value: number) => {
     return new Intl.NumberFormat("pt-BR").format(value);

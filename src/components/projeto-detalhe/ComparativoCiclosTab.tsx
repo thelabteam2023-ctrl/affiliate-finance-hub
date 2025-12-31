@@ -56,9 +56,19 @@ interface CicloData {
 
 interface ComparativoCiclosTabProps {
   projetoId: string;
+  formatCurrency?: (value: number) => string;
 }
 
-export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
+// Fallback para formatação de moeda
+const defaultFormatCurrency = (value: number): string => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+};
+
+export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp }: ComparativoCiclosTabProps) {
+  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [ciclos, setCiclos] = useState<CicloData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -230,12 +240,7 @@ export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
     return { mes: melhor[0], ...melhor[1], lucroMedio: melhor[1].apostas > 0 ? melhor[1].lucro / melhor[1].apostas : 0 };
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+  // formatCurrency definido no escopo do componente
 
   const identificarPontosAtencao = (ciclosData: CicloData[], variacoes: ReturnType<typeof calcularVariacoes>) => {
     const pontos: string[] = [];
@@ -569,6 +574,7 @@ export function ComparativoCiclosTab({ projetoId }: ComparativoCiclosTabProps) {
               bookmakerAnalises={bookmakerAnalises} 
               lucroTotalCiclo={lucroTotal}
               projetoContexto={projetoContexto}
+              formatCurrency={formatCurrency}
             />
           )}
         </CardContent>

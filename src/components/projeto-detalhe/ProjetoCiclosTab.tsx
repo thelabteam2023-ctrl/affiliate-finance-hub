@@ -53,7 +53,16 @@ interface Ciclo {
 
 interface ProjetoCiclosTabProps {
   projetoId: string;
+  formatCurrency?: (value: number) => string;
 }
+
+// Fallback para formatação de moeda
+const defaultFormatCurrency = (value: number): string => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+};
 
 interface PerdaCiclo {
   id: string;
@@ -85,7 +94,8 @@ interface CicloMetrics {
   perdas: PerdasCiclo;
 }
 
-export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
+export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp }: ProjetoCiclosTabProps) {
+  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -268,12 +278,7 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+// formatCurrency agora vem como prop
 
   const getDiasRestantes = (dataFim: string) => {
     const fim = new Date(dataFim);
@@ -760,7 +765,7 @@ export function ProjetoCiclosTab({ projetoId }: ProjetoCiclosTabProps) {
       </TabsContent>
 
       <TabsContent value="comparativo">
-        <ComparativoCiclosTab projetoId={projetoId} />
+        <ComparativoCiclosTab projetoId={projetoId} formatCurrency={formatCurrency} />
       </TabsContent>
     </Tabs>
   );

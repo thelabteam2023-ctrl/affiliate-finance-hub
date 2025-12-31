@@ -37,7 +37,16 @@ import {
 interface ProjetoPerdasTabProps {
   projetoId: string;
   onDataChange?: () => void;
+  formatCurrency?: (value: number) => string;
 }
+
+// Fallback para formatação de moeda
+const defaultFormatCurrency = (value: number): string => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+};
 
 interface Perda {
   id: string;
@@ -82,7 +91,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof
   },
 };
 
-export function ProjetoPerdasTab({ projetoId, onDataChange }: ProjetoPerdasTabProps) {
+export function ProjetoPerdasTab({ projetoId, onDataChange, formatCurrency: formatCurrencyProp }: ProjetoPerdasTabProps) {
+  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [perdas, setPerdas] = useState<Perda[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -266,12 +276,7 @@ export function ProjetoPerdasTab({ projetoId, onDataChange }: ProjetoPerdasTabPr
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+// formatCurrency agora vem como prop
 
   // Calculate totals by status
   const perdasPendentes = perdas.filter(p => p.status === 'PENDENTE');
