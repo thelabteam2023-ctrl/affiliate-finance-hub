@@ -16,7 +16,8 @@ interface Aposta {
 
 interface ValueBetStatisticsCardProps {
   apostas: Aposta[];
-  formatCurrency?: (value: number) => string;
+  /** Função de formatação obrigatória - deve vir do useProjetoCurrency */
+  formatCurrency: (value: number) => string;
 }
 
 const StatCell = ({ label, value, valueClass = "" }: { 
@@ -30,11 +31,7 @@ const StatCell = ({ label, value, valueClass = "" }: {
   </div>
 );
 
-const defaultFormatCurrency = (value: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-
-export function ValueBetStatisticsCard({ apostas, formatCurrency: formatCurrencyProp }: ValueBetStatisticsCardProps) {
-  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
+export function ValueBetStatisticsCard({ apostas, formatCurrency }: ValueBetStatisticsCardProps) {
   const stats = useMemo(() => {
     // Resultados
     const vencedoras = apostas.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;

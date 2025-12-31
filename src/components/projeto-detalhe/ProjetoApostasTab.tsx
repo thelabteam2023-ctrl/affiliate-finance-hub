@@ -891,6 +891,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           ]} 
           accentColor="hsl(var(--primary))"
           isSingleDayPeriod={internalPeriod === "1dia"}
+          formatCurrency={formatCurrency}
         />
       )}
 
