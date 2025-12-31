@@ -8,6 +8,7 @@ import { ResultadoPill } from "../ResultadoPill";
 
 interface FreebetApostaCardProps {
   aposta: ApostaOperacionalFreebet;
+  projetoId: string;
   compact?: boolean;
   formatCurrency: (value: number) => string;
   onResultadoUpdated: () => void;
@@ -143,6 +144,7 @@ function getOperationType(aposta: ApostaOperacionalFreebet): "bookmaker" | "back
 
 export function FreebetApostaCard({ 
   aposta, 
+  projetoId,
   compact = false, 
   formatCurrency,
   onResultadoUpdated,
@@ -193,6 +195,7 @@ export function FreebetApostaCard({
           <ResultadoPill
             apostaId={aposta.id}
             bookmarkerId={aposta.bookmaker_id}
+            projetoId={projetoId}
             layExchangeBookmakerId={operationType === "cobertura" ? aposta.lay_exchange : undefined}
             resultado={aposta.resultado}
             status={aposta.status}

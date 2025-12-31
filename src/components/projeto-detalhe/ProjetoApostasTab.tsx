@@ -1090,6 +1090,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                       <ResultadoPill
                         apostaId={aposta.id}
                         bookmarkerId={aposta.bookmaker_id}
+                        projetoId={projetoId}
                         layExchangeBookmakerId={opType.type === "cobertura" ? aposta.lay_exchange : undefined}
                         resultado={aposta.resultado}
                         status={aposta.status}
@@ -1157,6 +1158,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                     <ResultadoPill
                       apostaId={multipla.id}
                       bookmarkerId={multipla.bookmaker_id}
+                      projetoId={projetoId}
                       resultado={multipla.resultado}
                       status={multipla.status}
                       stake={multipla.stake}
