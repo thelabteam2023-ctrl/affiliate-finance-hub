@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { LayoutDashboard, Building2, Target, PanelLeft, LayoutList } from "lucide-react";
 import { BonusVisaoGeralTab } from "./BonusVisaoGeralTab";
 import { BonusBookmakersTab } from "./BonusBookmakersTab";
@@ -9,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "../StandardTimeFilter";
-import { supabase } from "@/integrations/supabase/client";
+import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 
 interface ProjetoBonusAreaProps {
   projetoId: string;
@@ -25,32 +26,17 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
   const { getBookmakersWithActiveBonus, fetchBonuses } = useProjectBonuses({ projectId: projetoId });
   const bookmakersInBonusMode = getBookmakersWithActiveBonus();
   
-  // Count of open operations (pending bets in bonus context)
-  const [openOperationsCount, setOpenOperationsCount] = useState(0);
-  
-  // Fetch open operations count
-  useEffect(() => {
-    const fetchOpenCount = async () => {
-      // bookmakersInBonusMode is an array of bookmaker IDs (strings)
-      const bookmakerIds = bookmakersInBonusMode;
-      
-      const { count } = await supabase
-        .from("apostas_unificada")
-        .select("*", { count: "exact", head: true })
-        .eq("projeto_id", projetoId)
-        .eq("status", "PENDENTE")
-        .or(`contexto_operacional.eq.BONUS,is_bonus_bet.eq.true${bookmakerIds.length > 0 ? `,bookmaker_id.in.(${bookmakerIds.join(",")})` : ""}`);
-      
-      setOpenOperationsCount(count || 0);
-    };
-    
-    fetchOpenCount();
-  }, [projetoId, bookmakersInBonusMode, refreshTrigger]);
+  // Count of open operations (pending bets in bonus context) - uses canonical hook
+  const { count: openOperationsCount } = useOpenOperationsCount({
+    projetoId,
+    estrategia: "BONUS",
+    refreshTrigger,
+  });
   
   // NAV_ITEMS with dynamic counts
   const NAV_ITEMS = useMemo(() => [
     { value: "visao-geral" as TabValue, label: "Visão Geral", icon: LayoutDashboard },
-    { value: "apostas" as TabValue, label: "Operações", icon: Target, showCount: true, count: openOperationsCount },
+    { value: "apostas" as TabValue, label: "Operações", icon: Target, showBadge: true, count: openOperationsCount },
     { value: "bookmakers" as TabValue, label: "Por Casa", icon: Building2, showCount: true, count: bookmakersInBonusMode.length },
   ], [openOperationsCount, bookmakersInBonusMode.length]);
   
@@ -154,11 +140,19 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
                 <TabsTrigger
                   key={item.value}
                   value={item.value}
-                  className="bg-transparent border-0 rounded-none px-1 pb-3 pt-1 h-auto shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground/70 data-[state=active]:text-foreground transition-colors"
+                  className="bg-transparent border-0 rounded-none px-1 pb-3 pt-1 h-auto shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground/70 data-[state=active]:text-foreground transition-colors relative"
                 >
                   <item.icon className="h-4 w-4 mr-2 opacity-60" />
                   {item.label}
-                  {item.showCount && item.count > 0 && (
+                  {item.showBadge && item.count > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="ml-1.5 h-5 min-w-5 px-1.5 text-[10px] font-bold"
+                    >
+                      {item.count > 99 ? "99+" : item.count}
+                    </Badge>
+                  )}
+                  {item.showCount && item.count > 0 && !item.showBadge && (
                     <span className="ml-1.5 text-xs font-medium text-muted-foreground/60">
                       ({item.count})
                     </span>
@@ -216,7 +210,15 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
                     isActive ? "text-accent" : "opacity-60"
                   )} />
                   <span className="flex-1 text-left">{item.label}</span>
-                  {item.showCount && item.count > 0 && (
+                  {item.showBadge && item.count > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="h-5 min-w-5 px-1.5 text-[10px] font-bold"
+                    >
+                      {item.count > 99 ? "99+" : item.count}
+                    </Badge>
+                  )}
+                  {item.showCount && item.count > 0 && !item.showBadge && (
                     <span className={cn(
                       "text-xs px-1.5 py-0.5 rounded-full transition-colors",
                       isActive 

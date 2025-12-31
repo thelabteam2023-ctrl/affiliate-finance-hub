@@ -45,6 +45,7 @@ import { ApostaCard } from "./ApostaCard";
 import { UnifiedStatisticsCard } from "./UnifiedStatisticsCard";
 
 import { cn, getFirstLastName } from "@/lib/utils";
+import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 
 interface ProjetoValueBetTabProps {
   projetoId: string;
@@ -97,12 +98,6 @@ type NavigationMode = "tabs" | "sidebar";
 type NavTabValue = "visao-geral" | "apostas" | "por-casa";
 
 const NAV_STORAGE_KEY = "valuebet-nav-mode";
-
-const NAV_ITEMS = [
-  { value: "visao-geral" as NavTabValue, label: "Visão Geral", icon: LayoutDashboard },
-  { value: "apostas" as NavTabValue, label: "Apostas", icon: Target },
-  { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
-];
 
 // Ordenação para Por Casa
 type SortField = "volume" | "lucro" | "apostas" | "roi";
@@ -172,6 +167,20 @@ export function ProjetoValueBetTab({
   const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
 
   const dateRange = useMemo(() => getDateRangeFromPeriod(internalPeriod, internalDateRange), [internalPeriod, internalDateRange]);
+
+  // Count of open operations for badge - uses the canonical hook
+  const { count: openOperationsCount } = useOpenOperationsCount({
+    projetoId,
+    estrategia: APOSTA_ESTRATEGIA.VALUEBET,
+    refreshTrigger,
+  });
+
+  // NAV_ITEMS with dynamic count for badge
+  const NAV_ITEMS = useMemo(() => [
+    { value: "visao-geral" as NavTabValue, label: "Visão Geral", icon: LayoutDashboard },
+    { value: "apostas" as NavTabValue, label: "Apostas", icon: Target, showBadge: true, count: openOperationsCount },
+    { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
+  ], [openOperationsCount]);
 
   // Save nav mode preference
   useEffect(() => {
@@ -1008,10 +1017,18 @@ export function ProjetoValueBetTab({
                 <TabsTrigger
                   key={item.value}
                   value={item.value}
-                  className="bg-transparent border-0 rounded-none px-1 pb-3 pt-1 h-auto shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground/70 data-[state=active]:text-foreground transition-colors"
+                  className="bg-transparent border-0 rounded-none px-1 pb-3 pt-1 h-auto shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground/70 data-[state=active]:text-foreground transition-colors relative"
                 >
                   <item.icon className="h-4 w-4 mr-2 opacity-60" />
                   {item.label}
+                  {item.showBadge && item.count > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="ml-1.5 h-5 min-w-5 px-1.5 text-[10px] font-bold"
+                    >
+                      {item.count > 99 ? "99+" : item.count}
+                    </Badge>
+                  )}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -1092,6 +1109,14 @@ export function ProjetoValueBetTab({
                   >
                     <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-accent" : "opacity-60")} />
                     <span className="flex-1 text-left">{item.label}</span>
+                    {item.showBadge && item.count > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="h-5 min-w-5 px-1.5 text-[10px] font-bold"
+                      >
+                        {item.count > 99 ? "99+" : item.count}
+                      </Badge>
+                    )}
                   </button>
                 );
               })}

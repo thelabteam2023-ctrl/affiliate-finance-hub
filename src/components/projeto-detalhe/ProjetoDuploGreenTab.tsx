@@ -47,6 +47,7 @@ import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { DuploGreenStatisticsCard } from "./DuploGreenStatisticsCard";
 
 import { cn, getFirstLastName } from "@/lib/utils";
+import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 
 interface ProjetoDuploGreenTabProps {
   projetoId: string;
@@ -110,12 +111,6 @@ type NavTabValue = "visao-geral" | "apostas" | "por-casa";
 
 const NAV_STORAGE_KEY = "duplogreen-nav-mode";
 
-const NAV_ITEMS = [
-  { value: "visao-geral" as NavTabValue, label: "Visão Geral", icon: LayoutDashboard },
-  { value: "apostas" as NavTabValue, label: "Apostas", icon: Target },
-  { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
-];
-
 function ResultadoBadge({ resultado }: { resultado: string | null }) {
   const getColor = (r: string | null) => {
     switch (r) {
@@ -172,6 +167,20 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
 
   const dateRange = useMemo(() => getDateRangeFromPeriod(internalPeriod, internalDateRange), [internalPeriod, internalDateRange]);
+
+  // Count of open operations for badge - uses the canonical hook
+  const { count: openOperationsCount } = useOpenOperationsCount({
+    projetoId,
+    estrategia: APOSTA_ESTRATEGIA.DUPLO_GREEN,
+    refreshTrigger,
+  });
+
+  // NAV_ITEMS with dynamic count for badge
+  const NAV_ITEMS = useMemo(() => [
+    { value: "visao-geral" as NavTabValue, label: "Visão Geral", icon: LayoutDashboard },
+    { value: "apostas" as NavTabValue, label: "Apostas", icon: Target, showBadge: true, count: openOperationsCount },
+    { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
+  ], [openOperationsCount]);
 
   useEffect(() => { localStorage.setItem(NAV_STORAGE_KEY, navMode); }, [navMode]);
 
@@ -886,7 +895,26 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       <div className="space-y-6">
         <Tabs value={activeNavTab} onValueChange={handleNavTabChange} className="space-y-6">
           <div className="flex items-center justify-between border-b border-border/50">
-            <TabsList className="bg-transparent border-0 rounded-none p-0 h-auto gap-6">{NAV_ITEMS.map((item) => <TabsTrigger key={item.value} value={item.value} className="bg-transparent border-0 rounded-none px-1 pb-3 pt-1 h-auto shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground/70 data-[state=active]:text-foreground transition-colors"><item.icon className="h-4 w-4 mr-2 opacity-60" />{item.label}</TabsTrigger>)}</TabsList>
+            <TabsList className="bg-transparent border-0 rounded-none p-0 h-auto gap-6">
+              {NAV_ITEMS.map((item) => (
+                <TabsTrigger 
+                  key={item.value} 
+                  value={item.value} 
+                  className="bg-transparent border-0 rounded-none px-1 pb-3 pt-1 h-auto shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground/70 data-[state=active]:text-foreground transition-colors relative"
+                >
+                  <item.icon className="h-4 w-4 mr-2 opacity-60" />
+                  {item.label}
+                  {item.showBadge && item.count > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="ml-1.5 h-5 min-w-5 px-1.5 text-[10px] font-bold"
+                    >
+                      {item.count > 99 ? "99+" : item.count}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
             <div className="flex items-center gap-4">{periodFilterComponent}{modeToggle}</div>
           </div>
           <TabsContent value={activeNavTab} className="mt-0">{renderMainContent()}</TabsContent>
@@ -901,7 +929,40 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
     <div className="space-y-4">
       <div className="flex justify-end">{periodFilterComponent}</div>
       <div className="flex gap-6">
-        <div className="w-52 shrink-0 space-y-6"><div><div className="flex items-center justify-between mb-4"><span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Navegação</span>{modeToggle}</div><nav className="space-y-1">{NAV_ITEMS.map((item) => { const isActive = activeNavTab === item.value; return <button key={item.value} onClick={() => handleNavTabChange(item.value)} className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200", isActive ? "bg-accent/10 text-foreground shadow-sm" : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/50")}><item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-accent" : "opacity-60")} /><span className="flex-1 text-left">{item.label}</span></button>; })}</nav></div></div>
+        <div className="w-52 shrink-0 space-y-6">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Navegação</span>
+              {modeToggle}
+            </div>
+            <nav className="space-y-1">
+              {NAV_ITEMS.map((item) => { 
+                const isActive = activeNavTab === item.value; 
+                return (
+                  <button 
+                    key={item.value} 
+                    onClick={() => handleNavTabChange(item.value)} 
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200", 
+                      isActive ? "bg-accent/10 text-foreground shadow-sm" : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-accent" : "opacity-60")} />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {item.showBadge && item.count > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="h-5 min-w-5 px-1.5 text-[10px] font-bold"
+                      >
+                        {item.count > 99 ? "99+" : item.count}
+                      </Badge>
+                    )}
+                  </button>
+                ); 
+              })}
+            </nav>
+          </div>
+        </div>
         <div className="flex-1 min-w-0">{renderMainContent()}</div>
       </div>
       {selectedAposta && <ApostaDialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setSelectedAposta(null); }} projetoId={projetoId} aposta={selectedAposta as any} onSuccess={handleApostaUpdated} defaultEstrategia={APOSTA_ESTRATEGIA.DUPLO_GREEN} activeTab="duplogreen" />}
