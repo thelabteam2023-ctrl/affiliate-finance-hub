@@ -280,58 +280,74 @@ export const SemSimulacao: React.FC<{
           </div>
         </div>
 
-        <div className="space-y-2 pt-2 border-t border-border/30">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Stake Inicial:</span>
-            <span className="font-medium text-foreground">{formatValue(stakeInicial)}</span>
+        <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border/30">
+          {/* Coluna Esquerda - Resultado */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Stake Inicial:</span>
+              <span className="font-medium text-foreground">{formatValue(stakeInicial)}</span>
+            </div>
+            
+            <div className="flex justify-between text-sm">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-muted-foreground flex items-center gap-1 cursor-help">
+                      Novo Saldo:
+                      <HelpCircle className="h-3 w-3" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="max-w-[220px] text-xs">
+                    <p>Lucro bruto recebido da Bookmaker.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <span className="font-bold text-success">{formatValue(greenFinal.novoSaldoNaCasa, true)}</span>
+            </div>
+            
+            <div className="flex justify-between text-sm">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-muted-foreground flex items-center gap-1 cursor-help">
+                      Custos LAY:
+                      <HelpCircle className="h-3 w-3" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="max-w-[220px] text-xs">
+                    <p>Soma das responsabilidades pagas nas proteções LAY.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <span className="font-bold text-destructive">-{formatValue(greenFinal.custosTotaisLay)}</span>
+            </div>
+            
+            <div className="flex justify-between text-sm pt-2 border-t border-border/30">
+              <span className="text-foreground font-medium">Resultado:</span>
+              <span className={cn('font-bold text-lg', greenFinal.lucroLiquidoReal >= 0 ? 'text-success' : 'text-destructive')}>
+                {formatValue(greenFinal.lucroLiquidoReal, true)}
+              </span>
+            </div>
           </div>
-          
-          <div className="flex justify-between text-sm">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="text-muted-foreground flex items-center gap-1 cursor-help">
-                    Novo Saldo na Casa:
-                    <HelpCircle className="h-3 w-3" />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="left" className="max-w-[220px] text-xs">
-                  <p>Lucro bruto recebido da Bookmaker: Stake × Π(Odds) - Stake</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <span className="font-bold text-success">{formatValue(greenFinal.novoSaldoNaCasa, true)}</span>
-          </div>
-          
-          <div className="flex justify-between text-sm">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="text-muted-foreground flex items-center gap-1 cursor-help">
-                    Custos LAY (proteções):
-                    <HelpCircle className="h-3 w-3" />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="left" className="max-w-[220px] text-xs">
-                  <p>Soma de todas as responsabilidades pagas nas proteções LAY ao longo da operação.</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <span className="font-bold text-destructive">-{formatValue(greenFinal.custosTotaisLay)}</span>
-          </div>
-          
-          <div className="flex justify-between text-sm pt-2 border-t border-border/30">
-            <span className="text-foreground font-medium">Resultado Líquido:</span>
-            <span className={cn('font-bold text-lg', greenFinal.lucroLiquidoReal >= 0 ? 'text-success' : 'text-destructive')}>
-              {formatValue(greenFinal.lucroLiquidoReal, true)}
-            </span>
-          </div>
-          
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Extração Real:</span>
-            <span className={cn('font-bold', greenFinal.percentualExtracao >= 0 ? 'text-success' : 'text-destructive')}>
-              {greenFinal.percentualExtracao >= 0 ? '+' : ''}{greenFinal.percentualExtracao.toFixed(1)}%
-            </span>
+
+          {/* Coluna Direita - Métricas */}
+          <div className="space-y-2 pl-4 border-l border-border/30">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Extração:</span>
+              <span className={cn('font-bold', greenFinal.percentualExtracao >= 0 ? 'text-success' : 'text-destructive')}>
+                {greenFinal.percentualExtracao >= 0 ? '+' : ''}{greenFinal.percentualExtracao.toFixed(1)}%
+              </span>
+            </div>
+            
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Vol. movimentado:</span>
+              <span className="font-medium text-foreground">{formatValue(volumeExchange)}</span>
+            </div>
+            
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Total LAY:</span>
+              <span className="font-medium text-warning">{formatValue(greenFinal.custosTotaisLay)}</span>
+            </div>
           </div>
         </div>
 
@@ -344,18 +360,6 @@ export const SemSimulacao: React.FC<{
             </p>
           </div>
         )}
-
-        {/* Volume Operado */}
-        <div className="pt-3 border-t border-border/50">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Vol. movimentado:</span>
-            <span className="font-medium text-foreground">{formatValue(volumeExchange)}</span>
-          </div>
-          <div className="flex items-center justify-between text-xs mt-1">
-            <span className="text-muted-foreground">Custos totais LAY:</span>
-            <span className="font-medium text-warning">{formatValue(greenFinal.custosTotaisLay)}</span>
-          </div>
-        </div>
       </div>
     );
   }
