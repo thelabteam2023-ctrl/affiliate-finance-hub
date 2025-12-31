@@ -232,7 +232,10 @@ export const SemSimulacao: React.FC<{
   volumeExchange: number;
   exposicaoMaxima: number;
   motivoEncerramento: 'red' | 'green_final' | null;
+  comissaoExchange?: number;
   redFinal: {
+    capitalBruto: number;
+    valorComissaoExchange: number;
     capitalExtraido: number;
     custosTotaisLay: number;
     resultadoLiquido: number;
@@ -247,7 +250,7 @@ export const SemSimulacao: React.FC<{
     percentualExtracao: number;
     houvePerda: boolean;
   } | null;
-}> = ({ moeda, stakeInicial, volumeExchange, motivoEncerramento, redFinal, greenFinal }) => {
+}> = ({ moeda, stakeInicial, volumeExchange, motivoEncerramento, comissaoExchange = 5, redFinal, greenFinal }) => {
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
   
   const formatValue = (value: number, showSign = false) => {
@@ -388,17 +391,56 @@ export const SemSimulacao: React.FC<{
             <span className="font-medium text-foreground">{formatValue(stakeInicial)}</span>
           </div>
           
+          {/* Capital Bruto - Exchange */}
           <div className="flex justify-between text-sm">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-muted-foreground flex items-center gap-1 cursor-help">
-                    Capital Extraído (Exchange):
+                    Capital Bruto (Exchange):
                     <HelpCircle className="h-3 w-3" />
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="max-w-[220px] text-xs">
-                  <p>Valor recebido da Exchange quando o LAY ganhou.</p>
+                  <p>Stake LAY recebido quando o LAY ganhou (antes da comissão).</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <span className="font-medium text-foreground">{formatValue(redFinal.capitalBruto)}</span>
+          </div>
+          
+          {/* Comissão da Exchange */}
+          {redFinal.valorComissaoExchange > 0 && (
+            <div className="flex justify-between text-sm">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-muted-foreground flex items-center gap-1 cursor-help">
+                      Comissão Exchange ({comissaoExchange}%):
+                      <HelpCircle className="h-3 w-3" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="max-w-[220px] text-xs">
+                    <p>Taxa cobrada pela Exchange sobre o ganho. Só paga quando ganha.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <span className="font-bold text-destructive">-{formatValue(redFinal.valorComissaoExchange)}</span>
+            </div>
+          )}
+          
+          {/* Capital Líquido */}
+          <div className="flex justify-between text-sm">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-muted-foreground flex items-center gap-1 cursor-help">
+                    Capital Líquido (Exchange):
+                    <HelpCircle className="h-3 w-3" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[220px] text-xs">
+                  <p>Valor recebido após desconto da comissão da Exchange.</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -416,7 +458,7 @@ export const SemSimulacao: React.FC<{
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="left" className="max-w-[220px] text-xs">
-                    <p>Soma das responsabilidades pagas nas pernas que deram GREEN.</p>
+                    <p>Soma das responsabilidades pagas nas pernas que deram GREEN. Sem comissão (você perdeu).</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

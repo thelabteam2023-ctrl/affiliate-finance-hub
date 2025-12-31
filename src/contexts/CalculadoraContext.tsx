@@ -79,7 +79,9 @@ export interface MetricasGlobais {
   
   // RED - Quando ocorre RED (extração via Exchange)
   redFinal: {
-    capitalExtraido: number;           // Valor recebido da Exchange
+    capitalBruto: number;              // Stake LAY recebido (bruto, antes da comissão)
+    valorComissaoExchange: number;     // Comissão paga à Exchange (só se houver lucro)
+    capitalExtraido: number;           // Valor líquido após comissão
     custosTotaisLay: number;           // Soma de todos os custos LAY pagos nas pernas GREEN anteriores
     resultadoLiquido: number;          // capitalExtraido - custosTotaisLay
     percentualExtracao: number;        // resultadoLiquido / stakeInicial × 100
@@ -480,7 +482,7 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, [recalcularPernas]);
 
   const getMetricasGlobais = useCallback((): MetricasGlobais => {
-    const { pernas, stakeInicial } = state;
+    const { pernas, stakeInicial, comissaoExchange } = state;
     
     // Verificar status
     const pernaRed = pernas.find(p => p.status === 'red');
@@ -518,8 +520,23 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       // RED = capital recuperado via Exchange
       motivoEncerramento = 'red';
       
-      // Capital extraído da Exchange
-      const capitalExtraido = pernaRed.capitalRecuperado;
+      // Capital BRUTO recebido da Exchange (stake LAY)
+      const capitalBruto = pernaRed.stakeLayNecessario;
+      
+      // Responsabilidade LAY da perna RED (o que foi arriscado)
+      const responsabilidadeLay = pernaRed.stakeLayNecessario * (pernaRed.oddLay - 1);
+      
+      // Lucro na Exchange = ganho bruto - risco (responsabilidade)
+      // Responsabilidade é zero porque ganhou, então lucro = stake LAY
+      const lucroExchange = capitalBruto - 0; // Quando ganha LAY, recebe o stake sem pagar responsabilidade
+      
+      // Comissão da Exchange SOMENTE sobre o lucro
+      const valorComissaoExchange = lucroExchange > 0 
+        ? (lucroExchange * comissaoExchange / 100) 
+        : 0;
+      
+      // Capital LÍQUIDO = bruto - comissão
+      const capitalExtraido = capitalBruto - valorComissaoExchange;
       
       // Soma dos custos LAY das pernas GREEN anteriores (só as que deram GREEN)
       const pernasGreenAnteriores = pernas.filter(p => p.status === 'green');
@@ -532,6 +549,8 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       const percentualExtracao = stakeInicial > 0 ? (resultadoLiquido / stakeInicial) * 100 : 0;
       
       redFinal = {
+        capitalBruto,
+        valorComissaoExchange,
         capitalExtraido,
         custosTotaisLay,
         resultadoLiquido,

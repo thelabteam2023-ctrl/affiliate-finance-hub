@@ -196,6 +196,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                   volumeExchange={metricas.volumeExchange}
                   exposicaoMaxima={metricas.exposicaoMaxima}
                   motivoEncerramento={metricas.motivoEncerramento}
+                  comissaoExchange={comissaoExchange}
                   redFinal={metricas.redFinal}
                   greenFinal={metricas.greenFinal}
                 />
