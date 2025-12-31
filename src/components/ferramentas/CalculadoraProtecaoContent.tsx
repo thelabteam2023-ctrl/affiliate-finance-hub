@@ -1,15 +1,13 @@
 import React from 'react';
-import { RotateCcw, Plus, Minus, AlertTriangle } from 'lucide-react';
+import { RotateCcw, Plus, Minus, Lock } from 'lucide-react';
 import { useCalculadora, TipoAposta, MoedaCalc } from '@/contexts/CalculadoraContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { PernaTimeline } from './PernaTimeline';
 import { SimulacaoAtivaCard, SemSimulacao } from './ProximaAcaoCard';
-import { GuiaProtecao } from './GuiaProtecao';
 
 export const CalculadoraProtecaoContent: React.FC = () => {
   const {
@@ -43,159 +41,143 @@ export const CalculadoraProtecaoContent: React.FC = () => {
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <GuiaProtecao />
+          {/* Header com Reiniciar */}
+          <div className="flex items-center justify-end">
             <Button variant="outline" size="sm" onClick={resetCalculadora} className="gap-2">
               <RotateCcw className="h-4 w-4" />
               Reiniciar
             </Button>
           </div>
 
-          {/* Aviso de Risco */}
-          <div className="p-3 rounded-lg bg-warning/10 border border-warning/30 flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium text-warning text-sm">Modelo Capital Comprometido</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                O Capital Comprometido cresce a cada GREEN. Quanto mais você ganha na bookmaker, maior o custo acumulado.
-                Cair na Exchange (RED) é o objetivo — recupera todo o capital comprometido e encerra a operação.
-              </p>
+          {/* Barra de Configuração Compacta */}
+          <div className={`px-3 py-2 rounded-lg border flex flex-wrap items-center gap-x-4 gap-y-2 ${
+            temPernaConfirmada 
+              ? 'bg-muted/30 border-border/50' 
+              : 'bg-muted/20 border-border'
+          }`}>
+            {temPernaConfirmada && (
+              <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            )}
+
+            {/* Tipo */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] uppercase text-muted-foreground font-medium">Tipo</span>
+              <Select 
+                value={tipoAposta} 
+                onValueChange={(v) => setTipoAposta(v as TipoAposta)}
+                disabled={temPernaConfirmada}
+              >
+                <SelectTrigger className="h-7 w-[90px] text-xs px-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dupla">Dupla</SelectItem>
+                  <SelectItem value="tripla">Tripla</SelectItem>
+                  <SelectItem value="multipla">Múltipla</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Pernas (só para múltipla) */}
+            {tipoAposta === 'multipla' && !temPernaConfirmada && (
+              <div className="flex items-center gap-1">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6"
+                  onClick={() => setNumPernas(Math.max(2, numPernas - 1))}
+                >
+                  <Minus className="h-3 w-3" />
+                </Button>
+                <span className="w-4 text-center text-xs font-medium">{numPernas}</span>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6"
+                  onClick={() => setNumPernas(Math.min(10, numPernas + 1))}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+
+            <div className="h-4 w-px bg-border/50 hidden sm:block" />
+
+            {/* Moeda */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] uppercase text-muted-foreground font-medium">Moeda</span>
+              <Select 
+                value={moeda} 
+                onValueChange={(v) => setMoeda(v as MoedaCalc)}
+                disabled={temPernaConfirmada}
+              >
+                <SelectTrigger className="h-7 w-[80px] text-xs px-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BRL">R$ BRL</SelectItem>
+                  <SelectItem value="USD">US$ USD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="h-4 w-px bg-border/50 hidden sm:block" />
+
+            {/* Stake */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] uppercase text-muted-foreground font-medium">Stake</span>
+              <Input
+                type="number"
+                min="1"
+                step="10"
+                value={stakeInicial}
+                onChange={(e) => setStakeInicial(parseFloat(e.target.value) || 0)}
+                className="h-7 w-[70px] text-xs px-2"
+                disabled={temPernaConfirmada}
+              />
+            </div>
+
+            <div className="h-4 w-px bg-border/50 hidden sm:block" />
+
+            {/* Comissão */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] uppercase text-muted-foreground font-medium">Comissão %</span>
+              <Input
+                type="number"
+                min="0"
+                max="20"
+                step="0.1"
+                value={comissaoExchange}
+                onChange={(e) => setComissaoExchange(parseFloat(e.target.value) || 0)}
+                className="h-7 w-[50px] text-xs px-2"
+                disabled={temPernaConfirmada}
+              />
+            </div>
+
+            <div className="h-4 w-px bg-border/50 hidden sm:block" />
+
+            {/* Odds BACK */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] uppercase text-muted-foreground font-medium">Odds</span>
+              {pernas.map((perna) => (
+                <Input
+                  key={perna.id}
+                  type="number"
+                  step="0.01"
+                  min="1.01"
+                  placeholder={`E${perna.id}`}
+                  value={perna.oddBack}
+                  onChange={(e) => updatePernaOddBack(perna.id, parseFloat(e.target.value) || 1.01)}
+                  className="h-7 w-[55px] text-xs px-2"
+                  disabled={temPernaConfirmada}
+                  title={`Entrada ${perna.id}`}
+                />
+              ))}
             </div>
           </div>
 
-          {/* Configuração + Simulação */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Configuração Inicial */}
-            <div className={`p-4 rounded-lg border space-y-3 ${
-              temPernaConfirmada 
-                ? 'bg-muted/20 border-border/50 opacity-80' 
-                : 'bg-muted/30 border-border'
-            }`}>
-              <h3 className="font-semibold text-sm text-foreground">
-                Configuração Inicial
-                {temPernaConfirmada && <span className="text-xs text-muted-foreground ml-2">(travada)</span>}
-              </h3>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Tipo</Label>
-                  <Select 
-                    value={tipoAposta} 
-                    onValueChange={(v) => setTipoAposta(v as TipoAposta)}
-                    disabled={temPernaConfirmada}
-                  >
-                    <SelectTrigger className="h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="dupla">Dupla</SelectItem>
-                      <SelectItem value="tripla">Tripla</SelectItem>
-                      <SelectItem value="multipla">Múltipla</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Moeda</Label>
-                  <Select 
-                    value={moeda} 
-                    onValueChange={(v) => setMoeda(v as MoedaCalc)}
-                    disabled={temPernaConfirmada}
-                  >
-                    <SelectTrigger className="h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="BRL">R$ (BRL)</SelectItem>
-                      <SelectItem value="USD">US$ (USD)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Stake Inicial ({currencySymbol})</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    step="10"
-                    value={stakeInicial}
-                    onChange={(e) => setStakeInicial(parseFloat(e.target.value) || 0)}
-                    className="h-9"
-                    disabled={temPernaConfirmada}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Comissão (%)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="20"
-                    step="0.1"
-                    value={comissaoExchange}
-                    onChange={(e) => setComissaoExchange(parseFloat(e.target.value) || 0)}
-                    className="h-9"
-                    disabled={temPernaConfirmada}
-                  />
-                </div>
-              </div>
-
-              {tipoAposta === 'multipla' && !temPernaConfirmada && (
-                <div className="flex items-center gap-3 pt-1">
-                  <Label className="text-xs text-muted-foreground">Pernas:</Label>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-7 w-7"
-                      onClick={() => setNumPernas(Math.max(2, numPernas - 1))}
-                    >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <span className="w-6 text-center font-medium text-sm">{numPernas}</span>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-7 w-7"
-                      onClick={() => setNumPernas(Math.min(10, numPernas + 1))}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Odds BACK por entrada */}
-              <div className="pt-3 border-t border-border/50 space-y-2">
-                <Label className="text-xs text-muted-foreground">Odds BACK (definidas na aposta)</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {pernas.map((perna) => (
-                    <div key={perna.id} className="flex items-center gap-2">
-                      <Label className="text-xs text-muted-foreground w-16">Entrada {perna.id}:</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="1.01"
-                        value={perna.oddBack}
-                        onChange={(e) => updatePernaOddBack(perna.id, parseFloat(e.target.value) || 1.01)}
-                        className="w-20 h-8 text-sm"
-                        disabled={temPernaConfirmada}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Nota explicativa */}
-              <div className="pt-2 border-t border-border/50">
-                <p className="text-[10px] text-muted-foreground">
-                  💡 O BACK é definido aqui e fica fixo. A odd LAY será ajustada em cada perna no momento da execução.
-                </p>
-              </div>
-            </div>
-
-            {/* Simulação Ativa */}
+          {/* Simulação Ativa - Agora ocupa largura total */}
+          {(simulacao || metricas.operacaoEncerrada) && (
             <div>
               {simulacao ? (
                 <SimulacaoAtivaCard
@@ -219,7 +201,7 @@ export const CalculadoraProtecaoContent: React.FC = () => {
                 />
               ) : null}
             </div>
-          </div>
+          )}
 
           <Separator />
 
