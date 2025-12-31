@@ -608,8 +608,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               logoMap={logoMap}
               showCasasCard={false}
               isSingleDayPeriod={internalPeriod === "1dia"}
+              formatCurrency={formatCurrency}
             />
-            <SurebetStatisticsCard surebets={surebets} />
+            <SurebetStatisticsCard surebets={surebets} formatCurrency={formatCurrency} />
           </div>
           {/* Coluna direita: Casas Mais Utilizadas */}
           <div className="lg:col-span-1">
@@ -628,6 +629,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               logoMap={logoMap}
               showEvolucaoChart={false}
               isSingleDayPeriod={internalPeriod === "1dia"}
+              formatCurrency={formatCurrency}
             />
           </div>
         </div>
@@ -724,6 +726,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                   setSelectedSurebet(sb as Surebet);
                   setDialogOpen(true);
                 }}
+                formatCurrency={formatCurrency}
               />
             ))}
           </div>

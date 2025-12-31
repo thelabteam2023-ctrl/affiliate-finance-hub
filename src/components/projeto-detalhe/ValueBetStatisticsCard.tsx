@@ -16,6 +16,7 @@ interface Aposta {
 
 interface ValueBetStatisticsCardProps {
   apostas: Aposta[];
+  formatCurrency?: (value: number) => string;
 }
 
 const StatCell = ({ label, value, valueClass = "" }: { 
@@ -29,7 +30,11 @@ const StatCell = ({ label, value, valueClass = "" }: {
   </div>
 );
 
-export function ValueBetStatisticsCard({ apostas }: ValueBetStatisticsCardProps) {
+const defaultFormatCurrency = (value: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+
+export function ValueBetStatisticsCard({ apostas, formatCurrency: formatCurrencyProp }: ValueBetStatisticsCardProps) {
+  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const stats = useMemo(() => {
     // Resultados
     const vencedoras = apostas.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
@@ -116,12 +121,6 @@ export function ValueBetStatisticsCard({ apostas }: ValueBetStatisticsCardProps)
     };
   }, [apostas]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   if (apostas.length === 0) {
     return null;

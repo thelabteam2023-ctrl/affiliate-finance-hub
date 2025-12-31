@@ -614,12 +614,12 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       </div>
 
       {metricas.total > 0 && (
-        <VisaoGeralCharts apostas={apostas} accentColor="#84cc16" logoMap={logoMap} isSingleDayPeriod={internalPeriod === "1dia"} />
+        <VisaoGeralCharts apostas={apostas} accentColor="#84cc16" logoMap={logoMap} isSingleDayPeriod={internalPeriod === "1dia"} formatCurrency={formatCurrency} />
       )}
 
       {/* Card de Estatísticas Detalhadas */}
       {metricas.total > 0 && (
-        <DuploGreenStatisticsCard apostas={apostas} />
+        <DuploGreenStatisticsCard apostas={apostas} formatCurrency={formatCurrency} />
       )}
 
       {/* Banner Info - No final da página */}
