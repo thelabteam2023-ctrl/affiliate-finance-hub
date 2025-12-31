@@ -212,8 +212,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     };
   });
   
-  // Arredondamento de stakes
-  const [arredondarAtivado, setArredondarAtivado] = useState(false);
+  // Arredondamento de stakes - ativado por padrão
+  const [arredondarAtivado, setArredondarAtivado] = useState(true);
   const [arredondarValor, setArredondarValor] = useState("1");
   
   // Odds entries (2 for binary, 3 for 1X2)
@@ -327,7 +327,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     setEsporte("Futebol");
     setModelo("1-2");
     setObservacoes("");
-    setArredondarAtivado(false);
+    setArredondarAtivado(true);
     setArredondarValor("1");
     const defaultSelecoes = getSelecoesPorMercado("", "1-2");
     setOdds(defaultSelecoes.map((sel, i) => ({
