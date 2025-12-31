@@ -54,6 +54,7 @@ export interface ApostaCardData {
   tipo_multipla?: string;
   bookmaker_nome?: string;
   operador_nome?: string;
+  moeda?: string; // Moeda da operação
 }
 
 interface ApostaCardProps {
@@ -207,11 +208,16 @@ function ResultadoBadge({ resultado, apostaId, onQuickResolve }: ResultadoBadgeP
   );
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  BRL: "R$",
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+};
+
+function formatCurrency(value: number, moeda: string = "BRL"): string {
+  const symbol = CURRENCY_SYMBOLS[moeda] || moeda;
+  return `${symbol} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function ApostaCard({ 
@@ -237,6 +243,8 @@ export function ApostaCard({
   
   const stake = hasPernas ? (aposta.stake_total ?? aposta.stake) : aposta.stake;
   const displayOdd = aposta.odd_final ?? aposta.odd ?? 0;
+  const moeda = aposta.moeda || "BRL";
+  const isForeignCurrency = moeda !== "BRL";
   
   // Para apostas múltiplas, exibir "MÚLTIPLA" como título
   const displayEvento = isMultipla ? 'MÚLTIPLA' : (aposta.evento || '');
@@ -286,6 +294,12 @@ export function ApostaCard({
               </Badge>
             )}
             <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
+            {/* Badge de moeda para moedas estrangeiras */}
+            {isForeignCurrency && (
+              <Badge variant="outline" className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
+                {moeda}
+              </Badge>
+            )}
           </div>
           
           {/* Data */}
@@ -311,7 +325,7 @@ export function ApostaCard({
           
           {/* Stake */}
           <div className="text-right shrink-0">
-            <p className="text-xs text-muted-foreground">{formatCurrency(stake)}</p>
+            <p className="text-xs text-muted-foreground">{formatCurrency(stake, moeda)}</p>
           </div>
         </div>
         
@@ -320,7 +334,7 @@ export function ApostaCard({
           {aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined && (
             <>
               <span className={cn("text-sm font-medium", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                {formatCurrency(aposta.lucro_prejuizo)}
+                {formatCurrency(aposta.lucro_prejuizo, moeda)}
               </span>
               {roi !== null && (
                 <span className={cn("text-xs", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
@@ -430,11 +444,11 @@ export function ApostaCard({
             )}
           </div>
           <div className="text-right">
-            <p className="text-xs text-muted-foreground">Stake: {formatCurrency(stake)}</p>
+            <p className="text-xs text-muted-foreground">Stake: {formatCurrency(stake, moeda)}</p>
             {aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined && (
               <div className="flex items-center gap-2 justify-end">
                 <span className={cn("text-sm font-medium", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                  {formatCurrency(aposta.lucro_prejuizo)}
+                  {formatCurrency(aposta.lucro_prejuizo, moeda)}
                 </span>
                 {roi !== null && (
                   <span className={cn("text-xs", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
