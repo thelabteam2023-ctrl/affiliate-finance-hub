@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { PernaTimeline } from './PernaTimeline';
-import { SimulacaoAtivaCard, SemSimulacao } from './ProximaAcaoCard';
+import { SemSimulacao } from './ProximaAcaoCard';
 
 export const CalculadoraProtecaoContent: React.FC = () => {
   const {
@@ -27,11 +27,11 @@ export const CalculadoraProtecaoContent: React.FC = () => {
     confirmarPerna,
     resetCalculadora,
     getMetricasGlobais,
-    getSimulacaoAtiva,
+    
   } = useCalculadora();
 
   const metricas = getMetricasGlobais();
-  const simulacao = getSimulacaoAtiva();
+  
   const currencySymbol = moeda === 'BRL' ? 'R$' : 'US$';
 
   // Verificar se tem alguma perna confirmada (não pode mais editar configuração inicial)
@@ -176,32 +176,20 @@ export const CalculadoraProtecaoContent: React.FC = () => {
             </div>
           </div>
 
-          {/* Simulação Ativa - Agora ocupa largura total */}
-          {(simulacao || metricas.operacaoEncerrada) && (
-            <div>
-              {simulacao ? (
-                <SimulacaoAtivaCard
-                  simulacao={simulacao}
-                  moeda={moeda}
-                  stakeInicial={stakeInicial}
-                  volumeExchange={metricas.volumeExchange}
-                  exposicaoMaxima={metricas.exposicaoMaxima}
-                />
-              ) : metricas.operacaoEncerrada ? (
-                <SemSimulacao
-                  capitalFinal={metricas.capitalFinal}
-                  eficiencia={metricas.eficienciaFinal}
-                  moeda={moeda}
-                  stakeInicial={stakeInicial}
-                  volumeExchange={metricas.volumeExchange}
-                  exposicaoMaxima={metricas.exposicaoMaxima}
-                  motivoEncerramento={metricas.motivoEncerramento}
-                  comissaoExchange={comissaoExchange}
-                  redFinal={metricas.redFinal}
-                  greenFinal={metricas.greenFinal}
-                />
-              ) : null}
-            </div>
+          {/* Card final - só aparece quando operação encerra */}
+          {metricas.operacaoEncerrada && (
+            <SemSimulacao
+              capitalFinal={metricas.capitalFinal}
+              eficiencia={metricas.eficienciaFinal}
+              moeda={moeda}
+              stakeInicial={stakeInicial}
+              volumeExchange={metricas.volumeExchange}
+              exposicaoMaxima={metricas.exposicaoMaxima}
+              motivoEncerramento={metricas.motivoEncerramento}
+              comissaoExchange={comissaoExchange}
+              redFinal={metricas.redFinal}
+              greenFinal={metricas.greenFinal}
+            />
           )}
 
           <Separator />
