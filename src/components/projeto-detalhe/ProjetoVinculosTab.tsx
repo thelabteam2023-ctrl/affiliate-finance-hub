@@ -790,7 +790,8 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         </div>
       </div>
 
-      {/* Vínculos Grid */}
+      {/* Vínculos Grid - com scroll interno */}
+      <ScrollArea className="max-h-[400px] pr-2">
       {filteredVinculos.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
@@ -1277,6 +1278,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           </CardContent>
         </Card>
       )}
+      </ScrollArea>
 
       {/* Add Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
