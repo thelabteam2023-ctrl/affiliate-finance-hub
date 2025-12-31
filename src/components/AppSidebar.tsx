@@ -27,7 +27,6 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { useCalculadora } from "@/contexts/CalculadoraContext";
 
 interface MenuItem {
   title: string;
@@ -173,13 +172,19 @@ export function AppSidebar() {
     navigate("/auth");
   };
 
-  // Hook para abrir calculadora
-  const { openCalculadora } = useCalculadora();
-
+  // Abre calculadora em janela externa
   const handleMenuItemClick = (item: MenuItem, e: React.MouseEvent) => {
     if (item.url === '#calculadora-lay') {
       e.preventDefault();
-      openCalculadora();
+      const width = 900;
+      const height = 750;
+      const left = Math.max(0, (window.screen.width - width) / 2);
+      const top = Math.max(0, (window.screen.height - height) / 2);
+      window.open(
+        '/ferramentas/protecao-progressiva',
+        'calculadora-protecao',
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+      );
     }
   };
 
