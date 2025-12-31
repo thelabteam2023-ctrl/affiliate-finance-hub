@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +74,7 @@ import {
   IdCard,
   Copy,
   Check,
+  Globe,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Toggle } from "@/components/ui/toggle";
@@ -450,15 +452,40 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     }
   };
 
-  const formatCurrency = (value: number, moeda: string = "BRL") => {
-    const symbols: Record<string, string> = {
-      BRL: "R$",
-      USD: "$",
-      EUR: "€",
-      GBP: "£"
+  // Hook de formatação multi-moeda
+  const { 
+    formatCurrency, 
+    groupBalancesByMoeda, 
+    convertToBRL, 
+    getMoedaBadgeInfo,
+    getCotacaoInfo,
+    loading: cotacoesLoading 
+  } = useProjectCurrencyFormat();
+
+  // Agrupar saldos por moeda para KPIs
+  const balancesByMoeda = useMemo(() => {
+    return groupBalancesByMoeda(
+      vinculos.map(v => ({ saldo: v.saldo_atual, moeda: v.moeda }))
+    );
+  }, [vinculos, groupBalancesByMoeda]);
+
+  // Calcular totais consolidados em BRL
+  const consolidatedTotals = useMemo(() => {
+    const totalRealBRL = vinculos.reduce((acc, v) => acc + convertToBRL(v.saldo_atual, v.moeda), 0);
+    const totalFreebetBRL = vinculos.reduce((acc, v) => acc + convertToBRL(v.saldo_freebet || 0, v.moeda), 0);
+    const totalBonusBRL = bonusSummary.active_bonus_total; // Bônus já está em BRL no summary
+    const totalOperavelBRL = totalRealBRL + totalFreebetBRL + totalBonusBRL;
+    
+    const hasForeignCurrency = vinculos.some(v => v.moeda !== "BRL");
+    
+    return {
+      totalRealBRL,
+      totalFreebetBRL,
+      totalBonusBRL,
+      totalOperavelBRL,
+      hasForeignCurrency,
     };
-    return `${symbols[moeda] || moeda} ${value.toFixed(2)}`;
-  };
+  }, [vinculos, convertToBRL, bonusSummary]);
 
   const getStatusBadge = (status: string) => {
     switch (status.toUpperCase()) {
@@ -502,10 +529,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     );
   };
 
-  const totalSaldoReal = vinculos.reduce((acc, v) => acc + v.saldo_atual, 0);
-  const totalSaldoFreebet = vinculos.reduce((acc, v) => acc + (v.saldo_freebet || 0), 0);
-  const totalBonusAtivo = bonusSummary.active_bonus_total;
-  const totalSaldoOperavel = totalSaldoReal + totalSaldoFreebet + totalBonusAtivo;
   const vinculosAtivos = vinculos.filter((v) => v.bookmaker_status.toUpperCase() === "ATIVO").length;
   const vinculosLimitados = vinculos.filter((v) => v.bookmaker_status.toUpperCase() === "LIMITADA").length;
 
@@ -552,6 +575,13 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
               {" · "}
               <span className="text-yellow-400">{vinculosLimitados} limitadas</span>
             </p>
+            {/* Indicador multi-moeda */}
+            {consolidatedTotals.hasForeignCurrency && (
+              <div className="flex items-center gap-1 mt-1">
+                <Globe className="h-3 w-3 text-blue-400" />
+                <span className="text-[10px] text-blue-400">Multi-moeda</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -562,21 +592,49 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-1">
                     Saldo Operável
+                    {consolidatedTotals.hasForeignCurrency && (
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
+                        ~BRL
+                      </Badge>
+                    )}
                     <Info className="h-3 w-3 text-muted-foreground" />
                   </CardTitle>
                   <TrendingUp className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-primary">{formatCurrency(totalSaldoOperavel)}</div>
+                  <div className="text-2xl font-bold text-primary">
+                    {formatCurrency(consolidatedTotals.totalOperavelBRL, "BRL")}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Real {formatCurrency(totalSaldoReal)} {totalSaldoFreebet > 0 && `+ FB ${formatCurrency(totalSaldoFreebet)}`} {totalBonusAtivo > 0 && `+ Bônus ${formatCurrency(totalBonusAtivo)}`}
+                    Real {formatCurrency(consolidatedTotals.totalRealBRL, "BRL")} 
+                    {consolidatedTotals.totalFreebetBRL > 0 && ` + FB ${formatCurrency(consolidatedTotals.totalFreebetBRL, "BRL")}`} 
+                    {consolidatedTotals.totalBonusBRL > 0 && ` + Bônus ${formatCurrency(consolidatedTotals.totalBonusBRL, "BRL")}`}
                   </p>
+                  {/* Breakdown por moeda */}
+                  {balancesByMoeda.length > 1 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {balancesByMoeda.map(b => (
+                        <Badge 
+                          key={b.moeda} 
+                          variant="outline" 
+                          className={`text-[9px] px-1 py-0 ${b.moeda === "BRL" ? "border-emerald-500/30 text-emerald-400" : "border-blue-500/30 text-blue-400"}`}
+                        >
+                          {b.moeda}: {formatCurrency(b.total, b.moeda, { compact: true })}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TooltipTrigger>
-            <TooltipContent>
+            <TooltipContent className="max-w-xs">
               <p className="font-medium">Saldo Operável = Real + Freebet + Bônus</p>
               <p className="text-xs text-muted-foreground">Valor total disponível para operação</p>
+              {consolidatedTotals.hasForeignCurrency && (
+                <p className="text-xs text-blue-400 mt-1">
+                  ⚡ Valores de moedas estrangeiras convertidos em tempo real
+                </p>
+              )}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -587,7 +645,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             <Gift className="h-4 w-4 text-purple-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-400">{formatCurrency(totalBonusAtivo)}</div>
+            <div className="text-2xl font-bold text-purple-400">{formatCurrency(consolidatedTotals.totalBonusBRL, "BRL")}</div>
             <p className="text-xs text-muted-foreground">
               {bonusSummary.bookmakers_with_active_bonus} casa{bonusSummary.bookmakers_with_active_bonus !== 1 ? 's' : ''} com bônus
             </p>
@@ -689,7 +747,27 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       </div>
                     )}
                     <div>
-                      <CardTitle className="text-base">{vinculo.nome}</CardTitle>
+                      <div className="flex items-center gap-1.5">
+                        <CardTitle className="text-base">{vinculo.nome}</CardTitle>
+                        {/* Badge de moeda para moedas estrangeiras */}
+                        {vinculo.moeda !== "BRL" && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30"
+                                >
+                                  {vinculo.moeda}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{getCotacaoInfo(vinculo.moeda)}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">
                         {vinculo.login_username}
                       </p>
@@ -783,7 +861,14 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                         <Wallet className="h-3 w-3" />
                         Saldo Real
                       </span>
-                      <span className="text-sm font-semibold">{formatCurrency(vinculo.saldo_atual, vinculo.moeda)}</span>
+                      <div className="text-right">
+                        <span className="text-sm font-semibold">{formatCurrency(vinculo.saldo_atual, vinculo.moeda)}</span>
+                        {vinculo.moeda !== "BRL" && (
+                          <p className="text-[10px] text-muted-foreground">
+                            ≈ {formatCurrency(convertToBRL(vinculo.saldo_atual, vinculo.moeda), "BRL")}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -896,6 +981,15 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium truncate">{vinculo.nome}</span>
+                      {/* Badge de moeda para moedas estrangeiras na lista */}
+                      {vinculo.moeda !== "BRL" && (
+                        <Badge 
+                          variant="outline" 
+                          className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30"
+                        >
+                          {vinculo.moeda}
+                        </Badge>
+                      )}
                       {vinculo.login_username && (
                         <Popover
                           open={credentialsPopoverOpen === vinculo.id}
