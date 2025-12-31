@@ -154,16 +154,16 @@ export default function GestaoProjetos() {
       
       // Buscar dados agregados em paralelo
       const [bookmarkersResult, apostasResult, operadoresResult, perdasResult] = await Promise.all([
-        // Bookmakers por projeto
+        // Bookmakers por projeto (incluindo saldo_freebet e moeda para conversão)
         supabase
           .from("bookmakers")
-          .select("projeto_id, saldo_atual, saldo_irrecuperavel")
+          .select("projeto_id, saldo_atual, saldo_freebet, saldo_irrecuperavel, moeda")
           .in("projeto_id", finalProjetoIds),
         
-        // Apostas liquidadas por projeto
+        // Apostas liquidadas por projeto (incluindo referência BRL para multi-moeda)
         supabase
           .from("apostas_unificada")
-          .select("projeto_id, lucro_prejuizo")
+          .select("projeto_id, lucro_prejuizo, lucro_prejuizo_brl_referencia, moeda_operacao")
           .in("projeto_id", finalProjetoIds)
           .eq("status", "LIQUIDADA"),
         
@@ -182,23 +182,43 @@ export default function GestaoProjetos() {
           .eq("status", "CONFIRMADA")
       ]);
       
-      // Agregar dados de bookmakers por projeto
+      // Taxa de conversão USD->BRL aproximada (idealmente vir de uma API ou cache)
+      const USD_TO_BRL = 5.5;
+      
+      // Agregar dados de bookmakers por projeto (considerando moeda e freebet)
       const bookmakersByProjeto: Record<string, { saldo: number; count: number; irrecuperavel: number }> = {};
       (bookmarkersResult.data || []).forEach((bk: any) => {
         if (!bk.projeto_id) return;
         if (!bookmakersByProjeto[bk.projeto_id]) {
           bookmakersByProjeto[bk.projeto_id] = { saldo: 0, count: 0, irrecuperavel: 0 };
         }
-        bookmakersByProjeto[bk.projeto_id].saldo += bk.saldo_atual || 0;
-        bookmakersByProjeto[bk.projeto_id].irrecuperavel += bk.saldo_irrecuperavel || 0;
+        
+        // Soma saldo_atual + saldo_freebet
+        const saldoTotal = (bk.saldo_atual || 0) + (bk.saldo_freebet || 0);
+        const irrecuperavel = bk.saldo_irrecuperavel || 0;
+        
+        // Converter para BRL se moeda for USD
+        const multiplier = bk.moeda === 'USD' ? USD_TO_BRL : 1;
+        
+        bookmakersByProjeto[bk.projeto_id].saldo += saldoTotal * multiplier;
+        bookmakersByProjeto[bk.projeto_id].irrecuperavel += irrecuperavel * multiplier;
         bookmakersByProjeto[bk.projeto_id].count += 1;
       });
       
-      // Agregar lucro de apostas por projeto
+      // Agregar lucro de apostas por projeto (usando lucro_prejuizo_brl_referencia quando disponível)
       const lucroByProjeto: Record<string, number> = {};
       (apostasResult.data || []).forEach((ap: any) => {
         if (!ap.projeto_id) return;
-        lucroByProjeto[ap.projeto_id] = (lucroByProjeto[ap.projeto_id] || 0) + (ap.lucro_prejuizo || 0);
+        // Priorizar valor em BRL já convertido, senão usar lucro_prejuizo com conversão
+        let valorLucro = ap.lucro_prejuizo_brl_referencia;
+        if (valorLucro == null) {
+          valorLucro = ap.lucro_prejuizo || 0;
+          // Converter USD para BRL se necessário
+          if (ap.moeda_operacao === 'USD') {
+            valorLucro = valorLucro * USD_TO_BRL;
+          }
+        }
+        lucroByProjeto[ap.projeto_id] = (lucroByProjeto[ap.projeto_id] || 0) + valorLucro;
       });
       
       // Agregar operadores ativos por projeto
