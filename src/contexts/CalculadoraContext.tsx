@@ -199,7 +199,10 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
    * - Target = Capital Comprometido (sempre 100%)
    * - Custo do LAY = responsabilidade = Stake_LAY × (oddLay - 1)
    * - Se GREEN: novo Capital Comprometido = atual + custo do LAY
-   * - Se RED: recupera todo o Capital Comprometido
+   * - Se RED: recupera capital via Exchange
+   * 
+   * IMPORTANTE: A comissão da Exchange só é paga quando o LAY GANHA (RED no modelo)
+   * Quando o LAY PERDE (GREEN), pagamos apenas a liability, sem comissão
    */
   const recalcularPernas = useCallback((
     pernas: PernaAposta[],
@@ -251,10 +254,34 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       // ==========================================
       const target = capitalComprometido;
       
-      // Stake LAY necessário = Target / (1 - comissão)
-      const stakeLayNecessario = target / (1 - comissaoDecimal);
+      // ==========================================
+      // STAKE LAY NECESSÁRIO - FÓRMULA DE ARBITRAGEM
+      // ==========================================
+      // Para garantir RESULTADO IGUAL em ambos cenários:
+      // 
+      // Se Back ganha: stakeBack * oddBack - stakeLay * (oddLay - 1) = resultado
+      // Se Lay ganha: -stakeBack + stakeLay * (1 - comissão) = resultado
+      //
+      // Igualando:
+      // stakeBack * oddBack - stakeLay * (oddLay - 1) = -stakeBack + stakeLay * (1 - c)
+      // stakeBack * (oddBack + 1) = stakeLay * (oddLay - 1 + 1 - c)
+      // stakeBack * (oddBack + 1) = stakeLay * (oddLay - c)
+      //
+      // FÓRMULA FINAL:
+      // stakeLay = stakeBack * (oddBack + 1) / (oddLay - comissão)
+      //
+      // Isso garante que a comissão NÃO afeta o resultado quando o Lay PERDE,
+      // apenas quando o Lay GANHA (que é quando a comissão é efetivamente paga)
       
-      // Custo do LAY (responsabilidade) = Stake_LAY × (oddLay - 1)
+      const denominador = oddLay - comissaoDecimal;
+      const stakeLayNecessario = denominador > 0 ? target * (oddBack + 1) / denominador : target;
+      
+      // ==========================================
+      // CUSTO DO LAY (RESPONSABILIDADE / LIABILITY)
+      // ==========================================
+      // Custo do LAY = Stake_LAY × (oddLay - 1)
+      // Este é o valor pago APENAS se o LAY PERDE (Back ganha = GREEN)
+      // NÃO inclui comissão - comissão só é paga quando LAY GANHA
       const custoLay = stakeLayNecessario * (oddLay - 1);
       
       // Lucro BACK = S0 × (oddBack - 1)
@@ -273,8 +300,9 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       // ==========================================
       // SE RED (Exchange ganha, operação encerra)
       // ==========================================
-      // Recuperamos todo o capital comprometido via Exchange
-      const capitalRecuperado = stakeLayNecessario * (1 - comissaoDecimal); // = target
+      // Quando o LAY GANHA, recebemos o stake LAY menos a comissão
+      // Capital recuperado = stakeLay * (1 - comissão) = target
+      const capitalRecuperado = stakeLayNecessario * (1 - comissaoDecimal);
       
       // Lucro = capital recuperado - stake inicial
       const lucroSeRed = capitalRecuperado - stakeInicial;
