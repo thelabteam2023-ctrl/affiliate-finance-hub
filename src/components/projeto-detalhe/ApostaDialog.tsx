@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import {
   Dialog,
   DialogContent,
@@ -77,20 +78,20 @@ interface Aposta {
   contexto_operacional?: string | null;
 }
 
+// Interface de Bookmaker local (mapeada do hook canônico)
 interface Bookmaker {
   id: string;
   nome: string;
-  parceiro_id: string;
+  parceiro_id: string | null;
+  parceiro_nome: string | null;
   saldo_atual: number;
   saldo_total: number;
   saldo_disponivel: number;
   saldo_freebet: number;
-  saldo_bonus: number;      // Soma de bônus creditados
-  saldo_operavel: number;   // disponível + freebet + bonus
+  saldo_bonus: number;
+  saldo_operavel: number;
   moeda: string;
-  parceiro?: {
-    nome: string;
-  };
+  logo_url: string | null;
 }
 
 interface ApostaDialogProps {
@@ -305,8 +306,39 @@ const getMoneylineSelecoes = (esporte: string | undefined, mandante: string, vis
 export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess, defaultEstrategia = 'PUNTER', activeTab = 'apostas' }: ApostaDialogProps) {
   const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
-  const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // ========== HOOK CANÔNICO DE SALDOS ==========
+  // Esta é a ÚNICA fonte de verdade para saldos de bookmaker
+  const { 
+    data: bookmakerSaldos = [], 
+    isLoading: saldosLoading,
+    refetch: refetchSaldos 
+  } = useBookmakerSaldosQuery({
+    projetoId,
+    enabled: open,
+    includeZeroBalance: !!aposta, // Em edição, mostrar todos
+    currentBookmakerId: aposta?.bookmaker_id || null
+  });
+  const invalidateSaldos = useInvalidateBookmakerSaldos();
+  
+  // Mapear saldos canônicos para formato local (retrocompatibilidade)
+  const bookmakers = useMemo((): Bookmaker[] => {
+    return bookmakerSaldos.map(bk => ({
+      id: bk.id,
+      nome: bk.nome,
+      parceiro_id: bk.parceiro_id,
+      parceiro_nome: bk.parceiro_nome,
+      saldo_atual: bk.saldo_real,
+      saldo_total: bk.saldo_real,
+      saldo_disponivel: bk.saldo_disponivel,
+      saldo_freebet: bk.saldo_freebet,
+      saldo_bonus: bk.saldo_bonus,
+      saldo_operavel: bk.saldo_operavel,
+      moeda: bk.moeda,
+      logo_url: bk.logo_url
+    }));
+  }, [bookmakerSaldos]);
 
   // Import by Print
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -549,7 +581,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
   useEffect(() => {
     if (open) {
-      fetchBookmakers();
+      // Bookmakers são carregados via useBookmakerSaldosQuery automaticamente
       if (aposta) {
         setDataAposta(aposta.data_aposta.slice(0, 16));
         setEsporte(aposta.esporte);
@@ -955,87 +987,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     setSelecaoFromPrint(false);
   };
 
-  const fetchBookmakers = async () => {
-    try {
-      // Fetch bookmakers com informação de saldo disponível e saldo_freebet
-      const { data: bookmakersData, error: bkError } = await supabase
-        .from("bookmakers")
-        .select(`
-          id,
-          nome,
-          parceiro_id,
-          saldo_atual,
-          saldo_freebet,
-          moeda,
-          parceiro:parceiros(nome)
-        `)
-        .eq("projeto_id", projetoId)
-        .in("status", ["ATIVO", "LIMITADA", "ativo", "limitada"]);
-
-      if (bkError) throw bkError;
-
-      // Buscar apostas pendentes para calcular saldo disponível
-      const bookmakerIds = (bookmakersData || []).map(b => b.id);
-      
-      let pendingStakes: Record<string, number> = {};
-      let bonusByBookmaker: Record<string, number> = {};
-      
-      if (bookmakerIds.length > 0) {
-        // Buscar em paralelo: apostas pendentes e bônus creditados
-        const [pendingBetsResult, bonusResult] = await Promise.all([
-          supabase
-            .from("apostas_unificada")
-            .select("bookmaker_id, stake")
-            .in("bookmaker_id", bookmakerIds)
-            .eq("status", "PENDENTE")
-            .not("bookmaker_id", "is", null),
-          // CONTRATO: saldo_bonus = SUM(project_bookmaker_link_bonuses.saldo_atual) WHERE status='credited'
-          supabase
-            .from("project_bookmaker_link_bonuses")
-            .select("bookmaker_id, saldo_atual")
-            .eq("project_id", projetoId)
-            .eq("status", "credited")
-        ]);
-
-        pendingStakes = (pendingBetsResult.data || []).reduce((acc, bet) => {
-          acc[bet.bookmaker_id!] = (acc[bet.bookmaker_id!] || 0) + (bet.stake || 0);
-          return acc;
-        }, {} as Record<string, number>);
-        
-        // Agrupar bônus creditados por bookmaker (usando saldo_atual = saldo corrente do bônus)
-        (bonusResult.data || []).forEach((b: any) => {
-          bonusByBookmaker[b.bookmaker_id] = (bonusByBookmaker[b.bookmaker_id] || 0) + (b.saldo_atual || 0);
-        });
-      }
-
-      const formatted = (bookmakersData || []).map((bk: any) => {
-        const saldoTotal = bk.saldo_atual || 0;
-        const stakeBloqueada = pendingStakes[bk.id] || 0;
-        const saldoDisponivel = saldoTotal - stakeBloqueada;
-        const saldoFreebet = bk.saldo_freebet || 0;
-        const saldoBonus = bonusByBookmaker[bk.id] || 0;
-        const saldoOperavel = saldoDisponivel + saldoFreebet + saldoBonus;
-        
-        return {
-          id: bk.id,
-          nome: bk.nome,
-          parceiro_id: bk.parceiro_id,
-          saldo_atual: saldoTotal,
-          saldo_total: saldoTotal,
-          saldo_disponivel: saldoDisponivel,
-          saldo_freebet: saldoFreebet,
-          saldo_bonus: saldoBonus,
-          saldo_operavel: saldoOperavel,
-          moeda: bk.moeda || "BRL",
-          parceiro: bk.parceiro
-        };
-      }).filter(bk => bk.saldo_operavel > 0 || (aposta && aposta.bookmaker_id === bk.id));
-
-      setBookmakers(formatted);
-    } catch (error) {
-      console.error("Erro ao buscar bookmakers:", error);
-    }
-  };
+  // fetchBookmakers REMOVIDO - agora usa useBookmakerSaldosQuery como fonte canônica
 
   const calculateLucroPrejuizo = () => {
     const stakeNum = parseFloat(stake) || 0;
@@ -2522,14 +2474,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                           <span className="truncate" title={(() => {
                             const selectedBk = bookmakers.find(b => b.id === bookmakerId);
                             if (selectedBk) {
-                              return `${selectedBk.nome} • ${selectedBk.parceiro?.nome || ""}`;
+                              return `${selectedBk.nome} • ${selectedBk.parceiro_nome || ""}`;
                             }
                             return "";
                           })()}>
                             {bookmakerId ? (() => {
                               const selectedBk = bookmakers.find(b => b.id === bookmakerId);
                               if (selectedBk) {
-                                return `${selectedBk.nome} • ${selectedBk.parceiro?.nome || ""}`;
+                                return `${selectedBk.nome} • ${selectedBk.parceiro_nome || ""}`;
                               }
                               return "Selecione";
                             })() : "Selecione"}
@@ -2543,7 +2495,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                           </div>
                         ) : (
                           bookmakers.map((bk) => {
-                            const displayName = `${bk.nome} • ${bk.parceiro?.nome || ""}`;
+                            const displayName = `${bk.nome} • ${bk.parceiro_nome || ""}`;
                             return (
                               <SelectItem key={bk.id} value={bk.id} className="max-w-full">
                                 <div className="flex items-center justify-between w-full gap-2 min-w-0">
@@ -2840,7 +2792,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 <SelectItem key={bk.id} value={bk.id}>
                                   <div className="flex items-center justify-between w-full gap-2 min-w-0">
                                     <span className="truncate min-w-0 flex-1">
-                                      {bk.nome} • {bk.parceiro?.nome || ""}
+                                      {bk.nome} • {bk.parceiro_nome || ""}
                                     </span>
                                   </div>
                                 </SelectItem>
@@ -3166,7 +3118,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                               <SelectContent className="max-w-[320px]">
                                 {bookmakers.map((bk) => (
                                   <SelectItem key={bk.id} value={bk.id}>
-                                    <span className="truncate">{bk.nome} • {bk.parceiro?.nome || ""}</span>
+                                    <span className="truncate">{bk.nome} • {bk.parceiro_nome || ""}</span>
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -3339,7 +3291,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                               <SelectContent className="max-w-[320px]">
                                 {bookmakers.map((bk) => (
                                   <SelectItem key={bk.id} value={bk.id}>
-                                    <span className="truncate">{bk.nome} • {bk.parceiro?.nome || ""}</span>
+                                    <span className="truncate">{bk.nome} • {bk.parceiro_nome || ""}</span>
                                   </SelectItem>
                                 ))}
                               </SelectContent>
