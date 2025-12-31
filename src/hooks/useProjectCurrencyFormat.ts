@@ -3,9 +3,41 @@ import { useCotacoes } from "@/hooks/useCotacoes";
 import { SupportedCurrency, CURRENCY_SYMBOLS, isForeignCurrency } from "@/types/currency";
 
 /**
- * Hook central para formatação multi-moeda em projetos.
- * Consolida valores de diferentes moedas usando cotação em tempo real
- * e fornece funções de formatação consistentes.
+ * =============================================================================
+ * DOCUMENTAÇÃO: SISTEMA DE CONVERSÃO MULTI-MOEDA
+ * =============================================================================
+ * 
+ * FONTE DE COTAÇÃO:
+ * - Banco Central do Brasil (BCB) - API PTAX oficial
+ * - Endpoint: olinda.bcb.gov.br/olinda/servico/PTAX
+ * - Cotação de venda (cotacaoVenda) do último dia útil
+ * 
+ * FREQUÊNCIA DE ATUALIZAÇÃO:
+ * - Automática a cada 60 segundos (REFRESH_INTERVAL)
+ * - Manual via refreshAll()
+ * 
+ * CACHE:
+ * - Em memória (React state)
+ * - Persiste durante a sessão
+ * - Fallback: USD=5.31, EUR=5.75, GBP=6.70 se API falhar
+ * 
+ * MOEDAS SUPORTADAS:
+ * - BRL (Real Brasileiro) - moeda base
+ * - USD (Dólar Americano) - cotação BCB PTAX
+ * - EUR (Euro) - cotação BCB PTAX
+ * - GBP (Libra Esterlina) - cotação BCB PTAX
+ * - Criptomoedas - API Binance (preço em USD × cotação BCB)
+ * 
+ * USO NO SISTEMA:
+ * - Conversão acontece em TEMPO REAL para exibição de KPIs
+ * - Valores de depósitos/saques mantêm snapshot da cotação no momento
+ * - Relatórios financeiros devem considerar snapshots, não cotação atual
+ * 
+ * IMPACTO FINANCEIRO:
+ * - ROI: calculado com cotação do momento da operação (snapshot)
+ * - Saldo Operável: calculado com cotação em tempo real
+ * - Relatórios: devem usar snapshots para auditoria
+ * =============================================================================
  */
 
 interface CurrencyTotal {
