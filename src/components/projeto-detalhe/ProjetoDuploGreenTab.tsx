@@ -48,6 +48,7 @@ import { DuploGreenStatisticsCard } from "./DuploGreenStatisticsCard";
 
 import { cn, getFirstLastName } from "@/lib/utils";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 interface ProjetoDuploGreenTabProps {
   projetoId: string;
@@ -145,6 +146,9 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   const [searchTerm, setSearchTerm] = useState("");
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  
+  // Hook de formatação de moeda do projeto
+  const { formatCurrency } = useProjetoCurrency(projetoId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [surebetDialogOpen, setSurebetDialogOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
@@ -533,7 +537,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
     });
   }, [casaData, porCasaSort]);
 
-  const formatCurrency = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+  // formatCurrency agora vem do useProjetoCurrency
   const formatPercent = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
   const handleApostaUpdated = () => { fetchData(); onDataChange?.(); };
   const handleOpenAposta = (aposta: Aposta) => {
@@ -724,6 +728,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
               onClick={() => handleOpenAposta(aposta)}
               onQuickResolve={handleQuickResolve}
               variant="card"
+              formatCurrency={formatCurrency}
             />
           ))}
         </div>
@@ -740,6 +745,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
               onClick={() => handleOpenAposta(aposta)}
               onQuickResolve={handleQuickResolve}
               variant="list"
+              formatCurrency={formatCurrency}
             />
           ))}
         </div>

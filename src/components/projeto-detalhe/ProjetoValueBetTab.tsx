@@ -46,6 +46,7 @@ import { UnifiedStatisticsCard } from "./UnifiedStatisticsCard";
 
 import { cn, getFirstLastName } from "@/lib/utils";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 interface ProjetoValueBetTabProps {
   projetoId: string;
@@ -141,6 +142,9 @@ export function ProjetoValueBetTab({
   const [searchTerm, setSearchTerm] = useState("");
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  
+  // Hook de formatação de moeda do projeto
+  const { formatCurrency } = useProjetoCurrency(projetoId);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
@@ -505,12 +509,7 @@ export function ProjetoValueBetTab({
     });
   }, [apostasListaAtual, searchTerm, resultadoFilter]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+  // formatCurrency agora vem do useProjetoCurrency
 
   const formatPercent = (value: number) => {
     return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
@@ -683,7 +682,7 @@ export function ProjetoValueBetTab({
       {metricas.total > 0 && (
         <>
           <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" logoMap={logoMap} isSingleDayPeriod={internalPeriod === "1dia"} />
-          <UnifiedStatisticsCard apostas={apostas} />
+          <UnifiedStatisticsCard apostas={apostas} formatCurrency={formatCurrency} />
         </>
       )}
 
@@ -812,6 +811,7 @@ export function ProjetoValueBetTab({
               onClick={() => openEditDialog(aposta)}
               onQuickResolve={handleQuickResolve}
               variant="card"
+              formatCurrency={formatCurrency}
             />
           ))}
         </div>
@@ -831,6 +831,7 @@ export function ProjetoValueBetTab({
               onClick={() => openEditDialog(aposta)}
               onQuickResolve={handleQuickResolve}
               variant="list"
+              formatCurrency={formatCurrency}
             />
           ))}
         </div>

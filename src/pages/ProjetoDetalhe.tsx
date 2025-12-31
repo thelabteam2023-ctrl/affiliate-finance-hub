@@ -33,6 +33,7 @@ import {
   Sparkles,
   Zap
 } from "lucide-react";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -101,6 +102,9 @@ export default function ProjetoDetalhe() {
   // Project favorites
   const { isFavorite, toggleFavorite } = useProjectFavorites();
   const { canEdit } = useActionAccess();
+  
+  // Hook de formatação de moeda do projeto
+  const { formatCurrency } = useProjetoCurrency(id);
   
   // KPIs sempre mostram dados completos (sem filtro de período - cada aba usa seu próprio)
   const [activeTab, setActiveTab] = useState("apostas");
@@ -244,12 +248,7 @@ export default function ProjetoDetalhe() {
 
   // Funções de período removidas - cada aba usa seu próprio StandardTimeFilter interno
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+  // formatCurrency agora vem do useProjetoCurrency
 
   const getStatusColor = (status: string) => {
     switch (status) {

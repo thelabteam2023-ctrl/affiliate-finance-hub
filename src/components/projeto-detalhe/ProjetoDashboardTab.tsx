@@ -29,6 +29,7 @@ import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 type PeriodFilter = "hoje" | "ontem" | "7dias" | "mes" | "ano" | "todo" | "custom";
 
@@ -104,6 +105,9 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
   const [apostasUnificadas, setApostasUnificadas] = useState<ApostaUnificada[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEsporte, setSelectedEsporte] = useState<string>("");
+  
+  // Hook de formatação de moeda do projeto
+  const { formatCurrency, getSymbol } = useProjetoCurrency(projetoId);
   
   // Filtros para Performance por Casa
   const [bookmakerFilterType, setBookmakerFilterType] = useState<BookmakerFilter>("all");
@@ -414,12 +418,7 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     return esportesData.filter(e => e.esporte === selectedEsporte);
   }, [esportesData, selectedEsporte]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+  // formatCurrency agora vem do useProjetoCurrency
 
   if (loading) {
     return (
@@ -555,7 +554,7 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
                       axisLine={false}
                       tickLine={false}
                       domain={[(dataMin: number) => Math.min(dataMin, 0), (dataMax: number) => Math.max(dataMax, 0)]}
-                      tickFormatter={(value) => `${value.toLocaleString('pt-BR')} R$`}
+                      tickFormatter={(value) => `${getSymbol()} ${value.toLocaleString('pt-BR')}`}
                     />
                     <Tooltip 
                       content={({ active, payload }) => {

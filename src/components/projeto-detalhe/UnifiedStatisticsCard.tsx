@@ -26,6 +26,8 @@ interface Aposta {
 interface UnifiedStatisticsCardProps {
   apostas: Aposta[];
   accentColor?: string;
+  /** Função de formatação de moeda (usa moeda do projeto quando fornecida) */
+  formatCurrency?: (value: number) => string;
 }
 
 // Componente de KPI âncora (destaque máximo)
@@ -178,8 +180,8 @@ const SectionHeader = ({
   );
 };
 
-// Formatadores
-const formatCurrency = (value: number) => {
+// Formatador padrão (fallback se não for passado prop)
+const defaultFormatCurrency = (value: number) => {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
@@ -224,7 +226,8 @@ const ODD_RANGES = [
   { min: 6.00, max: Infinity, label: "6+" },
 ];
 
-export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60%)" }: UnifiedStatisticsCardProps) {
+export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60%)", formatCurrency: formatCurrencyProp }: UnifiedStatisticsCardProps) {
+  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [activeTab, setActiveTab] = useState("resumo");
 
   // ==================== CÁLCULOS DE ESTATÍSTICAS ====================
