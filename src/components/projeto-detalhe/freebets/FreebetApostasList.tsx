@@ -143,6 +143,7 @@ function getOperationType(aposta: ApostaOperacionalFreebet): "bookmaker" | "back
 
 export function FreebetApostasList({ 
   apostas, 
+  projetoId,
   formatCurrency,
   onResultadoUpdated,
   onEditClick
@@ -224,6 +225,7 @@ export function FreebetApostasList({
                     <td className="p-3 text-center">
                       <ResultadoPill
                         apostaId={aposta.id}
+                        projetoId={projetoId}
                         bookmarkerId={aposta.bookmaker_id}
                         layExchangeBookmakerId={operationType === "cobertura" ? aposta.lay_exchange : undefined}
                         resultado={aposta.resultado}

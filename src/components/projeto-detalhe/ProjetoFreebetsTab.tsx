@@ -923,6 +923,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
             ) : viewMode === "list" ? (
               <FreebetApostasList 
                 apostas={apostasAtivas} 
+                projetoId={projetoId}
                 formatCurrency={formatCurrency}
                 onResultadoUpdated={handleApostaUpdated}
                 onEditClick={handleEditClick}
@@ -933,6 +934,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
                   <FreebetApostaCard 
                     key={aposta.id} 
                     aposta={aposta} 
+                    projetoId={projetoId}
                     compact={compactMode}
                     formatCurrency={formatCurrency}
                     onResultadoUpdated={handleApostaUpdated}
@@ -953,6 +955,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
             ) : viewMode === "list" ? (
               <FreebetApostasList 
                 apostas={apostasHistorico} 
+                projetoId={projetoId}
                 formatCurrency={formatCurrency}
                 onResultadoUpdated={handleApostaUpdated}
                 onEditClick={handleEditClick}
@@ -963,6 +966,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
                   <FreebetApostaCard 
                     key={aposta.id} 
                     aposta={aposta} 
+                    projetoId={projetoId}
                     compact={compactMode}
                     formatCurrency={formatCurrency}
                     onResultadoUpdated={handleApostaUpdated}
