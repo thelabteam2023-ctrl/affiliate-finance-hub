@@ -44,6 +44,7 @@ import { parsePernaFromJson, PernaArbitragem } from "@/types/apostasUnificada";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 interface ProjetoSurebetTabProps {
   projetoId: string;
@@ -118,6 +119,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedSurebet, setSelectedSurebet] = useState<Surebet | null>(null);
 
+  // Hook de formatação de moeda do projeto
+  const { formatCurrency: projectFormatCurrency, moedaConsolidacao } = useProjetoCurrency(projetoId);
   // Sub-abas Abertas/Histórico
   const [operacoesSubTab, setOperacoesSubTab] = useState<"abertas" | "historico">("abertas");
   
@@ -335,12 +338,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     onDataChange?.();
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+  // Usa a formatação do projeto (moeda de consolidação)
+  const formatCurrency = projectFormatCurrency;
 
   const formatPercent = (value: number | null) => {
     if (value === null) return "-";
