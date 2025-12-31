@@ -199,110 +199,78 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
    * - Target = Capital Comprometido (sempre 100%)
    * - Custo do LAY = responsabilidade = Stake_LAY × (oddLay - 1)
    * - Se GREEN: novo Capital Comprometido = atual + custo do LAY
-   * - Se RED: recupera capital via Exchange
-   * 
-   * IMPORTANTE: A comissão da Exchange só é paga quando o LAY GANHA (RED no modelo)
-   * Quando o LAY PERDE (GREEN), pagamos apenas a liability, sem comissão
+   * - Se RED: recupera todo o Capital Comprometido
    */
   const recalcularPernas = useCallback((
     pernas: PernaAposta[],
     stakeInicial: number,
-    comissao: number
-  ): PernaAposta[] => {
-    const comissaoDecimal = comissao / 100;
-    let operacaoEncerrada = false;
-    let pernaAtiva = 1;
-    // Perna 1 começa com o stake inicial como capital comprometido
-    let capitalParaProximaPerna = stakeInicial;
+    comissaoExchange: number
+  ): PernaCalculada[] => {
+    if (pernas.length === 0) return [];
+    
+    const comissaoDecimal = comissaoExchange / 100;
+    let capitalComprometido = stakeInicial;
     
     return pernas.map((perna, index) => {
-      const { oddBack, oddLay } = perna;
-      
-      // Se operação já encerrou (RED anterior)
-      if (operacaoEncerrada) {
-        return {
-          ...perna,
-          status: 'travada' as StatusPerna,
-          capitalComprometido: 0,
-          target: 0,
-          stakeLayNecessario: 0,
-          custoLay: 0,
-          lucroBack: 0,
-          custoSeGreen: 0,
-          novoCapitalComprometido: 0,
-          capitalRecuperado: 0,
-          lucroSeRed: 0,
-        };
-      }
+      const oddBack = perna.oddBack;
+      const oddLay = perna.oddLay;
       
       // ==========================================
-      // MODELO CAPITAL COMPROMETIDO
+      // LÓGICA PARA CADA PERNA
       // ==========================================
-      
-      // CAPITAL COMPROMETIDO:
-      // - Perna 1: = stakeInicial (o capital JÁ está em jogo!)
-      // - Perna n > 1: = capital comprometido anterior + custo do LAY anterior
-      const capitalComprometido = index === 0 ? stakeInicial : capitalParaProximaPerna;
-      
-      // VALIDAÇÃO: Capital Comprometido só pode aumentar (nunca diminuir)
-      if (index > 0 && capitalComprometido < stakeInicial) {
-        console.error('ERRO: Capital Comprometido menor que stake inicial - isso não deveria acontecer!');
-      }
+      // O objetivo é sempre PROTEGER o capital comprometido
+      // Se esta perna der GREEN (back ganha), o capital comprometido AUMENTA
+      // Se esta perna der RED (lay ganha), RECUPERAMOS o capital via Exchange
       
       // ==========================================
-      // FÓRMULA: Target = Capital Comprometido (sempre 100%)
+      // CÁLCULO DO LUCRO BRUTO (POTENCIAL)
+      // ==========================================
+      // Se o BACK ganhar (GREEN), o lucro bruto seria:
+      // Lucro BACK = Stake × (oddBack - 1)
+      // Na primeira perna: $100 × (2.0 - 1) = $100
+      // Mas esse lucro vai para a Bookmaker, não para nós diretamente
+      
+      // ==========================================
+      // STAKE LAY NECESSÁRIO
+      // ==========================================
+      // O target (quanto queremos recuperar) é sempre o capital comprometido
+      // Para recuperar exatamente o target, considerando a comissão:
+      // Stake_LAY = Target / (1 - comissão)
+      //
+      // Exemplo com 5% comissão:
+      // Stake_LAY = $100 / 0.95 = $105.26
+      // Se LAY ganha: $105.26 × 0.95 = $100 (recuperamos exatamente o target)
+      
+      // ==========================================
+      // PROTEÇÃO E RESULTADOS
       // ==========================================
       const target = capitalComprometido;
       
-      // ==========================================
-      // STAKE LAY NECESSÁRIO - FÓRMULA DE ARBITRAGEM
-      // ==========================================
-      // Para garantir RESULTADO IGUAL em ambos cenários:
-      // 
-      // Se Back ganha: stakeBack * oddBack - stakeLay * (oddLay - 1) = resultado
-      // Se Lay ganha: -stakeBack + stakeLay * (1 - comissão) = resultado
-      //
-      // Igualando:
-      // stakeBack * oddBack - stakeLay * (oddLay - 1) = -stakeBack + stakeLay * (1 - c)
-      // stakeBack * (oddBack + 1) = stakeLay * (oddLay - 1 + 1 - c)
-      // stakeBack * (oddBack + 1) = stakeLay * (oddLay - c)
-      //
-      // FÓRMULA FINAL:
-      // stakeLay = stakeBack * (oddBack + 1) / (oddLay - comissão)
-      //
-      // Isso garante que a comissão NÃO afeta o resultado quando o Lay PERDE,
-      // apenas quando o Lay GANHA (que é quando a comissão é efetivamente paga)
+      // Stake LAY necessário = Target / (1 - comissão)
+      const stakeLayNecessario = target / (1 - comissaoDecimal);
       
-      const denominador = oddLay - comissaoDecimal;
-      const stakeLayNecessario = denominador > 0 ? target * (oddBack + 1) / denominador : target;
-      
-      // ==========================================
-      // CUSTO DO LAY (RESPONSABILIDADE / LIABILITY)
-      // ==========================================
-      // Custo do LAY = Stake_LAY × (oddLay - 1)
-      // Este é o valor pago APENAS se o LAY PERDE (Back ganha = GREEN)
-      // NÃO inclui comissão - comissão só é paga quando LAY GANHA
+      // Custo do LAY (responsabilidade) = Stake_LAY × (oddLay - 1)
       const custoLay = stakeLayNecessario * (oddLay - 1);
       
       // Lucro BACK = S0 × (oddBack - 1)
       const lucroBack = stakeInicial * (oddBack - 1);
       
       // ==========================================
-      // SE GREEN (Bookmaker ganha, aposta continua)
+      // SE GREEN (Back ganha, precisamos continuar protegendo)
       // ==========================================
-      // O LAY perde, pagamos a responsabilidade
-      const custoSeGreen = custoLay;
-      
-      // Novo capital comprometido = atual + custo do LAY
-      // REGRA: Capital Comprometido SÓ AUMENTA!
+      // O novo capital comprometido = capital atual + custo do LAY
+      // Isso porque se GREEN, perdemos a responsabilidade do LAY
       const novoCapitalComprometido = capitalComprometido + custoLay;
+      
+      // Lucro se GREEN = lucro do back - custos acumulados
+      // Na última perna, se GREEN: lucro = lucro back - todos os custos LAY
+      const lucroSeGreen = lucroBack - custoLay;
       
       // ==========================================
       // SE RED (Exchange ganha, operação encerra)
       // ==========================================
-      // Quando o LAY GANHA, recebemos o stake LAY menos a comissão
-      // Capital recuperado = stakeLay * (1 - comissão) = target
-      const capitalRecuperado = stakeLayNecessario * (1 - comissaoDecimal);
+      // Recuperamos todo o capital comprometido via Exchange
+      const capitalRecuperado = stakeLayNecessario * (1 - comissaoDecimal); // = target
       
       // Lucro = capital recuperado - stake inicial
       const lucroSeRed = capitalRecuperado - stakeInicial;
