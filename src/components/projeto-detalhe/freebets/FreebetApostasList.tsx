@@ -8,6 +8,7 @@ import { ResultadoPill } from "../ResultadoPill";
 
 interface FreebetApostasListProps {
   apostas: ApostaOperacionalFreebet[];
+  projetoId: string;
   formatCurrency: (value: number) => string;
   onResultadoUpdated: () => void;
   onEditClick: (aposta: ApostaOperacionalFreebet) => void;

@@ -10,12 +10,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Pencil, CheckCircle2, XCircle, CircleDot, X, Check } from "lucide-react";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
+import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 
 type OperationType = "bookmaker" | "back" | "lay" | "cobertura";
 
 interface ResultadoPillProps {
   apostaId: string;
   bookmarkerId: string;
+  projetoId: string; // NOVO: necessário para invalidar cache de saldos
   layExchangeBookmakerId?: string | null;
   resultado: string | null;
   status: string;
@@ -68,6 +70,7 @@ const RESULTADO_OPTIONS_COBERTURA = [
 export function ResultadoPill({
   apostaId,
   bookmarkerId,
+  projetoId,
   layExchangeBookmakerId,
   resultado,
   status,
@@ -91,6 +94,9 @@ export function ResultadoPill({
   
   // Hook para gerenciar consumo de bônus
   const { processarLiquidacaoBonus, reverterLiquidacaoBonus } = useBonusBalanceManager();
+  
+  // Hook para invalidar cache de saldos após atualização
+  const invalidateSaldos = useInvalidateBookmakerSaldos();
 
   // Determina o valor a exibir na pill (resultado ou status se pendente)
   const displayValue = resultado || status;
@@ -717,6 +723,9 @@ export function ResultadoPill({
 
       toast.success(`Resultado atualizado para ${getDisplayLabel(novoResultado)}`);
       setOpen(false);
+      
+      // Invalidar cache de saldos para atualizar todas as UIs
+      invalidateSaldos(projetoId);
       
       // Notificar o parent para refetch dos dados
       onResultadoUpdated();

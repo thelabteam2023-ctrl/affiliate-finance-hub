@@ -1658,6 +1658,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         }
 
         toast.success("Aposta atualizada com sucesso!");
+        
+        // Invalidar cache de saldos após update
+        invalidateSaldos(projetoId);
       } else {
         // Insert - capturar o ID da aposta inserida
         const { data: insertedData, error } = await supabase
@@ -1735,6 +1738,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
         toast.success("Aposta registrada com sucesso!");
       }
+
+      // Invalidar cache de saldos para atualizar todas as UIs
+      invalidateSaldos(projetoId);
 
       onSuccess();
       onOpenChange(false);

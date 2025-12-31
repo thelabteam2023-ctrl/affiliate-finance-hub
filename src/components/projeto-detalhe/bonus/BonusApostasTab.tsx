@@ -584,6 +584,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
                     <ResultadoPill
                       apostaId={aposta.id}
                       bookmarkerId={aposta.bookmaker_id}
+                      projetoId={projetoId}
                       layExchangeBookmakerId={aposta.lay_exchange && aposta.lay_odd ? aposta.lay_exchange : undefined}
                       resultado={aposta.resultado}
                       status={aposta.status}

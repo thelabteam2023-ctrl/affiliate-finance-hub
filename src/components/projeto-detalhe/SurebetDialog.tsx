@@ -1363,6 +1363,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         .update({ saldo_atual: novoSaldo })
         .eq("id", bookmakerId);
 
+      // Invalidar cache de saldos para atualizar todas as UIs
+      invalidateSaldos(projetoId);
+
       // Atualizar perna no array
       const novasPernas = [...pernas];
       novasPernas[pernaIndex] = {
