@@ -120,7 +120,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   const [selectedSurebet, setSelectedSurebet] = useState<Surebet | null>(null);
 
   // Hook de formatação de moeda do projeto
-  const { formatCurrency: projectFormatCurrency, moedaConsolidacao } = useProjetoCurrency(projetoId);
+  const { formatCurrency: projectFormatCurrency, moedaConsolidacao, getSymbol } = useProjetoCurrency(projetoId);
+  const currencySymbol = getSymbol();
   // Sub-abas Abertas/Histórico
   const [operacoesSubTab, setOperacoesSubTab] = useState<"abertas" | "historico">("abertas");
   
@@ -610,7 +611,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               isSingleDayPeriod={internalPeriod === "1dia"}
               formatCurrency={formatCurrency}
             />
-            <SurebetStatisticsCard surebets={surebets} formatCurrency={formatCurrency} />
+            <SurebetStatisticsCard surebets={surebets} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
           </div>
           {/* Coluna direita: Casas Mais Utilizadas */}
           <div className="lg:col-span-1">

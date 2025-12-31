@@ -28,6 +28,8 @@ interface UnifiedStatisticsCardProps {
   accentColor?: string;
   /** Função de formatação de moeda (usa moeda do projeto quando fornecida) */
   formatCurrency?: (value: number) => string;
+  /** Símbolo da moeda do projeto (ex: "$", "R$") */
+  currencySymbol?: string;
 }
 
 // Componente de KPI âncora (destaque máximo)
@@ -193,19 +195,19 @@ const formatPercent = (value: number) => {
   return `${sign}${value.toFixed(2)}%`;
 };
 
-// Faixas de valor para análise (incrementos de 50, até 500+)
-const VALUE_RANGES = [
-  { min: 0, max: 50, label: "R$ 0-49,99" },
-  { min: 50, max: 100, label: "R$ 50-99,99" },
-  { min: 100, max: 150, label: "R$ 100-149,99" },
-  { min: 150, max: 200, label: "R$ 150-199,99" },
-  { min: 200, max: 250, label: "R$ 200-249,99" },
-  { min: 250, max: 300, label: "R$ 250-299,99" },
-  { min: 300, max: 350, label: "R$ 300-349,99" },
-  { min: 350, max: 400, label: "R$ 350-399,99" },
-  { min: 400, max: 450, label: "R$ 400-449,99" },
-  { min: 450, max: 500, label: "R$ 450-499,99" },
-  { min: 500, max: Infinity, label: "R$ 500+" },
+// Função para gerar faixas de valor dinamicamente com o símbolo correto
+const getValueRanges = (symbol: string) => [
+  { min: 0, max: 50, label: `${symbol} 0-49,99` },
+  { min: 50, max: 100, label: `${symbol} 50-99,99` },
+  { min: 100, max: 150, label: `${symbol} 100-149,99` },
+  { min: 150, max: 200, label: `${symbol} 150-199,99` },
+  { min: 200, max: 250, label: `${symbol} 200-249,99` },
+  { min: 250, max: 300, label: `${symbol} 250-299,99` },
+  { min: 300, max: 350, label: `${symbol} 300-349,99` },
+  { min: 350, max: 400, label: `${symbol} 350-399,99` },
+  { min: 400, max: 450, label: `${symbol} 400-449,99` },
+  { min: 450, max: 500, label: `${symbol} 450-499,99` },
+  { min: 500, max: Infinity, label: `${symbol} 500+` },
 ];
 
 // Faixas de cotação (incrementos de 0.40, até 6+)
@@ -226,9 +228,12 @@ const ODD_RANGES = [
   { min: 6.00, max: Infinity, label: "6+" },
 ];
 
-export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60%)", formatCurrency: formatCurrencyProp }: UnifiedStatisticsCardProps) {
+export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60%)", formatCurrency: formatCurrencyProp, currencySymbol = "R$" }: UnifiedStatisticsCardProps) {
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [activeTab, setActiveTab] = useState("resumo");
+  
+  // Gerar faixas de valor com o símbolo correto da moeda
+  const VALUE_RANGES = useMemo(() => getValueRanges(currencySymbol), [currencySymbol]);
 
   // ==================== CÁLCULOS DE ESTATÍSTICAS ====================
   const stats = useMemo(() => {
@@ -386,7 +391,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
     const oddsAltasLiquidadas = oddsAltas.filter(a => a.resultado && a.resultado !== "PENDENTE").length;
     const taxaAcertoOddsAltas = oddsAltasLiquidadas > 0 ? (oddsAltasGanhas / oddsAltasLiquidadas) * 100 : 0;
 
-    // Lucro por R$ 1.000 apostados
+    // Lucro por 1.000 apostados (moeda do projeto)
     const lucroPorMil = valorTotal > 0 ? (lucroTotal / valorTotal) * 1000 : 0;
 
     // Stake média
@@ -555,10 +560,10 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
         <SectionHeader title="Eficiência e Cotações" icon={Zap} priority="low" />
         <div className="grid grid-cols-3 gap-2">
           <StatCell 
-            label="Lucro por R$ 1.000" 
+            label={`Lucro por ${currencySymbol} 1.000`} 
             value={formatCurrency(stats.lucroPorMil)}
             valueClass={stats.lucroPorMil >= 0 ? "text-emerald-400" : "text-red-400"}
-            tooltip="Quanto você ganha para cada R$ 1.000 apostados"
+            tooltip={`Quanto você ganha para cada ${currencySymbol} 1.000 apostados`}
           />
           <StatCell 
             label="Maior odd ganha" 

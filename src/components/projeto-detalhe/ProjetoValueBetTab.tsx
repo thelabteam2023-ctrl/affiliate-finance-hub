@@ -144,7 +144,8 @@ export function ProjetoValueBetTab({
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   
   // Hook de formatação de moeda do projeto
-  const { formatCurrency } = useProjetoCurrency(projetoId);
+  const { formatCurrency, getSymbol } = useProjetoCurrency(projetoId);
+  const currencySymbol = getSymbol();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
@@ -682,7 +683,7 @@ export function ProjetoValueBetTab({
       {metricas.total > 0 && (
         <>
           <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" logoMap={logoMap} isSingleDayPeriod={internalPeriod === "1dia"} />
-          <UnifiedStatisticsCard apostas={apostas} formatCurrency={formatCurrency} />
+          <UnifiedStatisticsCard apostas={apostas} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
         </>
       )}
 
