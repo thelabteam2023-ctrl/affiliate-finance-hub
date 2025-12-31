@@ -154,6 +154,15 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     setBonusDrawerOpen(true);
   };
 
+  // Fonte de verdade de saldo por moeda:
+  // - Para USD/USDT, o saldo está no campo saldo_usd (legado).
+  // - Para BRL (e demais), o saldo está em saldo_atual.
+  const isUSDMoeda = (moeda?: string | null) => moeda === "USD" || moeda === "USDT";
+  const getSaldoBookmaker = (b: { moeda?: string | null; saldo_atual?: number | null; saldo_usd?: number | null }) => {
+    const moeda = b.moeda || "BRL";
+    return isUSDMoeda(moeda) ? (b.saldo_usd ?? 0) : (b.saldo_atual ?? 0);
+  };
+
   useEffect(() => {
     fetchVinculos();
     fetchHistoricoCount();
@@ -173,6 +182,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           projeto_id,
           status,
           saldo_atual,
+          saldo_usd,
           saldo_freebet,
           moeda,
           login_username,
@@ -215,6 +225,12 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
 
       const mappedVinculos: Vinculo[] = (vinculosData || []).map((v: any) => {
         const emAposta = saldoEmAposta[v.id] || 0;
+        const saldoAtual = getSaldoBookmaker({
+          moeda: v.moeda,
+          saldo_atual: v.saldo_atual,
+          saldo_usd: v.saldo_usd,
+        });
+
         return {
           id: v.id,
           nome: v.nome,
@@ -222,9 +238,9 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           parceiro_nome: v.parceiros?.nome || null,
           projeto_id: v.projeto_id,
           bookmaker_status: v.status,
-          saldo_atual: v.saldo_atual,
+          saldo_atual: saldoAtual,
           saldo_em_aposta: emAposta,
-          saldo_livre: v.saldo_atual - emAposta,
+          saldo_livre: saldoAtual - emAposta,
           saldo_freebet: v.saldo_freebet || 0,
           moeda: v.moeda || "BRL",
           login_username: v.login_username,
@@ -271,6 +287,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           parceiro_id,
           status,
           saldo_atual,
+          saldo_usd,
           moeda,
           parceiros!bookmakers_parceiro_id_fkey (nome),
           bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
@@ -285,7 +302,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         nome: v.nome,
         parceiro_id: v.parceiro_id,
         parceiro_nome: v.parceiros?.nome || null,
-        saldo_atual: v.saldo_atual,
+        saldo_atual: getSaldoBookmaker({ moeda: v.moeda, saldo_atual: v.saldo_atual, saldo_usd: v.saldo_usd }),
         bookmaker_status: v.status,
         logo_url: v.bookmakers_catalogo?.logo_url || null,
         moeda: v.moeda || 'BRL',
