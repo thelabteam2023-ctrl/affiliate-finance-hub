@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Loader2, Pencil, CheckCircle2, XCircle, CircleDot, X, Check } from "lucide-react";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
+import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
 
 type OperationType = "bookmaker" | "back" | "lay" | "cobertura";
 
@@ -453,7 +454,7 @@ export function ResultadoPill({
 
   /**
    * Atualiza o saldo do bookmaker baseado na mudança de resultado
-   * Esta função considera a reversão do resultado anterior e aplicação do novo
+   * CORRIGIDO: Usa helper centralizado que respeita multi-moeda (USD vs BRL)
    */
   const atualizarSaldoBookmaker = async (
     resultadoAnterior: string | null,
@@ -470,20 +471,9 @@ export function ResultadoPill({
       // Aplicar efeito do novo resultado
       saldoAjuste += calcularAjusteSaldo(resultadoNovo);
 
+      // CORREÇÃO: Usar helper que respeita moeda do bookmaker
       if (saldoAjuste !== 0) {
-        const { data: bookmaker } = await supabase
-          .from("bookmakers")
-          .select("saldo_atual")
-          .eq("id", bookmarkerId)
-          .maybeSingle();
-
-        if (bookmaker) {
-          const novoSaldo = Math.max(0, bookmaker.saldo_atual + saldoAjuste);
-          await supabase
-            .from("bookmakers")
-            .update({ saldo_atual: novoSaldo })
-            .eq("id", bookmarkerId);
-        }
+        await updateBookmakerBalance(bookmarkerId, saldoAjuste);
       }
 
       // Para Cobertura, também atualizar o saldo da Exchange
@@ -498,20 +488,9 @@ export function ResultadoPill({
         // Aplicar efeito do novo resultado na exchange
         saldoAjusteExchange += calcularAjusteSaldoExchange(resultadoNovo);
 
+        // CORREÇÃO: Usar helper que respeita moeda da exchange
         if (saldoAjusteExchange !== 0) {
-          const { data: exchangeBookmaker } = await supabase
-            .from("bookmakers")
-            .select("saldo_atual")
-            .eq("id", layExchangeBookmakerId)
-            .maybeSingle();
-
-          if (exchangeBookmaker) {
-            const novoSaldoExchange = Math.max(0, exchangeBookmaker.saldo_atual + saldoAjusteExchange);
-            await supabase
-              .from("bookmakers")
-              .update({ saldo_atual: novoSaldoExchange })
-              .eq("id", layExchangeBookmakerId);
-          }
+          await updateBookmakerBalance(layExchangeBookmakerId, saldoAjusteExchange);
         }
       }
     } catch (error) {

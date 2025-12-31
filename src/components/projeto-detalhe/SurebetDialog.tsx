@@ -45,6 +45,7 @@ import {
   MultiCurrencyIndicator, 
   MultiCurrencyWarning 
 } from "@/components/projeto-detalhe/MultiCurrencyIndicator";
+import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
 
 // Interface local DEPRECATED - agora usamos BookmakerSaldo do hook canônico diretamente
 interface LegacyBookmaker {
@@ -1096,31 +1097,21 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         const odd = parseFloat(aposta.odd) || 0;
         const bookmakerId = aposta.bookmaker_id;
         
+        // CORREÇÃO MULTI-MOEDA: Usar helper centralizado
         if (resultado && resultado !== "PENDENTE") {
-          const { data: bkData } = await supabase
-            .from("bookmakers")
-            .select("saldo_atual")
-            .eq("id", bookmakerId)
-            .single();
+          let delta = 0;
           
-          if (bkData) {
-            let novoSaldo = bkData.saldo_atual;
-            
-            if (resultado === "GREEN") {
-              // GREEN: lucro foi creditado, reverter (debitar lucro)
-              novoSaldo -= stake * (odd - 1);
-            } else if (resultado === "RED") {
-              // RED: stake foi debitada, reverter (creditar)
-              novoSaldo += stake;
-            }
-            // VOID: não alterou saldo, não precisa reverter
-            
-            if (novoSaldo !== bkData.saldo_atual) {
-              await supabase
-                .from("bookmakers")
-                .update({ saldo_atual: novoSaldo })
-                .eq("id", bookmakerId);
-            }
+          if (resultado === "GREEN") {
+            // GREEN: lucro foi creditado, reverter (debitar lucro)
+            delta = -(stake * (odd - 1));
+          } else if (resultado === "RED") {
+            // RED: stake foi debitada, reverter (creditar)
+            delta = stake;
+          }
+          // VOID: não alterou saldo, não precisa reverter
+          
+          if (delta !== 0) {
+            await updateBookmakerBalance(bookmakerId, delta);
           }
         }
       }
@@ -1322,46 +1313,38 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         lucro = 0;
       }
 
-      // ATUALIZAÇÃO DE SALDO DA CASA
-      const { data: bookmakerData } = await supabase
-        .from("bookmakers")
-        .select("saldo_atual")
-        .eq("id", bookmakerId)
-        .single();
+      // ATUALIZAÇÃO DE SALDO DA CASA - CORREÇÃO MULTI-MOEDA
+      // Calcula delta para reversão + aplicação do novo resultado
+      let delta = 0;
       
-      if (!bookmakerData) throw new Error("Bookmaker não encontrado");
-      
-      let novoSaldo = bookmakerData.saldo_atual;
-
       // 1. REVERTER efeito do resultado ANTERIOR
       if (resultadoAnterior && resultadoAnterior !== "PENDENTE") {
         if (resultadoAnterior === "GREEN") {
-          novoSaldo -= stake * (odd - 1);
+          delta -= stake * (odd - 1);
         } else if (resultadoAnterior === "MEIO_GREEN") {
-          novoSaldo -= (stake * (odd - 1)) / 2;
+          delta -= (stake * (odd - 1)) / 2;
         } else if (resultadoAnterior === "RED") {
-          novoSaldo += stake;
+          delta += stake;
         } else if (resultadoAnterior === "MEIO_RED") {
-          novoSaldo += stake / 2;
+          delta += stake / 2;
         }
       }
 
       // 2. APLICAR efeito do resultado NOVO
       if (resultado === "GREEN") {
-        novoSaldo += stake * (odd - 1);
+        delta += stake * (odd - 1);
       } else if (resultado === "MEIO_GREEN") {
-        novoSaldo += (stake * (odd - 1)) / 2;
+        delta += (stake * (odd - 1)) / 2;
       } else if (resultado === "RED") {
-        novoSaldo -= stake;
+        delta -= stake;
       } else if (resultado === "MEIO_RED") {
-        novoSaldo -= stake / 2;
+        delta -= stake / 2;
       }
 
-      // Atualizar saldo da casa
-      await supabase
-        .from("bookmakers")
-        .update({ saldo_atual: novoSaldo })
-        .eq("id", bookmakerId);
+      // CORREÇÃO: Usar helper centralizado que respeita moeda do bookmaker
+      if (delta !== 0) {
+        await updateBookmakerBalance(bookmakerId, delta);
+      }
 
       // Invalidar cache de saldos para atualizar todas as UIs
       invalidateSaldos(projetoId);

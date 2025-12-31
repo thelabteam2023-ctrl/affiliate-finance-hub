@@ -53,6 +53,7 @@ import {
   getCurrencyTextColor,
   getCurrencySymbol 
 } from "@/components/bookmakers/BookmakerSelectOption";
+import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
 
 interface Aposta {
   id: string;
@@ -2106,57 +2107,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         }
       }
 
-      // Atualizar saldo do BACK bookmaker
+      // CORREÇÃO MULTI-MOEDA: Usar helper centralizado que respeita moeda do bookmaker
       if (saldoAjuste !== 0) {
-        const { data: bookmaker } = await supabase
-          .from("bookmakers")
-          .select("saldo_atual")
-          .eq("id", bookmakerIdToUpdate)
-          .maybeSingle();
-
-        if (bookmaker) {
-          const novoSaldo = Math.max(0, bookmaker.saldo_atual + saldoAjuste);
-          await supabase
-            .from("bookmakers")
-            .update({ saldo_atual: novoSaldo })
-            .eq("id", bookmakerIdToUpdate);
-        }
+        await updateBookmakerBalance(bookmakerIdToUpdate, saldoAjuste);
       }
 
       // Atualizar saldo do LAY bookmaker (para cobertura)
+      // CORREÇÃO MULTI-MOEDA: Usar helper centralizado
       if (tipoOperacao === "cobertura" && layExchangeId && saldoAjusteLay !== 0) {
-        // Caso especial: mesma bookmaker para BACK e LAY
-        if (layExchangeId === bookmakerIdToUpdate) {
-          // Já foi atualizado acima, precisamos adicionar o ajuste LAY
-          const { data: bookmaker } = await supabase
-            .from("bookmakers")
-            .select("saldo_atual")
-            .eq("id", layExchangeId)
-            .maybeSingle();
-
-          if (bookmaker) {
-            const novoSaldo = Math.max(0, bookmaker.saldo_atual + saldoAjusteLay);
-            await supabase
-              .from("bookmakers")
-              .update({ saldo_atual: novoSaldo })
-              .eq("id", layExchangeId);
-          }
-        } else {
-          // Bookmakers diferentes: atualizar LAY separadamente
-          const { data: layBookmaker } = await supabase
-            .from("bookmakers")
-            .select("saldo_atual")
-            .eq("id", layExchangeId)
-            .maybeSingle();
-
-          if (layBookmaker) {
-            const novoSaldoLay = Math.max(0, layBookmaker.saldo_atual + saldoAjusteLay);
-            await supabase
-              .from("bookmakers")
-              .update({ saldo_atual: novoSaldoLay })
-              .eq("id", layExchangeId);
-          }
-        }
+        await updateBookmakerBalance(layExchangeId, saldoAjusteLay);
       }
     } catch (error) {
       console.error("Erro ao atualizar saldo do bookmaker:", error);
