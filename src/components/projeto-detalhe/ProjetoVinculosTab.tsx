@@ -110,6 +110,7 @@ interface BookmakerDisponivel {
   saldo_atual: number;
   bookmaker_status: string;
   logo_url?: string | null;
+  moeda: string;
 }
 
 export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
@@ -270,6 +271,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           parceiro_id,
           status,
           saldo_atual,
+          moeda,
           parceiros!bookmakers_parceiro_id_fkey (nome),
           bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
         `)
@@ -286,6 +288,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         saldo_atual: v.saldo_atual,
         bookmaker_status: v.status,
         logo_url: v.bookmakers_catalogo?.logo_url || null,
+        moeda: v.moeda || 'BRL',
       }));
 
       setDisponiveis(mapped);
@@ -1245,13 +1248,23 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       </div>
                     )}
                     <div className="flex-1">
-                      <p className="font-medium">{item.nome}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-medium">{item.nome}</p>
+                        {item.moeda !== 'BRL' && (
+                          <Badge 
+                            variant="outline" 
+                            className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30"
+                          >
+                            {item.moeda}
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">
                         {item.parceiro_nome || "Sem parceiro"}
                       </p>
                     </div>
                     <span className="text-sm font-medium">
-                      {formatCurrency(item.saldo_atual)}
+                      {formatCurrency(item.saldo_atual, item.moeda)}
                     </span>
                   </div>
                 ))}
