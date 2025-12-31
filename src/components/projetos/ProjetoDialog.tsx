@@ -52,8 +52,10 @@ import {
   Pencil,
   Briefcase,
   Percent,
-  Info
+  Info,
+  DollarSign
 } from "lucide-react";
+import { CurrencyConsolidationSettings } from "@/components/projeto-detalhe/CurrencyConsolidationSettings";
 import { VincularOperadorDialog } from "@/components/projetos/VincularOperadorDialog";
 import { EditarAcordoOperadorDialog } from "@/components/projetos/EditarAcordoOperadorDialog";
 import { ProjetoConciliacaoDialog } from "@/components/projetos/ProjetoConciliacaoDialog";
@@ -423,10 +425,14 @@ export function ProjetoDialog({
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="dados">
                 <FolderKanban className="h-4 w-4 mr-2" />
                 Dados
+              </TabsTrigger>
+              <TabsTrigger value="moeda" disabled={mode === "create"}>
+                <DollarSign className="h-4 w-4 mr-2" />
+                Moeda
               </TabsTrigger>
               <TabsTrigger value="operadores" disabled={mode === "create"}>
                 <Users className="h-4 w-4 mr-2" />
@@ -684,6 +690,12 @@ export function ProjetoDialog({
                     </div>
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="moeda" className="space-y-4 px-1">
+                {projeto?.id && (
+                  <CurrencyConsolidationSettings projetoId={projeto.id} />
+                )}
               </TabsContent>
 
               <TabsContent value="operadores" className="space-y-4 px-1">
