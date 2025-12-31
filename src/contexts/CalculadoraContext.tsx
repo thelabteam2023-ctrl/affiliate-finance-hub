@@ -542,10 +542,13 @@ export const CalculadoraProvider: React.FC<{ children: ReactNode }> = ({ childre
       const pernasGreenAnteriores = pernas.filter(p => p.status === 'green');
       const custosTotaisLay = pernasGreenAnteriores.reduce((sum, p) => sum + p.custoLay, 0);
       
-      // Resultado líquido = o que recebeu - o que pagou
-      const resultadoLiquido = capitalExtraido - custosTotaisLay;
+      // Resultado líquido = capital extraído - stake perdido na bookmaker - custos LAY anteriores
+      // O stake foi PERDIDO na bookmaker (RED), então precisa descontar
+      const resultadoLiquido = capitalExtraido - stakeInicial - custosTotaisLay;
       
-      // Percentual de extração em relação ao stake inicial
+      // Percentual de extração: quanto do stake inicial foi efetivamente recuperado
+      // Se resultadoLiquido = 0, significa break-even (recuperou 100% do stake, sem lucro)
+      // Se resultadoLiquido = -5.26, significa que perdeu 5.26% (o juice)
       const percentualExtracao = stakeInicial > 0 ? (resultadoLiquido / stakeInicial) * 100 : 0;
       
       redFinal = {
