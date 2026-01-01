@@ -111,27 +111,34 @@ interface CasaAgregada {
   vinculos: VinculoData[];
 }
 
-// Função utilitária para calcular lucro individual de uma perna baseado no resultado
-const calcularLucroPerna = (perna: SurebetPerna): number => {
+// Função utilitária para obter lucro de uma perna
+// Prioriza o valor salvo no banco (lucro_prejuizo), calcula se não existir
+const getLucroPerna = (perna: SurebetPerna & { lucro_prejuizo?: number | null }): number => {
+  // Se já tem lucro calculado e salvo, usar direto
+  if (typeof perna.lucro_prejuizo === "number") {
+    return perna.lucro_prejuizo;
+  }
+  
+  // Fallback: calcular baseado no resultado
   const stake = perna.stake || 0;
   const odd = perna.odd || 0;
   const resultado = perna.resultado;
   
   if (!resultado || resultado === "PENDENTE") {
-    return 0; // Ainda não liquidada
+    return 0;
   }
   
   switch (resultado) {
     case "GREEN":
-      return (odd * stake) - stake; // Ganhou: retorno - stake = lucro
+      return (odd * stake) - stake;
     case "MEIO_GREEN":
-      return ((odd * stake) - stake) / 2; // Metade do lucro
+      return ((odd * stake) - stake) / 2;
     case "RED":
-      return -stake; // Perdeu toda a stake
+      return -stake;
     case "MEIO_RED":
-      return -stake / 2; // Perdeu metade da stake
+      return -stake / 2;
     case "VOID":
-      return 0; // Anulada, sem lucro/prejuízo
+      return 0;
     default:
       return 0;
   }
@@ -431,7 +438,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     surebets.forEach((surebet) => {
       surebet.pernas?.forEach(perna => {
         const nomeCompleto = perna.bookmaker_nome || "Desconhecida";
-        const lucroPerna = calcularLucroPerna(perna);
+        const lucroPerna = getLucroPerna(perna);
         processEntry(nomeCompleto, perna.stake, lucroPerna);
       });
     });
@@ -631,7 +638,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                   stake: p.stake,
                   odd: p.odd,
                   resultado: p.resultado,
-                  lucro_prejuizo: calcularLucroPerna(p)
+                  lucro_prejuizo: getLucroPerna(p)
                 }))
               }))} 
               accentColor="hsl(var(--primary))"
@@ -655,7 +662,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                   stake: p.stake,
                   odd: p.odd,
                   resultado: p.resultado,
-                  lucro_prejuizo: calcularLucroPerna(p)
+                  lucro_prejuizo: getLucroPerna(p)
                 }))
               }))} 
               accentColor="hsl(var(--primary))"
