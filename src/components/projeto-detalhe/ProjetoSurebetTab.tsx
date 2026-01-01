@@ -818,7 +818,14 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                     estrategia="SUREBET"
                     variant={viewMode === "cards" ? "card" : "list"}
                     onClick={() => {
-                      setSelectedAposta(operacao);
+                      // Converter para formato esperado pelo ApostaDialog
+                      const apostaParaDialog = {
+                        ...operacao,
+                        data_aposta: operacao.data_operacao,
+                        lucro_prejuizo: operacao.lucro_real,
+                        bookmaker_id: operacao.bookmaker_id,
+                      };
+                      setSelectedAposta(apostaParaDialog);
                       setApostaDialogOpen(true);
                     }}
                     formatCurrency={formatCurrency}
