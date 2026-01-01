@@ -587,14 +587,14 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           // Converter para formato SurebetData compatível com SurebetCard
           const surebetData: SurebetData = {
             ...sb,
-            pernas: sb.pernas?.map(p => ({
+            pernas: sb.pernas?.map((p) => ({
               id: p.id,
               selecao: p.selecao,
               odd: p.odd,
               stake: p.stake,
               resultado: p.resultado,
-              bookmaker_nome: p.bookmaker?.nome || "—"
-            }))
+              bookmaker_nome: (p as any).bookmaker_nome || p.bookmaker?.nome || "—",
+            })),
           };
           
           return (
@@ -872,7 +872,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
 
             {/* Abertas Tab Content */}
             <TabsContent value="abertas" className="mt-4">
-              {bookmakersInBonusMode.length === 0 ? (
+              {bookmakersInBonusMode.length === 0 && apostasAbertas.length === 0 ? (
                 <div className="text-center py-10">
                   <Coins className="mx-auto h-12 w-12 text-muted-foreground/50" />
                   <h3 className="mt-4 text-lg font-semibold">Nenhuma casa em modo bônus</h3>
