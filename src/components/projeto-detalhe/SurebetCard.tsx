@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format as formatDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeftRight, Zap, CheckCircle2, Clock } from "lucide-react";
+import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface SurebetPerna {
@@ -40,6 +40,8 @@ interface SurebetCardProps {
   onEdit?: (surebet: SurebetData) => void;
   className?: string;
   formatCurrency?: (value: number) => string;
+  /** Quando true, exibe badge "Bônus" no lugar de "SUREBET" */
+  isBonusContext?: boolean;
 }
 
 // Fallback para formatação de moeda quando não é passada via props
@@ -73,18 +75,24 @@ function ResultadoBadge({ resultado }: { resultado: string | null | undefined })
   );
 }
 
-export function SurebetCard({ surebet, onEdit, className, formatCurrency }: SurebetCardProps) {
+export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonusContext }: SurebetCardProps) {
   // Usa formatCurrency do projeto ou fallback para BRL
   const formatValue = formatCurrency || defaultFormatCurrency;
   const isDuploGreen = surebet.estrategia === "DUPLO_GREEN";
   const isLiquidada = surebet.status === "LIQUIDADA";
   
+  // Detectar contexto de bônus pela estratégia ou prop
+  const showBonusBadge = isBonusContext || surebet.estrategia === "EXTRACAO_BONUS";
+  
   const lucroExibir = isLiquidada ? surebet.lucro_real : surebet.lucro_esperado;
   const roiExibir = isLiquidada ? surebet.roi_real : surebet.roi_esperado;
   
-  const estrategiaConfig = isDuploGreen 
-    ? { label: "DG", icon: Zap, color: "text-teal-400", bgColor: "bg-teal-500/20", borderColor: "border-teal-500/30" }
-    : { label: "SUREBET", icon: ArrowLeftRight, color: "text-amber-400", bgColor: "bg-amber-500/20", borderColor: "border-amber-500/30" };
+  // Configuração do badge principal
+  const estrategiaConfig = showBonusBadge 
+    ? { label: "BÔNUS", icon: Coins, color: "text-amber-400", bgColor: "bg-amber-500/20", borderColor: "border-amber-500/30" }
+    : isDuploGreen 
+      ? { label: "DG", icon: Zap, color: "text-teal-400", bgColor: "bg-teal-500/20", borderColor: "border-teal-500/30" }
+      : { label: "SUREBET", icon: ArrowLeftRight, color: "text-amber-400", bgColor: "bg-amber-500/20", borderColor: "border-amber-500/30" };
   
   const Icon = estrategiaConfig.icon;
 

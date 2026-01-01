@@ -601,6 +601,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
             <SurebetCard
               key={sb.id}
               surebet={surebetData}
+              isBonusContext={true}
               onEdit={(surebet) => {
                 setSelectedSurebet(surebet);
                 setDialogSurebetOpen(true);
