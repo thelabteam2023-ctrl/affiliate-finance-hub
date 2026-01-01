@@ -39,6 +39,8 @@ interface BookmakerOption {
   login_password_encrypted?: string | null;
   logo_url?: string | null;
   bookmaker_catalogo_id?: string | null;
+  saldo_atual?: number;
+  moeda?: string;
 }
 
 interface BonusDialogProps {
@@ -324,22 +326,33 @@ export function BonusDialog({
                 <SelectValue placeholder="Selecione a casa" />
               </SelectTrigger>
               <SelectContent>
-                {bookmakers.map((bk) => (
-                  <SelectItem key={bk.id} value={bk.id}>
-                    <div className="flex items-center gap-2">
-                      {bk.logo_url ? (
-                        <img
-                          src={bk.logo_url}
-                          alt={bk.nome}
-                          className="h-5 w-5 rounded object-contain bg-white"
-                        />
-                      ) : (
-                        <Building2 className="h-4 w-4" />
-                      )}
-                      <span>{bk.nome}</span>
-                    </div>
-                  </SelectItem>
-                ))}
+                {bookmakers.map((bk) => {
+                  const currencySymbol = bk.moeda === "USD" ? "$" : bk.moeda === "EUR" ? "€" : "R$";
+                  return (
+                    <SelectItem key={bk.id} value={bk.id}>
+                      <div className="flex items-center justify-between gap-4 w-full">
+                        <div className="flex items-center gap-2">
+                          {bk.logo_url ? (
+                            <img
+                              src={bk.logo_url}
+                              alt={bk.nome}
+                              className="h-5 w-5 rounded object-contain bg-white"
+                            />
+                          ) : (
+                            <Building2 className="h-4 w-4" />
+                          )}
+                          <span className="font-medium">{bk.nome}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span className="truncate max-w-[100px]">{bk.login_username}</span>
+                          <span className="text-emerald-400 font-medium whitespace-nowrap">
+                            {currencySymbol} {(bk.saldo_atual ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
