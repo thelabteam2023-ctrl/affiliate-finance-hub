@@ -36,6 +36,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { SurebetDialog } from "./SurebetDialog";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
+import { ApostaDialog } from "./ApostaDialog";
+import { ApostaCard, ApostaCardData } from "./ApostaCard";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { SurebetStatisticsCard } from "./SurebetStatisticsCard";
@@ -69,6 +71,13 @@ interface Surebet {
   resultado: string | null;
   observacoes: string | null;
   pernas?: SurebetPerna[];
+  // Campos adicionais para diferenciar tipo de registro
+  forma_registro?: string;
+  stake?: number;
+  odd?: number;
+  selecao?: string;
+  bookmaker_id?: string;
+  bookmaker_nome?: string;
 }
 
 interface Bookmaker {
@@ -151,6 +160,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedSurebet, setSelectedSurebet] = useState<Surebet | null>(null);
+  
+  // Estados para ApostaDialog (apostas simples no contexto Surebet)
+  const [apostaDialogOpen, setApostaDialogOpen] = useState(false);
+  const [selectedAposta, setSelectedAposta] = useState<any>(null);
 
   // Hook de formatação de moeda do projeto
   const { formatCurrency: projectFormatCurrency, moedaConsolidacao, getSymbol } = useProjetoCurrency(projetoId);
@@ -251,6 +264,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             bookmaker_nome: p.bookmaker_nome || "—",
             bookmaker_id: p.bookmaker_id
           }));
+          
+          // Verificar se é uma aposta simples (forma_registro = 'SIMPLES')
+          const isSimples = arb.forma_registro === "SIMPLES";
 
           return {
             id: arb.id,
@@ -259,7 +275,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             esporte: arb.esporte || "",
             modelo: arb.modelo || "1-2",
             mercado: arb.mercado,
-            stake_total: arb.stake_total || 0,
+            stake_total: arb.stake_total || arb.stake || 0,
             spread_calculado: arb.spread_calculado,
             roi_esperado: arb.roi_esperado,
             lucro_esperado: arb.lucro_esperado,
@@ -268,7 +284,14 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             status: arb.status,
             resultado: arb.resultado,
             observacoes: arb.observacoes,
-            pernas: pernasSurebetCard
+            pernas: isSimples ? [] : pernasSurebetCard,
+            // Campos extras para apostas simples
+            forma_registro: arb.forma_registro,
+            stake: arb.stake,
+            odd: arb.odd,
+            selecao: arb.selecao,
+            bookmaker_id: arb.bookmaker_id,
+            bookmaker_nome: pernas[0]?.bookmaker_nome || "—",
           };
         });
         
@@ -436,11 +459,20 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     };
 
     surebets.forEach((surebet) => {
-      surebet.pernas?.forEach(perna => {
-        const nomeCompleto = perna.bookmaker_nome || "Desconhecida";
-        const lucroPerna = getLucroPerna(perna);
-        processEntry(nomeCompleto, perna.stake, lucroPerna);
-      });
+      // Apostas simples (sem pernas) - usar bookmaker_nome direto
+      if (surebet.forma_registro === "SIMPLES" || !surebet.pernas?.length) {
+        const nomeCompleto = surebet.bookmaker_nome || "Desconhecida";
+        const stake = surebet.stake || surebet.stake_total || 0;
+        const lucro = surebet.lucro_real || 0;
+        processEntry(nomeCompleto, stake, lucro);
+      } else {
+        // Surebets com múltiplas pernas
+        surebet.pernas.forEach(perna => {
+          const nomeCompleto = perna.bookmaker_nome || "Desconhecida";
+          const lucroPerna = getLucroPerna(perna);
+          processEntry(nomeCompleto, perna.stake, lucroPerna);
+        });
+      }
     });
 
     return Array.from(casaMap.entries())
@@ -758,17 +790,55 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       ) : (
         <ScrollArea className="h-[calc(100vh-400px)]">
           <div className={viewMode === "cards" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-2"}>
-            {surebetsListaAtual.map((surebet) => (
-              <SurebetCard
-                key={surebet.id}
-                surebet={surebet}
-                onEdit={(sb) => {
-                  setSelectedSurebet(sb as Surebet);
-                  setDialogOpen(true);
-                }}
-                formatCurrency={formatCurrency}
-              />
-            ))}
+            {surebetsListaAtual.map((operacao) => {
+              // Diferenciar: aposta simples usa ApostaCard, surebet usa SurebetCard
+              const isSimples = operacao.forma_registro === "SIMPLES";
+              
+              if (isSimples) {
+                // Converter para formato ApostaCardData
+                const apostaData: ApostaCardData = {
+                  id: operacao.id,
+                  evento: operacao.evento,
+                  esporte: operacao.esporte,
+                  selecao: operacao.selecao,
+                  odd: operacao.odd,
+                  stake: operacao.stake || operacao.stake_total,
+                  data_aposta: operacao.data_operacao,
+                  resultado: operacao.resultado,
+                  status: operacao.status,
+                  lucro_prejuizo: operacao.lucro_real,
+                  estrategia: "SUREBET",
+                  bookmaker_nome: operacao.bookmaker_nome,
+                };
+                
+                return (
+                  <ApostaCard
+                    key={operacao.id}
+                    aposta={apostaData}
+                    estrategia="SUREBET"
+                    variant={viewMode === "cards" ? "card" : "list"}
+                    onClick={() => {
+                      setSelectedAposta(operacao);
+                      setApostaDialogOpen(true);
+                    }}
+                    formatCurrency={formatCurrency}
+                  />
+                );
+              }
+              
+              // Surebet com múltiplas pernas
+              return (
+                <SurebetCard
+                  key={operacao.id}
+                  surebet={operacao}
+                  onEdit={(sb) => {
+                    setSelectedSurebet(sb as Surebet);
+                    setDialogOpen(true);
+                  }}
+                  formatCurrency={formatCurrency}
+                />
+              );
+            })}
           </div>
         </ScrollArea>
       )}
@@ -990,6 +1060,18 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           surebet={selectedSurebet}
           onSuccess={handleDataChange}
         />
+        
+        <ApostaDialog
+          open={apostaDialogOpen}
+          onOpenChange={(open) => {
+            setApostaDialogOpen(open);
+            if (!open) setSelectedAposta(null);
+          }}
+          projetoId={projetoId}
+          aposta={selectedAposta}
+          onSuccess={handleDataChange}
+          activeTab="surebet"
+        />
       </div>
     );
   }
@@ -1055,6 +1137,18 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         projetoId={projetoId}
         surebet={selectedSurebet}
         onSuccess={handleDataChange}
+      />
+      
+      <ApostaDialog
+        open={apostaDialogOpen}
+        onOpenChange={(open) => {
+          setApostaDialogOpen(open);
+          if (!open) setSelectedAposta(null);
+        }}
+        projetoId={projetoId}
+        aposta={selectedAposta}
+        onSuccess={handleDataChange}
+        activeTab="surebet"
       />
     </div>
   );
