@@ -73,6 +73,8 @@ interface Surebet {
   pernas?: SurebetPerna[];
   // Campos adicionais para diferenciar tipo de registro
   forma_registro?: string;
+  estrategia?: string;
+  contexto_operacional?: string;
   stake?: number;
   odd?: number;
   selecao?: string;
@@ -227,7 +229,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       // O forma_registro define apenas COMO foi estruturada
       let query = supabase
         .from("apostas_unificada")
-        .select("*")
+        .select(`
+          *,
+          bookmaker:bookmakers(nome)
+        `)
         .eq("projeto_id", projetoId)
         .eq("estrategia", "SUREBET")
         .is("cancelled_at", null)
@@ -287,11 +292,16 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             pernas: isSimples ? [] : pernasSurebetCard,
             // Campos extras para apostas simples
             forma_registro: arb.forma_registro,
+            estrategia: arb.estrategia,
+            contexto_operacional: arb.contexto_operacional,
             stake: arb.stake,
             odd: arb.odd,
             selecao: arb.selecao,
             bookmaker_id: arb.bookmaker_id,
-            bookmaker_nome: pernas[0]?.bookmaker_nome || "—",
+            // Para apostas simples, buscar do join; para surebets, usar a primeira perna
+            bookmaker_nome: isSimples 
+              ? ((arb as any).bookmaker?.nome || "—")
+              : (pernas[0]?.bookmaker_nome || "—"),
           };
         });
         
@@ -824,6 +834,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                         data_aposta: operacao.data_operacao,
                         lucro_prejuizo: operacao.lucro_real,
                         bookmaker_id: operacao.bookmaker_id,
+                        // Garantir que os campos de registro estejam presentes
+                        estrategia: operacao.estrategia || "SUREBET",
+                        forma_registro: operacao.forma_registro || "SIMPLES",
+                        contexto_operacional: operacao.contexto_operacional || "NORMAL",
                       };
                       setSelectedAposta(apostaParaDialog);
                       setApostaDialogOpen(true);
