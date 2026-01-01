@@ -670,19 +670,31 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           {/* Coluna esquerda: Gráfico + Estatísticas */}
           <div className="lg:col-span-2 space-y-4">
             <VisaoGeralCharts 
-              apostas={surebets.map(s => ({
-                data_aposta: s.data_operacao,
-                lucro_prejuizo: s.lucro_real,
-                stake: s.stake_total,
-                bookmaker_nome: s.pernas?.[0]?.bookmaker_nome || "—",
-                pernas: s.pernas?.map(p => ({
-                  bookmaker_nome: p.bookmaker_nome,
-                  stake: p.stake,
-                  odd: p.odd,
-                  resultado: p.resultado,
-                  lucro_prejuizo: getLucroPerna(p)
-                }))
-              }))} 
+              apostas={surebets.map(s => {
+                const isSimples = s.forma_registro === "SIMPLES" || !s.pernas?.length;
+                return {
+                  data_aposta: s.data_operacao,
+                  lucro_prejuizo: s.lucro_real,
+                  stake: isSimples ? (s.stake || s.stake_total) : s.stake_total,
+                  bookmaker_nome: isSimples ? (s.bookmaker_nome || "—") : (s.pernas?.[0]?.bookmaker_nome || "—"),
+                  // Para apostas simples, criar uma "perna virtual" para o cálculo de casas
+                  pernas: isSimples 
+                    ? [{
+                        bookmaker_nome: s.bookmaker_nome || "—",
+                        stake: s.stake || s.stake_total,
+                        odd: s.odd,
+                        resultado: s.resultado,
+                        lucro_prejuizo: s.lucro_real || 0
+                      }]
+                    : s.pernas?.map(p => ({
+                        bookmaker_nome: p.bookmaker_nome,
+                        stake: p.stake,
+                        odd: p.odd,
+                        resultado: p.resultado,
+                        lucro_prejuizo: getLucroPerna(p)
+                      }))
+                };
+              })} 
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
               showCasasCard={false}
@@ -694,19 +706,31 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           {/* Coluna direita: Casas Mais Utilizadas */}
           <div className="lg:col-span-1">
             <VisaoGeralCharts 
-              apostas={surebets.map(s => ({
-                data_aposta: s.data_operacao,
-                lucro_prejuizo: s.lucro_real,
-                stake: s.stake_total,
-                bookmaker_nome: s.pernas?.[0]?.bookmaker_nome || "—",
-                pernas: s.pernas?.map(p => ({
-                  bookmaker_nome: p.bookmaker_nome,
-                  stake: p.stake,
-                  odd: p.odd,
-                  resultado: p.resultado,
-                  lucro_prejuizo: getLucroPerna(p)
-                }))
-              }))} 
+              apostas={surebets.map(s => {
+                const isSimples = s.forma_registro === "SIMPLES" || !s.pernas?.length;
+                return {
+                  data_aposta: s.data_operacao,
+                  lucro_prejuizo: s.lucro_real,
+                  stake: isSimples ? (s.stake || s.stake_total) : s.stake_total,
+                  bookmaker_nome: isSimples ? (s.bookmaker_nome || "—") : (s.pernas?.[0]?.bookmaker_nome || "—"),
+                  // Para apostas simples, criar uma "perna virtual" para o cálculo de casas
+                  pernas: isSimples 
+                    ? [{
+                        bookmaker_nome: s.bookmaker_nome || "—",
+                        stake: s.stake || s.stake_total,
+                        odd: s.odd,
+                        resultado: s.resultado,
+                        lucro_prejuizo: s.lucro_real || 0
+                      }]
+                    : s.pernas?.map(p => ({
+                        bookmaker_nome: p.bookmaker_nome,
+                        stake: p.stake,
+                        odd: p.odd,
+                        resultado: p.resultado,
+                        lucro_prejuizo: getLucroPerna(p)
+                      }))
+                };
+              })} 
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
               showEvolucaoChart={false}
