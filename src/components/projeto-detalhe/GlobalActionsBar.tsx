@@ -179,6 +179,8 @@ export function GlobalActionsBar({
     login_password_encrypted: b.login_password_encrypted,
     logo_url: b.bookmakers_catalogo?.logo_url,
     bookmaker_catalogo_id: b.bookmaker_catalogo_id,
+    saldo_atual: b.saldo_atual ?? 0,
+    moeda: b.moeda || "BRL",
   }));
 
   return (
