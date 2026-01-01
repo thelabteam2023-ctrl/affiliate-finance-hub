@@ -158,13 +158,21 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonu
           </div>
           <div className="text-right">
             <p className="text-xs text-muted-foreground">Stake: {formatValue(surebet.stake_total)}</p>
-            {lucroExibir !== null && lucroExibir !== undefined && (
+          {lucroExibir !== null && lucroExibir !== undefined && (
               <div className="flex items-center gap-2 justify-end">
-                <span className={cn("text-sm font-medium", lucroExibir >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                <span className={cn(
+                  "text-sm font-medium",
+                  lucroExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
+                  !isLiquidada && 'opacity-30'
+                )}>
                   {formatValue(lucroExibir)}
                 </span>
                 {roiExibir !== null && roiExibir !== undefined && (
-                  <span className={cn("text-xs", roiExibir >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                  <span className={cn(
+                    "text-xs",
+                    roiExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
+                    !isLiquidada && 'opacity-30'
+                  )}>
                     ({roiExibir >= 0 ? '+' : ''}{roiExibir.toFixed(1)}%)
                   </span>
                 )}
