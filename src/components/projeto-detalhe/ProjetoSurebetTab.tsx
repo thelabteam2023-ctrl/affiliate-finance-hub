@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 import { SurebetDialog } from "./SurebetDialog";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { ApostaDialog } from "./ApostaDialog";
@@ -47,6 +48,8 @@ import { cn, getFirstLastName } from "@/lib/utils";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
+import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 
 interface ProjetoSurebetTabProps {
   projetoId: string;
@@ -166,6 +169,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   // Estados para ApostaDialog (apostas simples no contexto Surebet)
   const [apostaDialogOpen, setApostaDialogOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<any>(null);
+  
+  // Hook para invalidar cache de saldos
+  const invalidateSaldos = useInvalidateBookmakerSaldos();
 
   // Hook de formatação de moeda do projeto
   const { formatCurrency: projectFormatCurrency, moedaConsolidacao, getSymbol } = useProjetoCurrency(projetoId);
@@ -404,6 +410,71 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     fetchSurebets();
     onDataChange?.();
   };
+
+  // Resolução rápida de apostas simples - atualiza saldo da bookmaker
+  const handleQuickResolve = useCallback(async (apostaId: string, resultado: string) => {
+    try {
+      const operacao = surebets.find(s => s.id === apostaId);
+      if (!operacao) return;
+
+      // Só permitir para apostas simples (forma_registro = 'SIMPLES')
+      if (operacao.forma_registro !== "SIMPLES") return;
+
+      const stake = operacao.stake || operacao.stake_total || 0;
+      const odd = operacao.odd || 1;
+      
+      // Calcular lucro usando função canônica
+      const lucro = calcularImpactoResultado(stake, odd, resultado);
+
+      // 1. Calcular delta financeiro (PENDENTE → novo resultado)
+      const delta = calcularImpactoResultado(stake, odd, resultado);
+
+      // 2. Atualizar saldo da bookmaker via helper canônico
+      if (operacao.bookmaker_id && delta !== 0) {
+        const balanceUpdated = await updateBookmakerBalance(operacao.bookmaker_id, delta);
+        if (!balanceUpdated) {
+          toast.error("Erro ao atualizar saldo da bookmaker. Liquidação cancelada.");
+          return;
+        }
+      }
+
+      // 3. Atualizar aposta no banco
+      const { error } = await supabase
+        .from("apostas_unificada")
+        .update({
+          resultado,
+          lucro_prejuizo: lucro,
+          status: "LIQUIDADA",
+        })
+        .eq("id", apostaId);
+
+      if (error) throw error;
+
+      // 4. Atualizar estado local
+      setSurebets(prev => prev.map(s => 
+        s.id === apostaId 
+          ? { ...s, resultado, lucro_real: lucro, status: "LIQUIDADA" }
+          : s
+      ));
+
+      // 5. Invalidar cache de saldos
+      invalidateSaldos(projetoId);
+
+      const resultLabel = {
+        GREEN: "Green",
+        RED: "Red",
+        MEIO_GREEN: "½ Green",
+        MEIO_RED: "½ Red",
+        VOID: "Void"
+      }[resultado] || resultado;
+
+      toast.success(`Aposta marcada como ${resultLabel}`);
+      onDataChange?.();
+    } catch (error: any) {
+      console.error("Erro ao atualizar aposta:", error);
+      toast.error("Erro ao atualizar resultado");
+    }
+  }, [surebets, onDataChange, projetoId, invalidateSaldos]);
 
   // Usa a formatação do projeto (moeda de consolidação)
   const formatCurrency = projectFormatCurrency;
@@ -866,6 +937,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                       setSelectedAposta(apostaParaDialog);
                       setApostaDialogOpen(true);
                     }}
+                    onQuickResolve={handleQuickResolve}
                     formatCurrency={formatCurrency}
                   />
                 );
