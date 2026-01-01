@@ -125,20 +125,17 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency }: Sure
         
         {/* Detalhamento: Pernas */}
         {surebet.pernas && surebet.pernas.length > 0 && (
-          <div className="space-y-1 mb-2">
+          <div className="space-y-1.5 mb-2">
             {surebet.pernas.map((perna) => (
-              <div key={perna.id} className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground truncate flex-1 uppercase text-xs">
-                  <span className="text-primary font-semibold">{perna.selecao}</span>
-                  {" "}
+              <div key={perna.id} className="flex items-center gap-2 text-xs">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-primary/30 text-primary bg-primary/10">
+                  {perna.selecao}
+                </Badge>
+                <span className="text-muted-foreground truncate flex-1 uppercase">
                   {perna.bookmaker_nome}
                 </span>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-xs">@{perna.odd.toFixed(2)}</span>
-                  {perna.resultado && (
-                    <ResultadoBadge resultado={perna.resultado} />
-                  )}
-                </div>
+                <span className="font-medium shrink-0">@{perna.odd.toFixed(2)}</span>
+                <span className="text-muted-foreground shrink-0">• {formatValue(perna.stake)}</span>
               </div>
             ))}
           </div>
