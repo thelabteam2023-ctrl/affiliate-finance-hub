@@ -248,13 +248,8 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
 
   const fetchApostas = async () => {
     try {
-      // If no bookmakers in bonus mode, no apostas to show
-      if (bookmakersInBonusMode.length === 0) {
-        setApostas([]);
-        return;
-      }
-
-      const { data, error } = await supabase
+      // Build filter: apostas with bonus context, strategy, or bookmaker in bonus mode
+      let query = supabase
         .from("apostas_unificada")
         .select(`
           *,
@@ -267,9 +262,17 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           )
         `)
         .eq("projeto_id", projetoId)
-        .eq("forma_registro", "SIMPLES")
-        .or(`bookmaker_id.in.(${bookmakersInBonusMode.join(',')}),is_bonus_bet.eq.true,contexto_operacional.eq.BONUS`)
-        .order("data_aposta", { ascending: false });
+        .eq("forma_registro", "SIMPLES");
+      
+      // Apply OR filter based on available bookmakers in bonus mode
+      if (bookmakersInBonusMode.length > 0) {
+        query = query.or(`bookmaker_id.in.(${bookmakersInBonusMode.join(',')}),is_bonus_bet.eq.true,contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
+      } else {
+        // No bookmakers in bonus mode, only fetch by context/strategy
+        query = query.or(`is_bonus_bet.eq.true,contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
+      }
+      
+      const { data, error } = await query.order("data_aposta", { ascending: false });
 
       if (error) throw error;
       
@@ -288,13 +291,8 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
 
   const fetchApostasMultiplas = async () => {
     try {
-      // If no bookmakers in bonus mode, no apostas to show
-      if (bookmakersInBonusMode.length === 0) {
-        setApostasMultiplas([]);
-        return;
-      }
-
-      const { data, error } = await supabase
+      // Build filter for multiple bets with bonus context
+      let query = supabase
         .from("apostas_unificada")
         .select(`
           *,
@@ -307,9 +305,16 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           )
         `)
         .eq("projeto_id", projetoId)
-        .eq("forma_registro", "MULTIPLA")
-        .or(`bookmaker_id.in.(${bookmakersInBonusMode.join(',')}),is_bonus_bet.eq.true,contexto_operacional.eq.BONUS`)
-        .order("data_aposta", { ascending: false });
+        .eq("forma_registro", "MULTIPLA");
+      
+      // Apply OR filter based on available bookmakers in bonus mode
+      if (bookmakersInBonusMode.length > 0) {
+        query = query.or(`bookmaker_id.in.(${bookmakersInBonusMode.join(',')}),is_bonus_bet.eq.true,contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
+      } else {
+        query = query.or(`is_bonus_bet.eq.true,contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
+      }
+      
+      const { data, error } = await query.order("data_aposta", { ascending: false });
 
       if (error) throw error;
       
@@ -324,23 +329,19 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
 
   const fetchSurebets = async () => {
     try {
-      // If no bookmakers in bonus mode, no surebets to show
-      if (bookmakersInBonusMode.length === 0) {
-        setSurebets([]);
-        return;
-      }
-
-      // Fetch surebets from apostas_unificada with estrategia SUREBET
+      // Fetch arbitragem operations (surebets) related to bonus context
+      // Include: estrategia EXTRACAO_BONUS, contexto_operacional BONUS, or pernas with bonus bookmakers
       const { data: surebetsData, error } = await supabase
         .from("apostas_unificada")
         .select("*")
         .eq("projeto_id", projetoId)
-        .eq("estrategia", "SUREBET")
+        .eq("forma_registro", "ARBITRAGEM")
+        .or(`estrategia.eq.EXTRACAO_BONUS,contexto_operacional.eq.BONUS`)
         .order("data_aposta", { ascending: false });
 
       if (error) throw error;
       
-      // Parse pernas from JSON and filter by bonus bookmakers
+      // Parse pernas from JSON
       const surebetsComPernas = (surebetsData || []).map((surebet: any) => {
         const pernas = Array.isArray(surebet.pernas) ? surebet.pernas : [];
         return {
@@ -359,16 +360,63 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           resultado: surebet.resultado,
           data_operacao: surebet.data_aposta,
           observacoes: surebet.observacoes,
+          estrategia: surebet.estrategia,
+          contexto_operacional: surebet.contexto_operacional,
           pernas: pernas
         };
       });
       
-      // Filter surebets that have at least one perna with a bookmaker in bonus mode
-      const surebetsFiltradas = surebetsComPernas.filter((sb: any) => 
-        sb.pernas?.some((p: any) => bookmakersInBonusMode.includes(p.bookmaker_id))
+      // Also include surebets with SUREBET strategy if they have pernas with bonus bookmakers
+      if (bookmakersInBonusMode.length > 0) {
+        const { data: surebetsWithBonusBk, error: error2 } = await supabase
+          .from("apostas_unificada")
+          .select("*")
+          .eq("projeto_id", projetoId)
+          .eq("forma_registro", "ARBITRAGEM")
+          .eq("estrategia", "SUREBET")
+          .order("data_aposta", { ascending: false });
+          
+        if (!error2 && surebetsWithBonusBk) {
+          const additionalSurebets = surebetsWithBonusBk
+            .filter((surebet: any) => {
+              const pernas = Array.isArray(surebet.pernas) ? surebet.pernas : [];
+              return pernas.some((p: any) => bookmakersInBonusMode.includes(p.bookmaker_id));
+            })
+            .filter((sb: any) => !surebetsComPernas.some((existing: any) => existing.id === sb.id))
+            .map((surebet: any) => {
+              const pernas = Array.isArray(surebet.pernas) ? surebet.pernas : [];
+              return {
+                id: surebet.id,
+                evento: surebet.evento || '',
+                esporte: surebet.esporte || '',
+                modelo: surebet.modelo || 'BACK_LAY',
+                mercado: surebet.mercado,
+                stake_total: surebet.stake_total || 0,
+                spread_calculado: surebet.spread_calculado,
+                roi_esperado: surebet.roi_esperado,
+                roi_real: surebet.roi_real,
+                lucro_esperado: surebet.lucro_esperado,
+                lucro_real: surebet.lucro_prejuizo,
+                status: surebet.status,
+                resultado: surebet.resultado,
+                data_operacao: surebet.data_aposta,
+                observacoes: surebet.observacoes,
+                estrategia: surebet.estrategia,
+                contexto_operacional: surebet.contexto_operacional,
+                pernas: pernas
+              };
+            });
+          
+          surebetsComPernas.push(...additionalSurebets);
+        }
+      }
+      
+      // Sort by date descending
+      surebetsComPernas.sort((a: any, b: any) => 
+        new Date(b.data_operacao).getTime() - new Date(a.data_operacao).getTime()
       );
       
-      setSurebets(surebetsFiltradas);
+      setSurebets(surebetsComPernas);
     } catch (error: any) {
       console.error("Erro ao carregar surebets:", error.message);
     }
