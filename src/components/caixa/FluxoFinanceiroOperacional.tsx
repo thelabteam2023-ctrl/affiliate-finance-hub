@@ -10,6 +10,7 @@ import { format, isWithinInterval, parseISO, subDays, startOfDay, endOfDay } fro
 import { ptBR } from "date-fns/locale";
 import { TrendingUp, TrendingDown, ArrowRightLeft, AlertCircle, Building2, Users, HelpCircle, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCotacoes } from "@/hooks/useCotacoes";
 
 interface Transacao {
   id: string;
@@ -80,6 +81,9 @@ export function FluxoFinanceiroOperacional({
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>(subDays(new Date(), 30));
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>(new Date());
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
+  
+  // Buscar cotação USD/BRL para normalizar as barras do gráfico
+  const { cotacaoUSD } = useCotacoes();
 
   // Handler para mudar período
   const handlePeriodoChange = (newPeriodo: Periodo) => {
@@ -181,8 +185,11 @@ export function FluxoFinanceiroOperacional({
         periodo: chave,
         aportes: dados.aportes_brl,
         aportes_usd: dados.aportes_usd,
+        // Valores normalizados em BRL para altura das barras (USD * cotação)
+        aportes_usd_normalizado: dados.aportes_usd * cotacaoUSD,
         liquidacoes: -dados.liquidacoes_brl,
         liquidacoes_usd: -dados.liquidacoes_usd,
+        liquidacoes_usd_normalizado: -dados.liquidacoes_usd * cotacaoUSD,
         liquido: dados.aportes_brl - dados.liquidacoes_brl,
         liquido_usd: dados.aportes_usd - dados.liquidacoes_usd,
         transacoes: dados.transacoes,
@@ -204,7 +211,7 @@ export function FluxoFinanceiroOperacional({
       liquidoUSD: totalAportesUSD - totalLiquidacoesUSD,
       hasUSD: totalAportesUSD > 0 || totalLiquidacoesUSD > 0
     };
-  }, [transacoesFiltradas, periodo]);
+  }, [transacoesFiltradas, periodo, cotacaoUSD]);
 
   // 2. Capital Alocado em Operação (Bookmakers)
   // REGRA: CRYPTO = USD, FIAT = BRL, nunca misturar
@@ -268,8 +275,11 @@ export function FluxoFinanceiroOperacional({
         periodo: chave,
         depositos: dados.depositos_brl,
         depositos_usd: dados.depositos_usd,
+        // Valores normalizados em BRL para altura das barras (USD * cotação)
+        depositos_usd_normalizado: dados.depositos_usd * cotacaoUSD,
         saques: dados.saques_brl,
         saques_usd: dados.saques_usd,
+        saques_usd_normalizado: dados.saques_usd * cotacaoUSD,
         alocacaoLiquida: dados.depositos_brl - dados.saques_brl,
         alocacaoLiquidaUSD: dados.depositos_usd - dados.saques_usd,
         transacoes: dados.transacoes,
@@ -291,7 +301,7 @@ export function FluxoFinanceiroOperacional({
       alocacaoLiquidaUSD: totalDepositosUSD - totalSaquesUSD,
       hasUSD: totalDepositosUSD > 0 || totalSaquesUSD > 0
     };
-  }, [transacoesFiltradas, periodo]);
+  }, [transacoesFiltradas, periodo, cotacaoUSD]);
 
   const formatCurrency = (value: number, currency: "BRL" | "USD" = "BRL") => {
     return new Intl.NumberFormat("pt-BR", {
@@ -536,7 +546,8 @@ export function FluxoFinanceiroOperacional({
                     gradientEnd: "#16A34A" 
                   },
                   { 
-                    dataKey: "aportes_usd", 
+                    // Usa valor normalizado para altura da barra
+                    dataKey: "aportes_usd_normalizado", 
                     label: "Aportes USD", 
                     gradientStart: "#06B6D4", 
                     gradientEnd: "#0891B2" 
@@ -548,7 +559,8 @@ export function FluxoFinanceiroOperacional({
                     gradientEnd: "#EA580C" 
                   },
                   { 
-                    dataKey: "liquidacoes_usd", 
+                    // Usa valor normalizado para altura da barra
+                    dataKey: "liquidacoes_usd_normalizado", 
                     label: "Liquidações USD", 
                     gradientStart: "#EC4899", 
                     gradientEnd: "#DB2777" 
@@ -560,8 +572,13 @@ export function FluxoFinanceiroOperacional({
                 formatLabel={(value, ctx) => {
                   if (value === 0) return '';
                   const isUSD = ctx?.dataKey?.toString().includes('_usd');
-                  const prefix = isUSD ? 'US$ ' : 'R$ ';
-                  return prefix + Math.abs(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                  if (isUSD) {
+                    // Para USD, mostrar o valor original (não normalizado) no label
+                    const originalKey = ctx?.dataKey?.toString().replace('_normalizado', '');
+                    const originalValue = ctx?.payload?.[originalKey] || 0;
+                    return 'US$ ' + Math.abs(originalValue).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                  }
+                  return 'R$ ' + Math.abs(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
                 }}
                 customTooltipContent={(payload, label) => {
                   const data = payload[0]?.payload;
@@ -615,7 +632,7 @@ export function FluxoFinanceiroOperacional({
             )}
 
             <p className="text-xs text-muted-foreground text-center">
-              Quanto capital novo entrou (aportes) vs quanto foi devolvido (liquidações) aos investidores. BRL e USD são exibidos separadamente.
+              Quanto capital novo entrou (aportes) vs quanto foi devolvido (liquidações). Barras USD são proporcionais ao valor em BRL.
             </p>
           </TabsContent>
 
@@ -672,7 +689,8 @@ export function FluxoFinanceiroOperacional({
                     gradientEnd: "#2563EB" 
                   },
                   { 
-                    dataKey: "depositos_usd", 
+                    // Usa valor normalizado para altura da barra
+                    dataKey: "depositos_usd_normalizado", 
                     label: "Depósitos USD", 
                     gradientStart: "#06B6D4", 
                     gradientEnd: "#0891B2" 
@@ -684,7 +702,8 @@ export function FluxoFinanceiroOperacional({
                     gradientEnd: "#7C3AED" 
                   },
                   { 
-                    dataKey: "saques_usd", 
+                    // Usa valor normalizado para altura da barra
+                    dataKey: "saques_usd_normalizado", 
                     label: "Saques USD", 
                     gradientStart: "#EC4899", 
                     gradientEnd: "#DB2777" 
@@ -696,8 +715,13 @@ export function FluxoFinanceiroOperacional({
                 formatLabel={(value, ctx) => {
                   if (value === 0) return '';
                   const isUSD = ctx?.dataKey?.toString().includes('_usd');
-                  const prefix = isUSD ? 'US$ ' : 'R$ ';
-                  return prefix + Math.abs(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                  if (isUSD) {
+                    // Para USD, mostrar o valor original (não normalizado) no label
+                    const originalKey = ctx?.dataKey?.toString().replace('_normalizado', '');
+                    const originalValue = ctx?.payload?.[originalKey] || 0;
+                    return 'US$ ' + Math.abs(originalValue).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                  }
+                  return 'R$ ' + Math.abs(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
                 }}
                 customTooltipContent={(payload, label) => {
                   const data = payload[0]?.payload;
@@ -751,7 +775,7 @@ export function FluxoFinanceiroOperacional({
             )}
 
             <p className="text-xs text-muted-foreground text-center">
-              Fluxo financeiro efetivo. BRL e USD (Crypto) são exibidos separadamente, nunca somados.
+              Fluxo financeiro efetivo. Barras USD são proporcionais ao valor equivalente em BRL para comparação visual correta.
             </p>
           </TabsContent>
         </Tabs>
