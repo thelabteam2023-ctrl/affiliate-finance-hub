@@ -34,7 +34,7 @@ export function useProjetoConsolidacao({ projetoId }: UseProjetoConsolidacaoProp
   const queryClient = useQueryClient();
   const { cotacaoUSD, loading: loadingCotacao, source } = useCotacoes();
 
-  // Buscar configuração do projeto
+  // Buscar configuração do projeto - SEM FALLBACKS LOCAIS
   const { data: config, isLoading } = useQuery({
     queryKey: ["projeto-consolidacao", projetoId],
     queryFn: async (): Promise<ProjetoConsolidacaoData> => {
@@ -48,32 +48,51 @@ export function useProjetoConsolidacao({ projetoId }: UseProjetoConsolidacaoProp
 
       if (error) throw error;
       
-      return {
-        moeda_consolidacao: (data.moeda_consolidacao as MoedaConsolidacao) || "USD",
+      // CRÍTICO: Usar o valor EXATO do banco, sem fallback
+      // O default do banco é 'USD', então se vier null significa problema de schema
+      const result = {
+        moeda_consolidacao: data.moeda_consolidacao as MoedaConsolidacao,
         cotacao_trabalho: data.cotacao_trabalho,
-        fonte_cotacao: (data.fonte_cotacao as FonteCotacao) || "TRABALHO",
+        fonte_cotacao: data.fonte_cotacao as FonteCotacao,
       };
+      
+      console.log("[useProjetoConsolidacao] Config carregada do banco:", result);
+      return result;
     },
     enabled: !!projetoId,
+    staleTime: 0, // Sempre buscar dados frescos após invalidação
   });
 
-  // Mutation para atualizar configuração
+  // Mutation para atualizar configuração - COM LOGS E INVALIDAÇÃO COMPLETA
   const updateConfigMutation = useMutation({
     mutationFn: async (newConfig: Partial<ProjetoConsolidationConfig>) => {
       if (!projetoId) throw new Error("projetoId é obrigatório");
       
-      const { error } = await supabase
+      console.log("[useProjetoConsolidacao] Salvando config:", newConfig);
+      
+      const { data, error } = await supabase
         .from("projetos")
         .update(newConfig)
-        .eq("id", projetoId);
+        .eq("id", projetoId)
+        .select("moeda_consolidacao, cotacao_trabalho, fonte_cotacao")
+        .single();
 
       if (error) throw error;
+      
+      console.log("[useProjetoConsolidacao] Config salva, retorno do banco:", data);
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Invalidar TODAS as queries relacionadas à moeda do projeto
       queryClient.invalidateQueries({ queryKey: ["projeto-consolidacao", projetoId] });
-      toast.success("Configuração de moeda atualizada");
+      queryClient.invalidateQueries({ queryKey: ["projeto-currency-config", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto", projetoId] });
+      
+      console.log("[useProjetoConsolidacao] Cache invalidado, novo valor:", data?.moeda_consolidacao);
+      toast.success(`Moeda de consolidação alterada para ${data?.moeda_consolidacao}`);
     },
     onError: (error) => {
+      console.error("[useProjetoConsolidacao] Erro ao salvar:", error);
       toast.error("Erro ao atualizar configuração: " + error.message);
     },
   });
@@ -98,7 +117,8 @@ export function useProjetoConsolidacao({ projetoId }: UseProjetoConsolidacaoProp
     valor: number,
     moedaOrigem: string
   ): { valorConsolidado: number; cotacaoUsada: number } => {
-    const moedaConsolidacao = config?.moeda_consolidacao || "USD";
+    // CRÍTICO: Usar moeda do config, fallback apenas se config não existir
+    const moedaConsolidacao = config?.moeda_consolidacao ?? "BRL";
     const cotacao = getCotacaoAtual();
 
     // Sem conversão necessária
@@ -150,8 +170,9 @@ export function useProjetoConsolidacao({ projetoId }: UseProjetoConsolidacaoProp
   ): MultiCurrencyConsolidation => {
     const moedas = pernas.map(p => p.moeda);
     const isMulti = isMultiCurrency(moedas);
-    const moedaConsolidacao = config?.moeda_consolidacao || "USD";
-    const fonteCotacao = config?.fonte_cotacao || "TRABALHO";
+    // CRÍTICO: Usar moeda do config sem fallback hardcoded
+    const moedaConsolidacao = config?.moeda_consolidacao ?? "BRL";
+    const fonteCotacao = config?.fonte_cotacao ?? "TRABALHO";
     const cotacao = getCotacaoAtual();
 
     if (!isMulti) {
@@ -195,7 +216,7 @@ export function useProjetoConsolidacao({ projetoId }: UseProjetoConsolidacaoProp
 
   // Gerar informações de exibição para transparência
   const getConversionDisplayInfo = useCallback((moedaOrigem: string): ConversionDisplayInfo | null => {
-    const moedaConsolidacao = config?.moeda_consolidacao || "USD";
+    const moedaConsolidacao = config?.moeda_consolidacao ?? "BRL";
     
     if (moedaOrigem === moedaConsolidacao) {
       return null; // Sem conversão necessária
@@ -215,11 +236,11 @@ export function useProjetoConsolidacao({ projetoId }: UseProjetoConsolidacaoProp
   }, [config, getCotacaoAtual, getDeltaCambial, cotacaoUSD]);
 
   return {
-    // Configuração
+    // Configuração - RESPEITAR VALOR DO BANCO
     config,
     isLoading: isLoading || loadingCotacao,
-    moedaConsolidacao: config?.moeda_consolidacao || "USD",
-    fonteCotacao: config?.fonte_cotacao || "TRABALHO",
+    moedaConsolidacao: config?.moeda_consolidacao ?? "BRL",
+    fonteCotacao: config?.fonte_cotacao ?? "TRABALHO",
     cotacaoTrabalho: config?.cotacao_trabalho,
     
     // Cotação

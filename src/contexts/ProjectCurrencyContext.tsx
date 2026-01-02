@@ -57,7 +57,7 @@ interface ProjectCurrencyProviderProps {
 export function ProjectCurrencyProvider({ projetoId, children }: ProjectCurrencyProviderProps) {
   const { cotacaoUSD, loading: loadingCotacao } = useCotacoes();
 
-  // Buscar configuração do projeto
+  // Buscar configuração do projeto - SINCRONIZADO COM OUTROS HOOKS
   const { data: projetoConfig, isLoading: loadingConfig } = useQuery({
     queryKey: ["projeto-currency-config", projetoId],
     queryFn: async () => {
@@ -70,20 +70,26 @@ export function ProjectCurrencyProvider({ projetoId, children }: ProjectCurrency
         .single();
 
       if (error) throw error;
+      console.log("[ProjectCurrencyContext] Config carregada:", data);
       return data;
     },
     enabled: !!projetoId,
+    staleTime: 0, // Sempre buscar dados frescos
   });
 
   const config: ProjectCurrencyConfig = useMemo(() => {
-    const moedaConsolidacao = (projetoConfig?.moeda_consolidacao as MoedaConsolidacao) || "USD";
-    const fonteCotacao = (projetoConfig?.fonte_cotacao as FonteCotacao) || "TRABALHO";
+    // CRÍTICO: Usar valor do banco SEM fallback hardcoded para USD
+    // O banco tem default 'USD', então se vier do banco, RESPEITAR
+    const moedaConsolidacao = (projetoConfig?.moeda_consolidacao as MoedaConsolidacao) ?? "BRL";
+    const fonteCotacao = (projetoConfig?.fonte_cotacao as FonteCotacao) ?? "TRABALHO";
     const cotacaoTrabalho = projetoConfig?.cotacao_trabalho || null;
     
     // Cotação atual baseada na fonte configurada
     const cotacaoAtual = fonteCotacao === "TRABALHO" && cotacaoTrabalho 
       ? cotacaoTrabalho 
       : cotacaoUSD;
+
+    console.log("[ProjectCurrencyContext] Config processada:", { moedaConsolidacao, fonteCotacao });
 
     return {
       moedaConsolidacao,
