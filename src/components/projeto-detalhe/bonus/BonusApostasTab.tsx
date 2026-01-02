@@ -161,6 +161,8 @@ interface Surebet {
     odd: number;
     stake: number;
     resultado: string | null;
+    moeda?: string;
+    bookmaker_nome?: string;
     bookmaker?: {
       nome: string;
       parceiro?: { nome: string };
@@ -544,7 +546,9 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
   
   const formatCurrencyWithMoeda = (value: number, moeda: string = 'BRL') => {
     const symbols: Record<string, string> = { BRL: 'R$', USD: '$', EUR: '€', GBP: '£' };
-    return `${symbols[moeda] || moeda} ${value.toFixed(2)}`;
+    const symbol = symbols[moeda] || moeda;
+    const formatted = value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `${symbol} ${formatted}`;
   };
 
   const parseLocalDateTime = (dateString: string): Date => {
@@ -588,24 +592,33 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
         if (item.tipo === "surebet") {
           const sb = item.data as Surebet;
           
+          // Detectar moeda a partir das pernas (primeira perna define a moeda do card)
+          const pernas = sb.pernas || [];
+          const moedaSurebet = (pernas[0] as any)?.moeda || 'BRL';
+          
           // Converter para formato SurebetData compatível com SurebetCard
           const surebetData: SurebetData = {
             ...sb,
-            pernas: sb.pernas?.map((p) => ({
+            pernas: pernas.map((p: any) => ({
               id: p.id,
               selecao: p.selecao,
               odd: p.odd,
               stake: p.stake,
               resultado: p.resultado,
-              bookmaker_nome: (p as any).bookmaker_nome || p.bookmaker?.nome || "—",
+              bookmaker_nome: p.bookmaker_nome || p.bookmaker?.nome || "—",
+              bookmaker_id: p.bookmaker_id,
             })),
           };
+          
+          // Criar formatador baseado na moeda das pernas
+          const formatSurebetCurrency = (value: number) => formatCurrencyWithMoeda(value, moedaSurebet);
           
           return (
             <SurebetCard
               key={sb.id}
               surebet={surebetData}
               isBonusContext={true}
+              formatCurrency={formatSurebetCurrency}
               onEdit={(surebet) => {
                 setSelectedSurebet(surebet);
                 setDialogSurebetOpen(true);
