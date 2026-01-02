@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Loader2, Gift, Building2, Sparkles, Check, Info, AlertTriangle } from "lucide-react";
+import { Loader2, Gift, Building2, Sparkles, Check, Info, AlertTriangle, Clock } from "lucide-react";
 import { BonusFormData, BonusStatus, ProjectBonus } from "@/hooks/useProjectBonuses";
 import { useBookmakerBonusTemplates, BonusTemplate, calculateRolloverTarget } from "@/hooks/useBookmakerBonusTemplates";
 import { format, addDays } from "date-fns";
@@ -147,13 +147,14 @@ export function BonusDialog({
         setFilledFromTemplate(bonus.source === "template");
         setSelectedTemplateId(null);
       } else {
-        // Create mode - default to pending to avoid accidental rollover tracking
+        // Create mode - default to credited (most bookmakers credit immediately)
+        // but show confirmation dialog to make user aware
         setBookmakerId(preselectedBookmakerId || "");
         setTitle("");
         setAmount("");
         setCurrency("BRL");
-        setStatus("pending");
-        setCreditedAt("");
+        setStatus("credited");
+        setCreditedAt(format(new Date(), "yyyy-MM-dd"));
         setExpiresAt("");
         
         setRolloverMultiplier("");
@@ -165,7 +166,8 @@ export function BonusDialog({
         setSelectedTemplateId(null);
         setTemplatePercent(null);
         setTemplateMaxValue(null);
-        setShowCreditConfirmation(false);
+        // Show confirmation dialog after a short delay to let the form render
+        setTimeout(() => setShowCreditConfirmation(true), 300);
       }
     }
   }, [open, bonus, preselectedBookmakerId]);
@@ -763,29 +765,45 @@ export function BonusDialog({
         </DialogFooter>
       </DialogContent>
       
-      {/* Confirmation dialog for changing to credited status */}
+      {/* Confirmation dialog shown when creating a new bonus */}
       <AlertDialog open={showCreditConfirmation} onOpenChange={setShowCreditConfirmation}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-400" />
-              Confirmar crédito do bônus
+              <Gift className="h-5 w-5 text-primary" />
+              O bônus já foi creditado?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-left space-y-3">
               <p>
-                Você tem certeza que o bônus <strong>já foi creditado</strong> na sua conta da casa de apostas?
+                A maioria das casas credita o bônus automaticamente ao depositar. 
+                Confirme se o valor <strong>já está disponível</strong> na sua conta.
               </p>
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-sm">
-                <p className="font-medium text-amber-400 mb-1">Importante:</p>
-                <p className="text-muted-foreground">
-                  Ao confirmar, o <strong>rollover começará a ser contado</strong> imediatamente. 
-                  Se o bônus ainda não foi creditado, deixe como "Pendente" e altere depois.
-                </p>
+              <div className="bg-muted/50 border rounded-lg p-3 text-sm space-y-2">
+                <div className="flex items-start gap-2">
+                  <Check className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <p className="text-muted-foreground">
+                    <strong className="text-foreground">Creditado:</strong> O rollover começa a contar imediatamente
+                  </p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Clock className="h-4 w-4 text-yellow-400 shrink-0 mt-0.5" />
+                  <p className="text-muted-foreground">
+                    <strong className="text-foreground">Pendente:</strong> Aguardando crédito pela casa (altere depois)
+                  </p>
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Manter como Pendente</AlertDialogCancel>
+          <AlertDialogFooter className="sm:space-x-2">
+            <AlertDialogCancel 
+              onClick={() => {
+                setStatus("pending");
+                setCreditedAt("");
+              }}
+              className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+            >
+              Ainda não foi creditado
+            </AlertDialogCancel>
             <AlertDialogAction 
               onClick={() => {
                 setStatus("credited");
@@ -794,7 +812,7 @@ export function BonusDialog({
               }}
               className="bg-emerald-600 hover:bg-emerald-700"
             >
-              Sim, foi creditado
+              Sim, já foi creditado
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
