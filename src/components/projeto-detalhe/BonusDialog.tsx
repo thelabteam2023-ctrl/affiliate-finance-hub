@@ -42,6 +42,7 @@ interface BookmakerOption {
   saldo_atual?: number;
   saldo_usd?: number;
   moeda?: string;
+  parceiro_nome?: string;
 }
 
 interface BonusDialogProps {
@@ -358,6 +359,9 @@ export function BonusDialog({
                           <span className="font-medium">{bk.nome}</span>
                         </div>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          {bk.parceiro_nome && (
+                            <span className="truncate max-w-[80px]">{bk.parceiro_nome}</span>
+                          )}
                           <span className="truncate max-w-[100px]">{bk.login_username}</span>
                           <span className="text-success font-medium whitespace-nowrap">
                             {currencySymbol}{" "}
