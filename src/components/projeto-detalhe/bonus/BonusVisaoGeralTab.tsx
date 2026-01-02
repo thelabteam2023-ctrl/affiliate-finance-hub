@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { useProjectBonuses, ProjectBonus } from "@/hooks/useProjectBonuses";
+import { useProjectBonuses, ProjectBonus, bonusQueryKeys } from "@/hooks/useProjectBonuses";
 import { useBonusContamination } from "@/hooks/useBonusContamination";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Building2, Coins, TrendingUp, AlertTriangle, Timer } from "lucide-react";
@@ -11,6 +11,7 @@ import { differenceInDays, parseISO, format, subDays } from "date-fns";
 import { BonusAnalyticsCard } from "./BonusAnalyticsCard";
 import { BonusContaminationAlert } from "./BonusContaminationAlert";
 import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useQuery } from "@tanstack/react-query";
 interface DateRangeResult {
   start: Date;
   end: Date;
@@ -39,8 +40,6 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
   const [bookmakersWithBonus, setBookmakersWithBonus] = useState<BookmakerWithBonus[]>([]);
   const [loading, setLoading] = useState(true);
-  const [betsData, setBetsData] = useState<any[]>([]);
-  const [betsLoading, setBetsLoading] = useState(true);
   // Note: deposit_amount from bonus records is now used as source of truth (not cash_ledger)
 
   const summary = getSummary();
@@ -66,46 +65,32 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   const expiring7Days = getExpiringSoon(7);
   const expiring15Days = getExpiringSoon(15);
 
-  // Fetch bets data for juice calculation
-  useEffect(() => {
-    const fetchBetsData = async () => {
-      if (!projetoId || bookmakersInBonusMode.length === 0) {
-        setBetsData([]);
-        setBetsLoading(false);
-        return;
+  // Fetch bets data for chart - using React Query for consistency
+  const { data: betsData = [], isLoading: betsLoading } = useQuery({
+    queryKey: ["bonus-bets", projetoId, bookmakersInBonusMode, dateRange?.start?.toISOString(), dateRange?.end?.toISOString()],
+    queryFn: async () => {
+      if (bookmakersInBonusMode.length === 0) return [];
+
+      const startDate = dateRange?.start?.toISOString() || subDays(new Date(), 30).toISOString();
+      
+      let query = supabase
+        .from("apostas_unificada")
+        .select("id, data_aposta, stake, lucro_prejuizo, pl_consolidado, bookmaker_id, is_bonus_bet, bonus_id")
+        .eq("projeto_id", projetoId)
+        .gte("data_aposta", startDate.split('T')[0])
+        .in("bookmaker_id", bookmakersInBonusMode);
+
+      if (dateRange?.end) {
+        query = query.lte("data_aposta", dateRange.end.toISOString());
       }
 
-      try {
-        setBetsLoading(true);
-        const startDate = dateRange?.start?.toISOString() || subDays(new Date(), 30).toISOString();
-        
-        // Fetch bets from bookmakers in bonus mode - using .in() filter properly
-        let query = supabase
-          .from("apostas_unificada")
-          .select("id, data_aposta, stake, lucro_prejuizo, pl_consolidado, bookmaker_id, is_bonus_bet, bonus_id")
-          .eq("projeto_id", projetoId)
-          .gte("data_aposta", startDate.split('T')[0])
-          .in("bookmaker_id", bookmakersInBonusMode);
-
-        if (dateRange?.end) {
-          query = query.lte("data_aposta", dateRange.end.toISOString());
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-        // Include all bets from bonus-mode bookmakers (settled or pending)
-        setBetsData(data || []);
-      } catch (error) {
-        console.error("Error fetching bets:", error);
-        setBetsData([]);
-      } finally {
-        setBetsLoading(false);
-      }
-    };
-
-    fetchBetsData();
-  }, [projetoId, bookmakersInBonusMode, dateRange]);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!projetoId && bookmakersInBonusMode.length > 0,
+    staleTime: 1000 * 30,
+  });
 
   // Note: Removed cash_ledger fetch - now using deposit_amount from bonus records
   // This ensures the chart shows only capital tied to bonus campaigns, not global bookmaker deposits

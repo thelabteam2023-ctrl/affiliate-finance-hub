@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus, FinalizeReason } from "@/hooks/useProjectBonuses";
+import { useQuery } from "@tanstack/react-query";
 import { VinculoBonusDrawer } from "../VinculoBonusDrawer";
 import { FinalizeBonusDialog } from "../FinalizeBonusDialog";
 import { 
@@ -64,9 +65,7 @@ interface BookmakerInBonusMode {
 }
 
 export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
-  const { bonuses, fetchBonuses, finalizeBonus, saving, getBookmakersWithActiveBonus, getRolloverPercentage } = useProjectBonuses({ projectId: projetoId });
-  const [bookmakers, setBookmakers] = useState<BookmakerInBonusMode[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { bonuses, finalizeBonus, saving, getBookmakersWithActiveBonus, getRolloverPercentage } = useProjectBonuses({ projectId: projetoId });
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   
@@ -80,19 +79,12 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
 
   const bookmakersInBonusMode = getBookmakersWithActiveBonus();
 
-  useEffect(() => {
-    fetchBookmakers();
-  }, [projetoId, bonuses]);
+  // Use React Query for fetching bookmakers - automatically refreshes when bonuses change
+  const { data: bookmakers = [], isLoading: loading } = useQuery({
+    queryKey: ["bonus-casas-bookmakers", projetoId, bookmakersInBonusMode.join(","), bonuses.length],
+    queryFn: async () => {
+      if (bookmakersInBonusMode.length === 0) return [];
 
-  const fetchBookmakers = async () => {
-    if (bookmakersInBonusMode.length === 0) {
-      setBookmakers([]);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
       const { data, error } = await supabase
         .from("bookmakers")
         .select(`
@@ -154,13 +146,11 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
       // Sort by bonus amount descending
       mapped.sort((a, b) => b.bonus_ativo - a.bonus_ativo);
       
-      setBookmakers(mapped);
-    } catch (error) {
-      console.error("Error fetching bookmakers:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return mapped;
+    },
+    enabled: !!projetoId,
+    staleTime: 1000 * 30,
+  });
 
   const handleOpenBonusDrawer = (bk: BookmakerInBonusMode) => {
     setSelectedBookmaker({
@@ -585,7 +575,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           bookmakerLogo={selectedBookmaker.logo}
           bookmakerCatalogoId={selectedBookmaker.bookmaker_catalogo_id}
           currency={selectedBookmaker.moeda}
-          onBonusChange={fetchBonuses}
+          onBonusChange={() => {}} // React Query handles automatic refresh
         />
       )}
 
