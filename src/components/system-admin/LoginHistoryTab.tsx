@@ -17,11 +17,16 @@ export function LoginHistoryTab() {
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'recent' | 'online_first'>('online_first');
   const { workspaces, fetchWorkspaces } = useSystemAdmin();
+  const { isUserOnline, onlineUserIds } = usePresence();
   const { loading, history, stats, inactiveUsers, fetchHistory, fetchStats, fetchInactiveUsers } = useLoginHistory({
     workspaceId: selectedWorkspaceId,
     limit: 100,
   });
-  const { isUserOnline, getUserOnlineInfo } = usePresence();
+
+  // Filtrar usuários inativos excluindo os que estão online agora
+  const filteredInactiveUsers = useMemo(() => {
+    return inactiveUsers.filter(user => !onlineUserIds.has(user.user_id));
+  }, [inactiveUsers, onlineUserIds]);
 
   // Sort history based on selected order
   // REGRA: Apenas sessões com session_status='active' podem ser online
@@ -273,7 +278,7 @@ export function LoginHistoryTab() {
         </Card>
 
         {/* Inactive Users Card - 1/3 width */}
-        <InactiveUsersCard users={inactiveUsers} loading={loading} />
+        <InactiveUsersCard users={filteredInactiveUsers} loading={loading} />
       </div>
     </div>
   );
