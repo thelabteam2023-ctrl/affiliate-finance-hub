@@ -102,14 +102,13 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         setBetsLoading(true);
         const startDate = dateRange?.start?.toISOString() || subDays(new Date(), 30).toISOString();
         
-        // Fetch bets from bookmakers in bonus mode or marked as bonus bets
+        // Fetch bets from bookmakers in bonus mode - using .in() filter properly
         let query = supabase
           .from("apostas_unificada")
-          .select("id, data_aposta, stake, lucro_prejuizo, bookmaker_id, is_bonus_bet")
+          .select("id, data_aposta, stake, lucro_prejuizo, bookmaker_id, is_bonus_bet, bonus_id")
           .eq("projeto_id", projetoId)
           .gte("data_aposta", startDate.split('T')[0])
-          .or(`is_bonus_bet.eq.true,bookmaker_id.in.(${bookmakersInBonusMode.join(',')})`)
-          .not("lucro_prejuizo", "is", null);
+          .in("bookmaker_id", bookmakersInBonusMode);
 
         if (dateRange?.end) {
           query = query.lte("data_aposta", dateRange.end.toISOString());
@@ -118,6 +117,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         const { data, error } = await query;
 
         if (error) throw error;
+        // Include all bets from bonus-mode bookmakers (settled or pending)
         setBetsData(data || []);
       } catch (error) {
         console.error("Error fetching bets:", error);
@@ -231,11 +231,14 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     // Group juice (P&L) by date from bets in bonus context
     const juiceByDate: Record<string, number> = {};
     betsData.forEach(bet => {
-      const dateKey = bet.data_aposta;
-      if (!juiceByDate[dateKey]) {
-        juiceByDate[dateKey] = 0;
+      // Normalize date format - data_aposta may be full timestamp or date string
+      const betDate = bet.data_aposta ? bet.data_aposta.split('T')[0].split(' ')[0] : null;
+      if (!betDate) return;
+      
+      if (!juiceByDate[betDate]) {
+        juiceByDate[betDate] = 0;
       }
-      juiceByDate[dateKey] += bet.lucro_prejuizo || 0;
+      juiceByDate[betDate] += bet.lucro_prejuizo || 0;
     });
 
     // Calculate cumulative adjusted balance
