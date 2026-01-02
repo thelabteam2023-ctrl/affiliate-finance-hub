@@ -10,9 +10,8 @@ import { useActionAccess } from "@/hooks/useModuleAccess";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
-import { CaixaRelatorios } from "@/components/caixa/CaixaRelatorios";
+import { CaixaTabsContainer } from "@/components/caixa/CaixaTabsContainer";
 import { SaldosParceirosSheet } from "@/components/caixa/SaldosParceirosSheet";
-import { FluxoFinanceiroOperacional } from "@/components/caixa/FluxoFinanceiroOperacional";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { subDays, startOfDay, endOfDay } from "date-fns";
@@ -551,18 +550,8 @@ export default function Caixa() {
             cotacaoUSD={cotacaoUSD}
           />
 
-          {/* Análise Financeira */}
-          <FluxoFinanceiroOperacional
-            transacoes={transacoes}
-            dataInicio={dataInicio}
-            dataFim={dataFim}
-            setDataInicio={setDataInicio}
-            setDataFim={setDataFim}
-            saldoBookmakers={saldoBookmakers}
-          />
-
-          {/* Relatórios Consolidados */}
-          <CaixaRelatorios
+          {/* Container com Abas */}
+          <CaixaTabsContainer
             transacoes={transacoes}
             parceiros={parceiros}
             contas={contas}
@@ -587,6 +576,8 @@ export default function Caixa() {
               setSaqueParaConfirmar(transacao);
               setConfirmSaqueDialogOpen(true);
             }}
+            saldoBookmakers={saldoBookmakers}
+            onRefresh={fetchData}
           />
         </div>
       </div>
