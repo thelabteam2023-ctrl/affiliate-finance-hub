@@ -8,6 +8,7 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { useProjectFavorites } from "@/hooks/useProjectFavorites";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
 import { useCentralAlertsCount } from "@/hooks/useCentralAlertsCount";
+import { useUserWorkspaces } from "@/hooks/useUserWorkspaces";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -24,6 +25,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { WorkspaceSwitcher } from "@/components/workspace/WorkspaceSwitcher";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { useWorkspace } from "@/hooks/useWorkspace";
@@ -128,9 +130,17 @@ export function AppSidebar() {
   const { canManageWorkspace } = useRole();
   const { favorites } = useFavorites();
   const { favorites: projectFavorites } = useProjectFavorites();
-  const { workspace } = useWorkspace();
+  const { workspace, workspaceId } = useWorkspace();
   const { canAccess } = useModuleAccess();
   const { count: alertsCount } = useCentralAlertsCount();
+  const { 
+    workspaces: userWorkspaces, 
+    pendingInvites, 
+    loading: workspacesLoading,
+    switching: workspaceSwitching,
+    switchWorkspace,
+    acceptInvite 
+  } = useUserWorkspaces();
   const currentPath = location.pathname;
   
   // State for project names
@@ -411,7 +421,7 @@ export function AppSidebar() {
     >
       <SidebarContent className="py-4">
         {/* Logo/Brand Section */}
-        <div className={`flex items-center gap-3 px-4 pb-6 ${isCollapsed ? 'justify-center' : ''}`}>
+        <div className={`flex items-center gap-3 px-4 pb-4 ${isCollapsed ? 'justify-center' : ''}`}>
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
             <Wallet className="h-4 w-4 text-white" />
           </div>
@@ -419,6 +429,22 @@ export function AppSidebar() {
             <span className="text-base font-bold tracking-tight">Labbet One</span>
           )}
         </div>
+
+        {/* Workspace Switcher */}
+        <div className={`px-2 pb-4 ${isCollapsed ? 'px-1' : ''}`}>
+          <WorkspaceSwitcher
+            workspaces={userWorkspaces}
+            pendingInvites={pendingInvites}
+            currentWorkspaceId={workspaceId}
+            onSwitch={switchWorkspace}
+            onAcceptInvite={acceptInvite}
+            isCollapsed={isCollapsed}
+            loading={workspacesLoading}
+            switching={workspaceSwitching}
+          />
+        </div>
+
+        <div className="mx-3 border-t border-border/50 mb-4" />
 
         {/* Favorites Section - Shows page favorites and project favorites */}
         {hasAnyFavorites && (
