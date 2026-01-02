@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useRole } from "@/hooks/useRole";
+import { useUserWorkspaces } from "@/hooks/useUserWorkspaces";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,10 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Users, Settings, UserPlus, Shield, DollarSign, Gamepad2, Eye, Check, X, Info, Mail } from "lucide-react";
+import { Loader2, Users, Settings, UserPlus, Shield, DollarSign, Gamepad2, Eye, Check, X, Info, Mail, Inbox } from "lucide-react";
 import { MemberList } from "@/components/workspace/MemberList";
 import { InviteMemberDialog } from "@/components/workspace/InviteMemberDialog";
 import { PendingInvitesList } from "@/components/workspace/PendingInvitesList";
+import { ReceivedInvitesList } from "@/components/workspace/ReceivedInvitesList";
 import { PlanUsageCard } from "@/components/workspace/PlanUsageCard";
 import { SubscriptionInfoCard } from "@/components/workspace/SubscriptionInfoCard";
 import { Database } from "@/integrations/supabase/types";
@@ -101,6 +103,7 @@ export default function Workspace() {
   const { workspace, workspaceId, refreshWorkspace } = useWorkspace();
   const { canManageWorkspace, isOwner, isSystemOwner } = useRole();
   const { toast } = useToast();
+  const { pendingInvites, loading: invitesLoading, acceptInvite, declineInvite, refresh: refreshInvites } = useUserWorkspaces();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -229,6 +232,27 @@ export default function Workspace() {
     );
   }
 
+  // Transform pendingInvites to the format expected by ReceivedInvitesList
+  const receivedInvites = pendingInvites.map(invite => ({
+    id: invite.id,
+    workspace_id: invite.workspace_id,
+    workspace_name: invite.workspace_name,
+    workspace_slug: '',
+    role: invite.role,
+    token: invite.token,
+    expires_at: invite.expires_at,
+  }));
+
+  const handleAcceptInvite = async (token: string) => {
+    await acceptInvite(token);
+    refreshInvites();
+  };
+
+  const handleDeclineInvite = async (inviteId: string) => {
+    await declineInvite(inviteId);
+    refreshInvites();
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
@@ -238,6 +262,34 @@ export default function Workspace() {
           Gerencie seu workspace e membros da equipe.
         </p>
       </div>
+
+      {/* Received Invites - Show for all users */}
+      {(receivedInvites.length > 0 || invitesLoading) && (
+        <Card className="border-orange-500/30 bg-orange-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Inbox className="h-5 w-5 text-orange-500" />
+              Convites Recebidos
+              {receivedInvites.length > 0 && (
+                <Badge variant="secondary" className="ml-2 bg-orange-500 text-white">
+                  {receivedInvites.length}
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription>
+              Você foi convidado para participar de outros workspaces.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ReceivedInvitesList
+              invites={receivedInvites}
+              onAccept={handleAcceptInvite}
+              onDecline={handleDeclineInvite}
+              loading={invitesLoading}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Plan Usage Card */}
       <div className="grid gap-6 md:grid-cols-2">
