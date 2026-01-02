@@ -7184,6 +7184,7 @@ export type Database = {
         Returns: {
           expires_at: string
           id: string
+          inviter_name: string
           role: string
           token: string
           workspace_id: string
