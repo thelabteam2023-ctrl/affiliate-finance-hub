@@ -379,8 +379,6 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                   <TableHead>Bookmaker</TableHead>
                   <TableHead>Parceiro</TableHead>
                   <TableHead className="text-right">Saldo Operável</TableHead>
-                  <TableHead className="text-right">Saldo Real</TableHead>
-                  <TableHead className="text-right">Bônus Ativo</TableHead>
                   <TableHead className="text-center">Expiração</TableHead>
                   <TableHead className="text-center">Ativos</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -494,14 +492,6 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                               </Tooltip>
                             </TooltipProvider>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <span className="text-sm">{formatCurrency(bk.saldo_real, bk.moeda)}</span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <span className="text-sm font-medium text-amber-400">
-                              {formatCurrency(bk.bonus_ativo, bk.moeda)}
-                            </span>
-                          </TableCell>
                           <TableCell className="text-center">
                             {getExpiryBadge(bk.nearest_expiry)}
                           </TableCell>
@@ -527,7 +517,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                         </TableRow>
                         <CollapsibleContent asChild>
                           <TableRow className="bg-muted/30 hover:bg-muted/30">
-                            <TableCell colSpan={9} className="py-3">
+                            <TableCell colSpan={7} className="py-3">
                               <div className="pl-10 space-y-2">
                                 <p className="text-xs font-medium text-muted-foreground mb-2">
                                   Bônus Ativos ({activeBonuses.length})
