@@ -70,7 +70,7 @@ interface BookmakerInBonusMode {
 }
 
 export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
-  const { bonuses, fetchBonuses, finalizeBonus, saving, getBookmakersWithActiveBonus, getRolloverPercentage } = useProjectBonuses({ projectId: projetoId });
+  const { bonuses, fetchBonuses, finalizeBonus, updateBonus, saving, getBookmakersWithActiveBonus, getRolloverPercentage } = useProjectBonuses({ projectId: projetoId });
   const [bookmakers, setBookmakers] = useState<BookmakerInBonusMode[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -84,6 +84,9 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
   // Finalize dialog state
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
   const [bonusToFinalize, setBonusToFinalize] = useState<ProjectBonus | null>(null);
+  
+  // Pending bonus edit state
+  const [pendingBonusToEdit, setPendingBonusToEdit] = useState<ProjectBonus | null>(null);
 
   const bookmakersInBonusMode = getBookmakersWithActiveBonus();
 
@@ -279,34 +282,55 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
           <CardContent>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {pendingBonuses.map((bonus) => (
-                <div 
-                  key={bonus.id} 
-                  className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-yellow-500/20"
-                >
-                  {bonus.bookmaker_logo_url ? (
-                    <img
-                      src={bonus.bookmaker_logo_url}
-                      alt={bonus.bookmaker_nome}
-                      className="h-8 w-8 rounded-lg object-contain bg-white p-0.5"
-                    />
-                  ) : (
-                    <div className="h-8 w-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-                      <Gift className="h-4 w-4 text-yellow-400" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{bonus.bookmaker_nome}</p>
-                    <p className="text-xs text-muted-foreground truncate">{bonus.title}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-yellow-400">
-                      {formatCurrency(bonus.bonus_amount, bonus.currency)}
-                    </p>
-                    <Badge variant="outline" className="text-[10px] border-yellow-500/30 text-yellow-400">
-                      Pendente
-                    </Badge>
-                  </div>
-                </div>
+                <TooltipProvider key={bonus.id}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div 
+                        className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-yellow-500/20 cursor-pointer hover:bg-yellow-500/10 transition-colors"
+                        onClick={() => {
+                          setPendingBonusToEdit(bonus);
+                          setSelectedBookmaker({
+                            id: bonus.bookmaker_id,
+                            nome: bonus.bookmaker_nome,
+                            login: bonus.bookmaker_login,
+                            password: null,
+                            logo: bonus.bookmaker_logo_url,
+                            bookmaker_catalogo_id: bonus.bookmaker_catalogo_id,
+                            moeda: bonus.currency,
+                          });
+                          setBonusDrawerOpen(true);
+                        }}
+                      >
+                        {bonus.bookmaker_logo_url ? (
+                          <img
+                            src={bonus.bookmaker_logo_url}
+                            alt={bonus.bookmaker_nome}
+                            className="h-8 w-8 rounded-lg object-contain bg-white p-0.5"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+                            <Gift className="h-4 w-4 text-yellow-400" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{bonus.bookmaker_nome}</p>
+                          <p className="text-xs text-muted-foreground truncate">{bonus.title}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-yellow-400">
+                            {formatCurrency(bonus.bonus_amount, bonus.currency)}
+                          </p>
+                          <Badge variant="outline" className="text-[10px] border-yellow-500/30 text-yellow-400 cursor-pointer">
+                            Pendente
+                          </Badge>
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Clique para editar o status</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               ))}
             </div>
             <p className="text-xs text-muted-foreground mt-3">
@@ -716,7 +740,12 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
       {selectedBookmaker && (
         <VinculoBonusDrawer
           open={bonusDrawerOpen}
-          onOpenChange={setBonusDrawerOpen}
+          onOpenChange={(open) => {
+            setBonusDrawerOpen(open);
+            if (!open) {
+              setPendingBonusToEdit(null);
+            }
+          }}
           projectId={projetoId}
           bookmakerId={selectedBookmaker.id}
           bookmakerName={selectedBookmaker.nome}
@@ -726,6 +755,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
           bookmakerCatalogoId={selectedBookmaker.bookmaker_catalogo_id}
           currency={selectedBookmaker.moeda}
           onBonusChange={fetchBonuses}
+          initialBonusToEdit={pendingBonusToEdit}
         />
       )}
 
