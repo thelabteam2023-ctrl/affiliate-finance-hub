@@ -285,7 +285,7 @@ export function ModernBarChart({
               ))}
               {showLabels && (
                 <LabelList
-                  dataKey={bar.dataKey}
+                  dataKey={bar.labelValueKey ?? labelDataKey ?? bar.dataKey}
                   position="top"
                   content={(props: any) => {
                     const entry = props.payload;
