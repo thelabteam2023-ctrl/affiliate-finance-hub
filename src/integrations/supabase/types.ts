@@ -7184,11 +7184,11 @@ export type Database = {
         Returns: {
           expires_at: string
           id: string
-          inviter_name: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
           token: string
           workspace_id: string
           workspace_name: string
+          workspace_slug: string
         }[]
       }
       get_plan_entitlements: { Args: { plan_name: string }; Returns: Json }
