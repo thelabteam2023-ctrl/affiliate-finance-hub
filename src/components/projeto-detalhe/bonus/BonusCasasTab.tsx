@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { VinculoBonusDrawer } from "../VinculoBonusDrawer";
@@ -20,7 +21,8 @@ import {
   User,
   Plus,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Target
 } from "lucide-react";
 import { differenceInDays, parseISO, format } from "date-fns";
 import {
@@ -50,14 +52,14 @@ interface BookmakerInBonusMode {
 }
 
 export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
-  const { bonuses, fetchBonuses, finalizeBonus, saving, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
+  const { bonuses, fetchBonuses, finalizeBonus, saving, getBookmakersWithActiveBonus, getRolloverPercentage } = useProjectBonuses({ projectId: projetoId });
   const [bookmakers, setBookmakers] = useState<BookmakerInBonusMode[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   
   // Drawer state
   const [bonusDrawerOpen, setBonusDrawerOpen] = useState(false);
-  const [selectedBookmaker, setSelectedBookmaker] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmaker_catalogo_id?: string | null } | null>(null);
+  const [selectedBookmaker, setSelectedBookmaker] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmaker_catalogo_id?: string | null; moeda?: string } | null>(null);
   
   // Finalize dialog state
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
@@ -155,6 +157,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
       password: bk.login_password_encrypted,
       logo: bk.logo_url,
       bookmaker_catalogo_id: bk.bookmaker_catalogo_id,
+      moeda: bk.moeda,
     });
     setBonusDrawerOpen(true);
   };
@@ -330,25 +333,68 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
                     {/* Active Bonuses List */}
                     <div className="pt-2 border-t">
                       <p className="text-xs text-muted-foreground mb-2">Bônus Ativos ({activeBonuses.length}):</p>
-                      <ScrollArea className="h-24">
-                        <div className="space-y-1.5">
-                          {activeBonuses.map(bonus => (
-                            <div key={bonus.id} className="flex items-center justify-between text-xs p-1.5 rounded bg-card border">
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <span className="truncate">{bonus.title || 'Bônus'}</span>
-                                <span className="font-semibold text-amber-400">{formatCurrency(bonus.bonus_amount, bonus.currency)}</span>
+                      <ScrollArea className="h-32">
+                        <div className="space-y-2">
+                          {activeBonuses.map(bonus => {
+                            const rolloverPercent = getRolloverPercentage(bonus);
+                            const hasRollover = bonus.rollover_target_amount && bonus.rollover_target_amount > 0;
+                            
+                            return (
+                              <div key={bonus.id} className="text-xs p-2 rounded bg-card border space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <span className="truncate">{bonus.title || 'Bônus'}</span>
+                                    <span className="font-semibold text-amber-400">{formatCurrency(bonus.bonus_amount, bonus.currency)}</span>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 px-2 text-xs hover:bg-emerald-500/20 hover:text-emerald-400"
+                                    onClick={() => handleFinalizeClick(bonus)}
+                                  >
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Finalizar
+                                  </Button>
+                                </div>
+                                
+                                {/* Rollover Progress Bar */}
+                                {hasRollover && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="space-y-1">
+                                          <div className="flex items-center justify-between text-[10px]">
+                                            <span className="text-muted-foreground flex items-center gap-1">
+                                              <Target className="h-3 w-3" />
+                                              Rollover
+                                            </span>
+                                            <span className={rolloverPercent >= 100 ? "text-emerald-400 font-medium" : "text-muted-foreground"}>
+                                              {formatCurrency(bonus.rollover_progress || 0, bonus.currency)} / {formatCurrency(bonus.rollover_target_amount!, bonus.currency)}
+                                            </span>
+                                          </div>
+                                          <Progress 
+                                            value={rolloverPercent} 
+                                            className="h-1.5"
+                                          />
+                                          <div className="text-right text-[10px] text-muted-foreground">
+                                            {rolloverPercent.toFixed(0)}% concluído
+                                          </div>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <div className="text-xs space-y-1">
+                                          <p>Meta de rollover: {formatCurrency(bonus.rollover_target_amount!, bonus.currency)}</p>
+                                          <p>Apostado: {formatCurrency(bonus.rollover_progress || 0, bonus.currency)}</p>
+                                          {bonus.rollover_multiplier && <p>Multiplicador: {bonus.rollover_multiplier}x</p>}
+                                          {bonus.min_odds && <p>Odd mínima: {bonus.min_odds}</p>}
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2 text-xs hover:bg-emerald-500/20 hover:text-emerald-400"
-                                onClick={() => handleFinalizeClick(bonus)}
-                              >
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                Finalizar
-                              </Button>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </ScrollArea>
                     </div>
@@ -385,6 +431,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           bookmakerPassword={selectedBookmaker.password}
           bookmakerLogo={selectedBookmaker.logo}
           bookmakerCatalogoId={selectedBookmaker.bookmaker_catalogo_id}
+          currency={selectedBookmaker.moeda}
           onBonusChange={fetchBonuses}
         />
       )}

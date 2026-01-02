@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +40,7 @@ import {
   Building2,
   Flag,
   Trophy,
+  Target,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -221,74 +223,117 @@ export function BonusHistoryDrawer({
                   Bônus Ativos ({activeBonuses.length})
                 </h4>
                 <div className="space-y-2">
-                  {activeBonuses.map((bonus) => (
-                    <div
-                      key={bonus.id}
-                      className="p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">
-                              {formatCurrency(bonus.bonus_amount, bonus.currency)}
-                            </span>
-                            {getStatusBadge(bonus.status)}
-                          </div>
-                          {bonus.title && (
-                            <p className="text-sm text-muted-foreground">{bonus.title}</p>
-                          )}
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {format(new Date(bonus.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                            </span>
-                            {bonus.expires_at && (
-                              <span className="flex items-center gap-1 text-amber-400">
-                                <Clock className="h-3 w-3" />
-                                Expira: {format(new Date(bonus.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+                  {activeBonuses.map((bonus) => {
+                    const hasRollover = bonus.rollover_target_amount && bonus.rollover_target_amount > 0;
+                    const rolloverPercent = hasRollover 
+                      ? Math.min(100, ((bonus.rollover_progress || 0) / bonus.rollover_target_amount!) * 100)
+                      : 0;
+                    
+                    return (
+                      <div
+                        key={bonus.id}
+                        className="p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">
+                                {formatCurrency(bonus.bonus_amount, bonus.currency)}
                               </span>
+                              {getStatusBadge(bonus.status)}
+                            </div>
+                            {bonus.title && (
+                              <p className="text-sm text-muted-foreground">{bonus.title}</p>
+                            )}
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {format(new Date(bonus.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                              </span>
+                              {bonus.expires_at && (
+                                <span className="flex items-center gap-1 text-amber-400">
+                                  <Clock className="h-3 w-3" />
+                                  Expira: {format(new Date(bonus.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Rollover Progress Bar */}
+                            {hasRollover && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="mt-2 pt-2 border-t border-emerald-500/20 space-y-1">
+                                      <div className="flex items-center justify-between text-xs">
+                                        <span className="text-muted-foreground flex items-center gap-1">
+                                          <Target className="h-3 w-3" />
+                                          Rollover
+                                        </span>
+                                        <span className={rolloverPercent >= 100 ? "text-emerald-400 font-medium" : "text-muted-foreground"}>
+                                          {formatCurrency(bonus.rollover_progress || 0, bonus.currency)} / {formatCurrency(bonus.rollover_target_amount!, bonus.currency)}
+                                        </span>
+                                      </div>
+                                      <Progress 
+                                        value={rolloverPercent} 
+                                        className="h-2"
+                                      />
+                                      <div className="text-right text-xs text-muted-foreground">
+                                        {rolloverPercent.toFixed(0)}% concluído
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="text-xs space-y-1">
+                                      <p>Meta de rollover: {formatCurrency(bonus.rollover_target_amount!, bonus.currency)}</p>
+                                      <p>Apostado: {formatCurrency(bonus.rollover_progress || 0, bonus.currency)}</p>
+                                      {bonus.rollover_multiplier && <p>Multiplicador: {bonus.rollover_multiplier}x</p>}
+                                      {bonus.min_odds && <p>Odd mínima: {bonus.min_odds}</p>}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             )}
                           </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-amber-500 hover:text-amber-400 hover:bg-amber-500/10"
-                                  onClick={() => onFinalizeBonus(bonus)}
-                                >
-                                  <Flag className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Finalizar bônus</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => onEditBonus(bonus)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => {
-                              setBonusToDelete(bonus.id);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1 ml-2">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-amber-500 hover:text-amber-400 hover:bg-amber-500/10"
+                                    onClick={() => onFinalizeBonus(bonus)}
+                                  >
+                                    <Flag className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Finalizar bônus</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => onEditBonus(bonus)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={() => {
+                                setBonusToDelete(bonus.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
