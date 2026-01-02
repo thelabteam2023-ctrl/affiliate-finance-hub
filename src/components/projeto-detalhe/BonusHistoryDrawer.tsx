@@ -162,6 +162,11 @@ export function BonusHistoryDrawer({
   // Separate active and historical bonuses
   const activeBonuses = bonuses.filter((b) => b.status === "credited");
   const historicalBonuses = bonuses.filter((b) => b.status !== "credited");
+  
+  // Calculate total from active bonuses using their own currency
+  const activeBonusTotal = activeBonuses.reduce((acc, b) => acc + b.bonus_amount, 0);
+  // Get the currency from the first active bonus, or fallback to prop
+  const activeBonusCurrency = activeBonuses.length > 0 ? activeBonuses[0].currency : currency;
 
   return (
     <>
@@ -198,7 +203,7 @@ export function BonusHistoryDrawer({
                       <span className="font-medium">Bônus Ativo</span>
                     </div>
                     <span className="text-xl font-bold text-emerald-400">
-                      {formatCurrency(totalCredited, currency)}
+                      {formatCurrency(activeBonusTotal, activeBonusCurrency)}
                     </span>
                   </div>
                 </TooltipTrigger>
