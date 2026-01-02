@@ -77,16 +77,20 @@ export function BookmakerSelectOption({
       {/* Coluna direita: Saldo */}
       <div className="flex flex-col items-end flex-shrink-0">
         <span className={cn(
-          "text-xs font-medium",
+          "text-xs font-medium flex items-center gap-1",
           disabled ? "text-destructive" : getCurrencyTextColor(moeda)
         )}>
           {disabled ? "Indisponível" : formatCurrency(saldo_operavel, moeda)}
+          {/* Indicador de bônus ativo (em rollover) */}
+          {!disabled && saldo_bonus > 0 && (
+            <span className="text-purple-400" title="Bônus ativo">🎁</span>
+          )}
         </span>
         
-        {/* Breakdown */}
-        {showBreakdown && !disabled && (saldo_freebet > 0 || saldo_bonus > 0) && (
+        {/* Breakdown - só mostra freebet separado, bônus está unificado */}
+        {showBreakdown && !disabled && saldo_freebet > 0 && saldo_bonus === 0 && (
           <span className="text-[9px] text-muted-foreground/70">
-            {formatBreakdown(bookmaker.saldo_disponivel || saldo_operavel, saldo_freebet, saldo_bonus, moeda)}
+            {formatBreakdown(bookmaker.saldo_disponivel || saldo_operavel, saldo_freebet, 0, moeda)}
           </span>
         )}
       </div>
@@ -223,53 +227,49 @@ export function SaldoBreakdownDisplay({
   saldoOperavel,
   moeda,
 }: SaldoBreakdownDisplayProps) {
+  // Se tem bônus ativo, mostrar saldo unificado com indicador
+  const hasActiveBonus = saldoBonus > 0;
+  
   return (
     <div className="text-xs text-center space-y-0.5">
-      <p className="text-muted-foreground">
+      <p className="text-muted-foreground flex items-center justify-center gap-1">
         Saldo Operável:{" "}
         <span className={cn("font-medium", getCurrencyTextColor(moeda))}>
           {formatCurrency(saldoOperavel, moeda)}
         </span>
-      </p>
-      <p className="text-muted-foreground/70 text-[10px] flex items-center justify-center gap-3 flex-wrap">
-        {/* Saldo Real */}
-        <span className="text-emerald-400 flex items-center gap-1">
-          <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="8" width="18" height="11" rx="2" className="fill-emerald-500/20 stroke-emerald-400" strokeWidth="1.5"/>
-            <path d="M3 10h18" className="stroke-emerald-400" strokeWidth="1.5"/>
-            <path d="M7 4h10M9 4v4M15 4v4" className="stroke-emerald-400" strokeWidth="1.5" strokeLinecap="round"/>
-            <rect x="6" y="13" width="4" height="3" rx="0.5" className="fill-emerald-400/50"/>
-          </svg>
-          {formatCurrency(saldoReal, moeda)}
-        </span>
-        
-        {/* Freebet */}
-        {saldoFreebet > 0 && (
-          <span className="text-amber-400 flex items-center gap-1">
-            <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
-              <rect x="2" y="6" width="20" height="12" rx="2" className="fill-amber-500/20 stroke-amber-400" strokeWidth="1.5"/>
-              <path d="M2 10h20" className="stroke-amber-400" strokeWidth="1"/>
-              <circle cx="12" cy="14" r="2" className="stroke-amber-400" strokeWidth="1.5"/>
-              <path d="M6 14h2M16 14h2" className="stroke-amber-400/60" strokeWidth="1" strokeLinecap="round"/>
-            </svg>
-            {formatCurrency(saldoFreebet, moeda)}
-          </span>
-        )}
-        
-        {/* Bônus */}
-        {saldoBonus > 0 && (
-          <span className="text-purple-400 flex items-center gap-1">
-            <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
-              <rect x="2" y="4" width="20" height="16" rx="3" className="fill-purple-500/20 stroke-purple-400" strokeWidth="1.5"/>
-              <circle cx="12" cy="12" r="4" className="stroke-purple-400" strokeWidth="1.5"/>
-              <path d="M12 10v4M10.5 11.5l1.5-1.5 1.5 1.5" className="stroke-purple-400" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-              <circle cx="5.5" cy="8" r="1" className="fill-purple-400/60"/>
-              <circle cx="18.5" cy="16" r="1" className="fill-purple-400/60"/>
-            </svg>
-            {formatCurrency(saldoBonus, moeda)}
-          </span>
+        {hasActiveBonus && (
+          <span className="text-purple-400" title="Bônus ativo em rollover">🎁</span>
         )}
       </p>
+      
+      {/* Só mostra breakdown se NÃO tem bônus ativo */}
+      {!hasActiveBonus && (saldoFreebet > 0) && (
+        <p className="text-muted-foreground/70 text-[10px] flex items-center justify-center gap-3 flex-wrap">
+          {/* Saldo Real */}
+          <span className="text-emerald-400 flex items-center gap-1">
+            <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="8" width="18" height="11" rx="2" className="fill-emerald-500/20 stroke-emerald-400" strokeWidth="1.5"/>
+              <path d="M3 10h18" className="stroke-emerald-400" strokeWidth="1.5"/>
+              <path d="M7 4h10M9 4v4M15 4v4" className="stroke-emerald-400" strokeWidth="1.5" strokeLinecap="round"/>
+              <rect x="6" y="13" width="4" height="3" rx="0.5" className="fill-emerald-400/50"/>
+            </svg>
+            {formatCurrency(saldoReal, moeda)}
+          </span>
+          
+          {/* Freebet */}
+          {saldoFreebet > 0 && (
+            <span className="text-amber-400 flex items-center gap-1">
+              <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="6" width="20" height="12" rx="2" className="fill-amber-500/20 stroke-amber-400" strokeWidth="1.5"/>
+                <path d="M2 10h20" className="stroke-amber-400" strokeWidth="1"/>
+                <circle cx="12" cy="14" r="2" className="stroke-amber-400" strokeWidth="1.5"/>
+                <path d="M6 14h2M16 14h2" className="stroke-amber-400/60" strokeWidth="1" strokeLinecap="round"/>
+              </svg>
+              {formatCurrency(saldoFreebet, moeda)}
+            </span>
+          )}
+        </p>
+      )}
     </div>
   );
 }
