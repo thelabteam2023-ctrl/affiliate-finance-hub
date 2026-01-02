@@ -1,19 +1,18 @@
 import { useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, AlertTriangle, Check, Clock } from "lucide-react";
+import { AlertTriangle, Check, Clock, Calculator, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProjectBonus } from "@/hooks/useProjectBonuses";
 import { format, differenceInDays, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface RolloverProgressProps {
   bonus: ProjectBonus;
@@ -22,10 +21,6 @@ interface RolloverProgressProps {
 }
 
 export function RolloverProgress({ bonus, onUpdateProgress, compact = false }: RolloverProgressProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState("");
-  const [saving, setSaving] = useState(false);
-
   const target = bonus.rollover_target_amount || 0;
   const progress = bonus.rollover_progress || 0;
   const percentage = target > 0 ? Math.min(100, (progress / target) * 100) : 0;
@@ -36,19 +31,6 @@ export function RolloverProgress({ bonus, onUpdateProgress, compact = false }: R
   const isExpired = expiresAt ? isPast(expiresAt) : false;
   const daysRemaining = expiresAt ? differenceInDays(expiresAt, new Date()) : null;
   const isNearExpiry = daysRemaining !== null && daysRemaining <= 5 && daysRemaining > 0;
-
-  const handleSaveProgress = async () => {
-    if (!onUpdateProgress) return;
-    const value = parseFloat(editValue);
-    if (isNaN(value) || value < 0) return;
-
-    setSaving(true);
-    const success = await onUpdateProgress(bonus.id, value);
-    if (success) {
-      setIsEditing(false);
-    }
-    setSaving(false);
-  };
 
   // Don't show if no rollover target
   if (!target || target <= 0) {
@@ -84,8 +66,22 @@ export function RolloverProgress({ bonus, onUpdateProgress, compact = false }: R
     return (
       <div className="space-y-1">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">
+          <span className="text-muted-foreground flex items-center gap-1">
             Rollover: {bonus.rollover_multiplier}x
+            {bonus.min_odds && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="text-[8px] px-1 py-0 h-4">
+                      ≥{bonus.min_odds}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Odd mínima: {bonus.min_odds}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </span>
           <span className={cn(
             "font-medium",
@@ -124,6 +120,21 @@ export function RolloverProgress({ bonus, onUpdateProgress, compact = false }: R
             <Badge variant="outline" className="text-[10px]">
               {rolloverBaseLabel}
             </Badge>
+          )}
+          {bonus.min_odds && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="text-[10px] gap-1">
+                    <Target className="h-2.5 w-2.5" />
+                    Odd ≥ {bonus.min_odds}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs max-w-[200px]">
+                  <p>Apenas apostas com odd igual ou maior que {bonus.min_odds} são contabilizadas no rollover.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -177,64 +188,15 @@ export function RolloverProgress({ bonus, onUpdateProgress, compact = false }: R
         </div>
       </div>
 
-      {/* Edit Progress */}
-      {onUpdateProgress && !isComplete && (
-        <Popover open={isEditing} onOpenChange={setIsEditing}>
-          <PopoverTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full mt-2"
-              onClick={() => {
-                setEditValue(String(progress));
-                setIsEditing(true);
-              }}
-            >
-              <Pencil className="h-3 w-3 mr-2" />
-              Atualizar Volume
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64" align="start">
-            <div className="space-y-3">
-              <Label className="text-xs">Volume Apostado ({bonus.currency})</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                placeholder="0.00"
-              />
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setIsEditing(false)}
-                  disabled={saving}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  size="sm"
-                  className="flex-1"
-                  onClick={handleSaveProgress}
-                  disabled={saving}
-                >
-                  Salvar
-                </Button>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-      )}
-
-      {/* Min Odds if set */}
-      {bonus.min_odds && (
-        <div className="text-xs text-muted-foreground mt-1">
-          Odd mínima: {bonus.min_odds}
-        </div>
-      )}
+      {/* Info sobre cálculo automático */}
+      <div className="flex items-center gap-1.5 p-2 rounded-md bg-muted/50 text-xs text-muted-foreground">
+        <Calculator className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
+        <span>
+          Cálculo automático baseado nas apostas vinculadas.
+          {bonus.min_odds && ` Apenas odds ≥ ${bonus.min_odds} contam.`}
+          {bonus.credited_at && ` Só apostas após ${format(new Date(bonus.credited_at), "dd/MM/yyyy", { locale: ptBR })}.`}
+        </span>
+      </div>
     </div>
   );
 }

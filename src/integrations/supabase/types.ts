@@ -187,6 +187,7 @@ export type Database = {
           aposta_relacionada_id: string | null
           back_comissao: number | null
           back_em_exchange: boolean | null
+          bonus_id: string | null
           bookmaker_id: string | null
           cancel_reason: string | null
           cancelled_at: string | null
@@ -256,6 +257,7 @@ export type Database = {
           aposta_relacionada_id?: string | null
           back_comissao?: number | null
           back_em_exchange?: boolean | null
+          bonus_id?: string | null
           bookmaker_id?: string | null
           cancel_reason?: string | null
           cancelled_at?: string | null
@@ -325,6 +327,7 @@ export type Database = {
           aposta_relacionada_id?: string | null
           back_comissao?: number | null
           back_em_exchange?: boolean | null
+          bonus_id?: string | null
           bookmaker_id?: string | null
           cancel_reason?: string | null
           cancelled_at?: string | null
@@ -396,6 +399,13 @@ export type Database = {
             columns: ["aposta_relacionada_id"]
             isOneToOne: false
             referencedRelation: "apostas_unificada"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bonus_id_fkey"
+            columns: ["bonus_id"]
+            isOneToOne: false
+            referencedRelation: "project_bookmaker_link_bonuses"
             referencedColumns: ["id"]
           },
           {
@@ -7023,6 +7033,10 @@ export type Database = {
           p_ultima_conciliacao: string
         }
         Returns: string
+      }
+      calculate_bonus_rollover: {
+        Args: { p_bonus_id: string }
+        Returns: number
       }
       calculate_expires_at: {
         Args: {
