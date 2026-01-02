@@ -574,10 +574,11 @@ export function FluxoFinanceiroOperacional({
                   const isUSD = dataKey.includes('_usd');
                   
                   if (isUSD && ctx?.payload) {
-                    // Para USD, mostrar o valor original (não normalizado) no label
+                    // Para USD, mostrar o valor original em dólar (não o normalizado em BRL)
+                    // dataKey: aportes_usd_normalizado -> originalKey: aportes_usd
                     const originalKey = dataKey.replace('_normalizado', '');
-                    const originalValue = ctx.payload[originalKey];
-                    if (originalValue !== undefined && originalValue !== 0) {
+                    const originalValue = (ctx.payload as Record<string, number>)[originalKey];
+                    if (typeof originalValue === 'number' && originalValue !== 0) {
                       return 'US$ ' + Math.abs(originalValue).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
                     }
                     return '';
@@ -724,10 +725,11 @@ export function FluxoFinanceiroOperacional({
                   const isUSD = dataKey.includes('_usd');
                   
                   if (isUSD && ctx?.payload) {
-                    // Para USD, mostrar o valor original (não normalizado) no label
+                    // Para USD, mostrar o valor original em dólar (não o normalizado em BRL)
+                    // dataKey: depositos_usd_normalizado -> originalKey: depositos_usd
                     const originalKey = dataKey.replace('_normalizado', '');
-                    const originalValue = ctx.payload[originalKey];
-                    if (originalValue !== undefined && originalValue !== 0) {
+                    const originalValue = (ctx.payload as Record<string, number>)[originalKey];
+                    if (typeof originalValue === 'number' && originalValue !== 0) {
                       return 'US$ ' + Math.abs(originalValue).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
                     }
                     return '';
