@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus } from "@/hooks/useProjectBonuses";
 import { useBonusContamination } from "@/hooks/useBonusContamination";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
-import { Building2, Coins, Wallet, TrendingUp, AlertTriangle, Timer } from "lucide-react";
+import { Building2, Coins, TrendingUp, AlertTriangle, Timer } from "lucide-react";
 import { differenceInDays, parseISO, format, startOfDay, startOfWeek, eachDayOfInterval, eachWeekOfInterval, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -334,14 +334,22 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       .reduce((acc, b) => acc + convertToConsolidation(b.saldo_atual || 0, b.currency), 0);
   }, [bonuses, convertToConsolidation]);
 
-  const totalSaldoRealConsolidated = useMemo(() => {
-    return bookmakersWithBonus.reduce(
-      (acc, bk) => acc + convertToConsolidation(bk.saldo_real || 0, bk.moeda),
-      0
+  // Progresso médio de rollover (apenas bônus com rollover definido)
+  const avgRolloverProgress = useMemo(() => {
+    const bonusesWithRollover = bonuses.filter(
+      (b) => b.status === "credited" && b.rollover_target_amount && b.rollover_target_amount > 0
     );
-  }, [bookmakersWithBonus, convertToConsolidation]);
+    if (bonusesWithRollover.length === 0) return null;
 
-  const totalSaldoOperavel = totalSaldoRealConsolidated + activeBonusTotalConsolidated;
+    const totalProgress = bonusesWithRollover.reduce((acc, b) => {
+      const pct = Math.min(100, ((b.rollover_progress || 0) / (b.rollover_target_amount || 1)) * 100);
+      return acc + pct;
+    }, 0);
+
+    return totalProgress / bonusesWithRollover.length;
+  }, [bonuses]);
+
+  const totalSaldoOperavel = activeBonusTotalConsolidated;
 
   const chartConfig = {
     deposits: { label: "Depósitos", color: "hsl(var(--chart-2))" },
@@ -411,26 +419,23 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             </CardContent>
           </Card>
 
-          <Card className={isContaminated ? 'ring-1 ring-amber-500/30' : ''}>
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-                Saldo Real (Casas)
-                {isContaminated && (
-                  <TooltipUI>
-                    <TooltipTrigger asChild>
-                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-[200px]">
-                      <p className="text-xs">Este valor pode incluir resultados de outras estratégias além de bônus</p>
-                    </TooltipContent>
-                  </TooltipUI>
-                )}
-              </CardTitle>
-              <Wallet className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Rollover Médio</CardTitle>
+              <Timer className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(totalSaldoRealConsolidated)}</div>
-              <p className="text-xs text-muted-foreground">Apenas casas em modo bônus</p>
+              {avgRolloverProgress !== null ? (
+                <>
+                  <div className="text-2xl font-bold">{avgRolloverProgress.toFixed(0)}%</div>
+                  <p className="text-xs text-muted-foreground">Progresso médio dos bônus</p>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold text-muted-foreground">—</div>
+                  <p className="text-xs text-muted-foreground">Sem rollover definido</p>
+                </>
+              )}
             </CardContent>
           </Card>
         </TooltipProvider>
