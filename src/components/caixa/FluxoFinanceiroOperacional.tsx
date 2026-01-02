@@ -570,14 +570,21 @@ export function FluxoFinanceiroOperacional({
                 barSize={24}
                 showLabels={true}
                 formatLabel={(value, ctx) => {
-                  if (value === 0) return '';
-                  const isUSD = ctx?.dataKey?.toString().includes('_usd');
-                  if (isUSD) {
+                  const dataKey = ctx?.dataKey?.toString() || '';
+                  const isUSD = dataKey.includes('_usd');
+                  
+                  if (isUSD && ctx?.payload) {
                     // Para USD, mostrar o valor original (não normalizado) no label
-                    const originalKey = ctx?.dataKey?.toString().replace('_normalizado', '');
-                    const originalValue = ctx?.payload?.[originalKey] || 0;
-                    return 'US$ ' + Math.abs(originalValue).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                    const originalKey = dataKey.replace('_normalizado', '');
+                    const originalValue = ctx.payload[originalKey];
+                    if (originalValue !== undefined && originalValue !== 0) {
+                      return 'US$ ' + Math.abs(originalValue).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                    }
+                    return '';
                   }
+                  
+                  // Para BRL, usar o valor diretamente
+                  if (value === 0) return '';
                   return 'R$ ' + Math.abs(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
                 }}
                 customTooltipContent={(payload, label) => {
@@ -713,14 +720,21 @@ export function FluxoFinanceiroOperacional({
                 barSize={24}
                 showLabels={true}
                 formatLabel={(value, ctx) => {
-                  if (value === 0) return '';
-                  const isUSD = ctx?.dataKey?.toString().includes('_usd');
-                  if (isUSD) {
+                  const dataKey = ctx?.dataKey?.toString() || '';
+                  const isUSD = dataKey.includes('_usd');
+                  
+                  if (isUSD && ctx?.payload) {
                     // Para USD, mostrar o valor original (não normalizado) no label
-                    const originalKey = ctx?.dataKey?.toString().replace('_normalizado', '');
-                    const originalValue = ctx?.payload?.[originalKey] || 0;
-                    return 'US$ ' + Math.abs(originalValue).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                    const originalKey = dataKey.replace('_normalizado', '');
+                    const originalValue = ctx.payload[originalKey];
+                    if (originalValue !== undefined && originalValue !== 0) {
+                      return 'US$ ' + Math.abs(originalValue).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                    }
+                    return '';
                   }
+                  
+                  // Para BRL, usar o valor diretamente
+                  if (value === 0) return '';
                   return 'R$ ' + Math.abs(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
                 }}
                 customTooltipContent={(payload, label) => {
