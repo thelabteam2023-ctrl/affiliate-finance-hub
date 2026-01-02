@@ -483,11 +483,14 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                                 <TooltipTrigger asChild>
                                   <span className="font-semibold text-primary flex items-center justify-end gap-1">
                                     <Gift className="h-3.5 w-3.5 text-amber-400" />
-                                    {formatCurrency(bk.bonus_ativo, bk.moeda)}
+                                    {formatCurrency(bk.saldo_real + bk.bonus_ativo, bk.moeda)}
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Saldo unificado (em modo bônus)</p>
+                                  <div className="text-xs space-y-1">
+                                    <p>Saldo Real: {formatCurrency(bk.saldo_real, bk.moeda)}</p>
+                                    <p>Bônus Ativo: {formatCurrency(bk.bonus_ativo, bk.moeda)}</p>
+                                  </div>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
