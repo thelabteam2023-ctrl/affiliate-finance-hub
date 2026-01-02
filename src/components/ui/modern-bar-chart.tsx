@@ -15,6 +15,8 @@ interface BarDataItem {
   [key: string]: any;
 }
 
+export type CurrencyType = "BRL" | "USD" | "none";
+
 interface BarConfig {
   dataKey: string;
   label: string;
@@ -22,6 +24,8 @@ interface BarConfig {
   gradientEnd: string;
   /** Optional: key to use for label value (useful when bar uses a normalized value) */
   labelValueKey?: string;
+  /** Currency type for this bar - controls label formatting */
+  currency?: CurrencyType;
 }
 
 interface ModernBarChartProps {
@@ -36,7 +40,9 @@ interface ModernBarChartProps {
   formatTooltip?: (dataKey: string, value: number) => string;
   customTooltipContent?: (payload: any, label: string) => React.ReactNode;
   labelDataKey?: string; // Key to use for label values (e.g., 'lucro' instead of bar count)
-  formatLabel?: (value: number, ctx: { dataKey: string; payload: any }) => string; // Custom formatter for labels
+  formatLabel?: (value: number, ctx: { dataKey: string; payload: any; currency?: CurrencyType }) => string; // Custom formatter for labels
+  /** Hide Y axis tick values (useful for proportional scale charts) */
+  hideYAxisTicks?: boolean;
 }
 
 // Custom animated label component
@@ -173,6 +179,7 @@ export function ModernBarChart({
   customTooltipContent,
   labelDataKey,
   formatLabel,
+  hideYAxisTicks = false,
 }: ModernBarChartProps) {
   const [isAnimated, setIsAnimated] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -237,8 +244,8 @@ export function ModernBarChart({
             fontSize={11}
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "hsl(var(--muted-foreground))" }}
-            width={35}
+            tick={hideYAxisTicks ? false : { fill: "hsl(var(--muted-foreground))" }}
+            width={hideYAxisTicks ? 10 : 35}
           />
           
           <Tooltip 
@@ -286,7 +293,8 @@ export function ModernBarChart({
                     const effectiveLabelKey = bar.labelValueKey ?? labelDataKey;
                     const rawValue = effectiveLabelKey && entry ? entry[effectiveLabelKey] : props.value;
 
-                    const ctx = { dataKey: bar.dataKey, payload: entry };
+                    // Pass the currency type from the bar config to the formatter
+                    const ctx = { dataKey: bar.dataKey, payload: entry, currency: bar.currency };
                     const formattedValue =
                       formatLabel && rawValue !== undefined ? formatLabel(rawValue, ctx) : rawValue;
 
