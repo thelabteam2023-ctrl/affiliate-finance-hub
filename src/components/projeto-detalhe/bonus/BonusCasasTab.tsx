@@ -22,8 +22,20 @@ import {
   Plus,
   CheckCircle2,
   AlertTriangle,
-  Target
+  Target,
+  LayoutGrid,
+  List,
+  Eye
 } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { differenceInDays, parseISO, format } from "date-fns";
 import {
   Tooltip,
@@ -56,6 +68,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
   const [bookmakers, setBookmakers] = useState<BookmakerInBonusMode[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   
   // Drawer state
   const [bonusDrawerOpen, setBonusDrawerOpen] = useState(false);
@@ -214,18 +227,28 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nome, login ou parceiro..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search and View Toggle */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, login ou parceiro..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as "cards" | "list")}>
+          <ToggleGroupItem value="list" aria-label="Visualização em lista">
+            <List className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="cards" aria-label="Visualização em cards">
+            <LayoutGrid className="h-4 w-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
-      {/* Grid of bookmakers in bonus mode */}
+      {/* Empty state */}
       {filteredBookmakers.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
@@ -238,7 +261,85 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
             </div>
           </CardContent>
         </Card>
+      ) : viewMode === "list" ? (
+        /* LIST VIEW */
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Bookmaker</TableHead>
+                <TableHead>Parceiro</TableHead>
+                <TableHead className="text-right">Saldo Operável</TableHead>
+                <TableHead className="text-right">Saldo Real</TableHead>
+                <TableHead className="text-right">Bônus Ativo</TableHead>
+                <TableHead className="text-center">Expiração</TableHead>
+                <TableHead className="text-center">Ativos</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredBookmakers.map((bk) => {
+                const activeBonuses = bk.bonuses.filter(b => b.status === 'credited');
+                
+                return (
+                  <TableRow key={bk.id} className="hover:bg-amber-500/5">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        {bk.logo_url ? (
+                          <img
+                            src={bk.logo_url}
+                            alt={bk.nome}
+                            className="h-8 w-8 rounded-lg object-contain bg-white p-0.5"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Building2 className="h-4 w-4 text-primary" />
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-medium flex items-center gap-2">
+                            {bk.nome}
+                            <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1">
+                              <Coins className="h-2.5 w-2.5" />
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{bk.login_username}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{bk.parceiro_nome || "—"}</TableCell>
+                    <TableCell className="text-right font-semibold text-primary">
+                      {formatCurrency(bk.saldo_real + bk.bonus_ativo, bk.moeda)}
+                    </TableCell>
+                    <TableCell className="text-right">{formatCurrency(bk.saldo_real, bk.moeda)}</TableCell>
+                    <TableCell className="text-right text-amber-400 font-semibold">
+                      {formatCurrency(bk.bonus_ativo, bk.moeda)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {getExpiryBadge(bk.nearest_expiry)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline">{activeBonuses.length}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-amber-500/30 hover:bg-amber-500/10"
+                        onClick={() => handleOpenBonusDrawer(bk)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver / Adicionar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
       ) : (
+        /* CARDS VIEW */
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredBookmakers.map((bk) => {
             const activeBonuses = bk.bonuses.filter(b => b.status === 'credited');
