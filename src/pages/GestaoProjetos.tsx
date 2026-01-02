@@ -32,16 +32,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useProjectFavorites } from "@/hooks/useProjectFavorites";
 import { VisualizarOperadoresDialog } from "@/components/projetos/VisualizarOperadoresDialog";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ProjetoDeleteDialog } from "@/components/projetos/ProjetoDeleteDialog";
 import {
   Select,
   SelectContent,
@@ -336,25 +327,9 @@ export default function GestaoProjetos() {
     }
   };
 
-  const handleDeleteProjeto = async () => {
-    if (!projetoToDelete) return;
-    
-    try {
-      const { error } = await supabase
-        .from("projetos")
-        .delete()
-        .eq("id", projetoToDelete.id);
-      
-      if (error) throw error;
-      
-      toast.success("Projeto excluído com sucesso");
-      fetchProjetos();
-    } catch (error: any) {
-      toast.error("Erro ao excluir projeto: " + error.message);
-    } finally {
-      setDeleteDialogOpen(false);
-      setProjetoToDelete(null);
-    }
+  const handleDeleteSuccess = () => {
+    fetchProjetos();
+    setProjetoToDelete(null);
   };
 
   const formatCurrency = (value: number) => {
@@ -370,6 +345,7 @@ export default function GestaoProjetos() {
       case "EM_ANDAMENTO": return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
       case "PAUSADO": return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
       case "FINALIZADO": return "bg-gray-500/20 text-gray-400 border-gray-500/30";
+      case "ARQUIVADO": return "bg-purple-500/20 text-purple-400 border-purple-500/30";
       default: return "bg-gray-500/20 text-gray-400 border-gray-500/30";
     }
   };
@@ -380,6 +356,7 @@ export default function GestaoProjetos() {
       case "EM_ANDAMENTO": return "Em Andamento";
       case "PAUSADO": return "Pausado";
       case "FINALIZADO": return "Finalizado";
+      case "ARQUIVADO": return "Arquivado";
       default: return status;
     }
   };
@@ -425,6 +402,7 @@ export default function GestaoProjetos() {
                 <SelectItem value="EM_ANDAMENTO">Em Andamento</SelectItem>
                 <SelectItem value="PAUSADO">Pausado</SelectItem>
                 <SelectItem value="FINALIZADO">Finalizado</SelectItem>
+                <SelectItem value="ARQUIVADO">Arquivado</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex gap-1">
@@ -844,26 +822,12 @@ export default function GestaoProjetos() {
         initialTab={dialogInitialTab}
       />
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir projeto?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir o projeto "{projetoToDelete?.nome}"? 
-              Esta ação não pode ser desfeita e todos os dados relacionados serão perdidos.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDeleteProjeto}
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ProjetoDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        projeto={projetoToDelete}
+        onSuccess={handleDeleteSuccess}
+      />
 
       {projetoParaVisualizar && (
         <VisualizarOperadoresDialog
