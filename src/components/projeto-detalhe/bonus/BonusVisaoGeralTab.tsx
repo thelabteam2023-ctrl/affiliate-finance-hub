@@ -5,13 +5,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus } from "@/hooks/useProjectBonuses";
 import { useBonusContamination } from "@/hooks/useBonusContamination";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
-import { Building2, Coins, TrendingUp, AlertTriangle, Timer } from "lucide-react";
-import { differenceInDays, parseISO, format, startOfDay, startOfWeek, eachDayOfInterval, eachWeekOfInterval, subDays } from "date-fns";
+import { Building2, Coins, TrendingUp, AlertTriangle, Timer, Activity, Info } from "lucide-react";
+import { differenceInDays, parseISO, format, startOfDay, eachDayOfInterval, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { XAxis, YAxis, ResponsiveContainer, ReferenceLine, CartesianGrid, Tooltip, ComposedChart, Line, Legend, Area } from "recharts";
 import {
-  ChartContainer,
-} from "@/components/ui/chart";
-import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, ResponsiveContainer, ReferenceLine, CartesianGrid, Tooltip } from "recharts";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { BonusAnalyticsCard } from "./BonusAnalyticsCard";
 import { BonusContaminationAlert } from "./BonusContaminationAlert";
 import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -47,13 +51,8 @@ interface DailyData {
   adjustedBalance: number;
 }
 
-interface WeeklyData {
-  weekStart: string;
-  weekLabel: string;
-  deposits: number;
-  bonusCredits: number;
-  count: number;
-}
+
+type Granularidade = "dia" | "semana" | "mes";
 
 export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false }: BonusVisaoGeralTabProps) {
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
@@ -62,6 +61,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   const [loading, setLoading] = useState(true);
   const [betsData, setBetsData] = useState<any[]>([]);
   const [betsLoading, setBetsLoading] = useState(true);
+  const [granularidade, setGranularidade] = useState<Granularidade>("dia");
   // Note: deposit_amount from bonus records is now used as source of truth (not cash_ledger)
 
   const summary = getSummary();
@@ -291,41 +291,6 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     });
   }, [bonuses, betsData, dateRange, isSingleDayPeriod]);
 
-  // Calculate weekly data using deposit_amount from bonus records (not cash_ledger)
-  const weeklyData = useMemo((): WeeklyData[] => {
-    const endDate = dateRange?.end || new Date();
-    const startDate = dateRange?.start || subDays(endDate, 30);
-    const weeks = eachWeekOfInterval({ start: startDate, end: endDate }, { weekStartsOn: 1 });
-
-    return weeks.map(weekStart => {
-      const weekEnd = subDays(startOfWeek(subDays(weekStart, -7), { weekStartsOn: 1 }), 1);
-      const weekLabel = format(weekStart, 'dd/MM', { locale: ptBR });
-
-      // Sum reference deposits from bonuses for this week
-      let deposits = 0;
-      let bonusCredits = 0;
-      let count = 0;
-      
-      bonuses.forEach(b => {
-        if (b.status === 'credited' && b.credited_at) {
-          const creditedDate = parseISO(b.credited_at);
-          if (creditedDate >= weekStart && creditedDate <= weekEnd) {
-            deposits += b.deposit_amount || 0;
-            bonusCredits += b.bonus_amount;
-            count++;
-          }
-        }
-      });
-
-      return {
-        weekStart: format(weekStart, 'yyyy-MM-dd'),
-        weekLabel,
-        deposits,
-        bonusCredits,
-        count,
-      };
-    });
-  }, [bonuses, dateRange]);
 
   // Totais (sempre na moeda de consolidação do projeto)
   const activeBonusTotalConsolidated = useMemo(() => {
@@ -334,29 +299,9 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       .reduce((acc, b) => acc + convertToConsolidation(b.saldo_atual || 0, b.currency), 0);
   }, [bonuses, convertToConsolidation]);
 
-  // Progresso médio de rollover (apenas bônus com rollover definido)
-  const avgRolloverProgress = useMemo(() => {
-    const bonusesWithRollover = bonuses.filter(
-      (b) => b.status === "credited" && b.rollover_target_amount && b.rollover_target_amount > 0
-    );
-    if (bonusesWithRollover.length === 0) return null;
-
-    const totalProgress = bonusesWithRollover.reduce((acc, b) => {
-      const pct = Math.min(100, ((b.rollover_progress || 0) / (b.rollover_target_amount || 1)) * 100);
-      return acc + pct;
-    }, 0);
-
-    return totalProgress / bonusesWithRollover.length;
-  }, [bonuses]);
 
   const totalSaldoOperavel = activeBonusTotalConsolidated;
 
-  const chartConfig = {
-    deposits: { label: "Depósitos", color: "hsl(var(--chart-2))" },
-    bonusCredits: { label: "Bônus", color: "hsl(var(--warning))" },
-    juice: { label: "Juice", color: "hsl(var(--primary))" },
-    adjustedBalance: { label: "Saldo Ajustado", color: "hsl(var(--primary))" },
-  };
 
   const hasData = dailyData.some(d => d.deposits > 0 || d.bonusCredits > 0 || d.juice !== 0);
 
@@ -372,9 +317,9 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       )}
 
       {/* KPIs with hierarchy - Saldo Operável is primary */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <TooltipProvider>
-          <Card className={`border-primary/30 bg-primary/5 lg:col-span-1 ${isContaminated ? 'ring-1 ring-amber-500/30' : ''}`}>
+          <Card className={`border-primary/30 bg-primary/5 ${isContaminated ? 'ring-1 ring-amber-500/30' : ''}`}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-1.5">
                 Saldo Operável
@@ -393,7 +338,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary">{formatCurrency(totalSaldoOperavel)}</div>
-              <p className="text-xs text-muted-foreground">Real + Bônus Ativo</p>
+              <p className="text-xs text-muted-foreground">Total ativo em modo bônus</p>
             </CardContent>
           </Card>
 
@@ -418,205 +363,189 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
               <p className="text-xs text-muted-foreground">{summary.count_credited} bônus creditados</p>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Rollover Médio</CardTitle>
-              <Timer className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {avgRolloverProgress !== null ? (
-                <>
-                  <div className="text-2xl font-bold">{avgRolloverProgress.toFixed(0)}%</div>
-                  <p className="text-xs text-muted-foreground">Progresso médio dos bônus</p>
-                </>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold text-muted-foreground">—</div>
-                  <p className="text-xs text-muted-foreground">Sem rollover definido</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
         </TooltipProvider>
       </div>
 
-      {/* Dashboard Charts */}
+      {/* Dashboard Chart - Curva de Evolução */}
       {hasData ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {/* Chart C - Adjusted Balance (Most Important) */}
-          <Card className={`lg:col-span-2 ${isContaminated ? 'ring-1 ring-amber-500/30' : ''}`}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                Saldo Ajustado Acumulado
+        <Card className={isContaminated ? 'ring-1 ring-amber-500/30' : ''}>
+          <CardHeader className="pb-3">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary" />
+                <CardTitle className="text-base">Evolução do Saldo em Bônus</CardTitle>
+                <TooltipProvider>
+                  <TooltipUI>
+                    <TooltipTrigger>
+                      <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-xs">
+                        Compara o total de Bônus creditados com o resultado líquido ao longo do tempo.
+                        A área sombreada representa o potencial acumulado.
+                      </p>
+                    </TooltipContent>
+                  </TooltipUI>
+                </TooltipProvider>
                 {isContaminated && (
                   <Badge variant="outline" className="border-amber-500/50 text-amber-500 text-[10px] ml-2">
                     Inclui outras estratégias
                   </Badge>
                 )}
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">
-                Depósito Referência + Bônus Creditado + Resultado das Apostas em Modo Bônus
-              </p>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={dailyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorAdjustedBalance" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
-                    <XAxis 
-                      dataKey="dateLabel" 
-                      tick={{ fontSize: 10 }} 
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 10 }} 
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v) => `${currencySymbol}${v}`}
-                    />
-                    <Tooltip 
-                      content={({ active, payload, label }) => {
-                        if (!active || !payload?.length) return null;
-                        const data = payload[0]?.payload as DailyData;
-                        return (
-                          <div className="bg-card border rounded-lg p-3 shadow-lg">
-                            <p className="font-medium mb-2">{label}</p>
-                            <div className="space-y-1 text-xs">
-                              <p className="text-blue-400">Depósito: {formatCurrency(data.deposits)}</p>
-                              <p className="text-warning">Bônus: {formatCurrency(data.bonusCredits)}</p>
-                              <p className={data.juice >= 0 ? "text-green-400" : "text-red-400"}>
-                                Juice: {formatCurrency(data.juice)}
-                              </p>
-                              <p className="font-medium text-primary pt-1 border-t border-border">
-                                Saldo: {formatCurrency(data.adjustedBalance)}
-                              </p>
+              </div>
+
+              {/* Filtro de Granularidade */}
+              <Select value={granularidade} onValueChange={(v) => setGranularidade(v as Granularidade)}>
+                <SelectTrigger className="w-[110px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dia">Por Dia</SelectItem>
+                  <SelectItem value="semana">Por Semana</SelectItem>
+                  <SelectItem value="mes">Por Mês</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+
+          <CardContent>
+            <div className="h-[320px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={dailyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradientBonus" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.05}/>
+                    </linearGradient>
+                    <linearGradient id="gradientSaldo" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
+                  
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                  <XAxis 
+                    dataKey="dateLabel" 
+                    tick={{ fontSize: 10 }} 
+                    className="text-muted-foreground"
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 10 }} 
+                    className="text-muted-foreground"
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => {
+                      if (Math.abs(value) >= 1000) return `${(value / 1000).toFixed(0)}k`;
+                      return value.toString();
+                    }}
+                  />
+                  <Tooltip 
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload?.length) return null;
+                      const data = payload[0]?.payload as DailyData;
+                      if (!data) return null;
+
+                      return (
+                        <div className="bg-popover/95 backdrop-blur-sm border rounded-lg shadow-xl p-4 min-w-[240px]">
+                          <p className="text-sm font-semibold border-b pb-2 mb-2">{label}</p>
+                          
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-blue-400 flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                                Depósito
+                              </span>
+                              <span className="text-sm font-medium">{formatCurrency(data.deposits)}</span>
+                            </div>
+                            
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-amber-400 flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                                Bônus
+                              </span>
+                              <span className="text-sm font-medium">{formatCurrency(data.bonusCredits)}</span>
+                            </div>
+
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-violet-400 flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-violet-400"></span>
+                                Juice
+                              </span>
+                              <span className={`text-sm font-medium ${data.juice >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {formatCurrency(data.juice)}
+                              </span>
+                            </div>
+
+                            <div className="flex justify-between items-center border-t pt-2">
+                              <span className="text-xs text-emerald-400 flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                                Saldo Acumulado
+                              </span>
+                              <span className={`text-sm font-bold ${data.adjustedBalance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {formatCurrency(data.adjustedBalance)}
+                              </span>
                             </div>
                           </div>
-                        );
-                      }}
-                    />
-                    <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
-                    <Area 
-                      type="monotone" 
-                      dataKey="adjustedBalance" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={2}
-                      fill="url(#colorAdjustedBalance)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Legend 
+                    wrapperStyle={{ fontSize: '11px' }}
+                    iconType="circle"
+                  />
+                  
+                  {/* Área sombreada para Bônus Acumulado */}
+                  <Area
+                    type="monotone"
+                    dataKey="bonusCredits"
+                    name="Bônus Creditado"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    fill="url(#gradientBonus)"
+                  />
 
-          {/* Chart A - Weekly Deposits */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Coins className="h-4 w-4 text-blue-400" />
-                Depósitos Semanais
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[200px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={weeklyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
-                    <XAxis 
-                      dataKey="weekLabel" 
-                      tick={{ fontSize: 10 }} 
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 10 }} 
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v) => `${currencySymbol}${v}`}
-                    />
-                    <Tooltip
-                      content={({ active, payload, label }) => {
-                        if (!active || !payload?.length) return null;
-                        const data = payload[0]?.payload as WeeklyData;
-                        return (
-                          <div className="bg-card border rounded-lg p-3 shadow-lg text-xs">
-                            <p className="font-medium mb-2">Semana de {label}</p>
-                            <p className="text-blue-400">Depósitos: {formatCurrency(data.deposits)}</p>
-                            <p className="text-warning">Bônus: {formatCurrency(data.bonusCredits)}</p>
-                            <p className="text-muted-foreground">{data.count} créditos</p>
-                          </div>
-                        );
-                      }}
-                    />
-                    <Bar dataKey="deposits" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} name="Depósitos" />
-                    <Bar dataKey="bonusCredits" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} name="Bônus" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
+                  {/* Linha para Juice */}
+                  <Line
+                    type="monotone"
+                    dataKey="juice"
+                    name="Juice"
+                    stroke="#8b5cf6"
+                    strokeWidth={2}
+                    dot={false}
+                    strokeDasharray="4 2"
+                  />
 
-          {/* Chart B - Daily Juice */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                Juice Diário (P&L)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[200px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dailyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
-                    <XAxis 
-                      dataKey="xLabel" 
-                      tick={{ fontSize: 10 }} 
-                      tickLine={false}
-                      axisLine={false}
-                      interval={isSingleDayPeriod ? 0 : "preserveEnd"}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 10 }} 
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v) => `${currencySymbol}${v}`}
-                    />
-                    <Tooltip
-                      content={({ active, payload, label }) => {
-                        if (!active || !payload?.length) return null;
-                        const data = payload[0]?.payload as DailyData;
-                        return (
-                          <div className="bg-card border rounded-lg p-3 shadow-lg text-xs">
-                            <p className="font-medium mb-2">{label}</p>
-                            <p className={data.juice >= 0 ? "text-green-400" : "text-red-400"}>
-                              Juice: {formatCurrency(data.juice)}
-                            </p>
-                          </div>
-                        );
-                      }}
-                    />
-                    <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
-                    <Bar 
-                      dataKey="juice" 
-                      fill="hsl(var(--primary))"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </div>
+                  {/* Linha para Saldo Acumulado */}
+                  <Line
+                    type="monotone"
+                    dataKey="adjustedBalance"
+                    name="Saldo Acumulado"
+                    stroke="#22c55e"
+                    strokeWidth={2.5}
+                    dot={false}
+                  />
+
+                  <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Legenda explicativa */}
+            <div className="mt-4 p-3 rounded-lg bg-muted/30 border">
+              <p className="text-xs text-muted-foreground">
+                <strong className="text-foreground">Como interpretar:</strong> A área 
+                <span className="text-amber-400 font-medium"> laranja </span>
+                representa bônus creditados. A linha
+                <span className="text-violet-400 font-medium"> roxa </span>
+                mostra o juice (P&L das apostas). A linha
+                <span className="text-emerald-400 font-medium"> verde </span>
+                é o saldo acumulado total.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
         <Card className="border-dashed">
           <CardContent className="py-12 text-center">
