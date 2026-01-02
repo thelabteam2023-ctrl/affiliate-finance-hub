@@ -30,6 +30,8 @@ export interface BookmakerSaldo {
   // Saldos calculados (da RPC)
   saldo_disponivel: number;  // saldo_real - saldo_em_aposta
   saldo_operavel: number;    // saldo_disponivel + saldo_freebet + saldo_bonus
+  // Estado do rollover
+  bonus_rollover_started: boolean; // true se rollover_progress > 0 em algum bônus creditado
 }
 
 interface UseBookmakerSaldosQueryOptions {
@@ -74,7 +76,8 @@ export function useBookmakerSaldosQuery({
         saldo_bonus: Number(row.saldo_bonus) || 0,
         saldo_em_aposta: Number(row.saldo_em_aposta) || 0,
         saldo_disponivel: Number(row.saldo_disponivel) || 0,
-        saldo_operavel: Number(row.saldo_operavel) || 0
+        saldo_operavel: Number(row.saldo_operavel) || 0,
+        bonus_rollover_started: Boolean(row.bonus_rollover_started)
       }));
 
       // Filtrar por saldo operável > 0, exceto se for o bookmaker atual ou includeZeroBalance
