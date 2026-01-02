@@ -46,7 +46,7 @@ export interface ProjectCurrencyReturn {
 export function useProjetoCurrency(projetoId: string | undefined): ProjectCurrencyReturn {
   const { cotacaoUSD, loading: loadingCotacao } = useCotacoes();
 
-  // Buscar configuração do projeto
+  // Buscar configuração do projeto - SINCRONIZADO COM useProjetoConsolidacao
   const { data: projetoConfig, isLoading: loadingConfig } = useQuery({
     queryKey: ["projeto-currency-config", projetoId],
     queryFn: async () => {
@@ -59,14 +59,18 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
         .single();
 
       if (error) throw error;
+      
+      console.log("[useProjetoCurrency] Config carregada:", data);
       return data;
     },
     enabled: !!projetoId,
-    staleTime: 30000,
+    staleTime: 0, // Sempre buscar dados frescos após invalidação
   });
 
-  const moedaConsolidacao = (projetoConfig?.moeda_consolidacao as MoedaConsolidacao) || "USD";
-  const fonteCotacao = (projetoConfig?.fonte_cotacao as FonteCotacao) || "TRABALHO";
+  // CRÍTICO: Usar valor do banco SEM fallback para USD
+  // O banco tem default 'USD', então null significa problema
+  const moedaConsolidacao = (projetoConfig?.moeda_consolidacao as MoedaConsolidacao) ?? "BRL";
+  const fonteCotacao = (projetoConfig?.fonte_cotacao as FonteCotacao) ?? "TRABALHO";
   const cotacaoTrabalho = projetoConfig?.cotacao_trabalho || null;
   
   const cotacaoAtual = useMemo(() => {
