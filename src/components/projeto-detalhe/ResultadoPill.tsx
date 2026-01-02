@@ -34,6 +34,8 @@ interface ResultadoPillProps {
   valorFreebetGerada?: number;
   stakeBonus?: number;
   bonusId?: string | null;
+  contextoOperacional?: string | null; // Para identificar apostas de bônus
+  estrategia?: string | null; // Para identificar apostas de extração de bônus
   onResultadoUpdated: () => void;
   onEditClick: () => void;
 }
@@ -87,6 +89,8 @@ export function ResultadoPill({
   valorFreebetGerada,
   stakeBonus = 0,
   bonusId = null,
+  contextoOperacional,
+  estrategia,
   onResultadoUpdated,
   onEditClick,
 }: ResultadoPillProps) {
@@ -94,7 +98,8 @@ export function ResultadoPill({
   const [loading, setLoading] = useState(false);
   
   // Hook para gerenciar consumo de bônus
-  const { processarLiquidacaoBonus, reverterLiquidacaoBonus } = useBonusBalanceManager();
+  const { processarLiquidacaoBonus, reverterLiquidacaoBonus, atualizarProgressoRollover, reverterProgressoRollover } = useBonusBalanceManager();
+
   
   // Hook para invalidar cache de saldos após atualização
   const invalidateSaldos = useInvalidateBookmakerSaldos();
@@ -541,6 +546,22 @@ export function ResultadoPill({
           lucroPrejuizo,
           bookmarkerId
         );
+      }
+
+      // ====== LÓGICA DE ROLLOVER ======
+      // Se é uma aposta de bônus e foi liquidada (exceto VOID), atualizar rollover
+      const isApostaBonus = contextoOperacional === "BONUS" || estrategia === "EXTRACAO_BONUS";
+      const resultadoContaRollover = novoResultado !== "VOID" && novoResultado !== "PENDENTE";
+      const resultadoAnteriorContava = resultado && resultado !== "VOID" && resultado !== "PENDENTE";
+      
+      if (isApostaBonus) {
+        if (resultadoContaRollover && !resultadoAnteriorContava) {
+          // Primeira vez liquidando (não VOID) - adicionar ao rollover
+          await atualizarProgressoRollover(projetoId, bookmarkerId, stake, odd);
+        } else if (!resultadoContaRollover && resultadoAnteriorContava) {
+          // Resultado válido → VOID/PENDENTE - reverter rollover
+          await reverterProgressoRollover(projetoId, bookmarkerId, stake);
+        }
       }
 
       // ====== LÓGICA DE FREEBET ======

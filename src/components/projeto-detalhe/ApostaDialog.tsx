@@ -1741,30 +1741,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           }
         }
 
-        // Atualizar progresso do rollover se for aposta de bônus
-        if (registroValues.contexto_operacional === "BONUS" || registroValues.estrategia === "EXTRACAO_BONUS") {
-          const bookmakerParaRollover = tipoAposta === "bookmaker" 
-            ? bookmakerId 
-            : tipoOperacaoExchange === "cobertura" 
-              ? coberturaBackBookmakerId 
-              : exchangeBookmakerId;
-          
-          const stakeParaRollover = tipoAposta === "bookmaker" 
-            ? parseFloat(stake) 
-            : tipoOperacaoExchange === "cobertura"
-              ? parseFloat(coberturaBackStake)
-              : parseFloat(exchangeStake);
-          
-          const oddParaRollover = tipoAposta === "bookmaker"
-            ? parseFloat(odd)
-            : tipoOperacaoExchange === "cobertura"
-              ? parseFloat(coberturaBackOdd)
-              : parseFloat(exchangeOdd);
-              
-          if (bookmakerParaRollover && stakeParaRollover > 0) {
-            await atualizarProgressoRollover(projetoId, bookmakerParaRollover, stakeParaRollover, oddParaRollover);
-          }
-        }
+        // NOTA: O progresso do rollover é atualizado na LIQUIDAÇÃO da aposta (ResultadoPill),
+        // não na criação. Isso garante que apenas apostas finalizadas (GREEN/RED) contem para o rollover.
       }
 
       // Invalidar cache de saldos para atualizar todas as UIs
