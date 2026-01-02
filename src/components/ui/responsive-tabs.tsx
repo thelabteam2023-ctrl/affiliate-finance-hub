@@ -3,11 +3,11 @@ import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface TabItem {
   value: string;
@@ -43,7 +43,6 @@ const ResponsiveTabsList = React.forwardRef<
   const measureRef = React.useRef<HTMLDivElement>(null);
   const [visibleCount, setVisibleCount] = React.useState(tabs.length);
   const [underlineStyle, setUnderlineStyle] = React.useState({ left: 0, width: 0 });
-  const [overflowOpen, setOverflowOpen] = React.useState(false);
 
   // Measure available space and tab widths
   const calculateVisibleTabs = React.useCallback(() => {
@@ -52,8 +51,8 @@ const ResponsiveTabsList = React.forwardRef<
     const containerWidth = containerRef.current.offsetWidth;
     const children = measureRef.current.children;
     
-    // Reserve space for overflow button (approx 60px) and extra content (approx 120px)
-    const reservedSpace = extraContent ? 180 : 60;
+    // Reserve space for overflow button (approx 80px) and extra content (approx 120px)
+    const reservedSpace = extraContent ? 200 : 80;
     const availableWidth = containerWidth - reservedSpace;
     
     let totalWidth = 0;
@@ -112,7 +111,6 @@ const ResponsiveTabsList = React.forwardRef<
 
   // Update underline when active tab changes
   React.useEffect(() => {
-    // Delay to ensure DOM is updated
     const timeout = setTimeout(updateUnderline, 50);
     return () => clearTimeout(timeout);
   }, [activeTab, visibleCount, updateUnderline]);
@@ -129,7 +127,7 @@ const ResponsiveTabsList = React.forwardRef<
       {/* Hidden measure container */}
       <div 
         ref={measureRef} 
-        className="absolute opacity-0 pointer-events-none flex gap-8"
+        className="absolute opacity-0 pointer-events-none flex gap-8 -z-10"
         aria-hidden="true"
       >
         {tabs.map((tab) => (
@@ -151,7 +149,7 @@ const ResponsiveTabsList = React.forwardRef<
           else if (ref) ref.current = node;
         }}
         className={cn(
-          "inline-flex h-12 items-center justify-start gap-8 border-b border-border relative overflow-hidden",
+          "inline-flex h-12 items-center justify-start gap-8 border-b border-border relative",
           className,
         )}
         {...props}
@@ -160,65 +158,54 @@ const ResponsiveTabsList = React.forwardRef<
           <TabsPrimitive.Trigger
             key={tab.value}
             value={tab.value}
-            className={cn(
-              "inline-flex items-center justify-center gap-2 whitespace-nowrap px-4 py-3 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground relative data-[state=active]:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shrink-0"
-            )}
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap px-4 py-3 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground relative data-[state=active]:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shrink-0"
           >
             {tab.icon}
             {tab.label}
           </TabsPrimitive.Trigger>
         ))}
 
-        {/* Overflow menu */}
+        {/* Overflow menu - simple dropdown, NO scroll */}
         {hasOverflow && (
-          <Popover open={overflowOpen} onOpenChange={setOverflowOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
                 className={cn(
-                  "h-9 px-3 gap-1 text-sm font-medium shrink-0",
+                  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors shrink-0 rounded-md",
                   activeInOverflow 
-                    ? "text-foreground" 
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "text-foreground bg-accent" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
                 <MoreHorizontal className="h-4 w-4" />
-                <span className="hidden sm:inline">Mais</span>
+                <span>Mais</span>
                 {activeInOverflow && (
                   <span className="ml-1 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">
                     {overflowTabs.find(t => t.value === activeTab)?.label}
                   </span>
                 )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent 
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
               align="end" 
-              className="w-48 p-1 bg-popover"
               sideOffset={8}
+              className="min-w-[160px] bg-popover"
             >
-              <div className="flex flex-col">
-                {overflowTabs.map((tab) => (
-                  <button
-                    key={tab.value}
-                    onClick={() => {
-                      onTabChange(tab.value);
-                      setOverflowOpen(false);
-                    }}
-                    className={cn(
-                      "flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md transition-colors text-left",
-                      activeTab === tab.value
-                        ? "bg-accent text-accent-foreground font-medium"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    )}
-                  >
-                    {tab.icon}
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
+              {overflowTabs.map((tab) => (
+                <DropdownMenuItem
+                  key={tab.value}
+                  onClick={() => onTabChange(tab.value)}
+                  className={cn(
+                    "flex items-center gap-2 cursor-pointer",
+                    activeTab === tab.value && "bg-accent font-medium"
+                  )}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
 
         {/* Extra content (dropdowns, etc) */}
