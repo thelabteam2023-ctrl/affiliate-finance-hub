@@ -214,6 +214,9 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
     bk.parceiro_nome?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Get pending bonuses (not yet credited)
+  const pendingBonuses = bonuses.filter(b => b.status === 'pending');
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -247,6 +250,55 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
+
+      {/* Pending Bonuses Section */}
+      {pendingBonuses.length > 0 && (
+        <Card className="border-yellow-500/30 bg-yellow-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2 text-yellow-400">
+              <Clock className="h-4 w-4" />
+              Aguardando Crédito ({pendingBonuses.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {pendingBonuses.map((bonus) => (
+                <div 
+                  key={bonus.id} 
+                  className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-yellow-500/20"
+                >
+                  {bonus.bookmaker_logo_url ? (
+                    <img
+                      src={bonus.bookmaker_logo_url}
+                      alt={bonus.bookmaker_nome}
+                      className="h-8 w-8 rounded-lg object-contain bg-white p-0.5"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+                      <Gift className="h-4 w-4 text-yellow-400" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{bonus.bookmaker_nome}</p>
+                    <p className="text-xs text-muted-foreground truncate">{bonus.title}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-yellow-400">
+                      {formatCurrency(bonus.bonus_amount, bonus.currency)}
+                    </p>
+                    <Badge variant="outline" className="text-[10px] border-yellow-500/30 text-yellow-400">
+                      Pendente
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              O rollover só será contado após o bônus ser creditado.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Empty state */}
       {filteredBookmakers.length === 0 ? (
