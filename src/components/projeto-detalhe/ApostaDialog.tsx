@@ -55,8 +55,6 @@ import {
 } from "@/components/bookmakers/BookmakerSelectOption";
 import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
-import { useProjectBonuses } from "@/hooks/useProjectBonuses";
-import { BonusRolloverSelect } from "./BonusRolloverSelect";
 
 interface Aposta {
   id: string;
@@ -336,11 +334,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   // Hook para gerenciamento de bônus (rollover)
   const { atualizarProgressoRollover } = useBonusBalanceManager();
   
-  // Hook para buscar bônus do projeto (para seletor de rollover)
-  const { bonuses: projectBonuses } = useProjectBonuses({ projectId: projetoId });
-  
-  // Estado para bonus_id selecionado (vínculo com rollover)
-  const [selectedBonusId, setSelectedBonusId] = useState<string | null>(null);
   // Mapear saldos canônicos para formato local (retrocompatibilidade)
   const bookmakers = useMemo((): Bookmaker[] => {
     return bookmakerSaldos.map(bk => ({
@@ -1269,8 +1262,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         estrategia: registroValues.estrategia,
         forma_registro: registroValues.forma_registro,
         contexto_operacional: registroValues.contexto_operacional,
-        // Vínculo com bônus para cálculo automático de rollover
-        bonus_id: selectedBonusId || null,
       };
 
       if (tipoAposta === "bookmaker") {
@@ -2625,15 +2616,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   </div>
                 )}
 
-                {/* Seletor de Bônus para Rollover */}
-                <BonusRolloverSelect
-                  bonuses={projectBonuses}
-                  selectedBonusId={selectedBonusId}
-                  onBonusChange={setSelectedBonusId}
-                  bookmakerId={bookmakerId}
-                  currentOdd={parseFloat(odd) || undefined}
-                  compact
-                />
 
               </TabsContent>
 
