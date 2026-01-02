@@ -104,6 +104,16 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [planLimitError, setPlanLimitError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // 🔍 DEBUG: Log para rastrear montagem/desmontagem e estado do dialog
+  console.log('[ParceiroDialog] RENDER', {
+    open,
+    parceiro_id: parceiro?.id || null,
+    parceiro_nome: parceiro?.nome || null,
+    viewMode,
+    nome_atual_no_estado: nome,
+    cpf_atual_no_estado: cpf,
+  });
+
   const copyToClipboard = async (text: string, fieldName: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -186,14 +196,29 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     fetchRedes();
   }, []);
 
+  // 🔍 DEBUG: useEffect que monitora abertura do dialog
   useEffect(() => {
+    console.log('[ParceiroDialog] useEffect[open] triggered', {
+      open,
+      parceiro_prop_id: parceiro?.id || null,
+      estado_atual_nome: nome,
+      estado_atual_cpf: cpf,
+    });
     if (open) {
       setActiveTab(initialTab);
     }
   }, [open, initialTab]);
 
+  // 🔍 DEBUG: useEffect que controla reset do formulário
   useEffect(() => {
+    console.log('[ParceiroDialog] useEffect[parceiro] triggered', {
+      parceiro_id: parceiro?.id || null,
+      parceiro_nome: parceiro?.nome || null,
+      vai_fazer_reset: !parceiro,
+    });
+    
     if (parceiro) {
+      console.log('[ParceiroDialog] Carregando dados do parceiro existente');
       setNome(parceiro.nome || "");
       setCpf(formatCPF(parceiro.cpf || "")); // Apply mask when loading
       setEmail(parceiro.email || "");
@@ -250,6 +275,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       
       setParceiroId(parceiro.id);
     } else {
+      console.log('[ParceiroDialog] parceiro é null, chamando resetForm()');
       resetForm();
     }
   }, [parceiro]);
@@ -386,6 +412,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   };
 
   const resetForm = () => {
+    console.log('[ParceiroDialog] resetForm() EXECUTADO - limpando todos os campos');
     setNome("");
     setCpf("");
     setEmail("");
