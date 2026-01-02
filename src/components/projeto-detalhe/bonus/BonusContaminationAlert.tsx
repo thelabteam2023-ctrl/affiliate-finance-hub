@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertTriangle, ChevronDown, ChevronUp, Info } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, Info, X } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,15 +33,24 @@ export function BonusContaminationAlert({
   totalNonBonusBets 
 }: BonusContaminationAlertProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
 
-  if (contaminatedBookmakers.length === 0) return null;
+  if (contaminatedBookmakers.length === 0 || isDismissed) return null;
 
   const getStrategyLabel = (strategy: string) => STRATEGY_LABELS[strategy] || strategy;
 
   return (
-    <Alert className="border-amber-500/50 bg-amber-500/10">
+    <Alert className="border-amber-500/50 bg-amber-500/10 relative">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-2 right-2 h-6 w-6 text-muted-foreground hover:text-foreground"
+        onClick={() => setIsDismissed(true)}
+      >
+        <X className="h-4 w-4" />
+      </Button>
       <AlertTriangle className="h-4 w-4 text-amber-500" />
-      <AlertTitle className="text-amber-500 font-semibold flex items-center gap-2">
+      <AlertTitle className="text-amber-500 font-semibold flex items-center gap-2 pr-8">
         Métricas com influência externa
         <Badge variant="outline" className="border-amber-500/50 text-amber-500 text-xs">
           {totalNonBonusBets} apostas
