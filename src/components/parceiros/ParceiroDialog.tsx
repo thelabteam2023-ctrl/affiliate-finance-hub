@@ -206,8 +206,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     });
     if (open) {
       setActiveTab(initialTab);
+      // FIX: Reset form quando abre em modo CREATE (parceiro é null)
+      if (!parceiro) {
+        console.log('[ParceiroDialog] Abrindo em modo CREATE - resetando formulário');
+        resetForm();
+      }
     }
-  }, [open, initialTab]);
+  }, [open, initialTab, parceiro]);
 
   // 🔍 DEBUG: useEffect que controla reset do formulário
   useEffect(() => {
