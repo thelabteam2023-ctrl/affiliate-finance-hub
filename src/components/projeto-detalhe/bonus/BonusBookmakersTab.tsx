@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { VinculoBonusDrawer } from "../VinculoBonusDrawer";
 import { FinalizeBonusDialog } from "../FinalizeBonusDialog";
+import { BonusDialog } from "../BonusDialog";
+import { BonusFormData } from "@/hooks/useProjectBonuses";
 import {
   Table,
   TableBody,
@@ -85,8 +87,10 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
   const [bonusToFinalize, setBonusToFinalize] = useState<ProjectBonus | null>(null);
   
-  // Pending bonus edit state
+  // Pending bonus edit dialog state (separate from drawer)
+  const [pendingBonusDialogOpen, setPendingBonusDialogOpen] = useState(false);
   const [pendingBonusToEdit, setPendingBonusToEdit] = useState<ProjectBonus | null>(null);
+  const [pendingBonusBookmaker, setPendingBonusBookmaker] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmaker_catalogo_id?: string | null; moeda?: string } | null>(null);
 
   const bookmakersInBonusMode = getBookmakersWithActiveBonus();
 
@@ -288,8 +292,9 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                       <div 
                         className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-yellow-500/20 cursor-pointer hover:bg-yellow-500/10 transition-colors"
                         onClick={() => {
+                          // Open edit dialog directly without drawer
                           setPendingBonusToEdit(bonus);
-                          setSelectedBookmaker({
+                          setPendingBonusBookmaker({
                             id: bonus.bookmaker_id,
                             nome: bonus.bookmaker_nome,
                             login: bonus.bookmaker_login,
@@ -298,7 +303,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                             bookmaker_catalogo_id: bonus.bookmaker_catalogo_id,
                             moeda: bonus.currency,
                           });
-                          setBonusDrawerOpen(true);
+                          setPendingBonusDialogOpen(true);
                         }}
                       >
                         {bonus.bookmaker_logo_url ? (
@@ -740,12 +745,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
       {selectedBookmaker && (
         <VinculoBonusDrawer
           open={bonusDrawerOpen}
-          onOpenChange={(open) => {
-            setBonusDrawerOpen(open);
-            if (!open) {
-              setPendingBonusToEdit(null);
-            }
-          }}
+          onOpenChange={setBonusDrawerOpen}
           projectId={projetoId}
           bookmakerId={selectedBookmaker.id}
           bookmakerName={selectedBookmaker.nome}
@@ -755,7 +755,43 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
           bookmakerCatalogoId={selectedBookmaker.bookmaker_catalogo_id}
           currency={selectedBookmaker.moeda}
           onBonusChange={fetchBonuses}
-          initialBonusToEdit={pendingBonusToEdit}
+        />
+      )}
+
+      {/* Pending Bonus Edit Dialog (separate from drawer) */}
+      {pendingBonusBookmaker && (
+        <BonusDialog
+          open={pendingBonusDialogOpen}
+          onOpenChange={(open) => {
+            setPendingBonusDialogOpen(open);
+            if (!open) {
+              setPendingBonusToEdit(null);
+              setPendingBonusBookmaker(null);
+            }
+          }}
+          projectId={projetoId}
+          bookmakers={[{
+            id: pendingBonusBookmaker.id,
+            nome: pendingBonusBookmaker.nome,
+            login_username: pendingBonusBookmaker.login || "",
+            login_password_encrypted: pendingBonusBookmaker.password,
+            logo_url: pendingBonusBookmaker.logo,
+            bookmaker_catalogo_id: pendingBonusBookmaker.bookmaker_catalogo_id,
+            moeda: pendingBonusBookmaker.moeda,
+          }]}
+          bonus={pendingBonusToEdit}
+          preselectedBookmakerId={pendingBonusBookmaker.id}
+          saving={saving}
+          onSubmit={async (data: BonusFormData) => {
+            if (!pendingBonusToEdit) return false;
+            const success = await updateBonus(pendingBonusToEdit.id, data);
+            if (success) {
+              setPendingBonusDialogOpen(false);
+              setPendingBonusToEdit(null);
+              setPendingBonusBookmaker(null);
+            }
+            return success;
+          }}
         />
       )}
 
