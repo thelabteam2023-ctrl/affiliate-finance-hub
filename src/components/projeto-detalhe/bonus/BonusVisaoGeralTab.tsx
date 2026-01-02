@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus } from "@/hooks/useProjectBonuses";
 import { useBonusContamination } from "@/hooks/useBonusContamination";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Building2, Coins, Wallet, TrendingUp, AlertTriangle, Timer } from "lucide-react";
 import { differenceInDays, parseISO, format, startOfDay, startOfWeek, eachDayOfInterval, eachWeekOfInterval, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -56,6 +57,7 @@ interface WeeklyData {
 
 export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false }: BonusVisaoGeralTabProps) {
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
+  const { formatCurrency, getSymbol, convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
   const [bookmakersWithBonus, setBookmakersWithBonus] = useState<BookmakerWithBonus[]>([]);
   const [loading, setLoading] = useState(true);
   const [betsData, setBetsData] = useState<any[]>([]);
@@ -70,6 +72,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   // Check for cross-strategy contamination
   const { isContaminated, contaminatedBookmakers, totalNonBonusBets, loading: contaminationLoading } = 
     useBonusContamination({ projetoId, bookmakersInBonusMode });
+  
+  const currencySymbol = getSymbol();
 
   // Get bonuses expiring soon
   const getExpiringSoon = (days: number): ProjectBonus[] => {
@@ -187,9 +191,10 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     }
   };
 
-  const formatCurrency = (value: number, moeda: string = 'BRL') => {
+  // Helper to format bonus in its original currency (for expiring alerts)
+  const formatBonusOriginalCurrency = (value: number, moeda: string = 'BRL') => {
     const symbols: Record<string, string> = { BRL: 'R$', USD: '$', EUR: '€', GBP: '£' };
-    return `${symbols[moeda] || moeda} ${value.toFixed(2)}`;
+    return `${symbols[moeda] || moeda} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   // Calculate daily data for charts using deposit_amount from bonus records (not cash_ledger)
@@ -447,7 +452,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                       tick={{ fontSize: 10 }} 
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={(v) => `R$${v}`}
+                      tickFormatter={(v) => `${currencySymbol}${v}`}
                     />
                     <Tooltip 
                       content={({ active, payload, label }) => {
@@ -507,7 +512,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                       tick={{ fontSize: 10 }} 
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={(v) => `R$${v}`}
+                      tickFormatter={(v) => `${currencySymbol}${v}`}
                     />
                     <Tooltip
                       content={({ active, payload, label }) => {
@@ -555,7 +560,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                       tick={{ fontSize: 10 }} 
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={(v) => `R$${v}`}
+                      tickFormatter={(v) => `${currencySymbol}${v}`}
                     />
                     <Tooltip
                       content={({ active, payload, label }) => {
@@ -608,7 +613,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             <div className="flex flex-wrap gap-2">
               {expiring7Days.map(bonus => (
                 <Badge key={bonus.id} variant="outline" className="border-destructive/30 text-destructive">
-                  {bonus.bookmaker_nome} - {formatCurrency(bonus.bonus_amount, bonus.currency)}
+                  {bonus.bookmaker_nome} - {formatBonusOriginalCurrency(bonus.bonus_amount, bonus.currency)}
                   {bonus.expires_at && (
                     <span className="ml-1 text-xs">({format(parseISO(bonus.expires_at), 'dd/MM')})</span>
                   )}
@@ -631,7 +636,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             <div className="flex flex-wrap gap-2">
               {expiring15Days.filter(b => !expiring7Days.some(e => e.id === b.id)).map(bonus => (
                 <Badge key={bonus.id} variant="outline" className="border-warning/30 text-warning">
-                  {bonus.bookmaker_nome} - {formatCurrency(bonus.bonus_amount, bonus.currency)}
+                  {bonus.bookmaker_nome} - {formatBonusOriginalCurrency(bonus.bonus_amount, bonus.currency)}
                   {bonus.expires_at && (
                     <span className="ml-1 text-xs">({format(parseISO(bonus.expires_at), 'dd/MM')})</span>
                   )}
