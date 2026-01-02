@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Loader2, Gift, Building2, Sparkles, Check, Info } from "lucide-react";
+import { Loader2, Gift, Building2, Sparkles, Check, Info, AlertTriangle } from "lucide-react";
 import { BonusFormData, BonusStatus, ProjectBonus } from "@/hooks/useProjectBonuses";
 import { useBookmakerBonusTemplates, BonusTemplate, calculateRolloverTarget } from "@/hooks/useBookmakerBonusTemplates";
 import { format, addDays } from "date-fns";
@@ -31,6 +31,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface BookmakerOption {
   id: string;
@@ -87,9 +97,10 @@ export function BonusDialog({
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("BRL");
-  const [status, setStatus] = useState<BonusStatus>("credited");
+  const [status, setStatus] = useState<BonusStatus>("pending");
   const [creditedAt, setCreditedAt] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
+  const [showCreditConfirmation, setShowCreditConfirmation] = useState(false);
   
   // New rollover fields
   const [rolloverMultiplier, setRolloverMultiplier] = useState("");
@@ -136,13 +147,13 @@ export function BonusDialog({
         setFilledFromTemplate(bonus.source === "template");
         setSelectedTemplateId(null);
       } else {
-        // Create mode
+        // Create mode - default to pending to avoid accidental rollover tracking
         setBookmakerId(preselectedBookmakerId || "");
         setTitle("");
         setAmount("");
         setCurrency("BRL");
-        setStatus("credited");
-        setCreditedAt(format(new Date(), "yyyy-MM-dd"));
+        setStatus("pending");
+        setCreditedAt("");
         setExpiresAt("");
         
         setRolloverMultiplier("");
@@ -154,6 +165,7 @@ export function BonusDialog({
         setSelectedTemplateId(null);
         setTemplatePercent(null);
         setTemplateMaxValue(null);
+        setShowCreditConfirmation(false);
       }
     }
   }, [open, bonus, preselectedBookmakerId]);
@@ -678,12 +690,27 @@ export function BonusDialog({
           </div>
 
           {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-          {/* LINHA 5 — Status (centralizado) */}
+          {/* LINHA 5 — Status (centralizado) com confirmação */}
           {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
           <div className="flex justify-center pt-2">
             <div className="space-y-1.5 w-48">
               <Label className="text-xs text-muted-foreground text-center block">Status</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as BonusStatus)}>
+              <Select 
+                value={status} 
+                onValueChange={(v) => {
+                  const newStatus = v as BonusStatus;
+                  // If changing to credited and not in edit mode, show confirmation
+                  if (newStatus === "credited" && !isEditMode && status !== "credited") {
+                    setShowCreditConfirmation(true);
+                  } else {
+                    setStatus(newStatus);
+                    // Auto-fill credited date when status changes to credited
+                    if (newStatus === "credited" && !creditedAt) {
+                      setCreditedAt(format(new Date(), "yyyy-MM-dd"));
+                    }
+                  }
+                }}
+              >
                 <SelectTrigger className="h-10 justify-center [&>span]:flex [&>span]:items-center [&>span]:justify-center">
                   <SelectValue />
                 </SelectTrigger>
@@ -695,8 +722,31 @@ export function BonusDialog({
                   ))}
                 </SelectContent>
               </Select>
+              
+              {/* Hint for pending status */}
+              {status === "pending" && !isEditMode && (
+                <p className="text-[10px] text-center text-muted-foreground">
+                  Altere para "Creditado" quando o bônus aparecer na sua conta
+                </p>
+              )}
             </div>
           </div>
+          
+          {/* Warning banner when credited is selected */}
+          {status === "credited" && !isEditMode && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+              <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-amber-400">
+                  Confirme que o bônus foi creditado
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Ao marcar como "Creditado", o rollover começará a ser contado imediatamente. 
+                  Só marque este status se o valor já está disponível na sua conta da casa.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
@@ -712,6 +762,43 @@ export function BonusDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      
+      {/* Confirmation dialog for changing to credited status */}
+      <AlertDialog open={showCreditConfirmation} onOpenChange={setShowCreditConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-400" />
+              Confirmar crédito do bônus
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-left space-y-3">
+              <p>
+                Você tem certeza que o bônus <strong>já foi creditado</strong> na sua conta da casa de apostas?
+              </p>
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-sm">
+                <p className="font-medium text-amber-400 mb-1">Importante:</p>
+                <p className="text-muted-foreground">
+                  Ao confirmar, o <strong>rollover começará a ser contado</strong> imediatamente. 
+                  Se o bônus ainda não foi creditado, deixe como "Pendente" e altere depois.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Manter como Pendente</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setStatus("credited");
+                setCreditedAt(format(new Date(), "yyyy-MM-dd"));
+                setShowCreditConfirmation(false);
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              Sim, foi creditado
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
