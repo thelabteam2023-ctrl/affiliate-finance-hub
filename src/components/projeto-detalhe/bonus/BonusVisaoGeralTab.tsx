@@ -334,6 +334,11 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       .reduce((acc, b) => acc + convertToConsolidation(b.saldo_atual || 0, b.currency), 0);
   }, [bonuses, convertToConsolidation]);
 
+  // Saldo Real total das bookmakers em modo bônus (consolidado)
+  const totalSaldoRealConsolidated = useMemo(() => {
+    return bookmakersWithBonus.reduce((acc, bk) => acc + convertToConsolidation(bk.saldo_real || 0, bk.moeda), 0);
+  }, [bookmakersWithBonus, convertToConsolidation]);
+
   // Progresso médio de rollover (apenas bônus com rollover definido)
   const avgRolloverProgress = useMemo(() => {
     const bonusesWithRollover = bonuses.filter(
@@ -349,7 +354,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     return totalProgress / bonusesWithRollover.length;
   }, [bonuses]);
 
-  const totalSaldoOperavel = activeBonusTotalConsolidated;
+  const totalSaldoOperavel = totalSaldoRealConsolidated + activeBonusTotalConsolidated;
 
   const chartConfig = {
     deposits: { label: "Depósitos", color: "hsl(var(--chart-2))" },
