@@ -538,12 +538,14 @@ export function FluxoFinanceiroOperacional({
               <ModernBarChart
                 data={dadosCapitalExterno.dados}
                 categoryKey="periodo"
+                hideYAxisTicks={dadosCapitalExterno.hasUSD}
                 bars={[
                   { 
                     dataKey: "aportes", 
                     label: "Aportes BRL", 
                     gradientStart: "#22C55E", 
-                    gradientEnd: "#16A34A" 
+                    gradientEnd: "#16A34A",
+                    currency: "BRL",
                   },
                   { 
                     // Usa valor normalizado para altura da barra
@@ -552,13 +554,15 @@ export function FluxoFinanceiroOperacional({
                     // Usa valor original em USD para o label
                     labelValueKey: "aportes_usd",
                     gradientStart: "#06B6D4", 
-                    gradientEnd: "#0891B2" 
+                    gradientEnd: "#0891B2",
+                    currency: "USD",
                   },
                   { 
                     dataKey: "liquidacoes", 
                     label: "Liquidações BRL", 
                     gradientStart: "#F97316", 
-                    gradientEnd: "#EA580C" 
+                    gradientEnd: "#EA580C",
+                    currency: "BRL",
                   },
                   { 
                     // Usa valor normalizado para altura da barra
@@ -567,7 +571,8 @@ export function FluxoFinanceiroOperacional({
                     // Usa valor original em USD para o label
                     labelValueKey: "liquidacoes_usd",
                     gradientStart: "#EC4899", 
-                    gradientEnd: "#DB2777" 
+                    gradientEnd: "#DB2777",
+                    currency: "USD",
                   },
                 ]}
                 height={300}
@@ -575,11 +580,10 @@ export function FluxoFinanceiroOperacional({
                 showLabels={true}
                 formatLabel={(value, ctx) => {
                   if (value === 0) return "";
-                  const dataKey = ctx?.dataKey?.toString() || "";
-                  const isUSD = dataKey.includes("_usd");
-
-                  return (isUSD ? "US$ " : "R$ ") +
-                    Math.abs(Number(value)).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+                  // Use explicit currency from bar config
+                  const currency = ctx?.currency;
+                  const prefix = currency === "USD" ? "US$ " : "R$ ";
+                  return prefix + Math.abs(Number(value)).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
                 }}
                 customTooltipContent={(payload, label) => {
                   const data = payload[0]?.payload;
@@ -633,7 +637,8 @@ export function FluxoFinanceiroOperacional({
             )}
 
             <p className="text-xs text-muted-foreground text-center">
-              Quanto capital novo entrou (aportes) vs quanto foi devolvido (liquidações). Barras USD são proporcionais ao valor em BRL.
+              Quanto capital novo entrou (aportes) vs quanto foi devolvido (liquidações).
+              {dadosCapitalExterno.hasUSD && " Barras em escala proporcional para comparação visual entre moedas."}
             </p>
           </TabsContent>
 
@@ -682,12 +687,14 @@ export function FluxoFinanceiroOperacional({
               <ModernBarChart
                 data={dadosCapitalOperacao.dados}
                 categoryKey="periodo"
+                hideYAxisTicks={dadosCapitalOperacao.hasUSD}
                 bars={[
                   { 
                     dataKey: "depositos", 
                     label: "Depósitos BRL", 
                     gradientStart: "#3B82F6", 
-                    gradientEnd: "#2563EB" 
+                    gradientEnd: "#2563EB",
+                    currency: "BRL",
                   },
                   { 
                     // Usa valor normalizado para altura da barra
@@ -696,13 +703,15 @@ export function FluxoFinanceiroOperacional({
                     // Usa valor original em USD para o label
                     labelValueKey: "depositos_usd",
                     gradientStart: "#06B6D4", 
-                    gradientEnd: "#0891B2" 
+                    gradientEnd: "#0891B2",
+                    currency: "USD",
                   },
                   { 
                     dataKey: "saques", 
                     label: "Saques BRL", 
                     gradientStart: "#8B5CF6", 
-                    gradientEnd: "#7C3AED" 
+                    gradientEnd: "#7C3AED",
+                    currency: "BRL",
                   },
                   { 
                     // Usa valor normalizado para altura da barra
@@ -711,7 +720,8 @@ export function FluxoFinanceiroOperacional({
                     // Usa valor original em USD para o label
                     labelValueKey: "saques_usd",
                     gradientStart: "#EC4899", 
-                    gradientEnd: "#DB2777" 
+                    gradientEnd: "#DB2777",
+                    currency: "USD",
                   },
                 ]}
                 height={300}
@@ -719,11 +729,10 @@ export function FluxoFinanceiroOperacional({
                 showLabels={true}
                 formatLabel={(value, ctx) => {
                   if (value === 0) return "";
-                  const dataKey = ctx?.dataKey?.toString() || "";
-                  const isUSD = dataKey.includes("_usd");
-
-                  return (isUSD ? "US$ " : "R$ ") +
-                    Math.abs(Number(value)).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+                  // Use explicit currency from bar config
+                  const currency = ctx?.currency;
+                  const prefix = currency === "USD" ? "US$ " : "R$ ";
+                  return prefix + Math.abs(Number(value)).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
                 }}
                 customTooltipContent={(payload, label) => {
                   const data = payload[0]?.payload;
@@ -777,7 +786,8 @@ export function FluxoFinanceiroOperacional({
             )}
 
             <p className="text-xs text-muted-foreground text-center">
-              Fluxo financeiro efetivo. Barras USD são proporcionais ao valor equivalente em BRL para comparação visual correta.
+              Fluxo financeiro efetivo.
+              {dadosCapitalOperacao.hasUSD && " Barras em escala proporcional para comparação visual entre moedas."}
             </p>
           </TabsContent>
         </Tabs>
