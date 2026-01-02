@@ -57,6 +57,7 @@ interface BookmakerOption {
   logo_url?: string | null;
   bookmaker_catalogo_id?: string | null;
   saldo_atual?: number;
+  saldo_usd?: number;
   moeda?: string;
 }
 
@@ -151,6 +152,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
           login_password_encrypted,
           bookmaker_catalogo_id,
           saldo_atual,
+          saldo_usd,
           moeda,
           bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
         `)
@@ -166,6 +168,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
         logo_url: b.bookmakers_catalogo?.logo_url || null,
         bookmaker_catalogo_id: b.bookmaker_catalogo_id || null,
         saldo_atual: b.saldo_atual ?? 0,
+        saldo_usd: b.saldo_usd ?? 0,
         moeda: b.moeda || "BRL",
       }));
 
