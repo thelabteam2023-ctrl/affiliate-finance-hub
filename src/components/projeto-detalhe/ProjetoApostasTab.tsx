@@ -1108,6 +1108,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                         isFreebetExtraction={aposta.estrategia === "COBERTURA_LAY" && aposta.back_em_exchange === true}
                         gerouFreebet={aposta.gerou_freebet || false}
                         valorFreebetGerada={aposta.valor_freebet_gerada || undefined}
+                        contextoOperacional={aposta.contexto_operacional}
+                        estrategia={aposta.estrategia}
                         onResultadoUpdated={handleApostaUpdated}
                         onEditClick={() => handleOpenDialog(aposta)}
                       />
@@ -1167,6 +1169,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                       status={multipla.status}
                       stake={multipla.stake}
                       odd={multipla.odd_final}
+                      contextoOperacional={multipla.contexto_operacional}
+                      estrategia={multipla.estrategia}
                       onResultadoUpdated={handleApostaUpdated}
                       onEditClick={() => handleOpenMultiplaDialog(multipla)}
                     />

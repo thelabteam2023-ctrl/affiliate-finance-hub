@@ -387,6 +387,65 @@ export function useBonusBalanceManager() {
     }
   }, []);
 
+  /**
+   * Reverte o progresso do rollover quando um resultado válido é alterado para VOID/PENDENTE.
+   * 
+   * @param projectId - ID do projeto
+   * @param bookmakerId - ID da bookmaker
+   * @param stakeApostada - Valor que foi contabilizado e precisa ser revertido
+   */
+  const reverterProgressoRollover = useCallback(async (
+    projectId: string,
+    bookmakerId: string,
+    stakeApostada: number
+  ): Promise<boolean> => {
+    try {
+      // Buscar todos os bônus ativos para esta bookmaker
+      const { data: bonusesAtivos, error: fetchError } = await supabase
+        .from("project_bookmaker_link_bonuses")
+        .select("id, rollover_progress")
+        .eq("project_id", projectId)
+        .eq("bookmaker_id", bookmakerId)
+        .eq("status", "credited");
+
+      if (fetchError) {
+        console.error("Erro ao buscar bônus para reverter rollover:", fetchError);
+        return false;
+      }
+
+      if (!bonusesAtivos || bonusesAtivos.length === 0) {
+        return true; // Sem bônus ativo, nada a reverter
+      }
+
+      // Reverter o progresso de cada bônus ativo
+      for (const bonus of bonusesAtivos) {
+        const currentProgress = Number(bonus.rollover_progress || 0);
+        const newProgress = Math.max(0, currentProgress - stakeApostada);
+
+        // Atualizar no banco
+        const { error: updateError } = await supabase
+          .from("project_bookmaker_link_bonuses")
+          .update({ 
+            rollover_progress: newProgress,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", bonus.id);
+
+        if (updateError) {
+          console.error("Erro ao reverter rollover_progress:", updateError);
+          return false;
+        }
+
+        console.log(`Rollover revertido: bônus ${bonus.id}, progresso ${currentProgress} -> ${newProgress}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Erro ao reverter progresso do rollover:", error);
+      return false;
+    }
+  }, []);
+
   return {
     getActiveBonus,
     calcularDecomposicaoStake,
@@ -394,6 +453,7 @@ export function useBonusBalanceManager() {
     processarLiquidacaoBonus,
     reverterLiquidacaoBonus,
     getSaldoBonusDisponivel,
-    atualizarProgressoRollover
+    atualizarProgressoRollover,
+    reverterProgressoRollover
   };
 }
