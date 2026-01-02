@@ -111,8 +111,7 @@ export function GlobalActionsBar({
           parceiro:parceiros (nome),
           bookmakers_catalogo (logo_url)
         `)
-        .eq("projeto_id", projetoId)
-        .in("status", ["ativo", "ATIVO", "LIMITADA", "limitada"]);
+        .eq("projeto_id", projetoId);
 
       if (error) throw error;
       setBookmakers(data || []);
