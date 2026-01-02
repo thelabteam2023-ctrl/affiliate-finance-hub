@@ -33,7 +33,11 @@ import {
   Loader2,
   HelpCircle,
   History,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -55,6 +59,21 @@ interface ExchangeAdjustmentSummary {
   totalPerdas: number;
   saldoLiquido: number;
   totalConciliacoes: number;
+}
+
+interface ExchangeAdjustmentRecord {
+  id: string;
+  created_at: string;
+  tipo: string;
+  tipo_ajuste: string;
+  valor_nominal: number;
+  valor_confirmado: number;
+  diferenca: number;
+  coin: string | null;
+  qtd_coin: number | null;
+  observacoes: string | null;
+  bookmaker_id: string | null;
+  wallet_id: string | null;
 }
 
 export function ConciliacaoSaldos({
@@ -81,19 +100,22 @@ export function ConciliacaoSaldos({
     saldoLiquido: 0,
     totalConciliacoes: 0,
   });
+  const [adjustmentHistory, setAdjustmentHistory] = useState<ExchangeAdjustmentRecord[]>([]);
   const [loadingSummary, setLoadingSummary] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
 
-  // Carregar resumo de ajustes cambiais
+  // Carregar resumo e histórico de ajustes cambiais
   useEffect(() => {
-    const loadSummary = async () => {
+    const loadAdjustments = async () => {
       if (!workspace?.id) return;
       
       setLoadingSummary(true);
       try {
         const { data, error } = await supabase
           .from("exchange_adjustments")
-          .select("diferenca, tipo_ajuste")
-          .eq("workspace_id", workspace.id);
+          .select("*")
+          .eq("workspace_id", workspace.id)
+          .order("created_at", { ascending: false });
         
         if (error) throw error;
         
@@ -114,14 +136,16 @@ export function ConciliacaoSaldos({
           saldoLiquido: totalGanhos - totalPerdas,
           totalConciliacoes: data?.length || 0,
         });
+        
+        setAdjustmentHistory(data || []);
       } catch (error) {
-        console.error("Erro ao carregar resumo de ajustes:", error);
+        console.error("Erro ao carregar ajustes:", error);
       } finally {
         setLoadingSummary(false);
       }
     };
     
-    loadSummary();
+    loadAdjustments();
   }, [workspace?.id, transacoes]);
 
   // Filtrar transações crypto pendentes de confirmação
@@ -355,6 +379,119 @@ export function ConciliacaoSaldos({
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Histórico de Ajustes Cambiais */}
+      {adjustmentHistory.length > 0 && (
+        <Collapsible open={showHistory} onOpenChange={setShowHistory}>
+          <Card className="border-border/50">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="pb-3 cursor-pointer hover:bg-muted/30 transition-colors">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <History className="h-4 w-4 text-muted-foreground" />
+                    Histórico de Ajustes Cambiais
+                    <Badge variant="secondary" className="text-xs">
+                      {adjustmentHistory.length}
+                    </Badge>
+                  </CardTitle>
+                  {showHistory ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                <ScrollArea className="h-[300px]">
+                  <div className="space-y-2">
+                    {adjustmentHistory.map((adj) => {
+                      const isGanho = adj.tipo_ajuste === "GANHO_CAMBIAL";
+                      const bookmakerNome = adj.bookmaker_id ? getBookmakerName(adj.bookmaker_id) : null;
+                      const walletInfo = adj.wallet_id ? getWalletInfo(adj.wallet_id) : null;
+                      
+                      return (
+                        <div
+                          key={adj.id}
+                          className={`flex items-center justify-between p-3 rounded-lg border ${
+                            isGanho 
+                              ? "bg-emerald-500/5 border-emerald-500/20" 
+                              : "bg-red-500/5 border-red-500/20"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 flex-wrap min-w-0">
+                            {/* Tipo Badge */}
+                            <Badge
+                              className={
+                                isGanho
+                                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shrink-0"
+                                  : "bg-red-500/20 text-red-400 border-red-500/30 shrink-0"
+                              }
+                            >
+                              {isGanho ? (
+                                <TrendingUp className="h-3 w-3 mr-1" />
+                              ) : (
+                                <TrendingDown className="h-3 w-3 mr-1" />
+                              )}
+                              {isGanho ? "Ganho" : "Perda"}
+                            </Badge>
+
+                            {/* Tipo transação */}
+                            <Badge variant="outline" className="text-xs shrink-0">
+                              {adj.tipo === "DEPOSITO" ? "Depósito" : "Saque"}
+                            </Badge>
+
+                            {/* Bookmaker/Wallet */}
+                            <div className="flex items-center gap-1 text-sm min-w-0">
+                              {bookmakerNome && (
+                                <div className="flex items-center gap-1 text-muted-foreground truncate">
+                                  <Building2 className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate">{bookmakerNome}</span>
+                                </div>
+                              )}
+                              {walletInfo && (
+                                <div className="flex items-center gap-1 text-muted-foreground truncate">
+                                  <Wallet className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate">{walletInfo}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Valores */}
+                            <div className="text-xs text-muted-foreground shrink-0">
+                              {adj.qtd_coin && adj.coin && (
+                                <span className="font-mono">
+                                  {adj.qtd_coin.toFixed(2)} {adj.coin}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Data */}
+                            <div className="text-xs text-muted-foreground shrink-0">
+                              {format(new Date(adj.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                            </div>
+                          </div>
+
+                          {/* Diferença */}
+                          <div className="text-right shrink-0 ml-2">
+                            <p className={`font-semibold ${isGanho ? "text-emerald-400" : "text-red-400"}`}>
+                              {isGanho ? "+" : "-"}{formatCurrency(Math.abs(adj.diferenca))}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatCurrency(adj.valor_nominal)} → {formatCurrency(adj.valor_confirmado)}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
       {/* Estado vazio */}
