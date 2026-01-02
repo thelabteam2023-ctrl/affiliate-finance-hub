@@ -40,6 +40,7 @@ interface BookmakerOption {
   logo_url?: string | null;
   bookmaker_catalogo_id?: string | null;
   saldo_atual?: number;
+  saldo_usd?: number;
   moeda?: string;
 }
 
@@ -327,7 +328,20 @@ export function BonusDialog({
               </SelectTrigger>
               <SelectContent>
                 {bookmakers.map((bk) => {
-                  const currencySymbol = bk.moeda === "USD" ? "$" : bk.moeda === "EUR" ? "€" : "R$";
+                  const moeda = bk.moeda || "BRL";
+                  const usaUsd = moeda === "USD" || moeda === "USDT";
+                  const currencySymbol = usaUsd
+                    ? "$"
+                    : moeda === "EUR"
+                      ? "€"
+                      : moeda === "GBP"
+                        ? "£"
+                        : "R$";
+
+                  const saldo = usaUsd
+                    ? (bk.saldo_usd ?? bk.saldo_atual ?? 0)
+                    : (bk.saldo_atual ?? 0);
+
                   return (
                     <SelectItem key={bk.id} value={bk.id}>
                       <div className="flex items-center justify-between gap-4 w-full">
@@ -345,8 +359,12 @@ export function BonusDialog({
                         </div>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                           <span className="truncate max-w-[100px]">{bk.login_username}</span>
-                          <span className="text-emerald-400 font-medium whitespace-nowrap">
-                            {currencySymbol} {(bk.saldo_atual ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          <span className="text-success font-medium whitespace-nowrap">
+                            {currencySymbol}{" "}
+                            {saldo.toLocaleString("pt-BR", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
                           </span>
                         </div>
                       </div>

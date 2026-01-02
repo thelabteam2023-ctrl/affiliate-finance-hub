@@ -36,6 +36,7 @@ interface Bookmaker {
   id: string;
   nome: string;
   saldo_atual: number;
+  saldo_usd: number;
   saldo_freebet: number;
   moeda: string;
   login_username?: string;
@@ -101,6 +102,7 @@ export function GlobalActionsBar({
           id,
           nome,
           saldo_atual,
+          saldo_usd,
           saldo_freebet,
           moeda,
           login_username,
@@ -180,6 +182,7 @@ export function GlobalActionsBar({
     logo_url: b.bookmakers_catalogo?.logo_url,
     bookmaker_catalogo_id: b.bookmaker_catalogo_id,
     saldo_atual: b.saldo_atual ?? 0,
+    saldo_usd: b.saldo_usd ?? 0,
     moeda: b.moeda || "BRL",
   }));
 
