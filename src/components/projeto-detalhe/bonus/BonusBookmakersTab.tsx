@@ -136,7 +136,8 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
       const mapped: BookmakerInBonusMode[] = (data || []).map((bk: any) => {
         const bkBonuses = bonusesByBookmaker[bk.id] || [];
         const activeBonuses = bkBonuses.filter(b => b.status === 'credited');
-        const bonusTotal = activeBonuses.reduce((acc, b) => acc + b.bonus_amount, 0);
+        // Use saldo_atual (current bonus balance) instead of bonus_amount (original value)
+        const bonusTotal = activeBonuses.reduce((acc, b) => acc + (b.saldo_atual ?? b.bonus_amount), 0);
         
         // Find nearest expiry
         let nearestExpiry: Date | null = null;
