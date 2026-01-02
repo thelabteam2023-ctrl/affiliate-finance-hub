@@ -1736,8 +1736,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             await debitarFreebetUsada(coberturaBackBookmakerId, backStakeNum);
           }
         }
-
-        toast.success("Aposta registrada com sucesso!");
       }
 
       // Invalidar cache de saldos para atualizar todas as UIs
